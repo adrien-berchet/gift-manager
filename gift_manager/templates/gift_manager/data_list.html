@@ -1,0 +1,35 @@
+{% extends "gift_manager/base.html" %}
+
+{% block title %}{{ type }}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{{ type }} Page</h1>
+{% if type == 'Persons' %}
+    <button onclick="location.href='{% url 'gift_manager:person_create' %}'">Create New Person</button>
+{% elif type == 'Gifts' %}
+    <button onclick="location.href='{% url 'gift_manager:gift_create' %}'">Create New Gift</button>
+{% elif type == 'Events' %}
+    <button onclick="location.href='{% url 'gift_manager:event_create' %}'">Create New Event</button>
+{% endif %}
+{% load custom_filters %}
+<table>
+    <thead>
+        <tr>
+            {% for col in columns %}
+                <th>{{ col|capfirst }}</th>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data %}
+            <tr>
+                {% for field in fields %}
+                    {% if field in item %}
+                        <td>{{ item|get_item:field }}</td>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

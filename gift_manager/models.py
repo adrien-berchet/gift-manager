@@ -17,12 +17,12 @@ class Person(models.Model):
     """
     person_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     first_name = models.TextField(unique=False, null=False)
-    family_name = models.TextField(unique=False, null=True)
-    email_address = models.EmailField(unique=False, null=True)
+    family_name = models.TextField(unique=False, null=True, blank=True)
+    email_address = models.EmailField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
-    groups = models.ManyToManyField("PersonGroup", secondary=group_relations, backref="persons")
-    shared_with = models.ManyToManyField(User, through='PersonPermission', related_name='shared_persons')
-    user_link = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='persons', null=True)
+    groups = models.ManyToManyField("PersonGroup", blank=True)
+    shared_with = models.ManyToManyField(User, through='PersonPermission', related_name='%(app_label)s_%(class)s_shared_with')
+    user_link = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='persons', null=True, blank=True)
 
     def __str__(self):
         return (self.first_name + " " + self.family_name).strip()
@@ -47,7 +47,7 @@ class PersonGroup(models.Model):
     group_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     group_name = models.TextField(unique=False, null=False)
     creation_date = models.DateTimeField(auto_now_add=True)
-    shared_with = models.ManyToManyField(User, through='GroupPermission', related_name='shared_groups')
+    shared_with = models.ManyToManyField(User, through='PersonGroupPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
 
 class PersonGroupPermission(models.Model):
@@ -62,25 +62,13 @@ class PersonGroupPermission(models.Model):
         unique_together = ('user', 'group')
 
 
-class PersonsGroupRelation(models.Model):
-    """
-    Relation between a person and a group.
-    """
-    person = models.ForeignKey(Person, on_delete=models.CASCADE)
-    group = models.ForeignKey(PersonGroup, on_delete=models.CASCADE)
-    creation_date = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('person', 'group')
-
-
 class GiftTag(models.Model):
     """
     Model for a gift tag.
     """
     tag_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     tag_name = models.TextField(unique=False, null=False)
-    parent_tag = models.ForeignKey("GiftTag", on_delete=models.CASCADE, null=True)
+    parent_tag = models.ForeignKey("GiftTag", on_delete=models.CASCADE, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='GiftTagPermission', related_name='shared_gift_tags')
 
@@ -103,10 +91,10 @@ class Gift(models.Model):
     """
     gift_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
-    comment = models.TextField(unique=False, null=True)
+    comment = models.TextField(unique=False, null=True, blank=True)
     tags = models.ManyToManyField(GiftTag, related_name="gifts")
     creation_date = models.DateTimeField(auto_now_add=True)
-    shared_with = models.ManyToManyField(User, through='GiftPermission', related_name='shared_gifts')
+    shared_with = models.ManyToManyField(User, through='GiftPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
 
 class GiftPermission(models.Model):
@@ -127,10 +115,10 @@ class Event(models.Model):
     """
     event_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
-    comment = models.TextField(unique=False, null=True)
-    usual_date = models.DateField(unique=False, null=True)
+    comment = models.TextField(unique=False, null=True, blank=True)
+    usual_date = models.DateField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
-    shared_with = models.ManyToManyField(User, through='EventPermission', related_name='shared_events')
+    shared_with = models.ManyToManyField(User, through='EventPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
 
 class EventPermission(models.Model):
@@ -157,11 +145,11 @@ class Relation(models.Model):
     Model for a relation.
     """
     relation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="related_person")
-    gift = models.ForeignKey(Gift, on_delete=models.CASCADE, related_name="related_gift")
-    status = models.ForeignKey(RelationStatus, on_delete=models.CASCADE)  # Add default value after the status model is created
-    due_date = models.DateField(unique=False, null=True)
-    comment = models.TextField(unique=False, null=True)
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="persons")
+    gift = models.ForeignKey(Gift, on_delete=models.CASCADE, related_name="gifts")
+    status = models.ForeignKey(RelationStatus, on_delete=models.CASCADE)  # Add default value after the status model is created and populated
+    due_date = models.DateField(unique=False, null=True, blank=True)
+    comment = models.TextField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='RelationPermission', related_name='shared_relations')
 

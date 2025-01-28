@@ -1,0 +1,37 @@
+{% extends "gift_manager/base.html" %}
+{% load static %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="jumbotron">
+            <div class="row">
+                <div class="col-sm-8">
+                    <h1>Welcome to Gift Manager</h1>
+                </div>
+                <div class="col-sm-4">
+                    <img src="{% static 'gift_manager/images/gift.png' %}" alt="Gift Image" class="img-fluid"/>
+                </div>
+            </div>
+            <div class="row">
+                <p>This web site will help you to manage all your gifts!</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+    <a href="{% url 'gift_manager:persons' %}" class="btn btn-primary mb-2">Persons</a>
+    <a href="{% url 'gift_manager:gifts' %}" class="btn btn-primary mb-2">Gifts</a>
+    <a href="{% url 'gift_manager:events' %}" class="btn btn-primary mb-2">Events</a>
+    <form method="post" action="{% url 'logout' %}" class="mt-2">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Logout</button>
+    </form>
+{% else %}
+    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">Login</a>
+{% endif %}
+{% endblock %}
