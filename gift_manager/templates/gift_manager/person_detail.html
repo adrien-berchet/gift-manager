@@ -9,28 +9,38 @@
 <p><strong>Family name:</strong> {{ person.family_name }}</p>
 <p><strong>Email address:</strong> {{ person.email_address }}</p>
 <p><strong>Groups:</strong> {% for group in person.groups.all %}{{ group.name }} {% endfor %}</p>
-<p><strong>Shared With:</strong> {% for user in person.shared_with.all %}{{ user.username }} {% endfor %}</p>
+<p><strong>Shared With:</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
 <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">Edit Person</a>
 
 <h2 class="my-4">Gifts for this person</h2>
 <a href="{% url 'gift_manager:add_person_relation' person.person_id %}" class="btn btn-primary mb-3">Add Relation</a>
-<table class="table table-striped">
+<table id="data-table" class="table table-striped">
     <thead>
         <tr>
             <th>Gift</th>
             <th>Status</th>
+            <th>Event</th>
             <th>Due Date</th>
         </tr>
     </thead>
     <tbody>
         {% for relation in relations %}
             <tr>
-                <td>{{ relation.gift.name }}</td>
+                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
                 <td>{{ relation.status.status }}</td>
+                <td>{{ relation.event.name|replace_empty:"-" }}</td>
                 <td>{{ relation.due_date|replace_none:"-" }}</td>
             </tr>
         {% endfor %}
     </tbody>
 </table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#data-table').DataTable();
+    });
+</script>
 {% endblock %}

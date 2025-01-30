@@ -23,6 +23,8 @@ urlpatterns = [
     path('events/create/', views.EventCreateView.as_view(), name='event_create'),
     path('events/<uuid:pk>/', views.EventDetailView.as_view(), name='event_detail'),
     path('events/<uuid:pk>/edit/', views.EventUpdateView.as_view(), name='event_edit'),
+    path('relation_statuses/', views.RelationStatusListView.as_view(), name='relation_statuses'),
+    path('relation_statuses/<int:pk>/', views.RelationStatusDetailView.as_view(), name='relation_status_detail'),
 ]
 
 if settings.DEBUG:

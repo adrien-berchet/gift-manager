@@ -18,8 +18,10 @@ from .models import Gift
 from .models import Event
 from .models import PersonPermission
 from .models import Relation
+from .models import RelationStatus
 from .forms import PersonRelationForm
 from .forms import GiftRelationForm
+from .forms import EventForm
 
 
 def home(request):
@@ -73,7 +75,7 @@ class PersonListView(LoginRequiredMixin, ListView):
         """
         return Person.objects.filter(
             Q(shared_with=self.request.user)
-        ).values("person_id", *self.column_names).order_by("first_name", "family_name")
+        ).values("person_id", *self.column_names)
 
 
 class PersonCreateView(LoginRequiredMixin, CreateView):
@@ -161,7 +163,7 @@ class GiftListView(LoginRequiredMixin, ListView):
         """
         return Gift.objects.filter(
             Q(shared_with=self.request.user)
-        ).values("gift_id", *self.column_names).order_by("name")
+        ).values("gift_id", *self.column_names)
 
 
 class GiftCreateView(LoginRequiredMixin, CreateView):
@@ -249,13 +251,13 @@ class EventListView(LoginRequiredMixin, ListView):
         """
         return Event.objects.filter(
             Q(shared_with=self.request.user)
-        ).values("event_id", *self.column_names).order_by("name")
+        ).values("event_id", *self.column_names)
 
 
 class EventCreateView(LoginRequiredMixin, CreateView):
     model = Event
+    form_class = EventForm
     template_name = "gift_manager/create_form.html"
-    fields = ['name', 'comment', 'usual_date', 'shared_with']
     login_url = "/accounts/login/"
     success_url = reverse_lazy('gift_manager:events')
 
@@ -283,8 +285,8 @@ class EventCreateView(LoginRequiredMixin, CreateView):
 
 class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
     model = Event
+    form_class = EventForm
     template_name = "gift_manager/create_form.html"
-    fields = ['name', 'comment', 'usual_date', 'shared_with']
     login_url = "/accounts/login/"
     success_url = reverse_lazy('gift_manager:events')
     pk_name = "event_id"
@@ -322,6 +324,7 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['relations'] = Relation.objects.filter(person=self.object)
+        context['shared_with'] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
 
@@ -336,6 +339,7 @@ class GiftDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['relations'] = Relation.objects.filter(gift=self.object)
+        context['shared_with'] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
 
@@ -346,6 +350,12 @@ class EventDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
     pk_name = "event_id"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['relations'] = Relation.objects.filter(event=self.object)
+        context['shared_with'] = self.object.shared_with.exclude(id=self.request.user.id)
+        return context
 
 
 class PersonRelationCreateView(LoginRequiredMixin, CreateView):
@@ -394,3 +404,47 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse('gift_manager:gift_detail', kwargs={'pk': self.kwargs['pk']})
+
+
+# class RelationStatusListView(LoginRequiredMixin, ListView):
+#     model = RelationStatus
+#     template_name = "gift_manager/relation_status_list.html"
+#     context_object_name = "statuses"
+#     login_url = "/accounts/login/"
+#     redirect_field_name = "redirect_to"
+
+
+class RelationStatusListView(LoginRequiredMixin, ListView):
+    model = RelationStatus
+    template_name = "gift_manager/data_list.html"
+    context_object_name = "data"
+    login_url = "/accounts/login/"
+    redirect_field_name = "redirect_to"
+    column_names = {
+        'status': 'Status',
+    }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['type'] = 'Status'
+        context['column_names'] = self.column_names
+        return context
+
+    def get_queryset(self):
+        """
+        Return RelationStatus.
+        """
+        return RelationStatus.objects.values("pk", *self.column_names)
+
+
+class RelationStatusDetailView(LoginRequiredMixin, DetailView):
+    model = RelationStatus
+    template_name = "gift_manager/relation_status_detail.html"
+    context_object_name = "status"
+    login_url = "/accounts/login/"
+    redirect_field_name = "redirect_to"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['relations'] = Relation.objects.filter(status=self.object)
+        return context

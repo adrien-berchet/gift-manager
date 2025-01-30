@@ -11,5 +11,9 @@ def get_item(dictionary, key):
     return dictionary.get(key)
 
 @register.filter
-def replace_none(value, replacement="N/A"):
+def replace_none(value, replacement="-"):
     return value if value is not None else replacement
+
+@register.filter
+def replace_empty(value, replacement="-"):
+    return value if value == 0 or value else replacement

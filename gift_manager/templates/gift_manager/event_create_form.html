@@ -1,0 +1,40 @@
+{% extends "gift_manager/base.html" %}
+
+{% block title %}{{ action }} {{ type }}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{{ action }} {{ type }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <div id="absolute_date_field" style="display: none;">
+        {{ form.absolute_date.label_tag }} {{ form.absolute_date }}
+    </div>
+    <div id="recurrence_field" style="display: none;">
+        {{ form.recurrence.label_tag }} {{ form.recurrence }}
+    </div>
+    <button type="submit" class="btn btn-success">Save</button>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateTypeField = document.querySelector('input[name="date_type"]:checked');
+        const absoluteDateField = document.getElementById('absolute_date_field');
+        const recurrenceField = document.getElementById('recurrence_field');
+
+        function toggleDateFields() {
+            if (dateTypeField.value === 'absolute') {
+                absoluteDateField.style.display = 'block';
+                recurrenceField.style.display = 'none';
+            } else if (dateTypeField.value === 'recurrence') {
+                absoluteDateField.style.display = 'none';
+                recurrenceField.style.display = 'block';
+            }
+        }
+
+        dateTypeField.addEventListener('change', toggleDateFields);
+        toggleDateFields();
+    });
+</script>
+{% endblock %}

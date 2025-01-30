@@ -1,0 +1,31 @@
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+
+{% block title %}Relation Status Detail{% endblock %}
+
+{% block content %}
+<h1 class="my-4">Relation Status Detail</h1>
+<p><strong>Status:</strong> {{ status.status }}</p>
+
+<h2 class="my-4">Relations with this Status</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Status</th>
+            <th>Gift</th>
+            <th>Event</th>
+            <th>Due Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for relation in relations %}
+            <tr>
+                <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
+                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
+                <td>{{ relation.event.name|default:"-" }}</td>
+                <td>{{ relation.due_date|replace_none:"-" }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

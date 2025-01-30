@@ -126,6 +126,8 @@ class Event(models.Model):
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
     usual_date = models.DateField(unique=False, null=True, blank=True)
+    absolute_date = models.DateField(unique=False, null=True, blank=True)
+    recurrence = models.CharField(max_length=20, choices=[('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly'), ('yearly', 'Yearly')], null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='EventPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
@@ -162,6 +164,7 @@ class Relation(models.Model):
     relation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="persons")
     gift = models.ForeignKey(Gift, on_delete=models.CASCADE, related_name="gifts")
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, related_name="relations", null=True, blank=True)
     status = models.ForeignKey(RelationStatus, on_delete=models.CASCADE)  # Add default value after the status model is created and populated
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)

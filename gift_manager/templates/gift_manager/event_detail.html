@@ -1,4 +1,5 @@
 {% extends "gift_manager/base.html" %}
+{% load custom_filters %}
 
 {% block title %}Event Detail{% endblock %}
 
@@ -6,6 +7,40 @@
 <h1 class="my-4">Event Detail</h1>
 <p><strong>Name:</strong> {{ event.name }}</p>
 <p><strong>Comment:</strong> {{ event.comment }}</p>
-<p><strong>Usual date:</strong> {{ event.usual_date }}</p>
-<p><strong>Shared With:</strong> {% for user in event.shared_with.all %}{{ user.username }} {% endfor %}</p>
+<p><strong>Usual Date:</strong> {{ event.usual_date|date:"Y-m-d" }}</p>
+<p><strong>Absolute Date:</strong> {{ event.absolute_date|date:"Y-m-d" }}</p>
+<p><strong>Recurrence:</strong> {{ event.recurrence }}</p>
+<p><strong>Shared With:</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+
+<a href="{% url 'gift_manager:event_edit' event.event_id %}" class="btn btn-warning mb-3">Edit Event</a>
+
+<h2 class="my-4">Relations for this Event</h2>
+<table id="data-table" class="table table-striped">
+    <thead>
+        <tr>
+            <th>Person</th>
+            <th>Gift</th>
+            <th>Status</th>
+            <th>Due Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for relation in relations %}
+            <tr>
+                <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
+                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
+                <td>{{ relation.status.status }}</td>
+                <td>{{ relation.due_date|replace_none:"-" }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        $('#data-table').DataTable();
+    });
+</script>
 {% endblock %}

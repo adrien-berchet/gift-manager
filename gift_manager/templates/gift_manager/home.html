@@ -27,6 +27,7 @@
     <a href="{% url 'gift_manager:persons' %}" class="btn btn-primary mb-2">Persons</a>
     <a href="{% url 'gift_manager:gifts' %}" class="btn btn-primary mb-2">Gifts</a>
     <a href="{% url 'gift_manager:events' %}" class="btn btn-primary mb-2">Events</a>
+    <a href="{% url 'gift_manager:relation_statuses' %}" class="btn btn-primary mb-2">Gift Status</a>
     <form method="post" action="{% url 'logout' %}" class="mt-2">
         {% csrf_token %}
         <button type="submit" class="btn btn-danger">Logout</button>
