@@ -12,22 +12,33 @@
     <button onclick="location.href='{% url 'gift_manager:event_create' %}'">Create New Event</button>
 {% endif %}
 {% load custom_filters %}
-<table>
+<table class="table table-striped">
     <thead>
         <tr>
-            {% for col in columns %}
-                <th>{{ col|capfirst }}</th>
+            {% for col, name in column_names.items %}
+            <th>{{ name }}</th>
             {% endfor %}
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for item in data %}
             <tr>
-                {% for field in fields %}
-                    {% if field in item %}
-                        <td>{{ item|get_item:field }}</td>
-                    {% endif %}
+                {% for col, name in column_names.items %}
+                    <td>{{ item|get_item:col }}</td>
                 {% endfor %}
+                <td>
+                    {% if type == 'Persons' %}
+                        <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm">View</a>
+                        <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm">Edit</a>
+                    {% elif type == 'Gifts' %}
+                        <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm">View</a>
+                        <a href="{% url 'gift_manager:gift_edit' item.gift_id %}" class="btn btn-warning btn-sm">Edit</a>
+                    {% elif type == 'Events' %}
+                        <a href="{% url 'gift_manager:event_detail' item.event_id %}" class="btn btn-info btn-sm">View</a>
+                        <a href="{% url 'gift_manager:event_edit' item.event_id %}" class="btn btn-warning btn-sm">Edit</a>
+                    {% endif %}
+                </td>
             </tr>
         {% endfor %}
     </tbody>

@@ -1,0 +1,11 @@
+{% extends "gift_manager/base.html" %}
+
+{% block title %}Event Detail{% endblock %}
+
+{% block content %}
+<h1 class="my-4">Event Detail</h1>
+<p><strong>Name:</strong> {{ event.name }}</p>
+<p><strong>Comment:</strong> {{ event.comment }}</p>
+<p><strong>Usual date:</strong> {{ event.usual_date }}</p>
+<p><strong>Shared With:</strong> {% for user in event.shared_with.all %}{{ user.username }} {% endfor %}</p>
+{% endblock %}

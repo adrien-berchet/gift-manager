@@ -9,3 +9,7 @@ def attr(obj, attr_name):
 @register.filter
 def get_item(dictionary, key):
     return dictionary.get(key)
+
+@register.filter
+def replace_none(value, replacement="N/A"):
+    return value if value is not None else replacement

@@ -11,10 +11,18 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('persons/', views.PersonListView.as_view(), name='persons'),
     path('persons/create/', views.PersonCreateView.as_view(), name='person_create'),
+    path('persons/<uuid:pk>/', views.PersonDetailView.as_view(), name='person_detail'),
+    path('persons/<uuid:pk>/edit/', views.PersonUpdateView.as_view(), name='person_edit'),
+    path('persons/<uuid:pk>/add_relation/', views.PersonRelationCreateView.as_view(), name='add_person_relation'),
     path('gifts/', views.GiftListView.as_view(), name='gifts'),
     path('gifts/create/', views.GiftCreateView.as_view(), name='gift_create'),
+    path('gifts/<uuid:pk>/', views.GiftDetailView.as_view(), name='gift_detail'),
+    path('gifts/<uuid:pk>/edit/', views.GiftUpdateView.as_view(), name='gift_edit'),
+    path('gifts/<uuid:pk>/add_relation/', views.GiftRelationCreateView.as_view(), name='add_gift_relation'),
     path('events/', views.EventListView.as_view(), name='events'),
     path('events/create/', views.EventCreateView.as_view(), name='event_create'),
+    path('events/<uuid:pk>/', views.EventDetailView.as_view(), name='event_detail'),
+    path('events/<uuid:pk>/edit/', views.EventUpdateView.as_view(), name='event_edit'),
 ]
 
 if settings.DEBUG:

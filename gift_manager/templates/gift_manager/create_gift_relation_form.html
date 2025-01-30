@@ -1,13 +1,13 @@
 {% extends "gift_manager/base.html" %}
 
-{% block title %}{{ action }} {{ type }}{% endblock %}
+{% block title %}Add Relation{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ action }} {{ type }}</h1>
+<h1 class="my-4">Add Relation for {{ gift.name }}</h1>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn btn-success">Save</button>
-    <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+    <a href="{% url 'gift_manager:gift_detail' gift.gift_id %}" class="btn btn-secondary">Cancel</a>
 </form>
 {% endblock %}

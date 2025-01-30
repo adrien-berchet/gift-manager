@@ -45,9 +45,12 @@ class PersonGroup(models.Model):
     Model for a group of persons.
     """
     group_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    group_name = models.TextField(unique=False, null=False)
+    name = models.TextField(unique=False, null=False)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='PersonGroupPermission', related_name='%(app_label)s_%(class)s_shared_with')
+
+    def __str__(self):
+        return self.name
 
 
 class PersonGroupPermission(models.Model):
@@ -67,10 +70,13 @@ class GiftTag(models.Model):
     Model for a gift tag.
     """
     tag_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    tag_name = models.TextField(unique=False, null=False)
+    name = models.TextField(unique=False, null=False)
     parent_tag = models.ForeignKey("GiftTag", on_delete=models.CASCADE, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='GiftTagPermission', related_name='shared_gift_tags')
+
+    def __str__(self):
+        return self.name
 
 
 class GiftTagPermission(models.Model):
@@ -96,6 +102,9 @@ class Gift(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='GiftPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
+    def __str__(self):
+        return self.name
+
 
 class GiftPermission(models.Model):
     """
@@ -120,6 +129,9 @@ class Event(models.Model):
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='EventPermission', related_name='%(app_label)s_%(class)s_shared_with')
 
+    def __str__(self):
+        return self.name
+
 
 class EventPermission(models.Model):
     """
@@ -139,10 +151,13 @@ class RelationStatus(models.Model):
     """
     status = models.TextField(unique=True, null=False)
 
+    def __str__(self):
+        return self.status
+
 
 class Relation(models.Model):
     """
-    Model for a relation.
+    Model for a relation between a person and a gift.
     """
     relation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="persons")
@@ -152,6 +167,9 @@ class Relation(models.Model):
     comment = models.TextField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(User, through='RelationPermission', related_name='shared_relations')
+
+    def __str__(self):
+        return f"{self.person} - {self.gift} ({self.status})"
 
 
 class RelationPermission(models.Model):
