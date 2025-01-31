@@ -8,6 +8,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.views.generic import DeleteView
 from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.generic import UpdateView
@@ -140,6 +141,13 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         return response
 
 
+class PersonDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+    model = Person
+    template_name = "gift_manager/confirm_delete.html"
+    success_url = reverse_lazy('gift_manager:persons')
+    pk_name = "person_id"
+
+
 class GiftListView(LoginRequiredMixin, ListView):
     model = Gift
     template_name = "gift_manager/data_list.html"
@@ -230,6 +238,13 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         return response
 
 
+class GiftDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+    model = Gift
+    template_name = "gift_manager/confirm_delete.html"
+    success_url = reverse_lazy('gift_manager:gifts')
+    pk_name = "gift_id"
+
+
 class EventListView(LoginRequiredMixin, ListView):
     model = Event
     template_name = "gift_manager/data_list.html"
@@ -315,6 +330,13 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
+
+
+class EventDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+    model = Event
+    template_name = "gift_manager/confirm_delete.html"
+    success_url = reverse_lazy('gift_manager:events')
+    pk_name = "event_id"
 
 
 class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView):

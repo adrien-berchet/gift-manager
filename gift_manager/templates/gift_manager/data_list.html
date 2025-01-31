@@ -32,12 +32,15 @@
                     {% if type == 'Persons' %}
                         <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
                         <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
+                        <a href="{% url 'gift_manager:person_delete' item.person_id %}" class="btn btn-danger btn-sm">{% trans "Delete" %}</a>
                     {% elif type == 'Gifts' %}
                         <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
                         <a href="{% url 'gift_manager:gift_edit' item.gift_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
+                        <a href="{% url 'gift_manager:gift_delete' item.gift_id %}" class="btn btn-danger btn-sm">{% trans "Delete" %}</a>
                     {% elif type == 'Events' %}
                         <a href="{% url 'gift_manager:event_detail' item.event_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
                         <a href="{% url 'gift_manager:event_edit' item.event_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
+                        <a href="{% url 'gift_manager:event_delete' item.event_id %}" class="btn btn-danger btn-sm">{% trans "Delete" %}</a>
                     {% elif type == 'Status' %}
                         <a href="{% url 'gift_manager:relation_status_detail' item.pk %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
                     {% endif %}
