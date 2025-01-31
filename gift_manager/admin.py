@@ -1,20 +1,19 @@
 from django.contrib import admin
 
-from .models import Person
-from .models import PersonPermission
-from .models import PersonGroup
-from .models import PersonGroupPermission
 # from .models import PersonsGroupRelation
-from .models import GiftTag
-from .models import GiftTagPermission
-from .models import Gift
-from .models import GiftPermission
 from .models import Event
 from .models import EventPermission
-from .models import RelationStatus
+from .models import Gift
+from .models import GiftPermission
+from .models import GiftTag
+from .models import GiftTagPermission
+from .models import Person
+from .models import PersonGroup
+from .models import PersonGroupPermission
+from .models import PersonPermission
 from .models import Relation
 from .models import RelationPermission
-
+from .models import RelationStatus
 
 admin.site.register(Person)
 admin.site.register(PersonPermission)

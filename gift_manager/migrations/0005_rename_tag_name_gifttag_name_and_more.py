@@ -2,60 +2,71 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import migrations, models
+from django.db import migrations
+from django.db import models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('gift_manager', '0004_alter_event_usual_date'),
+        ("gift_manager", "0004_alter_event_usual_date"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='gifttag',
-            old_name='tag_name',
-            new_name='name',
+            model_name="gifttag",
+            old_name="tag_name",
+            new_name="name",
         ),
         migrations.RenameField(
-            model_name='persongroup',
-            old_name='group_name',
-            new_name='name',
+            model_name="persongroup",
+            old_name="group_name",
+            new_name="name",
         ),
         migrations.AlterField(
-            model_name='event',
-            name='comment',
+            model_name="event",
+            name="comment",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='gift',
-            name='comment',
+            model_name="gift",
+            name="comment",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='gifttag',
-            name='parent_tag',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gift_manager.gifttag'),
+            model_name="gifttag",
+            name="parent_tag",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                to="gift_manager.gifttag",
+            ),
         ),
         migrations.AlterField(
-            model_name='person',
-            name='family_name',
+            model_name="person",
+            name="family_name",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='person',
-            name='user_link',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='persons', to=settings.AUTH_USER_MODEL),
+            model_name="person",
+            name="user_link",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="persons",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AlterField(
-            model_name='relation',
-            name='comment',
+            model_name="relation",
+            name="comment",
             field=models.TextField(blank=True, null=True),
         ),
         migrations.AlterField(
-            model_name='relation',
-            name='due_date',
+            model_name="relation",
+            name="due_date",
             field=models.DateField(blank=True, null=True),
         ),
     ]
