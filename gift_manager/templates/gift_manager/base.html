@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+{% load i18n %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,16 +16,16 @@
         <div class="collapse navbar-collapse">
             <ul class="navbar-nav mr-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:persons' %}">Persons</a>
+                    <a class="nav-link" href="{% url 'gift_manager:persons' %}">{% trans "Persons" %}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:gifts' %}">Gifts</a>
+                    <a class="nav-link" href="{% url 'gift_manager:gifts' %}">{% trans "Gifts" %}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:events' %}">Events</a>
+                    <a class="nav-link" href="{% url 'gift_manager:events' %}">{% trans "Events" %}</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">Gift statuses</a>
+                    <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">{% trans "Gift statuses" %}</a>
                 </li>
             </ul>
             <ul class="navbar-nav ml-auto">
@@ -40,6 +41,20 @@
                         <a class="nav-link" href="{% url 'login' %}">Login</a>
                     </li>
                 {% endif %}
+                <li class="nav-item">
+                    <form action="{% url 'set_language' %}" method="post">
+                        {% csrf_token %}
+                        <select name="language" onchange="this.form.submit()">
+                            {% get_current_language as LANGUAGE_CODE %}
+                            {% get_available_languages as LANGUAGES %}
+                            {% for lang in LANGUAGES %}
+                                <option value="{{ lang.0 }}" {% if lang.0 == LANGUAGE_CODE %}selected{% endif %}>
+                                    {{ lang.1 }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                </li>
             </ul>
         </div>
     </nav>

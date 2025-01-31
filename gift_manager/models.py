@@ -5,6 +5,7 @@ from django.contrib import admin
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.utils.translation import gettext_lazy
 
 PERMISSION_CHOICES = [
     ('editor', 'Editor'),
@@ -26,6 +27,10 @@ class Person(models.Model):
 
     def __str__(self):
         return (self.first_name + " " + self.family_name).strip()
+
+    class Meta:
+        verbose_name = gettext_lazy('Person')
+        verbose_name_plural = gettext_lazy('Persons')
 
 
 class PersonPermission(models.Model):
@@ -51,6 +56,10 @@ class PersonGroup(models.Model):
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        verbose_name = gettext_lazy('Group')
+        verbose_name_plural = gettext_lazy('Groups')
 
 
 class PersonGroupPermission(models.Model):
@@ -105,6 +114,10 @@ class Gift(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = gettext_lazy('Gift')
+        verbose_name_plural = gettext_lazy('Gifts')
+
 
 class GiftPermission(models.Model):
     """
@@ -134,6 +147,10 @@ class Event(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        verbose_name = gettext_lazy('Event')
+        verbose_name_plural = gettext_lazy('Events')
+
 
 class EventPermission(models.Model):
     """
@@ -156,6 +173,10 @@ class RelationStatus(models.Model):
     def __str__(self):
         return self.status
 
+    class Meta:
+        verbose_name = gettext_lazy('Relation Status')
+        verbose_name_plural = gettext_lazy('Relation Statuses')
+
 
 class Relation(models.Model):
     """
@@ -173,6 +194,10 @@ class Relation(models.Model):
 
     def __str__(self):
         return f"{self.person} - {self.gift} ({self.status})"
+
+    class Meta:
+        verbose_name = gettext_lazy('Relation')
+        verbose_name_plural = gettext_lazy('Relations')
 
 
 class RelationPermission(models.Model):

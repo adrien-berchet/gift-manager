@@ -1,15 +1,16 @@
 {% extends "gift_manager/base.html" %}
 
-{% block title %}{{ type }}{% endblock %}
+{% load i18n %}
+{% block title %}{{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ type }} Page</h1>
+<h1 class="my-4">{{ translated_type }}</h1>
 {% if type == 'Persons' %}
-    <button onclick="location.href='{% url 'gift_manager:person_create' %}'">Create New Person</button>
+    <button onclick="location.href='{% url 'gift_manager:person_create' %}'">{% trans "Create New Person" %}</button>
 {% elif type == 'Gifts' %}
-    <button onclick="location.href='{% url 'gift_manager:gift_create' %}'">Create New Gift</button>
+    <button onclick="location.href='{% url 'gift_manager:gift_create' %}'">{% trans "Create New Gift" %}</button>
 {% elif type == 'Events' %}
-    <button onclick="location.href='{% url 'gift_manager:event_create' %}'">Create New Event</button>
+    <button onclick="location.href='{% url 'gift_manager:event_create' %}'">{% trans "Create New Event" %}</button>
 {% endif %}
 {% load custom_filters %}
 <table id="data-table" class="table table-striped">
@@ -18,7 +19,7 @@
             {% for col, name in column_names.items %}
             <th>{{ name }}</th>
             {% endfor %}
-            <th>Actions</th>
+            <th>{% trans "Actions" %}</th>
         </tr>
     </thead>
     <tbody>
@@ -29,16 +30,16 @@
                 {% endfor %}
                 <td>
                     {% if type == 'Persons' %}
-                        <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm">View</a>
-                        <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
+                        <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
                     {% elif type == 'Gifts' %}
-                        <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm">View</a>
-                        <a href="{% url 'gift_manager:gift_edit' item.gift_id %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
+                        <a href="{% url 'gift_manager:gift_edit' item.gift_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
                     {% elif type == 'Events' %}
-                        <a href="{% url 'gift_manager:event_detail' item.event_id %}" class="btn btn-info btn-sm">View</a>
-                        <a href="{% url 'gift_manager:event_edit' item.event_id %}" class="btn btn-warning btn-sm">Edit</a>
+                        <a href="{% url 'gift_manager:event_detail' item.event_id %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
+                        <a href="{% url 'gift_manager:event_edit' item.event_id %}" class="btn btn-warning btn-sm">{% trans "Edit" %}</a>
                     {% elif type == 'Status' %}
-                        <a href="{% url 'gift_manager:relation_status_detail' item.pk %}" class="btn btn-info btn-sm">View</a>
+                        <a href="{% url 'gift_manager:relation_status_detail' item.pk %}" class="btn btn-info btn-sm">{% trans "View" %}</a>
                     {% endif %}
                 </td>
             </tr>

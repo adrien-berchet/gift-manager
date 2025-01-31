@@ -1,25 +1,26 @@
 {% extends "gift_manager/base.html" %}
 {% load custom_filters %}
 
-{% block title %}Gift Detail{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Gift Detail" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">Gift Detail</h1>
-<p><strong>Name:</strong> {{ gift.name }}</p>
-<p><strong>Comment:</strong> {{ gift.comment }}</p>
-<p><strong>Tags:</strong> {% for tag in gift.tags.all %}{{ tag.name }} {% endfor %}</p>
-<p><strong>Shared With:</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+<h1 class="my-4">{% trans "Gift Detail" %}</h1>
+<p><strong>{% trans "Name:" %}</strong> {{ gift.name }}</p>
+<p><strong>{% trans "Comment:" %}</strong> {{ gift.comment }}</p>
+<p><strong>{% trans "Tags:" %}</strong> {% for tag in gift.tags.all %}{{ tag.name }} {% endfor %}</p>
+<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">Edit Gift</a>
+<a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">{% trans "Edit Gift" %}</a>
 
-<h2 class="my-4">Persons related to this gift</h2>
-<a href="{% url 'gift_manager:add_gift_relation' gift.gift_id %}" class="btn btn-primary mb-3">Add Relation</a>
+<h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
+<a href="{% url 'gift_manager:add_gift_relation' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
 <table id="data-table" class="table table-striped">
     <thead>
         <tr>
-            <th>Person</th>
-            <th>Status</th>
-            <th>Due Date</th>
+            <th>{% trans "Person" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Due Date" %}</th>
         </tr>
     </thead>
     <tbody>

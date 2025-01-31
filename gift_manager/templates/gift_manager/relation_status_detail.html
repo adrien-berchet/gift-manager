@@ -1,20 +1,20 @@
 {% extends "gift_manager/base.html" %}
 {% load custom_filters %}
 
-{% block title %}Relation Status Detail{% endblock %}
+{% block title %}{% trans "Relation Status Detail" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">Relation Status Detail</h1>
-<p><strong>Status:</strong> {{ status.status }}</p>
+<h1 class="my-4">{% trans "Relation Status Detail" %}</h1>
+<p><strong>{% trans "Status" %}:</strong> {{ status.status }}</p>
 
-<h2 class="my-4">Relations with this Status</h2>
+<h2 class="my-4">{% trans "Relations with this Status" %}</h2>
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Status</th>
-            <th>Gift</th>
-            <th>Event</th>
-            <th>Due Date</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Gift" %}</th>
+            <th>{% trans "Event" %}</th>
+            <th>{% trans "Due Date" %}</th>
         </tr>
     </thead>
     <tbody>

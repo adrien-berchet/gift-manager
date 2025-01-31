@@ -1,13 +1,14 @@
 {% extends "gift_manager/base.html" %}
 
-{% block title %}{{ action }} {{ type }}{% endblock %}
+{% load i18n %}
+{% block title %}{{ action }} {{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ action }} {{ type }}</h1>
+<h1 class="my-4">{{ action }} {{ translated_type }}</h1>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit" class="btn btn-success">Save</button>
-    <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
 </form>
 {% endblock %}

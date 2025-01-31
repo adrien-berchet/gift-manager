@@ -1,27 +1,28 @@
 {% extends "gift_manager/base.html" %}
 {% load custom_filters %}
 
-{% block title %}Event Detail{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Event Detail" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">Event Detail</h1>
-<p><strong>Name:</strong> {{ event.name }}</p>
-<p><strong>Comment:</strong> {{ event.comment }}</p>
-<p><strong>Usual Date:</strong> {{ event.usual_date|date:"Y-m-d" }}</p>
-<p><strong>Absolute Date:</strong> {{ event.absolute_date|date:"Y-m-d" }}</p>
-<p><strong>Recurrence:</strong> {{ event.recurrence }}</p>
-<p><strong>Shared With:</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+<h1 class="my-4">{% trans "Event Detail" %}</h1>
+<p><strong>{% trans "Name:" %}</strong> {{ event.name }}</p>
+<p><strong>{% trans "Comment:" %}</strong> {{ event.comment }}</p>
+<p><strong>{% trans "Usual Date:" %}</strong> {{ event.usual_date|date:"Y-m-d" }}</p>
+<p><strong>{% trans "Absolute Date:" %}</strong> {{ event.absolute_date|date:"Y-m-d" }}</p>
+<p><strong>{% trans "Recurrence:" %}</strong> {{ event.recurrence }}</p>
+<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:event_edit' event.event_id %}" class="btn btn-warning mb-3">Edit Event</a>
+<a href="{% url 'gift_manager:event_edit' event.event_id %}" class="btn btn-warning mb-3">{% trans "Edit Event" %}</a>
 
-<h2 class="my-4">Relations for this Event</h2>
+<h2 class="my-4">{% trans "Relations for this Event" %}</h2>
 <table id="data-table" class="table table-striped">
     <thead>
         <tr>
-            <th>Person</th>
-            <th>Gift</th>
-            <th>Status</th>
-            <th>Due Date</th>
+            <th>{% trans "Person" %}</th>
+            <th>{% trans "Gift" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Due Date" %}</th>
         </tr>
     </thead>
     <tbody>

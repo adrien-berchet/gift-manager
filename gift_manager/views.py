@@ -12,6 +12,7 @@ from django.contrib.auth.models import User
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
+from django.utils.translation import gettext
 
 from .models import Person
 from .models import Gift
@@ -20,8 +21,10 @@ from .models import PersonPermission
 from .models import Relation
 from .models import RelationStatus
 from .forms import PersonRelationForm
+from .forms import GiftForm
 from .forms import GiftRelationForm
 from .forms import EventForm
+from .forms import PersonForm
 
 
 def home(request):
@@ -66,6 +69,7 @@ class PersonListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Persons'
+        context['translated_type'] = gettext('Persons')
         context['column_names'] = self.column_names
         return context
 
@@ -80,15 +84,16 @@ class PersonListView(LoginRequiredMixin, ListView):
 
 class PersonCreateView(LoginRequiredMixin, CreateView):
     model = Person
+    form_class = PersonForm
     template_name = "gift_manager/create_form.html"
-    fields = ['first_name', 'family_name', 'email_address', 'groups', 'shared_with']
     login_url = "/accounts/login/"
     success_url = reverse_lazy('gift_manager:persons')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Person'
-        context["action"] = "Create"
+        context['translated_type'] = gettext('Person')
+        context["action"] = gettext("Create")
         context['cancel_url'] = reverse_lazy('gift_manager:persons')
         return context
 
@@ -110,8 +115,8 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
 
 class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
     model = Person
+    form_class = PersonForm
     template_name = "gift_manager/create_form.html"
-    fields = ['first_name', 'family_name', 'email_address', 'groups', 'shared_with']
     login_url = "/accounts/login/"
     success_url = reverse_lazy('gift_manager:persons')
     pk_name = "person_id"
@@ -119,7 +124,8 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Person'
-        context["action"] = "Edit"
+        context['translated_type'] = gettext('Person')
+        context["action"] = gettext("Edit")
         context['cancel_url'] = reverse_lazy('gift_manager:persons')
         return context
 
@@ -154,6 +160,7 @@ class GiftListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Gifts'
+        context['translated_type'] = gettext('Gifts')
         context['column_names'] = self.column_names
         return context
 
@@ -168,15 +175,16 @@ class GiftListView(LoginRequiredMixin, ListView):
 
 class GiftCreateView(LoginRequiredMixin, CreateView):
     model = Gift
+    form_class = GiftForm
     template_name = "gift_manager/create_form.html"
-    fields = ['name', 'comment', 'tags', 'shared_with']
     login_url = "/accounts/login/"
     success_url = reverse_lazy('gift_manager:gifts')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Gift'
-        context["action"] = "Create"
+        context['translated_type'] = gettext('Gift')
+        context["action"] = gettext("Create")
         context['cancel_url'] = reverse_lazy('gift_manager:gifts')
         return context
 
@@ -207,7 +215,8 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Gift'
-        context["action"] = "Edit"
+        context['translated_type'] = gettext('Gift')
+        context["action"] = gettext("Edit")
         context['cancel_url'] = reverse_lazy('gift_manager:gifts')
         return context
 
@@ -242,6 +251,7 @@ class EventListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Events'
+        context['translated_type'] = gettext('Events')
         context['column_names'] = self.column_names
         return context
 
@@ -264,7 +274,8 @@ class EventCreateView(LoginRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Event'
-        context["action"] = "Create"
+        context['translated_type'] = gettext('Event')
+        context["action"] = gettext("Create")
         context['cancel_url'] = reverse_lazy('gift_manager:events')
         return context
 
@@ -294,7 +305,8 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Event'
-        context["action"] = "Edit"
+        context['translated_type'] = gettext('Event')
+        context["action"] = gettext("Edit")
         context['cancel_url'] = reverse_lazy('gift_manager:events')
         return context
 
@@ -406,14 +418,6 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
         return reverse('gift_manager:gift_detail', kwargs={'pk': self.kwargs['pk']})
 
 
-# class RelationStatusListView(LoginRequiredMixin, ListView):
-#     model = RelationStatus
-#     template_name = "gift_manager/relation_status_list.html"
-#     context_object_name = "statuses"
-#     login_url = "/accounts/login/"
-#     redirect_field_name = "redirect_to"
-
-
 class RelationStatusListView(LoginRequiredMixin, ListView):
     model = RelationStatus
     template_name = "gift_manager/data_list.html"
@@ -427,6 +431,7 @@ class RelationStatusListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['type'] = 'Status'
+        context['translated_type'] = gettext('Status')
         context['column_names'] = self.column_names
         return context
 

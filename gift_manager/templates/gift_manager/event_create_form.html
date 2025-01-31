@@ -1,5 +1,6 @@
 {% extends "gift_manager/base.html" %}
 
+{% load i18n %}
 {% block title %}{{ action }} {{ type }}{% endblock %}
 
 {% block content %}
@@ -13,8 +14,8 @@
     <div id="recurrence_field" style="display: none;">
         {{ form.recurrence.label_tag }} {{ form.recurrence }}
     </div>
-    <button type="submit" class="btn btn-success">Save</button>
-    <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
+    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
 </form>
 
 <script>
