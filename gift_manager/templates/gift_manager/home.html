@@ -2,7 +2,7 @@
 {% load static %}
 {% load i18n %}
 
-{% block title %}Accueil{% endblock %}
+{% block title %}{% trans Accueil %}{% endblock %}
 
 {% block content %}
 
@@ -24,12 +24,4 @@
     </div>
 </div>
 
-{% if user.is_authenticated %}
-    <form method="post" action="{% url 'logout' %}" class="mt-2">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Logout</button>
-    </form>
-{% else %}
-    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">Login</a>
-{% endif %}
 {% endblock %}

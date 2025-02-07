@@ -1,6 +1,6 @@
 django
+django-allauth
 django-grappelli
-django-registration
 psycopg[binary]
 python-dotenv
 ruff

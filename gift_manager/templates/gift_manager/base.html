@@ -28,7 +28,12 @@
                     <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">{% trans "Gift statuses" %}</a>
                 </li>
             </ul>
-            <ul class="navbar-nav ml-auto">
+            <ul class="navbar-nav ml-auto d-flex align-items-center">
+                {% if user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin_redirect' %}">Admin</a>
+                    </li>
+                {% endif %}
                 <li class="nav-item mr-2">
                     <form action="{% url 'set_language' %}" method="post">
                         {% csrf_token %}
@@ -44,15 +49,16 @@
                     </form>
                 </li>
                 {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <form method="post" action="{% url 'logout' %}">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-outline-danger">Logout</button>
-                        </form>
-                    </li>
+                    {% url 'account_email' as email_url_ %}
+                    {% url 'socialaccount_connections' as socialaccount_url_ %}
+                    {% if email_url_ or socialaccount_url_ %}
+                        <a href="{% if email_url_ %}{{ email_url_ }}{% else %}{{ socialaccount_url_ }}{% endif %}"
+                            class="btn btn-secondary">Manage Account</a>
+                    {% endif %}
+                    <a href="{% url 'account_logout' %}" class="btn btn-danger">{% trans "Sign Out" %}</a>
                 {% else %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        <a class="btn btn-success" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
                     </li>
                 {% endif %}
             </ul>
