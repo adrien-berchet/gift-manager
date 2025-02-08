@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-07 11:28+0100\n"
+"POT-Creation-Date: 2025-02-08 21:56+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: GiftManager/settings.py:155
+#: GiftManager/settings.py:143
 msgid "English"
 msgstr "Anglais"
 
-#: GiftManager/settings.py:156
+#: GiftManager/settings.py:144
 msgid "French"
 msgstr "Français"
 
@@ -101,7 +101,7 @@ msgstr "Récurrence"
 msgid "Person"
 msgstr "Personne"
 
-#: gift_manager/models.py:31 gift_manager/templates/gift_manager/base.html:19
+#: gift_manager/models.py:31 gift_manager/templates/gift_manager/base.html:20
 #: gift_manager/views.py:72
 msgid "Persons"
 msgstr "Personnes"
@@ -118,7 +118,7 @@ msgstr "Groupe"
 msgid "Gift"
 msgstr "Cadeau"
 
-#: gift_manager/models.py:126 gift_manager/templates/gift_manager/base.html:22
+#: gift_manager/models.py:126 gift_manager/templates/gift_manager/base.html:23
 #: gift_manager/views.py:167
 msgid "Gifts"
 msgstr "Cadeaux"
@@ -130,7 +130,7 @@ msgstr "Cadeaux"
 msgid "Event"
 msgstr "Événement"
 
-#: gift_manager/models.py:172 gift_manager/templates/gift_manager/base.html:25
+#: gift_manager/models.py:172 gift_manager/templates/gift_manager/base.html:26
 #: gift_manager/views.py:263
 msgid "Events"
 msgstr "Événements"
@@ -161,12 +161,12 @@ msgid "Select Language"
 msgstr "Sélectionner la langue"
 
 #: gift_manager/templates/allauth/layouts/base.html:68
-#: gift_manager/templates/gift_manager/base.html:58
+#: gift_manager/templates/gift_manager/base.html:59
 msgid "Sign Out"
 msgstr "Déconnexion"
 
 #: gift_manager/templates/allauth/layouts/base.html:70
-#: gift_manager/templates/gift_manager/base.html:61
+#: gift_manager/templates/gift_manager/base.html:62
 msgid "Sign In"
 msgstr "Connexion"
 
@@ -174,7 +174,7 @@ msgstr "Connexion"
 msgid "Sign Up"
 msgstr "Inscription"
 
-#: gift_manager/templates/gift_manager/base.html:28
+#: gift_manager/templates/gift_manager/base.html:29
 msgid "Gift statuses"
 msgstr "Statuts des cadeaux"
 
@@ -235,14 +235,14 @@ msgstr "Créer un nouvel événement"
 
 #: gift_manager/templates/gift_manager/data_list.html:22
 msgid "Actions"
-msgstr "Relations"
+msgstr "Actions"
 
 #: gift_manager/templates/gift_manager/data_list.html:33
 #: gift_manager/templates/gift_manager/data_list.html:37
 #: gift_manager/templates/gift_manager/data_list.html:41
 #: gift_manager/templates/gift_manager/data_list.html:45
-msgid "View"
-msgstr "Afficher"
+msgid "Details"
+msgstr "Détails"
 
 #: gift_manager/templates/gift_manager/data_list.html:34
 #: gift_manager/templates/gift_manager/data_list.html:38
