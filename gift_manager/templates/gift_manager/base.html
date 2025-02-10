@@ -20,6 +20,9 @@
                     <a class="nav-link" href="{% url 'gift_manager:persons' %}">{% trans "Persons" %}</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="{% url 'gift_manager:person_groups' %}">{% trans "Groups / Families" %}</a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{% url 'gift_manager:gifts' %}">{% trans "Gifts" %}</a>
                 </li>
                 <li class="nav-item">
@@ -27,9 +30,6 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">{% trans "Gift statuses" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:person_groups' %}">{% trans "Groups / Families" %}</a>
                 </li>
             </ul>
             <ul class="navbar-nav ml-auto d-flex align-items-center">

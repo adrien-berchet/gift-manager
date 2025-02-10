@@ -74,7 +74,6 @@ class PersonListView(LoginRequiredMixin, ListView):
         "family_name": "Family Name",
         "email_address": "Email Address",
         "groups": "Groups",
-        "shared_with": "Shared With",
     }
 
     def get_context_data(self, **kwargs):
@@ -193,7 +192,6 @@ class PersonGroupListView(LoginRequiredMixin, ListView):
     redirect_field_name = "redirect_to"
     column_names = {
         "name": "Group Name",
-        "shared_with": "Shared With",
     }
 
     def get_context_data(self, **kwargs):
@@ -322,7 +320,6 @@ class GiftListView(LoginRequiredMixin, ListView):
         "name": "Gift Name",
         "comment": "Comment",
         "tags": "Tags",
-        "shared_with": "Shared With",
     }
 
     def get_context_data(self, **kwargs):
@@ -373,7 +370,7 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
 class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
     model = Gift
     template_name = "gift_manager/create_form.html"
-    fields = ["name", "comment", "tags", "shared_with"]
+    fields = ["name", "comment", "tags"]
     login_url = "/accounts/login/"
     pk_name = "gift_id"
 
@@ -522,7 +519,7 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(person=self.object)
+        context["relations"] = Relation.objects.filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
