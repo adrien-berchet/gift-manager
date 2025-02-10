@@ -9,12 +9,14 @@ repos:
     rev: v5.0.0
     hooks:
       - id: check-added-large-files
+        exclude: staticfiles/
       - id: check-case-conflict
       - id: check-merge-conflict
       - id: check-symlinks
       - id: check-yaml
       - id: debug-statements
       - id: end-of-file-fixer
+        exclude: staticfiles/
       - id: trailing-whitespace
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
     rev: v9.17.0

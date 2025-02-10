@@ -296,7 +296,7 @@ def add_multiple_persons_to_group(request, pk):
     )
 
 
-def remove_person_from_group(request, pk, person_id):
+def remove_person_from_group(request, pk, person_id):  # noqa: ARG001
     group = get_object_or_404(PersonGroup, group_id=pk)
     person = get_object_or_404(Person, person_id=person_id)
     person.groups.remove(group)

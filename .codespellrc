@@ -1,3 +1,2 @@
 [codespell]
-skip = .git/*,*.svg,*.mo,*.po
-ignore-regex = vor
+skip = .git/*,*.svg,*.mo,*.po,staticfiles/*
