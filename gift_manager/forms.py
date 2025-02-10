@@ -1,9 +1,11 @@
 from django import forms
+from django.db.models import Q
 from django.utils.translation import gettext_lazy
 
 from .models import Event
 from .models import Gift
 from .models import Person
+from .models import PersonGroup
 from .models import Relation
 
 
@@ -36,7 +38,57 @@ class PersonForm(forms.ModelForm):
         self.fields["shared_with"].required = False
 
 
+class PersonGroupForm(forms.ModelForm):
+    class Meta:
+        model = PersonGroup
+        fields = ["name", "shared_with"]
+        labels = {
+            "name": gettext_lazy("Name"),
+            "shared_with": gettext_lazy("Shared With"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["name"].required = False
+        self.fields["shared_with"].required = False
+
+
+class PersonGroupAddMultiplePersonsForm(forms.Form):
+    persons = forms.ModelMultipleChoiceField(
+        queryset=Person.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label="Persons",
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)  # Get the user from the kwargs
+        super().__init__(*args, **kwargs)
+        # Filter the persons accessible to this user
+        if user:
+            self.fields["persons"].queryset = Person.objects.filter(Q(shared_with=user))
+
+    def save(self, group: PersonGroup):
+        """Add all selected persons to the group."""
+        for i in self.cleaned_data["persons"]:
+            i.groups.add(group)
+            i.save()
+
+
 class PersonRelationForm(forms.ModelForm):
+    class Meta:
+        model = Relation
+        fields = ["gift", "status", "due_date", "event"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["event"].queryset = Event.objects.all()
+        self.fields["event"].required = False
+
+
+class PersonGroupRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["gift", "status", "due_date", "event"]
@@ -73,10 +125,22 @@ class GiftForm(forms.ModelForm):
 class GiftRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["person", "status", "due_date"]
+        fields = ["person", "group", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        person = cleaned_data.get("person")
+        group = cleaned_data.get("group")
+
+        if person and group:
+            self.add_error("group", gettext_lazy("You can not select both a person and a group."))
+        elif not person and not group:
+            raise forms.ValidationError(gettext_lazy("You must select one person or one group."))
+
+        return cleaned_data
 
 
 class EventForm(forms.ModelForm):

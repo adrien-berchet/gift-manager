@@ -59,8 +59,8 @@ class PersonGroup(models.Model):
     )
 
     class Meta:
-        verbose_name = gettext_lazy("Group")
-        verbose_name_plural = gettext_lazy("Groups")
+        verbose_name = gettext_lazy("Person group")
+        verbose_name_plural = gettext_lazy("¨Person groups")
 
     def __str__(self):
         return self.name
@@ -206,14 +206,21 @@ class Relation(models.Model):
     """Model for a relation between a person and a gift."""
 
     relation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name="persons")
+    person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, related_name="persons", null=True, blank=True
+    )
+    group = models.ForeignKey(
+        PersonGroup, on_delete=models.CASCADE, related_name="groups", null=True, blank=True
+    )
     gift = models.ForeignKey(Gift, on_delete=models.CASCADE, related_name="gifts")
     event = models.ForeignKey(
         Event, on_delete=models.SET_NULL, related_name="relations", null=True, blank=True
     )
     status = models.ForeignKey(
-        RelationStatus, on_delete=models.CASCADE
-    )  # Add default value after the status model is created and populated
+        RelationStatus,
+        on_delete=models.CASCADE,
+        default="Idea",
+    )
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)

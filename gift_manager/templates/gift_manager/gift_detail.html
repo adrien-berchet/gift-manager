@@ -18,7 +18,7 @@
 <table id="data-table" class="table table-striped">
     <thead>
         <tr>
-            <th>{% trans "Person" %}</th>
+            <th>{% trans "Person" %} / {% trans "Group" %}</th>
             <th>{% trans "Status" %}</th>
             <th>{% trans "Due Date" %}</th>
         </tr>
@@ -26,7 +26,13 @@
     <tbody>
         {% for relation in relations %}
             <tr>
-                <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
+                {% if relation.person %}
+                    <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
+                {% elif relation.group %}
+                    <td><a href="{% url 'gift_manager:person_group_detail' relation.group.group_id %}">{{ relation.group.name }}</a></td>
+                {% else %}
+                    <td>Bad relation</td>
+                {% endif %}
                 <td>{{ relation.status.status }}</td>
                 <td>{{ relation.due_date|replace_none:"-" }}</td>
             </tr>

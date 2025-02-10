@@ -21,14 +21,16 @@ from django.shortcuts import redirect
 from django.urls import include
 from django.urls import path
 
-def admin_redirect(request):
-    return redirect('/admin/')
+
+def admin_redirect(request):  # noqa: ARG001
+    return redirect("/admin/")
+
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("admin_redirect/", admin_redirect, name='admin_redirect'),
+    path("admin_redirect/", admin_redirect, name="admin_redirect"),
     path("i18n/", include("django.conf.urls.i18n")),
-    path('accounts/', include('allauth.urls')),
+    path("accounts/", include("allauth.urls")),
 ]
 
 urlpatterns += i18n_patterns(

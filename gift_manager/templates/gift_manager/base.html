@@ -28,6 +28,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">{% trans "Gift statuses" %}</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'gift_manager:person_groups' %}">{% trans "Groups / Families" %}</a>
+                </li>
             </ul>
             <ul class="navbar-nav ml-auto d-flex align-items-center">
                 {% if user.is_superuser %}

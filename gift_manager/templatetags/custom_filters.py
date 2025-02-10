@@ -14,6 +14,11 @@ def get_item(dictionary, key):
 
 
 @register.filter
+def get_attr(obj, attr):
+    return getattr(obj, attr, "")
+
+
+@register.filter
 def replace_none(value, replacement="-"):
     return value if value is not None else replacement
 

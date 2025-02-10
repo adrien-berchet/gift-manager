@@ -9,7 +9,7 @@
 <p><strong>{% trans "First name:" %}</strong> {{ person.first_name }}</p>
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
 <p><strong>{% trans "Email address:" %}</strong> {{ person.email_address }}</p>
-<p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}{{ group.name }} {% endfor %}</p>
+<p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
 
 <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit Person" %}</a>

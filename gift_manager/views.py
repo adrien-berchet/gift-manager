@@ -1,9 +1,12 @@
 # filepath: /home/adrien/Work/Perso/GiftManager/gift_manager/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.db.models import Q
+from django.db.models.functions import Coalesce
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
@@ -18,10 +21,14 @@ from .forms import EventForm
 from .forms import GiftForm
 from .forms import GiftRelationForm
 from .forms import PersonForm
+from .forms import PersonGroupAddMultiplePersonsForm
+from .forms import PersonGroupForm
+from .forms import PersonGroupRelationForm
 from .forms import PersonRelationForm
 from .models import Event
 from .models import Gift
 from .models import Person
+from .models import PersonGroup
 from .models import Relation
 from .models import RelationStatus
 
@@ -32,11 +39,15 @@ def home(request):
 
 
 class FilterByUserMixin:
+    """Mixin to filter objects by the current user."""
+
     def get_queryset(self):
         return self.model.objects.filter(Q(shared_with=self.request.user))
 
 
 class GetObjectByTokenMixin:
+    """Mixin to get an object by its token."""
+
     pk_name = None
 
     def get_object(self, queryset=None):
@@ -71,13 +82,35 @@ class PersonListView(LoginRequiredMixin, ListView):
         context["type"] = "Persons"
         context["translated_type"] = gettext("Persons")
         context["column_names"] = self.column_names
+
         return context
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""
-        return Person.objects.filter(Q(shared_with=self.request.user)).values(
-            "person_id", *self.column_names
+        queryset = (
+            Person.objects.filter(Q(shared_with=self.request.user))
+            .values("person_id", *list(set(self.column_names.keys()).difference(["groups"])))
+            .annotate(
+                group_names=Coalesce(
+                    ArrayAgg("groups__name", distinct=True),  # Retrieve the list of group names
+                    [],
+                ),
+                group_ids=Coalesce(
+                    ArrayAgg("groups__group_id", distinct=True),  # Retrieve the list of group UUIDs
+                    [],
+                ),
+            )
         )
+
+        # Transform the list of group names and UUIDs into a list of tuples
+        for person in queryset:
+            person["grouped_groups"] = [
+                (i, j)
+                for i, j in list(zip(person["group_names"], person["group_ids"]))
+                if i is not None and j is not None
+            ]
+
+        return queryset
 
 
 class PersonCreateView(LoginRequiredMixin, CreateView):
@@ -98,13 +131,13 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
@@ -115,7 +148,6 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     form_class = PersonForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
-    success_url = reverse_lazy("gift_manager:persons")
     pk_name = "person_id"
 
     def get_context_data(self, **kwargs):
@@ -123,29 +155,161 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         context["type"] = "Person"
         context["translated_type"] = gettext("Person")
         context["action"] = gettext("Edit")
-        context["cancel_url"] = reverse_lazy("gift_manager:persons")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
+
+    def get_success_url(self):
+        return reverse("gift_manager:person_detail", kwargs={"pk": self.object.person_id})
 
 
 class PersonDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
     model = Person
     template_name = "gift_manager/confirm_delete.html"
-    success_url = reverse_lazy('gift_manager:persons')
+    success_url = reverse_lazy("gift_manager:persons")
     pk_name = "person_id"
+
+
+class PersonGroupListView(LoginRequiredMixin, ListView):
+    model = PersonGroup
+    template_name = "gift_manager/data_list.html"
+    context_object_name = "data"
+    login_url = "/accounts/login/"
+    redirect_field_name = "redirect_to"
+    column_names = {
+        "name": "Group Name",
+        "shared_with": "Shared With",
+    }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["type"] = "Groups"
+        context["translated_type"] = gettext("Groups")
+        context["column_names"] = self.column_names
+        return context
+
+    def get_queryset(self):
+        return PersonGroup.objects.filter(Q(shared_with=self.request.user)).values(
+            "group_id", *self.column_names
+        )
+
+
+class PersonGroupCreateView(LoginRequiredMixin, CreateView):
+    model = PersonGroup
+    form_class = PersonGroupForm
+    template_name = "gift_manager/create_form.html"
+    login_url = "/accounts/login/"
+    success_url = reverse_lazy("gift_manager:person_groups")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["type"] = "Person group"
+        context["translated_type"] = gettext("Person group")
+        context["action"] = gettext("Create")
+        context["cancel_url"] = reverse_lazy("gift_manager:person_groups")
+        return context
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].required = False  # Make the field optional in the form
+        return form
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+        form.instance.shared_with.add(self.request.user)  # Add current user
+        if form.cleaned_data["shared_with"]:
+            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+        return response
+
+
+class PersonGroupUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView
+):
+    model = PersonGroup
+    form_class = PersonGroupForm
+    template_name = "gift_manager/create_form.html"
+    login_url = "/accounts/login/"
+    pk_name = "group_id"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["type"] = "Person group"
+        context["translated_type"] = gettext("Person group")
+        context["action"] = gettext("Edit")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
+        return context
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].required = False  # Make the field optional in the form
+        return form
+
+    def form_valid(self, form):
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+        form.instance.shared_with.add(self.request.user)  # Add current user
+        if form.cleaned_data["shared_with"]:
+            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+        return response
+
+    def get_success_url(self):
+        return reverse("gift_manager:person_group_detail", kwargs={"pk": self.object.group_id})
+
+
+def add_multiple_persons_to_group(request, pk):
+    group = get_object_or_404(PersonGroup, group_id=pk)
+    if request.method == "POST":
+        form = PersonGroupAddMultiplePersonsForm(request.POST, user=request.user)
+        if form.is_valid():
+            form.save(group)
+            return redirect("gift_manager:person_group_detail", pk=pk)
+    else:
+        form = PersonGroupAddMultiplePersonsForm(user=request.user)
+
+    return render(
+        request,
+        "gift_manager/person_group_add_person_form.html",
+        {
+            "group": group,
+            "form": form,
+        },
+    )
+
+
+def remove_person_from_group(request, pk, person_id):
+    group = get_object_or_404(PersonGroup, group_id=pk)
+    person = get_object_or_404(Person, person_id=person_id)
+    person.groups.remove(group)
+    return redirect("gift_manager:person_group_detail", pk=pk)
+
+
+class PersonGroupDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView
+):
+    model = PersonGroup
+    template_name = "gift_manager/confirm_delete.html"
+    success_url = reverse_lazy("gift_manager:person_groups")
+    pk_name = "persongroup_id"
 
 
 class GiftListView(LoginRequiredMixin, ListView):
@@ -193,14 +357,14 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
-        form.fields["tags"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
+        form.fields["tags"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
@@ -211,7 +375,6 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
     template_name = "gift_manager/create_form.html"
     fields = ["name", "comment", "tags", "shared_with"]
     login_url = "/accounts/login/"
-    success_url = reverse_lazy("gift_manager:gifts")
     pk_name = "gift_id"
 
     def get_context_data(self, **kwargs):
@@ -219,29 +382,34 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         context["type"] = "Gift"
         context["translated_type"] = gettext("Gift")
         context["action"] = gettext("Edit")
-        context["cancel_url"] = reverse_lazy("gift_manager:gifts")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
-        form.fields["tags"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
+        form.fields["tags"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
+
+    def get_success_url(self):
+        return reverse("gift_manager:gift_detail", kwargs={"pk": self.object.person_id})
 
 
 class GiftDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
     model = Gift
     template_name = "gift_manager/confirm_delete.html"
-    success_url = reverse_lazy('gift_manager:gifts')
+    success_url = reverse_lazy("gift_manager:gifts")
     pk_name = "gift_id"
 
 
@@ -289,13 +457,13 @@ class EventCreateView(LoginRequiredMixin, CreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
@@ -314,28 +482,33 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         context["type"] = "Event"
         context["translated_type"] = gettext("Event")
         context["action"] = gettext("Edit")
-        context["cancel_url"] = reverse_lazy("gift_manager:events")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:event_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
-        form.fields["shared_with"].required = False  # Rendre le champ optionnel dans le formulaire
+        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        form.instance.shared_with.add(self.request.user)  # Ajoute l'utilisateur courant
+        form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
             form.instance.shared_with.set(form.cleaned_data["shared_with"])
         return response
+
+    def get_success_url(self):
+        return reverse("gift_manager:event_detail", kwargs={"pk": self.object.person_id})
 
 
 class EventDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
     model = Event
     template_name = "gift_manager/confirm_delete.html"
-    success_url = reverse_lazy('gift_manager:events')
+    success_url = reverse_lazy("gift_manager:events")
     pk_name = "event_id"
 
 
@@ -350,6 +523,23 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["relations"] = Relation.objects.filter(person=self.object)
+        context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
+        return context
+
+
+class PersonGroupDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView
+):
+    model = PersonGroup
+    template_name = "gift_manager/person_group_detail.html"
+    context_object_name = "group"
+    login_url = "/accounts/login/"
+    redirect_field_name = "redirect_to"
+    pk_name = "group_id"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["persons"] = Person.objects.filter(groups=self.object)
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -406,6 +596,30 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]})
+
+
+class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
+    model = Relation
+    form_class = PersonGroupRelationForm
+    template_name = "gift_manager/create_group_relation_form.html"
+    login_url = "/accounts/login/"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial["group"] = self.kwargs["pk"]
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["group"] = PersonGroup.objects.get(group_id=self.kwargs["pk"])
+        return context
+
+    def form_valid(self, form):
+        form.instance.group = PersonGroup.objects.get(group_id=self.kwargs["pk"])
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]})
 
 
 class GiftRelationCreateView(LoginRequiredMixin, CreateView):

@@ -11,6 +11,8 @@
     <button onclick="location.href='{% url 'gift_manager:gift_create' %}'">{% trans "Create New Gift" %}</button>
 {% elif type == 'Events' %}
     <button onclick="location.href='{% url 'gift_manager:event_create' %}'">{% trans "Create New Event" %}</button>
+    {% elif type == 'Groups' %}
+    <button onclick="location.href='{% url 'gift_manager:person_group_create' %}'">{% trans "Create New Group" %}</button>
 {% endif %}
 {% load custom_filters %}
 <table id="data-table" class="table table-striped">
@@ -26,9 +28,22 @@
         {% for item in data %}
             <tr>
                 {% for col, name in column_names.items %}
-                    <td>{{ item|get_item:col }}</td>
+                        {% comment %} <td>{{ item|get_item:col|replace_none:"" }}</td> {% endcomment %}
+                    {% if col != "groups" %}
+                        <td>{{ item|get_item:col|replace_none:"" }}</td>
+                        {% comment %} <td>{{ item|get_attr:col }}</td> {% endcomment %}
+                        {% comment %} <td>{{ item.col }}</td> {% endcomment %}
+                    {% else %}
+                        <td>
+                            {% if item.grouped_groups %}
+                                {% for group_name, group_id in item.grouped_groups %}
+                                    <a href="{% url 'gift_manager:person_group_detail' group_id %}">{{ group_name }}</a>{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </td>
+                    {% endif %}
                 {% endfor %}
-                <td>
+                <td style="white-space: nowrap;">
                     {% if type == 'Persons' %}
                         <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
                         <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
@@ -43,6 +58,10 @@
                         <a href="{% url 'gift_manager:event_delete' item.event_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
                     {% elif type == 'Status' %}
                         <a href="{% url 'gift_manager:relation_status_detail' item.pk %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
+                    {% elif type == 'Groups' %}
+                        <a href="{% url 'gift_manager:person_group_detail' item.group_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
+                        <a href="{% url 'gift_manager:person_group_edit' item.group_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'gift_manager:person_group_delete' item.group_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
                     {% endif %}
                 </td>
             </tr>
