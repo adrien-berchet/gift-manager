@@ -1,13 +1,61 @@
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy
 
 PERMISSION_CHOICES = [
     ("editor", "Editor"),
     ("viewer", "Viewer"),
 ]
+
+
+class Profile(models.Model):
+    """Model for a user profile."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    friends = models.ManyToManyField("self", symmetrical=True, blank=True)
+
+    def __str__(self):
+        return f"{gettext_lazy('Profile of')} {self.user.username}"
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_user_profile(sender, instance, created, **kwargs):  # noqa: ARG001
+    if created:
+        Profile.objects.create(user=instance)
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def save_user_profile(sender, instance, **kwargs):  # noqa: ARG001
+    if hasattr(instance, "profile"):
+        instance.profile.save()
+    else:
+        Profile.objects.create(user=instance)
+
+
+class Invitation(models.Model):
+    """Model for an invitation."""
+
+    token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="%(app_label)s_%(class)s_invitations_sent",
+        on_delete=models.CASCADE,
+    )
+    recipient_email = models.EmailField()
+    accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return (
+            f"{gettext_lazy('Invitation from')} {self.sender} "
+            f"{gettext_lazy('to')} {self.recipient_email}"
+        )
 
 
 class Person(models.Model):
@@ -23,7 +71,11 @@ class Person(models.Model):
         User, through="PersonPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
     user_link = models.ForeignKey(
-        User, on_delete=models.SET_NULL, related_name="persons", null=True, blank=True
+        User,
+        on_delete=models.SET_NULL,
+        related_name="%(app_label)s_%(class)s_user",
+        null=True,
+        blank=True,
     )
 
     class Meta:
@@ -88,7 +140,7 @@ class GiftTag(models.Model):
     parent_tag = models.ForeignKey("GiftTag", on_delete=models.CASCADE, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(
-        User, through="GiftTagPermission", related_name="shared_gift_tags"
+        User, through="GiftTagPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
 
     def __str__(self):

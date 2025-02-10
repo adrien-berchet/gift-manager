@@ -1,0 +1,18 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Send Invitation" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 card p-3">
+    <h1>{% trans "Send Invitation" %}</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="recipient_email">{% trans "Recipient Email:" %}</label>
+            <input type="email" name="recipient_email" id="recipient_email" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">{% trans "Send Invitation" %}</button>
+    </form>
+</div>
+{% endblock %}

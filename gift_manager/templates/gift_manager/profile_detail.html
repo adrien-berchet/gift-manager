@@ -1,0 +1,51 @@
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+
+{% load i18n %}
+
+{% block title %}{% trans "My Profile" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 card p-3">
+    <h1>{% trans "My Profile" %}</h1>
+    <p><strong>{% trans "User name:" %}</strong> {{ profile.user.username }}</p>
+    <p><strong>{% trans "Email address:" %}</strong> {{ profile.user.email }}
+       <a href="{% url 'account_email' %}" class="btn btn-secondary ml-4">{% trans 'Update' %}</a>
+    </p>
+    <h2 class="d-flex justify-content-between align-items-center">
+        <span>{% trans "My friends:" %}</span>
+        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-primary">{% trans "Invite friend" %}</a>
+    </h2>
+    {% if profile.friends.all %}
+        <div class="table-responsive mt-3">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{% trans "Username" %}</th>
+                        <th>{% trans "Email address" %}</th>
+                        <th>{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for friend in profile.friends.all %}
+                        <tr>
+                            <td>{{ friend.user.username }}</td>
+                            <td>{{ friend.user.email }}</td>
+                            <td>
+                                <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}" style="display:inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Remove friend' %}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p>{% trans "You don't have any friend yet." %}</p>
+    {% endif %}
+</div>
+{% endblock %}

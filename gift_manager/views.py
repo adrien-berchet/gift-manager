@@ -1,7 +1,10 @@
 # filepath: /home/adrien/Work/Perso/GiftManager/gift_manager/views.py
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
+from django.core.mail import send_mail
 from django.db.models import Q
 from django.db.models.functions import Coalesce
 from django.http import Http404
@@ -10,6 +13,7 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.generic import DeleteView
 from django.views.generic import DetailView
@@ -27,8 +31,10 @@ from .forms import PersonGroupRelationForm
 from .forms import PersonRelationForm
 from .models import Event
 from .models import Gift
+from .models import Invitation
 from .models import Person
 from .models import PersonGroup
+from .models import Profile
 from .models import Relation
 from .models import RelationStatus
 
@@ -36,6 +42,73 @@ from .models import RelationStatus
 def home(request):
     """Home page view."""
     return render(request, "gift_manager/home.html")
+
+
+class ProfileDetailView(LoginRequiredMixin, DetailView):
+    model = Profile
+    template_name = "gift_manager/profile_detail.html"
+    context_object_name = "profile"
+
+    def get_object(self):
+        return Profile.objects.get(user=self.request.user)
+
+
+def send_invitation(request):
+    if request.method == "POST":
+        recipient_email = request.POST.get("recipient_email")
+        invitation = Invitation.objects.create(sender=request.user, recipient_email=recipient_email)
+        invitation_link = request.build_absolute_uri(
+            reverse("gift_manager:accept_invitation", args=[invitation.token])
+        )
+        send_mail(
+            subject=gettext("Join my friends on Gift Manager"),
+            message=(
+                f"{gettext('To accept the invitation, click on the following link:')} "
+                f"{invitation_link}"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[recipient_email],
+        )
+        return redirect("gift_manager:profile_detail")
+    return render(request, "gift_manager/send_invitation.html")
+
+
+def accept_invitation(request, token):
+    invitation = get_object_or_404(Invitation, token=token, accepted=False)
+    # If the user is already logged in, establish the friendship relationship
+    if request.user.is_authenticated:
+        invitation.accepted = True
+        invitation.accepted_at = timezone.now()
+        invitation.save()
+        # Create or get the user's profile
+        user_profile, _ = Profile.objects.get_or_create(user=request.user)
+        sender_profile, _ = Profile.objects.get_or_create(user=invitation.sender)
+        # Add the sender to the user's friends and vice versa
+        user_profile.friends.add(sender_profile)
+        sender_profile.friends.add(user_profile)
+        user_profile.save()
+        sender_profile.save()
+        return redirect("gift_manager:profile_detail")
+    # Otherwise, redirect to the registration with the token
+    # (to be handled in the registration process)
+    return redirect(f"{reverse('account_signup')}?invitation_token={token}")
+
+
+@login_required
+def remove_friend(request, friend_id):
+    if request.method == "POST":
+        friend_profile = get_object_or_404(Profile, pk=friend_id)
+        user_profile = get_object_or_404(Profile, user=request.user)
+        # Remove the friend relationship (symmetric)
+        if friend_profile in user_profile.friends.all():
+            user_profile.friends.remove(friend_profile)
+
+        # Remove all shared objects between the two users
+        persons_shared = Person.objects.filter(shared_with=request.user)
+        for person in persons_shared:
+            if friend_profile.user in person.shared_with.all():
+                person.shared_with.remove(friend_profile.user)
+    return redirect("gift_manager:profile_detail")
 
 
 class FilterByUserMixin:
@@ -138,7 +211,7 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
 
@@ -170,7 +243,7 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
     def get_success_url(self):
@@ -233,7 +306,7 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
 
@@ -267,7 +340,7 @@ class PersonGroupUpdateView(
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
     def get_success_url(self):
@@ -363,7 +436,7 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
 
@@ -396,7 +469,7 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
     def get_success_url(self):
@@ -462,7 +535,7 @@ class EventCreateView(LoginRequiredMixin, CreateView):
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
 
@@ -495,7 +568,7 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         response = super().form_valid(form)
         form.instance.shared_with.add(self.request.user)  # Add current user
         if form.cleaned_data["shared_with"]:
-            form.instance.shared_with.set(form.cleaned_data["shared_with"])
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
         return response
 
     def get_success_url(self):
@@ -519,7 +592,9 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
+        context["relations"] = Relation.objects.filter(
+            Q(person=self.object) | Q(group__in=self.object.groups.all())
+        )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 

@@ -10,6 +10,10 @@ app_name = "gift_manager"
 urlpatterns = [
     path("", views.home, name="home"),
     path("admin/", admin.site.urls),
+    path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
+    path("send-invitation/", views.send_invitation, name="send_invitation"),
+    path("accept-invitation/<uuid:token>/", views.accept_invitation, name="accept_invitation"),
+    path("profile/remove-friend/<int:friend_id>/", views.remove_friend, name="remove_friend"),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),
     path("persons/<uuid:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
