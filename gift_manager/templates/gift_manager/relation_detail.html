@@ -1,0 +1,23 @@
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+
+{% load i18n %}
+{% block title %}{% trans "Gifting details" %}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{% trans "Gifting details" %}</h1>
+<p><strong>{% trans "Beneficiary:" %}</strong>
+    {% if relation.person %}
+    <a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a>
+    {% else %}
+    <td><a href="{% url 'gift_manager:person_group_detail' relation.group.group_id %}">{{ relation.group.name }}</a></td>
+    {% endif %}
+</p>
+<p><strong>{% trans "Gift:" %}</strong> <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></p>
+<p><strong>{% trans "Event:" %}</strong> {% if relation.event %}<a href="{% url 'gift_manager:event_detail' relation.event.event_id %}">{{ relation.event.name }}</a>{% endif %}</p>
+<p><strong>{% trans "Comment:" %}</strong> {{ relation.comment }}</p>
+<p><strong>{% trans "Status:" %}</strong> <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}">{{ relation.status.status }}</a></p>
+<p><strong>{% trans "Due date:" %}</strong> {{ relation.due_date }}</p>
+<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+
+{% endblock %}

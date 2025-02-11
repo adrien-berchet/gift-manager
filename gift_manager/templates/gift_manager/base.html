@@ -31,6 +31,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'gift_manager:relation_statuses' %}">{% trans "Gift statuses" %}</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'gift_manager:relations' %}">{% trans "Giftings" %}</a>
+                </li>
             </ul>
             <ul class="navbar-nav ml-auto d-flex align-items-center">
                 {% if user.is_superuser %}
@@ -71,7 +74,7 @@
         {% block content %}{% endblock %}
     </div>
     <!-- Bootstrap JS and dependencies -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- DataTables JS -->

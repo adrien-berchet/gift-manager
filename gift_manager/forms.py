@@ -77,7 +77,7 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
 class PersonRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "status", "due_date", "event"]
+        fields = ["gift", "status", "due_date", "event", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -91,7 +91,7 @@ class PersonRelationForm(forms.ModelForm):
 class PersonGroupRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "status", "due_date", "event"]
+        fields = ["gift", "status", "due_date", "event", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -125,7 +125,7 @@ class GiftForm(forms.ModelForm):
 class GiftRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["person", "group", "status", "due_date"]
+        fields = ["person", "group", "status", "due_date", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -177,3 +177,24 @@ class EventForm(forms.ModelForm):
             self.fields["date_type"].initial = "absolute"
         elif self.instance and self.instance.recurrence:
             self.fields["date_type"].initial = "recurrence"
+
+
+class RelationForm(forms.ModelForm):
+    class Meta:
+        model = Relation
+        fields = ["person", "group", "gift", "status", "due_date", "shared_with"]
+        widgets = {
+            "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        person = cleaned_data.get("person")
+        group = cleaned_data.get("group")
+
+        if person and group:
+            self.add_error("group", gettext_lazy("You can not select both a person and a group."))
+        elif not person and not group:
+            raise forms.ValidationError(gettext_lazy("You must select one person or one group."))
+
+        return cleaned_data

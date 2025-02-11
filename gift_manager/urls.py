@@ -22,7 +22,7 @@ urlpatterns = [
     path(
         "persons/<uuid:pk>/add_relation/",
         views.PersonRelationCreateView.as_view(),
-        name="add_person_relation",
+        name="person_relation_create",
     ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
     path(
@@ -51,7 +51,7 @@ urlpatterns = [
     path(
         "person_groups/<uuid:pk>/add_relation/",
         views.PersonGroupRelationCreateView.as_view(),
-        name="add_person_group_relation",
+        name="person_group_relation_create",
     ),
     path(
         "person_groups/<uuid:pk>/remove_person/<uuid:person_id>/",
@@ -66,7 +66,32 @@ urlpatterns = [
     path(
         "gifts/<uuid:pk>/add_relation/",
         views.GiftRelationCreateView.as_view(),
-        name="add_gift_relation",
+        name="gift_relation_create",
+    ),
+    path(
+        "relations/",
+        views.RelationListView.as_view(),
+        name="relations",
+    ),
+    path(
+        "relations/create/",
+        views.RelationCreateView.as_view(),
+        name="relation_create",
+    ),
+    path(
+        "relations/<uuid:pk>/",
+        views.RelationDetailView.as_view(),
+        name="relation_detail",
+    ),
+    path(
+        "relations/<uuid:pk>/edit",
+        views.RelationUpdateView.as_view(),
+        name="relation_edit",
+    ),
+    path(
+        "relations/<uuid:pk>/delete",
+        views.RelationDeleteView.as_view(),
+        name="relation_delete",
     ),
     path("events/", views.EventListView.as_view(), name="events"),
     path("events/create/", views.EventCreateView.as_view(), name="event_create"),
@@ -79,6 +104,7 @@ urlpatterns = [
         views.RelationStatusDetailView.as_view(),
         name="relation_status_detail",
     ),
+    path("relation_status_update/", views.update_relation_status, name="relation_status_update"),
 ]
 
 if settings.DEBUG:

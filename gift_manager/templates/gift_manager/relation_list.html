@@ -1,0 +1,77 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% block title %}{{ translated_type }}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{{ translated_type }}</h1>
+<button onclick="location.href='{% url 'gift_manager:relation_create' %}'">{% trans "Create new gifting" %}</button>
+{% load custom_filters %}
+<table id="data-table" class="table table-striped">
+    <thead>
+        <tr>
+            {% for col, name in column_names.items %}
+            <th>{{ name }}</th>
+            {% endfor %}
+            <th>{% trans "Actions" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in data %}
+            <tr>
+                {% for col, name in column_names.items %}
+                    {% if name != "Status" %}
+                        <td>{{ item|get_item:col|replace_none:"" }}</td>
+                    {% else %}
+                        <td>
+                            <select class="relation_status" data-relation-id="{{ item.relation_id }}">
+                                {% for stat in relation_statuses %}
+                                    <option value="{{ stat.pk }}" {% if item.status == stat.pk %}selected{% endif %}>
+                                        {{ stat.status }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                    {% endif %}
+                {% endfor %}
+                <td style="white-space: nowrap;">
+                        <a href="{% url 'gift_manager:relation_detail' item.relation_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
+                        <a href="{% url 'gift_manager:relation_edit' item.relation_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'gift_manager:relation_delete' item.relation_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        var order = [[2, 'desc']];  // Default order is descending by status
+        $('#data-table').DataTable({
+            "order": order
+        });
+    });
+    $('.relation_status').on('change', function(){
+        console.log("Status updated on page");
+        var relationId = $(this).data('relation-id'); // Note : d-attribute avec tiret plutôt que underscore
+        var newStatus = $(this).val();
+        $.ajax({
+            type: "POST",
+            url: "{% url 'gift_manager:relation_status_update' %}",
+            data: {
+                'relation_id': relationId,
+                'new_status': newStatus,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                console.log("Status updated");
+            },
+            error: function() {
+                alert("Error: Relation status could not be updated.");
+            }
+        });
+    });
+</script>
+{% endblock %}

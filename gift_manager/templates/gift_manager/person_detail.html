@@ -2,10 +2,10 @@
 {% load custom_filters %}
 
 {% load i18n %}
-{% block title %}{% trans "Person Detail" %}{% endblock %}
+{% block title %}{% trans "Person details" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Person Detail" %}</h1>
+<h1 class="my-4">{% trans "Person details" %}</h1>
 <p><strong>{% trans "First name:" %}</strong> {{ person.first_name }}</p>
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
 <p><strong>{% trans "Email address:" %}</strong> {{ person.email_address }}</p>
@@ -15,7 +15,7 @@
 <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit Person" %}</a>
 
 <h2 class="my-4">{% trans "Gifts for this person" %}</h2>
-<a href="{% url 'gift_manager:add_person_relation' person.person_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
+<a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
 <table id="data-table" class="table table-striped">
     <thead>
         <tr>
@@ -23,15 +23,41 @@
             <th>{% trans "Status" %}</th>
             <th>{% trans "Event" %}</th>
             <th>{% trans "Due Date" %}</th>
+            <th>{% trans "Actions" %}</th>
         </tr>
     </thead>
     <tbody>
         {% for relation in relations %}
             <tr>
                 <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
-                <td>{{ relation.status.status }}</td>
+                <td>
+                    <select class="relation_status" data-relation-id="{{ relation.relation_id }}">
+                        {% for stat in relation_statuses %}
+                            <option value="{{ stat.pk }}" {% if relation.status.pk == stat.pk %}selected{% endif %}>
+                                {{ stat.status }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </td>
                 <td>{{ relation.event.name|replace_empty:"-" }}</td>
                 <td>{{ relation.due_date|replace_none:"-" }}</td>
+                <td>
+                    <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Show' %}">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'gift_manager:gift_edit' relation.gift.gift_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% if not relation.group %}
+                        <a href="{% url 'gift_manager:relation_delete' relation.relation_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">{% trans "No gift for this person" %}</td>
             </tr>
         {% endfor %}
     </tbody>
@@ -41,7 +67,28 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
+        console.log("Page loaded properly");
         $('#data-table').DataTable();
+    });
+    $('.relation_status').on('change', function(){
+        console.log("Status updated on page");
+        var relationId = $(this).data('relation-id'); // Note : d-attribute avec tiret plutôt que underscore
+        var newStatus = $(this).val();
+        $.ajax({
+            type: "POST",
+            url: "{% url 'gift_manager:relation_status_update' %}",
+            data: {
+                'relation_id': relationId,
+                'new_status': newStatus,
+                'csrfmiddlewaretoken': '{{ csrf_token }}'
+            },
+            success: function(response) {
+                console.log("Status updated");
+            },
+            error: function() {
+                alert("Error: Relation status could not be updated.");
+            }
+        });
     });
 </script>
 {% endblock %}

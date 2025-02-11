@@ -1,48 +1,126 @@
 {% extends "gift_manager/base.html" %}
 {% load custom_filters %}
-
 {% load i18n %}
-{% block title %}{% trans "Group Detail" %}{% endblock %}
+{% block title %}{% trans "Group details" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Group Detail" %}</h1>
+<h1 class="my-4">{% trans "Group details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:person_group_edit' group.group_id %}" class="btn btn-warning mb-3">{% trans "Edit Group" %}</a>
+<a href="{% url 'gift_manager:person_group_edit' group.group_id %}" class="btn btn-warning mb-3">{% trans "Edit group" %}</a>
 
-<h2 class="my-4">{% trans "Persons in this group" %}</h2>
-<a href="{% url 'gift_manager:add_person_group_person' group.group_id %}" class="btn btn-primary mb-3">{% trans "Add persons" %}</a>
-<a href="{% url 'gift_manager:add_person_group_relation' group.group_id %}" class="btn btn-primary mb-3">{% trans "Offer a gift to this group" %}</a>
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{% trans "First name" %}</th>
-            <th>{% trans "Family name" %}</th>
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for person in persons %}
-            <tr>
-                <td><a href="{% url 'gift_manager:person_detail' person.person_id %}">{{ person.first_name }}</a></td>
-                <td><a href="{% url 'gift_manager:person_detail' person.person_id %}">{{ person.family_name }}</a></td>
-                <td>
-                    <a href="{% url 'gift_manager:remove_person_group_person' group.group_id person.person_id %}"
-                       class="btn btn-danger">
-                       {% trans "Remove" %}
-                    </a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- Tabs nav -->
+<ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
+    <li class="nav-item" role="presentation">
+        <a class="nav-link active" id="persons-tab" data-toggle="tab" href="#persons-list" role="tab" aria-controls="persons-list" aria-selected="true">
+            {% trans "Persons in this group" %}
+        </a>
+    </li>
+    <li class="nav-item" role="presentation">
+        <a class="nav-link" id="gifts-tab" data-toggle="tab" href="#gifts-list" role="tab" aria-controls="gifts-list" aria-selected="false">
+            {% trans "Gifts for this group" %}
+        </a>
+    </li>
+</ul>
+
+<!-- Tabs content -->
+<div class="tab-content" id="groupTabContent">
+    <div class="tab-pane fade show active" id="persons-list" role="tabpanel" aria-labelledby="persons-tab">
+        <a href="{% url 'gift_manager:add_person_group_person' group.group_id %}" class="btn btn-primary mb-3">
+            {% trans "Add persons" %}
+        </a>
+        <table id="person-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>{% trans "First name" %}</th>
+                    <th>{% trans "Family name" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for person in persons %}
+                    <tr>
+                        <td><a href="{% url 'gift_manager:person_detail' person.person_id %}">{{ person.first_name }}</a></td>
+                        <td><a href="{% url 'gift_manager:person_detail' person.person_id %}">{{ person.family_name }}</a></td>
+                        <td>
+                            <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Show' %}">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'gift_manager:remove_person_group_person' group.group_id person.person_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">{% trans "No person in this group" %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="tab-pane fade" id="gifts-list" role="tabpanel" aria-labelledby="gifts-tab">
+        <a href="{% url 'gift_manager:person_group_relation_create' group.group_id %}" class="btn btn-primary mb-3">
+            {% trans "Offer a gift to this group" %}
+        </a>
+        <table id="gift-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>{% trans "Name" %}</th>
+                    <th>{% trans "Comment" %}</th>
+                    <th>{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for relation in gifts %}
+                    <tr>
+                        <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
+                        <td>{{ relation.gift.comment }}</td>
+                        <td>
+                            <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Show' %}">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'gift_manager:gift_edit' relation.gift.gift_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'gift_manager:relation_delete' relation.relation_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center">{% trans "No gift for this group" %}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        $('#data-table').DataTable();
+        // Check if we have a tab parameter in the URL
+        var urlParams = new URLSearchParams(window.location.search);
+        if(urlParams.get('tab') === 'gifts') {
+            $('#gifts-tab').tab('show');
+        }
+        // If we click on the persons tab
+        $('#persons-tab').on('click', function(e) {
+            history.pushState(null, null, '?tab=persons');
+        });
+        // If we click on the gifts tab
+        $('#gifts-tab').on('click', function(e) {
+            history.pushState(null, null, '?tab=gifts');
+        });
+        $('#person-table').DataTable();
+        $('#gift-table').DataTable();
     });
 </script>
 {% endblock %}

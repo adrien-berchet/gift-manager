@@ -2,10 +2,10 @@
 {% load custom_filters %}
 
 {% load i18n %}
-{% block title %}{% trans "Event Detail" %}{% endblock %}
+{% block title %}{% trans "Event details" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Event Detail" %}</h1>
+<h1 class="my-4">{% trans "Event details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ event.name }}</p>
 <p><strong>{% trans "Comment:" %}</strong> {{ event.comment }}</p>
 <p><strong>{% trans "Usual Date:" %}</strong> {{ event.usual_date|date:"Y-m-d" }}</p>
