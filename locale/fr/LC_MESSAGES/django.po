@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-02-11 15:36+0100\n"
+"POT-Creation-Date: 2025-02-11 23:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -38,7 +38,7 @@ msgstr "Nom de famille"
 msgid "Email Address"
 msgstr "Adresse email"
 
-#: gift_manager/forms.py:20 gift_manager/views.py:278
+#: gift_manager/forms.py:20 gift_manager/views.py:277
 msgid "Groups"
 msgstr "Groupes"
 
@@ -108,17 +108,17 @@ msgstr "Récurrence"
 #: gift_manager/models.py:82
 #: gift_manager/templates/gift_manager/event_detail.html:22
 #: gift_manager/templates/gift_manager/gift_detail.html:21
-#: gift_manager/views.py:203 gift_manager/views.py:233
+#: gift_manager/views.py:202 gift_manager/views.py:232
 msgid "Person"
 msgstr "Personne"
 
 #: gift_manager/models.py:83 gift_manager/templates/gift_manager/base.html:20
-#: gift_manager/views.py:160
+#: gift_manager/views.py:159
 msgid "Persons"
 msgstr "Personnes"
 
-#: gift_manager/models.py:114 gift_manager/views.py:298
-#: gift_manager/views.py:330
+#: gift_manager/models.py:114 gift_manager/views.py:297
+#: gift_manager/views.py:329
 msgid "Person group"
 msgstr "Groupe de personnes"
 
@@ -130,24 +130,24 @@ msgstr "Groupes de personnes"
 #: gift_manager/templates/gift_manager/event_detail.html:23
 #: gift_manager/templates/gift_manager/person_detail.html:22
 #: gift_manager/templates/gift_manager/relation_status_detail.html:16
-#: gift_manager/views.py:427 gift_manager/views.py:458
+#: gift_manager/views.py:426 gift_manager/views.py:457
 msgid "Gift"
 msgstr "Cadeau"
 
 #: gift_manager/models.py:178 gift_manager/templates/gift_manager/base.html:26
-#: gift_manager/views.py:406
+#: gift_manager/views.py:405
 msgid "Gifts"
 msgstr "Cadeaux"
 
 #: gift_manager/models.py:223
 #: gift_manager/templates/gift_manager/person_detail.html:24
 #: gift_manager/templates/gift_manager/relation_status_detail.html:17
-#: gift_manager/views.py:527 gift_manager/views.py:558
+#: gift_manager/views.py:526 gift_manager/views.py:557
 msgid "Event"
 msgstr "Événement"
 
 #: gift_manager/models.py:224 gift_manager/templates/gift_manager/base.html:29
-#: gift_manager/views.py:506
+#: gift_manager/views.py:505
 msgid "Events"
 msgstr "Événements"
 
@@ -159,7 +159,7 @@ msgstr "Statut de la relation"
 msgid "Relation Statuses"
 msgstr "Statuts des relations"
 
-#: gift_manager/models.py:284 gift_manager/views.py:868
+#: gift_manager/models.py:284
 msgid "Relation"
 msgstr "Relation"
 
@@ -198,7 +198,7 @@ msgstr "Groupes / Familles"
 msgid "Gift statuses"
 msgstr "Statuts des cadeaux"
 
-#: gift_manager/templates/gift_manager/base.html:35 gift_manager/views.py:836
+#: gift_manager/templates/gift_manager/base.html:35 gift_manager/views.py:834
 msgid "Giftings"
 msgstr "Remises"
 
@@ -309,7 +309,7 @@ msgstr "Cadeaux pour cet événement"
 #: gift_manager/templates/gift_manager/gift_detail.html:22
 #: gift_manager/templates/gift_manager/person_detail.html:23
 #: gift_manager/templates/gift_manager/relation_status_detail.html:9
-#: gift_manager/views.py:787
+#: gift_manager/views.py:788
 msgid "Status"
 msgstr "Statut"
 
@@ -354,9 +354,9 @@ msgstr "Détails"
 #: gift_manager/templates/gift_manager/person_group_list.html:38
 #: gift_manager/templates/gift_manager/person_list.html:38
 #: gift_manager/templates/gift_manager/relation_list.html:39
-#: gift_manager/views.py:234 gift_manager/views.py:331
-#: gift_manager/views.py:459 gift_manager/views.py:559
-#: gift_manager/views.py:899
+#: gift_manager/views.py:233 gift_manager/views.py:330
+#: gift_manager/views.py:458 gift_manager/views.py:558
+#: gift_manager/views.py:897
 msgid "Edit"
 msgstr "Éditer"
 
@@ -598,20 +598,20 @@ msgstr "Pas encore de compte ?"
 msgid "Register here"
 msgstr "Inscrivez-vous ici"
 
-#: gift_manager/views.py:69
+#: gift_manager/views.py:68
 msgid "Join my friends on Gift Manager"
 msgstr "Rejoins mes amis sur Gift Manager"
 
-#: gift_manager/views.py:204 gift_manager/views.py:299
-#: gift_manager/views.py:428 gift_manager/views.py:528
-#: gift_manager/views.py:869
+#: gift_manager/views.py:203 gift_manager/views.py:298
+#: gift_manager/views.py:427 gift_manager/views.py:527
+#: gift_manager/views.py:867
 msgid "Create"
 msgstr "Création"
 
-#: gift_manager/views.py:898
-msgid "Gifting"
-msgstr "Remises"
+#: gift_manager/views.py:866 gift_manager/views.py:896
+msgid "gifting"
+msgstr "remise"
 
-#: gift_manager/views.py:941
+#: gift_manager/views.py:939
 msgid "Gifting not found"
 msgstr "Remise non trouvée"

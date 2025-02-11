@@ -30,7 +30,7 @@
         {% for relation in relations %}
             <tr>
                 <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
-                <td>
+                <td data-order="{{ relation.status }}" data-search="{% for stat in relation_statuses %}{% if relation.status == stat.pk %}{{ stat.status }}{% endif %}{% endfor %}">
                     <select class="relation_status" data-relation-id="{{ relation.relation_id }}">
                         {% for stat in relation_statuses %}
                             <option value="{{ stat.pk }}" {% if relation.status.pk == stat.pk %}selected{% endif %}>

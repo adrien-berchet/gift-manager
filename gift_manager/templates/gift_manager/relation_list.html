@@ -23,7 +23,7 @@
                     {% if name != "Status" %}
                         <td>{{ item|get_item:col|replace_none:"" }}</td>
                     {% else %}
-                        <td>
+                        <td data-order="{{ item.status }}" data-search="{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status }}{% endif %}{% endfor %}">
                             <select class="relation_status" data-relation-id="{{ item.relation_id }}">
                                 {% for stat in relation_statuses %}
                                     <option value="{{ stat.pk }}" {% if item.status == stat.pk %}selected{% endif %}>

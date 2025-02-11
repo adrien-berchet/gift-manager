@@ -842,7 +842,7 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
     template_name = "gift_manager/create_form.html"
     fields = ["person", "gift", "status", "due_date", "shared_with"]
     login_url = "/accounts/login/"
-    success_url = reverse_lazy("gift_manager:relation_list")
+    success_url = reverse_lazy("gift_manager:relations")
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -862,8 +862,8 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["type"] = "Relation"
-        context["translated_type"] = gettext("Relation")
+        context["type"] = "gifting"
+        context["translated_type"] = gettext("gifting")
         context["action"] = gettext("Create")
         context["cancel_url"] = reverse_lazy("gift_manager:relations")
         return context
@@ -892,8 +892,8 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["type"] = "Gifting"
-        context["translated_type"] = gettext("Gifting")
+        context["type"] = "gifting"
+        context["translated_type"] = gettext("gifting")
         context["action"] = gettext("Edit")
         context["cancel_url"] = reverse_lazy(
             "gift_manager:relation_detail", kwargs={"pk": self.kwargs["pk"]}
