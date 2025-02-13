@@ -30,6 +30,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DJANGO_DEBUG")
 
 ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app"]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app", "gift-manager.vercel.app"]
 
 
 # Application definition
