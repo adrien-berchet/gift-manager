@@ -7,7 +7,7 @@ python3.12 -m pip install -U pip
 # Install dependencies
 
 echo "Installing project dependencies..."
-apt-get install -y gettext
+yarn add gettext-parser
 export PATH=/python312/bin:$PATH
 python3.12 -m pip install -r requirements.txt
 
