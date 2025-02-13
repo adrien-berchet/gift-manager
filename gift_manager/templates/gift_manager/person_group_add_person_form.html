@@ -9,7 +9,6 @@
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
-    {% comment %} <a href="{% url 'gift_manager:person_group_detail' group.group_id %}" class="btn btn-secondary">{% trans "Cancel" %}</a> {% endcomment %}
   <a href="{% url 'gift_manager:person_group_detail' group.group_id %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
 </form>
 {% endblock %}

@@ -62,10 +62,17 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop("user", None)  # Get the user from the kwargs
+        group = kwargs.pop("group", None)  # Get the group from the kwargs
         super().__init__(*args, **kwargs)
         # Filter the persons accessible to this user
         if user:
-            self.fields["persons"].queryset = Person.objects.filter(Q(shared_with=user))
+            query = Q(shared_with=user)
+            # Filter the persons not in the group if a group is given
+            if group:
+                query &= ~Q(groups=group)
+            self.fields["persons"].queryset = Person.objects.filter(query).order_by(
+                "family_name", "first_name"
+            )
 
     def save(self, group: PersonGroup):
         """Add all selected persons to the group."""

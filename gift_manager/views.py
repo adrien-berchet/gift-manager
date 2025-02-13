@@ -354,12 +354,12 @@ class PersonGroupUpdateView(
 def add_multiple_persons_to_group(request, pk):
     group = get_object_or_404(PersonGroup, group_id=pk)
     if request.method == "POST":
-        form = PersonGroupAddMultiplePersonsForm(request.POST, user=request.user)
+        form = PersonGroupAddMultiplePersonsForm(request.POST, user=request.user, group=group)
         if form.is_valid():
             form.save(group)
             return redirect("gift_manager:person_group_detail", pk=pk)
     else:
-        form = PersonGroupAddMultiplePersonsForm(user=request.user)
+        form = PersonGroupAddMultiplePersonsForm(user=request.user, group=group)
 
     return render(
         request,
@@ -477,7 +477,7 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         return response
 
     def get_success_url(self):
-        return reverse("gift_manager:gift_detail", kwargs={"pk": self.object.person_id})
+        return reverse("gift_manager:gift_detail", kwargs={"pk": self.object.gift_id})
 
 
 class GiftDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
