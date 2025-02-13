@@ -15,6 +15,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <a class="navbar-brand" href="{% url 'gift_manager:home' %}">Gift Manager</a>
         <div class="collapse navbar-collapse">
+            {% if user.is_authenticated %}
             <ul class="navbar-nav mr-auto align-items-center">
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'gift_manager:persons' %}">{% trans "Persons" %}</a>
@@ -35,6 +36,7 @@
                     <a class="nav-link" href="{% url 'gift_manager:relations' %}">{% trans "Giftings" %}</a>
                 </li>
             </ul>
+            {% endif %}
             <ul class="navbar-nav ml-auto d-flex align-items-center">
                 {% if user.is_superuser %}
                     <li class="nav-item">
