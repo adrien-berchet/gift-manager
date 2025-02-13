@@ -7,8 +7,9 @@ python3.12 -m pip install -U pip
 # Install dependencies
 
 echo "Installing project dependencies..."
-python3.12 -m pip install -r requirements.txt
+apt-get install -y gettext
 export PATH=/python312/bin:$PATH
+python3.12 -m pip install -r requirements.txt
 
 # Make migrations
 echo "Making migrations..."
