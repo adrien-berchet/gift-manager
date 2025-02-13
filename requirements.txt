@@ -1,6 +1,8 @@
 django
 django-allauth
+django-debug-toolbar
 django-grappelli
+django-modeltranslation
 psycopg[binary]
 python-dotenv
 ruff
