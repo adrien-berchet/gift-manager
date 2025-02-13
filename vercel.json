@@ -1,4 +1,10 @@
 {
+    "builds": [
+        {
+            "src": "GiftManager/wsgi.py",
+            "use": "@vercel/python"
+        }
+    ],
     "routes": [
         {
             "src": "/static/(.*)",
