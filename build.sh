@@ -2,7 +2,7 @@
 
 # Update pip
 echo "Updating pip..."
-python3.12 pip install -U pip
+python3.12 -m pip install -U pip
 
 # Install dependencies
 
@@ -17,5 +17,9 @@ python3.12 manage.py migrate --noinput
 # Collect staticfiles
 echo "Collect static..."
 python3.12 manage.py collectstatic --noinput --clear
+
+# Compile locale files
+echo "Compile locale files..."
+django-admin compilemessages
 
 echo "Build process completed!"
