@@ -7,7 +7,10 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.mail import send_mail
 from django.db.models import Q
+from django.db.models import TextField
+from django.db.models import Value
 from django.db.models.functions import Coalesce
+from django.db.models.functions import Concat
 from django.http import Http404
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -823,7 +826,17 @@ class RelationListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return (
             Relation.objects.filter(Q(shared_with=self.request.user))
-            .annotate(related_object=Coalesce("person__first_name", "group__name"))
+            .annotate(
+                related_object=Coalesce(
+                    Concat(
+                        "person__first_name",
+                        Value(" "),
+                        "person__family_name",
+                        output_field=TextField(),
+                    ),
+                    "group__name",
+                )
+            )
             .values("relation_id", "gift__name", "related_object", "status")
         )
 
