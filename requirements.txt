@@ -6,3 +6,4 @@ django-modeltranslation
 psycopg[binary]
 python-dotenv
 ruff
+whitenoise
