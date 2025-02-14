@@ -83,6 +83,10 @@ coverage.xml
 # Django stuff:
 *.log
 local_settings.py
+node_modules/
+package.json
+pnpm-lock.yaml
+staticfiles/
 
 # Sphinx documentation
 docs/_build/
