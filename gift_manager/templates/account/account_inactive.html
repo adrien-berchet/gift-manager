@@ -1,0 +1,14 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% block head_title %}{% trans "Account inactive" %}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{% trans "Your account is inactive" %}</h1>
+<p>{% trans "Your account is currently inactive. You can reactivate it by clicking on the button below." %}</p>
+<form action="{% url 'reactivate_account' %}" method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">{% trans "Reactivate account" %}</button>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+</form>
+{% endblock %}

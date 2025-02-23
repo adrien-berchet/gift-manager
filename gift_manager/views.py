@@ -25,6 +25,7 @@ from django.views.generic import DeleteView
 from django.views.generic import DetailView
 from django.views.generic import ListView
 from django.views.generic import UpdateView
+from django.views.generic import View
 from django.views.generic.edit import CreateView
 
 from .forms import EventForm
@@ -60,8 +61,11 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         return Profile.objects.get(user=self.request.user)
 
 
-def send_invitation(request):
-    if request.method == "POST":
+class SendInvitationView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        return render(request, "gift_manager/send_invitation.html")
+
+    def post(self, request, *args, **kwargs):
         recipient_email = request.POST.get("recipient_email")
         invitation = Invitation.objects.create(sender=request.user, recipient_email=recipient_email)
         invitation_link = request.build_absolute_uri(
@@ -77,35 +81,36 @@ def send_invitation(request):
             recipient_list=[recipient_email],
         )
         return redirect("gift_manager:profile_detail")
-    return render(request, "gift_manager/send_invitation.html")
 
 
-def accept_invitation(request, token):
-    invitation = get_object_or_404(Invitation, token=token, accepted=False)
-    # If the user is already logged in, establish the friendship relationship
-    if request.user.is_authenticated:
-        invitation.accepted = True
-        invitation.accepted_at = timezone.now()
-        invitation.save()
-        # Create or get the user's profile
-        user_profile, _ = Profile.objects.get_or_create(user=request.user)
-        sender_profile, _ = Profile.objects.get_or_create(user=invitation.sender)
-        # Add the sender to the user's friends and vice versa
-        user_profile.friends.add(sender_profile)
-        sender_profile.friends.add(user_profile)
-        user_profile.save()
-        sender_profile.save()
-        return redirect("gift_manager:profile_detail")
-    # Otherwise, redirect to the registration with the token
-    # (to be handled in the registration process)
-    return redirect(f"{reverse('account_signup')}?invitation_token={token}")
+class AcceptInvitationView(View):
+    def get(self, request, *args, **kwargs):
+        token = self.kwargs.get("token")
+        invitation = get_object_or_404(Invitation, token=token, accepted=False)
+        # If the user is already logged in, establish the friendship relationship
+        if request.user.is_authenticated:
+            invitation.accepted = True
+            invitation.accepted_at = timezone.now()
+            invitation.save()
+            # Create or get the user's profile
+            user_profile, _ = Profile.objects.get_or_create(user=request.user)
+            sender_profile, _ = Profile.objects.get_or_create(user=invitation.sender)
+            # Add the sender to the user's friends and vice versa
+            user_profile.friends.add(sender_profile)
+            sender_profile.friends.add(user_profile)
+            user_profile.save()
+            sender_profile.save()
+            return redirect("gift_manager:profile_detail")
+        # Otherwise, redirect to the registration with the token
+        # (to be handled in the registration process)
+        return redirect(f"{reverse('account_signup')}?invitation_token={token}")
 
 
-@login_required
-def remove_friend(request, friend_id):
-    if request.method == "POST":
+class RemoveFriendView(LoginRequiredMixin, View):
+    def post(self, request, friend_id, *args, **kwargs):
         friend_profile = get_object_or_404(Profile, pk=friend_id)
         user_profile = get_object_or_404(Profile, user=request.user)
+
         # Remove the friend relationship (symmetric)
         if friend_profile in user_profile.friends.all():
             user_profile.friends.remove(friend_profile)
@@ -115,7 +120,12 @@ def remove_friend(request, friend_id):
         for person in persons_shared:
             if friend_profile.user in person.shared_with.all():
                 person.shared_with.remove(friend_profile.user)
-    return redirect("gift_manager:profile_detail")
+
+        return redirect("gift_manager:profile_detail")
+
+    def get(self, *args, **kwargs):
+        # Redirect to the profile detail page
+        return redirect("gift_manager:profile_detail")
 
 
 class FilterByUserMixin:
@@ -752,11 +762,18 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
         form = super().get_form(form_class)
         form.fields["person"].queryset = Person.objects.filter(shared_with=self.request.user)
         form.fields["group"].queryset = PersonGroup.objects.filter(shared_with=self.request.user)
+        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
         form.instance.gift = Gift.objects.get(gift_id=self.kwargs["pk"])
-        return super().form_valid(form)
+        form.instance.user = self.request.user
+        response = super().form_valid(form)
+        form.instance.shared_with.add(self.request.user)  # Add current user
+        if form.cleaned_data["shared_with"]:
+            form.instance.shared_with.add(*form.cleaned_data["shared_with"])
+        return response
 
     def get_success_url(self):
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]})

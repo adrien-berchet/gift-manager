@@ -24,6 +24,8 @@ from django.shortcuts import redirect
 from django.urls import include
 from django.urls import path
 
+from . import views
+
 
 def admin_redirect(request):  # noqa: ARG001
     return redirect("/admin/")
@@ -33,11 +35,21 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("admin_redirect/", admin_redirect, name="admin_redirect"),
     path("i18n/", include("django.conf.urls.i18n")),
+    path("accounts/login/", views.CustomLoginView.as_view(), name="account_login"),
+    path(
+        "accounts/user_deactivate",
+        views.UserAccountDeactivateView.as_view(),
+        name="deactivate_account",
+    ),
+    path("accounts/user_delete", views.UserAccountDeleteView.as_view(), name="delete_account"),
+    path(
+        "accounts/user_reactivate/",
+        views.UserAccountReactivateView.as_view(),
+        name="reactivate_account",
+    ),
     path("accounts/", include("allauth.urls")),
 ]
 
 urlpatterns += i18n_patterns(
     path("", include("gift_manager.urls", namespace="gift_manager")),
 )
-
-# urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
