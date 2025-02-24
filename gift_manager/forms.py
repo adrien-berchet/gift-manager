@@ -14,11 +14,11 @@ class PersonForm(forms.ModelForm):
         model = Person
         fields = ["first_name", "family_name", "email_address", "groups", "shared_with"]
         labels = {
-            "first_name": gettext_lazy("First Name"),
-            "family_name": gettext_lazy("Family Name"),
-            "email_address": gettext_lazy("Email Address"),
+            "first_name": gettext_lazy("First name"),
+            "family_name": gettext_lazy("Family name"),
+            "email_address": gettext_lazy("Email address"),
             "groups": gettext_lazy("Groups"),
-            "shared_with": gettext_lazy("Shared With"),
+            "shared_with": gettext_lazy("Shared with"),
         }
         error_messages = {
             "first_name": {
@@ -44,7 +44,7 @@ class PersonGroupForm(forms.ModelForm):
         fields = ["name", "shared_with"]
         labels = {
             "name": gettext_lazy("Name"),
-            "shared_with": gettext_lazy("Shared With"),
+            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -84,9 +84,17 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
 class PersonRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "status", "due_date", "event", "shared_with"]
+        fields = ["gift", "comment", "event", "status", "due_date", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        labels = {
+            "gift": gettext_lazy("Gift"),
+            "comment": gettext_lazy("Comment"),
+            "event": gettext_lazy("Event"),
+            "status": gettext_lazy("Status"),
+            "due_date": gettext_lazy("Due date"),
+            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -98,9 +106,17 @@ class PersonRelationForm(forms.ModelForm):
 class PersonGroupRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "status", "due_date", "event", "shared_with"]
+        fields = ["gift", "comment", "event", "status", "due_date", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        labels = {
+            "gift": gettext_lazy("Gift"),
+            "comment": gettext_lazy("Comment"),
+            "event": gettext_lazy("Event"),
+            "status": gettext_lazy("Status"),
+            "due_date": gettext_lazy("Due date"),
+            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -117,7 +133,7 @@ class GiftForm(forms.ModelForm):
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
             "tags": gettext_lazy("Tags"),
-            "shared_with": gettext_lazy("Shared With"),
+            "shared_with": gettext_lazy("Shared with"),
         }
         error_messages = {
             "name": {
@@ -132,9 +148,18 @@ class GiftForm(forms.ModelForm):
 class GiftRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["person", "group", "status", "due_date", "shared_with"]
+        fields = ["person", "group", "comment", "event", "status", "due_date", "shared_with"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+        }
+        labels = {
+            "person": gettext_lazy("Person"),
+            "group": gettext_lazy("Group"),
+            "comment": gettext_lazy("Comment"),
+            "event": gettext_lazy("Event"),
+            "status": gettext_lazy("Status"),
+            "due_date": gettext_lazy("Due date"),
+            "shared_with": gettext_lazy("Shared with"),
         }
 
     def clean(self):
@@ -152,9 +177,9 @@ class GiftRelationForm(forms.ModelForm):
 
 class EventForm(forms.ModelForm):
     date_type = forms.ChoiceField(
-        label=gettext_lazy("Date Type"),
+        label=gettext_lazy("Date type"),
         choices=[
-            ("absolute", gettext_lazy("Absolute Date")),
+            ("absolute", gettext_lazy("Absolute date")),
             ("recurrence", gettext_lazy("Recurrent")),
         ],
         widget=forms.RadioSelect,
@@ -169,10 +194,10 @@ class EventForm(forms.ModelForm):
         labels = {
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
-            "date_type": gettext_lazy("Date Type"),
-            "absolute_date": gettext_lazy("Absolute Date"),
+            "date_type": gettext_lazy("Date type"),
+            "absolute_date": gettext_lazy("Absolute date"),
             "recurrence": gettext_lazy("Recurrence"),
-            "shared_with": gettext_lazy("Shared With"),
+            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -189,10 +214,38 @@ class EventForm(forms.ModelForm):
 class RelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["person", "group", "gift", "status", "due_date", "shared_with"]
+        fields = [
+            "person",
+            "group",
+            "gift",
+            "comment",
+            "event",
+            "status",
+            "due_date",
+            "shared_with",
+        ]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
+        labels = {
+            "person": gettext_lazy("Person"),
+            "group": gettext_lazy("Group"),
+            "gift": gettext_lazy("Gift"),
+            "comment": gettext_lazy("Comment"),
+            "event": gettext_lazy("Event"),
+            "status": gettext_lazy("Status"),
+            "due_date": gettext_lazy("Due date"),
+            "shared_with": gettext_lazy("Shared with"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        hide_person = kwargs.pop("hide_person", False)
+        hide_group = kwargs.pop("hide_group", False)
+        super().__init__(*args, **kwargs)
+        if hide_person:
+            self.fields.pop("person", None)
+        if hide_group:
+            self.fields.pop("group", None)
 
     def clean(self):
         cleaned_data = super().clean()

@@ -159,12 +159,15 @@ class PersonListView(LoginRequiredMixin, ListView):
     context_object_name = "data"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
-    column_names = {
-        "first_name": "First Name",
-        "family_name": "Family Name",
-        "email_address": "Email Address",
-        "groups": "Groups",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "first_name": gettext("First name"),
+            "family_name": gettext("Family name"),
+            "email_address": gettext("Email address"),
+            "groups": gettext("Groups"),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -219,7 +222,12 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["groups"].queryset = PersonGroup.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -251,7 +259,12 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["groups"].queryset = PersonGroup.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -280,9 +293,12 @@ class PersonGroupListView(LoginRequiredMixin, ListView):
     context_object_name = "data"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
-    column_names = {
-        "name": "Group Name",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "name": gettext("Group name"),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -314,7 +330,9 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -348,7 +366,9 @@ class PersonGroupUpdateView(
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -406,11 +426,14 @@ class GiftListView(LoginRequiredMixin, ListView):
     context_object_name = "data"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
-    column_names = {
-        "name": "Gift Name",
-        "comment": "Comment",
-        "tags": "Tags",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "name": gettext("Gift name"),
+            "comment": gettext("Comment"),
+            "tags": gettext("Tags"),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -443,7 +466,9 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         form.fields["tags"].required = False  # Make the field optional in the form
         return form
@@ -476,7 +501,9 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         form.fields["tags"].required = False  # Make the field optional in the form
         return form
@@ -506,11 +533,14 @@ class EventListView(LoginRequiredMixin, ListView):
     context_object_name = "data"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
-    column_names = {
-        "name": "Event Name",
-        "comment": "Comment",
-        "usual_date": "Usual date",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "name": gettext("Event name"),
+            "comment": gettext("Comment"),
+            "usual_date": gettext("Usual date"),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -543,7 +573,9 @@ class EventCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -576,7 +608,9 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -629,8 +663,12 @@ class PersonGroupDetailView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["persons"] = Person.objects.filter(groups=self.object)
-        context["gifts"] = Relation.objects.filter(group=self.object, gift__isnull=False)
+        context["persons"] = Person.objects.filter(
+            groups=self.object, shared_with=self.request.user
+        )
+        context["gifts"] = Relation.objects.filter(
+            group=self.object, shared_with=self.request.user, gift__isnull=False
+        )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -645,7 +683,9 @@ class GiftDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(gift=self.object)
+        context["relations"] = Relation.objects.filter(
+            gift=self.object, shared_with=self.request.user
+        )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -660,7 +700,9 @@ class EventDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(event=self.object)
+        context["relations"] = Relation.objects.filter(
+            event=self.object, shared_with=self.request.user
+        )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -683,9 +725,15 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user)
-        form.fields["event"].queryset = Event.objects.filter(shared_with=self.request.user)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+            "name"
+        )
+        form.fields["event"].queryset = Event.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -720,9 +768,21 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user)
-        form.fields["event"].queryset = Event.objects.filter(shared_with=self.request.user)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["person"].queryset = Person.objects.filter(
+            shared_with=self.request.user
+        ).order_by("family_name", "first_name")
+        form.fields["group"].queryset = PersonGroup.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+            "name"
+        )
+        form.fields["event"].queryset = Event.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -760,9 +820,18 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(shared_with=self.request.user)
-        form.fields["group"].queryset = PersonGroup.objects.filter(shared_with=self.request.user)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["person"].queryset = Person.objects.filter(
+            shared_with=self.request.user
+        ).order_by("family_name", "first_name")
+        form.fields["group"].queryset = PersonGroup.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -798,9 +867,12 @@ class RelationStatusListView(LoginRequiredMixin, ListView):
     context_object_name = "data"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
-    column_names = {
-        "status": "Status",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "status": gettext("Status"),
+        }
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -833,12 +905,16 @@ class RelationListView(LoginRequiredMixin, ListView):
     model = Relation
     template_name = "gift_manager/relation_list.html"
     context_object_name = "data"
-    column_names = {
-        "gift__name": "Gift",
-        "related_object": "Offered To",
-        "status__status": "Status",
-        "due_date": "Due Date",
-    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "gift__name": gettext("Gift"),
+            "comment": gettext("Comment"),
+            "related_object": gettext("Offered to"),
+            "status__status": gettext("Status"),
+            "due_date": gettext("Due date"),
+        }
 
     def get_queryset(self):
         return (
@@ -854,7 +930,7 @@ class RelationListView(LoginRequiredMixin, ListView):
                     "group__name",
                 )
             )
-            .values("relation_id", "gift__name", "related_object", "status")
+            .values("relation_id", "gift__name", "comment", "related_object", "status")
         )
 
     def get_context_data(self, **kwargs):
@@ -869,16 +945,33 @@ class RelationListView(LoginRequiredMixin, ListView):
 
 class RelationCreateView(LoginRequiredMixin, CreateView):
     model = Relation
+    form_class = RelationForm
     template_name = "gift_manager/create_form.html"
-    fields = ["person", "gift", "status", "due_date", "shared_with"]
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:relations")
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        hide_person = self.request.GET.get("hide_person", "false") == "true"
+        kwargs["hide_person"] = hide_person
+        hide_group = self.request.GET.get("hide_group", "false") == "true"
+        kwargs["hide_group"] = hide_group
+        return kwargs
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(shared_with=self.request.user)
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["person"].queryset = Person.objects.filter(
+            shared_with=self.request.user
+        ).order_by("family_name", "first_name")
+        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+            "name"
+        )
+        form.fields["event"].queryset = Event.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False
         return form
 
@@ -930,9 +1023,28 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
         )
         return context
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        hide_person = self.request.GET.get("hide_person", "false") == "true"
+        kwargs["hide_person"] = hide_person
+        hide_group = self.request.GET.get("hide_group", "false") == "true"
+        kwargs["hide_group"] = hide_group
+        return kwargs
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.exclude(id=self.request.user.id)
+        form.fields["person"].queryset = Person.objects.filter(
+            shared_with=self.request.user
+        ).order_by("family_name", "first_name")
+        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+            "name"
+        )
+        form.fields["event"].queryset = Event.objects.filter(
+            shared_with=self.request.user
+        ).order_by("name")
+        form.fields["shared_with"].queryset = User.objects.filter(
+            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
