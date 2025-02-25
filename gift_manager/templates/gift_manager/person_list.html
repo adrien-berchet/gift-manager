@@ -1,6 +1,12 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+{% load static %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+{% endblock %}
+
 {% block title %}{{ translated_type }}{% endblock %}
 
 {% block content %}
@@ -11,7 +17,23 @@
     <thead>
         <tr>
             {% for col, name in column_names.items %}
-            <th>{{ name }}</th>
+                {% if col == "groups" %}
+                    <th class="group-column-filter" style="position: relative;">
+                        {{ name }}
+                        <i class="fa fa-filter filter-icon" style="cursor:pointer; margin-left: 5px;"></i>
+                        <div class="dropdown-filter" style="display:none; position: absolute; top: 100%; right: 0; z-index: 1000;">
+                            {% for group in unique_groups %}
+                               <div>
+                                  <label>
+                                     <input type="checkbox" class="group-filter" value="{{ group.name }}"> {{ group.name }}
+                                  </label>
+                               </div>
+                            {% endfor %}
+                        </div>
+                    </th>
+                {% else %}
+                    <th>{{ name }}</th>
+                {% endif %}
             {% endfor %}
             <th>{% trans "Actions" %}</th>
         </tr>
@@ -23,7 +45,7 @@
                     {% if col != "groups" %}
                         <td>{{ item|get_item:col|replace_none:"" }}</td>
                     {% else %}
-                        <td>
+                        <td data-search="{% if item.grouped_groups %}{% for group_name, group_id in item.grouped_groups %}{{ group_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
                             {% if item.grouped_groups %}
                                 {% for group_name, group_id in item.grouped_groups %}
                                     <a href="{% url 'gift_manager:person_group_detail' group_id %}">{{ group_name }}</a>{% if not forloop.last %}, {% endif %}
@@ -47,10 +69,44 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        var order = [[0, 'asc']];  // Default order is ascending
-        $('#data-table').DataTable({
-            "order": order
+        var order = [[0, 'asc']];
+        var table = $('#data-table').DataTable({
+            "order": order,
+            "paging": true,
+            "searching": true
         });
+
+        // Apply filter on Groups column
+        function applyGroupFilter() {
+            var selected = [];
+            $('.group-filter:checked').each(function(){
+                selected.push($(this).val());
+            });
+
+            // Build a regex to filter (logical OR)
+            var regex = selected.length ? selected.join("|") : "";
+            var colIndex = $('th.group-column-filter').index();
+            table.column(colIndex).search(regex, true, false).draw();
+        }
+
+        // Dropdown filter management for the Groups column
+        $('.filter-icon').on('click', function(e) {
+            e.stopPropagation();
+            $(this).siblings('.dropdown-filter').toggle();
+        });
+
+        // Hide the dropdown filter menu when clicking outside
+        $(document).on('click', function() {
+            $('.dropdown-filter').hide();
+        });
+
+        // Apply the filter when the state of a checkbox changes
+        $('.group-filter').on('change', function() {
+            applyGroupFilter();
+        });
+
+        // At load time, apply the filter if some checkboxes are already checked
+        applyGroupFilter();
     });
 </script>
 {% endblock %}

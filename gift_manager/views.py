@@ -174,6 +174,12 @@ class PersonListView(LoginRequiredMixin, ListView):
         context["type"] = "Persons"
         context["translated_type"] = gettext("Persons")
         context["column_names"] = self.column_names
+        context["unique_groups"] = (
+            PersonGroup.objects.filter(shared_with=self.request.user)
+            .values("name")
+            .distinct()
+            .order_by("name")
+        )
 
         return context
 
@@ -913,6 +919,7 @@ class RelationListView(LoginRequiredMixin, ListView):
             "gift__name": gettext("Gift"),
             "comment": gettext("Comment"),
             "related_object": gettext("Offered to"),
+            "event": gettext("Event"),
             "status__status": gettext("Status"),
             "due_date": gettext("Due date"),
         }
@@ -931,7 +938,7 @@ class RelationListView(LoginRequiredMixin, ListView):
                     "group__name",
                 )
             )
-            .values("relation_id", "gift__name", "comment", "related_object", "status")
+            .values("relation_id", "gift__name", "comment", "related_object", "event", "status")
         )
 
     def get_context_data(self, **kwargs):
@@ -941,6 +948,7 @@ class RelationListView(LoginRequiredMixin, ListView):
         context["translated_type"] = gettext("Giftings")
         context["column_names"] = self.column_names
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["events"] = Event.objects.all()
         return context
 
 
