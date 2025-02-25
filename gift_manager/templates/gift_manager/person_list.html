@@ -67,46 +67,16 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
 <script>
     $(document).ready(function() {
-        var order = [[0, 'asc']];
-        var table = $('#data-table').DataTable({
-            "order": order,
-            "paging": true,
-            "searching": true
+        $('#data-table').initDataTableFilters({
+            order: [[0, 'asc']],
+            filterSelector: '.filter-icon',
+            dropdownSelector: '.dropdown-filter',
+            checkboxSelector: '.group-filter',
+            thFilterClass: 'group-column-filter'
         });
-
-        // Apply filter on Groups column
-        function applyGroupFilter() {
-            var selected = [];
-            $('.group-filter:checked').each(function(){
-                selected.push($(this).val());
-            });
-
-            // Build a regex to filter (logical OR)
-            var regex = selected.length ? selected.join("|") : "";
-            var colIndex = $('th.group-column-filter').index();
-            table.column(colIndex).search(regex, true, false).draw();
-        }
-
-        // Dropdown filter management for the Groups column
-        $('.filter-icon').on('click', function(e) {
-            e.stopPropagation();
-            $(this).siblings('.dropdown-filter').toggle();
-        });
-
-        // Hide the dropdown filter menu when clicking outside
-        $(document).on('click', function() {
-            $('.dropdown-filter').hide();
-        });
-
-        // Apply the filter when the state of a checkbox changes
-        $('.group-filter').on('change', function() {
-            applyGroupFilter();
-        });
-
-        // At load time, apply the filter if some checkboxes are already checked
-        applyGroupFilter();
     });
 </script>
 {% endblock %}

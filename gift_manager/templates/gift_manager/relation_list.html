@@ -78,41 +78,15 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
 <script>
     $(document).ready(function() {
-        // Table initialization
-        var table = $('#data-table').DataTable({
-            "order": [[2, 'asc']],
-            "paging": true,
-            "searching": true
-        });
-
-        // Apply filter on the Status column
-        function applyStatusFilter() {
-            var selected = [];
-            $('.status-filter:checked').each(function(){
-                selected.push($(this).val());
-            });
-            // Construction d'une regex pour filtrer (logique OR)
-            var regex = selected.length ? selected.join("|") : "";
-            var colIndex = $('th.status-column-filter').index();
-            table.column(colIndex).search(regex, true, false).draw();
-        }
-
-        // Dropdown filter management for the Status column
-        $('.filter-icon').on('click', function(e) {
-            e.stopPropagation();
-            $(this).siblings('.dropdown-filter').toggle();
-        });
-
-        // Hide the dropdown filter when clicking outside
-        $(document).on('click', function() {
-            $('.dropdown-filter').hide();
-        });
-
-        // Apply filter when clicking on a checkbox
-        $('.status-filter').on('change', function() {
-            applyStatusFilter();
+        $('#data-table').initDataTableFilters({
+            order: [[2, 'asc']],
+            filterSelector: '.filter-icon',
+            dropdownSelector: '.dropdown-filter',
+            checkboxSelector: '.status-filter',
+            thFilterClass: 'status-column-filter',
         });
 
         // Event handler for status changes in the table
@@ -135,9 +109,6 @@
                 }
             });
         });
-
-        // At load time, apply the filter if some checkboxes are already checked
-        applyStatusFilter();
     });
 </script>
 {% endblock %}
