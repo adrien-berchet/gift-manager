@@ -554,7 +554,7 @@ msgstr "Afficher"
 
 #: gift_manager/templates/gift_manager/person_detail.html:63
 msgid "No gift for this person"
-msgstr "Aucun de cadeau pour cette personne"
+msgstr "Aucun cadeau pour cette personne"
 
 #: gift_manager/templates/gift_manager/person_group_add_person_form.html:4
 msgid "Add Persons"

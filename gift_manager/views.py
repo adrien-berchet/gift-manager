@@ -644,7 +644,8 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["relations"] = Relation.objects.filter(
-            Q(person=self.object) | Q(group__in=self.object.groups.all())
+            (Q(person=self.object) | Q(group__in=self.object.groups.all()))
+            & Q(shared_with=self.request.user)
         ).select_related("status")
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         context["relation_statuses"] = RelationStatus.objects.all()
@@ -1057,7 +1058,13 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
         return response
 
     def get_success_url(self):
-        return reverse("gift_manager:person_detail", kwargs={"pk": self.object.person_id})
+        if self.object.person_id is not None:
+            pk = self.object.person_id
+            url = "person_detail"
+        else:
+            pk = self.object.group.group_id
+            url = "person_group_detail"
+        return reverse(f"gift_manager:{url}", kwargs={"pk": pk})
 
 
 class RelationDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
