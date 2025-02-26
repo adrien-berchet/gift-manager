@@ -293,7 +293,7 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         ).order_by("name")
         form.fields["shared_with"].queryset = User.objects.filter(
             pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
+        ).order_by("username")
         form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
@@ -304,11 +304,29 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         PersonPermission.objects.get_or_create(
             user=self.request.user, person=form.instance, defaults={"permission_type": "editor"}
         )
+
+        # Get all current shared users
+        current_shared_users = form.instance.shared_with.all()
+
+        # Get selected users from form
+        selected_users = form.cleaned_data["shared_with"]
+
         # Add shared users
-        for user in form.cleaned_data["shared_with"]:
+        for user in selected_users:
             PersonPermission.objects.get_or_create(
                 user=user, person=form.instance, defaults={"permission_type": "viewer"}
             )
+
+        # Remove permissions for unselected users
+        # (users who were previously shared but not in the current selection)
+        users_to_remove = current_shared_users.exclude(id__in=[user.id for user in selected_users])
+        users_to_remove = users_to_remove.exclude(
+            id=self.request.user.id
+        )  # Don't remove current user
+
+        for user in users_to_remove:
+            # Remove the permission record
+            PersonPermission.objects.filter(user=user, person=form.instance).delete()
         return response
 
     def get_success_url(self):
@@ -1236,7 +1254,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
         # Get user's friends
         friends = User.objects.filter(
             pk__in=request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
+        ).select_related("profile")
 
         # Get the user's objects for each type
         persons = (
@@ -1249,18 +1267,27 @@ class ShareObjectsView(LoginRequiredMixin, View):
                     output_field=TextField(),
                 ),
             )
+            .prefetch_related("groups")
             .order_by("complete_name")
         )
-        person_groups = PersonGroup.objects.filter(shared_with=request.user).order_by("name")
+        person_groups = (
+            PersonGroup.objects.filter(shared_with=request.user)
+            .prefetch_related("person_set")
+            .order_by("name")
+        )
         gifts = Gift.objects.filter(shared_with=request.user).order_by("name")
         events = Event.objects.filter(shared_with=request.user).order_by("name")
-        relations = Relation.objects.filter(shared_with=request.user).order_by(
-            "person__family_name",
-            "person__first_name",
-            "group__name",
-            "gift__name",
-            "event__name",
-            "status__status",
+        relations = (
+            Relation.objects.filter(shared_with=request.user)
+            .select_related("person", "group", "gift", "event")
+            .order_by(
+                "person__family_name",
+                "person__first_name",
+                "group__name",
+                "gift__name",
+                "event__name",
+                "status__status",
+            )
         )
 
         context = {
