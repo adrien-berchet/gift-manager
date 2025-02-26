@@ -1,11 +1,15 @@
+from collections.abc import Sequence
+from typing import TypeAlias
 from urllib.parse import urlencode
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.mail import send_mail
+from django.db.models import Model
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
@@ -38,13 +42,22 @@ from .forms import PersonGroupRelationForm
 from .forms import PersonRelationForm
 from .forms import RelationForm
 from .models import Event
+from .models import EventPermission
 from .models import Gift
+from .models import GiftPermission
 from .models import Invitation
 from .models import Person
 from .models import PersonGroup
+from .models import PersonGroupPermission
+from .models import PersonPermission
 from .models import Profile
 from .models import Relation
+from .models import RelationPermission
 from .models import RelationStatus
+
+# Type definitions for clarity
+ModelType: TypeAlias = type[Model]
+SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 
 def home(request):
@@ -100,6 +113,9 @@ class AcceptInvitationView(View):
             sender_profile.friends.add(user_profile)
             user_profile.save()
             sender_profile.save()
+            messages.success(
+                request, gettext("You are now friend with {}").format(invitation.sender.username)
+            )
             return redirect("gift_manager:profile_detail")
         # Otherwise, redirect to the registration with the token
         # (to be handled in the registration process)
@@ -775,12 +791,6 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(
-            shared_with=self.request.user
-        ).order_by("family_name", "first_name")
-        form.fields["group"].queryset = PersonGroup.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
         form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
             "name"
         )
@@ -827,9 +837,18 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(
-            shared_with=self.request.user
-        ).order_by("family_name", "first_name")
+        form.fields["person"].queryset = (
+            Person.objects.filter(shared_with=self.request.user)
+            .annotate(
+                complete_name=Concat(
+                    "family_name",
+                    Value(" "),
+                    "first_name",
+                    output_field=TextField(),
+                ),
+            )
+            .order_by("complete_name")
+        )
         form.fields["group"].queryset = PersonGroup.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
@@ -969,9 +988,18 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(
-            shared_with=self.request.user
-        ).order_by("family_name", "first_name")
+        form.fields["person"].queryset = (
+            Person.objects.filter(shared_with=self.request.user)
+            .annotate(
+                complete_name=Concat(
+                    "family_name",
+                    Value(" "),
+                    "first_name",
+                    output_field=TextField(),
+                ),
+            )
+            .order_by("complete_name")
+        )
         form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
             "name"
         )
@@ -1042,9 +1070,18 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = Person.objects.filter(
-            shared_with=self.request.user
-        ).order_by("family_name", "first_name")
+        form.fields["person"].queryset = (
+            Person.objects.filter(shared_with=self.request.user)
+            .annotate(
+                complete_name=Concat(
+                    "family_name",
+                    Value(" "),
+                    "first_name",
+                    output_field=TextField(),
+                ),
+            )
+            .order_by("complete_name")
+        )
         form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
             "name"
         )
@@ -1094,3 +1131,276 @@ def update_relation_status(request):
         return JsonResponse({"success": True})
     except Relation.DoesNotExist:
         return JsonResponse({"error": gettext("Gifting not found")}, status=404)
+
+
+class ShareObjectsView(LoginRequiredMixin, View):
+    """View for sharing objects with friends."""
+
+    template_name = "gift_manager/share_objects.html"
+
+    def get(self, request):
+        """Display the sharing form."""
+        # Get user's friends
+        friends = User.objects.filter(
+            pk__in=request.user.profile.friends.all().values_list("user_id", flat=True)
+        )
+
+        # Get the user's objects for each type
+        persons = (
+            Person.objects.filter(shared_with=request.user)
+            .annotate(
+                complete_name=Concat(
+                    "family_name",
+                    Value(" "),
+                    "first_name",
+                    output_field=TextField(),
+                ),
+            )
+            .order_by("complete_name")
+        )
+        person_groups = PersonGroup.objects.filter(shared_with=request.user).order_by("name")
+        gifts = Gift.objects.filter(shared_with=request.user).order_by("name")
+        events = Event.objects.filter(shared_with=request.user).order_by("name")
+        relations = Relation.objects.filter(shared_with=request.user).order_by(
+            "person__family_name",
+            "person__first_name",
+            "group__name",
+            "gift__name",
+            "event__name",
+            "status__status",
+        )
+
+        context = {
+            "friends": friends,
+            "persons": persons,
+            "person_groups": person_groups,
+            "gifts": gifts,
+            "events": events,
+            "relations": relations,
+        }
+
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        """Process sharing of selected objects."""
+        # Get selected friends
+        friends = self._get_selected_friends(request)
+
+        # Get selected objects by type
+        selection = self._get_selection_from_request(request)
+
+        # Option to share persons in a group
+        share_group_persons = "share_group_persons" in request.POST
+
+        # Perform sharing for each object type
+        shared_items = {}
+
+        if selection["person_ids"]:
+            shared_items["persons"] = self._share_persons(selection["person_ids"], friends)
+
+        if selection["person_group_ids"]:
+            shared_items["person_groups"] = self._share_person_groups(
+                selection["person_group_ids"], friends, share_members=share_group_persons
+            )
+
+        if selection["gift_ids"]:
+            shared_items["gifts"] = self._share_gifts(selection["gift_ids"], friends)
+
+        if selection["event_ids"]:
+            shared_items["events"] = self._share_events(selection["event_ids"], friends)
+
+        if selection["relation_ids"]:
+            shared_items["relations"] = self._share_relations(selection["relation_ids"], friends)
+
+        # Success message
+        messages.success(
+            request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
+        )
+
+        return redirect("gift_manager:share_objects")
+
+    def _get_selected_friends(self, request) -> Sequence[User]:
+        """Get selected friends from the request.
+
+        Args:
+            request: The HTTP request
+
+        Returns:
+            Sequence of selected users
+        """
+        friend_ids = request.POST.getlist("friends")
+        return User.objects.filter(id__in=friend_ids)
+
+    def _get_selection_from_request(self, request) -> dict[str, list[str]]:
+        """Get the IDs of selected objects from the request.
+
+        Args:
+            request: The HTTP request
+
+        Returns:
+            Dictionary containing the IDs of selected objects by type
+        """
+        return {
+            "person_ids": request.POST.getlist("persons"),
+            "person_group_ids": request.POST.getlist("person_groups"),
+            "gift_ids": request.POST.getlist("gifts"),
+            "event_ids": request.POST.getlist("events"),
+            "relation_ids": request.POST.getlist("relations"),
+        }
+
+    def _share_persons(self, person_ids: list[str], friends: Sequence[User]) -> int:
+        """Share selected persons with selected friends.
+
+        Args:
+            person_ids: List of person IDs to share
+            friends: Sequence of friends to share with
+
+        Returns:
+            Number of shared persons
+        """
+        persons = Person.objects.filter(person_id__in=person_ids)
+
+        for person in persons:
+            for friend in friends:
+                PersonPermission.objects.get_or_create(
+                    user=friend, person=person, defaults={"permission_type": "viewer"}
+                )
+
+        return len(persons)
+
+    def _share_person_groups(
+        self, person_group_ids: list[str], friends: Sequence[User], *, share_members: bool = False
+    ) -> int:
+        """Share selected groups with selected friends.
+
+        Args:
+            person_group_ids: List of group IDs to share
+            friends: Sequence of friends to share with
+            share_members: If True, the persons in the groups are also shared
+
+        Returns:
+            Number of shared groups
+        """
+        groups = PersonGroup.objects.filter(group_id__in=person_group_ids)
+
+        for group in groups:
+            # Share the group
+            for friend in friends:
+                PersonGroupPermission.objects.get_or_create(
+                    user=friend, group=group, defaults={"permission_type": "viewer"}
+                )
+
+            # If requested, also share the persons in the group
+            if share_members:
+                persons_in_group = group.person_set.all()
+                for person in persons_in_group:
+                    for friend in friends:
+                        PersonPermission.objects.get_or_create(
+                            user=friend, person=person, defaults={"permission_type": "viewer"}
+                        )
+
+        return len(groups)
+
+    def _share_gifts(self, gift_ids: list[str], friends: Sequence[User]) -> int:
+        """Share selected gifts with selected friends.
+
+        Args:
+            gift_ids: List of gift IDs to share
+            friends: Sequence of friends to share with
+
+        Returns:
+            Number of shared gifts
+        """
+        gifts = Gift.objects.filter(gift_id__in=gift_ids)
+
+        for gift in gifts:
+            for friend in friends:
+                GiftPermission.objects.get_or_create(
+                    user=friend, gift=gift, defaults={"permission_type": "viewer"}
+                )
+
+        return len(gifts)
+
+    def _share_events(self, event_ids: list[str], friends: Sequence[User]) -> int:
+        """Share selected events with selected friends.
+
+        Args:
+            event_ids: List of event IDs to share
+            friends: Sequence of friends to share with
+
+        Returns:
+            Number of shared events
+        """
+        events = Event.objects.filter(event_id__in=event_ids)
+
+        for event in events:
+            for friend in friends:
+                EventPermission.objects.get_or_create(
+                    user=friend, event=event, defaults={"permission_type": "viewer"}
+                )
+
+        return len(events)
+
+    def _share_relations(self, relation_ids: list[str], friends: Sequence[User]) -> int:
+        """Share selected relations with selected friends.
+
+        Includes cascade sharing of related objects.
+
+        Args:
+            relation_ids: List of relation IDs to share
+            friends: Sequence of friends to share with
+
+        Returns:
+            Number of shared relations
+        """
+        relations = Relation.objects.filter(relation_id__in=relation_ids)
+
+        for relation in relations:
+            # Share the relation itself
+            for friend in friends:
+                RelationPermission.objects.get_or_create(
+                    user=friend, relation=relation, defaults={"permission_type": "viewer"}
+                )
+
+            # Share the associated gift
+            if relation.gift:
+                self._share_related_object(relation.gift, friends, GiftPermission)
+
+            # Share the associated person or group
+            if relation.person:
+                self._share_related_object(relation.person, friends, PersonPermission)
+            elif relation.group:
+                self._share_related_object(
+                    relation.group, friends, PersonGroupPermission, field_name="group"
+                )
+
+            # Share the associated event
+            if relation.event:
+                self._share_related_object(relation.event, friends, EventPermission)
+
+        return len(relations)
+
+    def _share_related_object(
+        self,
+        obj: SharedObjectType,
+        friends: Sequence[User],
+        permission_model: ModelType,
+        field_name: str = "",
+    ) -> None:
+        """Utility method to share an object related to a relation.
+
+        Args:
+            obj: The object to share
+            friends: Sequence of friends to share with
+            permission_model: The permission model to use
+            field_name: The field name in the permission model (default: class name in lowercase)
+
+        Returns:
+            None
+        """
+        if not field_name:
+            field_name = obj.__class__.__name__.lower()
+
+        for friend in friends:
+            kwargs = {"user": friend, field_name: obj, "defaults": {"permission_type": "viewer"}}
+            permission_model.objects.get_or_create(**kwargs)

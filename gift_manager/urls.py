@@ -113,6 +113,7 @@ urlpatterns = [
         name="relation_status_detail",
     ),
     path("relation_status_update/", views.update_relation_status, name="relation_status_update"),
+    path("share/", views.ShareObjectsView.as_view(), name="share_objects"),
 ]
 
 if settings.DEBUG:

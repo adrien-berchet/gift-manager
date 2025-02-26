@@ -1,0 +1,336 @@
+<!-- filepath: /home/adrien/Work/Perso/GiftManager/gift_manager/templates/gift_manager/share_objects.html -->
+{% extends 'gift_manager/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Share Objects" %} - Gift Manager{% endblock %}
+
+{% block extra_head %}
+<style>
+    .card-header {
+        cursor: pointer;
+    }
+    .object-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .friend-selection {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">{% trans "Share Objects with Friends" %}</h1>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Sélection des amis -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{% trans "Select Friends to Share With" %}</h5>
+            </div>
+            <div class="card-body friend-selection">
+                {% if friends %}
+                    <div class="form-group">
+                        <div class="custom-control custom-checkbox">
+                            <input type="checkbox" class="custom-control-input" id="select-all-friends">
+                            <label class="custom-control-label" for="select-all-friends"><strong>{% trans "Select All" %}</strong></label>
+                        </div>
+                    </div>
+                    <hr>
+                    {% for friend in friends %}
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input friend-checkbox" name="friends" value="{{ friend.id }}" id="friend-{{ friend.id }}">
+                                <label class="custom-control-label" for="friend-{{ friend.id }}">{{ friend.username }}</label>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">{% trans "You don't have any friends yet. Invite some friends to start sharing!" %}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Optional sharing of persons of a group -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="share-group-persons" name="share_group_persons">
+                    <label class="custom-control-label" for="share-group-persons">{% trans "When sharing groups, also share all persons in those groups" %}</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accordéon pour les différents types d'objets -->
+        <div class="accordion" id="shareAccordion">
+            <!-- Personnes -->
+            <div class="card mb-2">
+                <div class="card-header" id="headingPersons" data-toggle="collapse" data-target="#collapsePersons" aria-expanded="true" aria-controls="collapsePersons">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        {% trans "Persons" %}
+                        <span class="badge badge-info" id="persons-selected">0</span>
+                    </h5>
+                </div>
+                <div id="collapsePersons" class="collapse" aria-labelledby="headingPersons" data-parent="#shareAccordion">
+                    <div class="card-body object-list">
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="select-all-persons">
+                                <label class="custom-control-label" for="select-all-persons"><strong>{% trans "Select All" %}</strong></label>
+                            </div>
+                        </div>
+                        <hr>
+                        {% if persons %}
+                            {% for person in persons %}
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input person-checkbox" name="persons" value="{{ person.person_id }}" id="person-{{ person.person_id }}">
+                                        <label class="custom-control-label" for="person-{{ person.person_id }}">{{ person }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">{% trans "You don't have any persons to share." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Groups of persons -->
+            <div class="card mb-2">
+                <div class="card-header" id="headingGroups" data-toggle="collapse" data-target="#collapseGroups" aria-expanded="false" aria-controls="collapseGroups">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        {% trans "Groups / Families" %}
+                        <span class="badge badge-info" id="groups-selected">0</span>
+                    </h5>
+                </div>
+                <div id="collapseGroups" class="collapse" aria-labelledby="headingGroups" data-parent="#shareAccordion">
+                    <div class="card-body object-list">
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="select-all-groups">
+                                <label class="custom-control-label" for="select-all-groups"><strong>{% trans "Select All" %}</strong></label>
+                            </div>
+                        </div>
+                        <hr>
+                        {% if person_groups %}
+                            {% for group in person_groups %}
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input group-checkbox" name="person_groups" value="{{ group.group_id }}" id="group-{{ group.group_id }}">
+                                        <label class="custom-control-label" for="group-{{ group.group_id }}">{{ group.name }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">{% trans "You don't have any groups to share." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cadeaux -->
+            <div class="card mb-2">
+                <div class="card-header" id="headingGifts" data-toggle="collapse" data-target="#collapseGifts" aria-expanded="false" aria-controls="collapseGifts">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        {% trans "Gifts" %}
+                        <span class="badge badge-info" id="gifts-selected">0</span>
+                    </h5>
+                </div>
+                <div id="collapseGifts" class="collapse" aria-labelledby="headingGifts" data-parent="#shareAccordion">
+                    <div class="card-body object-list">
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="select-all-gifts">
+                                <label class="custom-control-label" for="select-all-gifts"><strong>{% trans "Select All" %}</strong></label>
+                            </div>
+                        </div>
+                        <hr>
+                        {% if gifts %}
+                            {% for gift in gifts %}
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input gift-checkbox" name="gifts" value="{{ gift.gift_id }}" id="gift-{{ gift.gift_id }}">
+                                        <label class="custom-control-label" for="gift-{{ gift.gift_id }}">{{ gift.name }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">{% trans "You don't have any gifts to share." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Événements -->
+            <div class="card mb-2">
+                <div class="card-header" id="headingEvents" data-toggle="collapse" data-target="#collapseEvents" aria-expanded="false" aria-controls="collapseEvents">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        {% trans "Events" %}
+                        <span class="badge badge-info" id="events-selected">0</span>
+                    </h5>
+                </div>
+                <div id="collapseEvents" class="collapse" aria-labelledby="headingEvents" data-parent="#shareAccordion">
+                    <div class="card-body object-list">
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="select-all-events">
+                                <label class="custom-control-label" for="select-all-events"><strong>{% trans "Select All" %}</strong></label>
+                            </div>
+                        </div>
+                        <hr>
+                        {% if events %}
+                            {% for event in events %}
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input event-checkbox" name="events" value="{{ event.event_id }}" id="event-{{ event.event_id }}">
+                                        <label class="custom-control-label" for="event-{{ event.event_id }}">{{ event.name }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">{% trans "You don't have any events to share." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relations -->
+            <div class="card mb-2">
+                <div class="card-header" id="headingRelations" data-toggle="collapse" data-target="#collapseRelations" aria-expanded="false" aria-controls="collapseRelations">
+                    <h5 class="mb-0 d-flex justify-content-between align-items-center">
+                        {% trans "Giftings" %}
+                        <span class="badge badge-info" id="relations-selected">0</span>
+                    </h5>
+                </div>
+                <div id="collapseRelations" class="collapse" aria-labelledby="headingRelations" data-parent="#shareAccordion">
+                    <div class="card-body object-list">
+                        <div class="form-group">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="select-all-relations">
+                                <label class="custom-control-label" for="select-all-relations"><strong>{% trans "Select All" %}</strong></label>
+                            </div>
+                        </div>
+                        <hr>
+                        {% if relations %}
+                            {% for relation in relations %}
+                                <div class="form-group">
+                                    <div class="custom-control custom-checkbox">
+                                        <input type="checkbox" class="custom-control-input relation-checkbox" name="relations" value="{{ relation.relation_id }}" id="relation-{{ relation.relation_id }}">
+                                        <label class="custom-control-label" for="relation-{{ relation.relation_id }}">
+                                            {% if relation.person %}{{ relation.person }}{% elif relation.group %}{{ relation.group }}{% endif %} - {{ relation.gift }}{% if relation.comment %} ({{ relation.comment }}){% endif %}
+                                            {% if relation.event %} [{{ relation.event }}]{% endif %}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">{% trans "You don't have any giftings to share." %}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-primary btn-lg" id="share-button" disabled>
+                {% trans "Share Selected Items" %}
+            </button>
+            <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-secondary btn-lg ml-2">{% trans "Cancel" %}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Function to update the selection counter
+    function updateSelectionCount(selector, counterId) {
+        var count = $(selector + ':checked').length;
+        $('#' + counterId).text(count);
+        updateShareButtonState();
+    }
+
+    // Function to update the share button state
+    function updateShareButtonState() {
+        var friendsSelected = $('.friend-checkbox:checked').length > 0;
+        var itemsSelected = $('.person-checkbox:checked, .group-checkbox:checked, .gift-checkbox:checked, .event-checkbox:checked, .relation-checkbox:checked').length > 0;
+
+        if (friendsSelected && itemsSelected) {
+            $('#share-button').prop('disabled', false);
+        } else {
+            $('#share-button').prop('disabled', true);
+        }
+    }
+
+    // Handle "Select All" for friends
+    $('#select-all-friends').change(function() {
+        $('.friend-checkbox').prop('checked', $(this).prop('checked'));
+        updateShareButtonState();
+    });
+
+    // Handle "Select All" for each object type
+    $('#select-all-persons').change(function() {
+        $('.person-checkbox').prop('checked', $(this).prop('checked'));
+        updateSelectionCount('.person-checkbox', 'persons-selected');
+    });
+
+    $('#select-all-groups').change(function() {
+        $('.group-checkbox').prop('checked', $(this).prop('checked'));
+        updateSelectionCount('.group-checkbox', 'groups-selected');
+    });
+
+    $('#select-all-gifts').change(function() {
+        $('.gift-checkbox').prop('checked', $(this).prop('checked'));
+        updateSelectionCount('.gift-checkbox', 'gifts-selected');
+    });
+
+    $('#select-all-events').change(function() {
+        $('.event-checkbox').prop('checked', $(this).prop('checked'));
+        updateSelectionCount('.event-checkbox', 'events-selected');
+    });
+
+    $('#select-all-relations').change(function() {
+        $('.relation-checkbox').prop('checked', $(this).prop('checked'));
+        updateSelectionCount('.relation-checkbox', 'relations-selected');
+    });
+
+    // Update counters when selecting individual items
+    $('.person-checkbox').change(function() {
+        updateSelectionCount('.person-checkbox', 'persons-selected');
+    });
+
+    $('.group-checkbox').change(function() {
+        updateSelectionCount('.group-checkbox', 'groups-selected');
+    });
+
+    $('.gift-checkbox').change(function() {
+        updateSelectionCount('.gift-checkbox', 'gifts-selected');
+    });
+
+    $('.event-checkbox').change(function() {
+        updateSelectionCount('.event-checkbox', 'events-selected');
+    });
+
+    $('.relation-checkbox').change(function() {
+        updateSelectionCount('.relation-checkbox', 'relations-selected');
+    });
+
+    $('.friend-checkbox').change(function() {
+        updateShareButtonState();
+    });
+
+    // Initialize counters
+    updateSelectionCount('.person-checkbox', 'persons-selected');
+    updateSelectionCount('.group-checkbox', 'groups-selected');
+    updateSelectionCount('.gift-checkbox', 'gifts-selected');
+    updateSelectionCount('.event-checkbox', 'events-selected');
+    updateSelectionCount('.relation-checkbox', 'relations-selected');
+});
+</script>
+{% endblock %}
