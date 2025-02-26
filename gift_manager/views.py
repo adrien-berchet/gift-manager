@@ -15,6 +15,7 @@ from django.db.models import TextField
 from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
+from django.db.models.functions import NullIf
 from django.http import Http404
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -948,16 +949,31 @@ class RelationListView(LoginRequiredMixin, ListView):
             Relation.objects.filter(Q(shared_with=self.request.user))
             .annotate(
                 related_object=Coalesce(
-                    Concat(
-                        "person__first_name",
+                    NullIf(
+                        Concat(
+                            "person__first_name",
+                            Value(" "),
+                            "person__family_name",
+                            output_field=TextField(),
+                        ),
                         Value(" "),
-                        "person__family_name",
-                        output_field=TextField(),
                     ),
                     "group__name",
+                    output_field=TextField(),
                 )
             )
-            .values("relation_id", "gift__name", "comment", "related_object", "event", "status")
+            .values(
+                "relation_id",
+                "gift__name",
+                "gift__gift_id",
+                "comment",
+                "related_object",
+                "person__person_id",
+                "group__group_id",
+                "event__name",
+                "event__event_id",
+                "status",
+            )
         )
 
     def get_context_data(self, **kwargs):
@@ -967,7 +983,6 @@ class RelationListView(LoginRequiredMixin, ListView):
         context["translated_type"] = gettext("Giftings")
         context["column_names"] = self.column_names
         context["relation_statuses"] = RelationStatus.objects.all()
-        context["events"] = Event.objects.all()
         return context
 
 

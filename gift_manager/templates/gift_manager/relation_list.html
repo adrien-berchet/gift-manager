@@ -42,7 +42,33 @@
         {% for item in data %}
             <tr>
                 {% for col, name in column_names.items %}
-                    {% if col == "status__status" %}
+                    {% if col == "gift__name" %}
+                        <td>
+                            {% if item.gift__gift_id %}
+                                <a href="{% url 'gift_manager:gift_detail' item.gift__gift_id %}">{{ item.gift__name }}</a>
+                            {% else %}
+                                {{ item.gift__name|default:"" }}
+                            {% endif %}
+                        </td>
+                    {% elif col == "related_object" %}
+                        <td>
+                            {% if item.person__person_id %}
+                                <a href="{% url 'gift_manager:person_detail' item.person__person_id %}">{{ item.related_object }}</a>
+                            {% elif item.group__group_id %}
+                                <a href="{% url 'gift_manager:person_group_detail' item.group__group_id %}">{{ item.related_object }}</a>
+                            {% else %}
+                                $$ {{ item.related_object|default:"" }} $$
+                            {% endif %}
+                        </td>
+                    {% elif col == "event" %}
+                        <td>
+                            {% if item.event__event_id %}
+                                <a href="{% url 'gift_manager:event_detail' item.event__event_id %}">{{ item.event__name }}</a>
+                            {% else %}
+                                {{ item.event__name|default:"" }}
+                            {% endif %}
+                        </td>
+                    {% elif col == "status__status" %}
                         <td data-order="{{ item.status }}" data-search="{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status }}{% endif %}{% endfor %}">
                             <select class="relation_status" data-relation-id="{{ item.relation_id }}">
                                 {% for stat in relation_statuses %}
@@ -51,16 +77,6 @@
                                     </option>
                                 {% endfor %}
                             </select>
-                        </td>
-                    {% elif col == "event" %}
-                        <td>
-                            {% if item.event %}
-                                {% for event in events %}
-                                    {% if item.event == event.pk %}
-                                        {{ event.name }}
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
                         </td>
                     {% else %}
                         <td>{{ item|get_item:col|replace_none:"" }}</td>
