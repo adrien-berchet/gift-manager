@@ -170,6 +170,36 @@ class GetObjectByTokenMixin:
         return get_object_or_404(queryset, **kwargs)
 
 
+def handle_permissions(
+    cls,
+    current_user,
+    related_object,
+    viewer_users,
+    object_attr,
+    current_shared_users=None,
+):
+    # Add current user
+    cls.objects.get_or_create(
+        user=current_user, **{object_attr: related_object}, defaults={"permission_type": "editor"}
+    )
+
+    # Add shared users
+    for user in viewer_users:
+        cls.objects.get_or_create(
+            user=user, defaults={"permission_type": "viewer"}, **{object_attr: related_object}
+        )
+
+    if current_shared_users is not None:
+        # Remove permissions for unselected users
+        # (users who were previously shared but not in the current selection)
+        users_to_remove = current_shared_users.exclude(id__in=[user.id for user in viewer_users])
+        users_to_remove = users_to_remove.exclude(id=current_user.id)  # Don't remove current user
+
+        for user in users_to_remove:
+            # Remove the permission record
+            cls.objects.filter(user=user, **{object_attr: related_object}).delete()
+
+
 class PersonListView(LoginRequiredMixin, ListView):
     model = Person
     template_name = "gift_manager/person_list.html"
@@ -257,15 +287,13 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        PersonPermission.objects.get_or_create(
-            user=self.request.user, person=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            PersonPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "person",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            PersonPermission.objects.get_or_create(
-                user=user, person=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
 
@@ -300,33 +328,14 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        PersonPermission.objects.get_or_create(
-            user=self.request.user, person=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            PersonPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "person",
+            current_shared_users=form.instance.shared_with.all(),
         )
-
-        # Get all current shared users
-        current_shared_users = form.instance.shared_with.all()
-
-        # Get selected users from form
-        selected_users = form.cleaned_data["shared_with"]
-
-        # Add shared users
-        for user in selected_users:
-            PersonPermission.objects.get_or_create(
-                user=user, person=form.instance, defaults={"permission_type": "viewer"}
-            )
-
-        # Remove permissions for unselected users
-        # (users who were previously shared but not in the current selection)
-        users_to_remove = current_shared_users.exclude(id__in=[user.id for user in selected_users])
-        users_to_remove = users_to_remove.exclude(
-            id=self.request.user.id
-        )  # Don't remove current user
-
-        for user in users_to_remove:
-            # Remove the permission record
-            PersonPermission.objects.filter(user=user, person=form.instance).delete()
         return response
 
     def get_success_url(self):
@@ -392,15 +401,13 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        PersonGroupPermission.objects.get_or_create(
-            user=self.request.user, group=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            PersonGroupPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "group",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            PersonGroupPermission.objects.get_or_create(
-                user=user, group=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
 
@@ -434,15 +441,14 @@ class PersonGroupUpdateView(
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        PersonGroupPermission.objects.get_or_create(
-            user=self.request.user, group=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            PersonGroupPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "group",
+            current_shared_users=form.instance.shared_with.all(),
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            PersonGroupPermission.objects.get_or_create(
-                user=user, group=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
@@ -541,15 +547,13 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        GiftPermission.objects.get_or_create(
-            user=self.request.user, gift=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            GiftPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "gift",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            GiftPermission.objects.get_or_create(
-                user=user, gift=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
 
@@ -582,15 +586,14 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        GiftPermission.objects.get_or_create(
-            user=self.request.user, gift=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            GiftPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "gift",
+            current_shared_users=form.instance.shared_with.all(),
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            GiftPermission.objects.get_or_create(
-                user=user, gift=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
@@ -659,15 +662,13 @@ class EventCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        EventPermission.objects.get_or_create(
-            user=self.request.user, event=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            PersonPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "event",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            EventPermission.objects.get_or_create(
-                user=user, event=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
 
@@ -700,15 +701,14 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        EventPermission.objects.get_or_create(
-            user=self.request.user, event=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            EventPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "event",
+            current_shared_users=form.instance.shared_with.all(),
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            EventPermission.objects.get_or_create(
-                user=user, event=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
@@ -831,15 +831,13 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
         form.instance.person = Person.objects.get(person_id=self.kwargs["pk"])
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        RelationPermission.objects.get_or_create(
-            user=self.request.user, relation=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            RelationPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "relation",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            RelationPermission.objects.get_or_create(
-                user=user, relation=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
@@ -880,15 +878,13 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
         form.instance.group = PersonGroup.objects.get(group_id=self.kwargs["pk"])
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        RelationPermission.objects.get_or_create(
-            user=self.request.user, relation=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            RelationPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "relation",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            RelationPermission.objects.get_or_create(
-                user=user, relation=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
@@ -953,6 +949,13 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
             RelationPermission.objects.get_or_create(
                 user=user, relation=form.instance, defaults={"permission_type": "viewer"}
             )
+        handle_permissions(
+            RelationPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "relation",
+        )
         return response
 
     def get_success_url(self):
@@ -1114,15 +1117,13 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        RelationPermission.objects.get_or_create(
-            user=self.request.user, relation=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            RelationPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "relation",
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            RelationPermission.objects.get_or_create(
-                user=user, relation=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_context_data(self, **kwargs):
@@ -1202,15 +1203,14 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        # Add current user
-        RelationPermission.objects.get_or_create(
-            user=self.request.user, relation=form.instance, defaults={"permission_type": "editor"}
+        handle_permissions(
+            RelationPermission,
+            self.request.user,
+            form.instance,
+            form.cleaned_data["shared_with"],
+            "relation",
+            current_shared_users=form.instance.shared_with.all(),
         )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            RelationPermission.objects.get_or_create(
-                user=user, relation=form.instance, defaults={"permission_type": "viewer"}
-            )
         return response
 
     def get_success_url(self):
