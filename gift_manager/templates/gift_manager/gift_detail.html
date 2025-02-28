@@ -12,6 +12,7 @@
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
 <a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">{% trans "Edit gift" %}</a>
+<a href="{% url 'gift_manager:gift_delete' gift.gift_id %}" class="btn btn-danger mb-3">{% trans 'Delete gift' %}</a>
 
 <h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
 <a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>

@@ -12,7 +12,8 @@
 <p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit Person" %}</a>
+<a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit person" %}</a>
+<a href="{% url 'gift_manager:person_delete' person.person_id %}" class="btn btn-danger mb-3">{% trans 'Delete person' %}</a>
 
 <h2 class="my-4">{% trans "Gifts for this person" %}</h2>
 <a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "New gifting" %}</a>

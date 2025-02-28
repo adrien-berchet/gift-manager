@@ -20,6 +20,7 @@
 <p><strong>{% trans "Due date:" %}</strong> {{ relation.due_date }}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:relation_edit' relation.relation_id %}" class="btn btn-warning mb-3">{% trans "Edit Relation" %}</a>
+<a href="{% url 'gift_manager:relation_edit' relation.relation_id %}" class="btn btn-warning mb-3">{% trans "Edit relation" %}</a>
+<a href="{% url 'gift_manager:relation_delete' relation.relation_id %}" class="btn btn-danger mb-3">{% trans 'Delete relation' %}</a>
 
 {% endblock %}

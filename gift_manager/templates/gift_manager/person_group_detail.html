@@ -9,6 +9,7 @@
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
 
 <a href="{% url 'gift_manager:person_group_edit' group.group_id %}" class="btn btn-warning mb-3">{% trans "Edit group" %}</a>
+<a href="{% url 'gift_manager:person_group_delete' group.group_id %}" class="btn btn-danger mb-3">{% trans 'Delete group' %}</a>
 
 <!-- Tabs nav -->
 <ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
