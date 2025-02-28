@@ -554,7 +554,7 @@ msgstr "Éditer la personne"
 
 #: gift_manager/templates/gift_manager/person_detail.html:16
 msgid "Delete person"
-msgstr "Supprimer une personne"
+msgstr "Supprimer la personne"
 
 #: gift_manager/templates/gift_manager/person_detail.html:18
 msgid "Gifts for this person"
@@ -656,7 +656,7 @@ msgstr "Nom d'utilisateur"
 
 #: gift_manager/templates/gift_manager/profile_detail.html:37
 msgid "Remove friend"
-msgstr "Supprimer un ami"
+msgstr "Supprimer cet ami"
 
 #: gift_manager/templates/gift_manager/profile_detail.html:48
 msgid "You don't have any friend yet."
@@ -709,7 +709,7 @@ msgstr "Éditer la relation"
 
 #: gift_manager/templates/gift_manager/relation_detail.html:24
 msgid "Delete relation"
-msgstr "Éditer la relation"
+msgstr "Supprimer la relation"
 
 #: gift_manager/templates/gift_manager/relation_list.html:14
 msgid "Create new gifting"

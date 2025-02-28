@@ -170,6 +170,23 @@ class GetObjectByTokenMixin:
         return get_object_or_404(queryset, **kwargs)
 
 
+def get_permission(obj, user, filter_name):
+    """Get the permission type for the user on the object."""
+    permission = obj.shared_with.through.objects.filter(**{"user": user, filter_name: obj}).first()
+    return permission.permission_type if permission else "viewer"
+
+
+class ContextPermissionMixin:
+    """Mixin to add permission context to the view."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["user_permission"] = get_permission(
+            self.object, self.request.user, self.context_object_name
+        )
+        return context
+
+
 class DeleteSharedMixin:
     """Mixin to delete shared objects."""
 
@@ -776,7 +793,9 @@ class EventDeleteView(
     pk_name = "event_id"
 
 
-class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView):
+class PersonDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
+):
     model = Person
     template_name = "gift_manager/person_detail.html"
     context_object_name = "person"
@@ -796,7 +815,7 @@ class PersonDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
 
 
 class PersonGroupDetailView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
 ):
     model = PersonGroup
     template_name = "gift_manager/person_group_detail.html"
@@ -817,7 +836,9 @@ class PersonGroupDetailView(
         return context
 
 
-class GiftDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView):
+class GiftDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
+):
     model = Gift
     template_name = "gift_manager/gift_detail.html"
     context_object_name = "gift"
@@ -834,7 +855,9 @@ class GiftDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         return context
 
 
-class EventDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView):
+class EventDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
+):
     model = Event
     template_name = "gift_manager/event_detail.html"
     context_object_name = "event"
@@ -1188,7 +1211,9 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
         return context
 
 
-class RelationDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DetailView):
+class RelationDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
+):
     model = Relation
     template_name = "gift_manager/relation_detail.html"
     context_object_name = "relation"

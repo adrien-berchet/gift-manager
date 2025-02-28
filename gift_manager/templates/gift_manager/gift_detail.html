@@ -11,8 +11,12 @@
 <p><strong>{% trans "Tags:" %}</strong> {% for tag in gift.tags.all %}{{ tag.name }} {% endfor %}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
-<a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">{% trans "Edit gift" %}</a>
-<a href="{% url 'gift_manager:gift_delete' gift.gift_id %}" class="btn btn-danger mb-3">{% trans 'Delete gift' %}</a>
+{% if user_permission == "editor" %}
+    <a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">{% trans "Edit gift" %}</a>
+{% else %}
+    <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit gift" %}</button>
+{% endif %}
+<a href="{% url 'gift_manager:gift_delete' gift.gift_id %}" class="btn btn-danger mb-3"{% if user_permission != "editor" %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete gift' %}</a>
 
 <h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
 <a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
