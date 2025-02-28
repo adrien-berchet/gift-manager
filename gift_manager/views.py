@@ -170,6 +170,45 @@ class GetObjectByTokenMixin:
         return get_object_or_404(queryset, **kwargs)
 
 
+class DeleteSharedMixin:
+    """Mixin to delete shared objects."""
+
+    def post(self, request, *args, **kwargs):
+        """Overload the delete method to handle conditional deletion.
+
+        If the person is shared with other users, only the sharing with the current user is removed.
+        Otherwise, the person is completely deleted.
+        """
+        self.object = self.get_object()
+        success_url = self.get_success_url()
+
+        # Check if the person is shared with other users
+        other_users = self.object.shared_with.exclude(id=request.user.id)
+
+        if other_users.exists():
+            # If shared, only remove the sharing with the current user
+            self.object.shared_with.remove(request.user)
+
+            # Delete the corresponding permission as well
+            self.object.shared_with.through.objects.filter(
+                user=request.user, person=self.object
+            ).delete()
+
+            messages.success(
+                request,
+                gettext(
+                    "You no longer have access to this person, but it remains shared with other "
+                    "users"
+                ),
+            )
+        else:
+            # If not shared, completely delete the object
+            self.object.delete()
+            messages.success(request, gettext("Person successfully deleted"))
+
+        return redirect(success_url)
+
+
 def handle_permissions(
     cls,
     current_user,
@@ -179,15 +218,24 @@ def handle_permissions(
     current_shared_users=None,
 ):
     # Add current user
-    cls.objects.get_or_create(
+    permission, created = cls.objects.get_or_create(
         user=current_user, **{object_attr: related_object}, defaults={"permission_type": "editor"}
     )
+    if not created and not permission.permission_type:
+        permission.permission_type = "editor"
+        permission.save()
 
     # Add shared users
     for user in viewer_users:
-        cls.objects.get_or_create(
-            user=user, defaults={"permission_type": "viewer"}, **{object_attr: related_object}
-        )
+        kwargs = {
+            object_attr: related_object,
+            "user": user,
+            "defaults": {"permission_type": "viewer"},
+        }
+        permission, created = cls.objects.get_or_create(**kwargs)
+        if not created and not permission.permission_type:
+            permission.permission_type = "viewer"
+            permission.save()
 
     if current_shared_users is not None:
         # Remove permissions for unselected users
@@ -342,7 +390,9 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         return reverse("gift_manager:person_detail", kwargs={"pk": self.object.person_id})
 
 
-class PersonDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+class PersonDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+):
     model = Person
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:persons")
@@ -483,7 +533,7 @@ def remove_person_from_group(request, pk, person_id):  # noqa: ARG001
 
 
 class PersonGroupDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
 ):
     model = PersonGroup
     template_name = "gift_manager/confirm_delete.html"
@@ -600,7 +650,9 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.object.gift_id})
 
 
-class GiftDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+class GiftDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+):
     model = Gift
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:gifts")
@@ -715,7 +767,9 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         return reverse("gift_manager:event_detail", kwargs={"pk": self.object.person_id})
 
 
-class EventDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+class EventDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+):
     model = Event
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:events")
@@ -792,7 +846,7 @@ class EventDetailView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         context = super().get_context_data(**kwargs)
         context["relations"] = Relation.objects.filter(
             event=self.object, shared_with=self.request.user
-        )
+        ).select_related("person", "group", "gift", "event", "status")
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -891,7 +945,6 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.object.group.group_id})
         query = urlencode({"tab": "gifts"})
         return f"{url}?{query}"
-        return reverse("gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]})
 
 
 class GiftRelationCreateView(LoginRequiredMixin, CreateView):
@@ -963,7 +1016,7 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
 
 
 class GiftRelationDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
 ):
     model = Relation
     template_name = "gift_manager/confirm_delete.html"
@@ -1223,7 +1276,9 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
         return reverse(f"gift_manager:{url}", kwargs={"pk": pk})
 
 
-class RelationDeleteView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteView):
+class RelationDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+):
     model = Relation
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:relations")
