@@ -7,10 +7,16 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy
 
-PERMISSION_CHOICES = [
-    ("editor", "Editor"),
-    ("viewer", "Viewer"),
-]
+
+class PermissionLevel:
+    NONE = 0
+    VIEWER = 10
+    EDITOR = 20
+    OWNER = 30
+
+    CHOICES = [(NONE, "none"), (VIEWER, "viewer"), (EDITOR, "editor"), (OWNER, "owner")]
+
+    CHOICES_DICT = {"none": NONE, "viewer": VIEWER, "editor": EDITOR, "owner": OWNER}
 
 
 class Profile(models.Model):
@@ -91,7 +97,9 @@ class PersonPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "person")
@@ -123,7 +131,9 @@ class PersonGroupPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     group = models.ForeignKey(PersonGroup, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "group")
@@ -152,7 +162,9 @@ class GiftTagPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     gift_tag = models.ForeignKey(GiftTag, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "gift_tag")
@@ -186,7 +198,9 @@ class GiftPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     gift = models.ForeignKey(Gift, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "gift")
@@ -232,7 +246,9 @@ class EventPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "event")
@@ -293,7 +309,9 @@ class RelationPermission(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     relation = models.ForeignKey(Relation, on_delete=models.CASCADE)
-    permission_type = models.CharField(max_length=6, choices=PERMISSION_CHOICES)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
 
     class Meta:
         unique_together = ("user", "relation")

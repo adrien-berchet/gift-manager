@@ -47,6 +47,7 @@ from .models import EventPermission
 from .models import Gift
 from .models import GiftPermission
 from .models import Invitation
+from .models import PermissionLevel
 from .models import Person
 from .models import PersonGroup
 from .models import PersonGroupPermission
@@ -173,7 +174,13 @@ class GetObjectByTokenMixin:
 def get_permission(obj, user, filter_name):
     """Get the permission type for the user on the object."""
     permission = obj.shared_with.through.objects.filter(**{"user": user, filter_name: obj}).first()
-    return permission.permission_type if permission else "viewer"
+    return permission.permission_type if permission else PermissionLevel.VIEWER
+
+
+def get_permission_label(obj, user, filter_name):
+    """Get the permission label for the user on the object."""
+    permission_value = get_permission(obj, user, filter_name)
+    return PermissionLevel.get_label(permission_value)
 
 
 class ContextPermissionMixin:
@@ -181,8 +188,9 @@ class ContextPermissionMixin:
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["user_permission"] = get_permission(
-            self.object, self.request.user, self.context_object_name
+        context["is_editor"] = (
+            get_permission(self.object, self.request.user, self.context_object_name)
+            >= PermissionLevel.EDITOR
         )
         return context
 

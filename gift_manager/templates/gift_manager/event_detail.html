@@ -13,12 +13,12 @@
 <p><strong>{% trans "Recurrence:" %}</strong> {{ event.recurrence }}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
 
-{% if user_permission == "editor" %}
+{% if is_editor %}
     <a href="{% url 'gift_manager:event_edit' event.event_id %}" class="btn btn-warning mb-3">{% trans "Edit event" %}</a>
 {% else %}
     <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit event" %}</button>
 {% endif %}
-<a href="{% url 'gift_manager:event_delete' event.event_id %}" class="btn btn-danger mb-3"{% if user_permission != "editor" %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete event' %}</a>
+<a href="{% url 'gift_manager:event_delete' event.event_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete event' %}</a>
 
 <h2 class="my-4">{% trans "Relations for this Event" %}</h2>
 <table id="data-table" class="table table-striped">

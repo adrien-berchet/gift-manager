@@ -8,12 +8,12 @@
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
 
-{% if user_permission == "editor" %}
+{% if is_editor %}
     <a href="{% url 'gift_manager:person_group_edit' group.group_id %}" class="btn btn-warning mb-3">{% trans "Edit group" %}</a>
 {% else %}
     <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit group" %}</button>
 {% endif %}
-<a href="{% url 'gift_manager:person_group_delete' group.group_id %}" class="btn btn-danger mb-3"{% if user_permission != "editor" %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete group' %}</a>
+<a href="{% url 'gift_manager:person_group_delete' group.group_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete group' %}</a>
 
 <!-- Tabs nav -->
 <ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
