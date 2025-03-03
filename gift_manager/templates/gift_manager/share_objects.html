@@ -55,9 +55,25 @@
             </div>
         </div>
 
-        <!-- Optional sharing of persons of a group -->
         <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{% trans "Sharing options" %}</h5>
+            </div>
             <div class="card-body">
+                <!-- Permission level-->
+                <div class="form-group mb-3">
+                    <label for="permission_level"><strong>{{ _("Permission level") }}</strong></label>
+                    <select class="form-control" name="permission_level" id="permission_level">
+                        {% for level in permission_levels %}
+                            <option value="{{ level.value }}">{{ level.label }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                        {{ _("Specify what level of access you want to grant to the selected friends for the selected objects") }}
+                    </small>
+                </div>
+
+                <!-- Optional sharing of persons of a group -->
                 <div class="custom-control custom-switch">
                     <input type="checkbox" class="custom-control-input" id="share-group-persons" name="share_group_persons">
                     <label class="custom-control-label" for="share-group-persons">{% trans "When sharing groups, also share all persons in those groups" %}</label>

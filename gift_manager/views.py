@@ -9,6 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.core.mail import send_mail
+from django.db import transaction
 from django.db.models import Model
 from django.db.models import Q
 from django.db.models import TextField
@@ -126,18 +127,19 @@ class AcceptInvitationView(View):
 
 class RemoveFriendView(LoginRequiredMixin, View):
     def post(self, request, friend_id, *args, **kwargs):
-        friend_profile = get_object_or_404(Profile, pk=friend_id)
-        user_profile = get_object_or_404(Profile, user=request.user)
+        with transaction.atomic():
+            friend_profile = get_object_or_404(Profile, pk=friend_id)
+            user_profile = get_object_or_404(Profile, user=request.user)
 
-        # Remove the friend relationship (symmetric)
-        if friend_profile in user_profile.friends.all():
-            user_profile.friends.remove(friend_profile)
+            # Remove the friend relationship (symmetric)
+            if friend_profile in user_profile.friends.all():
+                user_profile.friends.remove(friend_profile)
 
-        # Remove all shared objects between the two users
-        persons_shared = Person.objects.filter(shared_with=request.user)
-        for person in persons_shared:
-            if friend_profile.user in person.shared_with.all():
-                person.shared_with.remove(friend_profile.user)
+            # Remove all shared objects between the two users
+            persons_shared = Person.objects.filter(shared_with=request.user)
+            for person in persons_shared:
+                if friend_profile.user in person.shared_with.all():
+                    person.shared_with.remove(friend_profile.user)
 
         return redirect("gift_manager:profile_detail")
 
@@ -204,34 +206,35 @@ class DeleteSharedMixin:
         If the person is shared with other users, only the sharing with the current user is removed.
         Otherwise, the person is completely deleted.
         """
-        self.object = self.get_object()
-        success_url = self.get_success_url()
+        with transaction.atomic():
+            self.object = self.get_object()
+            success_url = self.get_success_url()
 
-        # Check if the person is shared with other users
-        other_users = self.object.shared_with.exclude(id=request.user.id)
+            # Check if the person is shared with other users
+            other_users = self.object.shared_with.exclude(id=request.user.id)
 
-        if other_users.exists():
-            # If shared, only remove the sharing with the current user
-            self.object.shared_with.remove(request.user)
+            if other_users.exists():
+                # If shared, only remove the sharing with the current user
+                self.object.shared_with.remove(request.user)
 
-            # Delete the corresponding permission as well
-            self.object.shared_with.through.objects.filter(
-                user=request.user, person=self.object
-            ).delete()
+                # Delete the corresponding permission as well
+                self.object.shared_with.through.objects.filter(
+                    user=request.user, person=self.object
+                ).delete()
 
-            messages.success(
-                request,
-                gettext(
-                    "You no longer have access to this person, but it remains shared with other "
-                    "users"
-                ),
-            )
-        else:
-            # If not shared, completely delete the object
-            self.object.delete()
-            messages.success(request, gettext("Person successfully deleted"))
+                messages.success(
+                    request,
+                    gettext(
+                        "You no longer have access to this person, but it remains shared with "
+                        "other users"
+                    ),
+                )
+            else:
+                # If not shared, completely delete the object
+                self.object.delete()
+                messages.success(request, gettext("Person successfully deleted"))
 
-        return redirect(success_url)
+            return redirect(success_url)
 
 
 def handle_permissions(
@@ -242,35 +245,42 @@ def handle_permissions(
     object_attr,
     current_shared_users=None,
 ):
-    # Add current user
-    permission, created = cls.objects.get_or_create(
-        user=current_user, **{object_attr: related_object}, defaults={"permission_type": "editor"}
-    )
-    if not created and not permission.permission_type:
-        permission.permission_type = "editor"
-        permission.save()
-
-    # Add shared users
-    for user in viewer_users:
-        kwargs = {
-            object_attr: related_object,
-            "user": user,
-            "defaults": {"permission_type": "viewer"},
-        }
-        permission, created = cls.objects.get_or_create(**kwargs)
+    with transaction.atomic():
+        # Add current user
+        permission, created = cls.objects.get_or_create(
+            user=current_user,
+            **{object_attr: related_object},
+            defaults={"permission_type": PermissionLevel.EDITOR},
+        )
         if not created and not permission.permission_type:
-            permission.permission_type = "viewer"
+            permission.permission_type = PermissionLevel.EDITOR
             permission.save()
 
-    if current_shared_users is not None:
-        # Remove permissions for unselected users
-        # (users who were previously shared but not in the current selection)
-        users_to_remove = current_shared_users.exclude(id__in=[user.id for user in viewer_users])
-        users_to_remove = users_to_remove.exclude(id=current_user.id)  # Don't remove current user
+        # Add shared users
+        for user in viewer_users:
+            kwargs = {
+                object_attr: related_object,
+                "user": user,
+                "defaults": {"permission_type": PermissionLevel.VIEWER},
+            }
+            permission, created = cls.objects.get_or_create(**kwargs)
+            if not created and not permission.permission_type:
+                permission.permission_type = PermissionLevel.VIEWER
+                permission.save()
 
-        for user in users_to_remove:
-            # Remove the permission record
-            cls.objects.filter(user=user, **{object_attr: related_object}).delete()
+        if current_shared_users is not None:
+            # Remove permissions for unselected users
+            # (users who were previously shared but not in the current selection)
+            users_to_remove = current_shared_users.exclude(
+                id__in=[user.id for user in viewer_users]
+            )
+            users_to_remove = users_to_remove.exclude(
+                id=current_user.id
+            )  # Don't remove current user
+
+            for user in users_to_remove:
+                # Remove the permission record
+                cls.objects.filter(user=user, **{object_attr: related_object}).delete()
 
 
 class PersonListView(LoginRequiredMixin, ListView):
@@ -358,16 +368,17 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            PersonPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "person",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                PersonPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "person",
+            )
+            return response
 
 
 class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
@@ -399,17 +410,18 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            PersonPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "person",
-            current_shared_users=form.instance.shared_with.all(),
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                PersonPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "person",
+                current_shared_users=form.instance.shared_with.all(),
+            )
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.object.person_id})
@@ -474,16 +486,17 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            PersonGroupPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "group",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                PersonGroupPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "group",
+            )
+            return response
 
 
 class PersonGroupUpdateView(
@@ -514,17 +527,18 @@ class PersonGroupUpdateView(
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            PersonGroupPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "group",
-            current_shared_users=form.instance.shared_with.all(),
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                PersonGroupPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "group",
+                current_shared_users=form.instance.shared_with.all(),
+            )
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:person_group_detail", kwargs={"pk": self.object.group_id})
@@ -551,10 +565,11 @@ def add_multiple_persons_to_group(request, pk):
 
 
 def remove_person_from_group(request, pk, person_id):  # noqa: ARG001
-    group = get_object_or_404(PersonGroup, group_id=pk)
-    person = get_object_or_404(Person, person_id=person_id)
-    person.groups.remove(group)
-    return redirect("gift_manager:person_group_detail", pk=pk)
+    with transaction.atomic():
+        group = get_object_or_404(PersonGroup, group_id=pk)
+        person = get_object_or_404(Person, person_id=person_id)
+        person.groups.remove(group)
+        return redirect("gift_manager:person_group_detail", pk=pk)
 
 
 class PersonGroupDeleteView(
@@ -620,16 +635,17 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            GiftPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "gift",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                GiftPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "gift",
+            )
+            return response
 
 
 class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
@@ -659,17 +675,18 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            GiftPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "gift",
-            current_shared_users=form.instance.shared_with.all(),
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                GiftPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "gift",
+                current_shared_users=form.instance.shared_with.all(),
+            )
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.object.gift_id})
@@ -737,16 +754,17 @@ class EventCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            PersonPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "event",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                PersonPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "event",
+            )
+            return response
 
 
 class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
@@ -776,17 +794,18 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            EventPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "event",
-            current_shared_users=form.instance.shared_with.all(),
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                EventPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "event",
+                current_shared_users=form.instance.shared_with.all(),
+            )
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:event_detail", kwargs={"pk": self.object.person_id})
@@ -913,17 +932,18 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.person = Person.objects.get(person_id=self.kwargs["pk"])
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            RelationPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "relation",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.person = Person.objects.get(person_id=self.kwargs["pk"])
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                RelationPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "relation",
+            )
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -960,17 +980,18 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.group = PersonGroup.objects.get(group_id=self.kwargs["pk"])
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            RelationPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "relation",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.group = PersonGroup.objects.get(group_id=self.kwargs["pk"])
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                RelationPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "relation",
+            )
+            return response
 
     def get_success_url(self):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.object.group.group_id})
@@ -1021,26 +1042,18 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.gift = Gift.objects.get(gift_id=self.kwargs["pk"])
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        # Add current user
-        RelationPermission.objects.get_or_create(
-            user=self.request.user, relation=form.instance, defaults={"permission_type": "editor"}
-        )
-        # Add shared users
-        for user in form.cleaned_data["shared_with"]:
-            RelationPermission.objects.get_or_create(
-                user=user, relation=form.instance, defaults={"permission_type": "viewer"}
+        with transaction.atomic():
+            form.instance.gift = Gift.objects.get(gift_id=self.kwargs["pk"])
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                RelationPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "relation",
             )
-        handle_permissions(
-            RelationPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "relation",
-        )
-        return response
+            return response
 
     def get_success_url(self):
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -1199,16 +1212,17 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            RelationPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "relation",
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                RelationPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "relation",
+            )
+            return response
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1287,17 +1301,18 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
         return form
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
-        response = super().form_valid(form)
-        handle_permissions(
-            RelationPermission,
-            self.request.user,
-            form.instance,
-            form.cleaned_data["shared_with"],
-            "relation",
-            current_shared_users=form.instance.shared_with.all(),
-        )
-        return response
+        with transaction.atomic():
+            form.instance.user = self.request.user
+            response = super().form_valid(form)
+            handle_permissions(
+                RelationPermission,
+                self.request.user,
+                form.instance,
+                form.cleaned_data["shared_with"],
+                "relation",
+                current_shared_users=form.instance.shared_with.all(),
+            )
+            return response
 
     def get_success_url(self):
         if self.object.person_id is not None:
@@ -1378,6 +1393,22 @@ class ShareObjectsView(LoginRequiredMixin, View):
             )
         )
 
+        # Permission levels for dropdown
+        permission_levels = [
+            {
+                "value": PermissionLevel.VIEWER,
+                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
+            },
+            {
+                "value": PermissionLevel.EDITOR,
+                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
+            },
+            {
+                "value": PermissionLevel.OWNER,
+                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
+            },
+        ]
+
         context = {
             "friends": friends,
             "persons": persons,
@@ -1385,47 +1416,63 @@ class ShareObjectsView(LoginRequiredMixin, View):
             "gifts": gifts,
             "events": events,
             "relations": relations,
+            "permission_levels": permission_levels,
         }
 
         return render(request, self.template_name, context)
 
     def post(self, request):
         """Process sharing of selected objects."""
-        # Get selected friends
-        friends = self._get_selected_friends(request)
+        with transaction.atomic():
+            # Get selected friends
+            friends = self._get_selected_friends(request)
 
-        # Get selected objects by type
-        selection = self._get_selection_from_request(request)
+            # Get selected objects by type
+            selection = self._get_selection_from_request(request)
 
-        # Option to share persons in a group
-        share_group_persons = "share_group_persons" in request.POST
+            # Get selected permission level (default to VIEWER if not specified)
+            permission_level = int(request.POST.get("permission_level", PermissionLevel.VIEWER))
 
-        # Perform sharing for each object type
-        shared_items = {}
+            # Option to share persons in a group
+            share_group_persons = "share_group_persons" in request.POST
 
-        if selection["person_ids"]:
-            shared_items["persons"] = self._share_persons(selection["person_ids"], friends)
+            # Perform sharing for each object type
+            shared_items = {}
 
-        if selection["person_group_ids"]:
-            shared_items["person_groups"] = self._share_person_groups(
-                selection["person_group_ids"], friends, share_members=share_group_persons
+            if selection["person_ids"]:
+                shared_items["persons"] = self._share_persons(
+                    selection["person_ids"], friends, permission_level
+                )
+
+            if selection["person_group_ids"]:
+                shared_items["person_groups"] = self._share_person_groups(
+                    selection["person_group_ids"],
+                    friends,
+                    share_members=share_group_persons,
+                    permission_level=permission_level,
+                )
+
+            if selection["gift_ids"]:
+                shared_items["gifts"] = self._share_gifts(
+                    selection["gift_ids"], friends, permission_level
+                )
+
+            if selection["event_ids"]:
+                shared_items["events"] = self._share_events(
+                    selection["event_ids"], friends, permission_level
+                )
+
+            if selection["relation_ids"]:
+                shared_items["relations"] = self._share_relations(
+                    selection["relation_ids"], friends, permission_level
+                )
+
+            # Success message
+            messages.success(
+                request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
             )
 
-        if selection["gift_ids"]:
-            shared_items["gifts"] = self._share_gifts(selection["gift_ids"], friends)
-
-        if selection["event_ids"]:
-            shared_items["events"] = self._share_events(selection["event_ids"], friends)
-
-        if selection["relation_ids"]:
-            shared_items["relations"] = self._share_relations(selection["relation_ids"], friends)
-
-        # Success message
-        messages.success(
-            request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
-        )
-
-        return redirect("gift_manager:share_objects")
+            return redirect("gift_manager:share_objects")
 
     def _get_selected_friends(self, request) -> Sequence[User]:
         """Get selected friends from the request.
@@ -1456,12 +1503,15 @@ class ShareObjectsView(LoginRequiredMixin, View):
             "relation_ids": request.POST.getlist("relations"),
         }
 
-    def _share_persons(self, person_ids: list[str], friends: Sequence[User]) -> int:
+    def _share_persons(
+        self, person_ids: list[str], friends: Sequence[User], permission_level: int
+    ) -> int:
         """Share selected persons with selected friends.
 
         Args:
             person_ids: List of person IDs to share
             friends: Sequence of friends to share with
+            permission_level: Permission level to apply
 
         Returns:
             Number of shared persons
@@ -1470,14 +1520,21 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for person in persons:
             for friend in friends:
-                PersonPermission.objects.get_or_create(
-                    user=friend, person=person, defaults={"permission_type": "viewer"}
+                obj, _ = PersonPermission.objects.get_or_create(
+                    user=friend, person=person, defaults={"permission_type": permission_level}
                 )
+                obj.permission_type = permission_level
+                obj.save()
 
         return len(persons)
 
     def _share_person_groups(
-        self, person_group_ids: list[str], friends: Sequence[User], *, share_members: bool = False
+        self,
+        person_group_ids: list[str],
+        friends: Sequence[User],
+        *,
+        share_members: bool = False,
+        permission_level: int,
     ) -> int:
         """Share selected groups with selected friends.
 
@@ -1485,6 +1542,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             person_group_ids: List of group IDs to share
             friends: Sequence of friends to share with
             share_members: If True, the persons in the groups are also shared
+            permission_level: Permission level to apply
 
         Returns:
             Number of shared groups
@@ -1494,27 +1552,36 @@ class ShareObjectsView(LoginRequiredMixin, View):
         for group in groups:
             # Share the group
             for friend in friends:
-                PersonGroupPermission.objects.get_or_create(
-                    user=friend, group=group, defaults={"permission_type": "viewer"}
+                obj, _ = PersonGroupPermission.objects.get_or_create(
+                    user=friend, group=group, defaults={"permission_type": permission_level}
                 )
+                obj.permission_type = permission_level
+                obj.save()
 
             # If requested, also share the persons in the group
             if share_members:
                 persons_in_group = group.person_set.all()
                 for person in persons_in_group:
                     for friend in friends:
-                        PersonPermission.objects.get_or_create(
-                            user=friend, person=person, defaults={"permission_type": "viewer"}
+                        obj, _ = PersonPermission.objects.get_or_create(
+                            user=friend,
+                            person=person,
+                            defaults={"permission_type": permission_level},
                         )
+                        obj.permission_type = permission_level
+                obj.save()
 
         return len(groups)
 
-    def _share_gifts(self, gift_ids: list[str], friends: Sequence[User]) -> int:
+    def _share_gifts(
+        self, gift_ids: list[str], friends: Sequence[User], permission_level: int
+    ) -> int:
         """Share selected gifts with selected friends.
 
         Args:
             gift_ids: List of gift IDs to share
             friends: Sequence of friends to share with
+            permission_level: Permission level to apply
 
         Returns:
             Number of shared gifts
@@ -1523,18 +1590,23 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for gift in gifts:
             for friend in friends:
-                GiftPermission.objects.get_or_create(
-                    user=friend, gift=gift, defaults={"permission_type": "viewer"}
+                obj, _ = GiftPermission.objects.get_or_create(
+                    user=friend, gift=gift, defaults={"permission_type": permission_level}
                 )
+                obj.permission_type = permission_level
+                obj.save()
 
         return len(gifts)
 
-    def _share_events(self, event_ids: list[str], friends: Sequence[User]) -> int:
+    def _share_events(
+        self, event_ids: list[str], friends: Sequence[User], permission_level: int
+    ) -> int:
         """Share selected events with selected friends.
 
         Args:
             event_ids: List of event IDs to share
             friends: Sequence of friends to share with
+            permission_level: Permission level to apply
 
         Returns:
             Number of shared events
@@ -1543,13 +1615,17 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for event in events:
             for friend in friends:
-                EventPermission.objects.get_or_create(
-                    user=friend, event=event, defaults={"permission_type": "viewer"}
+                obj, _ = EventPermission.objects.get_or_create(
+                    user=friend, event=event, defaults={"permission_type": permission_level}
                 )
+                obj.permission_type = permission_level
+                obj.save()
 
         return len(events)
 
-    def _share_relations(self, relation_ids: list[str], friends: Sequence[User]) -> int:
+    def _share_relations(
+        self, relation_ids: list[str], friends: Sequence[User], permission_level: int
+    ) -> int:
         """Share selected relations with selected friends.
 
         Includes cascade sharing of related objects.
@@ -1557,6 +1633,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
         Args:
             relation_ids: List of relation IDs to share
             friends: Sequence of friends to share with
+            permission_level: Permission level to apply
 
         Returns:
             Number of shared relations
@@ -1566,25 +1643,37 @@ class ShareObjectsView(LoginRequiredMixin, View):
         for relation in relations:
             # Share the relation itself
             for friend in friends:
-                RelationPermission.objects.get_or_create(
-                    user=friend, relation=relation, defaults={"permission_type": "viewer"}
+                obj, _ = RelationPermission.objects.get_or_create(
+                    user=friend, relation=relation, defaults={"permission_type": permission_level}
                 )
+                obj.permission_type = permission_level
+                obj.save()
 
             # Share the associated gift
             if relation.gift:
-                self._share_related_object(relation.gift, friends, GiftPermission)
+                self._share_related_object(
+                    relation.gift, friends, GiftPermission, permission_level=permission_level
+                )
 
             # Share the associated person or group
             if relation.person:
-                self._share_related_object(relation.person, friends, PersonPermission)
+                self._share_related_object(
+                    relation.person, friends, PersonPermission, permission_level=permission_level
+                )
             elif relation.group:
                 self._share_related_object(
-                    relation.group, friends, PersonGroupPermission, field_name="group"
+                    relation.group,
+                    friends,
+                    PersonGroupPermission,
+                    field_name="group",
+                    permission_level=permission_level,
                 )
 
             # Share the associated event
             if relation.event:
-                self._share_related_object(relation.event, friends, EventPermission)
+                self._share_related_object(
+                    relation.event, friends, EventPermission, permission_level=permission_level
+                )
 
         return len(relations)
 
@@ -1594,6 +1683,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
         friends: Sequence[User],
         permission_model: ModelType,
         field_name: str = "",
+        permission_level: int = PermissionLevel.VIEWER,
     ) -> None:
         """Utility method to share an object related to a relation.
 
@@ -1602,6 +1692,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             friends: Sequence of friends to share with
             permission_model: The permission model to use
             field_name: The field name in the permission model (default: class name in lowercase)
+            permission_level: Permission level to apply
 
         Returns:
             None
@@ -1610,5 +1701,11 @@ class ShareObjectsView(LoginRequiredMixin, View):
             field_name = obj.__class__.__name__.lower()
 
         for friend in friends:
-            kwargs = {"user": friend, field_name: obj, "defaults": {"permission_type": "viewer"}}
-            permission_model.objects.get_or_create(**kwargs)
+            kwargs = {
+                "user": friend,
+                field_name: obj,
+                "defaults": {"permission_type": permission_level},
+            }
+            obj, _ = permission_model.objects.get_or_create(**kwargs)
+            obj.permission_type = permission_level
+            obj.save()

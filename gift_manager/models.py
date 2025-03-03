@@ -7,16 +7,37 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy
 
+_PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
+_PERMISSION_LABEL_DICT = {
+    0: gettext_lazy("none"),
+    10: gettext_lazy("viewer"),
+    20: gettext_lazy("editor"),
+    30: gettext_lazy("owner"),
+}
+
 
 class PermissionLevel:
-    NONE = 0
-    VIEWER = 10
-    EDITOR = 20
-    OWNER = 30
+    NONE = _PERMISSION_LEVEL_DICT["none"]
+    VIEWER = _PERMISSION_LEVEL_DICT["viewer"]
+    EDITOR = _PERMISSION_LEVEL_DICT["editor"]
+    OWNER = _PERMISSION_LEVEL_DICT["owner"]
 
-    CHOICES = [(NONE, "none"), (VIEWER, "viewer"), (EDITOR, "editor"), (OWNER, "owner")]
+    CHOICES = [
+        (NONE, _PERMISSION_LABEL_DICT[NONE]),
+        (VIEWER, _PERMISSION_LABEL_DICT[VIEWER]),
+        (EDITOR, _PERMISSION_LABEL_DICT[EDITOR]),
+        (OWNER, _PERMISSION_LABEL_DICT[OWNER]),
+    ]
 
-    CHOICES_DICT = {"none": NONE, "viewer": VIEWER, "editor": EDITOR, "owner": OWNER}
+    @classmethod
+    def get_label(cls, permission_level, case="lower") -> str:
+        """Get the label of a permission level."""
+        label = _PERMISSION_LABEL_DICT.get(permission_level, "none")
+        if case == "upper":
+            return label.upper()
+        if case == "title":
+            return label.title()
+        return label
 
 
 class Profile(models.Model):
