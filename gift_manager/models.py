@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -200,7 +201,7 @@ class Gift(models.Model):
     gift_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
-    tags = models.ManyToManyField(GiftTag, related_name="gifts")
+    tags = models.ManyToManyField(GiftTag, related_name="gifts", blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(
         User, through="GiftPermission", related_name="%(app_label)s_%(class)s_shared_with"
@@ -323,6 +324,18 @@ class Relation(models.Model):
 
     def __str__(self):
         return f"{self.person} - {self.gift} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        """Override save to ensure validation."""
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        """Ensure that at least person or group is set."""
+        if (self.person is None) == (self.group is None):
+            raise ValidationError(
+                gettext_lazy("Either a person or a group must be specified but not both.")
+            )
 
 
 class RelationPermission(models.Model):

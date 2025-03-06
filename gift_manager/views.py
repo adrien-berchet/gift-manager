@@ -197,6 +197,344 @@ class ContextPermissionMixin:
         return context
 
 
+class SharedUsersMixin:
+    """Mixin to add shared users with their permissions to the context."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Get the users with whom this object is shared, with their permissions
+        shared_users = []
+        for user in self.object.shared_with.exclude(id=self.request.user.id):
+            permission = get_permission(self.object, user, self.context_object_name)
+            permission_label = PermissionLevel.get_label(permission)
+            shared_users.append(
+                {"user": user, "permission": permission, "permission_label": permission_label}
+            )
+
+        context["shared_users"] = shared_users
+        return context
+
+
+class CreatePermissionMixin:
+    """Mixin to add shared user permissions to CreateView forms."""
+
+    def get_initial(self):
+        initial = super().get_initial()
+
+        # Get the current user profile and its friends
+        current_user_profile = Profile.objects.get(user=self.request.user)
+        friend_profiles = current_user_profile.friends.all()
+        friend_users = User.objects.filter(profile__in=friend_profiles)
+
+        # Prepare the lists for the shared users and unshared friends
+        self.unshared_friends = [
+            {
+                "user": friend,
+                "form_id": f"share_{friend.id}",  # Unique identifier for the form
+            }
+            for friend in friend_users
+        ]
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if hasattr(self, "unshared_friends"):
+            context["unshared_friends"] = self.unshared_friends
+
+        # Add the permission levels available for the dropdown menus
+        context["permission_levels"] = [
+            {
+                "value": PermissionLevel.VIEWER,
+                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
+            },
+            {
+                "value": PermissionLevel.EDITOR,
+                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
+            },
+            {
+                "value": PermissionLevel.OWNER,
+                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
+            },
+        ]
+        return context
+
+    def form_valid(self, form):
+        """Process the form and add shared user permissions."""
+        # Save the object and get the response
+        response = super().form_valid(form)
+
+        # Process the shared users
+        for key, value in self.request.POST.items():
+            if (
+                key.startswith("share_with_") and value
+            ):  # Not empty value means the user is selected
+                try:
+                    user_id = key.split("_")[-1]
+                    permission = int(value)
+
+                    user = User.objects.get(id=user_id)
+
+                    # Add the user to the shared_with of the object
+                    self.object.shared_with.add(user)
+
+                    # Create the corresponding permission as well
+                    object_type = self.context_object_name
+                    permission_model_map = {
+                        "person": PersonPermission,
+                        "group": PersonGroupPermission,
+                        "gift": GiftPermission,
+                        "event": EventPermission,
+                        "relation": RelationPermission,
+                    }
+
+                    model = permission_model_map.get(object_type)
+                    if model:
+                        filter_kwargs = {"user": user, object_type: self.object}
+                        permission_obj, created = model.objects.get_or_create(
+                            **filter_kwargs, defaults={"permission_type": permission}
+                        )
+                        if not created:
+                            permission_obj.permission_type = permission
+                            permission_obj.save()
+                except Exception as e:
+                    messages.error(self.request, str(e))
+
+        return response
+
+
+class EditPermissionMixin:
+    """Mixin to add shared user permissions to UpdateView forms."""
+
+    def get_initial(self):
+        initial = super().get_initial()
+        self.object = self.get_object()
+
+        # Get the current user profile and its friends
+        current_user_profile = Profile.objects.get(user=self.request.user)
+        friend_profiles = current_user_profile.friends.all()
+        friend_users = User.objects.filter(profile__in=friend_profiles)
+
+        # Prepare the lists for the shared users and unshared friends
+        shared_users = []
+        unshared_friends = []
+        object_type = self.context_object_name
+
+        # Process the shared users
+        for friend in friend_users:
+            # Check if the friend is already shared with
+            if friend in self.object.shared_with.all():
+                permission = get_permission(self.object, friend, object_type)
+                permission_label = PermissionLevel.get_label(permission)
+
+                shared_users.append(
+                    {
+                        "user": friend,
+                        "permission": permission,
+                        "permission_label": permission_label,
+                        "form_id": f"perm_{friend.id}",  # Unique identifier for the form
+                    }
+                )
+            else:
+                unshared_friends.append(
+                    {
+                        "user": friend,
+                        "form_id": f"share_{friend.id}",  # Unique identifier for the form
+                    }
+                )
+
+        self.shared_users = shared_users
+        self.unshared_friends = unshared_friends
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if hasattr(self, "shared_users"):
+            context["shared_users"] = self.shared_users
+        if hasattr(self, "unshared_friends"):
+            context["unshared_friends"] = self.unshared_friends
+
+        # Add the permission levels available for the dropdown menus
+        context["permission_levels"] = [
+            {
+                "value": PermissionLevel.VIEWER,
+                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
+            },
+            {
+                "value": PermissionLevel.EDITOR,
+                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
+            },
+            {
+                "value": PermissionLevel.OWNER,
+                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
+            },
+        ]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        self.is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+        # Case 1: Update an existing permission
+        if "update_permission" in request.POST:
+            return self._handle_update_permission(request)
+
+        # Case 2: Remove an existing sharing
+        if "remove_share" in request.POST:
+            return self._handle_remove_share(request)
+
+        # Case 3: Share the object with a new user
+        if "share_with" in request.POST:
+            return self._handle_share_with(request)
+
+        # For other cases, call the parent post method
+        return super().post(request, *args, **kwargs)
+
+    def _handle_update_permission(self, request) -> JsonResponse:
+        """Update an existing permission."""
+        new_permission = int(request.POST.get("permission"))
+
+        try:
+            user, username, user_id = self._get_user(request, return_id=True)
+
+            # Find the corresponding permission and update it
+            permission_obj = self._get_permission_object(user_id)
+
+            if permission_obj:
+                permission_obj.permission_type = new_permission
+                permission_obj.save()
+
+                permission_label = PermissionLevel.get_label(new_permission)
+                message = gettext(
+                    "Permission for '{username}' changed to '{permission_level}'"
+                ).format(username=username, permission_level=permission_label)
+
+                if self.is_ajax:
+                    return JsonResponse(
+                        {
+                            "success": True,
+                            "message": message,
+                            "user": {"id": user.id, "username": username},
+                            "permission": new_permission,
+                        }
+                    )
+                messages.success(request, message)
+                return self.get(request)
+
+        except Exception as e:
+            return self._handle_error(request, e)
+
+    def _handle_remove_share(self, request) -> JsonResponse:
+        """Remove an existing sharing."""
+        try:
+            user, username = self._get_user(request)
+
+            # Remove the user from the shared_with of the object
+            self.object.shared_with.remove(user)
+
+            message = gettext("Sharing with '{username}' removed successfully").format(
+                username=username
+            )
+
+            if self.is_ajax:
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": message,
+                        "user": {"id": user.id, "username": username},
+                    }
+                )
+            messages.success(request, message)
+            return self.get(request)
+
+        except Exception as e:
+            return self._handle_error(request, e)
+
+    def _handle_share_with(self, request) -> JsonResponse:
+        """Share the object with a new user."""
+        permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
+
+        try:
+            user, username = self._get_user(request)
+
+            # Add the user to the shared_with of the object
+            self.object.shared_with.add(user)
+
+            # Create the corresponding permission as well
+            self._create_permission_object(user, permission)
+
+            message = gettext("Object shared with '{username}' successfully").format(
+                username=username
+            )
+
+            if self.is_ajax:
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": message,
+                        "user": {"id": user.id, "username": username},
+                        "permission": permission,
+                    }
+                )
+            messages.success(request, message)
+            return self.get(request)
+
+        except Exception as e:
+            return self._handle_error(request, e)
+
+    @staticmethod
+    def _get_user(request, *, return_id=False) -> tuple[User, str] | tuple[User, str, str]:
+        user_id = request.POST.get("user_id")
+        user = User.objects.get(id=user_id)
+        username = user.username
+        if return_id:
+            return user, username, user_id
+        return user, username
+
+    def _get_permission_model(self) -> type[Model] | None:
+        """Get the permission model for the current object type."""
+        object_type = self.context_object_name
+        permission_model_map = {
+            "person": PersonPermission,
+            "group": PersonGroupPermission,
+            "gift": GiftPermission,
+            "event": EventPermission,
+            "relation": RelationPermission,
+        }
+        return permission_model_map.get(object_type)
+
+    def _get_permission_object(self, user_id) -> Model | None:
+        """Get the permission object for the specified user and current object."""
+        model = self._get_permission_model()
+        if model:
+            object_type = self.context_object_name
+            filter_kwargs = {"user_id": user_id, object_type: self.object}
+            return model.objects.get(**filter_kwargs)
+        raise Model.DoesNotExist(gettext("Could not find permission object"))
+
+    def _create_permission_object(self, user, permission_level) -> Model | None:
+        """Create or update permission object for the user."""
+        model = self._get_permission_model()
+        if model:
+            object_type = self.context_object_name
+            filter_kwargs = {"user": user, object_type: self.object}
+            obj, created = model.objects.get_or_create(
+                **filter_kwargs, defaults={"permission_type": permission_level}
+            )
+            if not created:
+                obj.permission_type = permission_level
+                obj.save()
+            return obj
+        raise Model.DoesNotExist(gettext("Could not create permission object"))
+
+    def _handle_error(self, request, exception) -> JsonResponse:
+        """Handle exceptions by returning appropriate response."""
+        if self.is_ajax:
+            return JsonResponse({"success": False, "message": str(exception)})
+        messages.error(request, str(exception))
+        return self.get(request)
+
+
 class DeleteSharedMixin:
     """Mixin to delete shared objects."""
 
@@ -219,7 +557,7 @@ class DeleteSharedMixin:
 
                 # Delete the corresponding permission as well
                 self.object.shared_with.through.objects.filter(
-                    user=request.user, person=self.object
+                    user=request.user, **{self.object_type: self.object}
                 ).delete()
 
                 messages.success(
@@ -235,6 +573,17 @@ class DeleteSharedMixin:
                 messages.success(request, gettext("Person successfully deleted"))
 
             return redirect(success_url)
+
+
+class CancelToPreviousMixin:
+    """Mixin to redirect to the previous page or a default URL."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Retrieve the referer URL (previous page) or use the default URL
+        referer = self.request.META.get("HTTP_REFERER")
+        context["cancel_url"] = referer if referer else self.success_url
+        return context
 
 
 def handle_permissions(
@@ -341,12 +690,13 @@ class PersonListView(LoginRequiredMixin, ListView):
         return queryset
 
 
-class PersonCreateView(LoginRequiredMixin, CreateView):
+class PersonCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Person
     form_class = PersonForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:persons")
+    context_object_name = "person"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -361,10 +711,6 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
         form.fields["groups"].queryset = PersonGroup.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
@@ -375,18 +721,21 @@ class PersonCreateView(LoginRequiredMixin, CreateView):
                 PersonPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "person",
             )
             return response
 
 
-class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
+class PersonUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
+):
     model = Person
     form_class = PersonForm
-    template_name = "gift_manager/create_form.html"
+    template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
     pk_name = "person_id"
+    context_object_name = "person"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -403,10 +752,6 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
         form.fields["groups"].queryset = PersonGroup.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        ).order_by("username")
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
@@ -417,7 +762,7 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
                 PersonPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "person",
                 current_shared_users=form.instance.shared_with.all(),
             )
@@ -428,12 +773,18 @@ class PersonUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMi
 
 
 class PersonDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = Person
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:persons")
     pk_name = "person_id"
+    object_type = "person"
 
 
 class PersonGroupListView(LoginRequiredMixin, ListView):
@@ -462,12 +813,13 @@ class PersonGroupListView(LoginRequiredMixin, ListView):
         )
 
 
-class PersonGroupCreateView(LoginRequiredMixin, CreateView):
+class PersonGroupCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = PersonGroup
     form_class = PersonGroupForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:person_groups")
+    context_object_name = "group"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -477,14 +829,6 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
         context["cancel_url"] = reverse_lazy("gift_manager:person_groups")
         return context
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
-        return form
-
     def form_valid(self, form):
         with transaction.atomic():
             form.instance.user = self.request.user
@@ -493,20 +837,21 @@ class PersonGroupCreateView(LoginRequiredMixin, CreateView):
                 PersonGroupPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "group",
             )
             return response
 
 
 class PersonGroupUpdateView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
 ):
     model = PersonGroup
     form_class = PersonGroupForm
-    template_name = "gift_manager/create_form.html"
+    template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
     pk_name = "group_id"
+    context_object_name = "group"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -518,14 +863,6 @@ class PersonGroupUpdateView(
         )
         return context
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
-        return form
-
     def form_valid(self, form):
         with transaction.atomic():
             form.instance.user = self.request.user
@@ -534,7 +871,7 @@ class PersonGroupUpdateView(
                 PersonGroupPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "group",
                 current_shared_users=form.instance.shared_with.all(),
             )
@@ -573,12 +910,18 @@ def remove_person_from_group(request, pk, person_id):  # noqa: ARG001
 
 
 class PersonGroupDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = PersonGroup
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:person_groups")
     pk_name = "group_id"
+    object_type = "group"
 
 
 class GiftListView(LoginRequiredMixin, ListView):
@@ -610,12 +953,13 @@ class GiftListView(LoginRequiredMixin, ListView):
         )
 
 
-class GiftCreateView(LoginRequiredMixin, CreateView):
+class GiftCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Gift
     form_class = GiftForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:gifts")
+    context_object_name = "gift"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -627,10 +971,6 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         form.fields["tags"].required = False  # Make the field optional in the form
         return form
 
@@ -642,18 +982,21 @@ class GiftCreateView(LoginRequiredMixin, CreateView):
                 GiftPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "gift",
             )
             return response
 
 
-class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
+class GiftUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
+):
     model = Gift
-    template_name = "gift_manager/create_form.html"
-    fields = ["name", "comment", "tags", "shared_with"]
+    template_name = "gift_manager/edit_form.html"
+    fields = ["name", "comment", "tags"]
     login_url = "/accounts/login/"
     pk_name = "gift_id"
+    context_object_name = "gift"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -667,10 +1010,6 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         form.fields["tags"].required = False  # Make the field optional in the form
         return form
 
@@ -682,7 +1021,7 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
                 GiftPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "gift",
                 current_shared_users=form.instance.shared_with.all(),
             )
@@ -693,12 +1032,18 @@ class GiftUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixi
 
 
 class GiftDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = Gift
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:gifts")
     pk_name = "gift_id"
+    object_type = "gift"
 
 
 class EventListView(LoginRequiredMixin, ListView):
@@ -730,12 +1075,13 @@ class EventListView(LoginRequiredMixin, ListView):
         )
 
 
-class EventCreateView(LoginRequiredMixin, CreateView):
+class EventCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Event
     form_class = EventForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:events")
+    context_object_name = "event"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -745,35 +1091,30 @@ class EventCreateView(LoginRequiredMixin, CreateView):
         context["cancel_url"] = reverse_lazy("gift_manager:events")
         return context
 
-    def get_form(self, form_class=None):
-        form = super().get_form(form_class)
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
-        return form
-
     def form_valid(self, form):
         with transaction.atomic():
             form.instance.user = self.request.user
             response = super().form_valid(form)
             handle_permissions(
-                PersonPermission,
+                EventPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "event",
             )
             return response
 
 
-class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
+class EventUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
+):
     model = Event
     form_class = EventForm
-    template_name = "gift_manager/create_form.html"
+    template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:events")
     pk_name = "event_id"
+    context_object_name = "event"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -801,7 +1142,7 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
                 EventPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "event",
                 current_shared_users=form.instance.shared_with.all(),
             )
@@ -812,16 +1153,27 @@ class EventUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMix
 
 
 class EventDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = Event
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:events")
     pk_name = "event_id"
+    object_type = "event"
 
 
 class PersonDetailView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, ContextPermissionMixin, DetailView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    ContextPermissionMixin,
+    SharedUsersMixin,
+    DetailView,
 ):
     model = Person
     template_name = "gift_manager/person_detail.html"
@@ -836,7 +1188,6 @@ class PersonDetailView(
             (Q(person=self.object) | Q(group__in=self.object.groups.all()))
             & Q(shared_with=self.request.user)
         ).select_related("status")
-        context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         context["relation_statuses"] = RelationStatus.objects.all()
         return context
 
@@ -901,20 +1252,20 @@ class EventDetailView(
         return context
 
 
-class PersonRelationCreateView(LoginRequiredMixin, CreateView):
+class PersonRelationCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Relation
     form_class = PersonRelationForm
-    template_name = "gift_manager/create_person_relation_form.html"
+    template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial["person"] = self.kwargs["pk"]
-        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["person"] = Person.objects.get(person_id=self.kwargs["pk"])
+        context["type"] = "Relation"
+        context["translated_type"] = gettext("Relation")
+        context["action"] = gettext("Create")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
@@ -925,22 +1276,22 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
         form.fields["event"].queryset = Event.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["person_id"] = self.kwargs["pk"]  # Pass the person ID to the form
+        return kwargs
 
     def form_valid(self, form):
         with transaction.atomic():
-            form.instance.person = Person.objects.get(person_id=self.kwargs["pk"])
             form.instance.user = self.request.user
             response = super().form_valid(form)
             handle_permissions(
                 RelationPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "relation",
             )
             return response
@@ -949,20 +1300,21 @@ class PersonRelationCreateView(LoginRequiredMixin, CreateView):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]})
 
 
-class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
+class PersonGroupRelationCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Relation
     form_class = PersonGroupRelationForm
-    template_name = "gift_manager/create_group_relation_form.html"
+    template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial["group"] = self.kwargs["pk"]
-        return initial
+    context_object_name = "relation"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["group"] = PersonGroup.objects.get(group_id=self.kwargs["pk"])
+        context["type"] = "Relation"
+        context["translated_type"] = gettext("Relation")
+        context["action"] = gettext("Create")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
@@ -973,22 +1325,22 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
         form.fields["event"].queryset = Event.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["group_id"] = self.kwargs["pk"]  # Pass the group ID to the form
+        return kwargs
 
     def form_valid(self, form):
         with transaction.atomic():
-            form.instance.group = PersonGroup.objects.get(group_id=self.kwargs["pk"])
             form.instance.user = self.request.user
             response = super().form_valid(form)
             handle_permissions(
                 RelationPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "relation",
             )
             return response
@@ -999,20 +1351,21 @@ class PersonGroupRelationCreateView(LoginRequiredMixin, CreateView):
         return f"{url}?{query}"
 
 
-class GiftRelationCreateView(LoginRequiredMixin, CreateView):
+class GiftRelationCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Relation
     form_class = GiftRelationForm
-    template_name = "gift_manager/create_gift_relation_form.html"
+    template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
-
-    def get_initial(self):
-        initial = super().get_initial()
-        initial["gift"] = self.kwargs["pk"]
-        return initial
+    context_object_name = "relation"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["gift"] = Gift.objects.get(gift_id=self.kwargs["pk"])
+        context["type"] = "Gift"
+        context["translated_type"] = gettext("Gift")
+        context["action"] = gettext("Create relation")
+        context["cancel_url"] = reverse_lazy(
+            "gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]}
+        )
         return context
 
     def get_form(self, form_class=None):
@@ -1035,22 +1388,22 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
         form.fields["event"].queryset = Event.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["gift_id"] = self.kwargs["pk"]  # Pass the gift ID to the form
+        return kwargs
 
     def form_valid(self, form):
         with transaction.atomic():
-            form.instance.gift = Gift.objects.get(gift_id=self.kwargs["pk"])
             form.instance.user = self.request.user
             response = super().form_valid(form)
             handle_permissions(
                 RelationPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "relation",
             )
             return response
@@ -1060,11 +1413,17 @@ class GiftRelationCreateView(LoginRequiredMixin, CreateView):
 
 
 class GiftRelationDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = Relation
     template_name = "gift_manager/confirm_delete.html"
     pk_name = "relation_id"
+    object_type = "relation"
 
     def get_success_url(self):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.object.group.group_id})
@@ -1170,12 +1529,13 @@ class RelationListView(LoginRequiredMixin, ListView):
         return context
 
 
-class RelationCreateView(LoginRequiredMixin, CreateView):
+class RelationCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     model = Relation
     form_class = RelationForm
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
     success_url = reverse_lazy("gift_manager:relations")
+    context_object_name = "relation"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -1205,10 +1565,6 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
         form.fields["event"].queryset = Event.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False
         return form
 
     def form_valid(self, form):
@@ -1219,7 +1575,7 @@ class RelationCreateView(LoginRequiredMixin, CreateView):
                 RelationPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "relation",
             )
             return response
@@ -1249,12 +1605,15 @@ class RelationDetailView(
         return context
 
 
-class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, UpdateView):
+class RelationUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
+):
     model = Relation
     form_class = RelationForm
-    template_name = "gift_manager/create_form.html"
+    template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
     pk_name = "relation_id"
+    context_object_name = "relation"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1294,10 +1653,6 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
         form.fields["event"].queryset = Event.objects.filter(
             shared_with=self.request.user
         ).order_by("name")
-        form.fields["shared_with"].queryset = User.objects.filter(
-            pk__in=self.request.user.profile.friends.all().values_list("user_id", flat=True)
-        )
-        form.fields["shared_with"].required = False  # Make the field optional in the form
         return form
 
     def form_valid(self, form):
@@ -1308,7 +1663,7 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
                 RelationPermission,
                 self.request.user,
                 form.instance,
-                form.cleaned_data["shared_with"],
+                [],
                 "relation",
                 current_shared_users=form.instance.shared_with.all(),
             )
@@ -1325,12 +1680,18 @@ class RelationUpdateView(FilterByUserMixin, GetObjectByTokenMixin, LoginRequired
 
 
 class RelationDeleteView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, DeleteSharedMixin, DeleteView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    DeleteSharedMixin,
+    CancelToPreviousMixin,
+    DeleteView,
 ):
     model = Relation
     template_name = "gift_manager/confirm_delete.html"
     success_url = reverse_lazy("gift_manager:relations")
     pk_name = "relation_id"
+    object_type = "relation"
 
 
 @login_required

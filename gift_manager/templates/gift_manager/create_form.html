@@ -4,26 +4,255 @@
 {% block title %}{{ action }} {{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ action }} {{ translated_type }}</h1>
-<form method="post">
+<div class="container mb-5 pb-5">
+  <h1>{{ action }} {{ translated_type }}</h1>
+  <form method="post" id="main-form">
     {% csrf_token %}
-    {% for field in form %}
-        {% if not field.disabled %}
-        <div class="form-group">
-            <label for="{{ field.id_for_label }}" style="vertical-align: top;">{{ field.label_tag }}</label>
-            {{ field }}
-            {% if field.help_text %}
-                <small class="form-text text-muted">{{ field.help_text }}</small>
-            {% endif %}
-            {% for error in field.errors %}
-                <div class="text-danger">
-                    {{ error }}
-                </div>
-            {% endfor %}
+    {{ form.as_p }}
+
+    <div class="mt-5">
+      <h3><i class="fas fa-share-alt me-2"></i>{% trans "Sharing Management" %}</h3>
+
+      <div class="alert alert-info mb-3">
+        <h5><i class="fas fa-info-circle me-2"></i>{% trans "Permission levels" %}:</h5>
+        <ul class="mb-0">
+          <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
+          <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
+          <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the object" %}</li>
+        </ul>
+      </div>
+
+      {% if unshared_friends %}
+      <div class="card">
+        <div class="card-header bg-secondary text-white">
+          <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>{% trans "Share with friends" %}</h4>
         </div>
-        {% endif %}
-    {% endfor %}
-    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
-    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
-</form>
+        <div class="card-body">
+          <div class="alert alert-info mb-3">
+            <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to share with." %}</p>
+          </div>
+
+          <div class="table-responsive unshared-friends-table">
+            <table class="table table-striped">
+              <thead>
+                <tr>
+                  <th>{% trans "User" %}</th>
+                  <th>{% trans "Permission level" %}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for friend in unshared_friends %}
+                <tr>
+                  <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                      <i class="fas fa-user me-2 text-muted"></i>
+                      {{ friend.user.username }}
+                    </div>
+                  </td>
+                  <td class="align-middle">
+                    <select name="share_with_{{ friend.user.id }}" class="form-select form-select-sm">
+                      <option value="" selected>{% trans "Not shared" %}</option>
+                      {% for level in permission_levels %}
+                      <option value="{{ level.value }}">
+                        {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="alert alert-warning">
+        <i class="fas fa-user-friends me-2"></i>
+        {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
+        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+          <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </form>
+
+  <div style="height: 80px;"></div>
+</div>
+{% endblock %}
+
+{% block body_end %}
+<!-- Fixed action buttons moved outside the normal document flow -->
+<div id="fixed-action-bar" class="fixed-action-bar">
+  <div class="container">
+    <div class="action-buttons">
+      <button type="submit" form="main-form" class="btn btn-primary">
+        <i class="fas fa-save me-2"></i>{% trans "Save" %}
+      </button>
+      <a href="{{ cancel_url }}" class="btn btn-secondary">
+        <i class="fas fa-times me-2"></i>{% trans "Cancel" %}
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Create a container for notifications
+  let notificationsContainer;
+  function createNotificationsContainer() {
+    let container = document.getElementById('notifications-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'notifications-container';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.right = '20px';
+      container.style.zIndex = '1050';
+      container.style.maxWidth = '400px';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  function showNotification(message, type = 'success', duration = null) {
+    // Determine the duration based on the type if not specified
+    if (duration === null) {
+      // Default durations according to notification type
+      switch(type) {
+        case 'success': duration = 5000; break; // 5 seconds for successes
+        case 'info': duration = 6000; break;    // 6 seconds for info
+        case 'warning': duration = 8000; break; // 8 seconds for warnings
+        case 'danger': duration = 10000; break; // 10 seconds for errors
+        default: duration = 5000;               // 5 seconds by default
+      }
+    }
+
+    // Create a notification div
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show`;
+    notification.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+    notification.style.marginBottom = '10px';
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.3s';
+
+    // Add the close button and the message in separate elements
+    notification.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center">
+        <div>${message}</div>
+        <button type="button" class="btn-close ms-3" aria-label="Close"></button>
+      </div>
+    `;
+
+    // Add to the notifications container
+    notificationsContainer.appendChild(notification);
+
+    // Force rendering before adding opacity
+    setTimeout(() => {
+      notification.style.opacity = '1';
+    }, 10);
+
+    // Delete after specified duration
+    let timeoutId;
+    if (duration > 0) {
+      timeoutId = setTimeout(() => {
+        fadeOutAndRemove(notification);
+      }, duration);
+    }
+
+    // Add an event handler for the close button
+    const closeButton = notification.querySelector('.btn-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', function() {
+        if (timeoutId) clearTimeout(timeoutId); // Cancel the auto-delete delay
+        fadeOutAndRemove(notification);
+      });
+    }
+
+    // Function to fade out and smoothly remove the notification
+    function fadeOutAndRemove(element) {
+      element.style.opacity = '0';
+      setTimeout(() => element.remove(), 300);
+    }
+  }
+
+  // Initialization on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Create the notifications container
+    notificationsContainer = createNotificationsContainer();
+
+    // Add ID to the form for the fixed buttons to work
+    document.querySelector('form').id = 'form';
+    if (mainForm) {
+      mainForm.id = 'main-form';
+    }
+
+    // Ensure the action bar is always visible
+    const actionBar = document.getElementById('fixed-action-bar');
+    if (fixedBar) {
+      // Make sure it's at the end of the body to avoid z-index issues
+      document.body.appendChild(fixedBar);
+
+      // Force visibility by applying styles directly
+      Object.assign(fixedBar.style, {
+        position: 'fixed',
+        bottom: '0',
+        left: '0',
+        right: '0',
+        zIndex: '100000',
+        display: 'block'
+      });
+    }
+  });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .fixed-action-bar {
+    position: fixed !important; /* Important override */
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    background-color: rgba(248, 249, 250, 0.95);
+    padding: 15px;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 100000 !important; /* Ultra high z-index */
+    border-top: 2px solid #007bff;
+  }
+
+  .fixed-action-bar .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+  }
+
+  /* Add padding to body to prevent content from being hidden */
+  body {
+    padding-bottom: 80px !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Make buttons more visible */
+  .fixed-action-bar .btn {
+    padding: 0.5rem 2rem;
+    font-weight: 500;
+  }
+
+  .fixed-action-bar .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+    box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
+    transition: all 0.2s;
+  }
+
+  .fixed-action-bar .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
+  }
+</style>
 {% endblock %}

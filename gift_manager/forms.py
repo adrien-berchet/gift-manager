@@ -12,13 +12,12 @@ from .models import Relation
 class PersonForm(forms.ModelForm):
     class Meta:
         model = Person
-        fields = ["first_name", "family_name", "email_address", "groups", "shared_with"]
+        fields = ["first_name", "family_name", "email_address", "groups"]
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
             "email_address": gettext_lazy("Email address"),
             "groups": gettext_lazy("Groups"),
-            "shared_with": gettext_lazy("Shared with"),
         }
         error_messages = {
             "first_name": {
@@ -35,22 +34,19 @@ class PersonForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["groups"].required = False
-        self.fields["shared_with"].required = False
 
 
 class PersonGroupForm(forms.ModelForm):
     class Meta:
         model = PersonGroup
-        fields = ["name", "shared_with"]
+        fields = ["name"]
         labels = {
             "name": gettext_lazy("Name"),
-            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["name"].required = False
-        self.fields["shared_with"].required = False
 
 
 class PersonGroupAddMultiplePersonsForm(forms.Form):
@@ -84,7 +80,7 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
 class PersonRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "event", "status", "due_date", "shared_with"]
+        fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -94,19 +90,35 @@ class PersonRelationForm(forms.ModelForm):
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
-            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
+        self.person_id = kwargs.pop("person_id", None)
         super().__init__(*args, **kwargs)
         self.fields["event"].queryset = Event.objects.all()
         self.fields["event"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Ensure that the group is None
+        self.instance.group = None
+
+        # Define the person if the person_id is given
+        if self.person_id:
+            try:
+                self.instance.person = Person.objects.get(person_id=self.person_id)
+            except Person.DoesNotExist:
+                raise forms.ValidationError(
+                    gettext_lazy("The specified person does not exist.")
+                ) from None
+
+        return cleaned_data
 
 
 class PersonGroupRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "event", "status", "due_date", "shared_with"]
+        fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -116,24 +128,39 @@ class PersonGroupRelationForm(forms.ModelForm):
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
-            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
+        self.group_id = kwargs.pop("group_id", None)
         super().__init__(*args, **kwargs)
         self.fields["event"].queryset = Event.objects.all()
         self.fields["event"].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # Ensure that the group is None
+        self.instance.group = None
+
+        # Define the person if the group_id is given
+        if self.group_id:
+            try:
+                self.instance.group = PersonGroup.objects.get(group_id=self.group_id)
+            except PersonGroup.DoesNotExist:
+                raise forms.ValidationError(
+                    gettext_lazy("The specified person group does not exist.")
+                ) from None
+
+        return cleaned_data
 
 
 class GiftForm(forms.ModelForm):
     class Meta:
         model = Gift
-        fields = ["name", "comment", "tags", "shared_with"]
+        fields = ["name", "comment", "tags"]
         labels = {
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
             "tags": gettext_lazy("Tags"),
-            "shared_with": gettext_lazy("Shared with"),
         }
         error_messages = {
             "name": {
@@ -148,7 +175,7 @@ class GiftForm(forms.ModelForm):
 class GiftRelationForm(forms.ModelForm):
     class Meta:
         model = Relation
-        fields = ["person", "group", "comment", "event", "status", "due_date", "shared_with"]
+        fields = ["person", "group", "comment", "event", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -159,18 +186,27 @@ class GiftRelationForm(forms.ModelForm):
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
-            "shared_with": gettext_lazy("Shared with"),
         }
+
+    def __init__(self, *args, **kwargs):
+        self.gift_id = kwargs.pop("gift_id", None)
+        super().__init__(*args, **kwargs)
+        self.fields["event"].queryset = Event.objects.all()
+        self.fields["event"].required = False
 
     def clean(self):
         cleaned_data = super().clean()
-        person = cleaned_data.get("person")
-        group = cleaned_data.get("group")
+        # Ensure that the group is None
+        self.instance.group = None
 
-        if person and group:
-            self.add_error("group", gettext_lazy("You can not select both a person and a group."))
-        elif not person and not group:
-            raise forms.ValidationError(gettext_lazy("You must select one person or one group."))
+        # Define the person if the group_id is given
+        if self.gift_id:
+            try:
+                self.instance.gift = Gift.objects.get(gift_id=self.gift_id)
+            except Gift.DoesNotExist:
+                raise forms.ValidationError(
+                    gettext_lazy("The specified gift does not exist.")
+                ) from None
 
         return cleaned_data
 
@@ -187,7 +223,7 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = Event
-        fields = ["name", "comment", "date_type", "absolute_date", "recurrence", "shared_with"]
+        fields = ["name", "comment", "date_type", "absolute_date", "recurrence"]
         widgets = {
             "absolute_date": forms.DateInput(attrs={"type": "date"}),
         }
@@ -197,7 +233,6 @@ class EventForm(forms.ModelForm):
             "date_type": gettext_lazy("Date type"),
             "absolute_date": gettext_lazy("Absolute date"),
             "recurrence": gettext_lazy("Recurrence"),
-            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -222,7 +257,6 @@ class RelationForm(forms.ModelForm):
             "event",
             "status",
             "due_date",
-            "shared_with",
         ]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
@@ -235,7 +269,6 @@ class RelationForm(forms.ModelForm):
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
-            "shared_with": gettext_lazy("Shared with"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -246,15 +279,3 @@ class RelationForm(forms.ModelForm):
             self.fields.pop("person", None)
         if hide_group:
             self.fields.pop("group", None)
-
-    def clean(self):
-        cleaned_data = super().clean()
-        person = cleaned_data.get("person")
-        group = cleaned_data.get("group")
-
-        if person and group:
-            self.add_error("group", gettext_lazy("You can not select both a person and a group."))
-        elif not person and not group:
-            raise forms.ValidationError(gettext_lazy("You must select one person or one group."))
-
-        return cleaned_data

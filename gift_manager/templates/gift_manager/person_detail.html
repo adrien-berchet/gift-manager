@@ -10,7 +10,24 @@
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
 <p><strong>{% trans "Email address:" %}</strong> {{ person.email_address|replace_none:"" }}</p>
 <p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
-<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
+
+<div class="mt-4">
+    <h5>{% trans "Shared with" %}</h5>
+    {% if shared_users %}
+    <ul class="list-group">
+    {% for shared_user in shared_users %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      {{ shared_user.user.username }}
+      <span class="badge bg-primary rounded-pill">{{ shared_user.permission_label }}</span>
+    </li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    This object is not shared with any friend.
+    {% endif %}
+</div>
+<div class="mt-4">
+</div>
 
 {% if is_editor %}
     <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit person" %}</a>

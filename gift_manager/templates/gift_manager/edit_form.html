@@ -1,0 +1,634 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% block title %}{{ action }} {{ translated_type }}{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1>{{ action }} {{ translated_type }}</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">{% trans "Save" %}</button>
+    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+  </form>
+
+  <div class="mt-5">
+    <h3><i class="fas fa-share-alt me-2"></i>{% trans "Sharing Management" %}</h3>
+
+    <div class="alert alert-info mb-3">
+      <h5><i class="fas fa-info-circle me-2"></i>{% trans "Permission levels" %}:</h5>
+      <ul class="mb-0">
+        <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
+        <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
+        <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the object" %}</li>
+      </ul>
+    </div>
+
+    {% if shared_users %}
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Currently shared with" %}</h4>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped shared-users-table">
+            <thead>
+              <tr>
+                <th>{% trans "User" %}</th>
+                <th>{% trans "Permission level" %}</th>
+                <th>{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for shared_user in shared_users %}
+              <tr>
+                <td class="align-middle">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    {{ shared_user.user.username }}
+                  </div>
+                </td>
+                <td class="align-middle">
+                  {% if shared_user.permission == 0 %}
+                    <span class="badge bg-primary" title="{% trans 'Can only view this object' %}">
+                      <i class="fas fa-eye me-1"></i> {{ shared_user.permission_label }}
+                    </span>
+                  {% elif shared_user.permission == 1 %}
+                    <span class="badge bg-success" title="{% trans 'Can edit this object' %}">
+                      <i class="fas fa-edit me-1"></i> {{ shared_user.permission_label }}
+                    </span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark" title="{% trans 'Has full control over this object' %}">
+                      <i class="fas fa-crown me-1"></i> {{ shared_user.permission_label }}
+                    </span>
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex">
+                    <form method="post" id="{{ shared_user.form_id }}" class="me-2 permission-form" data-user-id="{{ shared_user.user.id }}">
+                      {% csrf_token %}
+                      <input type="hidden" name="update_permission" value="true">
+                      <input type="hidden" name="user_id" value="{{ shared_user.user.id }}">
+                      <div class="input-group">
+                        <select name="permission" class="form-control form-control-sm">
+                          {% for level in permission_levels %}
+                          <option value="{{ level.value }}" {% if level.value == shared_user.permission %}selected{% endif %}>
+                            {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
+                          </option>
+                          {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-outline-primary">
+                          <i class="fas fa-save me-1"></i> {% trans "Update" %}
+                        </button>
+                      </div>
+                    </form>
+
+                    <form method="post" class="remove-share-form" data-user-id="{{ shared_user.user.id }}">
+                      {% csrf_token %}
+                      <input type="hidden" name="remove_share" value="true">
+                      <input type="hidden" name="user_id" value="{{ shared_user.user.id }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger btn-remove-share">
+                        <i class="fas fa-trash me-1"></i> {% trans "Remove" %}
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if unshared_friends %}
+    <div class="card">
+      <div class="card-header bg-secondary text-white">
+        <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i>{% trans "Share with other friends" %}</h4>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive unshared-friends-table">
+          <table class="table table-striped">
+            <thead>
+              <tr>
+                <th>{% trans "User" %}</th>
+                <th>{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for friend in unshared_friends %}
+              <tr>
+                <td class="align-middle">
+                  <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    {{ friend.user.username }}
+                  </div>
+                </td>
+                <td>
+                  <form method="post" id="{{ friend.form_id }}" class="share-form" data-user-id="{{ friend.user.id }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="share_with" value="true">
+                    <input type="hidden" name="user_id" value="{{ friend.user.id }}">
+                    <div class="input-group">
+                      <select name="permission" class="form-control form-control-sm">
+                        {% for level in permission_levels %}
+                        <option value="{{ level.value }}">
+                          {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
+                        </option>
+                        {% endfor %}
+                      </select>
+                      <button type="submit" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-share me-1"></i> {% trans "Share" %}
+                      </button>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% elif not shared_users %}
+    <div class="alert alert-warning">
+      <i class="fas fa-user-friends me-2"></i>
+      {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
+      <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+        <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Define utility functions at the global level
+  function getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    return csrfToken;
+  }
+
+  // Create a container for notifications
+  let notificationsContainer;
+  function createNotificationsContainer() {
+    let container = document.getElementById('notifications-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'notifications-container';
+      container.style.position = 'fixed';
+      container.style.top = '20px';
+      container.style.right = '20px';
+      container.style.zIndex = '1050';
+      container.style.maxWidth = '400px';
+      document.body.appendChild(container);
+    }
+    return container;
+  }
+
+  function showNotification(message, type = 'success', duration = null) {
+    // Determine the duration based on the type if not specified
+    if (duration === null) {
+      // Default durations according to notification type
+      switch(type) {
+        case 'success': duration = 5000; break; // 5 seconds for successes
+        case 'info': duration = 6000; break;    // 6 seconds for info
+        case 'warning': duration = 8000; break; // 8 seconds for warnings
+        case 'danger': duration = 10000; break; // 10 seconds for errors
+        default: duration = 5000;               // 5 seconds by default
+      }
+    }
+
+    // Create a notification div
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} alert-dismissible fade show`;
+    notification.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+    notification.style.marginBottom = '10px';
+    notification.style.opacity = '0';
+    notification.style.transition = 'opacity 0.3s';
+
+    // Add the close button and the message in separate elements
+    notification.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center">
+        <div>${message}</div>
+        <button type="button" class="btn-close ms-3" aria-label="Close"></button>
+      </div>
+    `;
+
+    // Add to the notifications container
+    notificationsContainer.appendChild(notification);
+
+    // Force rendering before adding opacity
+    setTimeout(() => {
+      notification.style.opacity = '1';
+    }, 10);
+
+    // Delete after specified duration
+    let timeoutId;
+    if (duration > 0) {
+      timeoutId = setTimeout(() => {
+        fadeOutAndRemove(notification);
+      }, duration);
+    }
+
+    // Add an event handler for the close button
+    const closeButton = notification.querySelector('.btn-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', function() {
+        if (timeoutId) clearTimeout(timeoutId); // Cancel the auto-delete delay
+        fadeOutAndRemove(notification);
+      });
+    }
+
+    // Function to fade out and smoothly remove the notification
+    function fadeOutAndRemove(element) {
+      element.style.opacity = '0';
+      setTimeout(() => element.remove(), 300);
+    }
+  }
+
+  // Function to harmonize permission badges
+  function harmonizePermissionBadges(selectElement = null) {
+    // If a specific select element is provided, we only process that one
+    const selects = selectElement ? [selectElement] : document.querySelectorAll('.permission-form select[name="permission"]');
+
+    selects.forEach(select => {
+      const permissionValue = select.value;
+      const permissionCell = select.closest('tr').querySelector('td:nth-child(2)');
+
+      if (permissionCell) {
+        // Ensure the display matches the value of the select
+        let badgeClass, iconClass, permissionLabel;
+
+        // Use the same conditions as in the Django template
+        if (permissionValue <= 10) {
+          badgeClass = 'bg-primary';
+          iconClass = 'fa-eye';
+          permissionLabel = '{% trans "Viewer" %}';
+        } else if (permissionValue <= 20) {
+          badgeClass = 'bg-success';
+          iconClass = 'fa-edit';
+          permissionLabel = '{% trans "Editor" %}';
+        } else {
+          badgeClass = 'bg-warning text-dark';
+          iconClass = 'fa-crown';
+          permissionLabel = '{% trans "Owner" %}';
+        }
+
+        permissionCell.innerHTML = `
+          <span class="badge ${badgeClass}">
+            <i class="fas ${iconClass} me-1"></i> ${permissionLabel}
+          </span>
+        `;
+      }
+    });
+  }
+
+  function attachPermissionFormHandler(form) {
+    // Avoid duplication of event handlers
+    form.removeEventListener('submit', permissionFormSubmitHandler);
+    form.addEventListener('submit', permissionFormSubmitHandler);
+  }
+
+  function permissionFormSubmitHandler(e) {
+    e.preventDefault();
+    const form = this;
+    const button = form.querySelector('button[type="submit"]');
+    const originalButtonContent = button.innerHTML;
+    const userId = form.dataset.userId;
+    const selectElement = form.querySelector('select[name="permission"]');
+    const permissionValue = selectElement.value;
+
+    // Deactivate the button and show loading state
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>';
+
+    // Send the AJAX request
+    fetch(window.location.href, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCSRFToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: `update_permission=true&user_id=${userId}&permission=${permissionValue}`
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Reactivate the button
+      button.disabled = false;
+      button.innerHTML = originalButtonContent;
+
+      if (data.success) {
+        showNotification(data.message, 'success', 6000);
+
+        // Use harmonizePermissionBadges to update the display
+        harmonizePermissionBadges(selectElement);
+      } else {
+        showNotification(data.message || '{% trans "An error occurred" %}', 'danger');
+      }
+    })
+    .catch(error => {
+      // In case of error
+      button.disabled = false;
+      button.innerHTML = originalButtonContent;
+      showNotification('{% trans "An error occurred while updating permission" %}', 'danger');
+      console.error('Error:', error);
+    });
+  }
+
+  function attachRemoveFormHandler(form) {
+    // Avoid duplication of event handlers
+    form.removeEventListener('submit', removeFormSubmitHandler);
+    form.addEventListener('submit', removeFormSubmitHandler);
+  }
+
+  function removeFormSubmitHandler(e) {
+    e.preventDefault();
+    const form = this;
+
+    if (!confirm('{% trans "Are you sure you want to remove this sharing? This user will no longer have access to this object." %}')) {
+      return;
+    }
+
+    const button = form.querySelector('.btn-remove-share');
+    const userId = form.dataset.userId;
+    const row = form.closest('tr');
+
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {% trans "Processing..." %}';
+
+    fetch(window.location.href, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCSRFToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: `remove_share=true&user_id=${userId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification(data.message, 'success', 6000);
+
+        // Remove the row from the table
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+
+        // If it was the last user, you can update the interface
+        const remainingRows = form.closest('tbody').querySelectorAll('tr').length;
+        if (remainingRows <= 1) {  // This '1' includes the current row that will disappear
+          setTimeout(() => updateSharingSection(), 500);
+        } else {
+          // Add the user to the list of unshared users
+          if (data.user && document.querySelector('.unshared-friends-table')) {
+            addUserToUnsharedTable(data.user);
+          }
+        }
+      } else {
+        button.disabled = false;
+        button.innerHTML = '<i class="fas fa-trash me-1"></i> {% trans "Remove" %}';
+        showNotification(data.message || '{% trans "An error occurred" %}', 'danger');
+      }
+    })
+    .catch(error => {
+      button.disabled = false;
+      button.innerHTML = '<i class="fas fa-trash me-1"></i> {% trans "Remove" %}';
+      showNotification('{% trans "An error occurred while removing sharing" %}', 'danger');
+      console.error('Error:', error);
+    });
+  }
+
+  // Function to attach handlers to new forms
+  function attachPermissionFormHandlers() {
+    document.querySelectorAll('.permission-form').forEach(form => {
+      attachPermissionFormHandler(form);
+    });
+  }
+
+  function attachRemoveFormHandlers() {
+    document.querySelectorAll('.remove-share-form').forEach(form => {
+      attachRemoveFormHandler(form);
+    });
+  }
+
+  function attachShareFormHandler(form) {
+    // Avoid duplication of event handlers
+    form.removeEventListener('submit', shareFormSubmitHandler);
+    form.addEventListener('submit', shareFormSubmitHandler);
+  }
+
+  function shareFormSubmitHandler(e) {
+    e.preventDefault();
+    const form = this;
+    const button = form.querySelector('button[type="submit"]');
+    const originalButtonContent = button.innerHTML;
+    const userId = form.dataset.userId;
+    const permissionValue = form.querySelector('select[name="permission"]').value;
+    const row = form.closest('tr');
+
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> {% trans "Processing..." %}';
+
+    fetch(window.location.href, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': getCSRFToken(),
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: `share_with=true&user_id=${userId}&permission=${permissionValue}`
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showNotification(data.message, 'success', 6000);
+
+        // Make the row disappear
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+
+        // If it was the last friend, update the interface
+        const remainingRows = form.closest('tbody').querySelectorAll('tr').length;
+        if (remainingRows <= 1) {
+          setTimeout(() => updateSharingSection(), 500);
+        } else {
+          // Add the user to the list of shared users
+          if (data.user && document.querySelector('.shared-users-table')) {
+            addUserToSharedTable(data.user, permissionValue);
+          }
+        }
+      } else {
+        button.disabled = false;
+        button.innerHTML = originalButtonContent;
+        showNotification(data.message || '{% trans "An error occurred" %}', 'danger');
+      }
+    })
+    .catch(error => {
+      button.disabled = false;
+      button.innerHTML = originalButtonContent;
+      showNotification('{% trans "An error occurred while sharing" %}', 'danger');
+      console.error('Error:', error);
+    });
+  }
+
+  function attachShareFormHandlers() {
+    document.querySelectorAll('.share-form').forEach(form => {
+      attachShareFormHandler(form);
+    });
+  }
+
+  // Function to update the sharing section
+  function updateSharingSection() {
+    fetch(window.location.href)
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Update only the sharing management section
+        const newSharingSection = doc.querySelector('.mt-5');
+        const currentSharingSection = document.querySelector('.mt-5');
+
+        if (newSharingSection && currentSharingSection) {
+          currentSharingSection.innerHTML = newSharingSection.innerHTML;
+
+          // Reattach all event handlers
+          attachShareFormHandlers();
+          attachPermissionFormHandlers();
+          attachRemoveFormHandlers();
+
+          // Reapply badge harmonization
+          harmonizePermissionBadges();
+        }
+      });
+  }
+
+  // Function to add a user to the unshared table
+  function addUserToUnsharedTable(user) {
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+      <td class="align-middle">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-user me-2 text-muted"></i>
+          ${user.username}
+        </div>
+      </td>
+      <td>
+        <form method="post" id="share_${user.id}" class="share-form" data-user-id="${user.id}">
+          {% csrf_token %}
+          <input type="hidden" name="share_with" value="true">
+          <input type="hidden" name="user_id" value="${user.id}">
+          <div class="input-group">
+            <select name="permission" class="form-control form-control-sm">
+              {% for level in permission_levels %}
+              <option value="{{ level.value }}">
+                {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-success">
+              <i class="fas fa-share me-1"></i> {% trans "Share" %}
+            </button>
+          </div>
+        </form>
+      </td>
+    `;
+
+    document.querySelector('.unshared-friends-table tbody').appendChild(newRow);
+
+    // Attach the handler to the new form
+    attachShareFormHandler(newRow.querySelector('.share-form'));
+  }
+
+  function addUserToSharedTable(user, permissionValue) {
+    // Determine the badge style based on the permission value
+    let badgeClass, iconClass, permissionLabel;
+
+    if (permissionValue <= 10) {
+      badgeClass = 'bg-primary';
+      iconClass = 'fa-eye';
+      permissionLabel = '{% trans "Viewer" %}';
+    } else if (permissionValue <= 20) {
+      badgeClass = 'bg-success';
+      iconClass = 'fa-edit';
+      permissionLabel = '{% trans "Editor" %}';
+    } else {
+      badgeClass = 'bg-warning text-dark';
+      iconClass = 'fa-crown';
+      permissionLabel = '{% trans "Owner" %}';
+    }
+
+    // Create the new row
+    const newRow = document.createElement('tr');
+    newRow.innerHTML = `
+      <td class="align-middle">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-user me-2 text-muted"></i>
+          ${user.username}
+        </div>
+      </td>
+      <td class="align-middle">
+        <span class="badge ${badgeClass}">
+          <i class="fas ${iconClass} me-1"></i> ${permissionLabel}
+        </span>
+      </td>
+      <td>
+        <div class="d-flex">
+          <form method="post" id="perm_${user.id}" class="me-2 permission-form" data-user-id="${user.id}">
+            {% csrf_token %}
+            <input type="hidden" name="update_permission" value="true">
+            <input type="hidden" name="user_id" value="${user.id}">
+            <div class="input-group">
+              <select name="permission" class="form-control form-control-sm">
+                {% for level in permission_levels %}
+                <option value="{{ level.value }}" ${permissionValue == '{{ level.value }}' ? 'selected' : ''}>
+                  {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
+                </option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-save me-1"></i> {% trans "Update" %}
+              </button>
+            </div>
+          </form>
+          <form method="post" class="remove-share-form" data-user-id="${user.id}">
+            {% csrf_token %}
+            <input type="hidden" name="remove_share" value="true">
+            <input type="hidden" name="user_id" value="${user.id}">
+            <button type="submit" class="btn btn-sm btn-outline-danger btn-remove-share">
+              <i class="fas fa-trash me-1"></i> {% trans "Remove" %}
+            </button>
+          </form>
+        </div>
+      </td>
+    `;
+
+    // Add the row to the table
+    document.querySelector('.shared-users-table tbody').appendChild(newRow);
+
+    // Attach event handlers to the new forms
+    attachPermissionFormHandler(newRow.querySelector('.permission-form'));
+    attachRemoveFormHandler(newRow.querySelector('.remove-share-form'));
+  }
+
+  // Initialization on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    // Create the notifications container
+    notificationsContainer = createNotificationsContainer();
+
+    // Execute badge harmonization on load
+    harmonizePermissionBadges();
+
+    // Attach event handlers
+    attachShareFormHandlers();
+    attachPermissionFormHandlers();
+    attachRemoveFormHandlers();
+  });
+</script>
+{% endblock %}
