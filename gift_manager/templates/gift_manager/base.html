@@ -21,66 +21,70 @@
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-        <a class="navbar-brand" href="{% url 'gift_manager:home' %}">Gift Manager</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            {% if user.is_authenticated %}
-            <ul class="navbar-nav mr-auto align-items-center">
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:persons' %}">{% trans "Persons" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:person_groups' %}">{% trans "Groups / Families" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:gifts' %}">{% trans "Gifts" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:events' %}">{% trans "Events" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:relations' %}">{% trans "Giftings" %}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'gift_manager:share_objects' %}">{% trans "Share" %}</a>
-                </li>
-            </ul>
-            {% endif %}
-            <ul class="navbar-nav ml-auto d-flex align-items-center">
-                {% if user.is_superuser %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'admin_redirect' %}">Admin</a>
-                    </li>
-                {% endif %}
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'gift_manager:home' %}">Gift Manager</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 {% if user.is_authenticated %}
-                    <li class="nav-item mr-2">
-                        <a href="{% url 'gift_manager:profile_detail' %}" class="nav-link">{% trans 'My profile' %}</a>
-                    </li>
-                {% endif %}
-                <li class="nav-item mr-2">
-                    <form action="{% url 'set_language' %}" method="post">
-                        {% csrf_token %}
-                        <select name="language" onchange="this.form.submit()">
-                            {% get_current_language as LANGUAGE_CODE %}
-                            {% get_available_languages as LANGUAGES %}
-                            {% for lang in LANGUAGES %}
-                            <option value="{{ lang.0 }}" {% if lang.0 == LANGUAGE_CODE %}selected{% endif %}>
-                                {{ lang.1 }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                </li>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'account_logout' %}" class="btn btn-danger">{% trans "Sign Out" %}</a>
-                {% else %}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="btn btn-success" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
+                        <a class="nav-link" href="{% url 'gift_manager:persons' %}">{% trans "Persons" %}</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gift_manager:person_groups' %}">{% trans "Groups / Families" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gift_manager:gifts' %}">{% trans "Gifts" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gift_manager:events' %}">{% trans "Events" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gift_manager:relations' %}">{% trans "Giftings" %}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gift_manager:share_objects' %}">{% trans "Share" %}</a>
+                    </li>
+                </ul>
                 {% endif %}
-            </ul>
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 d-flex align-items-center">
+                    {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'admin_redirect' %}">Admin</a>
+                        </li>
+                    {% endif %}
+                    {% if user.is_authenticated %}
+                        <li class="nav-item me-2">
+                            <a href="{% url 'gift_manager:profile_detail' %}" class="nav-link">{% trans 'My profile' %}</a>
+                        </li>
+                    {% endif %}
+                    <li class="nav-item me-2">
+                        <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
+                            {% csrf_token %}
+                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm">
+                                {% get_current_language as LANGUAGE_CODE %}
+                                {% get_available_languages as LANGUAGES %}
+                                {% for lang in LANGUAGES %}
+                                <option value="{{ lang.0 }}" {% if lang.0 == LANGUAGE_CODE %}selected{% endif %}>
+                                    {{ lang.1 }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a href="{% url 'account_logout' %}" class="btn btn-danger">{% trans "Sign Out" %}</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="btn btn-success" href="{% url 'account_login' %}">{% trans "Sign In" %}</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
         </div>
     </nav>
     <div class="container mt-4">
