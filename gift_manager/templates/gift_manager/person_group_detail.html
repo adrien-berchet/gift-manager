@@ -6,7 +6,7 @@
 {% block content %}
 <h1 class="my-4">{% trans "Group details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
-<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with %}{{ user.username }} {% endfor %}</p>
+<p><strong>{% trans "Creation date:" %}</strong> {{ group.creation_date|replace_none:"" }}</p>
 
 {% if is_editor %}
     <a href="{% url 'gift_manager:person_group_edit' group.group_id %}" class="btn btn-warning mb-3">{% trans "Edit group" %}</a>
@@ -108,6 +108,24 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<div class="mt-4">
+    <h5>{% trans "Shared with:" %}</h5>
+    {% if shared_users %}
+    <ul class="list-group">
+    {% for shared_user in shared_users %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      {{ shared_user.user.username }}
+      <span class="badge bg-primary rounded-pill">{{ shared_user.permission_label }}</span>
+    </li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    This person is not shared with any friend.
+    {% endif %}
+</div>
+<div class="mt-4">
 </div>
 {% endblock %}
 

@@ -9,7 +9,7 @@
 <p><strong>{% trans "Name:" %}</strong> {{ gift.name }}</p>
 <p><strong>{% trans "Comment:" %}</strong> {{ gift.comment }}</p>
 <p><strong>{% trans "Tags:" %}</strong> {% for tag in gift.tags.all %}{{ tag.name }} {% endfor %}</p>
-<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+<p><strong>{% trans "Creation date:" %}</strong> {{ gift.creation_date|replace_none:"" }}</p>
 
 {% if is_editor %}
     <a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning mb-3">{% trans "Edit gift" %}</a>
@@ -44,6 +44,24 @@
         {% endfor %}
     </tbody>
 </table>
+
+<div class="mt-4">
+    <h5>{% trans "Shared with:" %}</h5>
+    {% if shared_users %}
+    <ul class="list-group">
+    {% for shared_user in shared_users %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      {{ shared_user.user.username }}
+      <span class="badge bg-primary rounded-pill">{{ shared_user.permission_label }}</span>
+    </li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    This person is not shared with any friend.
+    {% endif %}
+</div>
+<div class="mt-4">
+</div>
 {% endblock %}
 
 {% block extra_js %}

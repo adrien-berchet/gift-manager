@@ -1,6 +1,7 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+
 {% block title %}{{ translated_type }}{% endblock %}
 
 {% block content %}
@@ -47,9 +48,8 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        var order = [[0, 'asc']];  // Default order is ascending
-        $('#data-table').DataTable({
-            "order": order
+        $('#data-table').initDataTableFilters({
+            order: [[0, 'asc']],
         });
     });
 </script>

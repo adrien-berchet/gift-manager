@@ -18,13 +18,31 @@
 <p><strong>{% trans "Comment:" %}</strong> {{ relation.comment }}</p>
 <p><strong>{% trans "Status:" %}</strong> <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}">{{ relation.status.status }}</a></p>
 <p><strong>{% trans "Due date:" %}</strong> {{ relation.due_date }}</p>
-<p><strong>{% trans "Shared With:" %}</strong> {% for user in shared_with.all %}{{ user.username }} {% endfor %}</p>
+<p><strong>{% trans "Creation date:" %}</strong> {{ relation.creation_date|replace_none:"" }}</p>
 
 {% if is_editor %}
-    <a href="{% url 'gift_manager:relation_edit' relation.relation_id %}" class="btn btn-warning mb-3">{% trans "Edit relation" %}</a>
+<a href="{% url 'gift_manager:relation_edit' relation.relation_id %}" class="btn btn-warning mb-3">{% trans "Edit relation" %}</a>
 {% else %}
-    <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit relation" %}</button>
+<button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit relation" %}</button>
 {% endif %}
 <a href="{% url 'gift_manager:relation_delete' relation.relation_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete relation' %}</a>
+
+<div class="mt-4">
+    <h5>{% trans "Shared with:" %}</h5>
+    {% if shared_users %}
+    <ul class="list-group">
+    {% for shared_user in shared_users %}
+    <li class="list-group-item d-flex justify-content-between align-items-center">
+      {{ shared_user.user.username }}
+      <span class="badge bg-primary rounded-pill">{{ shared_user.permission_label }}</span>
+    </li>
+    {% endfor %}
+    </ul>
+    {% else %}
+    This person is not shared with any friend.
+    {% endif %}
+</div>
+<div class="mt-4">
+</div>
 
 {% endblock %}
