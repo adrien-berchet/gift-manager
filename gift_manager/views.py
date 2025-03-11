@@ -313,38 +313,41 @@ class EditPermissionMixin:
         # Get the current user profile and its friends
         current_user_profile = Profile.objects.get(user=self.request.user)
         friend_profiles = current_user_profile.friends.all()
-        friend_users = User.objects.filter(profile__in=friend_profiles)
+        friend_users = User.objects.filter(profile__in=friend_profiles).order_by("username")
 
         # Prepare the lists for the shared users and unshared friends
-        shared_users = []
-        unshared_friends = []
+        friends_list = []
         object_type = self.context_object_name
+        all_shared_with = self.object.shared_with.all()
 
-        # Process the shared users
+        # Process all friends and determine their sharing status
         for friend in friend_users:
             # Check if the friend is already shared with
-            if friend in self.object.shared_with.all():
+            is_shared = friend in all_shared_with
+
+            if is_shared:
                 permission = get_permission(self.object, friend, object_type)
                 permission_label = PermissionLevel.get_label(permission)
 
-                shared_users.append(
+                friends_list.append(
                     {
                         "user": friend,
                         "permission": permission,
                         "permission_label": permission_label,
                         "form_id": f"perm_{friend.id}",  # Unique identifier for the form
+                        "is_shared": True,
                     }
                 )
             else:
-                unshared_friends.append(
+                friends_list.append(
                     {
                         "user": friend,
                         "form_id": f"share_{friend.id}",  # Unique identifier for the form
+                        "is_shared": False,
                     }
                 )
 
-        self.shared_users = shared_users
-        self.unshared_friends = unshared_friends
+        self.friends_list = friends_list
         return initial
 
     def get_context_data(self, **kwargs):
@@ -353,6 +356,8 @@ class EditPermissionMixin:
             context["shared_users"] = self.shared_users
         if hasattr(self, "unshared_friends"):
             context["unshared_friends"] = self.unshared_friends
+        if hasattr(self, "friends_list"):
+            context["friends_list"] = self.friends_list
 
         # Add the permission levels available for the dropdown menus
         context["permission_levels"] = [
@@ -392,15 +397,20 @@ class EditPermissionMixin:
 
     def _handle_update_permission(self, request) -> JsonResponse:
         """Update an existing permission."""
-        new_permission = int(request.POST.get("permission"))
+        permission_value = request.POST.get("permission")
 
         try:
             user, username, user_id = self._get_user(request, return_id=True)
+
+            # Si la permission est "not_shared", rediriger vers la méthode de suppression de partage
+            if permission_value == "not_shared":
+                return self._handle_remove_share(request)
 
             # Find the corresponding permission and update it
             permission_obj = self._get_permission_object(user_id)
 
             if permission_obj:
+                new_permission = int(permission_value)
                 permission_obj.permission_type = new_permission
                 permission_obj.save()
 
