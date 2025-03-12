@@ -1329,7 +1329,7 @@ class RelationUpdateView(BaseUpdateView):
 
     def get_success_url(self):
         if self.object.person_id is not None:
-            pk = self.object.person_id
+            pk = self.object.person.person_id
             url = "person_detail"
         else:
             pk = self.object.group.group_id
