@@ -9,7 +9,22 @@ from .models import PersonGroup
 from .models import Relation
 
 
-class PersonForm(forms.ModelForm):
+class BaseFormMixin:
+    """Mixin to apply CSS classes to form fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Apply CSS classes to form fields based on the widget type
+        for field in self.fields.values():
+            if isinstance(field.widget, (forms.TextInput | forms.EmailInput)):
+                field.widget.attrs.update({"class": "form-input-text"})
+            elif isinstance(field.widget, forms.Textarea):
+                field.widget.attrs.update({"class": "form-textarea"})
+            elif isinstance(field.widget, forms.DateInput):
+                field.widget.attrs.update({"class": "form-date-input", "type": "date"})
+
+
+class PersonForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Person
         fields = ["first_name", "family_name", "email_address", "groups"]
@@ -18,6 +33,10 @@ class PersonForm(forms.ModelForm):
             "family_name": gettext_lazy("Family name"),
             "email_address": gettext_lazy("Email address"),
             "groups": gettext_lazy("Groups"),
+        }
+        widgets = {
+            "first_name": forms.TextInput(attrs={"rows": 1}),
+            "family_name": forms.TextInput(attrs={"rows": 1}),
         }
         error_messages = {
             "first_name": {
@@ -36,12 +55,15 @@ class PersonForm(forms.ModelForm):
         self.fields["groups"].required = False
 
 
-class PersonGroupForm(forms.ModelForm):
+class PersonGroupForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = PersonGroup
         fields = ["name"]
         labels = {
             "name": gettext_lazy("Name"),
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"rows": 1}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -77,11 +99,12 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
             i.save()
 
 
-class PersonRelationForm(forms.ModelForm):
+class PersonRelationForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
+            "comment": forms.Textarea(attrs={"rows": 3}),
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {
@@ -115,11 +138,12 @@ class PersonRelationForm(forms.ModelForm):
         return cleaned_data
 
 
-class PersonGroupRelationForm(forms.ModelForm):
+class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
+            "comment": forms.Textarea(attrs={"rows": 3}),
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {
@@ -153,7 +177,7 @@ class PersonGroupRelationForm(forms.ModelForm):
         return cleaned_data
 
 
-class GiftForm(forms.ModelForm):
+class GiftForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Gift
         fields = ["name", "comment", "tags"]
@@ -161,6 +185,10 @@ class GiftForm(forms.ModelForm):
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
             "tags": gettext_lazy("Tags"),
+        }
+        widgets = {
+            "name": forms.TextInput(attrs={"rows": 1}),
+            "comment": forms.Textarea(attrs={"rows": 3}),
         }
         error_messages = {
             "name": {
@@ -172,12 +200,13 @@ class GiftForm(forms.ModelForm):
         }
 
 
-class GiftRelationForm(forms.ModelForm):
+class GiftRelationForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["person", "group", "comment", "event", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
+            "comment": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
             "person": gettext_lazy("Person"),
@@ -211,7 +240,7 @@ class GiftRelationForm(forms.ModelForm):
         return cleaned_data
 
 
-class EventForm(forms.ModelForm):
+class EventForm(BaseFormMixin, forms.ModelForm):
     date_type = forms.ChoiceField(
         label=gettext_lazy("Date type"),
         choices=[
@@ -225,6 +254,8 @@ class EventForm(forms.ModelForm):
         model = Event
         fields = ["name", "comment", "date_type", "absolute_date", "recurrence"]
         widgets = {
+            "name": forms.TextInput(attrs={"rows": 1}),
+            "comment": forms.Textarea(attrs={"rows": 3}),
             "absolute_date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {
@@ -246,7 +277,7 @@ class EventForm(forms.ModelForm):
             self.fields["date_type"].initial = "recurrence"
 
 
-class RelationForm(forms.ModelForm):
+class RelationForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = [
@@ -259,6 +290,7 @@ class RelationForm(forms.ModelForm):
             "due_date",
         ]
         widgets = {
+            "comment": forms.Textarea(attrs={"rows": 3}),
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {

@@ -8,7 +8,6 @@
             filterSelector: '.filter-icon',             // Filter icon to click on
             dropdownSelector: '.dropdown-filter',       // Dropdown to show/hide
             checkboxSelector: '.column-filter',         // Checkbox to filter on
-            thFilterClass: '',                          // <th> class to filter on
         };
 
         var settings = $.extend(true, {}, defaults, options);
