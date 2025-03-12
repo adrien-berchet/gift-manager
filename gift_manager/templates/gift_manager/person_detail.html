@@ -117,18 +117,22 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        $('#data-table').DataTable({
-            order: [[2, 'desc']]
-        });
+        {% if relations %}
+            $('#data-table').DataTable({
+                order: [[2, 'desc']]
+            });
+        {% endif %}
 
         // Initialize the DataTable for the shares table
-        $('#shares-table').DataTable({
-            paging: true,
-            pageLength: 5,
-            searching: false,
-            info: false,
-            lengthChange: false
-        });
+        {% if shared_users %}
+            $('#shares-table').DataTable({
+                paging: true,
+                pageLength: 5,
+                searching: false,
+                info: false,
+                lengthChange: false
+            });
+        {% endif %}
     });
     $('.relation_status').on('change', function(){
         console.log("Status updated on page");
