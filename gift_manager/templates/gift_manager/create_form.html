@@ -99,6 +99,8 @@
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap5.min.js"></script>
 
+{% include "gift_manager/includes/datatables-translations.html" %}
+
 <script>
   // Create a container for notifications
   let notificationsContainer;
@@ -183,16 +185,14 @@
     // Create the DataTable
     const sharingTable = $('#sharing-datatable').DataTable({
       responsive: true,
-      language: {
-        url: '//cdn.datatables.net/plug-ins/1.10.25/i18n/French.json'
-      },
+      language: dataTablesTranslations,
       columnDefs: [
         { orderable: true, targets: 0 },  // User - sortable
         { orderable: false, targets: 1 }  // Permissions - not sortable
       ],
       dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
-      lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "{% trans 'All' %}"]],
-      pageLength: 10,
+      lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "{% trans 'All' %}"]],
+      pageLength: 5,
       order: [[0, 'asc']],  // Default sort on user column
       initComplete: function() {
         // Apply specific styles after initialization
@@ -310,7 +310,7 @@
       console.log('Initialization complete');
     } catch (error) {
       console.error('Error during initialization:', error);
-      showNotification('{% trans "Error initializing page components" %}', 'danger');
+      showNotification("{% trans 'Error initializing page components' %}", 'danger');
     }
   });
 </script>

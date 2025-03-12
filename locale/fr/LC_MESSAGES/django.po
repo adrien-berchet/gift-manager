@@ -503,16 +503,16 @@ msgstr "Non Partagé"
 
 #: gift_manager/templates/gift_manager/edit_form.html:222
 msgid "Error: Cannot find form"
-msgstr "Erreur: Impossible de trouver le formulaire"
+msgstr "Erreur : Impossible de trouver le formulaire"
 
 #: gift_manager/templates/gift_manager/edit_form.html:230
 #: gift_manager/templates/gift_manager/edit_form.html:237
 msgid "Error: Form structure invalid"
-msgstr "Erreur: Structure du formulaire invalide"
+msgstr "Erreur : Structure du formulaire invalide"
 
 #: gift_manager/templates/gift_manager/edit_form.html:248
 msgid "Error: Cannot find user row"
-msgstr "Erreur: Impossible de trouver la ligne de cet utilisateur"
+msgstr "Erreur : Impossible de trouver la ligne de cet utilisateur"
 
 #: gift_manager/templates/gift_manager/edit_form.html:258
 msgid "This user already has no access to this object"
@@ -520,11 +520,11 @@ msgstr "Cet utilisateur n'a déjà aucun accès à cet objet"
 
 #: gift_manager/templates/gift_manager/edit_form.html:348
 msgid "An error occurred"
-msgstr "Un erreur s'est produite"
+msgstr "Une erreur s'est produite"
 
 #: gift_manager/templates/gift_manager/edit_form.html:362
 msgid "An error occurred while updating sharing"
-msgstr "Un erreur s'est produite lors de l'édition du partage"
+msgstr "Une erreur s'est produite lors de l'édition du partage"
 
 #: gift_manager/templates/gift_manager/edit_form.html:369
 msgid "Error processing form"
