@@ -1,6 +1,7 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+{% load static %}
 
 {% block title %}{{ translated_type }}{% endblock %}
 
@@ -46,10 +47,13 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
+{% include "gift_manager/includes/datatables-translations.html" %}
 <script>
     $(document).ready(function() {
         $('#data-table').initDataTableFilters({
             order: [[0, 'asc']],
+            language: dataTablesTranslations
         });
     });
 </script>

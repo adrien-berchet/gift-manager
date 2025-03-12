@@ -1,6 +1,7 @@
 (function($) {
-    $.fn.initDataTableFilters = function(options) {
-        var settings = $.extend({
+    $.fn.initDataTableFilters = function (options) {
+        // Default values with translations
+        var defaults = {
             order: [[0, 'asc']],
             paging: true,
             searching: true,
@@ -8,12 +9,15 @@
             dropdownSelector: '.dropdown-filter',       // Dropdown to show/hide
             checkboxSelector: '.column-filter',         // Checkbox to filter on
             thFilterClass: '',                          // <th> class to filter on
-        }, options);
+        };
+
+        var settings = $.extend(true, {}, defaults, options);
 
         var table = this.DataTable({
             "order": settings.order,
             "paging": settings.paging,
-            "searching": settings.searching
+            "searching": settings.searching,
+            "language": settings.language
         });
 
         function applyColumnFilter() {

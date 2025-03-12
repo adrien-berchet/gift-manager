@@ -1,0 +1,18 @@
+{% load i18n %}
+<script>
+    var dataTablesTranslations = {
+        search: "{% trans 'Search' %}",
+        lengthMenu: "{% trans 'Show' %} _MENU_ {% trans 'entries' %}",
+        info: "{% trans 'Showing' %} _START_ {% trans 'to' %} _END_ {% trans 'of' %} _TOTAL_ {% trans 'entries' %}",
+        infoEmpty: "{% trans 'No entries to display' %}",
+        infoFiltered: "({% trans 'filtered from' %} _MAX_ {% trans 'total entries' %})",
+        paginate: {
+            first: "{% trans 'First' %}",
+            last: "{% trans 'Last' %}",
+            next: "{% trans 'Next' %}",
+            previous: "{% trans 'Previous' %}"
+        },
+        emptyTable: "{% trans 'No data to display' %}",
+        zeroRecords: "{% trans 'No matching records found' %}"
+    };
+</script>

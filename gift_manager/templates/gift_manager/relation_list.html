@@ -95,6 +95,7 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
+{% include "gift_manager/includes/datatables-translations.html" %}
 <script>
     $(document).ready(function() {
         $('#data-table').initDataTableFilters({
@@ -103,6 +104,7 @@
             dropdownSelector: '.dropdown-filter',
             checkboxSelector: '.status-filter',
             thFilterClass: '.status-column-filter',
+            language: dataTablesTranslations
         });
 
         // Event handler for status changes in the table
