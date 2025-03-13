@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from copy import deepcopy
 from typing import TypeAlias
 from urllib.parse import urlencode
 
@@ -44,23 +45,29 @@ from .forms import PersonGroupRelationForm
 from .forms import PersonRelationForm
 from .forms import RelationForm
 from .models import Event
-from .models import EventPermission
 from .models import Gift
-from .models import GiftPermission
 from .models import Invitation
 from .models import PermissionLevel
 from .models import Person
 from .models import PersonGroup
-from .models import PersonGroupPermission
-from .models import PersonPermission
 from .models import Profile
 from .models import Relation
-from .models import RelationPermission
 from .models import RelationStatus
+from .permissions import PERMISSION_LEVELS
+from .permissions import create_or_update_permission
+from .permissions import delete_permission
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]
 SharedObjectType = Person | PersonGroup | Gift | Event | Relation
+
+
+def get_user(user_id, *, return_id=False) -> tuple[User, str] | tuple[User, str, str]:
+    user = User.objects.get(id=user_id)
+    username = user.username
+    if return_id:
+        return user, username, user_id
+    return user, username
 
 
 def home(request):
@@ -263,20 +270,7 @@ class CreatePermissionMixin:
             context["unshared_friends"] = self.unshared_friends
 
         # Add the permission levels available for the dropdown menus
-        context["permission_levels"] = [
-            {
-                "value": PermissionLevel.VIEWER,
-                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
-            },
-            {
-                "value": PermissionLevel.EDITOR,
-                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
-            },
-            {
-                "value": PermissionLevel.OWNER,
-                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
-            },
-        ]
+        context["permission_levels"] = deepcopy(PERMISSION_LEVELS)
         return context
 
     def form_valid(self, form):
@@ -292,31 +286,11 @@ class CreatePermissionMixin:
                 try:
                     user_id = key.split("_")[-1]
                     permission = int(value)
-
                     user = User.objects.get(id=user_id)
 
-                    # Add the user to the shared_with of the object
-                    self.object.shared_with.add(user)
+                    # Créer ou mettre à jour la permission pour cet utilisateur
+                    create_or_update_permission(user, self.object, permission_level=permission)
 
-                    # Create the corresponding permission as well
-                    object_type = self.context_object_name
-                    permission_model_map = {
-                        "person": PersonPermission,
-                        "group": PersonGroupPermission,
-                        "gift": GiftPermission,
-                        "event": EventPermission,
-                        "relation": RelationPermission,
-                    }
-
-                    model = permission_model_map.get(object_type)
-                    if model:
-                        filter_kwargs = {"user": user, object_type: self.object}
-                        permission_obj, created = model.objects.get_or_create(
-                            **filter_kwargs, defaults={"permission_type": permission}
-                        )
-                        if not created:
-                            permission_obj.permission_type = permission
-                            permission_obj.save()
                 except Exception as e:
                     messages.error(self.request, str(e))
 
@@ -328,7 +302,6 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
 
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
-    object_attr = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -346,11 +319,11 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
         with transaction.atomic():
             form.instance.user = self.request.user
             response = super().form_valid(form)
-            handle_permissions(
-                self.permission_model,
+            create_or_update_permission(
                 self.request.user,
                 form.instance,
-                self.object_attr if self.object_attr is not None else self.context_object_name,
+                permission_level=PermissionLevel.EDITOR,
+                object_attr=self.context_object_name,
             )
             return response
 
@@ -412,20 +385,7 @@ class EditPermissionMixin:
             context["friends_list"] = self.friends_list
 
         # Add the permission levels available for the dropdown menus
-        context["permission_levels"] = [
-            {
-                "value": PermissionLevel.VIEWER,
-                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
-            },
-            {
-                "value": PermissionLevel.EDITOR,
-                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
-            },
-            {
-                "value": PermissionLevel.OWNER,
-                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
-            },
-        ]
+        context["permission_levels"] = deepcopy(PERMISSION_LEVELS)
         return context
 
     def post(self, request, *args, **kwargs):
@@ -452,36 +412,32 @@ class EditPermissionMixin:
         permission_value = request.POST.get("permission")
 
         try:
-            user, username, user_id = self._get_user(request, return_id=True)
+            user, username = get_user(request.POST.get("user_id"))
 
             # Si la permission est "not_shared", rediriger vers la méthode de suppression de partage
             if permission_value == "not_shared":
                 return self._handle_remove_share(request)
 
-            # Find the corresponding permission and update it
-            permission_obj = self._get_permission_object(user_id)
+            # Mettre à jour la permission
+            new_permission = int(permission_value)
+            create_or_update_permission(user, self.object, permission_level=new_permission)
 
-            if permission_obj:
-                new_permission = int(permission_value)
-                permission_obj.permission_type = new_permission
-                permission_obj.save()
+            permission_label = PermissionLevel.get_label(new_permission)
+            message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
+                username=username, permission_level=permission_label
+            )
 
-                permission_label = PermissionLevel.get_label(new_permission)
-                message = gettext(
-                    "Permission for '{username}' changed to '{permission_level}'"
-                ).format(username=username, permission_level=permission_label)
-
-                if self.is_ajax:
-                    return JsonResponse(
-                        {
-                            "success": True,
-                            "message": message,
-                            "user": {"id": user.id, "username": username},
-                            "permission": new_permission,
-                        }
-                    )
-                messages.success(request, message)
-                return self.get(request)
+            if self.is_ajax:
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "message": message,
+                        "user": {"id": user.id, "username": username},
+                        "permission": new_permission,
+                    }
+                )
+            messages.success(request, message)
+            return self.get(request)
 
         except Exception as e:
             return self._handle_error(request, e)
@@ -489,10 +445,10 @@ class EditPermissionMixin:
     def _handle_remove_share(self, request) -> JsonResponse:
         """Remove an existing sharing."""
         try:
-            user, username = self._get_user(request)
+            user, username = get_user(request.POST.get("user_id"))
 
-            # Remove the user from the shared_with of the object
-            self.object.shared_with.remove(user)
+            # Supprimer la permission
+            delete_permission(user, self.object)
 
             message = gettext("Sharing with '{username}' removed successfully").format(
                 username=username
@@ -517,13 +473,10 @@ class EditPermissionMixin:
         permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
 
         try:
-            user, username = self._get_user(request)
+            user, username = get_user(request.POST.get("user_id"))
 
-            # Add the user to the shared_with of the object
-            self.object.shared_with.add(user)
-
-            # Create the corresponding permission as well
-            self._create_permission_object(user, permission)
+            # Créer ou mettre à jour la permission
+            create_or_update_permission(user, self.object, permission_level=permission)
 
             message = gettext("Object shared with '{username}' successfully").format(
                 username=username
@@ -544,51 +497,6 @@ class EditPermissionMixin:
         except Exception as e:
             return self._handle_error(request, e)
 
-    @staticmethod
-    def _get_user(request, *, return_id=False) -> tuple[User, str] | tuple[User, str, str]:
-        user_id = request.POST.get("user_id")
-        user = User.objects.get(id=user_id)
-        username = user.username
-        if return_id:
-            return user, username, user_id
-        return user, username
-
-    def _get_permission_model(self) -> type[Model] | None:
-        """Get the permission model for the current object type."""
-        object_type = self.context_object_name
-        permission_model_map = {
-            "person": PersonPermission,
-            "group": PersonGroupPermission,
-            "gift": GiftPermission,
-            "event": EventPermission,
-            "relation": RelationPermission,
-        }
-        return permission_model_map.get(object_type)
-
-    def _get_permission_object(self, user_id) -> Model | None:
-        """Get the permission object for the specified user and current object."""
-        model = self._get_permission_model()
-        if model:
-            object_type = self.context_object_name
-            filter_kwargs = {"user_id": user_id, object_type: self.object}
-            return model.objects.get(**filter_kwargs)
-        raise Model.DoesNotExist(gettext("Could not find permission object"))
-
-    def _create_permission_object(self, user, permission_level) -> Model | None:
-        """Create or update permission object for the user."""
-        model = self._get_permission_model()
-        if model:
-            object_type = self.context_object_name
-            filter_kwargs = {"user": user, object_type: self.object}
-            obj, created = model.objects.get_or_create(
-                **filter_kwargs, defaults={"permission_type": permission_level}
-            )
-            if not created:
-                obj.permission_type = permission_level
-                obj.save()
-            return obj
-        raise Model.DoesNotExist(gettext("Could not create permission object"))
-
     def _handle_error(self, request, exception) -> JsonResponse:
         """Handle exceptions by returning appropriate response."""
         if self.is_ajax:
@@ -604,7 +512,6 @@ class BaseUpdateView(
 
     template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
-    object_attr = None
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -624,11 +531,11 @@ class BaseUpdateView(
         with transaction.atomic():
             form.instance.user = self.request.user
             response = super().form_valid(form)
-            handle_permissions(
-                self.permission_model,
+            create_or_update_permission(
                 self.request.user,
                 form.instance,
-                self.object_attr if self.object_attr is not None else self.context_object_name,
+                permission_level=PermissionLevel.EDITOR,
+                object_attr=self.context_object_name,
             )
             return response
 
@@ -717,24 +624,6 @@ class BaseDetailView(
     redirect_field_name = "redirect_to"
 
 
-def handle_permissions(
-    cls,
-    current_user,
-    related_object,
-    object_attr,
-):
-    with transaction.atomic():
-        # Add current user
-        permission, created = cls.objects.get_or_create(
-            user=current_user,
-            **{object_attr: related_object},
-            defaults={"permission_type": PermissionLevel.EDITOR},
-        )
-        if not created and not permission.permission_type:
-            permission.permission_type = PermissionLevel.EDITOR
-            permission.save()
-
-
 class PersonListView(BaseListView):
     model = Person
     template_name = "gift_manager/person_list.html"
@@ -790,7 +679,6 @@ class PersonListView(BaseListView):
 
 class PersonCreateView(BaseCreateView):
     model = Person
-    permission_model = PersonPermission
     form_class = PersonForm
     success_url = reverse_lazy("gift_manager:persons")
     context_object_name = "person"
@@ -806,7 +694,6 @@ class PersonCreateView(BaseCreateView):
 
 class PersonUpdateView(BaseUpdateView):
     model = Person
-    permission_model = PersonPermission
     form_class = PersonForm
     pk_name = "person_id"
     context_object_name = "person"
@@ -863,7 +750,6 @@ class PersonGroupListView(BaseListView):
 
 class PersonGroupCreateView(BaseCreateView):
     model = PersonGroup
-    permission_model = PersonGroupPermission
     form_class = PersonGroupForm
     success_url = reverse_lazy("gift_manager:person_groups")
     context_object_name = "group"
@@ -872,7 +758,6 @@ class PersonGroupCreateView(BaseCreateView):
 
 class PersonGroupUpdateView(BaseUpdateView):
     model = PersonGroup
-    permission_model = PersonGroupPermission
     form_class = PersonGroupForm
     pk_name = "group_id"
     context_object_name = "group"
@@ -955,7 +840,6 @@ class GiftListView(BaseListView):
 
 class GiftCreateView(BaseCreateView):
     model = Gift
-    permission_model = GiftPermission
     form_class = GiftForm
     success_url = reverse_lazy("gift_manager:gifts")
     context_object_name = "gift"
@@ -964,7 +848,6 @@ class GiftCreateView(BaseCreateView):
 
 class GiftUpdateView(BaseUpdateView):
     model = Gift
-    permission_model = GiftPermission
     form_class = GiftForm
     pk_name = "gift_id"
     context_object_name = "gift"
@@ -1024,7 +907,6 @@ class EventListView(BaseListView):
 class EventCreateView(BaseCreateView):
     model = Event
     form_class = EventForm
-    permission_model = EventPermission
     success_url = reverse_lazy("gift_manager:events")
     context_object_name = "event"
     object_type = "Event"
@@ -1032,7 +914,6 @@ class EventCreateView(BaseCreateView):
 
 class EventUpdateView(BaseUpdateView):
     model = Event
-    permission_model = EventPermission
     form_class = EventForm
     pk_name = "event_id"
     context_object_name = "event"
@@ -1065,7 +946,6 @@ class EventDetailView(BaseDetailView):
 class PersonRelationCreateView(BaseCreateView):
     model = Relation
     form_class = PersonRelationForm
-    permission_model = RelationPermission
     context_object_name = "relation"
     object_type = "Relation"
 
@@ -1091,7 +971,6 @@ class PersonRelationCreateView(BaseCreateView):
 class PersonGroupRelationCreateView(BaseCreateView):
     model = Relation
     form_class = PersonGroupRelationForm
-    permission_model = RelationPermission
     context_object_name = "relation"
     object_type = "Relation"
 
@@ -1119,7 +998,6 @@ class PersonGroupRelationCreateView(BaseCreateView):
 class GiftRelationCreateView(BaseCreateView):
     model = Relation
     form_class = GiftRelationForm
-    permission_model = RelationPermission
     context_object_name = "relation"
     object_type = "Relation"
 
@@ -1251,7 +1129,6 @@ class RelationListView(BaseListView):
 
 class RelationCreateView(BaseCreateView):
     model = Relation
-    permission_model = RelationPermission
     form_class = RelationForm
     success_url = reverse_lazy("gift_manager:relations")
     context_object_name = "relation"
@@ -1290,7 +1167,6 @@ class RelationCreateView(BaseCreateView):
 
 class RelationUpdateView(BaseUpdateView):
     model = Relation
-    permission_model = RelationPermission
     form_class = RelationForm
     pk_name = "relation_id"
     context_object_name = "relation"
@@ -1411,22 +1287,6 @@ class ShareObjectsView(LoginRequiredMixin, View):
             )
         )
 
-        # Permission levels for dropdown
-        permission_levels = [
-            {
-                "value": PermissionLevel.VIEWER,
-                "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
-            },
-            {
-                "value": PermissionLevel.EDITOR,
-                "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
-            },
-            {
-                "value": PermissionLevel.OWNER,
-                "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
-            },
-        ]
-
         context = {
             "friends": friends,
             "persons": persons,
@@ -1434,7 +1294,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             "gifts": gifts,
             "events": events,
             "relations": relations,
-            "permission_levels": permission_levels,
+            "permission_levels": deepcopy(PERMISSION_LEVELS),
         }
 
         return render(request, self.template_name, context)
@@ -1538,11 +1398,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for person in persons:
             for friend in friends:
-                obj, _ = PersonPermission.objects.get_or_create(
-                    user=friend, person=person, defaults={"permission_type": permission_level}
-                )
-                obj.permission_type = permission_level
-                obj.save()
+                create_or_update_permission(friend, person, permission_level=permission_level)
 
         return len(persons)
 
@@ -1570,24 +1426,17 @@ class ShareObjectsView(LoginRequiredMixin, View):
         for group in groups:
             # Share the group
             for friend in friends:
-                obj, _ = PersonGroupPermission.objects.get_or_create(
-                    user=friend, group=group, defaults={"permission_type": permission_level}
-                )
-                obj.permission_type = permission_level
-                obj.save()
+                with transaction.atomic():
+                    create_or_update_permission(
+                        friend, group, permission_level=permission_level, object_attr="group"
+                    )
 
-            # If requested, also share the persons in the group
-            if share_members:
-                persons_in_group = group.person_set.all()
-                for person in persons_in_group:
-                    for friend in friends:
-                        obj, _ = PersonPermission.objects.get_or_create(
-                            user=friend,
-                            person=person,
-                            defaults={"permission_type": permission_level},
-                        )
-                        obj.permission_type = permission_level
-                obj.save()
+                    # If requested, also share the persons in the group
+                    if share_members:
+                        for person in group.person_set.all():
+                            create_or_update_permission(
+                                friend, person, permission_level=permission_level
+                            )
 
         return len(groups)
 
@@ -1608,11 +1457,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for gift in gifts:
             for friend in friends:
-                obj, _ = GiftPermission.objects.get_or_create(
-                    user=friend, gift=gift, defaults={"permission_type": permission_level}
-                )
-                obj.permission_type = permission_level
-                obj.save()
+                create_or_update_permission(friend, gift, permission_level=permission_level)
 
         return len(gifts)
 
@@ -1633,11 +1478,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for event in events:
             for friend in friends:
-                obj, _ = EventPermission.objects.get_or_create(
-                    user=friend, event=event, defaults={"permission_type": permission_level}
-                )
-                obj.permission_type = permission_level
-                obj.save()
+                create_or_update_permission(friend, event, permission_level=permission_level)
 
         return len(events)
 
@@ -1658,72 +1499,37 @@ class ShareObjectsView(LoginRequiredMixin, View):
         """
         relations = Relation.objects.filter(relation_id__in=relation_ids)
 
-        for relation in relations:
-            # Share the relation itself
-            for friend in friends:
-                obj, _ = RelationPermission.objects.get_or_create(
-                    user=friend, relation=relation, defaults={"permission_type": permission_level}
-                )
-                obj.permission_type = permission_level
-                obj.save()
+        for friend in friends:
+            for relation in relations:
+                with transaction.atomic():
+                    # Share the relation itself
+                    create_or_update_permission(friend, relation, permission_level=permission_level)
 
-            # Share the associated gift
-            if relation.gift:
-                self._share_related_object(
-                    relation.gift, friends, GiftPermission, permission_level=permission_level
-                )
+                    # Share the associated gift
+                    if relation.gift:
+                        create_or_update_permission(
+                            friend, relation.gift, permission_level=permission_level
+                        )
 
-            # Share the associated person or group
-            if relation.person:
-                self._share_related_object(
-                    relation.person, friends, PersonPermission, permission_level=permission_level
-                )
-            elif relation.group:
-                self._share_related_object(
-                    relation.group,
-                    friends,
-                    PersonGroupPermission,
-                    field_name="group",
-                    permission_level=permission_level,
-                )
+                    # Share the associated person
+                    if relation.person:
+                        create_or_update_permission(
+                            friend, relation.person, permission_level=permission_level
+                        )
 
-            # Share the associated event
-            if relation.event:
-                self._share_related_object(
-                    relation.event, friends, EventPermission, permission_level=permission_level
-                )
+                    # Share the associated group
+                    if relation.group:
+                        create_or_update_permission(
+                            friend,
+                            relation.group,
+                            permission_level=permission_level,
+                            object_attr="group",
+                        )
+
+                    # Share the associated event
+                    if relation.event:
+                        create_or_update_permission(
+                            friend, relation.event, permission_level=permission_level
+                        )
 
         return len(relations)
-
-    def _share_related_object(
-        self,
-        obj: SharedObjectType,
-        friends: Sequence[User],
-        permission_model: ModelType,
-        field_name: str = "",
-        permission_level: int = PermissionLevel.VIEWER,
-    ) -> None:
-        """Utility method to share an object related to a relation.
-
-        Args:
-            obj: The object to share
-            friends: Sequence of friends to share with
-            permission_model: The permission model to use
-            field_name: The field name in the permission model (default: class name in lowercase)
-            permission_level: Permission level to apply
-
-        Returns:
-            None
-        """
-        if not field_name:
-            field_name = obj.__class__.__name__.lower()
-
-        for friend in friends:
-            kwargs = {
-                "user": friend,
-                field_name: obj,
-                "defaults": {"permission_type": permission_level},
-            }
-            obj, _ = permission_model.objects.get_or_create(**kwargs)
-            obj.permission_type = permission_level
-            obj.save()
