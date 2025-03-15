@@ -1,17 +1,17 @@
 from django.db.models import Model
 from django.utils.translation import gettext
 
-from .models import Event
-from .models import EventPermission
-from .models import Gift
-from .models import GiftPermission
-from .models import PermissionLevel
-from .models import Person
-from .models import PersonGroup
-from .models import PersonGroupPermission
-from .models import PersonPermission
-from .models import Relation
-from .models import RelationPermission
+from gift_manager.models import Event
+from gift_manager.models import EventPermission
+from gift_manager.models import Gift
+from gift_manager.models import GiftPermission
+from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import PersonGroupPermission
+from gift_manager.models import PersonPermission
+from gift_manager.models import Relation
+from gift_manager.models import RelationPermission
 
 PERMISSION_MODEL_MAP = {
     Person: PersonPermission,
@@ -40,6 +40,18 @@ PERMISSION_LEVELS = [
 def get_permission_model(obj) -> type[Model] | None:
     """Get the permission model for the given object."""
     return PERMISSION_MODEL_MAP.get(obj.__class__)
+
+
+def get_permission(obj, user, filter_name):
+    """Get the permission type for the user on the object."""
+    permission = obj.shared_with.through.objects.filter(**{"user": user, filter_name: obj}).first()
+    return permission.permission_type if permission else PermissionLevel.VIEWER
+
+
+def get_permission_label(obj, user, filter_name, case="lower"):
+    """Get the permission label for the user on the object."""
+    permission_value = get_permission(obj, user, filter_name)
+    return PermissionLevel.get_label(permission_value, case=case)
 
 
 def create_or_update_permission(

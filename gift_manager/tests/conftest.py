@@ -1,0 +1,136 @@
+from datetime import date
+
+import pytest
+from django.contrib.auth.models import User
+
+from gift_manager.models import Event
+from gift_manager.models import Gift
+from gift_manager.models import GiftTag
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import RelationStatus
+
+
+@pytest.fixture
+def username():
+    """Create a test username."""
+    return "testuser"
+
+
+@pytest.fixture
+def userpassword():
+    """Create a test user password."""
+    return "password123"
+
+
+@pytest.fixture
+def user_email():
+    """Create a test user email."""
+    return "user@example.com"
+
+
+@pytest.fixture
+def user(username, userpassword, user_email):
+    """Create a test user."""
+    return User.objects.create_user(username=username, password=userpassword, email=user_email)
+
+
+@pytest.fixture
+def person_first_name():
+    """Create a test person first name."""
+    return "John"
+
+
+@pytest.fixture
+def person_family_name():
+    """Create a test person family name."""
+    return "Doe"
+
+
+@pytest.fixture
+def person(person_first_name, person_family_name):
+    """Create a test person."""
+    return Person.objects.create(first_name=person_first_name, family_name=person_family_name)
+
+
+@pytest.fixture
+def group_name():
+    """Create a test person group name."""
+    return "Family"
+
+
+@pytest.fixture
+def group(group_name):
+    """Create a test person group."""
+    return PersonGroup.objects.create(name=group_name)
+
+
+@pytest.fixture
+def gift_tag_name():
+    """Create a test gift tag name."""
+    return "Electronics"
+
+
+@pytest.fixture
+def gift_tag(gift_tag_name):
+    """Create a test gift tag."""
+    return GiftTag.objects.create(name=gift_tag_name)
+
+
+@pytest.fixture
+def gift_name():
+    """Create a test gift name."""
+    return "Smartphone"
+
+
+@pytest.fixture
+def gift_comment():
+    """Create a test gift comment."""
+    return "Latest model"
+
+
+@pytest.fixture
+def gift(gift_name, gift_comment):
+    """Create a test gift."""
+    return Gift.objects.create(name=gift_name, comment=gift_comment)
+
+
+@pytest.fixture
+def event_name():
+    """Create a test event name."""
+    return "Birthday"
+
+
+@pytest.fixture
+def event_comment():
+    """Create a test event comment."""
+    return "Annual celebration"
+
+
+@pytest.fixture
+def event_usual_date():
+    """Create a test event usual date."""
+    return date(2000, 5, 15)
+
+
+@pytest.fixture
+def event_recurrence():
+    """Create a test event recurrence."""
+    return "yearly"
+
+
+@pytest.fixture
+def event(event_name, event_comment, event_usual_date, event_recurrence):
+    """Create a test event."""
+    return Event.objects.create(
+        name=event_name,
+        comment=event_comment,
+        usual_date=event_usual_date,
+        recurrence=event_recurrence,
+    )
+
+
+@pytest.fixture
+def status():
+    """Create a test relation status."""
+    return RelationStatus.objects.create(status="Idea")

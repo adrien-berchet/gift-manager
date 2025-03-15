@@ -2,6 +2,7 @@ from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
+from django.contrib.auth.models import User
 
 from gift_manager.models import Event
 from gift_manager.models import EventPermission
@@ -16,6 +17,8 @@ from gift_manager.models import RelationPermission
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.permissions import delete_permission
+from gift_manager.permissions import get_permission
+from gift_manager.permissions import get_permission_label
 from gift_manager.permissions import get_permission_model
 
 
@@ -82,6 +85,88 @@ class TestGetPermissionModel:
 
         result = get_permission_model(obj)
         assert result is None
+
+
+class TestGetPermission:
+    """Tests for the get_permission function."""
+
+    def test_get_permission(self):
+        """Test that get_permission returns correct permission type."""
+        # Arrange
+        mock_obj = Mock()
+        mock_user = Mock(spec=User)
+        filter_name = "object_name"
+
+        # Configure the mock relationship
+        mock_through = Mock()
+        mock_permission = Mock()
+        mock_permission.permission_type = PermissionLevel.EDITOR
+        mock_through.objects.filter.return_value.first.return_value = mock_permission
+        mock_obj.shared_with.through = mock_through
+
+        # Act
+        result = get_permission(mock_obj, mock_user, filter_name)
+
+        # Assert
+        mock_through.objects.filter.assert_called_once_with(
+            user=mock_user, **{filter_name: mock_obj}
+        )
+        assert result == PermissionLevel.EDITOR
+
+    def test_get_permission_no_permission(self):
+        """Test that get_permission returns VIEWER when no permission exists."""
+        # Arrange
+        mock_obj = Mock()
+        mock_user = Mock(spec=User)
+        filter_name = "object_name"
+
+        # Configure the mock to return None (no permission)
+        mock_through = Mock()
+        mock_through.objects.filter.return_value.first.return_value = None
+        mock_obj.shared_with.through = mock_through
+
+        # Act
+        result = get_permission(mock_obj, mock_user, filter_name)
+
+        # Assert
+        mock_through.objects.filter.assert_called_once_with(
+            user=mock_user, **{filter_name: mock_obj}
+        )
+        assert result == PermissionLevel.VIEWER
+
+    @pytest.mark.parametrize(
+        ("permission_level", "case", "expected"),
+        [
+            (PermissionLevel.NONE, "lower", "none"),
+            (PermissionLevel.VIEWER, "lower", "viewer"),
+            (PermissionLevel.EDITOR, "lower", "editor"),
+            (PermissionLevel.OWNER, "lower", "owner"),
+            (PermissionLevel.NONE, "upper", "NONE"),
+            (PermissionLevel.VIEWER, "upper", "VIEWER"),
+            (PermissionLevel.EDITOR, "upper", "EDITOR"),
+            (PermissionLevel.OWNER, "upper", "OWNER"),
+            (PermissionLevel.NONE, "title", "None"),
+            (PermissionLevel.VIEWER, "title", "Viewer"),
+            (PermissionLevel.EDITOR, "title", "Editor"),
+            (PermissionLevel.OWNER, "title", "Owner"),
+        ],
+    )
+    @patch("gift_manager.permissions.get_permission")
+    def test_get_permission_label(self, mock_get_permission, permission_level, case, expected):
+        """Test that get_permission_label returns correct label."""
+        # Arrange
+        mock_obj = Mock()
+        mock_user = Mock(spec=User)
+        filter_name = "object_name"
+
+        # Configure the mock to return the expected permission
+        mock_get_permission.return_value = permission_level
+
+        result = get_permission_label(mock_obj, mock_user, filter_name, case=case)
+
+        # Assert
+        mock_get_permission.assert_called_once_with(mock_obj, mock_user, filter_name)
+        assert result == expected
 
 
 class TestCreateOrUpdatePermission:

@@ -56,6 +56,7 @@ from .models import RelationStatus
 from .permissions import PERMISSION_LEVELS
 from .permissions import create_or_update_permission
 from .permissions import delete_permission
+from .permissions import get_permission
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]
@@ -133,20 +134,51 @@ class AcceptInvitationView(View):
 
 
 class RemoveFriendView(LoginRequiredMixin, View):
-    def post(self, request, friend_id, *args, **kwargs):
+    def post(self, request, friend_id, *args, **kwargs):  # noqa: C901
         with transaction.atomic():
             friend_profile = get_object_or_404(Profile, pk=friend_id)
+            friend = friend_profile.user
             user_profile = get_object_or_404(Profile, user=request.user)
 
             # Remove the friend relationship (symmetric)
             if friend_profile in user_profile.friends.all():
                 user_profile.friends.remove(friend_profile)
 
+            # Symmetric removal
+            if user_profile in friend_profile.friends.all():
+                friend_profile.friends.remove(user_profile)
+
             # Remove all shared objects between the two users
+
+            # Persons
             persons_shared = Person.objects.filter(shared_with=request.user)
             for person in persons_shared:
-                if friend_profile.user in person.shared_with.all():
-                    person.shared_with.remove(friend_profile.user)
+                if friend.user in person.shared_with.all():
+                    person.shared_with.remove(friend)
+
+            # PersonGroups
+            person_groups_shared = PersonGroup.objects.filter(shared_with=request.user)
+            for group in person_groups_shared:
+                if friend in group.shared_with.all():
+                    group.shared_with.remove(friend)
+
+            # Gifts
+            gifts_shared = Gift.objects.filter(shared_with=request.user)
+            for gift in gifts_shared:
+                if friend in gift.shared_with.all():
+                    gift.shared_with.remove(friend)
+
+            # Events
+            events_shared = Event.objects.filter(shared_with=request.user)
+            for event in events_shared:
+                if friend in event.shared_with.all():
+                    event.shared_with.remove(friend)
+
+            # Relations
+            relations_shared = Relation.objects.filter(shared_with=request.user)
+            for relation in relations_shared:
+                if friend in relation.shared_with.all():
+                    relation.shared_with.remove(friend)
 
         return redirect("gift_manager:profile_detail")
 
@@ -178,18 +210,6 @@ class GetObjectByTokenMixin:
             raise AttributeError(msg)
         kwargs = {self.pk_name: obj_id}
         return get_object_or_404(queryset, **kwargs)
-
-
-def get_permission(obj, user, filter_name):
-    """Get the permission type for the user on the object."""
-    permission = obj.shared_with.through.objects.filter(**{"user": user, filter_name: obj}).first()
-    return permission.permission_type if permission else PermissionLevel.VIEWER
-
-
-def get_permission_label(obj, user, filter_name):
-    """Get the permission label for the user on the object."""
-    permission_value = get_permission(obj, user, filter_name)
-    return PermissionLevel.get_label(permission_value)
 
 
 class ContextPermissionMixin:
@@ -1304,9 +1324,17 @@ class ShareObjectsView(LoginRequiredMixin, View):
         with transaction.atomic():
             # Get selected friends
             friends = self._get_selected_friends(request)
+            if not friends:
+                messages.error(request, gettext("Please select at least one friend."))
+                return self.get(request)
 
             # Get selected objects by type
             selection = self._get_selection_from_request(request)
+
+            # Check if at least one object is selected
+            if not any(selection.values()):
+                messages.error(request, gettext("Please select at least one object to share."))
+                return self.get(request)
 
             # Get selected permission level (default to VIEWER if not specified)
             permission_level = int(request.POST.get("permission_level", PermissionLevel.VIEWER))
