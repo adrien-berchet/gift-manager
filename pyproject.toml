@@ -22,12 +22,11 @@ dependencies = {file = ["requirements.txt"]}
 docs = [
 ]
 test = [
-    "mock>=3",
-    "pytest>=6.1",
-    "pytest-click>=1.1",
-    "pytest-console-scripts>=1.4",
-    "pytest-cov>=4.1",
-    "pytest-html>=3.2",
+    "mock>=5",
+    "pytest>=8",
+    "pytest-django>=4",
+    "pytest-cov>=6",
+    "pytest-html>=4",
 ]
 
 mypy = [
@@ -67,9 +66,8 @@ line_length = 100
 force_single_line = true
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
+DJANGO_SETTINGS_MODULE = "GiftManager.settings"
+python_files = ["test_*.py"]
 filterwarnings = [
 ]
 
@@ -133,7 +131,7 @@ max-complexity = 12
 ignore-variadic-names = true
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = [
+"*/tests/*" = [
     "PLR2004",
     "S101",
 ]
