@@ -53,7 +53,7 @@ class Profile(models.Model):
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):  # noqa: ARG001
-    if created:
+    if created:  # pragma: no branch
         Profile.objects.create(user=instance)
 
 
@@ -61,7 +61,7 @@ def create_user_profile(sender, instance, created, **kwargs):  # noqa: ARG001
 def save_user_profile(sender, instance, **kwargs):  # noqa: ARG001
     if hasattr(instance, "profile"):
         instance.profile.save()
-    else:
+    else:  # pragma: no branch
         Profile.objects.create(user=instance)
 
 
@@ -111,7 +111,7 @@ class Person(models.Model):
         verbose_name_plural = gettext_lazy("Persons")
 
     def __str__(self):
-        return (self.first_name + " " + self.family_name).strip()
+        return (self.first_name + " " + (self.family_name or "")).strip()
 
 
 class PersonPermission(models.Model):
@@ -127,7 +127,7 @@ class PersonPermission(models.Model):
         unique_together = ("user", "person")
 
     def __str__(self):
-        return f"{self.user} - {self.person} -> {self.permission_type}"
+        return f"{self.user} - {self.person} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
 class PersonGroup(models.Model):
@@ -161,7 +161,7 @@ class PersonGroupPermission(models.Model):
         unique_together = ("user", "group")
 
     def __str__(self):
-        return f"{self.user} - {self.group} -> {self.permission_type}"
+        return f"{self.user} - {self.group} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
 class GiftTag(models.Model):
@@ -192,7 +192,7 @@ class GiftTagPermission(models.Model):
         unique_together = ("user", "gift_tag")
 
     def __str__(self):
-        return f"{self.user} - {self.gift_tag} -> {self.permission_type}"
+        return f"{self.user} - {self.gift_tag} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
 class Gift(models.Model):
@@ -228,7 +228,7 @@ class GiftPermission(models.Model):
         unique_together = ("user", "gift")
 
     def __str__(self):
-        return f"{self.user} - {self.gift} -> {self.permission_type}"
+        return f"{self.user} - {self.gift} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
 class Event(models.Model):
@@ -276,7 +276,7 @@ class EventPermission(models.Model):
         unique_together = ("user", "event")
 
     def __str__(self):
-        return f"{self.user} - {self.event} -> {self.permission_type}"
+        return f"{self.user} - {self.event} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
 class RelationStatus(models.Model):
@@ -351,4 +351,4 @@ class RelationPermission(models.Model):
         unique_together = ("user", "relation")
 
     def __str__(self):
-        return f"{self.user} - {self.relation} -> {self.permission_type}"
+        return f"{self.user} - {self.relation} -> {PermissionLevel.get_label(self.permission_type)}"
