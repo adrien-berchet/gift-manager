@@ -302,7 +302,7 @@ class GiftTag(models.Model):
                 if self.has_cycle_with(parent):
                     raise ValidationError(
                         gettext_lazy(
-                            "Creating this relationship would cause a cycle in the tag hierarchy."
+                            "Adding this parent would create a cycle in the tag hierarchy."
                         )
                     )
 

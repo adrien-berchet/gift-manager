@@ -1655,7 +1655,7 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
                 context["breadcrumbs"] = [*selected_tag.get_primary_ancestors_path(), selected_tag]
 
             except GiftTag.DoesNotExist:
-                messages.error(request, gettext("Tag non trouvé."))
+                messages.error(request, gettext("Tag not found."))
         else:
             # If no tag is selected, show all root tags
             # (either public or shared with the user)

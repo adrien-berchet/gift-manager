@@ -64,13 +64,13 @@
                 <div class="card-header">
                     {% if selected_tag %}
                         <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">{% trans "Gifts labelled as" %} "{{ selected_tag.name }}"</h5>
+                            <h5 class="mb-0">{% trans "Gifts tagged as" %} "{{ selected_tag.name }}"</h5>
                             <a href="{% url 'gift_manager:gift_tag_detail' pk=selected_tag.tag_id %}" class="btn btn-sm btn-primary">
                                 {% trans "Details" %}
                             </a>
                         </div>
                     {% else %}
-                        <h5 class="mb-0">{% trans "Gifts with no label" %}</h5>
+                        <h5 class="mb-0">{% trans "Gifts with no tag" %}</h5>
                     {% endif %}
                 </div>
                 <div class="card-body">
