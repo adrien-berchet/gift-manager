@@ -250,10 +250,8 @@ msgstr ""
 "Soit une personne, soit un groupe doit être sélectionné, mais pas les deux."
 
 #: gift_manager/permissions.py:76 gift_manager/permissions.py:109
-#, fuzzy
-#| msgid "Could not create permission object"
 msgid "Could not determine permission model for this object type"
-msgstr "Impossible de créer l'objet de permission"
+msgstr "Impossible de déterminer le modèle de permission pour ce type d'objet"
 
 #: gift_manager/templates/account/account_inactive.html:4
 msgid "Account inactive"
@@ -362,10 +360,8 @@ msgid "Groups / Families"
 msgstr "Groupes / Familles"
 
 #: gift_manager/templates/gift_manager/base.html:44
-#, fuzzy
-#| msgid "Gift details"
 msgid "Gift tags"
-msgstr "Détails du cadeau"
+msgstr "Tags de cadeau"
 
 #: gift_manager/templates/gift_manager/base.html:50
 #: gift_manager/templates/gift_manager/share_objects.html:222
@@ -784,7 +780,7 @@ msgstr "Aucun"
 
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:16
 msgid "Children tags:"
-msgstr "Tagsq enfants:"
+msgstr "Tags enfants:"
 
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:28
 msgid "This gift tag is public and is thus shared with all users."
