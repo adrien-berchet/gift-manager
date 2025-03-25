@@ -76,6 +76,16 @@ urlpatterns = [
         views.GiftRelationCreateView.as_view(),
         name="gift_relation_create",
     ),
+    path("gift-tags/", views.GiftTagExplorerView.as_view(), name="gift_tag_explorer"),
+    path(
+        "gift-tags/<uuid:pk>/",
+        views.GiftTagExplorerView.as_view(),
+        name="gift_tag_explorer_with_tag",
+    ),
+    path("gift-tag/create/", views.GiftTagCreateView.as_view(), name="gift_tag_create"),
+    path("gift-tag/<uuid:pk>/", views.GiftTagDetailView.as_view(), name="gift_tag_detail"),
+    path("gift-tag/<uuid:pk>/edit", views.GiftTagUpdateView.as_view(), name="gift_tag_edit"),
+    path("gift-tag/<uuid:pk>/delete", views.GiftTagDeleteView.as_view(), name="gift_tag_delete"),
     path(
         "relations/",
         views.RelationListView.as_view(),

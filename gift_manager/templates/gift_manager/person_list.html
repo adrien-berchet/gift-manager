@@ -45,10 +45,10 @@
                     {% if col != "groups" %}
                         <td>{{ item|get_item:col|replace_none:"" }}</td>
                     {% else %}
-                        <td data-search="{% if item.grouped_groups %}{% for group_name, group_id in item.grouped_groups %}{{ group_name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
-                            {% if item.grouped_groups %}
-                                {% for group_name, group_id in item.grouped_groups %}
-                                    <a href="{% url 'gift_manager:person_group_detail' group_id %}">{{ group_name }}</a>{% if not forloop.last %}, {% endif %}
+                        <td data-search="{% if item.groups_info %}{% for group in item.groups_info %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
+                            {% if item.groups_info %}
+                                {% for group in item.groups_info %}
+                                    <a href="{% url 'gift_manager:person_group_detail' group.id %}">{{ group.name }}</a>{% if not forloop.last %}, {% endif %}
                                 {% endfor %}
                             {% endif %}
                         </td>

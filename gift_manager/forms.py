@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy
 
 from .models import Event
 from .models import Gift
+from .models import GiftTag
 from .models import Person
 from .models import PersonGroup
 from .models import Relation
@@ -198,6 +199,29 @@ class GiftForm(BaseFormMixin, forms.ModelForm):
                 "max_length": gettext_lazy("This comment is too long."),
             },
         }
+
+
+class GiftTagForm(BaseFormMixin, forms.ModelForm):
+    class Meta:
+        model = GiftTag
+        fields = ["name", "parent_tags"]
+        widgets = {
+            "parent_tags": forms.SelectMultiple(attrs={"class": "form-control"}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # If the form is in edit mode, check that the parent tags do not create a cycle
+        if self.instance and self.instance.pk:
+            for parent in cleaned_data.get("parent_tags", []):
+                if self.instance.has_cycle_with(parent):
+                    self.add_error(
+                        "parent_tags",
+                        gettext_lazy(
+                            "Adding this parent would create a cycle in the tag hierarchy."
+                        ),
+                    )
+        return cleaned_data
 
 
 class GiftRelationForm(BaseFormMixin, forms.ModelForm):

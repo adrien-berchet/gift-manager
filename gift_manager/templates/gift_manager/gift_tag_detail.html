@@ -1,0 +1,133 @@
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+
+{% load i18n %}
+{% block title %}{% trans "Gift tag details" %}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{% trans "Gift tag details" %}</h1>
+<p><strong>{% trans "Name:" %}</strong> {{ gift_tag.name }}</p>
+<p><strong>{% trans "Parent tags:" %}</strong>
+    {% for tag in parent_tags %}
+        <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}" class="badge bg-primary">{{ tag.name }}</a>
+    {% empty %}
+        {% trans "None" %}
+    {% endfor %}
+<p><strong>{% trans "Children tags:" %}</strong>
+    {% for tag in child_tags %}
+        <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}" class="badge bg-primary">{{ tag.name }}</a>
+    {% empty %}
+        {% trans "None" %}
+    {% endfor %}
+</p>
+<p><strong>{% trans "Creation date:" %}</strong> {{ gift_tag.creation_date|replace_none:"" }}</p>
+
+<div class="mt-4">
+    <h5>{% trans "Shared with:" %}</h5>
+    {% if gift_tag.is_public %}
+    <p>{% trans "This gift tag is public and is thus shared with all users." %}</p>
+    {% else %}
+        {% if shared_users %}
+        <table id="shares-table" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>{% trans "Username" %}</th>
+                    <th>{% trans "Permission" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shared_user in shared_users %}
+                <tr>
+                    <td>{{ shared_user.user.username }}</td>
+                    <td>
+                        {% if shared_user.permission <= 10 %}
+                            <span class="badge bg-primary" title="{% trans 'Can only view this object' %}">
+                            <i class="fas fa-eye me-1"></i> {{ shared_user.permission_label }}
+                            </span>
+                        {% elif shared_user.permission <= 20 %}
+                            <span class="badge bg-success" title="{% trans 'Can edit this object' %}">
+                            <i class="fas fa-edit me-1"></i> {{ shared_user.permission_label }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark" title="{% trans 'Has full control over this object' %}">
+                            <i class="fas fa-crown me-1"></i> {{ shared_user.permission_label }}
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>{% trans "This gift tag is not shared with any friend." %}</p>
+        {% endif %}
+    {% endif %}
+</div>
+<div class="mt-4">
+</div>
+
+{% if is_editor %}
+    <a href="{% url 'gift_manager:gift_tag_edit' gift_tag.tag_id %}" class="btn btn-warning mb-3">{% trans "Edit tag" %}</a>
+{% else %}
+    <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit tag" %}</button>
+{% endif %}
+{% if gift_tag.is_public %}
+    <button class="btn btn-danger mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object' %}">{% trans "Delete tag" %}</button>
+{% else %}
+    <a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete tag' %}</a>
+{% endif %}
+
+<h2 class="my-4">{% trans "Gifts with this tag" %}</h2>
+<table id="data-table" class="table table-striped">
+    <thead>
+        <tr>
+            <th>{% trans "Name" %}</th>
+            <th>{% trans "Comment" %}</th>
+            <th>{% trans "Actions" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for gift in gifts %}
+            <tr>
+                <td><a href="{% url 'gift_manager:gift_detail' gift.gift_id %}">{{ gift.name }}</a></td>
+                <td>{{ gift.comment|default:"-" }}</td>
+                <td>
+                    <a href="{% url 'gift_manager:gift_detail' gift.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="3" class="text-center">{% trans "No gift with this tag" %}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        {% if gifts %}
+            $('#data-table').DataTable({
+                "order": [[0, 'asc']]
+            });
+        {% endif %}
+
+        // Initialize the DataTable for the shares table
+        {% if shared_users %}
+            $('#shares-table').DataTable({
+                paging: true,
+                pageLength: 5,
+                searching: false,
+                info: false,
+                lengthChange: false
+            });
+        {% endif %}
+    });
+</script>
+{% endblock %}

@@ -5,6 +5,8 @@ from gift_manager.models import Event
 from gift_manager.models import EventPermission
 from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
+from gift_manager.models import GiftTag
+from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -17,6 +19,7 @@ PERMISSION_MODEL_MAP = {
     Person: PersonPermission,
     PersonGroup: PersonGroupPermission,
     Gift: GiftPermission,
+    GiftTag: GiftTagPermission,
     Event: EventPermission,
     Relation: RelationPermission,
 }

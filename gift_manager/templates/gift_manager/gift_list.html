@@ -12,18 +12,24 @@
 <table id="data-table" class="table table-striped">
     <thead>
         <tr>
-            {% for col, name in column_names.items %}
-            <th>{{ name }}</th>
-            {% endfor %}
+            <th>{{ column_names.name }}</th>
+            <th>{{ column_names.comment }}</th>
+            <th>{{ column_names.tags }}</th>
             <th>{% trans "Actions" %}</th>
         </tr>
     </thead>
     <tbody>
         {% for item in data %}
             <tr>
-                {% for col, name in column_names.items %}
-                    <td>{{ item|get_item:col|replace_none:"" }}</td>
-                {% endfor %}
+                <td>{{ item.name }}</td>
+                <td>{{ item.comment|default:"" }}</td>
+                <td>
+                    {% if item.tags_info %}
+                        {% for tag in item.tags_info %}
+                            <a href="{% url 'gift_manager:gift_tag_detail' tag.id %}" class="badge bg-primary">{{ tag.name }}</a>
+                        {% endfor %}
+                    {% endif %}
+                </td>
                 <td style="white-space: nowrap;">
                     <a href="{% url 'gift_manager:gift_relation_create' item.gift_id %}" class="btn btn-primary btn-sm" data-toggle="tooltip" title="{% trans 'Give' %}"><i class="fas fa-hand-holding-heart"></i></a>
                     <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>

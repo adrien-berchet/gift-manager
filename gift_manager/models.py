@@ -4,6 +4,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.translation import gettext_lazy
@@ -39,6 +40,12 @@ class PermissionLevel:
         if case == "title":
             return label.title()
         return label
+
+
+class UserPermissionManager(models.Manager):
+    def accessible_by(self, user):
+        """Return all objects accessible by a user."""
+        return self.filter(Q(shared_with=user))
 
 
 class Profile(models.Model):
@@ -106,6 +113,9 @@ class Person(models.Model):
         blank=True,
     )
 
+    # Custom manager
+    objects = UserPermissionManager()
+
     class Meta:
         verbose_name = gettext_lazy("Person")
         verbose_name_plural = gettext_lazy("Persons")
@@ -140,6 +150,9 @@ class PersonGroup(models.Model):
         User, through="PersonGroupPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
 
+    # Custom manager
+    objects = UserPermissionManager()
+
     class Meta:
         verbose_name = gettext_lazy("Person group")
         verbose_name_plural = gettext_lazy("¨Person groups")
@@ -164,19 +177,134 @@ class PersonGroupPermission(models.Model):
         return f"{self.user} - {self.group} -> {PermissionLevel.get_label(self.permission_type)}"
 
 
+class GiftTagManager(models.Manager):
+    def accessible_by(self, user):
+        """Return all tags accessible by a user."""
+        return self.filter(Q(is_public=True) | Q(shared_with=user))
+
+    def root_tags_for_user(self, user):
+        """Return all root tags accessible by a user."""
+        return self.accessible_by(user).filter(parent_tags__isnull=True)
+
+    def children_for_user(self, parent_tag, user):
+        """Return all children tags of a tag accessible by a user."""
+        return self.accessible_by(user).filter(parent_tags=parent_tag)
+
+
 class GiftTag(models.Model):
     """Model for a gift tag."""
 
     tag_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
-    parent_tag = models.ForeignKey("GiftTag", on_delete=models.CASCADE, null=True, blank=True)
+    parent_tags = models.ManyToManyField(
+        "self", symmetrical=False, related_name="child_tags", blank=True
+    )
     creation_date = models.DateTimeField(auto_now_add=True)
+    is_public = models.BooleanField(default=False, help_text="If true, this tag is public.")
     shared_with = models.ManyToManyField(
         User, through="GiftTagPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
 
+    # Custom manager
+    objects = GiftTagManager()
+
     def __str__(self):
         return self.name
+
+    def get_children(self):
+        """Returns all direct child tags."""
+        return self.child_tags.all()
+
+    def get_descendants(self):
+        """Returns all descendant tags (recursively)."""
+        descendants = set()
+        to_process = list(self.get_children())
+        processed_ids = set()
+
+        while to_process:
+            current = to_process.pop(0)
+            if current.pk in processed_ids:
+                continue
+
+            processed_ids.add(current.pk)
+            descendants.add(current)
+            to_process.extend(
+                [child for child in current.get_children() if child.pk not in processed_ids]
+            )
+
+        return list(descendants)
+
+    def get_ancestors(self):
+        """Returns all parent tags (up to the root)."""
+        ancestors = set()
+        to_process = list(self.parent_tags.all())
+        processed_ids = set()
+
+        while to_process:
+            current = to_process.pop(0)
+            if current.pk in processed_ids:
+                continue
+
+            processed_ids.add(current.pk)
+            ancestors.add(current)
+            to_process.extend(
+                [parent for parent in current.parent_tags.all() if parent.pk not in processed_ids]
+            )
+
+        return list(ancestors)
+
+    def get_primary_ancestors_path(self):
+        """Returns a specific path of ancestors (for breadcrumbs)."""
+        # Arbitrarily choosing the first parent at each level
+        ancestors = []
+        current = self
+        visited = {self.pk}
+
+        while True:
+            parents = current.parent_tags.all()
+            if not parents:
+                break
+
+            # Take the first parent that doesn't create a cycle
+            next_parent = None
+            for parent in parents:
+                if parent.pk not in visited:
+                    next_parent = parent
+                    visited.add(parent.pk)
+                    break
+
+            if not next_parent:
+                break
+
+            ancestors.append(next_parent)
+            current = next_parent
+
+        ancestors.reverse()
+        return ancestors
+
+    def has_cycle_with(self, potential_parent):
+        """Checks if adding a parent would create a cycle."""
+        if potential_parent == self:
+            return True
+
+        # Check if we are already an ancestor of the potential parent
+        return self in potential_parent.get_ancestors()
+
+    def get_all_gifts(self):
+        """Returns all gifts associated with this tag and its descendants."""
+        tags = [self, *self.get_descendants()]
+        return Gift.objects.filter(tags__in=tags).distinct()
+
+    def clean(self):
+        """Custom validation to avoid cycles."""
+        if self.pk:
+            for parent in self.parent_tags.all():
+                if self.has_cycle_with(parent):
+                    raise ValidationError(
+                        gettext_lazy(
+                            "Creating this relationship would cause a cycle in the tag hierarchy."
+                        )
+                    )
 
 
 class GiftTagPermission(models.Model):
@@ -206,6 +334,9 @@ class Gift(models.Model):
     shared_with = models.ManyToManyField(
         User, through="GiftPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
+
+    # Custom manager
+    objects = UserPermissionManager()
 
     class Meta:
         verbose_name = gettext_lazy("Gift")
@@ -254,6 +385,9 @@ class Event(models.Model):
     shared_with = models.ManyToManyField(
         User, through="EventPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
+
+    # Custom manager
+    objects = UserPermissionManager()
 
     class Meta:
         verbose_name = gettext_lazy("Event")
@@ -317,6 +451,9 @@ class Relation(models.Model):
     shared_with = models.ManyToManyField(
         User, through="RelationPermission", related_name="shared_relations"
     )
+
+    # Custom manager
+    objects = UserPermissionManager()
 
     class Meta:
         verbose_name = gettext_lazy("Relation")

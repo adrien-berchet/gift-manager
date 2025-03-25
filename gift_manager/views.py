@@ -8,9 +8,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.contrib.postgres.aggregates import ArrayAgg
+from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import F
+from django.db.models import Func
 from django.db.models import Model
 from django.db.models import Q
 from django.db.models import TextField
@@ -38,6 +40,7 @@ from django.views.generic.edit import CreateView
 from .forms import EventForm
 from .forms import GiftForm
 from .forms import GiftRelationForm
+from .forms import GiftTagForm
 from .forms import PersonForm
 from .forms import PersonGroupAddMultiplePersonsForm
 from .forms import PersonGroupForm
@@ -46,6 +49,7 @@ from .forms import PersonRelationForm
 from .forms import RelationForm
 from .models import Event
 from .models import Gift
+from .models import GiftTag
 from .models import Invitation
 from .models import PermissionLevel
 from .models import Person
@@ -661,7 +665,7 @@ class PersonListView(BaseListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["unique_groups"] = (
-            PersonGroup.objects.filter(shared_with=self.request.user)
+            PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
             .distinct()
             .order_by("name")
@@ -671,30 +675,23 @@ class PersonListView(BaseListView):
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""
-        queryset = (
-            Person.objects.filter(Q(shared_with=self.request.user))
+        return (
+            Person.objects.accessible_by(self.request.user)
             .values("person_id", *list(set(self.column_names.keys()).difference(["groups"])))
             .annotate(
-                group_names=Coalesce(
-                    ArrayAgg("groups__name", distinct=True),  # Retrieve the list of group names
-                    [],
-                ),
-                group_ids=Coalesce(
-                    ArrayAgg("groups__group_id", distinct=True),  # Retrieve the list of group UUIDs
-                    [],
+                groups_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("groups__group_id"),
+                        Value("name"),
+                        F("groups__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(groups__group_id__isnull=False),
+                    distinct=True,
                 ),
             )
         )
-
-        # Transform the list of group names and UUIDs into a list of tuples
-        for person in queryset:
-            person["grouped_groups"] = [
-                (i, j)
-                for i, j in list(zip(person["group_names"], person["group_ids"]))
-                if i is not None and j is not None
-            ]
-
-        return queryset
 
 
 class PersonCreateView(BaseCreateView):
@@ -706,8 +703,8 @@ class PersonCreateView(BaseCreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["groups"].queryset = PersonGroup.objects.filter(
-            shared_with=self.request.user
+        form.fields["groups"].queryset = PersonGroup.objects.accessible_by(
+            self.request.user
         ).order_by("name")
         return form
 
@@ -722,8 +719,8 @@ class PersonUpdateView(BaseUpdateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["groups"].queryset = PersonGroup.objects.filter(
-            shared_with=self.request.user
+        form.fields["groups"].queryset = PersonGroup.objects.accessible_by(
+            self.request.user
         ).order_by("name")
         return form
 
@@ -743,10 +740,11 @@ class PersonDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(
-            (Q(person=self.object) | Q(group__in=self.object.groups.all()))
-            & Q(shared_with=self.request.user)
-        ).select_related("status")
+        context["relations"] = (
+            Relation.objects.accessible_by(self.request.user)
+            .filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
+            .select_related("status")
+        )
         context["relation_statuses"] = RelationStatus.objects.all()
         return context
 
@@ -763,7 +761,7 @@ class PersonGroupListView(BaseListView):
         }
 
     def get_queryset(self):
-        return PersonGroup.objects.filter(Q(shared_with=self.request.user)).values(
+        return PersonGroup.objects.accessible_by(self.request.user).values(
             "group_id", *self.column_names
         )
 
@@ -828,13 +826,12 @@ class PersonGroupDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["persons"] = Person.objects.filter(
-            groups=self.object, shared_with=self.request.user
+        context["persons"] = Person.objects.accessible_by(self.request.user).filter(
+            groups=self.object
         )
-        context["gifts"] = Relation.objects.filter(
-            group=self.object, shared_with=self.request.user, gift__isnull=False
+        context["gifts"] = Relation.objects.accessible_by(self.request.user).filter(
+            group=self.object, gift__isnull=False
         )
-        context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
 
@@ -853,8 +850,22 @@ class GiftListView(BaseListView):
 
     def get_queryset(self):
         """Return Gifts for the current user or shared with the user."""
-        return Gift.objects.filter(Q(shared_with=self.request.user)).values(
-            "gift_id", *self.column_names
+        return (
+            Gift.objects.accessible_by(self.request.user)
+            .annotate(
+                tags_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("tags__tag_id"),
+                        Value("name"),
+                        F("tags__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(tags__tag_id__isnull=False),
+                    distinct=True,
+                ),
+            )
+            .values("gift_id", "name", "comment", "tags_info")
         )
 
 
@@ -865,6 +876,13 @@ class GiftCreateView(BaseCreateView):
     context_object_name = "gift"
     object_type = "Gift"
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["tags"].queryset = GiftTag.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
+        return form
+
 
 class GiftUpdateView(BaseUpdateView):
     model = Gift
@@ -873,6 +891,13 @@ class GiftUpdateView(BaseUpdateView):
     context_object_name = "gift"
     object_type = "Gift"
     detail_url_name = "gift_detail"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["tags"].queryset = GiftTag.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
+        return form
 
 
 class GiftDeleteView(BaseDeleteView):
@@ -890,8 +915,8 @@ class GiftDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(
-            gift=self.object, shared_with=self.request.user
+        context["relations"] = Relation.objects.accessible_by(self.request.user).filter(
+            gift=self.object
         )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
@@ -919,9 +944,7 @@ class EventListView(BaseListView):
 
     def get_queryset(self):
         """Return Events for the current user or shared with the user."""
-        return Event.objects.filter(Q(shared_with=self.request.user)).values(
-            "event_id", *self.column_names
-        )
+        return Event.objects.accessible_by(self.request.user).values("event_id", *self.column_names)
 
 
 class EventCreateView(BaseCreateView):
@@ -956,9 +979,11 @@ class EventDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(
-            event=self.object, shared_with=self.request.user
-        ).select_related("person", "group", "gift", "event", "status")
+        context["relations"] = (
+            Relation.objects.accessible_by(self.request.user)
+            .filter(event=self.object)
+            .select_related("person", "group", "gift", "event", "status")
+        )
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
 
@@ -979,12 +1004,12 @@ class PersonRelationCreateView(BaseCreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+        form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )
-        form.fields["event"].queryset = Event.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
         return form
 
 
@@ -1006,12 +1031,12 @@ class PersonGroupRelationCreateView(BaseCreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+        form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )
-        form.fields["event"].queryset = Event.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
         return form
 
 
@@ -1032,7 +1057,7 @@ class GiftRelationCreateView(BaseCreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["person"].queryset = (
-            Person.objects.filter(shared_with=self.request.user)
+            Person.objects.accessible_by(self.request.user)
             .annotate(
                 complete_name=Concat(
                     "family_name",
@@ -1043,12 +1068,12 @@ class GiftRelationCreateView(BaseCreateView):
             )
             .order_by("complete_name")
         )
-        form.fields["group"].queryset = PersonGroup.objects.filter(
-            shared_with=self.request.user
+        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
+            self.request.user
         ).order_by("name")
-        form.fields["event"].queryset = Event.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
         return form
 
 
@@ -1087,8 +1112,8 @@ class RelationStatusDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = Relation.objects.filter(
-            Q(status=self.object) & Q(shared_with=self.request.user)
+        context["relations"] = Relation.objects.accessible_by(self.request.user).filter(
+            status=self.object
         )
         return context
 
@@ -1111,7 +1136,7 @@ class RelationListView(BaseListView):
 
     def get_queryset(self):
         return (
-            Relation.objects.filter(Q(shared_with=self.request.user))
+            Relation.objects.accessible_by(self.request.user)
             .annotate(
                 related_object=Coalesce(
                     NullIf(
@@ -1165,7 +1190,7 @@ class RelationCreateView(BaseCreateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["person"].queryset = (
-            Person.objects.filter(shared_with=self.request.user)
+            Person.objects.accessible_by(self.request.user)
             .annotate(
                 complete_name=Concat(
                     "family_name",
@@ -1176,12 +1201,15 @@ class RelationCreateView(BaseCreateView):
             )
             .order_by("complete_name")
         )
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
+            self.request.user
+        ).order_by("name")
+        form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )
-        form.fields["event"].queryset = Event.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
         return form
 
 
@@ -1204,7 +1232,7 @@ class RelationUpdateView(BaseUpdateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["person"].queryset = (
-            Person.objects.filter(shared_with=self.request.user)
+            Person.objects.accessible_by(self.request.user)
             .annotate(
                 complete_name=Concat(
                     "family_name",
@@ -1215,12 +1243,15 @@ class RelationUpdateView(BaseUpdateView):
             )
             .order_by("complete_name")
         )
-        form.fields["gift"].queryset = Gift.objects.filter(shared_with=self.request.user).order_by(
+        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
+            self.request.user
+        ).order_by("name")
+        form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )
-        form.fields["event"].queryset = Event.objects.filter(
-            shared_with=self.request.user
-        ).order_by("name")
+        form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
+            "name"
+        )
         return form
 
     def get_success_url(self):
@@ -1275,7 +1306,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         # Get the user's objects for each type
         persons = (
-            Person.objects.filter(shared_with=request.user)
+            Person.objects.accessible_by(request.user)
             .annotate(
                 complete_name=Concat(
                     "family_name",
@@ -1288,14 +1319,14 @@ class ShareObjectsView(LoginRequiredMixin, View):
             .order_by("complete_name")
         )
         person_groups = (
-            PersonGroup.objects.filter(shared_with=request.user)
+            PersonGroup.objects.accessible_by(request.user)
             .prefetch_related("person_set")
             .order_by("name")
         )
-        gifts = Gift.objects.filter(shared_with=request.user).order_by("name")
-        events = Event.objects.filter(shared_with=request.user).order_by("name")
+        gifts = Gift.objects.accessible_by(request.user).order_by("name")
+        events = Event.objects.accessible_by(request.user).order_by("name")
         relations = (
-            Relation.objects.filter(shared_with=request.user)
+            Relation.objects.accessible_by(request.user)
             .select_related("person", "group", "gift", "event")
             .order_by(
                 "person__family_name",
@@ -1561,3 +1592,170 @@ class ShareObjectsView(LoginRequiredMixin, View):
                         )
 
         return len(relations)
+
+
+class GiftTagExplorerView(LoginRequiredMixin, View):
+    """View for exploring gifts by hierarchical tags."""
+
+    template_name = "gift_manager/gift_tag_explorer.html"
+
+    def get(self, request, *args, **kwargs):
+        # Get the selected tag (or None for the root level)
+        selected_tag_id = kwargs.get("pk")
+
+        # Context to be sent to the template
+        context = {
+            "selected_tag": None,
+            "root_tags": [],
+            "parent_tags": [],
+            "child_tags": [],
+            "gifts": [],
+            "breadcrumbs": [],
+        }
+
+        # If a tag is selected, retrieve it
+        if selected_tag_id:
+            try:
+                selected_tag = get_object_or_404(GiftTag, tag_id=selected_tag_id)
+
+                # Check if the user has access to this tag (public tag or shared with them)
+                if (
+                    not selected_tag.is_public
+                    and not selected_tag.shared_with.filter(id=request.user.id).exists()
+                ):
+                    messages.error(
+                        request,
+                        gettext("You do not have access to this tag or this tag does not exist."),
+                    )
+                    return redirect("gift_manager:gift_tag_explorer")
+
+                context["selected_tag"] = selected_tag
+
+                # Get parent tags (useful for navigation)
+                context["parent_tags"] = selected_tag.parent_tags.filter(
+                    Q(is_public=True) | Q(shared_with=request.user)
+                ).order_by("name")
+
+                # Get the child tags of the selected tag
+                # (either public or shared with the user)
+                context["child_tags"] = selected_tag.child_tags.filter(
+                    Q(is_public=True) | Q(shared_with=request.user)
+                ).order_by("name")
+
+                # Get the gifts associated with the selected tag that are accessible to the user
+                descendants = selected_tag.get_descendants()
+                all_tags_ids = [selected_tag.pk] + [tag.pk for tag in descendants]
+                context["gifts"] = (
+                    Gift.objects.accessible_by(request.user)
+                    .filter(Q(tags__in=all_tags_ids))
+                    .order_by("name")
+                )
+
+                # Build the breadcrumbs
+                context["breadcrumbs"] = [*selected_tag.get_primary_ancestors_path(), selected_tag]
+
+            except GiftTag.DoesNotExist:
+                messages.error(request, gettext("Tag non trouvé."))
+        else:
+            # If no tag is selected, show all root tags
+            # (either public or shared with the user)
+            context["root_tags"] = (
+                GiftTag.objects.accessible_by(request.user)
+                .filter(Q(parent_tags__isnull=True))
+                .distinct()
+                .order_by("name")
+            )
+
+            # Show all untagged gifts accessible to the user
+            context["gifts"] = (
+                Gift.objects.accessible_by(request.user)
+                .filter(Q(tags__isnull=True))
+                .order_by("name")
+            )
+
+        return render(request, self.template_name, context)
+
+
+class GiftTagListView(BaseListView):
+    model = GiftTag
+    template_name = "gift_manager/gift_tag_list.html"
+    object_type = "Gift Tags"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "name": gettext("Tag name"),
+            "parent_tag__name": gettext("Parent tag"),
+        }
+
+    def get_queryset(self):
+        return GiftTag.objects.accessible_by(self.request.user).values(
+            "tag_id", "name", "parent_tag__name"
+        )
+
+
+class GiftTagCreateView(BaseCreateView):
+    model = GiftTag
+    form_class = GiftTagForm
+    success_url = reverse_lazy("gift_manager:gift_tag_explorer")
+    context_object_name = "gift_tag"
+    object_type = "Gift Tag"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["parent_tags"].queryset = GiftTag.objects.accessible_by(
+            self.request.user
+        ).order_by("name")
+        return form
+
+
+class GiftTagUpdateView(BaseUpdateView):
+    model = GiftTag
+    fields = ["name", "parent_tag"]
+    pk_name = "tag_id"
+    context_object_name = "gift_tag"
+    object_type = "Gift tag"
+    detail_url_name = "gift_tag_detail"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        current_tag = self.get_object()
+        descendants = current_tag.get_descendants()
+        excluded_ids = [current_tag.pk] + [tag.pk for tag in descendants]
+        form.fields["parent_tags"].queryset = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .exclude(pk__in=excluded_ids)
+            .order_by("name")
+        )
+        return form
+
+
+class GiftTagDeleteView(BaseDeleteView):
+    model = GiftTag
+    success_url = reverse_lazy("gift_manager:gift_tags")
+    pk_name = "tag_id"
+    object_type = "gift_tag"
+
+
+class GiftTagDetailView(BaseDetailView):
+    model = GiftTag
+    template_name = "gift_manager/gift_tag_detail.html"
+    context_object_name = "gift_tag"
+    pk_name = "tag_id"
+
+    def get_queryset(self):
+        return self.model.objects.filter(Q(is_public=True) | Q(shared_with=self.request.user))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["gifts"] = Gift.objects.accessible_by(self.request.user).filter(tags=self.object)
+        context["parent_tags"] = self.object.parent_tags.filter(
+            Q(is_public=True) | Q(shared_with=self.request.user)
+        ).order_by("name")
+        context["child_tags"] = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .filter(parent_tags=self.object)
+            .order_by("name")
+        )
+        context["ancestors"] = self.object.get_ancestors()
+        return context
