@@ -1648,6 +1648,7 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
                 context["gifts"] = (
                     Gift.objects.accessible_by(request.user)
                     .filter(Q(tags__in=all_tags_ids))
+                    .distinct()
                     .order_by("name")
                 )
 
