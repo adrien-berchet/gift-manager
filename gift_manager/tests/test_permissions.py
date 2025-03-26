@@ -1,18 +1,16 @@
 from unittest.mock import Mock
 from unittest.mock import patch
 
+# from venv import create
+# import attr
 import pytest
 from django.contrib.auth.models import User
 
-from gift_manager.models import Event
 from gift_manager.models import EventPermission
-from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import Person
-from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
 from gift_manager.models import PersonPermission
-from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
@@ -54,24 +52,21 @@ class TestPermissionLevel:
 class TestGetPermissionModel:
     """Tests for the get_permission_model function."""
 
+    @pytest.mark.django_db
     @pytest.mark.parametrize(
-        ("model_class", "expected_permission_model"),
+        ("db_obj", "expected_permission_model"),
         [
-            (Person, PersonPermission),
-            (Gift, GiftPermission),
-            (Event, EventPermission),
-            (PersonGroup, PersonGroupPermission),
-            (Relation, RelationPermission),
+            ("Person", PersonPermission),
+            ("PersonGroup", PersonGroupPermission),
+            ("Gift", GiftPermission),
+            ("Event", EventPermission),
+            ("Relation", RelationPermission),
         ],
+        indirect=["db_obj"],
     )
-    def test_get_permission_model(self, model_class, expected_permission_model):
+    def test_get_permission_model(self, db_obj, expected_permission_model):
         """Test that the correct permission model is returned for various objects."""
-        # Create a mock object with the appropriate class
-        obj = Mock(spec=["__class__"])
-        obj.__class__ = model_class
-
-        # Check that the function returns the correct permission model
-        result = get_permission_model(obj)
+        result = get_permission_model(db_obj)
         assert result == expected_permission_model
 
     def test_get_permission_model_unknown_class(self):
@@ -83,14 +78,14 @@ class TestGetPermissionModel:
         obj = Mock(spec=["__class__"])
         obj.__class__ = UnknownClass
 
-        result = get_permission_model(obj)
-        assert result is None
+        with pytest.raises(TypeError, match="Could not determine the model of the object"):
+            get_permission_model(obj)
 
 
 class TestGetPermission:
     """Tests for the get_permission function."""
 
-    def test_get_permission(self):
+    def test_get_permission_mock(self):
         """Test that get_permission returns correct permission type."""
         # Arrange
         mock_obj = Mock()
@@ -113,8 +108,44 @@ class TestGetPermission:
         )
         assert result == PermissionLevel.EDITOR
 
+    @pytest.mark.django_db
+    @pytest.mark.parametrize(
+        "db_obj",
+        [
+            ("Person"),
+            ("PersonGroup"),
+            ("Gift"),
+            ("Event"),
+            ("Relation"),
+        ],
+        indirect=True,
+    )
+    def test_get_permission_model(self, db_obj):
+        """Test that get_permission_label returns correct permission."""
+        result = get_permission_model(db_obj)
+        assert result == db_obj.shared_with.through
+
+    @pytest.mark.parametrize(
+        ("permission_level"),
+        [
+            (PermissionLevel.NONE),
+            (PermissionLevel.VIEWER),
+            (PermissionLevel.EDITOR),
+            (PermissionLevel.OWNER),
+        ],
+    )
+    @pytest.mark.django_db
+    def test_get_permission(self, permission_level, person, user):
+        """Test that get_permission_label returns correct permission."""
+        result = get_permission(person, user, "person")
+        assert result == PermissionLevel.NONE
+
+        create_or_update_permission(user, person, permission_level=permission_level)
+        result = get_permission(person, user, "person")
+        assert result == permission_level
+
     def test_get_permission_no_permission(self):
-        """Test that get_permission returns VIEWER when no permission exists."""
+        """Test that get_permission returns NONE when no permission exists."""
         # Arrange
         mock_obj = Mock()
         mock_user = Mock(spec=User)
@@ -132,7 +163,7 @@ class TestGetPermission:
         mock_through.objects.filter.assert_called_once_with(
             user=mock_user, **{filter_name: mock_obj}
         )
-        assert result == PermissionLevel.VIEWER
+        assert result == PermissionLevel.NONE
 
     @pytest.mark.parametrize(
         ("permission_level", "case", "expected"),

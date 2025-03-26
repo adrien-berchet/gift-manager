@@ -8,6 +8,7 @@ from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 
 
@@ -134,3 +135,30 @@ def event(event_name, event_comment, event_usual_date, event_recurrence):
 def status():
     """Create a test relation status."""
     return RelationStatus.objects.create(status="Idea")
+
+
+@pytest.fixture
+def person_relation(person, gift, status):
+    """Create a test relation for a person."""
+    return Relation.objects.create(person=person, gift=gift, status=status)
+
+
+@pytest.fixture
+def group_relation(group, gift, status):
+    """Create a test relation for a group."""
+    return Relation.objects.create(group=group, gift=gift, status=status)
+
+
+@pytest.fixture
+def db_obj(request, person, gift, event, group, person_relation):
+    if isinstance(request.param, (list | tuple)):
+        obj_type = str(request.param[0]).lower()
+    else:
+        obj_type = str(request.param).lower()
+    return {
+        "person": person,
+        "gift": gift,
+        "event": event,
+        "persongroup": group,
+        "relation": person_relation,
+    }[obj_type]

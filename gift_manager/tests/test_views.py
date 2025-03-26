@@ -1,21 +1,28 @@
+import json
 import uuid
 from unittest.mock import Mock
 from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.http.request import QueryDict
 from django.test import Client
 from django.test import override_settings
 from django.urls import reverse
 
+from gift_manager.models import Gift
 from gift_manager.models import Invitation
+from gift_manager.models import Person
 from gift_manager.models import Profile
 from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.permissions import get_permission
 from gift_manager.views import FilterByUserMixin
 from gift_manager.views import GetObjectByTokenMixin
 from gift_manager.views import ProfileDetailView
+from gift_manager.views import ShareObjectsView
 from gift_manager.views import get_user
 from gift_manager.views import home
 
@@ -496,10 +503,383 @@ class TestShareObjectsView:
             self.group,
             self.event,
         ]:
-            obj_type = obj.__class__.__name__.lower()
-            perm = obj_type + "_permissions"
+            perm = get_permission(obj, self.friend)
+            assert perm == PermissionLevel.EDITOR
 
-            if hasattr(obj, perm):
-                permissions = getattr(obj, perm).filter(user=self.friend)
-                assert permissions.exists()
-                assert permissions.first().permission_level == PermissionLevel.EDITOR
+    @override_settings(USE_I18N=False)
+    def test_post_share_objects_with_share_group_persons(self):
+        """Test sharing person groups with the option to share group members."""
+        # Arrange
+        url = reverse("gift_manager:share_objects")
+        data = {
+            "person_groups": [self.group.group_id],
+            "friends": [self.friend.id],
+            "permission_level": PermissionLevel.VIEWER,
+            "share_group_persons": "on",  # Option to share persons in the group
+        }
+        self.person.groups.add(self.group)
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        # Check redirection
+        assert response.status_code == 302
+
+        # Check permissions for group
+        group_permissions = get_permission(self.group, self.friend, "group")
+        assert group_permissions == PermissionLevel.VIEWER
+
+        # Check permissions for persons in the group
+        for person in self.group.person_set.all():
+            person_permissions = get_permission(person, self.friend)
+            assert person_permissions == PermissionLevel.VIEWER
+
+    def test_share_objects_view_helper_methods(self):
+        """Test helper methods of the ShareObjectsView class."""
+        # Arrange
+        view = ShareObjectsView()
+        friends = [self.friend]
+
+        # Test _share_persons method
+        person_ids = [self.person.person_id]
+        num_shared = view._share_persons(person_ids, friends, PermissionLevel.EDITOR)
+        assert num_shared == 1
+        permissions = get_permission(self.person, self.friend)
+        assert permissions == PermissionLevel.EDITOR
+
+        # Test _share_events method
+        event_ids = [self.event.event_id]
+        num_shared = view._share_events(event_ids, friends, PermissionLevel.EDITOR)
+        assert num_shared == 1
+        permissions = get_permission(self.event, self.friend)
+        assert permissions == PermissionLevel.EDITOR
+
+        # Test _share_gifts method
+        gift_ids = [self.gift.gift_id]
+        num_shared = view._share_gifts(gift_ids, friends, PermissionLevel.EDITOR)
+        assert num_shared == 1
+        permissions = get_permission(self.gift, self.friend)
+        assert permissions == PermissionLevel.EDITOR
+
+    def test_get_selected_friends_and_selection(self):
+        """Test methods for extracting friends and object selection from request."""
+        # Create mock request with POST data
+        mock_request = Mock()
+        mock_request.POST = QueryDict("", mutable=True)
+        mock_request.POST.update(
+            {
+                "friends": [str(self.friend.id)],
+                "persons": [str(self.person.person_id)],
+                "person_groups": [str(self.group.group_id)],
+                "gifts": [str(self.gift.gift_id)],
+                "events": [str(self.event.event_id)],
+                "relations": [str(self.relation_person.relation_id)],
+            }
+        )
+
+        # Setup mock User.objects.filter to return our friend user
+        with patch("gift_manager.views.User.objects.filter") as mock_filter:
+            mock_filter.return_value = [self.friend]
+
+            # Test _get_selected_friends
+            view = ShareObjectsView()
+            friends = view._get_selected_friends(mock_request)
+            assert friends == [self.friend]
+            mock_filter.assert_called_once_with(id__in=mock_request.POST.getlist("friends"))
+
+        # Test _get_selection_from_request
+        view = ShareObjectsView()
+        selection = view._get_selection_from_request(mock_request)
+        assert selection["person_ids"] == mock_request.POST.getlist("persons")
+        assert selection["person_group_ids"] == mock_request.POST.getlist("person_groups")
+        assert selection["gift_ids"] == mock_request.POST.getlist("gifts")
+        assert selection["event_ids"] == mock_request.POST.getlist("events")
+        assert selection["relation_ids"] == mock_request.POST.getlist("relations")
+
+
+@pytest.mark.django_db
+class TestBaseCreateView:
+    """Tests for BaseCreateView."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user):
+        """Setup test fixtures."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+
+    @override_settings(USE_I18N=False)
+    def test_gift_create_view_with_shared_permissions(self):
+        """Test creating an object with sharing permissions."""
+        # Create a friend user
+        friend = User.objects.create_user(
+            username="testfriend", email="friend@example.com", password="password123"
+        )
+        # Add the friend to the user's profile
+        self.user.profile.friends.add(friend.profile)
+
+        # Create gift with sharing
+        url = reverse("gift_manager:gift_create")
+        data = {
+            "name": "Test Shared Gift",
+            "comment": "Gift with sharing",
+            "share_with_" + str(friend.id): PermissionLevel.VIEWER,
+        }
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302  # Redirect after success
+
+        # Check that gift was created
+        gift = Gift.objects.get(name="Test Shared Gift")
+        assert gift is not None
+
+        # Check that sharing was created
+        permissions = get_permission(gift, friend)
+        assert permissions == PermissionLevel.VIEWER
+
+
+@pytest.mark.django_db
+class TestEditPermissionMixin:
+    """Tests for EditPermissionMixin."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user, userpassword, person):
+        """Setup test fixtures."""
+        self.user = user
+        self.person = person
+
+        # Create a friend
+        self.friend = User.objects.create_user(
+            username="testfriend", email="friend@example.com", password=userpassword
+        )
+
+        # Add the friend to the user's profile
+        self.user.profile.friends.add(self.friend.profile)
+
+        # Create a permission for the person
+        create_or_update_permission(self.user, self.person, permission_level=PermissionLevel.OWNER)
+
+        self.client = Client()
+        self.client.force_login(user)
+
+    @override_settings(USE_I18N=False)
+    def test_update_permission_ajax(self):
+        """Test updating a permission via AJAX."""
+        # Share the person with the friend first
+        create_or_update_permission(
+            self.friend, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+
+        # AJAX request data
+        data = {
+            "update_permission": "1",
+            "user_id": self.friend.id,
+            "permission": PermissionLevel.EDITOR,
+        }
+
+        # Set AJAX header
+        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+        # Act
+        response = self.client.post(url, data, **headers)
+
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.content)
+        assert response_data["success"] is True
+
+        # Check database
+        permissions = get_permission(self.person, self.friend)
+        assert permissions == PermissionLevel.EDITOR
+
+    @override_settings(USE_I18N=False)
+    def test_remove_share_ajax(self):
+        """Test removing a share via AJAX."""
+        # Share the person with the friend first
+        create_or_update_permission(
+            self.friend, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+
+        # AJAX request data
+        data = {
+            "remove_share": "1",
+            "user_id": self.friend.id,
+        }
+
+        # Set AJAX header
+        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+        # Act
+        response = self.client.post(url, data, **headers)
+
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.content)
+        assert response_data["success"] is True
+
+        # Check database
+        assert get_permission(self.person, self.friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_share_with_ajax(self):
+        """Test sharing with a new user via AJAX."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+
+        # AJAX request data
+        data = {
+            "share_with": "1",
+            "user_id": self.friend.id,
+            "permission": PermissionLevel.VIEWER,
+        }
+
+        # Set AJAX header
+        headers = {"HTTP_X_REQUESTED_WITH": "XMLHttpRequest"}
+
+        # Act
+        response = self.client.post(url, data, **headers)
+
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.content)
+        assert response_data["success"] is True
+
+        # Check database
+        permissions = get_permission(self.person, self.friend)
+        assert permissions == PermissionLevel.VIEWER
+
+
+@pytest.mark.django_db
+class TestUpdateRelationStatus:
+    """Tests for update_relation_status view."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user, person_relation):
+        """Setup test fixtures."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+
+        # Create a test status
+        self.new_status = RelationStatus.objects.create(status="Testing")
+
+        # Create a test relation
+        self.relation = person_relation
+        create_or_update_permission(user, self.relation, permission_level=PermissionLevel.OWNER)
+
+    @override_settings(USE_I18N=False)
+    def test_update_relation_status_success(self):
+        """Test updating a relation status successfully."""
+        url = reverse("gift_manager:relation_status_update")
+        data = {
+            "relation_id": self.relation.relation_id,
+            "new_status": self.new_status.pk,
+        }
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 200
+        response_data = json.loads(response.content)
+        assert response_data["success"] is True
+
+        # Check database
+        self.relation.refresh_from_db()
+        assert self.relation.status == self.new_status
+
+    @override_settings(USE_I18N=False)
+    def test_update_relation_status_not_found(self):
+        """Test updating a non-existent relation status."""
+        url = reverse("gift_manager:relation_status_update")
+        fake_uuid = str(uuid.uuid4())
+        data = {
+            "relation_id": fake_uuid,
+            "new_status": self.new_status.pk,
+        }
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 404
+        response_data = json.loads(response.content)
+        assert "error" in response_data
+
+
+@pytest.mark.django_db
+class TestDeleteSharedMixin:
+    """Tests for DeleteSharedMixin."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user, userpassword):
+        """Setup test fixtures."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+
+        # Create another user
+        self.other_user = User.objects.create_user(
+            username="otheruser", email="other@example.com", password=userpassword
+        )
+
+        # Create a test person shared with both users
+        self.person = Person.objects.create(
+            first_name="Shared",
+            family_name="Person",
+        )
+        create_or_update_permission(user, self.person, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(
+            self.other_user, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        # Create a test person shared only with current user
+        self.person_not_shared = Person.objects.create(
+            first_name="Not",
+            family_name="Shared",
+        )
+        create_or_update_permission(
+            user, self.person_not_shared, permission_level=PermissionLevel.OWNER
+        )
+
+    @override_settings(USE_I18N=False)
+    def test_delete_shared_object(self):
+        """Test deleting an object shared with other users."""
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
+
+        # Act
+        response = self.client.post(url)
+
+        # Assert
+        assert response.status_code == 302  # Redirect after action
+
+        # The person should still exist (only sharing is removed)
+        self.person.refresh_from_db()
+
+        # Current user should not have access anymore
+        assert get_permission(self.person, self.user) == PermissionLevel.NONE
+
+        # Other user should still have access
+        assert get_permission(self.person, self.other_user) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_delete_non_shared_object(self):
+        """Test deleting an object not shared with other users."""
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person_not_shared.person_id})
+
+        # Act
+        response = self.client.post(url)
+
+        # Assert
+        assert response.status_code == 302  # Redirect after action
+
+        # The person should be completely deleted
+        with pytest.raises(Person.DoesNotExist):
+            self.person_not_shared.refresh_from_db()
