@@ -42,7 +42,7 @@
                         <ul class="list-group">
                             {% for tag in root_tags|default:child_tags %}
                                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}">
+                                    <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}{% if selected_tag %}?from_tag={{ selected_tag.tag_id }}{% endif %}">
                                         {{ tag.name }}
                                     </a>
                                     <span class="badge bg-primary rounded-pill">

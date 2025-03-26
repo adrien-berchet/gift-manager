@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils.functional import classproperty
 from django.utils.translation import gettext_lazy
 
 _PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
@@ -139,6 +140,10 @@ class PersonPermission(models.Model):
     def __str__(self):
         return f"{self.user} - {self.person} -> {PermissionLevel.get_label(self.permission_type)}"
 
+    @classproperty
+    def filter_name(self):
+        return "person"
+
 
 class PersonGroup(models.Model):
     """Model for a group of persons."""
@@ -175,6 +180,10 @@ class PersonGroupPermission(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.group} -> {PermissionLevel.get_label(self.permission_type)}"
+
+    @classproperty
+    def filter_name(self):
+        return "group"
 
 
 class GiftTagManager(models.Manager):
@@ -322,6 +331,10 @@ class GiftTagPermission(models.Model):
     def __str__(self):
         return f"{self.user} - {self.gift_tag} -> {PermissionLevel.get_label(self.permission_type)}"
 
+    @classproperty
+    def filter_name(self):
+        return "gift_tag"
+
 
 class Gift(models.Model):
     """Model for a gift."""
@@ -360,6 +373,10 @@ class GiftPermission(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.gift} -> {PermissionLevel.get_label(self.permission_type)}"
+
+    @classproperty
+    def filter_name(self):
+        return "gift"
 
 
 class Event(models.Model):
@@ -411,6 +428,10 @@ class EventPermission(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.event} -> {PermissionLevel.get_label(self.permission_type)}"
+
+    @classproperty
+    def filter_name(self):
+        return "event"
 
 
 class RelationStatus(models.Model):
@@ -489,3 +510,7 @@ class RelationPermission(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.relation} -> {PermissionLevel.get_label(self.permission_type)}"
+
+    @classproperty
+    def filter_name(self):
+        return "relation"

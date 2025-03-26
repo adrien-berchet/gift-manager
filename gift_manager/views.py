@@ -222,8 +222,7 @@ class ContextPermissionMixin:
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_editor"] = (
-            get_permission(self.object, self.request.user, self.context_object_name)
-            >= PermissionLevel.EDITOR
+            get_permission(self.object, self.request.user) >= PermissionLevel.EDITOR
         )
         return context
 
@@ -257,7 +256,7 @@ class SharedUsersMixin:
         # Get the users with whom this object is shared, with their permissions
         shared_users = []
         for user in self.object.shared_with.exclude(id=self.request.user.id):
-            permission = get_permission(self.object, user, self.context_object_name)
+            permission = get_permission(self.object, user)
             permission_label = PermissionLevel.get_label(permission)
             shared_users.append(
                 {"user": user, "permission": permission, "permission_label": permission_label}
@@ -366,7 +365,6 @@ class EditPermissionMixin:
 
         # Prepare the lists for the shared users and unshared friends
         friends_list = []
-        object_type = self.context_object_name
         all_shared_with = self.object.shared_with.all()
 
         # Process all friends and determine their sharing status
@@ -375,7 +373,7 @@ class EditPermissionMixin:
             is_shared = friend in all_shared_with
 
             if is_shared:
-                permission = get_permission(self.object, friend, object_type)
+                permission = get_permission(self.object, friend)
                 permission_label = PermissionLevel.get_label(permission)
 
                 friends_list.append(
@@ -1613,12 +1611,18 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
             "breadcrumbs": [],
         }
 
+        # Initialize the navigation history in session if it doesn't exist
+        if "tag_navigation_history" not in request.session:
+            request.session["tag_navigation_history"] = {}
+
+        navigation_history = request.session["tag_navigation_history"]
+
         # If a tag is selected, retrieve it
         if selected_tag_id:
             try:
                 selected_tag = get_object_or_404(GiftTag, tag_id=selected_tag_id)
 
-                # Check if the user has access to this tag (public tag or shared with them)
+                # Check if the user has access to this tag
                 if (
                     not selected_tag.is_public
                     and not selected_tag.shared_with.filter(id=request.user.id).exists()
@@ -1631,18 +1635,41 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
 
                 context["selected_tag"] = selected_tag
 
-                # Get parent tags (useful for navigation)
+                # Get the source/referring tag if present in the query string
+                referring_tag_id = request.GET.get("from_tag")
+                if referring_tag_id:
+                    # Store the relationship: current tag came from this referring tag
+                    navigation_history[str(selected_tag_id)] = referring_tag_id
+                    request.session.modified = True
+
+                # Build the breadcrumbs based on navigation history
+                breadcrumbs = []
+                current_tag_id = str(selected_tag_id)
+                visited = set()  # To prevent infinite loops
+
+                while current_tag_id and current_tag_id not in visited:
+                    visited.add(current_tag_id)
+                    try:
+                        tag = GiftTag.objects.get(tag_id=current_tag_id)
+                        breadcrumbs.insert(0, tag)
+                        # Move to parent in the navigation history
+                        current_tag_id = navigation_history.get(current_tag_id)
+                    except GiftTag.DoesNotExist:
+                        break
+
+                context["breadcrumbs"] = breadcrumbs
+
+                # Rest of your existing code...
+                # Get parent tags, child tags, gifts, etc.
                 context["parent_tags"] = selected_tag.parent_tags.filter(
                     Q(is_public=True) | Q(shared_with=request.user)
                 ).order_by("name")
 
-                # Get the child tags of the selected tag
-                # (either public or shared with the user)
                 context["child_tags"] = selected_tag.child_tags.filter(
                     Q(is_public=True) | Q(shared_with=request.user)
                 ).order_by("name")
 
-                # Get the gifts associated with the selected tag that are accessible to the user
+                # Get the gifts associated with the selected tag
                 descendants = selected_tag.get_descendants()
                 all_tags_ids = [selected_tag.pk] + [tag.pk for tag in descendants]
                 context["gifts"] = (
@@ -1652,14 +1679,14 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
                     .order_by("name")
                 )
 
-                # Build the breadcrumbs
-                context["breadcrumbs"] = [*selected_tag.get_primary_ancestors_path(), selected_tag]
-
             except GiftTag.DoesNotExist:
                 messages.error(request, gettext("Tag not found."))
         else:
-            # If no tag is selected, show all root tags
-            # (either public or shared with the user)
+            # If no tag is selected, show all root tags and reset navigation history
+            navigation_history.clear()
+            request.session.modified = True
+
+            # Your existing code for root tags
             context["root_tags"] = (
                 GiftTag.objects.accessible_by(request.user)
                 .filter(Q(parent_tags__isnull=True))
@@ -1712,7 +1739,7 @@ class GiftTagCreateView(BaseCreateView):
 
 class GiftTagUpdateView(BaseUpdateView):
     model = GiftTag
-    fields = ["name", "parent_tag"]
+    fields = ["name", "parent_tags"]
     pk_name = "tag_id"
     context_object_name = "gift_tag"
     object_type = "Gift tag"

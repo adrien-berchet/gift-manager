@@ -1,28 +1,7 @@
 from django.db.models import Model
 from django.utils.translation import gettext
 
-from gift_manager.models import Event
-from gift_manager.models import EventPermission
-from gift_manager.models import Gift
-from gift_manager.models import GiftPermission
-from gift_manager.models import GiftTag
-from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
-from gift_manager.models import Person
-from gift_manager.models import PersonGroup
-from gift_manager.models import PersonGroupPermission
-from gift_manager.models import PersonPermission
-from gift_manager.models import Relation
-from gift_manager.models import RelationPermission
-
-PERMISSION_MODEL_MAP = {
-    Person: PersonPermission,
-    PersonGroup: PersonGroupPermission,
-    Gift: GiftPermission,
-    GiftTag: GiftTagPermission,
-    Event: EventPermission,
-    Relation: RelationPermission,
-}
 
 PERMISSION_LEVELS = [
     {
@@ -42,13 +21,29 @@ PERMISSION_LEVELS = [
 
 def get_permission_model(obj) -> type[Model] | None:
     """Get the permission model for the given object."""
-    return PERMISSION_MODEL_MAP.get(obj.__class__)
+    try:
+        return obj.shared_with.through
+    except AttributeError:
+        raise TypeError(
+            gettext(
+                "Could not determine the model of the object because it does not have a "
+                "'shared_with' attribute"
+            )
+        ) from None
 
 
-def get_permission(obj, user, filter_name):
+def get_permission(obj, user, filter_name=None):
     """Get the permission type for the user on the object."""
-    permission = obj.shared_with.through.objects.filter(**{"user": user, filter_name: obj}).first()
-    return permission.permission_type if permission else PermissionLevel.VIEWER
+    model = get_permission_model(obj)
+    if filter_name is None:
+        try:
+            filter_name = model.filter_name
+        except KeyError:
+            raise ValueError(
+                gettext("Could not determine filter name for this object type")
+            ) from None
+    permission = model.objects.filter(**{"user": user, filter_name: obj}).first()
+    return permission.permission_type if permission else PermissionLevel.NONE
 
 
 def get_permission_label(obj, user, filter_name, case="lower"):
