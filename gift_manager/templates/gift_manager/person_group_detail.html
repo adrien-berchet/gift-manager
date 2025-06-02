@@ -58,14 +58,14 @@
 <!-- Tabs nav -->
 <ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
     <li class="nav-item" role="presentation">
-        <a class="nav-link active" id="persons-tab" data-toggle="tab" href="#persons-list" role="tab" aria-controls="persons-list" aria-selected="true">
+        <button class="nav-link active" id="persons-tab" data-bs-toggle="tab" data-bs-target="#persons-list" type="button" role="tab" aria-controls="persons-list" aria-selected="true">
             {% trans "Persons in this group" %}
-        </a>
+        </button>
     </li>
     <li class="nav-item" role="presentation">
-        <a class="nav-link" id="gifts-tab" data-toggle="tab" href="#gifts-list" role="tab" aria-controls="gifts-list" aria-selected="false">
+        <button class="nav-link" id="gifts-tab" data-bs-toggle="tab" data-bs-target="#gifts-list" type="button" role="tab" aria-controls="gifts-list" aria-selected="false">
             {% trans "Gifts for this group" %}
-        </a>
+        </button>
     </li>
 </ul>
 
@@ -157,16 +157,20 @@
         // Check if we have a tab parameter in the URL
         var urlParams = new URLSearchParams(window.location.search);
         if(urlParams.get('tab') === 'gifts') {
-            $('#gifts-tab').tab('show');
+            var giftsTab = new bootstrap.Tab(document.querySelector('#gifts-tab'));
+            giftsTab.show();
         }
+
         // If we click on the persons tab
         $('#persons-tab').on('click', function(e) {
             history.pushState(null, null, '?tab=persons');
         });
+
         // If we click on the gifts tab
         $('#gifts-tab').on('click', function(e) {
             history.pushState(null, null, '?tab=gifts');
         });
+
         {% if persons %}
         $('#person-table').DataTable();
         {% endif %}
