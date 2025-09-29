@@ -157,7 +157,7 @@ class RemoveFriendView(LoginRequiredMixin, View):
             # Persons
             persons_shared = Person.objects.filter(shared_with=request.user)
             for person in persons_shared:
-                if friend.user in person.shared_with.all():
+                if friend in person.shared_with.all():
                     person.shared_with.remove(friend)
 
             # PersonGroups
