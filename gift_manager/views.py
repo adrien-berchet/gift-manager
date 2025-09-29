@@ -115,14 +115,15 @@ class SendInvitationView(LoginRequiredMixin, View):
 class AcceptInvitationView(View):
     def get(self, request, *args, **kwargs):
         token = self.kwargs.get("token")
+
         try:
             invitation = get_object_or_404(Invitation, token=token, accepted=False)
-        except Invitation.DoesNotExist:
+            # Vérifier si l'invitation a expiré
+            if invitation.is_expired():
+                msg = "Invitation does not exist or has already been accepted."
+                raise Http404(msg)  # noqa: TRY301
+        except Http404:
             # L'invitation n'existe pas ou a déjà été acceptée
-            return redirect("gift_manager:invitation_expired")
-
-        # Vérifier si l'invitation a expiré
-        if invitation.is_expired():
             return redirect("gift_manager:invitation_expired")
 
         # If the user is already logged in, establish the friendship relationship
