@@ -328,7 +328,7 @@ class TestGiftTag:
         # Second level - diamond structure
         leaf_tag = GiftTag.objects.create(name="Devices")
         leaf_tag.parent_tags.add(mid_tag1)
-        leaf_tag.parent_tags.add(mid_tag2)  # Le même tag a 2 parents différents
+        leaf_tag.parent_tags.add(mid_tag2)  # The same tag has 2 different parents
 
         # Third level
         bottom_tag = GiftTag.objects.create(name="Accessories")

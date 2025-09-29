@@ -187,10 +187,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 
-# Configuration du site ID
+# Site ID configuration
 SITE_ID = 1
 
-# Configuration de l'envoi de mail
+# Email sending configuration
 if "test" in sys.argv or "pytest" in sys.modules or os.environ.get("TOX_ENV_NAME"):
     EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 else:

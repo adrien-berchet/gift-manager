@@ -98,7 +98,7 @@ class Invitation(models.Model):
     def is_expired(self):
         """Check if the invitation has expired."""
         if not hasattr(settings, "INVITATION_EXPIRY_DAYS"):
-            return False  # Si pas configuré, les invitations n'expirent pas
+            return False  # If not configured, invitations don't expire
 
         expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", 7)
         expiry_date = self.created_at + timedelta(days=expiry_days)
@@ -171,7 +171,7 @@ class PersonGroup(models.Model):
 
     class Meta:
         verbose_name = gettext_lazy("Person group")
-        verbose_name_plural = gettext_lazy("¨Person groups")
+        verbose_name_plural = gettext_lazy("Person groups")
 
     def __str__(self):
         return self.name

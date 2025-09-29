@@ -314,7 +314,7 @@ class TestCreateOrUpdatePermission:
 
     def test_create_permission_no_model(self, mock_user, mock_obj):
         """Test that ValueError is raised when no permission model is found."""
-        # Setup et exécution
+        # Setup and execution
         with (
             patch("gift_manager.permissions.get_permission_model", return_value=None),
             pytest.raises(
@@ -418,7 +418,7 @@ class TestDeletePermission:
             mock_obj.shared_with.remove.assert_not_called()
 
     def test_delete_permission_no_model(self, mock_user, mock_obj):
-        # Setup et exécution
+        # Setup and execution
         with (
             patch("gift_manager.permissions.get_permission_model", return_value=None),
             pytest.raises(

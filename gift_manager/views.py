@@ -118,12 +118,12 @@ class AcceptInvitationView(View):
 
         try:
             invitation = get_object_or_404(Invitation, token=token, accepted=False)
-            # Vérifier si l'invitation a expiré
+            # Check if the invitation has expired
             if invitation.is_expired():
                 msg = "Invitation does not exist or has already been accepted."
                 raise Http404(msg)  # noqa: TRY301
         except Http404:
-            # L'invitation n'existe pas ou a déjà été acceptée
+            # The invitation doesn't exist or has already been accepted
             return redirect("gift_manager:invitation_expired")
 
         # If the user is already logged in, establish the friendship relationship
@@ -149,7 +149,7 @@ class AcceptInvitationView(View):
 
 
 class InvitationExpiredView(TemplateView):
-    """Vue pour afficher la page d'invitation expirée."""
+    """View to display the expired invitation page."""
 
     template_name = "gift_manager/invitation_expired.html"
 
@@ -328,7 +328,7 @@ class CreatePermissionMixin:
                     permission = int(value)
                     user = User.objects.get(id=user_id)
 
-                    # Créer ou mettre à jour la permission pour cet utilisateur
+                    # Create or update the permission for this user
                     create_or_update_permission(user, self.object, permission_level=permission)
 
                 except Exception as e:
@@ -453,11 +453,11 @@ class EditPermissionMixin:
         try:
             user, username = get_user(request.POST.get("user_id"))
 
-            # Si la permission est "not_shared", rediriger vers la méthode de suppression de partage
+            # If the permission is "not_shared", redirect to the share removal method
             if permission_value == "not_shared":
                 return self._handle_remove_share(request)
 
-            # Mettre à jour la permission
+            # Update the permission
             new_permission = int(permission_value)
             create_or_update_permission(user, self.object, permission_level=new_permission)
 
@@ -486,7 +486,7 @@ class EditPermissionMixin:
         try:
             user, username = get_user(request.POST.get("user_id"))
 
-            # Supprimer la permission
+            # Remove the permission
             delete_permission(user, self.object)
 
             message = gettext("Sharing with '{username}' removed successfully").format(
@@ -514,7 +514,7 @@ class EditPermissionMixin:
         try:
             user, username = get_user(request.POST.get("user_id"))
 
-            # Créer ou mettre à jour la permission
+            # Create or update the permission
             create_or_update_permission(user, self.object, permission_level=permission)
 
             message = gettext("Object shared with '{username}' successfully").format(

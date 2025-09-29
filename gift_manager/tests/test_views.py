@@ -85,7 +85,7 @@ class TestProfileDetailView:
 
     @override_settings(USE_I18N=False)
     def test_profile_detail_view(self, user):
-        """Test la vue complète ProfileDetailView."""
+        """Test the complete ProfileDetailView."""
         # Arrange
         client = Client()
         client.force_login(user)
