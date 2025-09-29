@@ -71,7 +71,12 @@ class UserAccountDeleteView(LoginRequiredMixin, View):
     template_name = "account/confirm_delete_user_account.html"
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template_name)
+        # Retrieve the referer URL (previous page) or use a default URL
+        referer = request.META.get("HTTP_REFERER")
+        cancel_url = referer if referer else "gift_manager:user_account"
+
+        context = {"cancel_url": cancel_url}
+        return render(request, self.template_name, context)
 
     def post(self, request, *args, **kwargs):
         user = request.user
