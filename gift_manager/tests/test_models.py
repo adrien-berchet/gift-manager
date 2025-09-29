@@ -1,10 +1,14 @@
 import uuid
 from datetime import datetime
+from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.test import override_settings
+from django.utils import timezone
 
 from gift_manager.models import EventPermission
 from gift_manager.models import GiftPermission
@@ -115,6 +119,45 @@ class TestInvitation:
         assert "Invitation from" in str(invitation)
         assert sender.username in str(invitation)
         assert invitation.recipient_email in str(invitation)
+
+    @override_settings(INVITATION_EXPIRY_DAYS=7)
+    def test_invitation_is_expired_with_setting(self, invitation):
+        """Test is_expired method with expiry setting configured."""
+        # Test non-expired invitation
+        assert invitation.is_expired() is False
+
+        # Test expired invitation
+        invitation.created_at = timezone.now() - timedelta(days=8)
+        invitation.save()
+        assert invitation.is_expired() is True
+
+        # Test invitation on the edge (exactly 7 days)
+        invitation.created_at = timezone.now() - timedelta(days=7)
+        invitation.save()
+        assert invitation.is_expired() is True
+
+    def test_invitation_is_expired_without_setting(self, invitation):
+        """Test is_expired method without expiry setting configured."""
+        # Remove the setting if it exists
+        if hasattr(settings, "INVITATION_EXPIRY_DAYS"):
+            del settings.INVITATION_EXPIRY_DAYS
+
+        # Test old invitation without setting (should not expire)
+        invitation.created_at = timezone.now() - timedelta(days=365)
+        invitation.save()
+        assert invitation.is_expired() is False
+
+    @override_settings(INVITATION_EXPIRY_DAYS=30)
+    def test_invitation_is_expired_different_expiry_days(self, invitation):
+        """Test is_expired method with different expiry days setting."""
+        # Test with 30 days setting
+        invitation.created_at = timezone.now() - timedelta(days=29)
+        invitation.save()
+        assert invitation.is_expired() is False
+
+        invitation.created_at = timezone.now() - timedelta(days=31)
+        invitation.save()
+        assert invitation.is_expired() is True
 
 
 @pytest.mark.django_db

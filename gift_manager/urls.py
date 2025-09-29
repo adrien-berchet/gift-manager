@@ -18,6 +18,11 @@ urlpatterns = [
         name="accept_invitation",
     ),
     path(
+        "invitation-expired/",
+        views.InvitationExpiredView.as_view(),
+        name="invitation_expired",
+    ),
+    path(
         "profile/remove-friend/<int:friend_id>/",
         views.RemoveFriendView.as_view(),
         name="remove_friend",

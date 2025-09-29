@@ -1,5 +1,6 @@
 import json
 import uuid
+from datetime import timedelta
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -9,6 +10,7 @@ from django.http.request import QueryDict
 from django.test import Client
 from django.test import override_settings
 from django.urls import reverse
+from django.utils import timezone
 
 from gift_manager.models import Gift
 from gift_manager.models import Invitation
@@ -226,6 +228,123 @@ class TestAcceptInvitationView:
         self.invitation.refresh_from_db()
         assert self.invitation.accepted is False
         assert self.invitation.accepted_at is None
+
+
+@pytest.mark.django_db
+class TestAcceptInvitationViewExpiration:
+    """Tests for AcceptInvitationView expiration handling."""
+
+    @pytest.fixture(autouse=True)
+    def setup_invitation(self):
+        """Prepares the test environment with users and invitation."""
+        # Create a sender user
+        self.sender = User.objects.create_user(
+            username="sender_user", email="sender@example.com", password="testpass123"
+        )
+        # Create a recipient user
+        self.recipient = User.objects.create_user(
+            username="recipient_user", email="recipient@example.com", password="testpass123"
+        )
+        # Create an invitation with a valid UUID token
+        self.token = str(uuid.uuid4())
+        self.invitation = Invitation.objects.create(
+            sender=self.sender,
+            recipient_email="recipient@example.com",
+            token=self.token,
+            accepted=False,
+        )
+        self.client = Client()
+
+    @override_settings(USE_I18N=False, INVITATION_EXPIRY_DAYS=7)
+    def test_accept_invitation_expired_authenticated(self):
+        """Test accepting an expired invitation by an authenticated user."""
+        # Make the invitation expired by modifying its creation date
+        self.invitation.created_at = timezone.now() - timedelta(days=8)
+        self.invitation.save()
+
+        # Authenticate the user
+        self.client.login(username="recipient_user", password="testpass123")
+
+        # URL to accept the invitation
+        url = reverse("gift_manager:accept_invitation", kwargs={"token": self.token})
+
+        # Perform the GET request
+        response = self.client.get(url)
+
+        # Verify that the user is redirected to the invitation expired page
+        assert response.status_code == 302
+        assert reverse("gift_manager:invitation_expired") in response.url
+
+        # Verify that the invitation has not been accepted
+        self.invitation.refresh_from_db()
+        assert self.invitation.accepted is False
+        assert self.invitation.accepted_at is None
+
+    @override_settings(USE_I18N=False, INVITATION_EXPIRY_DAYS=7)
+    def test_accept_invitation_expired_unauthenticated(self):
+        """Test accepting an expired invitation by an unauthenticated user."""
+        # Make the invitation expired by modifying its creation date
+        self.invitation.created_at = timezone.now() - timedelta(days=8)
+        self.invitation.save()
+
+        # URL to accept the invitation without being logged in
+        url = reverse("gift_manager:accept_invitation", kwargs={"token": self.token})
+
+        # Perform the GET request
+        response = self.client.get(url)
+
+        # Verify that the user is redirected to the invitation expired page
+        assert response.status_code == 302
+        assert reverse("gift_manager:invitation_expired") in response.url
+
+        # Verify that the invitation has not been accepted
+        self.invitation.refresh_from_db()
+        assert self.invitation.accepted is False
+        assert self.invitation.accepted_at is None
+
+    @override_settings(USE_I18N=False)
+    def test_accept_invitation_no_expiry_setting(self):
+        """Test accepting an invitation when no expiry setting is configured."""
+        # Make the invitation old but should not expire if no setting
+        self.invitation.created_at = timezone.now() - timedelta(days=365)
+        self.invitation.save()
+
+        # Authenticate the user
+        self.client.login(username="recipient_user", password="testpass123")
+
+        # URL to accept the invitation
+        url = reverse("gift_manager:accept_invitation", kwargs={"token": self.token})
+
+        # Perform the GET request
+        response = self.client.get(url)
+
+        # Verify that the invitation is accepted (no expiration without setting)
+        assert response.status_code == 302
+        assert reverse("gift_manager:profile_detail") in response.url
+
+        # Verify that the invitation has been accepted
+        self.invitation.refresh_from_db()
+        assert self.invitation.accepted is True
+        assert self.invitation.accepted_at is not None
+
+
+@pytest.mark.django_db
+class TestInvitationExpiredView:
+    """Tests for InvitationExpiredView."""
+
+    @override_settings(USE_I18N=False)
+    def test_get_invitation_expired_page(self):
+        """Test that GET request renders the invitation expired template."""
+        # Arrange
+        url = reverse("gift_manager:invitation_expired")
+        client = Client()
+
+        # Act
+        response = client.get(url)
+
+        # Assert
+        assert response.status_code == 200
+        assert "gift_manager/invitation_expired.html" in [t.name for t in response.templates]
 
 
 @pytest.mark.django_db

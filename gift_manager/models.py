@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -7,6 +8,7 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.translation import gettext_lazy
 
@@ -92,6 +94,15 @@ class Invitation(models.Model):
             f"{gettext_lazy('Invitation from')} {self.sender} "
             f"{gettext_lazy('to')} {self.recipient_email}"
         )
+
+    def is_expired(self):
+        """Check if the invitation has expired."""
+        if not hasattr(settings, "INVITATION_EXPIRY_DAYS"):
+            return False  # Si pas configuré, les invitations n'expirent pas
+
+        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", 7)
+        expiry_date = self.created_at + timedelta(days=expiry_days)
+        return timezone.now() > expiry_date
 
 
 class Person(models.Model):

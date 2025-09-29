@@ -1312,3 +1312,35 @@ msgstr "Nom du tag"
 #: gift_manager/views.py:1688
 msgid "Parent tag"
 msgstr "Tag parent"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Invitation Expired"
+msgstr "Invitation Expirée"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Unfortunately, this invitation link has expired and is no longer valid."
+msgstr "Malheureusement, ce lien d'invitation a expiré et n'est plus valide."
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Invitation links are valid for a limited time for security reasons."
+msgstr "Les liens d'invitation sont valides pour une durée limitée pour des raisons de sécurité."
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "What can you do?"
+msgstr "Que pouvez-vous faire ?"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Ask your friend to send you a new invitation"
+msgstr "Demandez à votre ami de vous envoyer une nouvelle invitation"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Create a new account and contact your friend"
+msgstr "Créez un nouveau compte et contactez votre ami"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Go to Home Page"
+msgstr "Aller à la page d'accueil"
+
+#: gift_manager/templates/gift_manager/invitation_expired.html
+msgid "Sign Up"
+msgstr "S'inscrire"

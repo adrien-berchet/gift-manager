@@ -33,6 +33,7 @@ from django.views.decorators.http import require_POST
 from django.views.generic import DeleteView
 from django.views.generic import DetailView
 from django.views.generic import ListView
+from django.views.generic import TemplateView
 from django.views.generic import UpdateView
 from django.views.generic import View
 from django.views.generic.edit import CreateView
@@ -114,7 +115,16 @@ class SendInvitationView(LoginRequiredMixin, View):
 class AcceptInvitationView(View):
     def get(self, request, *args, **kwargs):
         token = self.kwargs.get("token")
-        invitation = get_object_or_404(Invitation, token=token, accepted=False)
+        try:
+            invitation = get_object_or_404(Invitation, token=token, accepted=False)
+        except Invitation.DoesNotExist:
+            # L'invitation n'existe pas ou a déjà été acceptée
+            return redirect("gift_manager:invitation_expired")
+
+        # Vérifier si l'invitation a expiré
+        if invitation.is_expired():
+            return redirect("gift_manager:invitation_expired")
+
         # If the user is already logged in, establish the friendship relationship
         if request.user.is_authenticated:
             invitation.accepted = True
@@ -135,6 +145,12 @@ class AcceptInvitationView(View):
         # Otherwise, redirect to the registration with the token
         # (to be handled in the registration process)
         return redirect(f"{reverse('account_signup')}?invitation_token={token}")
+
+
+class InvitationExpiredView(TemplateView):
+    """Vue pour afficher la page d'invitation expirée."""
+
+    template_name = "gift_manager/invitation_expired.html"
 
 
 class RemoveFriendView(LoginRequiredMixin, View):
