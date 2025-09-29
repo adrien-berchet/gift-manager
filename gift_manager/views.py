@@ -1760,7 +1760,7 @@ class GiftTagUpdateView(BaseUpdateView):
 
 class GiftTagDeleteView(BaseDeleteView):
     model = GiftTag
-    success_url = reverse_lazy("gift_manager:gift_tags")
+    success_url = reverse_lazy("gift_manager:gift_tag_explorer")
     pk_name = "tag_id"
     object_type = "gift_tag"
 
