@@ -99,86 +99,12 @@
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap5.min.js"></script>
 
+<!-- Notification System -->
+<script src="{% static 'gift_manager/notifications.js' %}"></script>
+
 {% include "gift_manager/includes/datatables-translations.html" %}
 
 <script>
-  // Create a container for notifications
-  let notificationsContainer;
-  function createNotificationsContainer() {
-    let container = document.getElementById('notifications-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'notifications-container';
-      container.style.position = 'fixed';
-      container.style.top = '20px';
-      container.style.right = '20px';
-      container.style.zIndex = '1050';
-      container.style.maxWidth = '400px';
-      document.body.appendChild(container);
-    }
-    return container;
-  }
-
-  function showNotification(message, type = 'success', duration = null) {
-    // Determine the duration based on the type if not specified
-    if (duration === null) {
-      // Default durations according to notification type
-      switch(type) {
-        case 'success': duration = 5000; break; // 5 seconds for successes
-        case 'info': duration = 6000; break;    // 6 seconds for info
-        case 'warning': duration = 8000; break; // 8 seconds for warnings
-        case 'danger': duration = 10000; break; // 10 seconds for errors
-        default: duration = 5000;               // 5 seconds by default
-      }
-    }
-
-    // Create a notification div
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show`;
-    notification.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-    notification.style.marginBottom = '10px';
-    notification.style.opacity = '0';
-    notification.style.transition = 'opacity 0.3s';
-
-    // Add the close button and the message in separate elements
-    notification.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center">
-        <div>${message}</div>
-        <button type="button" class="btn-close ms-3" aria-label="Close"></button>
-      </div>
-    `;
-
-    // Add to the notifications container
-    notificationsContainer.appendChild(notification);
-
-    // Force rendering before adding opacity
-    setTimeout(() => {
-      notification.style.opacity = '1';
-    }, 10);
-
-    // Delete after specified duration
-    let timeoutId;
-    if (duration > 0) {
-      timeoutId = setTimeout(() => {
-        fadeOutAndRemove(notification);
-      }, duration);
-    }
-
-    // Add an event handler for the close button
-    const closeButton = notification.querySelector('.btn-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', function() {
-        if (timeoutId) clearTimeout(timeoutId); // Cancel the auto-delete delay
-        fadeOutAndRemove(notification);
-      });
-    }
-
-    // Function to fade out and smoothly remove the notification
-    function fadeOutAndRemove(element) {
-      element.style.opacity = '0';
-      setTimeout(() => element.remove(), 300);
-    }
-  }
 
   // Function to initialize DataTables
   function initializeDataTable() {
@@ -262,8 +188,6 @@
   // Initialization on page load
   document.addEventListener('DOMContentLoaded', function() {
     try {
-      // Create the notifications container
-      notificationsContainer = createNotificationsContainer();
 
       // Initialize DataTable if the table exists
       if (document.getElementById('sharing-datatable')) {

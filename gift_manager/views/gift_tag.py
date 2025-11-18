@@ -1,0 +1,210 @@
+"""GiftTag-related views."""
+
+from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
+from django.utils.translation import gettext
+from django.views.generic import View
+
+from ..forms import GiftTagForm
+from ..models import Gift, GiftTag
+from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+
+
+class GiftTagExplorerView(LoginRequiredMixin, View):
+    """View for exploring gifts by hierarchical tags."""
+
+    template_name = "gift_manager/gift_tag_explorer.html"
+
+    def get(self, request, *args, **kwargs):
+        # Get the selected tag (or None for the root level)
+        selected_tag_id = kwargs.get("pk")
+
+        # Context to be sent to the template
+        context = {
+            "selected_tag": None,
+            "root_tags": [],
+            "parent_tags": [],
+            "child_tags": [],
+            "gifts": [],
+            "breadcrumbs": [],
+        }
+
+        # Initialize the navigation history in session if it doesn't exist
+        if "tag_navigation_history" not in request.session:
+            request.session["tag_navigation_history"] = {}
+
+        navigation_history = request.session["tag_navigation_history"]
+
+        # If a tag is selected, retrieve it
+        if selected_tag_id:
+            try:
+                selected_tag = get_object_or_404(GiftTag, tag_id=selected_tag_id)
+
+                # Check if the user has access to this tag
+                if (
+                    not selected_tag.is_public
+                    and not selected_tag.shared_with.filter(id=request.user.id).exists()
+                ):
+                    messages.error(
+                        request,
+                        gettext("You do not have access to this tag or this tag does not exist."),
+                    )
+                    return redirect("gift_manager:gift_tag_explorer")
+
+                context["selected_tag"] = selected_tag
+
+                # Get the source/referring tag if present in the query string
+                referring_tag_id = request.GET.get("from_tag")
+                if referring_tag_id:
+                    # Store the relationship: current tag came from this referring tag
+                    navigation_history[str(selected_tag_id)] = referring_tag_id
+                    request.session.modified = True
+
+                # Build the breadcrumbs based on navigation history
+                breadcrumbs = []
+                current_tag_id = str(selected_tag_id)
+                visited = set()  # To prevent infinite loops
+
+                while current_tag_id and current_tag_id not in visited:
+                    visited.add(current_tag_id)
+                    try:
+                        tag = GiftTag.objects.get(tag_id=current_tag_id)
+                        breadcrumbs.insert(0, tag)
+                        # Move to parent in the navigation history
+                        current_tag_id = navigation_history.get(current_tag_id)
+                    except GiftTag.DoesNotExist:
+                        break
+
+                context["breadcrumbs"] = breadcrumbs
+
+                # Rest of your existing code...
+                # Get parent tags, child tags, gifts, etc.
+                context["parent_tags"] = selected_tag.parent_tags.filter(
+                    Q(is_public=True) | Q(shared_with=request.user)
+                ).order_by("name")
+
+                context["child_tags"] = selected_tag.child_tags.filter(
+                    Q(is_public=True) | Q(shared_with=request.user)
+                ).order_by("name")
+
+                # Get the gifts associated with the selected tag
+                descendants = selected_tag.get_descendants()
+                all_tags_ids = [selected_tag.pk] + [tag.pk for tag in descendants]
+                context["gifts"] = (
+                    Gift.objects.accessible_by(request.user)
+                    .filter(Q(tags__in=all_tags_ids))
+                    .distinct()
+                    .order_by("name")
+                )
+
+            except GiftTag.DoesNotExist:
+                messages.error(request, gettext("Tag not found."))
+        else:
+            # If no tag is selected, show all root tags and reset navigation history
+            navigation_history.clear()
+            request.session.modified = True
+
+            # Your existing code for root tags
+            context["root_tags"] = (
+                GiftTag.objects.accessible_by(request.user)
+                .filter(Q(parent_tags__isnull=True))
+                .distinct()
+                .order_by("name")
+            )
+
+            # Show all untagged gifts accessible to the user
+            context["gifts"] = (
+                Gift.objects.accessible_by(request.user)
+                .filter(Q(tags__isnull=True))
+                .order_by("name")
+            )
+
+        return render(request, self.template_name, context)
+
+
+class GiftTagListView(BaseListView):
+    model = GiftTag
+    template_name = "gift_manager/gift_tag_list.html"
+    object_type = "Gift Tags"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.column_names = {
+            "name": gettext("Tag name"),
+            "parent_tag__name": gettext("Parent tag"),
+        }
+
+    def get_queryset(self):
+        return GiftTag.objects.accessible_by(self.request.user).values(
+            "tag_id", "name", "parent_tag__name"
+        )
+
+
+class GiftTagCreateView(BaseCreateView):
+    model = GiftTag
+    form_class = GiftTagForm
+    success_url = reverse_lazy("gift_manager:gift_tag_explorer")
+    context_object_name = "gift_tag"
+    object_type = "Gift Tag"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        form.fields["parent_tags"].queryset = GiftTag.objects.accessible_by(
+            self.request.user
+        ).order_by("name")
+        return form
+
+
+class GiftTagUpdateView(BaseUpdateView):
+    model = GiftTag
+    fields = ["name", "parent_tags"]
+    pk_name = "tag_id"
+    context_object_name = "gift_tag"
+    object_type = "Gift tag"
+    detail_url_name = "gift_tag_detail"
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        current_tag = self.get_object()
+        descendants = current_tag.get_descendants()
+        excluded_ids = [current_tag.pk] + [tag.pk for tag in descendants]
+        form.fields["parent_tags"].queryset = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .exclude(pk__in=excluded_ids)
+            .order_by("name")
+        )
+        return form
+
+
+class GiftTagDeleteView(BaseDeleteView):
+    model = GiftTag
+    success_url = reverse_lazy("gift_manager:gift_tag_explorer")
+    pk_name = "tag_id"
+    object_type = "gift_tag"
+
+
+class GiftTagDetailView(BaseDetailView):
+    model = GiftTag
+    template_name = "gift_manager/gift_tag_detail.html"
+    context_object_name = "gift_tag"
+    pk_name = "tag_id"
+
+    def get_queryset(self):
+        return self.model.objects.filter(Q(is_public=True) | Q(shared_with=self.request.user))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["gifts"] = Gift.objects.accessible_by(self.request.user).filter(tags=self.object)
+        context["parent_tags"] = self.object.parent_tags.filter(
+            Q(is_public=True) | Q(shared_with=self.request.user)
+        ).order_by("name")
+        context["child_tags"] = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .filter(parent_tags=self.object)
+            .order_by("name")
+        )
+        context["ancestors"] = self.object.get_ancestors()
+        return context
