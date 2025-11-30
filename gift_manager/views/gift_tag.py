@@ -41,7 +41,11 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
         # If a tag is selected, retrieve it
         if selected_tag_id:
             try:
-                selected_tag = get_object_or_404(GiftTag, tag_id=selected_tag_id)
+                # Prefetch related tags to optimize hierarchy traversal
+                selected_tag = get_object_or_404(
+                    GiftTag.objects.prefetch_related('parent_tags', 'child_tags'),
+                    tag_id=selected_tag_id
+                )
 
                 # Check if the user has access to this tag
                 if (
@@ -166,9 +170,14 @@ class GiftTagUpdateView(BaseUpdateView):
     object_type = "Gift tag"
     detail_url_name = "gift_tag_detail"
 
+    def get_queryset(self):
+        """Optimize queryset with prefetched relations."""
+        return GiftTag.objects.prefetch_related('parent_tags', 'child_tags')
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         current_tag = self.get_object()
+        # get_descendants() is now cached and optimized
         descendants = current_tag.get_descendants()
         excluded_ids = [current_tag.pk] + [tag.pk for tag in descendants]
         form.fields["parent_tags"].queryset = (
@@ -193,7 +202,10 @@ class GiftTagDetailView(BaseDetailView):
     pk_name = "tag_id"
 
     def get_queryset(self):
-        return self.model.objects.filter(Q(is_public=True) | Q(shared_with=self.request.user))
+        """Optimize queryset with prefetched relations."""
+        return self.model.objects.prefetch_related('parent_tags', 'child_tags').filter(
+            Q(is_public=True) | Q(shared_with=self.request.user)
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -206,5 +218,6 @@ class GiftTagDetailView(BaseDetailView):
             .filter(parent_tags=self.object)
             .order_by("name")
         )
+        # get_ancestors() is now cached and optimized
         context["ancestors"] = self.object.get_ancestors()
         return context
