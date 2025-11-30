@@ -6,13 +6,23 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
 from django.db import transaction
 from django.http import Http404
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext
-from django.views.generic import DetailView, TemplateView, View
+from django.views.generic import DetailView
+from django.views.generic import TemplateView
+from django.views.generic import View
 
-from ..models import Event, Gift, Invitation, Person, PersonGroup, Profile, Relation
+from gift_manager.models import Event
+from gift_manager.models import Gift
+from gift_manager.models import Invitation
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import Profile
+from gift_manager.models import Relation
 
 
 class ProfileDetailView(LoginRequiredMixin, DetailView):
@@ -52,12 +62,12 @@ class AcceptInvitationView(View):
 
         try:
             invitation = get_object_or_404(Invitation, token=token, accepted=False)
-            # Check if the invitation has expired
-            if invitation.is_expired():
-                msg = "Invitation does not exist or has already been accepted."
-                raise Http404(msg)  # noqa: TRY301
         except Http404:
             # The invitation doesn't exist or has already been accepted
+            return redirect("gift_manager:invitation_expired")
+
+        # Check if the invitation has expired
+        if invitation.is_expired():
             return redirect("gift_manager:invitation_expired")
 
         # If the user is already logged in, establish the friendship relationship

@@ -1,13 +1,22 @@
 """Gift-related views."""
 
 from django.contrib.postgres.aggregates import JSONBAgg
-from django.db.models import F, Func, Q, Value
+from django.db.models import F
+from django.db.models import Func
+from django.db.models import Q
+from django.db.models import Value
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
-from ..forms import GiftForm
-from ..models import Gift, GiftTag, Relation
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from gift_manager.forms import GiftForm
+from gift_manager.models import Gift
+from gift_manager.models import GiftTag
+from gift_manager.models import Relation
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class GiftListView(BaseListView):
@@ -88,7 +97,7 @@ class GiftDetailView(BaseDetailView):
     context_object_name = "gift"
     pk_name = "gift_id"
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["relations"] = (
             Relation.objects.accessible_by(self.request.user)

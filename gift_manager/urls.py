@@ -107,12 +107,12 @@ urlpatterns = [
         name="relation_detail",
     ),
     path(
-        "relations/<uuid:pk>/edit",
+        "relations/<uuid:pk>/edit/",
         views.RelationUpdateView.as_view(),
         name="relation_edit",
     ),
     path(
-        "relations/<uuid:pk>/delete",
+        "relations/<uuid:pk>/delete/",
         views.RelationDeleteView.as_view(),
         name="relation_delete",
     ),

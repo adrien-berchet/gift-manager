@@ -3,16 +3,33 @@
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, TextField, Value
-from django.db.models.functions import Coalesce, Concat, NullIf
+from django.db.models import Q
+from django.db.models import TextField
+from django.db.models import Value
+from django.db.models.functions import Coalesce
+from django.db.models.functions import Concat
+from django.db.models.functions import NullIf
 from django.http import JsonResponse
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
+from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.views.decorators.http import require_POST
 
-from ..forms import GiftRelationForm, PersonGroupRelationForm, PersonRelationForm, RelationForm
-from ..models import Event, Gift, Person, PersonGroup, Relation, RelationStatus
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from gift_manager.forms import GiftRelationForm
+from gift_manager.forms import PersonGroupRelationForm
+from gift_manager.forms import PersonRelationForm
+from gift_manager.forms import RelationForm
+from gift_manager.models import Event
+from gift_manager.models import Gift
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -308,12 +325,29 @@ class RelationDetailView(BaseDetailView):
 @login_required
 @require_POST
 def update_relation_status(request):
+    from django.template.loader import render_to_string
+
     relation_id = request.POST.get("relation_id")
-    new_status = request.POST.get("new_status")
+    new_status = int(request.POST.get("new_status"))
+
     try:
         relation = Relation.objects.get(Q(relation_id=relation_id) & Q(shared_with=request.user))
         relation.status_id = new_status
         relation.save()
-        return JsonResponse({"success": True})
+
+        # Return HTML partial for HTMX
+        html = render_to_string(
+            "gift_manager/includes/status_select_partial.html",
+            {
+                "relation_id": relation.relation_id,
+                "current_status": new_status,
+                "relation_statuses": RelationStatus.objects.all(),
+            },
+            request=request,
+        )
+        from django.http import HttpResponse
+
+        return HttpResponse(html)
+
     except Relation.DoesNotExist:
         return JsonResponse({"error": gettext("Gifting not found")}, status=404)

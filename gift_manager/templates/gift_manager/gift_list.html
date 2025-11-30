@@ -7,50 +7,60 @@
 
 {% block content %}
 <h1 class="my-4">{{ translated_type }}</h1>
-<button onclick="location.href='{% url 'gift_manager:gift_create' %}'">{% trans "Create new gift" %}</button>
-{% load custom_filters %}
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{{ column_names.name }}</th>
-            <th>{{ column_names.comment }}</th>
-            <th>{{ column_names.tags }}</th>
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in data %}
-            <tr>
-                <td>{{ item.name }}</td>
-                <td>{{ item.comment|default:"" }}</td>
-                <td>
-                    {% if item.tags_info %}
-                        {% for tag in item.tags_info %}
-                            <a href="{% url 'gift_manager:gift_tag_detail' tag.id %}" class="badge bg-primary">{{ tag.name }}</a>
-                        {% endfor %}
-                    {% endif %}
-                </td>
-                <td style="white-space: nowrap;">
-                    <a href="{% url 'gift_manager:gift_relation_create' item.gift_id %}" class="btn btn-primary btn-sm" data-toggle="tooltip" title="{% trans 'Give' %}"><i class="fas fa-hand-holding-heart"></i></a>
-                    <a href="{% url 'gift_manager:gift_detail' item.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
-                    <a href="{% url 'gift_manager:gift_edit' item.gift_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
-                    <a href="{% url 'gift_manager:gift_delete' item.gift_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary">{% trans "Create new gift" %}</a>
+
+<!-- Grid.js container -->
+<div id="gift-grid" class="mt-3"></div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
-{% include "gift_manager/includes/datatables-translations.html" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
 <script>
-    $(document).ready(function() {
-        $('#data-table').initDataTableFilters({
-            order: [[0, 'asc']],
-            language: dataTablesTranslations
-        });
+    {% load custom_filters %}
+    (function () {
+        // Prepare data for Grid.js
+        const data = [
+            {% for item in data %}
+    [
+        "{{ item.name|escapejs }}",
+        "{{ item.comment|default:''|escapejs }}",
+        {% if item.tags_info %}
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    {% else %}
+    [],
+        {% endif %}
+    "{{ item.gift_id }}"
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+        ];
+
+    // Initialize Grid.js
+    GridUtils.initGrid('gift-grid', [
+        { name: '{{ column_names.name|escapejs }}', width: '25%' },
+        { name: '{{ column_names.comment|escapejs }}', width: '35%' },
+        {
+            name: '{{ column_names.tags|escapejs }}',
+            width: '20%',
+            formatter: GridUtils.badgeFormatter('/{{ LANGUAGE_CODE }}/gift_tags/{id}/')
+        },
+        {
+            name: '{% trans "Actions"|escapejs %}',
+            width: '20%',
+            sort: false,
+            formatter: GridUtils.actionButtonsFormatter({
+                give: '/{{ LANGUAGE_CODE }}/gifts/{id}/add_relation/',
+                details: '/{{ LANGUAGE_CODE }}/gifts/{id}/',
+                edit: '/{{ LANGUAGE_CODE }}/gifts/{id}/edit/',
+                delete: '/{{ LANGUAGE_CODE }}/gifts/{id}/delete/'
+            }, ['give', 'details', 'edit', 'delete'], 3)
+        }
+    ], data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
     });
+    }) ();
 </script>
 {% endblock %}

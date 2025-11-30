@@ -8,6 +8,7 @@ from django.db import models
 from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.translation import gettext_lazy
@@ -60,6 +61,9 @@ class Profile(models.Model):
     def __str__(self):
         return f"{gettext_lazy('Profile of')} {self.user.username}"
 
+    def get_absolute_url(self) -> str:
+        return reverse("gift_manager:profile_detail")
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):  # noqa: ARG001
@@ -89,7 +93,7 @@ class Invitation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"{gettext_lazy('Invitation from')} {self.sender} "
             f"{gettext_lazy('to')} {self.recipient_email}"
@@ -132,7 +136,7 @@ class Person(models.Model):
         verbose_name = gettext_lazy("Person")
         verbose_name_plural = gettext_lazy("Persons")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (self.first_name + " " + (self.family_name or "")).strip()
 
 
@@ -173,8 +177,11 @@ class PersonGroup(models.Model):
         verbose_name = gettext_lazy("Person group")
         verbose_name_plural = gettext_lazy("Person groups")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
+
+    def get_absolute_url(self) -> str:
+        return reverse("gift_manager:person_group_edit", kwargs={"pk": self.pk})
 
 
 class PersonGroupPermission(models.Model):
@@ -339,7 +346,7 @@ class GiftTagPermission(models.Model):
     class Meta:
         unique_together = ("user", "gift_tag")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user} - {self.gift_tag} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
@@ -366,7 +373,7 @@ class Gift(models.Model):
         verbose_name = gettext_lazy("Gift")
         verbose_name_plural = gettext_lazy("Gifts")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -421,7 +428,7 @@ class Event(models.Model):
         verbose_name = gettext_lazy("Event")
         verbose_name_plural = gettext_lazy("Events")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 
@@ -454,7 +461,7 @@ class RelationStatus(models.Model):
         verbose_name = gettext_lazy("Relation Status")
         verbose_name_plural = gettext_lazy("Relation Statuses")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.status
 
 
@@ -491,13 +498,16 @@ class Relation(models.Model):
         verbose_name = gettext_lazy("Relation")
         verbose_name_plural = gettext_lazy("Relations")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.person} - {self.gift} ({self.status})"
 
     def save(self, *args, **kwargs):
         """Override save to ensure validation."""
         self.clean()
         super().save(*args, **kwargs)
+
+    def get_absolute_url(self) -> str:
+        return reverse("gift_manager:person_edit", kwargs={"pk": self.pk})
 
     def clean(self):
         """Ensure that at least person or group is set."""

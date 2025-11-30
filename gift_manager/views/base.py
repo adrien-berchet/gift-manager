@@ -1,26 +1,32 @@
 """Base classes and mixins for views."""
 
+import json
 from copy import deepcopy
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.contrib import messages
 from django.db import transaction
 from django.db.models import Q
-from django.http import Http404, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse, reverse_lazy
+from django.http import Http404
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
+from django.urls import reverse
+from django.urls import reverse_lazy
 from django.utils.translation import gettext
-from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
+from django.views.generic import CreateView
+from django.views.generic import DeleteView
+from django.views.generic import DetailView
+from django.views.generic import ListView
+from django.views.generic import UpdateView
 
-from ..models import PermissionLevel, Profile
-from ..permissions import (
-    PERMISSION_LEVELS,
-    create_or_update_permission,
-    delete_permission,
-    get_permission,
-)
-from .common import get_user
+from gift_manager.models import PermissionLevel
+from gift_manager.models import Profile
+from gift_manager.permissions import PERMISSION_LEVELS
+from gift_manager.services import PermissionService
+from gift_manager.views.common import get_user
 
 
 class FilterByUserMixin:
@@ -51,10 +57,11 @@ class GetObjectByTokenMixin:
 class ContextPermissionMixin:
     """Mixin to add permission context to the view."""
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["is_editor"] = (
-            get_permission(self.object, self.request.user) >= PermissionLevel.EDITOR
+            PermissionService.get_permission(self.object, self.request.user)
+            >= PermissionLevel.EDITOR
         )
         return context
 
@@ -71,7 +78,7 @@ class BaseListView(LoginRequiredMixin, ListView):
         super().__init__(*args, **kwargs)
         self.column_names = {}  # Will be defined in the subclasses
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["type"] = self.object_type
         context["translated_type"] = gettext(self.object_type)
@@ -82,13 +89,13 @@ class BaseListView(LoginRequiredMixin, ListView):
 class SharedUsersMixin:
     """Mixin to add shared users with their permissions to the context."""
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
 
         # Get the users with whom this object is shared, with their permissions
         shared_users = []
         for user in self.object.shared_with.exclude(id=self.request.user.id):
-            permission = get_permission(self.object, user)
+            permission = PermissionService.get_permission(self.object, user)
             permission_label = PermissionLevel.get_label(permission)
             shared_users.append(
                 {"user": user, "permission": permission, "permission_label": permission_label}
@@ -101,7 +108,7 @@ class SharedUsersMixin:
 class CreatePermissionMixin:
     """Mixin to add shared user permissions to CreateView forms."""
 
-    def get_initial(self):
+    def get_initial(self) -> dict:
         initial = super().get_initial()
 
         # Get the current user profile and its friends
@@ -119,7 +126,7 @@ class CreatePermissionMixin:
         ]
         return initial
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         if hasattr(self, "unshared_friends"):
             context["unshared_friends"] = self.unshared_friends
@@ -144,7 +151,9 @@ class CreatePermissionMixin:
                     user = User.objects.get(id=user_id)
 
                     # Create or update the permission for this user
-                    create_or_update_permission(user, self.object, permission_level=permission)
+                    PermissionService.create_or_update_permission(
+                        user, self.object, permission_level=permission
+                    )
 
                 except Exception as e:
                     messages.error(self.request, str(e))
@@ -158,7 +167,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
     template_name = "gift_manager/create_form.html"
     login_url = "/accounts/login/"
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["type"] = self.object_type
         context["translated_type"] = gettext(self.object_type)
@@ -166,7 +175,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
         context["cancel_url"] = self.get_cancel_url()
         return context
 
-    def get_cancel_url(self):
+    def get_cancel_url(self) -> str:
         """URL to redirect to when the cancel button is clicked."""
         return self.success_url
 
@@ -174,7 +183,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
         with transaction.atomic():
             form.instance.user = self.request.user
             response = super().form_valid(form)
-            create_or_update_permission(
+            PermissionService.create_or_update_permission(
                 self.request.user,
                 form.instance,
                 permission_level=PermissionLevel.EDITOR,
@@ -186,7 +195,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
 class EditPermissionMixin:
     """Mixin to add shared user permissions to UpdateView forms."""
 
-    def get_initial(self):
+    def get_initial(self) -> dict:
         initial = super().get_initial()
         self.object = self.get_object()
 
@@ -205,7 +214,7 @@ class EditPermissionMixin:
             is_shared = friend in all_shared_with
 
             if is_shared:
-                permission = get_permission(self.object, friend)
+                permission = PermissionService.get_permission(self.object, friend)
                 permission_label = PermissionLevel.get_label(permission)
 
                 friends_list.append(
@@ -221,6 +230,7 @@ class EditPermissionMixin:
                 friends_list.append(
                     {
                         "user": friend,
+                        "permission": None,
                         "form_id": f"share_{friend.id}",  # Unique identifier for the form
                         "is_shared": False,
                     }
@@ -229,7 +239,7 @@ class EditPermissionMixin:
         self.friends_list = friends_list
         return initial
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         if hasattr(self, "shared_users"):
             context["shared_users"] = self.shared_users
@@ -242,9 +252,9 @@ class EditPermissionMixin:
         context["permission_levels"] = deepcopy(PERMISSION_LEVELS)
         return context
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):  # noqa: PLR0911
         self.object = self.get_object()
-        self.is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        self.is_htmx = request.headers.get("HX-Request") == "true"
 
         # Case 1: Update an existing permission
         if "update_permission" in request.POST:
@@ -258,10 +268,25 @@ class EditPermissionMixin:
         if "share_with" in request.POST:
             return self._handle_share_with(request)
 
+        # HTMX permission change (no explicit action parameter)
+        if self.is_htmx and "permission" in request.POST:
+            permission_value = request.POST.get("permission")
+            if permission_value == "not_shared":
+                return self._handle_remove_share(request)
+
+            # Check if user is already shared
+            user_id = request.POST.get("user_id")
+            user = User.objects.get(id=user_id)
+            is_shared = self.object.shared_with.filter(id=user.id).exists()
+
+            if is_shared:
+                return self._handle_update_permission(request)
+            return self._handle_share_with(request)
+
         # For other cases, call the parent post method
         return super().post(request, *args, **kwargs)
 
-    def _handle_update_permission(self, request) -> JsonResponse:
+    def _handle_update_permission(self, request) -> HttpResponse:
         """Update an existing permission."""
         permission_value = request.POST.get("permission")
 
@@ -274,55 +299,76 @@ class EditPermissionMixin:
 
             # Update the permission
             new_permission = int(permission_value)
-            create_or_update_permission(user, self.object, permission_level=new_permission)
+            PermissionService.create_or_update_permission(
+                user, self.object, permission_level=new_permission
+            )
 
             permission_label = PermissionLevel.get_label(new_permission)
             message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
                 username=username, permission_level=permission_label
             )
 
-            if self.is_ajax:
-                return JsonResponse(
+            if self.is_htmx:
+                # Return HTML partial for HTMX with trigger for notification
+
+                response = render(
+                    request,
+                    "gift_manager/includes/permission_row_partial.html",
                     {
-                        "success": True,
-                        "message": message,
-                        "user": {"id": user.id, "username": username},
+                        "shared_user": user,
                         "permission": new_permission,
-                    }
+                        "permission_levels": PERMISSION_LEVELS,
+                        "is_shared": True,
+                        "update_url": request.path,
+                    },
                 )
+                response["HX-Trigger"] = json.dumps({"showSuccess": message})
+                return response
+
+            # Fallback for non-HTMX requests
             messages.success(request, message)
             return self.get(request)
 
         except Exception as e:
             return self._handle_error(request, e)
 
-    def _handle_remove_share(self, request) -> JsonResponse:
+    def _handle_remove_share(self, request) -> HttpResponse:
         """Remove an existing sharing."""
         try:
             user, username = get_user(request.POST.get("user_id"))
 
             # Remove the permission
-            delete_permission(user, self.object)
+            PermissionService.delete_permission(user, self.object)
 
             message = gettext("Sharing with '{username}' removed successfully").format(
                 username=username
             )
 
-            if self.is_ajax:
-                return JsonResponse(
+            if self.is_htmx:
+                # Return HTML partial for HTMX with trigger for notification
+
+                response = render(
+                    request,
+                    "gift_manager/includes/permission_row_partial.html",
                     {
-                        "success": True,
-                        "message": message,
-                        "user": {"id": user.id, "username": username},
-                    }
+                        "shared_user": user,
+                        "permission": None,
+                        "permission_levels": PERMISSION_LEVELS,
+                        "is_shared": False,
+                        "update_url": request.path,
+                    },
                 )
+                response["HX-Trigger"] = json.dumps({"showSuccess": message})
+                return response
+
+            # Fallback for non-HTMX requests
             messages.success(request, message)
             return self.get(request)
 
         except Exception as e:
             return self._handle_error(request, e)
 
-    def _handle_share_with(self, request) -> JsonResponse:
+    def _handle_share_with(self, request) -> HttpResponse:
         """Share the object with a new user."""
         permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
 
@@ -330,31 +376,40 @@ class EditPermissionMixin:
             user, username = get_user(request.POST.get("user_id"))
 
             # Create or update the permission
-            create_or_update_permission(user, self.object, permission_level=permission)
+            PermissionService.create_or_update_permission(
+                user, self.object, permission_level=permission
+            )
 
             message = gettext("Object shared with '{username}' successfully").format(
                 username=username
             )
 
-            if self.is_ajax:
-                return JsonResponse(
+            if self.is_htmx:
+                # Return HTML partial for HTMX with trigger for notification
+
+                response = render(
+                    request,
+                    "gift_manager/includes/permission_row_partial.html",
                     {
-                        "success": True,
-                        "message": message,
-                        "user": {"id": user.id, "username": username},
+                        "shared_user": user,
                         "permission": permission,
-                    }
+                        "permission_levels": PERMISSION_LEVELS,
+                        "is_shared": True,
+                        "update_url": request.path,
+                    },
                 )
+                response["HX-Trigger"] = json.dumps({"showSuccess": message})
+                return response
+
+            # Fallback for non-HTMX requests
             messages.success(request, message)
             return self.get(request)
 
         except Exception as e:
             return self._handle_error(request, e)
 
-    def _handle_error(self, request, exception) -> JsonResponse:
+    def _handle_error(self, request, exception) -> HttpResponse:
         """Handle exceptions by returning appropriate response."""
-        if self.is_ajax:
-            return JsonResponse({"success": False, "message": str(exception)})
         messages.error(request, str(exception))
         return self.get(request)
 
@@ -367,7 +422,7 @@ class BaseUpdateView(
     template_name = "gift_manager/edit_form.html"
     login_url = "/accounts/login/"
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["type"] = self.object_type
         context["translated_type"] = gettext(self.object_type)
@@ -375,7 +430,7 @@ class BaseUpdateView(
         context["cancel_url"] = self.get_cancel_url()
         return context
 
-    def get_cancel_url(self):
+    def get_cancel_url(self) -> str:
         """URL to redirect to when the cancel button is clicked."""
         return reverse_lazy(
             f"gift_manager:{self.detail_url_name}", kwargs={"pk": self.kwargs["pk"]}
@@ -385,7 +440,7 @@ class BaseUpdateView(
         with transaction.atomic():
             form.instance.user = self.request.user
             response = super().form_valid(form)
-            create_or_update_permission(
+            PermissionService.create_or_update_permission(
                 self.request.user,
                 form.instance,
                 permission_level=PermissionLevel.EDITOR,
@@ -393,7 +448,7 @@ class BaseUpdateView(
             )
             return response
 
-    def get_success_url(self):
+    def get_success_url(self) -> str:
         return reverse(
             f"gift_manager:{self.detail_url_name}",
             kwargs={"pk": getattr(self.object, self.pk_name)},
@@ -443,7 +498,7 @@ class DeleteSharedMixin:
 class CancelToPreviousMixin:
     """Mixin to redirect to the previous page or a default URL."""
 
-    def get_context_data(self, **kwargs):
+    def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         # Retrieve the referer URL (previous page) or use the default URL
         referer = self.request.META.get("HTTP_REFERER")

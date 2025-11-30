@@ -7,44 +7,50 @@
 
 {% block content %}
 <h1 class="my-4">{{ translated_type }}</h1>
-{% load custom_filters %}
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            {% for col, name in column_names.items %}
-            <th>{{ name }}</th>
-            {% endfor %}
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in data %}
-            <tr>
-                {% for col, name in column_names.items %}
-                    <td>{{ item|get_item:col|replace_none:"" }}</td>
-                {% endfor %}
-                <td style="white-space: nowrap;">
-                    <a href="{% url 'gift_manager:relation_status_detail' item.pk %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+
+<!-- Grid.js container -->
+<div id="status-grid" class="mt-3"></div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
-{% include "gift_manager/includes/datatables-translations.html" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
 <script>
-    $(document).ready(function() {
-        $('#data-table').initDataTableFilters({
-            order: [[0, 'desc']],
-            filterSelector: '.filter-icon',
-            dropdownSelector: '.dropdown-filter',
-            checkboxSelector: '.status-filter',
-            thFilterClass: '.status-column-filter',
-            language: dataTablesTranslations
-        });
+    {% load custom_filters %}
+    (function () {
+        // Prepare data for Grid.js
+        const data = [
+            {% for item in data %}
+    [
+        {% for col, name in column_names.items %}
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    {% endfor %},
+    { { item.pk } }
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+        ];
+
+    // Build columns dynamically
+    const columns = [
+        {% for col, name in column_names.items %}
+    { name: '{{ name|escapejs }}' } {% if not forloop.last %}, {% endif %}
+    {% endfor %},
+    {
+        name: '{% trans "Actions"|escapejs %}',
+            sort: false,
+                formatter: GridUtils.actionButtonsFormatter({
+                    details: '/{{ LANGUAGE_CODE }}/relation_statuses/{id}/'
+                }, ['details'], {{ column_names| length }})
+            }
+        ];
+
+    // Initialize Grid.js
+    GridUtils.initGrid('status-grid', columns, data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
     });
+    }) ();
 </script>
 {% endblock %}

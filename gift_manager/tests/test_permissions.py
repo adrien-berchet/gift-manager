@@ -182,7 +182,7 @@ class TestGetPermission:
             (PermissionLevel.OWNER, "title", "Owner"),
         ],
     )
-    @patch("gift_manager.permissions.get_permission")
+    @patch("gift_manager.services.PermissionService.get_permission")
     def test_get_permission_label(self, mock_get_permission, permission_level, case, expected):
         """Test that get_permission_label returns correct label."""
         # Arrange
@@ -222,7 +222,10 @@ class TestCreateOrUpdatePermission:
         mock_permission = Mock()
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, True)
             ) as mock_get_or_create,
@@ -246,7 +249,10 @@ class TestCreateOrUpdatePermission:
         mock_permission.permission_type = PermissionLevel.VIEWER
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, False)
             ) as mock_get_or_create,
@@ -274,7 +280,10 @@ class TestCreateOrUpdatePermission:
         mock_permission.permission_type = PermissionLevel.EDITOR
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, False)
             ) as mock_get_or_create,
@@ -296,7 +305,10 @@ class TestCreateOrUpdatePermission:
         mock_permission = Mock(spec=["permission_type", "save"])
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, True)
             ) as mock_get_or_create,
@@ -316,7 +328,9 @@ class TestCreateOrUpdatePermission:
         """Test that ValueError is raised when no permission model is found."""
         # Setup and execution
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=None),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model", return_value=None
+            ),
             pytest.raises(
                 ValueError, match="Could not determine permission model for this object type"
             ),
@@ -331,7 +345,10 @@ class TestCreateOrUpdatePermission:
         mock_obj.shared_with.all.return_value = [mock_user]
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, True)
             ),
@@ -352,7 +369,10 @@ class TestCreateOrUpdatePermission:
         mock_permission = Mock()
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get_or_create", return_value=(mock_permission, True)
             ),
@@ -387,7 +407,10 @@ class TestDeletePermission:
         mock_obj.shared_with.all.return_value = [mock_user]
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get", return_value=mock_permission_obj
             ) as mock_get,
@@ -404,7 +427,10 @@ class TestDeletePermission:
     def test_delete_permission_not_exist(self, mock_user, mock_obj):
         # Setup
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get", side_effect=PersonPermission.DoesNotExist()
             ) as mock_get,
@@ -420,7 +446,9 @@ class TestDeletePermission:
     def test_delete_permission_no_model(self, mock_user, mock_obj):
         # Setup and execution
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=None),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model", return_value=None
+            ),
             pytest.raises(
                 ValueError, match="Could not determine permission model for this object type"
             ),
@@ -433,7 +461,10 @@ class TestDeletePermission:
         mock_obj_no_sharing.__class__ = Person
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get", return_value=mock_permission_obj
             ) as mock_get,
@@ -454,7 +485,10 @@ class TestDeletePermission:
         mock_obj.shared_with.all.return_value = [other_user]
 
         with (
-            patch("gift_manager.permissions.get_permission_model", return_value=PersonPermission),
+            patch(
+                "gift_manager.services.PermissionService.get_permission_model",
+                return_value=PersonPermission,
+            ),
             patch.object(
                 PersonPermission.objects, "get", return_value=mock_permission_obj
             ) as mock_get,

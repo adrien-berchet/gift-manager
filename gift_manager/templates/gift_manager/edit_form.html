@@ -1,6 +1,7 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+{% load static %}
 {% block title %}{{ action }} {{ translated_type }}{% endblock %}
 
 {% block content %}
@@ -9,79 +10,54 @@
   <form method="post" id="main-form">
     {% csrf_token %}
     {{ form.as_p }}
+  </form>
 
-    <div class="mt-5">
-      {% if friends_list %}
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h4>
+  <div class="mt-5">
+    {% if friends_list %}
+    <div class="card mb-4">
+      <div class="card-header bg-primary text-white">
+        <h4 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h4>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info mb-3">
+          <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to
+            share with." %}</p>
+          <ul class="mb-1">
+            <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
+            <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
+            <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the
+              object" %}</li>
+          </ul>
         </div>
-        <div class="card-body">
-          <div class="alert alert-info mb-3">
-            <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to share with." %}</p>
-            <ul class="mb-1">
-              <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
-              <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
-              <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the object" %}</li>
-            </ul>
-          </div>
 
-          <div class="table-responsive">
-            <table id="sharing-datatable" class="table table-striped unified-sharing-table">
-              <thead>
-                <tr>
-                  <th>{% trans "User" %}</th>
-                  <th>{% trans "Permission level" %}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for friend in friends_list %}
-                <tr class="{% if friend.is_shared %}shared-user-row{% else %}unshared-user-row{% endif %}" data-user-id="{{ friend.user.id }}">
-                  <td class="align-middle">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-user me-2 text-muted"></i>
-                      {{ friend.user.username }}
-                    </div>
-                  </td>
-                  <td class="align-middle">
-                    <form method="post" id="{{ friend.form_id }}" class="permission-form" data-user-id="{{ friend.user.id }}">
-                      {% csrf_token %}
-                      <input type="hidden" name="user_id" value="{{ friend.user.id }}">
-                      <div class="input-group">
-                        <select name="permission" class="form-select permission-select" onchange="handlePermissionChange(this)">
-                          <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>
-                            🚫 {% trans "Not Shared" %}
-                          </option>
-                          {% for level in permission_levels %}
-                          <option value="{{ level.value }}" {% if friend.is_shared and level.value == friend.permission %}selected{% endif %}>
-                            {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
-                          </option>
-                          {% endfor %}
-                        </select>
-                        <div class="spinner-container d-none">
-                          <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
-                        </div>
-                      </div>
-                    </form>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+        <div class="table-responsive">
+          <table id="sharing-datatable" class="table table-striped unified-sharing-table">
+            <thead>
+              <tr>
+                <th>{% trans "User" %}</th>
+                <th>{% trans "Permission level" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for friend in friends_list %}
+              {% include "gift_manager/includes/permission_row_partial.html" with shared_user=friend.user permission=friend.permission is_shared=friend.is_shared update_url=request.path permission_levels=permission_levels %}
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
-      {% else %}
-      <div class="alert alert-warning">
-        <i class="fas fa-user-friends me-2"></i>
-        {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
-        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
-          <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
-        </a>
-      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+      <i class="fas fa-user-friends me-2"></i>
+      {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
+      <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+        <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
+      </a>
+
       {% endif %}
     </div>
-  </form>
+  </div>
 
   <div style="height: 80px;"></div>
 </div>
@@ -116,182 +92,6 @@
 {% include "gift_manager/includes/datatables-translations.html" %}
 
 <script>
-
-  // Function to handle permission change
-  function handlePermissionChange(selectElement) {
-    // Get the parent form and necessary elements
-    const form = selectElement.closest('form');
-    const row = form.closest('tr');
-    const spinner = form.querySelector('.spinner-container');
-
-    // Show spinner
-    spinner.classList.remove('d-none');
-
-    // Disable select during processing
-    selectElement.disabled = true;
-
-    // Call the processing function directly
-    handlePermissionAction(selectElement);
-  }
-
-  function handlePermissionAction(element) {
-    console.log("Processing permission action for element:", element);
-
-    // Get the parent form
-    const form = element.closest('form');
-    if (!form) {
-      console.error("Element is not inside a form!");
-      showNotification('{% trans "Error: Cannot find form" %}', 'danger');
-      return;
-    }
-
-    // Find necessary elements
-    const selectElement = form.querySelector('select[name="permission"]');
-    if (!selectElement) {
-      console.error("Cannot find permission select element");
-      showNotification('{% trans "Error: Form structure invalid" %}', 'danger');
-      return;
-    }
-
-    const userIdInput = form.querySelector('input[name="user_id"]');
-    if (!userIdInput) {
-      console.error("Cannot find user_id input");
-      showNotification('{% trans "Error: Form structure invalid" %}', 'danger');
-      return;
-    }
-
-    const userId = userIdInput.value;
-    console.log("User ID:", userId);
-
-    // Find parent row - directly via data-user-id attribute
-    const row = document.querySelector(`tr[data-user-id="${userId}"]`);
-    if (!row) {
-      console.error("Cannot find row for user ID:", userId);
-      showNotification('{% trans "Error: Cannot find user row" %}', 'danger');
-      return;
-    }
-
-    // Check permission value
-    const permissionValue = selectElement.value;
-
-    // If user is already unshared and "not_shared" is selected,
-    // do nothing and just show a notification
-    if (permissionValue === "not_shared" && row.classList.contains('unshared-user-row')) {
-      showNotification("{% trans 'This user already has no access to this object' %}", 'info', 3000);
-      // Re-enable select
-      selectElement.disabled = false;
-      // Hide spinner
-      form.querySelector('.spinner-container').classList.add('d-none');
-      return;
-    }
-
-    // Show spinner
-    const spinner = form.querySelector('.spinner-container');
-    spinner.classList.remove('d-none');
-
-    // Disable select
-    selectElement.disabled = true;
-
-    try {
-      // Create form data
-      const formData = new FormData();
-      formData.append('user_id', userId);
-      formData.append('csrfmiddlewaretoken', getCSRFToken());
-
-      // Add specific parameters based on action
-      if (permissionValue === "not_shared") {
-        formData.append('remove_share', 'true');
-      } else if (row.classList.contains('unshared-user-row')) {
-        formData.append('share_with', 'true');
-        formData.append('permission', permissionValue);
-      } else {
-        formData.append('update_permission', 'true');
-        formData.append('permission', permissionValue);
-      }
-
-      // Convert FormData to URL-encoded format
-      const urlEncodedData = new URLSearchParams(formData).toString();
-
-      console.log('Sending AJAX request with data:', urlEncodedData);
-
-      // Send request
-      fetch(window.location.href, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'X-CSRFToken': getCSRFToken(),
-          'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: urlEncodedData
-      })
-      .then(response => {
-        console.log('Response received with status:', response.status);
-
-        // Check response even if not OK to see what's happening
-        return response.text().then(text => {
-          if (response.ok) {
-            try {
-              return JSON.parse(text);
-            } catch (e) {
-              console.error('Failed to parse JSON response:', e);
-              console.log('Raw response:', text);
-              throw new Error('Invalid JSON response');
-            }
-          } else {
-            console.error('Server returned an error response:', response.status);
-            console.log('Response text:', text);
-            throw new Error('Server error: ' + response.status);
-          }
-        });
-      })
-      .then(data => {
-        console.log('Parsed response data:', data);
-
-        // Re-enable controls and hide spinner
-        selectElement.disabled = false;
-        spinner.classList.add('d-none');
-
-        if (data && data.success) {
-          showNotification(data.message, 'success', 3000);
-
-          // Update row class
-          if (permissionValue === "not_shared") {
-            row.classList.remove('shared-user-row');
-            row.classList.add('unshared-user-row');
-          } else {
-            row.classList.remove('unshared-user-row');
-            row.classList.add('shared-user-row');
-          }
-
-          // Refresh DataTables after update
-          $('#sharing-datatable').DataTable().row(row).invalidate().draw(false);
-        } else {
-          showNotification(
-            (data && data.message) || "{% trans 'An error occurred' %}",
-            'danger'
-          );
-          // Reset to previous value
-          selectElement.value = row.classList.contains('unshared-user-row') ? "not_shared" :
-                                row.querySelector('.badge')?.classList.contains('bg-primary') ? "10" :
-                                row.querySelector('.badge')?.classList.contains('bg-success') ? "20" : "30";
-        }
-      })
-      .catch(error => {
-        // Handle errors and always restore controls
-        console.error('Error in AJAX request:', error);
-        selectElement.disabled = false;
-        spinner.classList.add('d-none');
-        showNotification("{% trans 'An error occurred while updating sharing' %}", 'danger');
-      });
-    } catch (ex) {
-      // Capture errors in form processing
-      console.error('Error processing form:', ex);
-      selectElement.disabled = false;
-      spinner.classList.add('d-none');
-      showNotification('{% trans "Error processing form" %}', 'danger');
-    }
-  }
-
   // Function to prepare the table at initial loading
   function initializeDataTable() {
     // Create DataTable
@@ -306,10 +106,14 @@
       lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "{% trans 'All' %}"]],
       pageLength: 5,
       order: [[0, 'asc']],  // Default sort on user column
-      initComplete: function() {
+      initComplete: function () {
         // Apply specific styles after initialization
         $('.dataTables_filter input').addClass('form-control form-control-sm');
         $('.dataTables_length select').addClass('form-select form-select-sm ms-1 me-1');
+      },
+      drawCallback: function () {
+        // Re-initialize HTMX on DataTable elements after each draw (pagination, sort, etc.)
+        htmx.process(document.getElementById('sharing-datatable'));
       }
     });
 
@@ -318,48 +122,18 @@
       document.querySelectorAll('.permission-select').forEach(select => {
         select.style.minWidth = '280px';
       });
+      // Initial HTMX processing after DataTable is ready
+      htmx.process(document.getElementById('sharing-datatable'));
     }, 100);
 
     return sharingTable;
   }
 
   // Initialization on page load
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     try {
-
       // Initialize DataTable
       const sharingTable = initializeDataTable();
-
-      // Attach handlers to buttons directly
-      document.querySelectorAll('.update-permission-btn').forEach(button => {
-        console.log('Attaching click handler to button:', button);
-        button.addEventListener('click', function(e) {
-          e.preventDefault();
-          e.stopPropagation();
-          handlePermissionAction(this);
-        });
-      });
-
-      // Prevent permission forms from being submitted normally
-      document.querySelectorAll('form.permission-form').forEach(form => {
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-          const submitButton = form.querySelector('button[type="submit"]');
-          if (submitButton) {
-            handlePermissionAction(submitButton);
-          }
-        });
-      });
-
-      // Disable main form submission for permission buttons
-      const mainForm = document.getElementById('main-form');
-      if (mainForm) {
-        mainForm.addEventListener('submit', function(e) {
-          if (e.submitter && e.submitter.closest('.permission-form')) {
-            e.preventDefault();
-          }
-        });
-      }
 
       // Ensure the action bar is always visible
       const fixedBar = document.getElementById('fixed-action-bar');
@@ -381,6 +155,37 @@
       showNotification("{% trans 'Error initializing page components' %}", 'danger');
     }
   });
+
+  // HTMX event handlers for notifications and DataTables refresh
+  document.body.addEventListener('htmx:afterSwap', function (event) {
+    // Refresh DataTables after HTMX swap
+    const table = $('#sharing-datatable').DataTable();
+    if (table) {
+      table.rows().invalidate().draw(false);
+    }
+  });
+
+  // Listen for showSuccess event triggered by HX-Trigger header
+  document.body.addEventListener('showSuccess', function (event) {
+    showNotification(event.detail.value, 'success');
+  });
+
+  // Update row styling after successful permission change
+  document.body.addEventListener('htmx:afterRequest', function (event) {
+    if (event.detail.successful && event.detail.elt && event.detail.elt.classList.contains('permission-select')) {
+      const select = event.detail.elt;
+      const row = select.closest('tr');
+      if (row) {
+        const isShared = select.value !== 'not_shared';
+        row.classList.remove('shared-user-row', 'unshared-user-row');
+        row.classList.add(isShared ? 'shared-user-row' : 'unshared-user-row');
+      }
+    }
+  });
+
+  document.body.addEventListener('htmx:responseError', function (event) {
+    showNotification("{% trans 'An error occurred while updating permissions' %}", 'danger');
+  });
 </script>
 {% endblock %}
 
@@ -391,14 +196,16 @@
 
 <style>
   .fixed-action-bar {
-    position: fixed !important; /* Important override */
+    position: fixed !important;
+    /* Important override */
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     background-color: rgba(248, 249, 250, 0.95);
     padding: 15px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 100000 !important; /* Ultra high z-index */
+    z-index: 100000 !important;
+    /* Ultra high z-index */
     border-top: 2px solid #007bff;
   }
 
@@ -477,6 +284,17 @@
     #sharing-datatable .permission-select {
       min-width: 160px !important;
     }
+  }
+
+  /* HTMX Indicator */
+  /* HTMX Indicator */
+  .htmx-indicator {
+    display: none;
+  }
+
+  .htmx-request .htmx-indicator,
+  .htmx-request.htmx-indicator {
+    display: inline-block;
   }
 </style>
 {% endblock %}
