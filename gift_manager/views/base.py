@@ -1,11 +1,13 @@
 """Base classes and mixins for views."""
 
 import json
+import logging
 from copy import deepcopy
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.http import Http404
@@ -27,6 +29,8 @@ from gift_manager.models import Profile
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.services import PermissionService
 from gift_manager.views.common import get_user
+
+logger = logging.getLogger(__name__)
 
 
 class FilterByUserMixin:

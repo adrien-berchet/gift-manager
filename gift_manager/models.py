@@ -47,9 +47,141 @@ class PermissionLevel:
 
 
 class UserPermissionManager(models.Manager):
+    """Base manager for models with user permissions."""
+
     def accessible_by(self, user):
         """Return all objects accessible by a user."""
         return self.filter(Q(shared_with=user))
+
+
+class PersonManager(UserPermissionManager):
+    """Manager for Person model with additional query methods."""
+
+    def with_groups_annotated(self):
+        """Return persons with groups information annotated for Grid.js."""
+        from django.contrib.postgres.aggregates import JSONBAgg
+        from django.db.models import F, Func, Value
+
+        return self.annotate(
+            groups_info=JSONBAgg(
+                Func(
+                    Value("id"),
+                    F("groups__group_id"),
+                    Value("name"),
+                    F("groups__name"),
+                    function="jsonb_build_object",
+                ),
+                filter=Q(groups__group_id__isnull=False),
+                distinct=True,
+            )
+        )
+
+    def with_complete_name(self):
+        """Return persons with complete_name annotation (family_name + first_name)."""
+        from django.db.models import TextField, Value
+        from django.db.models.functions import Concat
+
+        return self.annotate(
+            complete_name=Concat(
+                "family_name", Value(" "), "first_name", output_field=TextField()
+            )
+        )
+
+    def for_list_display(self, user):
+        """Return queryset optimized for list display with all necessary annotations."""
+        return (
+            self.accessible_by(user)
+            .with_groups_annotated()
+            .values("person_id", "first_name", "family_name", "email_address", "groups_info")
+        )
+
+
+class GiftManager(UserPermissionManager):
+    """Manager for Gift model with additional query methods."""
+
+    def with_tags_annotated(self):
+        """Return gifts with tags information annotated for Grid.js."""
+        from django.contrib.postgres.aggregates import JSONBAgg
+        from django.db.models import F, Func, Value
+
+        return self.annotate(
+            tags_info=JSONBAgg(
+                Func(
+                    Value("id"),
+                    F("tags__tag_id"),
+                    Value("name"),
+                    F("tags__name"),
+                    function="jsonb_build_object",
+                ),
+                filter=Q(tags__tag_id__isnull=False),
+                distinct=True,
+            )
+        )
+
+    def for_list_display(self, user):
+        """Return queryset optimized for list display with all necessary annotations."""
+        return (
+            self.accessible_by(user)
+            .with_tags_annotated()
+            .values("gift_id", "name", "comment", "tags_info")
+        )
+
+
+class EventManager(UserPermissionManager):
+    """Manager for Event model with additional query methods."""
+
+    def for_list_display(self, user):
+        """Return queryset optimized for list display."""
+        return self.accessible_by(user).values("event_id", "name", "comment", "usual_date")
+
+
+class RelationManager(UserPermissionManager):
+    """Manager for Relation model with additional query methods."""
+
+    def with_related_objects(self):
+        """Return relations with all related objects selected."""
+        return self.select_related("person", "group", "gift", "event", "status")
+
+    def with_related_object_name(self):
+        """Return relations with related_object annotation (person or group name)."""
+        from django.db.models import TextField, Value
+        from django.db.models.functions import Coalesce, Concat, NullIf
+
+        return self.annotate(
+            related_object=Coalesce(
+                NullIf(
+                    Concat(
+                        "person__first_name",
+                        Value(" "),
+                        "person__family_name",
+                        output_field=TextField(),
+                    ),
+                    Value(" "),
+                ),
+                "group__name",
+                output_field=TextField(),
+            )
+        )
+
+    def for_list_display(self, user):
+        """Return queryset optimized for list display with all annotations."""
+        return (
+            self.accessible_by(user)
+            .with_related_object_name()
+            .values(
+                "relation_id",
+                "gift__name",
+                "gift__gift_id",
+                "comment",
+                "related_object",
+                "person__person_id",
+                "group__group_id",
+                "event__name",
+                "event__event_id",
+                "status",
+                "due_date",
+            )
+        )
 
 
 class Profile(models.Model):
@@ -130,7 +262,7 @@ class Person(models.Model):
     )
 
     # Custom manager
-    objects = UserPermissionManager()
+    objects = PersonManager()
 
     class Meta:
         verbose_name = gettext_lazy("Person")
@@ -171,7 +303,7 @@ class PersonGroup(models.Model):
     )
 
     # Custom manager
-    objects = UserPermissionManager()
+    objects = UserPermissionManager()  # PersonGroup uses basic manager
 
     class Meta:
         verbose_name = gettext_lazy("Person group")
@@ -367,7 +499,7 @@ class Gift(models.Model):
     )
 
     # Custom manager
-    objects = UserPermissionManager()
+    objects = GiftManager()
 
     class Meta:
         verbose_name = gettext_lazy("Gift")
@@ -422,7 +554,7 @@ class Event(models.Model):
     )
 
     # Custom manager
-    objects = UserPermissionManager()
+    objects = EventManager()
 
     class Meta:
         verbose_name = gettext_lazy("Event")
@@ -492,7 +624,7 @@ class Relation(models.Model):
     )
 
     # Custom manager
-    objects = UserPermissionManager()
+    objects = RelationManager()
 
     class Meta:
         verbose_name = gettext_lazy("Relation")

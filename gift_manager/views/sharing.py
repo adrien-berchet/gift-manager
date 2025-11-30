@@ -1,11 +1,13 @@
 """Sharing-related views."""
 
+import logging
 from collections.abc import Sequence
 from copy import deepcopy
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.db.models import TextField, Value
 from django.db.models.functions import Concat
@@ -15,6 +17,8 @@ from django.views.generic import View
 
 from ..models import Event, Gift, Person, PersonGroup, PermissionLevel, Relation
 from ..permissions import PERMISSION_LEVELS, create_or_update_permission
+
+logger = logging.getLogger(__name__)
 
 
 class ShareObjectsView(LoginRequiredMixin, View):
@@ -77,23 +81,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
     def post(self, request):
         """Process sharing of selected objects."""
-        with transaction.atomic():
-            # Get selected friends
-            friends = self._get_selected_friends(request)
-            if not friends:
-                messages.error(request, gettext("Please select at least one friend."))
-                return self.get(request)
+        try:
+            with transaction.atomic():
+                # Get selected friends
+                friends = self._get_selected_friends(request)
+                if not friends:
+                    logger.info(f"User {request.user} tried to share without selecting friends")
+                    messages.error(request, gettext("Please select at least one friend."))
+                    return self.get(request)
 
-            # Get selected objects by type
-            selection = self._get_selection_from_request(request)
+                # Get selected objects by type
+                selection = self._get_selection_from_request(request)
 
-            # Check if at least one object is selected
-            if not any(selection.values()):
-                messages.error(request, gettext("Please select at least one object to share."))
-                return self.get(request)
+                # Check if at least one object is selected
+                if not any(selection.values()):
+                    logger.info(f"User {request.user} tried to share without selecting objects")
+                    messages.error(request, gettext("Please select at least one object to share."))
+                    return self.get(request)
 
-            # Get selected permission level (default to VIEWER if not specified)
-            permission_level = int(request.POST.get("permission_level", PermissionLevel.VIEWER))
+                # Get selected permission level (default to VIEWER if not specified)
+                try:
+                    permission_level = int(request.POST.get("permission_level", PermissionLevel.VIEWER))
+                    if permission_level not in [PermissionLevel.VIEWER, PermissionLevel.EDITOR, PermissionLevel.OWNER]:
+                        raise ValueError("Invalid permission level")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Invalid permission level provided by user {request.user}: {e}")
+                    messages.error(request, gettext("Invalid permission level selected."))
+                    return self.get(request)
 
             # Option to share persons in a group
             share_group_persons = "share_group_persons" in request.POST
@@ -129,12 +143,35 @@ class ShareObjectsView(LoginRequiredMixin, View):
                     selection["relation_ids"], friends, permission_level
                 )
 
-            # Success message
-            messages.success(
-                request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
-            )
+                # Success message
+                total_shared = sum(shared_items.values())
+                logger.info(
+                    f"User {request.user} shared {total_shared} items with "
+                    f"{len(friends)} friend(s) at permission level {permission_level}"
+                )
+                messages.success(
+                    request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
+                )
 
-            return redirect("gift_manager:share_objects")
+                return redirect("gift_manager:share_objects")
+
+        except PermissionDenied as e:
+            logger.warning(f"Permission denied for user {request.user} in ShareObjectsView: {e}")
+            messages.error(request, gettext("You don't have permission to share one or more selected objects."))
+            return self.get(request)
+
+        except ValidationError as e:
+            logger.info(f"Validation error in ShareObjectsView for user {request.user}: {e}")
+            messages.error(request, gettext("Invalid data provided. Please check your selections."))
+            return self.get(request)
+
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in ShareObjectsView for user {request.user}: {e}",
+                exc_info=True
+            )
+            messages.error(request, gettext("An unexpected error occurred while sharing objects."))
+            return self.get(request)
 
     def _get_selected_friends(self, request) -> Sequence[User]:
         """Get selected friends from the request.
