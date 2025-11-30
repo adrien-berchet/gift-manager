@@ -38,14 +38,15 @@
     {% endfor %},
     {
         name: '{% trans "Actions"|escapejs %}',
-            sort: false,
-                formatter: GridUtils.actionButtonsFormatter({
-                    details: '/{{ LANGUAGE_CODE }}/events/{id}/',
-                    edit: '/{{ LANGUAGE_CODE }}/events/{id}/edit/',
-                    delete: '/{{ LANGUAGE_CODE }}/events/{id}/delete/'
-                }, ['details', 'edit', 'delete'], {{ column_names| length }})
-            }
-        ];
+        width: '160px',
+        sort: false,
+        formatter: GridUtils.actionButtonsFormatter({
+            details: '/{{ LANGUAGE_CODE }}/events/{id}/',
+            edit: '/{{ LANGUAGE_CODE }}/events/{id}/edit/',
+            delete: '/{{ LANGUAGE_CODE }}/events/{id}/delete/'
+        }, ['details', 'edit', 'delete'], {{ column_names| length }})
+    }
+    ];
 
     // Initialize Grid.js
     GridUtils.initGrid('event-grid', columns, data, {

@@ -37,16 +37,16 @@
 
     // Initialize Grid.js
     GridUtils.initGrid('gift-grid', [
-        { name: '{{ column_names.name|escapejs }}', width: '25%' },
-        { name: '{{ column_names.comment|escapejs }}', width: '35%' },
+        { name: '{{ column_names.name|escapejs }}', width: '30%' },
+        { name: '{{ column_names.comment|escapejs }}', width: '45%' },
         {
             name: '{{ column_names.tags|escapejs }}',
-            width: '20%',
+            width: '25%',
             formatter: GridUtils.badgeFormatter('/{{ LANGUAGE_CODE }}/gift_tags/{id}/')
         },
         {
             name: '{% trans "Actions"|escapejs %}',
-            width: '20%',
+            width: '200px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
                 give: '/{{ LANGUAGE_CODE }}/gifts/{id}/add_relation/',
