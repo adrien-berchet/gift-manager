@@ -38,13 +38,12 @@
 
     // Initialize Grid.js
     const grid = GridUtils.initGrid('person-grid', [
-        { id: 'first_name', name: '{{ column_names.first_name|escapejs }}', width: '20%' },
-        { id: 'family_name', name: '{{ column_names.family_name|escapejs }}', width: '20%' },
-        { id: 'email', name: '{{ column_names.email_address|escapejs }}', width: '25%' },
+        { id: 'first_name', name: '{{ column_names.first_name|escapejs }}' },
+        { id: 'family_name', name: '{{ column_names.family_name|escapejs }}' },
+        { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
         {
             id: 'groups',
             name: '{{ column_names.groups|escapejs }}',
-            width: '35%',
             formatter: GridUtils.multiLinkFormatter('/{{ LANGUAGE_CODE }}/person_groups/{id}/')
         },
         {

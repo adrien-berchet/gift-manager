@@ -37,11 +37,10 @@
 
     // Initialize Grid.js
     GridUtils.initGrid('gift-grid', [
-        { name: '{{ column_names.name|escapejs }}', width: '30%' },
-        { name: '{{ column_names.comment|escapejs }}', width: '45%' },
+        { name: '{{ column_names.name|escapejs }}' },
+        { name: '{{ column_names.comment|escapejs }}' },
         {
             name: '{{ column_names.tags|escapejs }}',
-            width: '25%',
             formatter: GridUtils.badgeFormatter('/{{ LANGUAGE_CODE }}/gift_tags/{id}/')
         },
         {
