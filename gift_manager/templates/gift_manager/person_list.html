@@ -4,79 +4,72 @@
 {% load static %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
 {% endblock %}
 
 {% block title %}{{ translated_type }}{% endblock %}
 
 {% block content %}
 <h1 class="my-4">{{ translated_type }}</h1>
-<button onclick="location.href='{% url 'gift_manager:person_create' %}'">{% trans "Create new person" %}</button>
-{% load custom_filters %}
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            {% for col, name in column_names.items %}
-                {% if col == "groups" %}
-                    <th class="group-column-filter" style="position: relative;">
-                        {{ name }}
-                        <i class="fa fa-filter filter-icon" style="cursor:pointer; margin-left: 5px;"></i>
-                        <div class="dropdown-filter" style="display:none; position: absolute; top: 100%; right: 0; z-index: 1000;">
-                            {% for group in unique_groups %}
-                               <div>
-                                  <label>
-                                     <input type="checkbox" class="group-filter" value="{{ group.name }}"> {{ group.name }}
-                                  </label>
-                               </div>
-                            {% endfor %}
-                        </div>
-                    </th>
-                {% else %}
-                    <th>{{ name }}</th>
-                {% endif %}
-            {% endfor %}
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in data %}
-            <tr>
-                {% for col, name in column_names.items %}
-                    {% if col != "groups" %}
-                        <td>{{ item|get_item:col|replace_none:"" }}</td>
-                    {% else %}
-                        <td data-search="{% if item.groups_info %}{% for group in item.groups_info %}{{ group.name }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}">
-                            {% if item.groups_info %}
-                                {% for group in item.groups_info %}
-                                    <a href="{% url 'gift_manager:person_group_detail' group.id %}">{{ group.name }}</a>{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                        </td>
-                    {% endif %}
-                {% endfor %}
-                <td style="white-space: nowrap;">
-                    <a href="{% url 'gift_manager:person_relation_create' item.person_id %}" class="btn btn-primary btn-sm" data-toggle="tooltip" title="{% trans 'Give' %}"><i class="fas fa-hand-holding-heart"></i></a>
-                    <a href="{% url 'gift_manager:person_detail' item.person_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
-                    <a href="{% url 'gift_manager:person_edit' item.person_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
-                    <a href="{% url 'gift_manager:person_delete' item.person_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary">{% trans "Create new person" %}</a>
+
+<!-- Grid.js container -->
+<div id="person-grid"></div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
-{% include "gift_manager/includes/datatables-translations.html" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
 <script>
-    $(document).ready(function() {
-        $('#data-table').initDataTableFilters({
-            order: [[0, 'asc']],
-            checkboxSelector: '.group-filter',
-            thFilterClass: 'group-column-filter',
-            language: dataTablesTranslations
-        });
+    {% load custom_filters %}
+    (function () {
+        // Prepare data for Grid.js
+        const data = [
+            {% for item in data %}
+    [
+        "{{ item.first_name|escapejs }}",
+        "{{ item.family_name|escapejs }}",
+        "{{ item.email_address|default:''|escapejs }}",
+        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
+    "{{ item.person_id }}"
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+            ];
+
+    // Initialize Grid.js
+    const grid = GridUtils.initGrid('person-grid', [
+        { id: 'first_name', name: '{{ column_names.first_name|escapejs }}' },
+        { id: 'family_name', name: '{{ column_names.family_name|escapejs }}' },
+        { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
+        {
+            id: 'groups',
+            name: '{{ column_names.groups|escapejs }}',
+            formatter: GridUtils.multiLinkFormatter('/{{ LANGUAGE_CODE }}/person_groups/{id}/')
+        },
+        {
+            id: 'actions',
+            name: '{% trans "Actions"|escapejs %}',
+            width: '200px',
+            sort: false,
+            formatter: GridUtils.actionButtonsFormatter({
+                give: '/{{ LANGUAGE_CODE }}/persons/{id}/add_relation/',
+                details: '/{{ LANGUAGE_CODE }}/persons/{id}/',
+                edit: '/{{ LANGUAGE_CODE }}/persons/{id}/edit/',
+                delete: '/{{ LANGUAGE_CODE }}/persons/{id}/delete/'
+            }, ['give', 'details', 'edit', 'delete'], 4) // idField is at index 4
+        }
+    ], data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
     });
+
+    // Setup filter dropdown UI
+    GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
+
+    // Setup custom group filter
+    GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
+    }) ();
 </script>
 {% endblock %}

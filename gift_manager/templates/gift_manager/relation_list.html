@@ -4,129 +4,136 @@
 {% load static %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
 {% endblock %}
 
 {% block title %}{{ translated_type }}{% endblock %}
 
 {% block content %}
 <h1 class="my-4">{{ translated_type }}</h1>
-<button onclick="location.href='{% url 'gift_manager:relation_create' %}'">{% trans "Create new gifting" %}</button>
-{% load custom_filters %}
-<table id="data-table" class="table table-striped" style="position: relative;">
-    <thead>
-        <tr>
-            {% for col, name in column_names.items %}
-                {% if col == "status__status" %}
-                    <th class="status-column-filter" style="position: relative;">
-                        {{ name }}
-                        <i class="fa fa-filter filter-icon" style="cursor:pointer; margin-left: 5px;"></i>
-                        <div class="dropdown-filter" style="display:none; position: absolute; top: 100%; right: 0; z-index: 1000;">
-                            {% for stat in relation_statuses %}
-                               <div>
-                                  <label>
-                                     <input type="checkbox" class="status-filter" value="{{ stat.status }}"> {{ stat.status }}
-                                  </label>
-                               </div>
-                            {% endfor %}
-                        </div>
-                    </th>
-                {% else %}
-                    <th>{{ name }}</th>
-                {% endif %}
-            {% endfor %}
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in data %}
-            <tr>
-                {% for col, name in column_names.items %}
-                    {% if col == "gift__name" %}
-                        <td>
-                            {% if item.gift__gift_id %}
-                                <a href="{% url 'gift_manager:gift_detail' item.gift__gift_id %}">{{ item.gift__name }}</a>
-                            {% else %}
-                                {{ item.gift__name|default:"" }}
-                            {% endif %}
-                        </td>
-                    {% elif col == "related_object" %}
-                        <td>
-                            {% if item.person__person_id %}
-                                <a href="{% url 'gift_manager:person_detail' item.person__person_id %}">{{ item.related_object }}</a>
-                            {% elif item.group__group_id %}
-                                <a href="{% url 'gift_manager:person_group_detail' item.group__group_id %}">{{ item.related_object }}</a>
-                            {% else %}
-                                $$ {{ item.related_object|default:"" }} $$
-                            {% endif %}
-                        </td>
-                    {% elif col == "event" %}
-                        <td>
-                            {% if item.event__event_id %}
-                                <a href="{% url 'gift_manager:event_detail' item.event__event_id %}">{{ item.event__name }}</a>
-                            {% else %}
-                                {{ item.event__name|default:"" }}
-                            {% endif %}
-                        </td>
-                    {% elif col == "status__status" %}
-                        <td data-order="{{ item.status }}" data-search="{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status }}{% endif %}{% endfor %}">
-                            <select class="relation_status" data-relation-id="{{ item.relation_id }}">
-                                {% for stat in relation_statuses %}
-                                    <option value="{{ stat.pk }}" {% if item.status == stat.pk %}selected{% endif %}>
-                                        {{ stat.status }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </td>
-                    {% else %}
-                        <td>{{ item|get_item:col|replace_none:"" }}</td>
-                    {% endif %}
-                {% endfor %}
-                <td style="white-space: nowrap;">
-                        <a href="{% url 'gift_manager:relation_detail' item.relation_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}"><i class="fas fa-eye"></i></a>
-                        <a href="{% url 'gift_manager:relation_edit' item.relation_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}"><i class="fas fa-edit"></i></a>
-                        <a href="{% url 'gift_manager:relation_delete' item.relation_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}"><i class="fas fa-trash"></i></a>
-                </td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary">{% trans "Create new gifting" %}</a>
+
+<!-- Grid.js container -->
+<div id="relation-grid"></div>
+
+<!-- Hidden template for status select partial -->
+<div id="status-templates" style="display: none;">
+    {% for item in data %}
+    <div data-relation-id="{{ item.relation_id }}">
+        {% include "gift_manager/includes/status_select_partial.html" with relation_id=item.relation_id
+        current_status=item.status %}
+    </div>
+    {% endfor %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/datatables-filters.js' %}"></script>
-{% include "gift_manager/includes/datatables-translations.html" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
 <script>
-    $(document).ready(function() {
-        $('#data-table').initDataTableFilters({
-            order: [[2, 'asc']],
-            filterSelector: '.filter-icon',
-            dropdownSelector: '.dropdown-filter',
-            checkboxSelector: '.status-filter',
-            thFilterClass: 'status-column-filter',
-            language: dataTablesTranslations
-        });
+    {% load custom_filters %}
+    (function () {
+        // Prepare data for Grid.js
+        const data = [
+            {% for item in data %}
+    [
+        {% if item.gift__gift_id %}
+    { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}" },
+    {% else %}
+    null,
+        {% endif %}
+    {
+        text: "{{ item.related_object|escapejs }}",
+            personId: {% if item.person__person_id %} "{{item.person__person_id}}"{% else %} null{% endif %},
+        groupId: {% if item.group__group_id %} "{{item.group__group_id}}"{% else %} null{% endif %}
+    },
+    {% if item.event__event_id %}
+    { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}" },
+    {% else %}
+    null,
+        {% endif %}
+    "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
+        "{{item.relation_id}}"
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+        ];
 
-        // Event handler for status changes in the table
-        $('.relation_status').on('change', function(){
-            var relationId = $(this).data('relation-id');
-            var newStatus = $(this).val();
-            $.ajax({
-                type: "POST",
-                url: "{% url 'gift_manager:relation_status_update' %}",
-                data: {
-                    'relation_id': relationId,
-                    'new_status': newStatus,
-                    'csrfmiddlewaretoken': '{{ csrf_token }}'
-                },
-                success: function(response) {
-                    console.log("Status updated");
-                },
-                error: function() {
-                    alert("Error: Relation status could not be updated.");
+    // Initialize Grid.js
+    const grid = GridUtils.initGrid('relation-grid', [
+        {
+            name: '{{ column_names.gift__name|escapejs }}',
+            formatter: function (cell) {
+                if (!cell || !cell.id) return '';
+                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/gifts/' + cell.id + '/">' + cell.name + '</a>');
+            }
+        },
+        {
+            name: '{{ column_names.related_object|escapejs }}',
+            formatter: function (cell) {
+                if (!cell || !cell.text) return '';
+
+                const text = cell.text;
+                const personId = cell.personId;
+                const groupId = cell.groupId;
+
+                if (personId) {
+                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/persons/' + personId + '/">' + text + '</a>');
+                } else if (groupId) {
+                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/person_groups/' + groupId + '/">' + text + '</a>');
                 }
-            });
-        });
+                return text;
+            }
+        },
+        {
+            name: '{{ column_names.event|escapejs }}',
+            formatter: function (cell) {
+                if (!cell || !cell.id) return '';
+                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/events/' + cell.id + '/">' + cell.name + '</a>');
+            }
+        },
+        {
+            name: '{{ column_names.status__status|escapejs }}',
+            formatter: function (cell, row) {
+                // Get relation ID from the first cell's array index
+                // We need to find the relation ID from the visible cells
+                // Since we can't access row index, we'll use the status-templates approach
+                const template = document.querySelector('#status-templates [data-relation-id]');
+                if (!template) return cell;
+
+                // Find the matching template by iterating through all of them
+                const templates = document.querySelectorAll('#status-templates [data-relation-id]');
+                for (let i = 0; i < templates.length; i++) {
+                    const t = templates[i];
+                    const statusText = t.textContent.trim().split('\n').filter(s => s.trim()).pop();
+                    if (statusText && cell.includes(statusText.trim())) {
+                        return gridjs.html(t.innerHTML);
+                    }
+                }
+                return cell;
+            }
+        },
+        {
+            name: '{% trans "Actions"|escapejs %}',
+            width: '160px',
+            sort: false,
+            formatter: GridUtils.actionButtonsFormatter({
+                details: '/{{ LANGUAGE_CODE }}/relations/{id}/',
+                edit: '/{{ LANGUAGE_CODE }}/relations/{id}/edit/',
+                delete: '/{{ LANGUAGE_CODE }}/relations/{id}/delete/'
+            }, ['details', 'edit', 'delete'], 4)
+        }
+    ], data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
     });
+
+    // Setup filter dropdown UI
+    GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
+
+    // Setup custom status filter
+    GridUtils.setupCustomColumnFilter(grid, 3, '.status-filter');
+    }) ();
 </script>
 {% endblock %}

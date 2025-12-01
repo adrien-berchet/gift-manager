@@ -30,7 +30,6 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "test-secret-key-for-developmen
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
 
-ALLOWED_HOSTS = ["127.0.0.1", ".vercel.app"]
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".vercel.app", "gift-manager.vercel.app"]
 INTERNAL_IPS = [
     "127.0.0.1",

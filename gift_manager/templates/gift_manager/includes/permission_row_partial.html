@@ -1,0 +1,29 @@
+{% load i18n %}
+
+{# Permission row for a single user - used for HTMX updates #}
+<tr class="{% if is_shared %}shared-user-row{% else %}unshared-user-row{% endif %}" data-user-id="{{ shared_user.id }}">
+    <td class="align-middle">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-user me-2 text-muted"></i>
+            {{ shared_user.username }}
+        </div>
+    </td>
+    <td class="align-middle">
+        <form method="post" id="perm_{{ shared_user.id }}" class="permission-form" data-user-id="{{ shared_user.id }}">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ shared_user.id }}">
+            <select name="permission" class="form-select permission-select" hx-post="{{ update_url }}" hx-swap="none" hx-trigger="change" hx-include="closest form">
+                <option value="not_shared" {% if not is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
+                {% for level in permission_levels %}
+                <option value="{{ level.value }}" {% if is_shared and level.value == permission %}selected{% endif %}>
+                    {% if level.value <= 10 %}👁️
+                    {% elif level.value <= 20 %}✏️
+                    {% else %}👑
+                    {% endif %}
+                    {{ level.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </td>
+</tr>

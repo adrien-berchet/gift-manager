@@ -1,0 +1,18 @@
+{% load i18n %}
+
+{# Status selector for a single relation - used for HTMX updates #}
+<form id="status-form-{{ relation_id }}" style="display: inline;" hx-post="{% url 'gift_manager:relation_status_update' %}" hx-trigger="change from:select"
+    hx-target="#status-form-{{ relation_id }}" hx-swap="outerHTML" hx-indicator="#spinner-{{ relation_id }}">
+    {% csrf_token %}
+    <input type="hidden" name="relation_id" value="{{ relation_id }}">
+    <select class="relation_status form-select form-select-sm" name="new_status" id="status-select-{{ relation_id }}">
+        {% for stat in relation_statuses %}
+        <option value="{{ stat.pk }}" {% if current_status == stat.pk %}selected{% endif %}>
+            {{ stat.status }}
+        </option>
+        {% endfor %}
+    </select>
+    <span id="spinner-{{ relation_id }}" class="htmx-indicator" style="display: inline-block; margin-left: 5px;">
+        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+    </span>
+</form>

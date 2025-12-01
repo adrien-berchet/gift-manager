@@ -1,0 +1,61 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% load static %}
+{% load grid_tags %}
+
+{% block title %}{{ translated_type }}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{{ translated_type }}</h1>
+
+{# Create button - can be overridden in child templates #}
+{% block create_button %}
+<a href="{% url create_url %}" class="btn btn-primary mb-3">
+    <i class="fas fa-plus me-2"></i>{% trans "Create new" %} {{ object_type|lower }}
+</a>
+{% endblock %}
+
+{# Grid container - unique ID per model type #}
+<div id="{{ grid_id }}" class="mt-3"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
+<script>
+    {% load custom_filters %}
+    (function () {
+        {% block grid_data_preparation %}
+        {# This block can be overridden for custom data preparation #}
+        const data = {{ grid_data|safe }};
+        {% endblock %}
+
+        {% block grid_columns_definition %}
+        {# This block can be overridden for custom column definitions #}
+        const columns = {{ grid_columns|safe }};
+        {% endblock %}
+
+        {% block grid_initialization %}
+        {# Initialize Grid.js with configuration #}
+        const grid = GridUtils.initGrid('{{ grid_id }}', columns, data, {
+            pagination: {
+                enabled: true,
+                limit: {{ pagination_limit|default:10 }}
+            },
+            search: {
+                enabled: true
+            },
+            sort: {
+                enabled: true
+            }
+        });
+        {% endblock %}
+
+        {% block grid_custom_setup %}
+        {# Additional grid setup can go here (filters, etc.) #}
+        {% endblock %}
+    })();
+</script>
+{% endblock %}

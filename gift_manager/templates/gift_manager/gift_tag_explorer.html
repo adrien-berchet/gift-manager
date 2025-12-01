@@ -4,7 +4,7 @@
 {% block content %}
 <div class="container">
     <h1>{% trans "Explore Gift Tags" %}</h1>
-    <button onclick="location.href='{% url 'gift_manager:gift_tag_create' %}'">{% trans "Create new gift tag" %}</button>
+    <a href="{% url 'gift_manager:gift_tag_create' %}" class="btn btn-primary">{% trans "Create new gift tag" %}</a>
 
     <!-- Breadcrumbs -->
     <nav aria-label="breadcrumb" class="mt-3">
@@ -13,15 +13,15 @@
                 <a href="{% url 'gift_manager:gift_tag_explorer' %}">{% trans "All tags" %}</a>
             </li>
             {% for tag in breadcrumbs %}
-                {% if forloop.last %}
-                    <li class="breadcrumb-item active" aria-current="page">{{ tag.name }}</li>
-                {% else %}
-                    <li class="breadcrumb-item">
-                        <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}">
-                            {{ tag.name }}
-                        </a>
-                    </li>
-                {% endif %}
+            {% if forloop.last %}
+            <li class="breadcrumb-item active" aria-current="page">{{ tag.name }}</li>
+            {% else %}
+            <li class="breadcrumb-item">
+                <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}">
+                    {{ tag.name }}
+                </a>
+            </li>
+            {% endif %}
             {% endfor %}
         </ol>
     </nav>
@@ -32,27 +32,28 @@
             <div class="card">
                 <div class="card-header">
                     {% if selected_tag %}
-                        <h5>{{ selected_tag.name }} - {% trans "Children tags" %}</h5>
+                    <h5>{{ selected_tag.name }} - {% trans "Children tags" %}</h5>
                     {% else %}
-                        <h5>{% trans "Root tags" %}</h5>
+                    <h5>{% trans "Root tags" %}</h5>
                     {% endif %}
                 </div>
                 <div class="card-body">
                     {% if root_tags or child_tags %}
-                        <ul class="list-group">
-                            {% for tag in root_tags|default:child_tags %}
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}{% if selected_tag %}?from_tag={{ selected_tag.tag_id }}{% endif %}">
-                                        {{ tag.name }}
-                                    </a>
-                                    <span class="badge bg-primary rounded-pill">
-                                        {{ tag.gifts.count }}
-                                    </span>
-                                </li>
-                            {% endfor %}
-                        </ul>
+                    <ul class="list-group">
+                        {% for tag in root_tags|default:child_tags %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <a
+                                href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}{% if selected_tag %}?from_tag={{ selected_tag.tag_id }}{% endif %}">
+                                {{ tag.name }}
+                            </a>
+                            <span class="badge bg-primary rounded-pill">
+                                {{ tag.gifts.count }}
+                            </span>
+                        </li>
+                        {% endfor %}
+                    </ul>
                     {% else %}
-                        <p>{% trans "No tags found in this category." %}</p>
+                    <p>{% trans "No tags found in this category." %}</p>
                     {% endif %}
                 </div>
             </div>
@@ -63,47 +64,49 @@
             <div class="card">
                 <div class="card-header">
                     {% if selected_tag %}
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">{% trans "Gifts tagged as" %} "{{ selected_tag.name }}"</h5>
-                            <a href="{% url 'gift_manager:gift_tag_detail' pk=selected_tag.tag_id %}" class="btn btn-sm btn-primary">
-                                {% trans "Details" %}
-                            </a>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{% trans "Gifts tagged as" %} "{{ selected_tag.name }}"</h5>
+                        <a href="{% url 'gift_manager:gift_tag_detail' pk=selected_tag.tag_id %}"
+                            class="btn btn-sm btn-primary">
+                            {% trans "Details" %}
+                        </a>
+                    </div>
                     {% else %}
-                        <h5 class="mb-0">{% trans "Gifts with no tag" %}</h5>
+                    <h5 class="mb-0">{% trans "Gifts with no tag" %}</h5>
                     {% endif %}
                 </div>
                 <div class="card-body">
                     {% if gifts %}
-                        <div class="row">
-                            {% for gift in gifts %}
-                                <div class="col-md-6 mb-3">
-                                    <div class="card h-100">
-                                        <div class="card-body">
-                                            <h5 class="card-title">{{ gift.name }}</h5>
-                                            {% if gift.comment %}
-                                                <p class="card-text">{{ gift.comment|truncatewords:20 }}</p>
-                                            {% endif %}
-                                            <div class="mt-2">
-                                                {% for tag in gift.tags.all %}
-                                                    <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}"
-                                                       class="badge bg-secondary text-decoration-none">
-                                                        {{ tag.name }}
-                                                    </a>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                        <div class="card-footer">
-                                            <a href="{% url 'gift_manager:gift_detail' pk=gift.gift_id %}" class="btn btn-sm btn-primary">
-                                                {% trans "Detail" %}
-                                            </a>
-                                        </div>
+                    <div class="row">
+                        {% for gift in gifts %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ gift.name }}</h5>
+                                    {% if gift.comment %}
+                                    <p class="card-text">{{ gift.comment|truncatewords:20 }}</p>
+                                    {% endif %}
+                                    <div class="mt-2">
+                                        {% for tag in gift.tags.all %}
+                                        <a href="{% url 'gift_manager:gift_tag_explorer_with_tag' pk=tag.tag_id %}"
+                                            class="badge bg-secondary text-decoration-none">
+                                            {{ tag.name }}
+                                        </a>
+                                        {% endfor %}
                                     </div>
                                 </div>
-                            {% endfor %}
+                                <div class="card-footer">
+                                    <a href="{% url 'gift_manager:gift_detail' pk=gift.gift_id %}"
+                                        class="btn btn-sm btn-primary">
+                                        {% trans "Detail" %}
+                                    </a>
+                                </div>
+                            </div>
                         </div>
+                        {% endfor %}
+                    </div>
                     {% else %}
-                        <p>{% trans "No gifts found with this tag." %}</p>
+                    <p>{% trans "No gifts found with this tag." %}</p>
                     {% endif %}
                 </div>
             </div>

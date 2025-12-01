@@ -1,6 +1,7 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+{% load static %}
 {% block title %}{{ action }} {{ translated_type }}{% endblock %}
 
 {% block content %}
@@ -18,11 +19,13 @@
         </div>
         <div class="card-body">
           <div class="alert alert-info mb-3">
-            <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to share with." %}</p>
+            <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to
+              share with." %}</p>
             <ul class="mb-1">
               <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
               <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
-              <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the object" %}</li>
+              <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the
+                object" %}</li>
             </ul>
           </div>
 
@@ -48,8 +51,12 @@
                       <option value="" selected>🚫 {% trans "Not shared" %}</option>
                       {% for level in permission_levels %}
                       <option value="{{ level.value }}">
-                        {% if level.value <= 10 %}👁️ {% elif level.value <= 20 %}✏️ {% else %}👑 {% endif %}{{ level.label }}
-                      </option>
+                          {% if level.value <= 10 %}👁️
+                          {% elif level.value <= 20 %}
+                          ✏️{% else %}
+                          👑{% endif %}
+                          {{ level.label }}
+                        </option>
                       {% endfor %}
                     </select>
                   </td>
@@ -99,86 +106,12 @@
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
 <script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap5.min.js"></script>
 
+<!-- Notification System -->
+<script src="{% static 'gift_manager/notifications.js' %}"></script>
+
 {% include "gift_manager/includes/datatables-translations.html" %}
 
 <script>
-  // Create a container for notifications
-  let notificationsContainer;
-  function createNotificationsContainer() {
-    let container = document.getElementById('notifications-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.id = 'notifications-container';
-      container.style.position = 'fixed';
-      container.style.top = '20px';
-      container.style.right = '20px';
-      container.style.zIndex = '1050';
-      container.style.maxWidth = '400px';
-      document.body.appendChild(container);
-    }
-    return container;
-  }
-
-  function showNotification(message, type = 'success', duration = null) {
-    // Determine the duration based on the type if not specified
-    if (duration === null) {
-      // Default durations according to notification type
-      switch(type) {
-        case 'success': duration = 5000; break; // 5 seconds for successes
-        case 'info': duration = 6000; break;    // 6 seconds for info
-        case 'warning': duration = 8000; break; // 8 seconds for warnings
-        case 'danger': duration = 10000; break; // 10 seconds for errors
-        default: duration = 5000;               // 5 seconds by default
-      }
-    }
-
-    // Create a notification div
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show`;
-    notification.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-    notification.style.marginBottom = '10px';
-    notification.style.opacity = '0';
-    notification.style.transition = 'opacity 0.3s';
-
-    // Add the close button and the message in separate elements
-    notification.innerHTML = `
-      <div class="d-flex justify-content-between align-items-center">
-        <div>${message}</div>
-        <button type="button" class="btn-close ms-3" aria-label="Close"></button>
-      </div>
-    `;
-
-    // Add to the notifications container
-    notificationsContainer.appendChild(notification);
-
-    // Force rendering before adding opacity
-    setTimeout(() => {
-      notification.style.opacity = '1';
-    }, 10);
-
-    // Delete after specified duration
-    let timeoutId;
-    if (duration > 0) {
-      timeoutId = setTimeout(() => {
-        fadeOutAndRemove(notification);
-      }, duration);
-    }
-
-    // Add an event handler for the close button
-    const closeButton = notification.querySelector('.btn-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', function() {
-        if (timeoutId) clearTimeout(timeoutId); // Cancel the auto-delete delay
-        fadeOutAndRemove(notification);
-      });
-    }
-
-    // Function to fade out and smoothly remove the notification
-    function fadeOutAndRemove(element) {
-      element.style.opacity = '0';
-      setTimeout(() => element.remove(), 300);
-    }
-  }
 
   // Function to initialize DataTables
   function initializeDataTable() {
@@ -194,7 +127,7 @@
       lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "{% trans 'All' %}"]],
       pageLength: 5,
       order: [[0, 'asc']],  // Default sort on user column
-      initComplete: function() {
+      initComplete: function () {
         // Apply specific styles after initialization
         $('.dataTables_filter input').addClass('form-control form-control-sm');
         $('.dataTables_length select').addClass('form-select form-select-sm ms-1 me-1');
@@ -203,7 +136,7 @@
 
     // Selection change event
     document.querySelectorAll('.permission-select').forEach(select => {
-      select.addEventListener('change', function() {
+      select.addEventListener('change', function () {
         const row = this.closest('tr');
         const userId = row.dataset.userId;
         const selectedValue = this.value;
@@ -260,10 +193,8 @@
   }
 
   // Initialization on page load
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     try {
-      // Create the notifications container
-      notificationsContainer = createNotificationsContainer();
 
       // Initialize DataTable if the table exists
       if (document.getElementById('sharing-datatable')) {
@@ -274,7 +205,7 @@
           const selectAllBtn = document.createElement('button');
           selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-3';
           selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>{% trans "Select all as Viewers" %}';
-          selectAllBtn.onclick = function() {
+          selectAllBtn.onclick = function () {
             document.querySelectorAll('#sharing-datatable tbody tr').forEach(row => {
               const select = row.querySelector('.permission-select');
               if (select) {
@@ -323,14 +254,16 @@
 
 <style>
   .fixed-action-bar {
-    position: fixed !important; /* Important override */
+    position: fixed !important;
+    /* Important override */
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
     background-color: rgba(248, 249, 250, 0.95);
     padding: 15px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 100000 !important; /* Ultra high z-index */
+    z-index: 100000 !important;
+    /* Ultra high z-index */
     border-top: 2px solid #007bff;
   }
 
@@ -425,9 +358,17 @@
 
   /* Animation for the share counter */
   @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.05);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
 
   #share-counter {
