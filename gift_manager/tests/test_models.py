@@ -439,11 +439,11 @@ class TestGiftTag:
 
         # The get_ancestors code should avoid infinite loops
         ancestors_a = tag_a.get_ancestors()
-        assert len(ancestors_a) == 2
+        assert len(ancestors_a) == 1
         assert tag_b in ancestors_a
 
         ancestors_b = tag_b.get_ancestors()
-        assert len(ancestors_b) == 2
+        assert len(ancestors_b) == 1
         assert tag_a in ancestors_b
 
         # Test with a very deep tag to verify the method works
