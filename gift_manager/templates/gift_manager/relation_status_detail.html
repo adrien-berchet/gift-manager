@@ -75,8 +75,8 @@
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
             pagination: { enabled: true, limit: 10 },
-            search: { enabled: true },
-            sort: { enabled: true, multiColumn: false }
+            search: true,
+            sort: true
         });
         {% endif %}
     })();

@@ -90,8 +90,8 @@
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
             pagination: { enabled: true, limit: 10 },
-            search: { enabled: true },
-            sort: { enabled: true, multiColumn: false }
+            search: true,
+            sort: true
         });
         {% endif %}
 
@@ -140,8 +140,8 @@
 
         GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
             pagination: { enabled: true, limit: 5 },
-            search: { enabled: false },
-            sort: { enabled: false }
+            search: false,
+            sort: false
         });
         {% endif %}
     })();
