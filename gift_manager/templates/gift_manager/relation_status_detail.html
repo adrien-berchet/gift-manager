@@ -9,7 +9,11 @@
 <p><strong>{% trans "Status" %}:</strong> {{ status.status }}</p>
 
 <h2 class="my-4">{% trans "Giftings with this status" %}</h2>
+{% if relations %}
 <div id="relations-grid" class="mt-3"></div>
+{% else %}
+<p class="text-center text-muted">{% trans "No giftings with this status" %}</p>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

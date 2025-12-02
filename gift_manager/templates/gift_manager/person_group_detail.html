@@ -46,13 +46,21 @@
         <a href="{% url 'gift_manager:add_person_group_person' group.group_id %}" class="btn btn-primary mb-3">
             {% trans "Add persons" %}
         </a>
+        {% if persons %}
         <div id="persons-grid" class="mt-3"></div>
+        {% else %}
+        <p class="text-center text-muted">{% trans "No person in this group" %}</p>
+        {% endif %}
     </div>
     <div class="tab-pane fade" id="gifts-list" role="tabpanel" aria-labelledby="gifts-tab">
         <a href="{% url 'gift_manager:person_group_relation_create' group.group_id %}" class="btn btn-primary mb-3">
             {% trans "Offer a gift to this group" %}
         </a>
+        {% if gifts %}
         <div id="gifts-grid" class="mt-3"></div>
+        {% else %}
+        <p class="text-center text-muted">{% trans "No gift for this group" %}</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
