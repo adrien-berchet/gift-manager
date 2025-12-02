@@ -33,11 +33,14 @@
 
     /**
      * Create action buttons formatter for CRUD operations
+     *
+     * @param urls Object with URL templates (e.g., {details: '/persons/{id}/'})
+     * @param actions Array of action names to display
      */
-    function actionButtonsFormatter(urls, actions, idField = 0) {
+    function actionButtonsFormatter(urls, actions) {
         return function (cell, row) {
-            // Get the ID from the specified cell index
-            const id = row._cells[idField].data;
+            // The cell parameter contains the ID value for this column
+            const id = cell;
 
             const buttons = [];
 
