@@ -51,7 +51,7 @@
         const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const updateStatusUrl = "{% url 'gift_manager:update_relation_status' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
         // Gifts Grid
@@ -88,28 +88,24 @@
                     const statusPk = row.cells[4].data;
                     const relationId = row.cells[7].data;
                     return gridjs.html(`
-                        <select
-                            class="form-select form-select-sm status-select"
-                            hx-post="${updateStatusUrl.replace('__ID__', relationId)}"
-                            hx-trigger="change"
-                            hx-target="#status-cell-${relationId}"
-                            hx-swap="outerHTML"
-                        >
-                            {% for status in relation_statuses %}
-                            <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                {{ status.status }}
-                            </option>
-                            {% endfor %}
-                        </select>
+                        <form id="status-form-${relationId}" style="display: inline;"
+                              hx-post="${updateStatusUrl}"
+                              hx-trigger="change from:select"
+                              hx-target="#status-form-${relationId}"
+                              hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="relation_id" value="${relationId}">
+                            <select class="form-select form-select-sm" name="new_status">
+                                {% for status in relation_statuses %}
+                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
+                                    {{ status.status }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
                     `);
                 },
-                sort: {
-                    compare: (a, b) => {
-                        const aPk = parseInt(a.split('|')[1]);
-                        const bPk = parseInt(b.split('|')[1]);
-                        return aPk - bPk;
-                    }
-                }
+                sort: false
             },
             { name: "{% trans 'Event' %}", data: (row) => row[5] },
             { name: "{% trans 'Due Date' %}", data: (row) => row[6] },
