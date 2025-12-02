@@ -23,36 +23,7 @@
 <div class="mt-4">
     <h5>{% trans "Shared with:" %}</h5>
     {% if shared_users %}
-    <table id="shares-table" class="table table-striped">
-        <thead>
-            <tr>
-                <th>{% trans "Username" %}</th>
-                <th>{% trans "Permission" %}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for shared_user in shared_users %}
-            <tr>
-                <td>{{ shared_user.user.username }}</td>
-                <td>
-                    {% if shared_user.permission <= 10 %}
-                        <span class="badge bg-primary" title="{% trans 'Can only view this object' %}">
-                        <i class="fas fa-eye me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% elif shared_user.permission <= 20 %}
-                        <span class="badge bg-success" title="{% trans 'Can edit this object' %}">
-                        <i class="fas fa-edit me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark" title="{% trans 'Has full control over this object' %}">
-                        <i class="fas fa-crown me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div id="shares-grid" class="mt-3"></div>
     {% else %}
     <p>{% trans "This relation is not shared with any friend." %}</p>
     {% endif %}
@@ -69,18 +40,61 @@
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
 <script>
-    $(document).ready(function() {
-        // Initialize the DataTable for the shares table
+    (function() {
         {% if shared_users %}
-            $('#shares-table').DataTable({
-                paging: true,
-                pageLength: 5,
-                searching: false,
-                info: false,
-                lengthChange: false
-            });
+        // Shares Grid
+        const sharesData = [
+            {% for shared_user in shared_users %}
+            [
+                "{{ shared_user.user.username|escapejs }}",
+                "{{ shared_user.permission }}",
+                "{{ shared_user.permission_label|escapejs }}"
+            ],
+            {% endfor %}
+        ];
+
+        const sharesColumns = [
+            { name: "{% trans 'Username' %}" },
+            {
+                name: "{% trans 'Permission' %}",
+                formatter: (cell, row) => {
+                    const permission = parseInt(row.cells[1].data);
+                    const label = row.cells[2].data;
+
+                    let badgeClass = 'bg-primary';
+                    let icon = 'fa-eye';
+                    let title = "{% trans 'Can only view this object' %}";
+
+                    if (permission > 20) {
+                        badgeClass = 'bg-warning text-dark';
+                        icon = 'fa-crown';
+                        title = "{% trans 'Has full control over this object' %}";
+                    } else if (permission > 10) {
+                        badgeClass = 'bg-success';
+                        icon = 'fa-edit';
+                        title = "{% trans 'Can edit this object' %}";
+                    }
+
+                    return gridjs.html(`
+                        <span class="badge ${badgeClass}" title="${title}">
+                            <i class="fas ${icon} me-1"></i> ${label}
+                        </span>
+                    `);
+                }
+            }
+        ];
+
+        GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
+            pagination: { enabled: true, limit: 5 },
+            search: { enabled: false },
+            sort: { enabled: false }
+        });
         {% endif %}
-    });
+    })();
 </script>
 {% endblock %}

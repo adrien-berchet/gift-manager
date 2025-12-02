@@ -9,41 +9,65 @@
 <p><strong>{% trans "Status" %}:</strong> {{ status.status }}</p>
 
 <h2 class="my-4">{% trans "Giftings with this status" %}</h2>
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{% trans "Beneficiary" %}</th>
-            <th>{% trans "Gift" %}</th>
-            <th>{% trans "Comment" %}</th>
-            <th>{% trans "Event" %}</th>
-            <th>{% trans "Due Date" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for relation in relations %}
-            <tr>
-                {% if relation.person %}
-                <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
-                {% else %}
-                <td><a href="{% url 'gift_manager:person_group_detail' relation.group.group_id %}">{{ relation.group.name }}</a></td>
-                {% endif %}
-                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
-                <td>{{ relation.comment|default:"-" }}</td>
-                <td>{{ relation.event.name|default:"-" }}</td>
-                <td>{{ relation.due_date|replace_none:"-" }}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div id="relations-grid" class="mt-3"></div>
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
 <script>
-    $(document).ready(function() {
-        var order = [[1, 'asc']];  // Default order is descending by status
-        $('#data-table').DataTable({
-            "order": order
+    (function() {
+        // Relations Grid
+        const relationsData = [
+            {% for relation in relations %}
+            [
+                {% if relation.person %}"person"{% else %}"group"{% endif %},
+                {% if relation.person %}"{{ relation.person.person_id }}"{% else %}"{{ relation.group.group_id }}"{% endif %},
+                {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %}"{{ relation.group.name|escapejs }}"{% endif %},
+                "{{ relation.gift.gift_id }}",
+                "{{ relation.gift.name|escapejs }}",
+                "{{ relation.comment|default:'-'|escapejs }}",
+                "{{ relation.event.name|default:'-'|escapejs }}",
+                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %}
+            ],
+            {% endfor %}
+        ];
+
+        const relationsColumns = [
+            {
+                name: "{% trans 'Beneficiary' %}",
+                formatter: (cell, row) => {
+                    const type = row.cells[0].data;
+                    const id = row.cells[1].data;
+                    const name = row.cells[2].data;
+
+                    if (type === 'person') {
+                        return gridjs.html(`<a href="{% url 'gift_manager:person_detail' 'PERSON_ID' %}".replace('PERSON_ID', id)>${name}</a>`);
+                    } else {
+                        return gridjs.html(`<a href="{% url 'gift_manager:person_group_detail' 'GROUP_ID' %}".replace('GROUP_ID', id)>${name}</a>`);
+                    }
+                }
+            },
+            {
+                name: "{% trans 'Gift' %}",
+                formatter: (cell, row) => {
+                    const giftId = row.cells[3].data;
+                    const giftName = row.cells[4].data;
+                    return gridjs.html(`<a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)>${giftName}</a>`);
+                }
+            },
+            { name: "{% trans 'Comment' %}", data: (row) => row[5] },
+            { name: "{% trans 'Event' %}", data: (row) => row[6] },
+            { name: "{% trans 'Due Date' %}", data: (row) => row[7] }
+        ];
+
+        GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
+            pagination: { enabled: true, limit: 10 },
+            search: { enabled: true },
+            sort: { enabled: true, multiColumn: false }
         });
-    });
+    })();
 </script>
 {% endblock %}
