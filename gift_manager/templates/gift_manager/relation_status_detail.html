@@ -68,9 +68,9 @@
                     return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
-            { name: "{% trans 'Comment' %}", data: (row) => row[5] },
-            { name: "{% trans 'Event' %}", data: (row) => row[6] },
-            { name: "{% trans 'Due Date' %}", data: (row) => row[7] }
+            { name: "{% trans 'Comment' %}", formatter: (cell, row) => row.cells[5].data },
+            { name: "{% trans 'Event' %}", formatter: (cell, row) => row.cells[6].data },
+            { name: "{% trans 'Due Date' %}", formatter: (cell, row) => row.cells[7].data }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {

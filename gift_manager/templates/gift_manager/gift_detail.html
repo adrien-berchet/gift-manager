@@ -82,7 +82,7 @@
             },
             {
                 name: "{% trans 'Status' %}",
-                data: (row) => row[3],
+                formatter: (cell, row) => row.cells[3].data,
                 sort: {
                     compare: (a, b) => {
                         // Get status pk from the last column for proper sorting
@@ -90,7 +90,7 @@
                     }
                 }
             },
-            { name: "{% trans 'Due Date' %}", data: (row) => row[4] }
+            { name: "{% trans 'Due Date' %}", formatter: (cell, row) => row.cells[4].data }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
@@ -113,7 +113,7 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {

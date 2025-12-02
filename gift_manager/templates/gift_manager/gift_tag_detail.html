@@ -88,7 +88,7 @@
                     return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
-            { name: "{% trans 'Comment' %}", data: (row) => row[2] },
+            { name: "{% trans 'Comment' %}", formatter: (cell, row) => row.cells[2].data },
             {
                 name: "{% trans 'Actions' %}",
                 formatter: (cell, row) => {
@@ -132,7 +132,7 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {

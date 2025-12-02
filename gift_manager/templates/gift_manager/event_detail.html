@@ -84,8 +84,8 @@
                     return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
-            { name: "{% trans 'Status' %}", data: (row) => row[4] },
-            { name: "{% trans 'Due Date' %}", data: (row) => row[5] }
+            { name: "{% trans 'Status' %}", formatter: (cell, row) => row.cells[4].data },
+            { name: "{% trans 'Due Date' %}", formatter: (cell, row) => row.cells[5].data }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
@@ -108,7 +108,7 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {

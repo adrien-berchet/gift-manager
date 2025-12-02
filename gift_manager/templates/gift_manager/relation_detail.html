@@ -59,7 +59,7 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {

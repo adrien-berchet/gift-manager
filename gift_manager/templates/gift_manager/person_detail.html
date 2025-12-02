@@ -80,7 +80,10 @@
                     return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
-            { name: "{% trans 'Comment' %}", data: (row) => row[2] },
+            {
+                name: "{% trans 'Comment' %}",
+                formatter: (cell, row) => row.cells[2].data
+            },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
@@ -107,8 +110,14 @@
                 },
                 sort: false
             },
-            { name: "{% trans 'Event' %}", data: (row) => row[5] },
-            { name: "{% trans 'Due Date' %}", data: (row) => row[6] },
+            {
+                name: "{% trans 'Event' %}",
+                formatter: (cell, row) => row.cells[5].data
+            },
+            {
+                name: "{% trans 'Due Date' %}",
+                formatter: (cell, row) => row.cells[6].data
+            },
             {
                 name: "{% trans 'Actions' %}",
                 formatter: (cell, row) => {
@@ -172,7 +181,10 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            {
+                name: "{% trans 'Username' %}",
+                formatter: (cell, row) => row.cells[0].data
+            },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {
