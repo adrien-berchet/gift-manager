@@ -23,6 +23,11 @@
 
 <script>
     (function() {
+        // URL templates for links
+        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         {% if relations %}
         // Relations Grid
         const relationsData = [
@@ -49,9 +54,9 @@
                     const name = row.cells[2].data;
 
                     if (type === 'person') {
-                        return gridjs.html(`<a href="{% url 'gift_manager:person_detail' 'PERSON_ID' %}".replace('PERSON_ID', id)>${name}</a>`);
+                        return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', id)}">${name}</a>`);
                     } else {
-                        return gridjs.html(`<a href="{% url 'gift_manager:person_group_detail' 'GROUP_ID' %}".replace('GROUP_ID', id)>${name}</a>`);
+                        return gridjs.html(`<a href="${groupDetailUrl.replace('__ID__', id)}">${name}</a>`);
                     }
                 }
             },
@@ -60,7 +65,7 @@
                 formatter: (cell, row) => {
                     const giftId = row.cells[3].data;
                     const giftName = row.cells[4].data;
-                    return gridjs.html(`<a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)>${giftName}</a>`);
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
             { name: "{% trans 'Comment' %}", data: (row) => row[5] },

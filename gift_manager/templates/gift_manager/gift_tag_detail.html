@@ -63,6 +63,10 @@
 
 <script>
     (function() {
+        // URL templates for links
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftEditUrl = "{% url 'gift_manager:gift_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         {% if gifts %}
         // Gifts Grid
         const giftsData = [
@@ -81,7 +85,7 @@
                 formatter: (cell, row) => {
                     const giftId = row.cells[0].data;
                     const giftName = row.cells[1].data;
-                    return gridjs.html(`<a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)>${giftName}</a>`);
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
             { name: "{% trans 'Comment' %}", data: (row) => row[2] },
@@ -91,12 +95,12 @@
                     const giftId = row.cells[0].data;
                     return gridjs.html(`
                         <div style="white-space: nowrap;">
-                            <a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)
+                            <a href="${giftDetailUrl.replace('__ID__', giftId)}"
                                class="btn btn-info btn-sm"
                                title="{% trans 'Details' %}">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{% url 'gift_manager:gift_edit' 'GIFT_ID' %}".replace('GIFT_ID', giftId)
+                            <a href="${giftEditUrl.replace('__ID__', giftId)}"
                                class="btn btn-warning btn-sm"
                                title="{% trans 'Edit' %}">
                                 <i class="fas fa-edit"></i>

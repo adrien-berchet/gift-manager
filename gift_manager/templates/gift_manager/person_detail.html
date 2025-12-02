@@ -46,6 +46,13 @@
 
 <script>
     (function() {
+        // URL templates for links
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const updateStatusUrl = "{% url 'gift_manager:update_relation_status' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         {% if relations %}
         // Gifts Grid
         const giftsData = [
@@ -70,7 +77,7 @@
                 formatter: (cell, row) => {
                     const giftId = row.cells[0].data;
                     const giftName = row.cells[1].data;
-                    return gridjs.html(`<a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)>${giftName}</a>`);
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
             { name: "{% trans 'Comment' %}", data: (row) => row[2] },
@@ -83,7 +90,7 @@
                     return gridjs.html(`
                         <select
                             class="form-select form-select-sm status-select"
-                            hx-post="{% url 'gift_manager:update_relation_status' 'RELATION_ID' %}".replace('RELATION_ID', relationId)
+                            hx-post="${updateStatusUrl.replace('__ID__', relationId)}"
                             hx-trigger="change"
                             hx-target="#status-cell-${relationId}"
                             hx-swap="outerHTML"
@@ -116,7 +123,7 @@
                     let deleteBtn = '';
                     if (canDelete) {
                         deleteBtn = `
-                            <a href="{% url 'gift_manager:relation_delete' 'RELATION_ID' %}".replace('RELATION_ID', relationId)
+                            <a href="${relationDeleteUrl.replace('__ID__', relationId)}"
                                class="btn btn-danger btn-sm"
                                title="{% trans 'Delete' %}">
                                 <i class="fas fa-trash"></i>
@@ -126,17 +133,17 @@
 
                     return gridjs.html(`
                         <div style="white-space: nowrap;">
-                            <a href="{% url 'gift_manager:gift_detail' 'GIFT_ID' %}".replace('GIFT_ID', giftId)
+                            <a href="${giftDetailUrl.replace('__ID__', giftId)}"
                                class="btn btn-primary btn-sm"
                                title="{% trans 'Show' %}">
                                 <i class="fas fa-gift"></i>
                             </a>
-                            <a href="{% url 'gift_manager:relation_detail' 'RELATION_ID' %}".replace('RELATION_ID', relationId)
+                            <a href="${relationDetailUrl.replace('__ID__', relationId)}"
                                class="btn btn-info btn-sm"
                                title="{% trans 'Show' %}">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{% url 'gift_manager:relation_edit' 'RELATION_ID' %}".replace('RELATION_ID', relationId)
+                            <a href="${relationEditUrl.replace('__ID__', relationId)}"
                                class="btn btn-warning btn-sm"
                                title="{% trans 'Edit' %}">
                                 <i class="fas fa-edit"></i>
