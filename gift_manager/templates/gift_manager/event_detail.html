@@ -52,8 +52,8 @@
         const relationsData = [
             {% for relation in relations %}
             [
-                "{{ relation.person.person_id }}",
-                "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}",
+                {% if relation.person %}"{{ relation.person.person_id }}"{% else %}""{% endif %},
+                {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %}""{% endif %},
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
                 "{{ relation.status.status|escapejs }}",

@@ -23,6 +23,7 @@
 
 <script>
     (function() {
+        {% if relations %}
         // Relations Grid
         const relationsData = [
             {% for relation in relations %}
@@ -72,6 +73,7 @@
             search: { enabled: true },
             sort: { enabled: true, multiColumn: false }
         });
+        {% endif %}
     })();
 </script>
 {% endblock %}
