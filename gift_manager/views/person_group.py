@@ -6,7 +6,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
 from ..forms import PersonGroupAddMultiplePersonsForm, PersonGroupForm
-from ..models import Person, PersonGroup, Relation
+from ..models import Person, PersonGroup, Relation, RelationStatus
 from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
 
 
