@@ -45,8 +45,8 @@
     {% else %}
     null,
         {% endif %}
-    "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
-        "{{ item.status }}",
+    "{{ item.status }}",
+        "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
         "{{item.relation_id}}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
@@ -88,8 +88,8 @@
         {
             name: '{{ column_names.status__status|escapejs }}',
             formatter: function (cell, row) {
-                const statusLabel = row.cells[3].data;
-                const statusPk = row.cells[4].data;
+                const statusPk = row.cells[3].data;
+                const statusLabel = row.cells[4].data;
                 const relationId = row.cells[5].data;
                 return gridjs.html(`
                     <form id="status-form-${relationId}" style="display: inline;">
@@ -108,7 +108,7 @@
             }
         },
         {
-            name: 'Status PK',
+            name: 'Status Label',
             hidden: true
         },
         {

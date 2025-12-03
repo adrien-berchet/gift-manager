@@ -169,8 +169,8 @@
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
                 "{{ relation.gift.comment|escapejs }}",
-                "{{ relation.status.status|escapejs }}",
                 "{{ relation.status.pk }}",
+                "{{ relation.status.status|escapejs }}",
                 "{{ relation.relation_id }}"
             ],
             {% endfor %}
@@ -187,12 +187,11 @@
                 }
             },
             { name: "{% trans 'Comment' %}" },
-            { name: 'status_label', hidden: true },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusLabel = row.cells[3].data;
-                    const statusPk = row.cells[4].data;
+                    const statusPk = row.cells[3].data;
+                    const statusLabel = row.cells[4].data;
                     const relationId = row.cells[5].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
@@ -210,6 +209,7 @@
                     `);
                 }
             },
+            { name: 'status_label', hidden: true },
             { name: 'relation_id', hidden: true }
         ];
 
