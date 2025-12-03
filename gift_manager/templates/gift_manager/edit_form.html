@@ -110,6 +110,14 @@ console.log('=== Edit form sharing table script loading ===');
   console.log('friendsData:', friendsData);
   console.log('friendsData length:', friendsData.length);
 
+  // Check if GridUtils is available
+  if (typeof GridUtils === 'undefined') {
+    console.error('GridUtils is not loaded!');
+    return;
+  }
+
+  console.log('Initializing Grid.js...');
+
   // Initialize Grid.js
   const grid = GridUtils.initGrid('sharing-grid', [
     {
@@ -174,7 +182,11 @@ console.log('=== Edit form sharing table script loading ===');
     }
   });
 
+  console.log('Grid object created:', grid);
+  console.log('Grid object type:', typeof grid);
+
   // Initialize HTMX after grid is rendered
+  console.log('Setting up grid.on ready handler...');
   grid.on('ready', function() {
     console.log('Grid.js ready event fired');
     const gridContainer = document.getElementById('sharing-grid');
