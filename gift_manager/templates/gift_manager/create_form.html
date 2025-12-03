@@ -29,42 +29,8 @@
             </ul>
           </div>
 
-          <div class="table-responsive">
-            <table id="sharing-datatable" class="table table-striped unified-sharing-table">
-              <thead>
-                <tr>
-                  <th>{% trans "User" %}</th>
-                  <th>{% trans "Permission level" %}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for friend in unshared_friends %}
-                <tr data-user-id="{{ friend.user.id }}">
-                  <td class="align-middle">
-                    <div class="d-flex align-items-center">
-                      <i class="fas fa-user me-2 text-muted"></i>
-                      {{ friend.user.username }}
-                    </div>
-                  </td>
-                  <td class="align-middle">
-                    <select name="share_with_{{ friend.user.id }}" class="form-select form-select-sm permission-select">
-                      <option value="" selected>🚫 {% trans "Not shared" %}</option>
-                      {% for level in permission_levels %}
-                      <option value="{{ level.value }}">
-                          {% if level.value <= 10 %}👁️
-                          {% elif level.value <= 20 %}
-                          ✏️{% else %}
-                          👑{% endif %}
-                          {{ level.label }}
-                        </option>
-                      {% endfor %}
-                    </select>
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+          <!-- Grid.js container -->
+          <div id="sharing-grid"></div>
         </div>
       </div>
       {% else %}
@@ -100,68 +66,27 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- DataTables JS (kept for form functionality) -->
-<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
-<script src="https://cdn.datatables.net/responsive/2.2.9/js/responsive.bootstrap5.min.js"></script>
-
 <!-- Notification System -->
 <script src="{% static 'gift_manager/notifications.js' %}"></script>
-
-{% include "gift_manager/includes/datatables-translations.html" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-
-  // Function to initialize DataTables
-  function initializeDataTable() {
-    // Create the DataTable
-    const sharingTable = $('#sharing-datatable').DataTable({
-      responsive: true,
-      language: dataTablesTranslations,
-      columnDefs: [
-        { orderable: true, targets: 0 },  // User - sortable
-        { orderable: false, targets: 1 }  // Permissions - not sortable
-      ],
-      dom: '<"d-flex justify-content-between align-items-center mb-3"lf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
-      lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "{% trans 'All' %}"]],
-      pageLength: 5,
-      order: [[0, 'asc']],  // Default sort on user column
-      initComplete: function () {
-        // Apply specific styles after initialization
-        $('.dataTables_filter input').addClass('form-control form-control-sm');
-        $('.dataTables_length select').addClass('form-select form-select-sm ms-1 me-1');
-      }
-    });
-
-    // Selection change event
-    document.querySelectorAll('.permission-select').forEach(select => {
-      select.addEventListener('change', function () {
-        const row = this.closest('tr');
-        const userId = row.dataset.userId;
-        const selectedValue = this.value;
-
-        // Highlight the modified row
-        if (selectedValue) {
-          row.classList.add('table-primary', 'selected-for-sharing');
-          row.classList.remove('table-secondary');
-          showNotification(`{% trans "Will share with" %} ${row.querySelector('td:first-child').textContent.trim()}`, 'info', 2000);
-        } else {
-          row.classList.remove('table-primary', 'selected-for-sharing');
-          row.classList.add('table-secondary');
-        }
-
-        // Update the shared objects counter
-        updateShareCounter();
-      });
-    });
-
-    return sharingTable;
-  }
+(function() {
+  // Prepare data for Grid.js
+  const friendsData = [
+    {% for friend in unshared_friends %}
+    [
+      "{{ friend.user.id }}",
+      "{{ friend.user.username|escapejs }}",
+      ""  // Empty value for permission (will be filled by select)
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
 
   // Function to update the share counter
   function updateShareCounter() {
-    const selectedCount = document.querySelectorAll('.selected-for-sharing').length;
+    const selectedCount = document.querySelectorAll('.gridjs-table .selected-for-sharing').length;
     const counterEl = document.getElementById('share-counter');
 
     if (!counterEl && selectedCount > 0) {
@@ -192,66 +117,121 @@
     }
   }
 
-  // Initialization on page load
-  document.addEventListener('DOMContentLoaded', function () {
-    try {
-
-      // Initialize DataTable if the table exists
-      if (document.getElementById('sharing-datatable')) {
-        const sharingTable = initializeDataTable();
-
-        // Add a "Select all" button in the header
-        if (document.querySelector('#sharing-datatable tbody tr')) {
-          const selectAllBtn = document.createElement('button');
-          selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-3';
-          selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>{% trans "Select all as Viewers" %}';
-          selectAllBtn.onclick = function () {
-            document.querySelectorAll('#sharing-datatable tbody tr').forEach(row => {
-              const select = row.querySelector('.permission-select');
-              if (select) {
-                select.value = '10'; // Viewer value
-                row.classList.add('table-primary', 'selected-for-sharing');
-                row.classList.remove('table-secondary');
-              }
-            });
-            updateShareCounter();
-            showNotification('{% trans "All friends will be added as Viewers" %}', 'success', 3000);
-            return false;
-          };
-
-          const tableParent = document.getElementById('sharing-datatable').parentNode;
-          tableParent.insertBefore(selectAllBtn, document.getElementById('sharing-datatable'));
-        }
+  // Initialize Grid.js
+  const grid = GridUtils.initGrid('sharing-grid', [
+    {
+      name: 'User ID',
+      hidden: true
+    },
+    {
+      name: '{% trans "User"|escapejs %}',
+      formatter: function(cell) {
+        return gridjs.html('<div class="d-flex align-items-center"><i class="fas fa-user me-2 text-muted"></i>' + cell + '</div>');
       }
-
-      // Ensure the action bar is always visible
-      const fixedBar = document.getElementById('fixed-action-bar');
-      if (fixedBar) {
-        document.body.appendChild(fixedBar);
-        Object.assign(fixedBar.style, {
-          position: 'fixed',
-          bottom: '0',
-          left: '0',
-          right: '0',
-          zIndex: '100000',
-          display: 'block'
-        });
+    },
+    {
+      name: '{% trans "Permission level"|escapejs %}',
+      sort: false,
+      formatter: function(cell, row) {
+        const userId = row.cells[0].data;
+        return gridjs.html(`
+          <select name="share_with_${userId}" class="form-select form-select-sm permission-select" data-user-id="${userId}">
+            <option value="" selected>🚫 {% trans "Not shared"|escapejs %}</option>
+            {% for level in permission_levels %}
+            <option value="{{ level.value }}">
+              {% if level.value <= 10 %}👁️
+              {% elif level.value <= 20 %}✏️
+              {% else %}👑{% endif %}
+              {{ level.label|escapejs }}
+            </option>
+            {% endfor %}
+          </select>
+        `);
       }
-
-      console.log('Initialization complete');
-    } catch (error) {
-      console.error('Error during initialization:', error);
-      showNotification("{% trans 'Error initializing page components' %}", 'danger');
+    }
+  ], friendsData, {
+    pagination: {
+      enabled: true,
+      limit: 5
+    },
+    sort: {
+      multiColumn: false,
+      enabled: true
     }
   });
+
+  // Handle permission select changes with event delegation
+  document.getElementById('sharing-grid').addEventListener('change', function(e) {
+    if (e.target.classList.contains('permission-select')) {
+      const select = e.target;
+      const row = select.closest('tr');
+      const userId = select.dataset.userId;
+      const selectedValue = select.value;
+      const username = row.querySelector('td:nth-child(2)').textContent.trim();
+
+      // Highlight the modified row
+      if (selectedValue) {
+        row.classList.add('table-primary', 'selected-for-sharing');
+        row.classList.remove('table-secondary');
+        showNotification(`{% trans "Will share with"|escapejs %} ${username}`, 'info', 2000);
+      } else {
+        row.classList.remove('table-primary', 'selected-for-sharing');
+        row.classList.add('table-secondary');
+      }
+
+      // Update the shared objects counter
+      updateShareCounter();
+    }
+  });
+
+  // Add "Select all" button after grid is rendered
+  grid.on('ready', function() {
+    const gridContainer = document.getElementById('sharing-grid');
+    if (gridContainer && friendsData.length > 0) {
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.type = 'button';
+      selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-3';
+      selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>{% trans "Select all as Viewers"|escapejs %}';
+      selectAllBtn.onclick = function() {
+        document.querySelectorAll('.gridjs-table .permission-select').forEach(select => {
+          select.value = '10'; // Viewer value
+          const row = select.closest('tr');
+          row.classList.add('table-primary', 'selected-for-sharing');
+          row.classList.remove('table-secondary');
+        });
+        updateShareCounter();
+        showNotification('{% trans "All friends will be added as Viewers"|escapejs %}', 'success', 3000);
+        return false;
+      };
+
+      // Insert before the grid wrapper
+      const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+      if (gridWrapper) {
+        gridContainer.insertBefore(selectAllBtn, gridWrapper);
+      }
+    }
+  });
+
+  // Ensure the action bar is always visible
+  document.addEventListener('DOMContentLoaded', function() {
+    const fixedBar = document.getElementById('fixed-action-bar');
+    if (fixedBar) {
+      document.body.appendChild(fixedBar);
+      Object.assign(fixedBar.style, {
+        position: 'fixed',
+        bottom: '0',
+        left: '0',
+        right: '0',
+        zIndex: '100000',
+        display: 'block'
+      });
+    }
+  });
+})();
 </script>
 {% endblock %}
 
 {% block extra_css %}
-<!-- DataTables CSS (kept for form functionality) -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css">
-<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.bootstrap5.min.css">
-
 <style>
   .fixed-action-bar {
     position: fixed !important;
@@ -299,17 +279,8 @@
     box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
   }
 
-  /* DataTable specific styling */
-  .dataTables_wrapper .dataTables_filter {
-    margin-bottom: 1rem;
-  }
-
-  .dataTables_wrapper .dataTables_length {
-    margin-bottom: 1rem;
-  }
-
-  /* Styling for select elements in the DataTable */
-  #sharing-datatable .permission-select {
+  /* Styling for select elements in the Grid */
+  #sharing-grid .permission-select {
     min-width: 280px !important;
     width: 280px !important;
     max-width: 280px !important;
@@ -321,36 +292,36 @@
     transition: background-color 0.3s ease;
   }
 
-  /* Improved table styling */
-  #sharing-datatable {
+  /* Grid table styling */
+  #sharing-grid .gridjs-table {
     border-collapse: separate;
     border-spacing: 0;
   }
 
-  #sharing-datatable thead th {
+  #sharing-grid .gridjs-thead th {
     background-color: #f8f9fa;
     border-bottom: 2px solid #dee2e6;
     font-weight: 600;
   }
 
-  #sharing-datatable tbody tr {
+  #sharing-grid .gridjs-tbody tr {
     transition: all 0.2s ease;
   }
 
-  #sharing-datatable tbody tr:hover {
+  #sharing-grid .gridjs-tbody tr:hover {
     background-color: rgba(0, 0, 0, 0.05);
   }
 
   /* Responsive adjustments */
   @media (max-width: 992px) {
-    #sharing-datatable .permission-select {
+    #sharing-grid .permission-select {
       min-width: 200px !important;
       width: 200px !important;
     }
   }
 
   @media (max-width: 768px) {
-    #sharing-datatable .permission-select {
+    #sharing-grid .permission-select {
       min-width: 150px !important;
       width: 150px !important;
     }
