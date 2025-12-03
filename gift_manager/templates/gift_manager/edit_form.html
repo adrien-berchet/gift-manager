@@ -169,8 +169,31 @@
 
   // Initialize HTMX after grid is rendered
   grid.on('ready', function() {
+    console.log('Grid.js ready event fired');
     const gridContainer = document.getElementById('sharing-grid');
+
+    // Check if HTMX is available
+    if (typeof htmx === 'undefined') {
+      console.error('HTMX is not loaded!');
+      return;
+    }
+
+    console.log('Processing HTMX on grid container');
     htmx.process(gridContainer);
+
+    // Check if select elements have HTMX attributes
+    const selects = gridContainer.querySelectorAll('.permission-select');
+    console.log('Found', selects.length, 'select elements');
+    if (selects.length > 0) {
+      const firstSelect = selects[0];
+      console.log('First select HTMX attributes:', {
+        'hx-post': firstSelect.getAttribute('hx-post'),
+        'hx-swap': firstSelect.getAttribute('hx-swap'),
+        'hx-trigger': firstSelect.getAttribute('hx-trigger'),
+        'hx-include': firstSelect.getAttribute('hx-include')
+      });
+    }
+
     applyRowStyling();
 
     // Set up MutationObserver to re-initialize HTMX when grid updates (pagination, sorting)
