@@ -65,13 +65,14 @@
         ];
 
         const relationsColumns = [
+            { name: 'type', hidden: true },
+            { name: 'id', hidden: true },
             {
                 name: "{% trans 'Person' %} / {% trans 'Group' %}",
                 formatter: (cell, row) => {
                     const type = row.cells[0].data;
                     const id = row.cells[1].data;
                     const name = row.cells[2].data;
-
                     if (type === 'person') {
                         return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', id)}">${name}</a>`);
                     } else if (type === 'group') {
@@ -80,17 +81,9 @@
                     return name;
                 }
             },
-            {
-                name: "{% trans 'Status' %}",
-                formatter: (cell, row) => row.cells[3].data,
-                sort: {
-                    compare: (a, b) => {
-                        // Get status pk from the last column for proper sorting
-                        return 0; // Will be sorted by the visible text
-                    }
-                }
-            },
-            { name: "{% trans 'Due Date' %}", formatter: (cell, row) => row.cells[4].data }
+            { name: "{% trans 'Status' %}" },
+            { name: "{% trans 'Due Date' %}" },
+            { name: 'status_pk', hidden: true }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
@@ -113,7 +106,8 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
+            { name: "{% trans 'Username' %}" },
+            { name: 'permission', hidden: true },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {

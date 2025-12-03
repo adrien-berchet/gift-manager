@@ -67,15 +67,9 @@
         ];
 
         const relationsColumns = [
-            {
-                name: "{% trans 'Person' %}",
-                formatter: (cell, row) => {
-                    const personId = row.cells[0].data;
-                    const personName = row.cells[1].data;
-                    if (!personId) return personName;
-                    return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', personId)}">${personName}</a>`);
-                }
-            },
+            { name: 'person_id', hidden: true },
+            { name: "{% trans 'Person' %}" },
+            { name: 'gift_id', hidden: true },
             {
                 name: "{% trans 'Gift' %}",
                 formatter: (cell, row) => {
@@ -84,8 +78,8 @@
                     return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
                 }
             },
-            { name: "{% trans 'Status' %}", formatter: (cell, row) => row.cells[4].data },
-            { name: "{% trans 'Due Date' %}", formatter: (cell, row) => row.cells[5].data }
+            { name: "{% trans 'Status' %}" },
+            { name: "{% trans 'Due Date' %}" }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
@@ -108,7 +102,8 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}", formatter: (cell, row) => row.cells[0].data },
+            { name: "{% trans 'Username' %}" },
+            { name: 'permission', hidden: true },
             {
                 name: "{% trans 'Permission' %}",
                 formatter: (cell, row) => {
