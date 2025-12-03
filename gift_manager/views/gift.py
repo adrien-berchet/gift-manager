@@ -12,6 +12,7 @@ from gift_manager.forms import GiftForm
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView

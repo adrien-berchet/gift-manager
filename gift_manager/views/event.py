@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
 from ..forms import EventForm
-from ..models import Event, Relation
+from ..models import Event, Relation, RelationStatus
 from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
 
 
