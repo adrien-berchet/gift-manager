@@ -23,12 +23,7 @@
 <div class="mt-4">
 </div>
 
-{% if is_editor %}
-    <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit person" %}</a>
-{% else %}
-    <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit person" %}</button>
-{% endif %}
-<a href="{% url 'gift_manager:person_delete' person.person_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete person' %}</a>
+{% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <h2 class="my-4">{% trans "Gifts for this person" %}</h2>
 <a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "New gifting" %}</a>
