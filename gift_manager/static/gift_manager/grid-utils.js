@@ -146,8 +146,13 @@
 
     /**
      * Initialize a Grid.js table with common settings
+     * @param {string} containerId - The ID of the container element
+     * @param {Array} columns - Array of column definitions
+     * @param {Array} data - Array of data rows
+     * @param {Object} options - Optional configuration overrides
+     * @param {Function} onReady - Optional callback when grid is ready
      */
-    function initGrid(containerId, columns, data, options = {}) {
+    function initGrid(containerId, columns, data, options = {}, onReady = null) {
         const translations = getGridTranslations();
 
         const defaultOptions = {
@@ -170,6 +175,12 @@
         const config = Object.assign({}, defaultOptions, options);
 
         const grid = new gridjs.Grid(config);
+
+        // Attach ready event listener BEFORE rendering if callback provided
+        if (onReady && typeof onReady === 'function') {
+            grid.on('ready', onReady);
+        }
+
         grid.render(document.getElementById(containerId));
 
         return grid;

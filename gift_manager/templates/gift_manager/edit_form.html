@@ -118,7 +118,7 @@ console.log('=== Edit form sharing table script loading ===');
 
   console.log('Initializing Grid.js...');
 
-  // Initialize Grid.js
+  // Initialize Grid.js with onReady callback
   const grid = GridUtils.initGrid('sharing-grid', [
     {
       name: 'User ID',
@@ -180,35 +180,9 @@ console.log('=== Edit form sharing table script loading ===');
       multiColumn: false,
       enabled: true
     }
-  });
-
-  console.log('Grid object created:', grid);
-  console.log('Grid object type:', typeof grid);
-
-  // Wait for grid to actually render by polling for the table structure
-  console.log('Waiting for grid to render...');
-  function waitForGridRender(callback, maxAttempts = 50, interval = 20) {
-    let attempts = 0;
-    const gridContainer = document.getElementById('sharing-grid');
-
-    const checkInterval = setInterval(function() {
-      attempts++;
-      const tbody = gridContainer.querySelector('.gridjs-tbody');
-
-      // Check if tbody exists and has rows
-      if (tbody && tbody.children.length > 0) {
-        clearInterval(checkInterval);
-        console.log('Grid rendered after', attempts * interval, 'ms');
-        callback();
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkInterval);
-        console.error('Grid rendering timeout after', maxAttempts * interval, 'ms');
-      }
-    }, interval);
-  }
-
-  waitForGridRender(function() {
-    console.log('Initializing HTMX after grid render');
+  }, function() {
+    // This callback runs when Grid.js 'ready' event fires (proper event-based approach)
+    console.log('Grid.js ready event fired - initializing HTMX');
     const gridContainer = document.getElementById('sharing-grid');
 
     // Check if HTMX is available
