@@ -51,8 +51,8 @@ class UserPermissionManager(models.Manager):
     """Base manager for models with user permissions."""
 
     def accessible_by(self, user):
-        """Return all objects accessible by a user."""
-        return self.filter(Q(shared_with=user))
+        """Return all objects accessible by a user (owned by or shared with)."""
+        return self.filter(Q(owner=user) | Q(shared_with=user))
 
 
 class PersonManager(UserPermissionManager):
