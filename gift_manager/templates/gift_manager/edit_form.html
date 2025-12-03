@@ -118,8 +118,10 @@ console.log('=== Edit form sharing table script loading ===');
 
   console.log('Initializing Grid.js...');
 
-  // Initialize Grid.js with onReady callback
-  const grid = GridUtils.initGrid('sharing-grid', [
+  try {
+    // Initialize Grid.js with onReady callback
+    console.log('About to call GridUtils.initGrid...');
+    const grid = GridUtils.initGrid('sharing-grid', [
     {
       name: 'User ID',
       hidden: true
@@ -234,6 +236,15 @@ console.log('=== Edit form sharing table script loading ===');
       });
     }
   });
+
+    console.log('GridUtils.initGrid returned successfully');
+    console.log('Grid object:', grid);
+    console.log('Grid.on method exists?', typeof grid.on === 'function');
+
+  } catch (error) {
+    console.error('Error initializing Grid.js:', error);
+    console.error('Error stack:', error.stack);
+  }
 
   // Apply row styling based on shared status
   function applyRowStyling() {
