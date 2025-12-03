@@ -48,6 +48,7 @@
         // URL templates for links
         const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
         // Relations Grid
@@ -59,7 +60,8 @@
                 {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% elif relation.group %}"{{ relation.group.name|escapejs }}"{% else %}"Bad relation"{% endif %},
                 "{{ relation.status.status|escapejs }}",
                 {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
-                "{{ relation.status.pk }}"
+                "{{ relation.status.pk }}",
+                "{{ relation.relation_id }}"
             ],
             {% endfor %}
         ];
@@ -81,15 +83,84 @@
                     return name;
                 }
             },
-            { name: "{% trans 'Status' %}" },
+            { name: 'status_label', hidden: true },
+            {
+                name: "{% trans 'Status' %}",
+                formatter: (cell, row) => {
+                    const statusLabel = row.cells[3].data;
+                    const statusPk = row.cells[5].data;
+                    const relationId = row.cells[6].data;
+                    return gridjs.html(`
+                        <form id="status-form-${relationId}" style="display: inline;">
+                            <select class="form-select form-select-sm status-selector"
+                                    name="new_status"
+                                    data-relation-id="${relationId}"
+                                    data-update-url="${updateStatusUrl}">
+                                {% for status in relation_statuses %}
+                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
+                                    {{ status.status }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    `);
+                },
+                sort: false
+            },
             { name: "{% trans 'Due Date' %}" },
-            { name: 'status_pk', hidden: true }
+            { name: 'relation_id', hidden: true }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
             pagination: { enabled: true, limit: 10 },
             search: true,
             sort: true
+        });
+
+        // Handle status selector changes with event delegation
+        document.getElementById('relations-grid').addEventListener('change', function(e) {
+            if (e.target.classList.contains('status-selector')) {
+                const select = e.target;
+                const relationId = select.dataset.relationId;
+                const updateUrl = select.dataset.updateUrl;
+                const newStatus = select.value;
+                const form = select.closest('form');
+
+                // Get CSRF token
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+
+                // Make POST request
+                fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: `relation_id=${relationId}&new_status=${newStatus}`
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Replace the form with the server response
+                    form.outerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error updating status:', error);
+                    alert('Failed to update status. Please try again.');
+                });
+            }
         });
         {% endif %}
 

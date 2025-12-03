@@ -104,5 +104,6 @@ class GiftDetailView(BaseDetailView):
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
         )
+        context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
