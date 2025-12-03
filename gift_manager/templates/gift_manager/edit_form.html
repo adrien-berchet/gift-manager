@@ -73,7 +73,11 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
+console.log('=== Edit form sharing table script loading ===');
+
 (function() {
+  console.log('=== Inside IIFE, starting initialization ===');
+
   // Get CSRF token from cookie
   function getCookie(name) {
     let cookieValue = null;
@@ -102,6 +106,9 @@
     ]{% if not forloop.last %},{% endif %}
     {% endfor %}
   ];
+
+  console.log('friendsData:', friendsData);
+  console.log('friendsData length:', friendsData.length);
 
   // Initialize Grid.js
   const grid = GridUtils.initGrid('sharing-grid', [
