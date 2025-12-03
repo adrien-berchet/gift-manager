@@ -153,6 +153,11 @@
      * @param {Function} onReady - Optional callback when grid is ready
      */
     function initGrid(containerId, columns, data, options = {}, onReady = null) {
+        console.log('[GridUtils.initGrid] Starting initialization');
+        console.log('[GridUtils.initGrid] containerId:', containerId);
+        console.log('[GridUtils.initGrid] data length:', data ? data.length : 0);
+        console.log('[GridUtils.initGrid] onReady callback provided:', typeof onReady === 'function');
+
         const translations = getGridTranslations();
 
         const defaultOptions = {
@@ -173,17 +178,29 @@
         };
 
         const config = Object.assign({}, defaultOptions, options);
+        console.log('[GridUtils.initGrid] Config created');
 
-        const grid = new gridjs.Grid(config);
+        try {
+            const grid = new gridjs.Grid(config);
+            console.log('[GridUtils.initGrid] Grid object created');
 
-        // Attach ready event listener BEFORE rendering if callback provided
-        if (onReady && typeof onReady === 'function') {
-            grid.on('ready', onReady);
+            // Attach ready event listener BEFORE rendering if callback provided
+            if (onReady && typeof onReady === 'function') {
+                console.log('[GridUtils.initGrid] Attaching ready event listener');
+                grid.on('ready', onReady);
+                console.log('[GridUtils.initGrid] Ready event listener attached');
+            }
+
+            console.log('[GridUtils.initGrid] About to call render()');
+            grid.render(document.getElementById(containerId));
+            console.log('[GridUtils.initGrid] Render completed');
+
+            return grid;
+        } catch (error) {
+            console.error('[GridUtils.initGrid] Error during initialization:', error);
+            console.error('[GridUtils.initGrid] Error stack:', error.stack);
+            throw error;
         }
-
-        grid.render(document.getElementById(containerId));
-
-        return grid;
     }
 
     /**
