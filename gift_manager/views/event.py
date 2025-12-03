@@ -70,5 +70,6 @@ class EventDetailView(BaseDetailView):
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
         )
+        context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
         return context
