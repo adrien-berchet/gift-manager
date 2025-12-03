@@ -1,13 +1,10 @@
 """Gift-related views."""
 
 from django.contrib.postgres.aggregates import JSONBAgg
-from django.db.models import Case
 from django.db.models import F
 from django.db.models import Func
-from django.db.models import IntegerField
 from django.db.models import Q
 from django.db.models import Value
-from django.db.models import When
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
@@ -107,17 +104,7 @@ class GiftDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
-            .annotate(
-                status_order=Case(
-                    When(status__status__iexact="idea", then=Value(0)),
-                    When(status__status__iexact="to buy", then=Value(1)),
-                    When(status__status__iexact="bought", then=Value(2)),
-                    When(status__status__iexact="given", then=Value(3)),
-                    default=Value(99),
-                    output_field=IntegerField(),
-                )
-            )
-            .order_by("status_order", "status__status")
+            .order_by("status__pk")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)

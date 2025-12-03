@@ -1,6 +1,5 @@
 """Event-related views."""
 
-from django.db.models import Case, IntegerField, Value, When
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
@@ -70,17 +69,7 @@ class EventDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
-            .annotate(
-                status_order=Case(
-                    When(status__status__iexact="idea", then=Value(0)),
-                    When(status__status__iexact="to buy", then=Value(1)),
-                    When(status__status__iexact="bought", then=Value(2)),
-                    When(status__status__iexact="given", then=Value(3)),
-                    default=Value(99),
-                    output_field=IntegerField(),
-                )
-            )
-            .order_by("status_order", "status__status")
+            .order_by("status__pk")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
