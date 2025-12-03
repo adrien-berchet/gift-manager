@@ -114,6 +114,14 @@
             sort: true
         });
 
+        // Trigger initial sort on status column to make Grid.js aware of the sort
+        setTimeout(() => {
+            const statusHeader = document.querySelector('#relations-grid th:nth-child(5)');
+            if (statusHeader) {
+                statusHeader.click();
+            }
+        }, 100);
+
         // Handle status selector changes with event delegation
         document.getElementById('relations-grid').addEventListener('change', function(e) {
             if (e.target.classList.contains('status-selector')) {

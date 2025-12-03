@@ -157,6 +157,14 @@
             sort: true
         });
 
+        // Trigger initial sort on status column to make Grid.js aware of the sort
+        setTimeout(() => {
+            const statusHeader = document.querySelector('#gifts-grid th:nth-child(4)');
+            if (statusHeader) {
+                statusHeader.click();
+            }
+        }, 100);
+
         // Handle status selector changes with event delegation
         document.getElementById('gifts-grid').addEventListener('change', function(e) {
             if (e.target.classList.contains('status-selector')) {
