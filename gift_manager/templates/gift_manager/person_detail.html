@@ -155,11 +155,19 @@
             }
         ];
 
-        GridUtils.initGrid('gifts-grid', giftsColumns, giftsData, {
+        const giftsGrid = GridUtils.initGrid('gifts-grid', giftsColumns, giftsData, {
             pagination: { enabled: true, limit: 10 },
             search: true,
             sort: true
         });
+
+        // Process HTMX attributes in dynamically rendered Grid.js content
+        const processHtmx = () => {
+            htmx.process(document.getElementById('gifts-grid'));
+        };
+
+        giftsGrid.on('ready', processHtmx);
+        giftsGrid.on('updated', processHtmx);
         {% endif %}
 
         {% if shared_users %}
