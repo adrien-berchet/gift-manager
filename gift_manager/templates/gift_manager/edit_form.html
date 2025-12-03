@@ -182,13 +182,12 @@ console.log('=== Edit form sharing table script loading ===');
       multiColumn: false,
       enabled: true
     }
-  }); // No callback parameter - attach listener after like create_form.html
+  });
 
-    console.log('Grid returned, attaching ready listener...');
+    console.log('Grid returned, grid is rendered - initializing HTMX immediately');
 
-    // Attach ready listener AFTER initGrid returns (like create_form.html)
-    grid.on('ready', function() {
-      console.log('Grid.js ready event fired - initializing HTMX');
+    // Grid is already rendered when initGrid returns (render() is synchronous)
+    // Initialize HTMX immediately without waiting for events
     const gridContainer = document.getElementById('sharing-grid');
 
     // Check if HTMX is available
@@ -239,7 +238,6 @@ console.log('=== Edit form sharing table script loading ===');
         subtree: true
       });
     }
-    });
 
   } catch (error) {
     console.error('Error initializing Grid.js:', error);
