@@ -1,7 +1,7 @@
 """Person-related views."""
 
 from django.contrib.postgres.aggregates import JSONBAgg
-from django.db.models import F, Func, Q, Value
+from django.db.models import Case, F, Func, IntegerField, Q, Value, When
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 
@@ -107,6 +107,17 @@ class PersonDetailView(BaseDetailView):
             .filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
             .select_related("status", "gift", "event", "person", "group")
             .prefetch_related("gift__tags")
+            .annotate(
+                status_order=Case(
+                    When(status__status__iexact="idea", then=Value(0)),
+                    When(status__status__iexact="to buy", then=Value(1)),
+                    When(status__status__iexact="bought", then=Value(2)),
+                    When(status__status__iexact="given", then=Value(3)),
+                    default=Value(99),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("status_order", "status__status")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
         return context

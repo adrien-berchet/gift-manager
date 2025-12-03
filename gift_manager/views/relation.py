@@ -3,9 +3,12 @@
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Case
+from django.db.models import IntegerField
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
+from django.db.models import When
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
@@ -194,8 +197,17 @@ class RelationListView(BaseListView):
                     ),
                     "group__name",
                     output_field=TextField(),
+                ),
+                status_order=Case(
+                    When(status__status__iexact="idea", then=Value(0)),
+                    When(status__status__iexact="to buy", then=Value(1)),
+                    When(status__status__iexact="bought", then=Value(2)),
+                    When(status__status__iexact="given", then=Value(3)),
+                    default=Value(99),
+                    output_field=IntegerField(),
                 )
             )
+            .order_by("status_order", "status__status")
             .values(
                 "relation_id",
                 "gift__name",

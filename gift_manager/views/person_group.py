@@ -1,6 +1,7 @@
 """PersonGroup-related views."""
 
 from django.db import transaction
+from django.db.models import Case, IntegerField, Value, When
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
@@ -97,6 +98,17 @@ class PersonGroupDetailView(BaseDetailView):
             .filter(group=self.object, gift__isnull=False)
             .select_related("gift", "event", "status")
             .prefetch_related("gift__tags")
+            .annotate(
+                status_order=Case(
+                    When(status__status__iexact="idea", then=Value(0)),
+                    When(status__status__iexact="to buy", then=Value(1)),
+                    When(status__status__iexact="bought", then=Value(2)),
+                    When(status__status__iexact="given", then=Value(3)),
+                    default=Value(99),
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("status_order", "status__status")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
         return context

@@ -105,8 +105,7 @@
                         </select>
                     </form>
                 `);
-            },
-            sort: false
+            }
         },
         {
             name: 'Status PK',
@@ -130,6 +129,10 @@
         pagination: {
             enabled: true,
             limit: 10
+        },
+        sort: {
+            multiColumn: false,
+            enabled: true
         }
     });
 
