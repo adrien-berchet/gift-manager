@@ -150,18 +150,31 @@
     }
   });
 
-  // Initialize HTMX after grid is rendered and on pagination/sorting
+  // Initialize HTMX after grid is rendered
   grid.on('ready', function() {
     htmx.process(document.getElementById('sharing-grid'));
     applyRowStyling();
-  });
 
-  // Re-initialize HTMX after pagination or sorting
-  grid.on('cellClick', function() {
-    setTimeout(() => {
-      htmx.process(document.getElementById('sharing-grid'));
-      applyRowStyling();
-    }, 100);
+    // Set up MutationObserver to re-initialize HTMX when grid updates (pagination, sorting)
+    const gridContainer = document.getElementById('sharing-grid');
+    const observer = new MutationObserver(function(mutations) {
+      // Check if the tbody was modified
+      const tbodyModified = mutations.some(mutation => {
+        return mutation.target.classList.contains('gridjs-tbody') ||
+               mutation.target.closest('.gridjs-tbody');
+      });
+
+      if (tbodyModified) {
+        htmx.process(gridContainer);
+        applyRowStyling();
+      }
+    });
+
+    // Observe the grid container for changes
+    observer.observe(gridContainer, {
+      childList: true,
+      subtree: true
+    });
   });
 
   // Apply row styling based on shared status
