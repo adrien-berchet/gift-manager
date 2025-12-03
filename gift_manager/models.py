@@ -51,12 +51,16 @@ class UserPermissionManager(models.Manager):
     """Base manager for models with user permissions."""
 
     def accessible_by(self, user):
-        """Return all objects accessible by a user (owned by or shared with)."""
-        return self.filter(Q(owner=user) | Q(shared_with=user))
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.filter(Q(shared_with=user))
 
 
 class PersonManager(UserPermissionManager):
     """Manager for Person model with additional query methods."""
+
+    def accessible_by(self, user):
+        """Return all persons accessible by a user (user_link or shared_with)."""
+        return self.filter(Q(user_link=user) | Q(shared_with=user))
 
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""
