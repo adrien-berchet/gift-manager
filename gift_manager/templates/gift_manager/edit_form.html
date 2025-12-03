@@ -185,10 +185,29 @@ console.log('=== Edit form sharing table script loading ===');
   console.log('Grid object created:', grid);
   console.log('Grid object type:', typeof grid);
 
-  // Initialize HTMX after grid has finished rendering
-  // Grid.js renders asynchronously, so we need to wait a bit
-  console.log('Waiting for grid to render, then initializing HTMX...');
-  setTimeout(function() {
+  // Wait for grid to actually render by polling for the table structure
+  console.log('Waiting for grid to render...');
+  function waitForGridRender(callback, maxAttempts = 50, interval = 20) {
+    let attempts = 0;
+    const gridContainer = document.getElementById('sharing-grid');
+
+    const checkInterval = setInterval(function() {
+      attempts++;
+      const tbody = gridContainer.querySelector('.gridjs-tbody');
+
+      // Check if tbody exists and has rows
+      if (tbody && tbody.children.length > 0) {
+        clearInterval(checkInterval);
+        console.log('Grid rendered after', attempts * interval, 'ms');
+        callback();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.error('Grid rendering timeout after', maxAttempts * interval, 'ms');
+      }
+    }, interval);
+  }
+
+  waitForGridRender(function() {
     console.log('Initializing HTMX after grid render');
     const gridContainer = document.getElementById('sharing-grid');
 
@@ -240,7 +259,7 @@ console.log('=== Edit form sharing table script loading ===');
         subtree: true
       });
     }
-  }, 100); // Wait 100ms for Grid.js to finish rendering
+  });
 
   // Apply row styling based on shared status
   function applyRowStyling() {
