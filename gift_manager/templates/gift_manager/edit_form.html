@@ -119,7 +119,7 @@ console.log('=== Edit form sharing table script loading ===');
   console.log('Initializing Grid.js...');
 
   try {
-    // Initialize Grid.js (without callback parameter - will attach listener after)
+    // Initialize Grid.js with onReady callback
     console.log('About to call GridUtils.initGrid...');
     const grid = GridUtils.initGrid('sharing-grid', [
     {
@@ -182,66 +182,60 @@ console.log('=== Edit form sharing table script loading ===');
       multiColumn: false,
       enabled: true
     }
-  });
+  }, function() {
+    // This callback is passed to initGrid and attached BEFORE render()
+    console.log('Grid.js ready event fired - initializing HTMX');
+    const gridContainer = document.getElementById('sharing-grid');
 
-    console.log('GridUtils.initGrid returned successfully');
-    console.log('Grid object:', grid);
-    console.log('Grid.on method exists?', typeof grid.on === 'function');
+    // Check if HTMX is available
+    if (typeof htmx === 'undefined') {
+      console.error('HTMX is not loaded!');
+      return;
+    }
 
-    // Attach ready event listener AFTER initGrid returns (like create_form.html)
-    grid.on('ready', function() {
-      console.log('Grid.js ready event fired - initializing HTMX');
-      const gridContainer = document.getElementById('sharing-grid');
+    console.log('Processing HTMX on grid container');
+    htmx.process(gridContainer);
 
-      // Check if HTMX is available
-      if (typeof htmx === 'undefined') {
-        console.error('HTMX is not loaded!');
-        return;
-      }
-
-      console.log('Processing HTMX on grid container');
-      htmx.process(gridContainer);
-
-      // Check if select elements have HTMX attributes
-      const selects = gridContainer.querySelectorAll('.permission-select');
-      console.log('Found', selects.length, 'select elements');
-      if (selects.length > 0) {
-        const firstSelect = selects[0];
-        console.log('First select HTMX attributes:', {
-          'hx-post': firstSelect.getAttribute('hx-post'),
-          'hx-swap': firstSelect.getAttribute('hx-swap'),
-          'hx-trigger': firstSelect.getAttribute('hx-trigger'),
-          'hx-include': firstSelect.getAttribute('hx-include')
-        });
-      }
-
-      applyRowStyling();
-
-      // Set up MutationObserver to re-initialize HTMX when grid updates (pagination, sorting)
-      let processingTimeout;
-      const observer = new MutationObserver(function(mutations) {
-        // Debounce the processing to avoid excessive calls
-        clearTimeout(processingTimeout);
-        processingTimeout = setTimeout(function() {
-          // Check if the tbody was actually modified
-          const tbody = gridContainer.querySelector('.gridjs-tbody');
-          if (tbody) {
-            console.log('Grid.js table updated, re-initializing HTMX');
-            htmx.process(gridContainer);
-            applyRowStyling();
-          }
-        }, 50);
+    // Check if select elements have HTMX attributes
+    const selects = gridContainer.querySelectorAll('.permission-select');
+    console.log('Found', selects.length, 'select elements');
+    if (selects.length > 0) {
+      const firstSelect = selects[0];
+      console.log('First select HTMX attributes:', {
+        'hx-post': firstSelect.getAttribute('hx-post'),
+        'hx-swap': firstSelect.getAttribute('hx-swap'),
+        'hx-trigger': firstSelect.getAttribute('hx-trigger'),
+        'hx-include': firstSelect.getAttribute('hx-include')
       });
+    }
 
-      // Observe only the wrapper for changes (more efficient)
-      const wrapper = gridContainer.querySelector('.gridjs-wrapper');
-      if (wrapper) {
-        observer.observe(wrapper, {
-          childList: true,
-          subtree: true
-        });
-      }
+    applyRowStyling();
+
+    // Set up MutationObserver to re-initialize HTMX when grid updates (pagination, sorting)
+    let processingTimeout;
+    const observer = new MutationObserver(function(mutations) {
+      // Debounce the processing to avoid excessive calls
+      clearTimeout(processingTimeout);
+      processingTimeout = setTimeout(function() {
+        // Check if the tbody was actually modified
+        const tbody = gridContainer.querySelector('.gridjs-tbody');
+        if (tbody) {
+          console.log('Grid.js table updated, re-initializing HTMX');
+          htmx.process(gridContainer);
+          applyRowStyling();
+        }
+      }, 50);
     });
+
+    // Observe only the wrapper for changes (more efficient)
+    const wrapper = gridContainer.querySelector('.gridjs-wrapper');
+    if (wrapper) {
+      observer.observe(wrapper, {
+        childList: true,
+        subtree: true
+      });
+    }
+  });
 
   } catch (error) {
     console.error('Error initializing Grid.js:', error);
