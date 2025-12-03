@@ -98,4 +98,5 @@ class PersonGroupDetailView(BaseDetailView):
             .select_related("gift", "event", "status")
             .prefetch_related("gift__tags")
         )
+        context["relation_statuses"] = RelationStatus.objects.all()
         return context
