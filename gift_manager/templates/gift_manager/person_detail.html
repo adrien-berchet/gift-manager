@@ -41,11 +41,6 @@
 
 <script>
     (function() {
-        // URL templates for links
-        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
@@ -55,12 +50,16 @@
             [
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
+                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
                 "{{ relation.comment|replace_empty:'-'|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
                 {% if relation.event %}"{{ relation.event.name|escapejs }}"{% else %}"-"{% endif %},
                 {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
                 "{{ relation.relation_id }}",
+                "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+                "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+                "{% url 'gift_manager:relation_delete' relation.relation_id %}",
                 {% if relation.group %}false{% else %}true{% endif %}
             ],
             {% endfor %}
@@ -71,18 +70,19 @@
             {
                 name: "{% trans 'Gift' %}",
                 formatter: (cell, row) => {
-                    const giftId = row.cells[0].data;
                     const giftName = row.cells[1].data;
-                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                    const giftUrl = row.cells[2].data;
+                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
                 }
             },
+            { name: 'gift_url', hidden: true },
             { name: "{% trans 'Comment' %}" },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusPk = row.cells[3].data;
-                    const statusLabel = row.cells[4].data;
-                    const relationId = row.cells[7].data;
+                    const statusPk = row.cells[4].data;
+                    const statusLabel = row.cells[5].data;
+                    const relationId = row.cells[8].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
@@ -103,6 +103,9 @@
             { name: "{% trans 'Event' %}" },
             { name: "{% trans 'Due Date' %}" },
             { name: 'relation_id', hidden: true },
+            { name: 'relation_detail_url', hidden: true },
+            { name: 'relation_edit_url', hidden: true },
+            { name: 'relation_delete_url', hidden: true },
             { name: 'canDelete', hidden: true },
             {
                 name: "{% trans 'Actions' %}",
@@ -110,16 +113,16 @@
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter(
                     {
-                        give: (row) => `/{{ LANGUAGE_CODE }}/gifts/${row.cells[0].data}/`,
-                        details: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/`,
-                        edit: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/edit/`,
-                        delete: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/delete/`
+                        give: (row) => row.cells[2].data,
+                        details: (row) => row.cells[9].data,
+                        edit: (row) => row.cells[10].data,
+                        delete: (row) => row.cells[11].data
                     },
                     [
                         'give',
                         'details',
                         'edit',
-                        { type: 'delete', condition: (row) => row.cells[8].data }
+                        { type: 'delete', condition: (row) => row.cells[12].data }
                     ]
                 )
             }

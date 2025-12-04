@@ -23,22 +23,34 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // Calculate column indices for clarity
+        const numDataColumns = {{ column_names.items|length }};
+        const groupIdIdx = numDataColumns;           // Index of group_id
+        const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
+        const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
+        const editUrlIdx = numDataColumns + 3;       // Index of edit URL
+        const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
     [
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
-    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
     {% else %}
-    {% if item.grouped_groups %}
-    [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% if not forloop.last %}, {% endif %}
-    {% else %}
-    []{% if not forloop.last %}, {% endif %}
-    {% endif %}
+        {% if item.grouped_groups %}
+        [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% if not forloop.last %}, {% endif %}
+        {% else %}
+        []{% if not forloop.last %}, {% endif %}
+        {% endif %}
     {% endif %}
     {% endfor %},
-    "{{ item.group_id }}"
+        "{{ item.group_id }}",  // cells[numDataColumns]
+        "{% url 'gift_manager:person_group_relation_create' item.group_id %}",  // cells[numDataColumns + 1]
+        "{% url 'gift_manager:person_group_detail' item.group_id %}",           // cells[numDataColumns + 2]
+        "{% url 'gift_manager:person_group_edit' item.group_id %}",             // cells[numDataColumns + 3]
+        "{% url 'gift_manager:person_group_delete' item.group_id %}"            // cells[numDataColumns + 4]
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -51,19 +63,24 @@
     {% else %}
     {
         name: '{{ name|escapejs }}',
-            formatter: GridUtils.multiLinkFormatter('/{{ LANGUAGE_CODE }}/person_groups/{id}/')
+            formatter: GridUtils.multiLinkFormatter()
     } {% if not forloop.last %}, {% endif %}
     {% endif %}
     {% endfor %},
+    { name: 'group_id', hidden: true },
+    { name: 'group_relation_create_url', hidden: true },
+    { name: 'group_detail_url', hidden: true },
+    { name: 'group_edit_url', hidden: true },
+    { name: 'group_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '105px',
+        width: '180px',
         sort: false,
         formatter: GridUtils.actionButtonsFormatter({
-            give: '/{{ LANGUAGE_CODE }}/person_groups/{id}/add_relation/',
-            details: '/{{ LANGUAGE_CODE }}/person_groups/{id}/',
-            edit: '/{{ LANGUAGE_CODE }}/person_groups/{id}/edit/',
-            delete: '/{{ LANGUAGE_CODE }}/person_groups/{id}/delete/'
+            give: (row) => row.cells[giveUrlIdx].data,
+            details: (row) => row.cells[detailUrlIdx].data,
+            edit: (row) => row.cells[editUrlIdx].data,
+            delete: (row) => row.cells[deleteUrlIdx].data
         }, ['give', 'details', 'edit', 'delete'])
     }
     ];

@@ -18,14 +18,20 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // Calculate column indices for clarity
+        const numDataColumns = {{ column_names.items|length }};
+        const statusPkIdx = numDataColumns;      // Index of status_pk
+        const detailUrlIdx = numDataColumns + 1; // Index of detail URL
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
     [
         {% for col, name in column_names.items %}
-    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-    {% endfor %},
-    { { item.pk } }
+        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+        {% endfor %},
+        "{{ item.pk }}",  // cells[numDataColumns]
+        "{% url 'gift_manager:relation_status_detail' item.pk %}"  // cells[numDataColumns + 1]
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -35,14 +41,16 @@
         {% for col, name in column_names.items %}
     { name: '{{ name|escapejs }}' } {% if not forloop.last %}, {% endif %}
     {% endfor %},
+    { name: 'status_pk', hidden: true },
+    { name: 'status_detail_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-            sort: false,
-                formatter: GridUtils.actionButtonsFormatter({
-                    details: '/{{ LANGUAGE_CODE }}/relation_statuses/{id}/'
-                }, ['details'])
-            }
-        ];
+        sort: false,
+        formatter: GridUtils.actionButtonsFormatter({
+            details: (row) => row.cells[detailUrlIdx].data
+        }, ['details'])
+    }
+    ];
 
     // Initialize Grid.js
     GridUtils.initGrid('status-grid', columns, data, {

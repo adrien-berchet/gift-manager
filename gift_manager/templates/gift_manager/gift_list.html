@@ -26,11 +26,15 @@
         "{{ item.name|escapejs }}",
         "{{ item.comment|default:''|escapejs }}",
         {% if item.tags_info %}
-    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
     {% else %}
     [],
         {% endif %}
-    "{{ item.gift_id }}"
+    "{{ item.gift_id }}",
+    "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
+    "{% url 'gift_manager:gift_detail' item.gift_id %}",
+    "{% url 'gift_manager:gift_edit' item.gift_id %}",
+    "{% url 'gift_manager:gift_delete' item.gift_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -41,17 +45,22 @@
         { name: '{{ column_names.comment|escapejs }}' },
         {
             name: '{{ column_names.tags|escapejs }}',
-            formatter: GridUtils.badgeFormatter('/{{ LANGUAGE_CODE }}/gift_tags/{id}/')
+            formatter: GridUtils.badgeFormatter()
         },
+        { name: 'gift_id', hidden: true },
+        { name: 'gift_relation_create_url', hidden: true },
+        { name: 'gift_detail_url', hidden: true },
+        { name: 'gift_edit_url', hidden: true },
+        { name: 'gift_delete_url', hidden: true },
         {
             name: '{% trans "Actions"|escapejs %}',
             width: '180px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                give: '/{{ LANGUAGE_CODE }}/gifts/{id}/add_relation/',
-                details: '/{{ LANGUAGE_CODE }}/gifts/{id}/',
-                edit: '/{{ LANGUAGE_CODE }}/gifts/{id}/edit/',
-                delete: '/{{ LANGUAGE_CODE }}/gifts/{id}/delete/'
+                give: (row) => row.cells[4].data,
+                details: (row) => row.cells[5].data,
+                edit: (row) => row.cells[6].data,
+                delete: (row) => row.cells[7].data
             }, ['give', 'details', 'edit', 'delete'])
         }
     ], data, {

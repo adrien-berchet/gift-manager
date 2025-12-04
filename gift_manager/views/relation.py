@@ -153,10 +153,23 @@ class RelationStatusDetailView(BaseDetailView):
     model = RelationStatus
     template_name = "gift_manager/relation_status_detail.html"
     context_object_name = "status"
-    pk_name = "status_id"
+    pk_name = "pk"  # RelationStatus uses default 'id' field, not 'status_id'
+
+    def get_queryset(self):
+        """Return all RelationStatus objects without user filtering.
+
+        RelationStatus is a global lookup table shared by all users,
+        so it doesn't have a 'shared_with' field.
+        """
+        return RelationStatus.objects.all()
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+        # Skip BaseDetailView's mixins that expect 'shared_with' field
+        # Call DetailView's get_context_data directly
+        from django.views.generic import DetailView
+        context = DetailView.get_context_data(self, **kwargs)
+
+        # Add relations that have this status (filtered by user)
         context["relations"] = Relation.objects.accessible_by(self.request.user).filter(
             status=self.object
         )

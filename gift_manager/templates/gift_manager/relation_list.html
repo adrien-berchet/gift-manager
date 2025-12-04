@@ -23,7 +23,6 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // URL for status updates
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         // Prepare data for Grid.js
@@ -31,23 +30,27 @@
             {% for item in data %}
     [
         {% if item.gift__gift_id %}
-    { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}" },
+    { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
     {% else %}
     null,
         {% endif %}
     {
         text: "{{ item.related_object|escapejs }}",
             personId: {% if item.person__person_id %} "{{item.person__person_id}}"{% else %} null{% endif %},
-        groupId: {% if item.group__group_id %} "{{item.group__group_id}}"{% else %} null{% endif %}
+        groupId: {% if item.group__group_id %} "{{item.group__group_id}}"{% else %} null{% endif %},
+        url: {% if item.person__person_id %}"{% url 'gift_manager:person_detail' item.person__person_id %}"{% elif item.group__group_id %}"{% url 'gift_manager:person_group_detail' item.group__group_id %}"{% else %}null{% endif %}
     },
     {% if item.event__event_id %}
-    { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}" },
+    { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
     {% else %}
     null,
         {% endif %}
     "{{ item.status }}",
         "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
-        "{{item.relation_id}}"
+        "{{item.relation_id}}",
+    "{% url 'gift_manager:relation_detail' item.relation_id %}",
+    "{% url 'gift_manager:relation_edit' item.relation_id %}",
+    "{% url 'gift_manager:relation_delete' item.relation_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -58,31 +61,24 @@
             name: '{{ column_names.gift__name|escapejs }}',
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
-                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/gifts/' + cell.id + '/">' + cell.name + '</a>');
+                return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
             }
         },
         {
             name: '{{ column_names.related_object|escapejs }}',
             formatter: function (cell) {
                 if (!cell || !cell.text) return '';
-
-                const text = cell.text;
-                const personId = cell.personId;
-                const groupId = cell.groupId;
-
-                if (personId) {
-                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/persons/' + personId + '/">' + text + '</a>');
-                } else if (groupId) {
-                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/person_groups/' + groupId + '/">' + text + '</a>');
+                if (cell.url) {
+                    return gridjs.html(`<a href="${cell.url}">${cell.text}</a>`);
                 }
-                return text;
+                return cell.text;
             }
         },
         {
             name: '{{ column_names.event|escapejs }}',
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
-                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/events/' + cell.id + '/">' + cell.name + '</a>');
+                return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
             }
         },
         {
@@ -115,15 +111,18 @@
             name: 'Relation ID',
             hidden: true
         },
+        { name: 'relation_detail_url', hidden: true },
+        { name: 'relation_edit_url', hidden: true },
+        { name: 'relation_delete_url', hidden: true },
         {
             name: '{% trans "Actions"|escapejs %}',
             width: '150px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                details: '/{{ LANGUAGE_CODE }}/relations/{id}/',
-                edit: '/{{ LANGUAGE_CODE }}/relations/{id}/edit/',
-                delete: '/{{ LANGUAGE_CODE }}/relations/{id}/delete/'
-            }, ['details', 'edit', 'delete'], { idResolver: row => row.cells[5].data })
+                details: (row) => row.cells[6].data,
+                edit: (row) => row.cells[7].data,
+                delete: (row) => row.cells[8].data
+            }, ['details', 'edit', 'delete'])
         }
     ], data, {
         pagination: {
