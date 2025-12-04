@@ -23,11 +23,6 @@
 
 <script>
     (function() {
-        // URL templates for links
-        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-
         {% if relations %}
         // Relations Grid
         const relationsData = [
@@ -36,8 +31,10 @@
                 {% if relation.person %}"person"{% else %}"group"{% endif %},
                 {% if relation.person %}"{{ relation.person.person_id }}"{% else %}"{{ relation.group.group_id }}"{% endif %},
                 {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %}"{{ relation.group.name|escapejs }}"{% endif %},
+                {% if relation.person %}"{% url 'gift_manager:person_detail' relation.person.person_id %}"{% else %}"{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% endif %},
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
+                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
                 "{{ relation.comment|default:'-'|escapejs }}",
                 "{{ relation.event.name|default:'-'|escapejs }}",
                 {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %}
@@ -51,26 +48,25 @@
             {
                 name: "{% trans 'Person' %} / {% trans 'Group' %}",
                 formatter: (cell, row) => {
-                    const type = row.cells[0].data;
-                    const id = row.cells[1].data;
                     const name = row.cells[2].data;
-                    if (type === 'person') {
-                        return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', id)}">${name}</a>`);
-                    } else if (type === 'group') {
-                        return gridjs.html(`<a href="${groupDetailUrl.replace('__ID__', id)}">${name}</a>`);
+                    const url = row.cells[3].data;
+                    if (url) {
+                        return gridjs.html(`<a href="${url}">${name}</a>`);
                     }
                     return name;
                 }
             },
+            { name: 'person_group_url', hidden: true },
             { name: 'gift_id', hidden: true },
             {
                 name: "{% trans 'Gift' %}",
                 formatter: (cell, row) => {
-                    const giftId = row.cells[3].data;
-                    const giftName = row.cells[4].data;
-                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                    const giftName = row.cells[5].data;
+                    const giftUrl = row.cells[6].data;
+                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
                 }
             },
+            { name: 'gift_url', hidden: true },
             { name: "{% trans 'Comment' %}" },
             { name: "{% trans 'Event' %}" },
             { name: "{% trans 'Due Date' %}" }

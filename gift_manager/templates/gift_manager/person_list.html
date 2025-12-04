@@ -23,13 +23,6 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // URL templates for links
-        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const personRelationCreateUrl = "{% url 'gift_manager:person_relation_create' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const personEditUrl = "{% url 'gift_manager:person_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const personDeleteUrl = "{% url 'gift_manager:person_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -37,8 +30,12 @@
         "{{ item.first_name|escapejs }}",
         "{{ item.family_name|escapejs }}",
         "{{ item.email_address|default:''|escapejs }}",
-        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
-    "{{ item.person_id }}"
+        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
+    "{{ item.person_id }}",
+    "{% url 'gift_manager:person_relation_create' item.person_id %}",
+    "{% url 'gift_manager:person_detail' item.person_id %}",
+    "{% url 'gift_manager:person_edit' item.person_id %}",
+    "{% url 'gift_manager:person_delete' item.person_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
             ];
@@ -51,18 +48,23 @@
         {
             id: 'groups',
             name: '{{ column_names.groups|escapejs }}',
-            formatter: GridUtils.multiLinkFormatter(groupDetailUrl)
+            formatter: GridUtils.multiLinkFormatter()
         },
+        { name: 'person_id', hidden: true },
+        { name: 'person_relation_create_url', hidden: true },
+        { name: 'person_detail_url', hidden: true },
+        { name: 'person_edit_url', hidden: true },
+        { name: 'person_delete_url', hidden: true },
         {
             id: 'actions',
             name: '{% trans "Actions"|escapejs %}',
             width: '180px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                give: personRelationCreateUrl,
-                details: personDetailUrl,
-                edit: personEditUrl,
-                delete: personDeleteUrl
+                give: (row) => row.cells[5].data,
+                details: (row) => row.cells[6].data,
+                edit: (row) => row.cells[7].data,
+                delete: (row) => row.cells[8].data
             }, ['give', 'details', 'edit', 'delete'])
         }
     ], data, {

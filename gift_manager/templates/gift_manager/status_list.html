@@ -18,9 +18,6 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // URL templates for links
-        const statusDetailUrl = "{% url 'gift_manager:relation_status_detail' 1 %}".replace('1', '__ID__');
-
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -28,7 +25,8 @@
         {% for col, name in column_names.items %}
     "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
     {% endfor %},
-    { { item.pk } }
+    { { item.pk } },
+    "{% url 'gift_manager:relation_status_detail' item.pk %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -38,11 +36,13 @@
         {% for col, name in column_names.items %}
     { name: '{{ name|escapejs }}' } {% if not forloop.last %}, {% endif %}
     {% endfor %},
+    { name: 'status_pk', hidden: true },
+    { name: 'status_detail_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
             sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: statusDetailUrl
+                    details: (row) => row.cells[{% for col, name in column_names.items %}{% if forloop.last %}{{ forloop.counter|add:1 }}{% endif %}{% endfor %}].data
                 }, ['details'])
             }
         ];

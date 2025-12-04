@@ -19,13 +19,6 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // URL templates for links
-        const tagDetailUrl = "{% url 'gift_manager:gift_tag_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftRelationCreateUrl = "{% url 'gift_manager:gift_relation_create' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftEditUrl = "{% url 'gift_manager:gift_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftDeleteUrl = "{% url 'gift_manager:gift_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -33,11 +26,15 @@
         "{{ item.name|escapejs }}",
         "{{ item.comment|default:''|escapejs }}",
         {% if item.tags_info %}
-    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
     {% else %}
     [],
         {% endif %}
-    "{{ item.gift_id }}"
+    "{{ item.gift_id }}",
+    "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
+    "{% url 'gift_manager:gift_detail' item.gift_id %}",
+    "{% url 'gift_manager:gift_edit' item.gift_id %}",
+    "{% url 'gift_manager:gift_delete' item.gift_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -48,17 +45,22 @@
         { name: '{{ column_names.comment|escapejs }}' },
         {
             name: '{{ column_names.tags|escapejs }}',
-            formatter: GridUtils.badgeFormatter(tagDetailUrl)
+            formatter: GridUtils.badgeFormatter()
         },
+        { name: 'gift_id', hidden: true },
+        { name: 'gift_relation_create_url', hidden: true },
+        { name: 'gift_detail_url', hidden: true },
+        { name: 'gift_edit_url', hidden: true },
+        { name: 'gift_delete_url', hidden: true },
         {
             name: '{% trans "Actions"|escapejs %}',
             width: '180px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                give: giftRelationCreateUrl,
-                details: giftDetailUrl,
-                edit: giftEditUrl,
-                delete: giftDeleteUrl
+                give: (row) => row.cells[4].data,
+                details: (row) => row.cells[5].data,
+                edit: (row) => row.cells[6].data,
+                delete: (row) => row.cells[7].data
             }, ['give', 'details', 'edit', 'delete'])
         }
     ], data, {

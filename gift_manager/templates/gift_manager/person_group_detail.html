@@ -67,14 +67,6 @@
 
 <script>
     (function() {
-        // URL templates for links
-        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const personEditUrl = "{% url 'gift_manager:person_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const removePersonUrl = "{% url 'gift_manager:remove_person_group_person' group.group_id '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         // Tab handling
@@ -100,7 +92,9 @@
                 "{{ person.person_id }}",
                 "{{ person.first_name|escapejs }}",
                 "{{ person.family_name|escapejs }}",
-                "{{ person.person_id }}" // ID for actions column
+                "{% url 'gift_manager:person_detail' person.person_id %}",
+                "{% url 'gift_manager:person_edit' person.person_id %}",
+                "{% url 'gift_manager:remove_person_group_person' group.group_id person.person_id %}"
             ],
             {% endfor %}
         ];
@@ -110,27 +104,30 @@
             {
                 name: "{% trans 'First name' %}",
                 formatter: (cell, row) => {
-                    const personId = row.cells[0].data;
                     const firstName = row.cells[1].data;
-                    return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', personId)}">${firstName}</a>`);
+                    const personUrl = row.cells[3].data;
+                    return gridjs.html(`<a href="${personUrl}">${firstName}</a>`);
                 }
             },
             {
                 name: "{% trans 'Family name' %}",
                 formatter: (cell, row) => {
-                    const personId = row.cells[0].data;
                     const familyName = row.cells[2].data;
-                    return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', personId)}">${familyName}</a>`);
+                    const personUrl = row.cells[3].data;
+                    return gridjs.html(`<a href="${personUrl}">${familyName}</a>`);
                 }
             },
+            { name: 'person_detail_url', hidden: true },
+            { name: 'person_edit_url', hidden: true },
+            { name: 'person_delete_url', hidden: true },
             {
                 name: "{% trans 'Actions' %}",
                 width: '150px',
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: personDetailUrl,
-                    edit: personEditUrl,
-                    delete: removePersonUrl
+                    details: (row) => row.cells[3].data,
+                    edit: (row) => row.cells[4].data,
+                    delete: (row) => row.cells[5].data
                 }, ['details', 'edit', 'delete'])
             }
         ];
@@ -149,6 +146,7 @@
             [
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
+                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
                 "{{ relation.gift.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
@@ -162,18 +160,19 @@
             {
                 name: "{% trans 'Name' %}",
                 formatter: (cell, row) => {
-                    const giftId = row.cells[0].data;
                     const giftName = row.cells[1].data;
-                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                    const giftUrl = row.cells[2].data;
+                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
                 }
             },
+            { name: 'gift_url', hidden: true },
             { name: "{% trans 'Comment' %}" },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusPk = row.cells[3].data;
-                    const statusLabel = row.cells[4].data;
-                    const relationId = row.cells[5].data;
+                    const statusPk = row.cells[4].data;
+                    const statusLabel = row.cells[5].data;
+                    const relationId = row.cells[6].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"

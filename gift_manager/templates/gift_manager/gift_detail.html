@@ -40,9 +40,6 @@
 
 <script>
     (function() {
-        // URL templates for links
-        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
-        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
@@ -53,6 +50,7 @@
                 {% if relation.person %}"person"{% elif relation.group %}"group"{% else %}"bad"{% endif %},
                 {% if relation.person %}"{{ relation.person.person_id }}"{% elif relation.group %}"{{ relation.group.group_id }}"{% else %}""{% endif %},
                 {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% elif relation.group %}"{{ relation.group.name|escapejs }}"{% else %}"Bad relation"{% endif %},
+                {% if relation.person %}"{% url 'gift_manager:person_detail' relation.person.person_id %}"{% elif relation.group %}"{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% else %}""{% endif %},
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
                 {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
@@ -67,23 +65,21 @@
             {
                 name: "{% trans 'Person' %} / {% trans 'Group' %}",
                 formatter: (cell, row) => {
-                    const type = row.cells[0].data;
-                    const id = row.cells[1].data;
                     const name = row.cells[2].data;
-                    if (type === 'person') {
-                        return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', id)}">${name}</a>`);
-                    } else if (type === 'group') {
-                        return gridjs.html(`<a href="${groupDetailUrl.replace('__ID__', id)}">${name}</a>`);
+                    const url = row.cells[3].data;
+                    if (url) {
+                        return gridjs.html(`<a href="${url}">${name}</a>`);
                     }
                     return name;
                 }
             },
+            { name: 'url', hidden: true },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusPk = row.cells[3].data;
-                    const statusLabel = row.cells[4].data;
-                    const relationId = row.cells[6].data;
+                    const statusPk = row.cells[4].data;
+                    const statusLabel = row.cells[5].data;
+                    const relationId = row.cells[7].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
