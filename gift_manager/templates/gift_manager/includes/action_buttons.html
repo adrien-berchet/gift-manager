@@ -1,5 +1,5 @@
 {% load i18n %}
-{#
+{% comment %}
   Reusable action buttons component
 
   Usage:
@@ -12,7 +12,7 @@
     - enabled: whether button is enabled (optional, default True)
     - tooltip: tooltip text when disabled (optional)
     - css_class: additional CSS classes (optional)
-#}
+{% endcomment %}
 
 <div class="action-buttons mb-3" style="white-space: nowrap;">
   {% for button in buttons %}
