@@ -23,7 +23,14 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // URL for status updates
+        // URL templates for links
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const eventDetailUrl = "{% url 'gift_manager:event_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         // Prepare data for Grid.js
@@ -58,7 +65,7 @@
             name: '{{ column_names.gift__name|escapejs }}',
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
-                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/gifts/' + cell.id + '/">' + cell.name + '</a>');
+                return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', cell.id)}">${cell.name}</a>`);
             }
         },
         {
@@ -71,9 +78,9 @@
                 const groupId = cell.groupId;
 
                 if (personId) {
-                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/persons/' + personId + '/">' + text + '</a>');
+                    return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', personId)}">${text}</a>`);
                 } else if (groupId) {
-                    return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/person_groups/' + groupId + '/">' + text + '</a>');
+                    return gridjs.html(`<a href="${groupDetailUrl.replace('__ID__', groupId)}">${text}</a>`);
                 }
                 return text;
             }
@@ -82,7 +89,7 @@
             name: '{{ column_names.event|escapejs }}',
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
-                return gridjs.html('<a href="/{{ LANGUAGE_CODE }}/events/' + cell.id + '/">' + cell.name + '</a>');
+                return gridjs.html(`<a href="${eventDetailUrl.replace('__ID__', cell.id)}">${cell.name}</a>`);
             }
         },
         {
@@ -120,10 +127,10 @@
             width: '150px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                details: '/{{ LANGUAGE_CODE }}/relations/{id}/',
-                edit: '/{{ LANGUAGE_CODE }}/relations/{id}/edit/',
-                delete: '/{{ LANGUAGE_CODE }}/relations/{id}/delete/'
-            }, ['details', 'edit', 'delete'], { idResolver: row => row.cells[5].data })
+                details: (row) => relationDetailUrl.replace('__ID__', row.cells[5].data),
+                edit: (row) => relationEditUrl.replace('__ID__', row.cells[5].data),
+                delete: (row) => relationDeleteUrl.replace('__ID__', row.cells[5].data)
+            }, ['details', 'edit', 'delete'])
         }
     ], data, {
         pagination: {

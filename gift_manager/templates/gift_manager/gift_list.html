@@ -19,6 +19,13 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // URL templates for links
+        const tagDetailUrl = "{% url 'gift_manager:gift_tag_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftRelationCreateUrl = "{% url 'gift_manager:gift_relation_create' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftEditUrl = "{% url 'gift_manager:gift_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftDeleteUrl = "{% url 'gift_manager:gift_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -41,17 +48,17 @@
         { name: '{{ column_names.comment|escapejs }}' },
         {
             name: '{{ column_names.tags|escapejs }}',
-            formatter: GridUtils.badgeFormatter('/{{ LANGUAGE_CODE }}/gift_tags/{id}/')
+            formatter: GridUtils.badgeFormatter(tagDetailUrl)
         },
         {
             name: '{% trans "Actions"|escapejs %}',
             width: '180px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                give: '/{{ LANGUAGE_CODE }}/gifts/{id}/add_relation/',
-                details: '/{{ LANGUAGE_CODE }}/gifts/{id}/',
-                edit: '/{{ LANGUAGE_CODE }}/gifts/{id}/edit/',
-                delete: '/{{ LANGUAGE_CODE }}/gifts/{id}/delete/'
+                give: giftRelationCreateUrl,
+                details: giftDetailUrl,
+                edit: giftEditUrl,
+                delete: giftDeleteUrl
             }, ['give', 'details', 'edit', 'delete'])
         }
     ], data, {

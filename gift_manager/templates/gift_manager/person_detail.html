@@ -110,10 +110,10 @@
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter(
                     {
-                        give: (row) => `/{{ LANGUAGE_CODE }}/gifts/${row.cells[0].data}/`,
-                        details: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/`,
-                        edit: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/edit/`,
-                        delete: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/delete/`
+                        give: (row) => giftDetailUrl.replace('__ID__', row.cells[0].data),
+                        details: (row) => relationDetailUrl.replace('__ID__', row.cells[7].data),
+                        edit: (row) => relationEditUrl.replace('__ID__', row.cells[7].data),
+                        delete: (row) => relationDeleteUrl.replace('__ID__', row.cells[7].data)
                     },
                     [
                         'give',

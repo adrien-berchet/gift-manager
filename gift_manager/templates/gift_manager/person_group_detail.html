@@ -128,9 +128,9 @@
                 width: '150px',
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: '/{{ LANGUAGE_CODE }}/persons/{id}/',
-                    edit: '/{{ LANGUAGE_CODE }}/persons/{id}/edit/',
-                    delete: '/{{ LANGUAGE_CODE }}/person_groups/{{ group.group_id }}/remove_person/{id}/'
+                    details: personDetailUrl,
+                    edit: personEditUrl,
+                    delete: removePersonUrl
                 }, ['details', 'edit', 'delete'])
             }
         ];
