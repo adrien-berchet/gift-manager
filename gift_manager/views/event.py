@@ -6,8 +6,14 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from ..forms import EventForm
-from ..models import Event, Relation, RelationStatus
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from ..models import Event
+from ..models import Relation
+from ..models import RelationStatus
+from .base import BaseCreateView
+from .base import BaseDeleteView
+from .base import BaseDetailView
+from .base import BaseListView
+from .base import BaseUpdateView
 
 
 class EventListView(BaseListView):
@@ -84,14 +90,20 @@ class EventDetailView(BaseDetailView):
                 "url": reverse("gift_manager:event_edit", kwargs={"pk": self.object.event_id}),
                 "label": _("Edit event"),
                 "enabled": is_editor,
-                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+                "tooltip": _("You do not have permission to edit this object")
+                if not is_editor
+                else None,
             },
             {
                 "type": "delete",
                 "url": reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
                 "label": _("Delete event"),
                 "enabled": True,
-                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+                "tooltip": _(
+                    "You do not have permission to delete this object so it will only be unshared with you"
+                )
+                if not is_editor
+                else None,
             },
         ]
         return context

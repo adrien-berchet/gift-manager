@@ -167,6 +167,7 @@ class RelationStatusDetailView(BaseDetailView):
         # Skip BaseDetailView's mixins that expect 'shared_with' field
         # Call DetailView's get_context_data directly
         from django.views.generic import DetailView
+
         context = DetailView.get_context_data(self, **kwargs)
 
         # Add relations that have this status (filtered by user)
@@ -344,17 +345,27 @@ class RelationDetailView(BaseDetailView):
         context["action_buttons"] = [
             {
                 "type": "edit",
-                "url": reverse("gift_manager:relation_edit", kwargs={"pk": self.object.relation_id}),
+                "url": reverse(
+                    "gift_manager:relation_edit", kwargs={"pk": self.object.relation_id}
+                ),
                 "label": _("Edit relation"),
                 "enabled": is_editor,
-                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+                "tooltip": _("You do not have permission to edit this object")
+                if not is_editor
+                else None,
             },
             {
                 "type": "delete",
-                "url": reverse("gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}),
+                "url": reverse(
+                    "gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}
+                ),
                 "label": _("Delete relation"),
                 "enabled": True,
-                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+                "tooltip": _(
+                    "You do not have permission to delete this object so it will only be unshared with you"
+                )
+                if not is_editor
+                else None,
             },
         ]
         return context

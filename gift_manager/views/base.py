@@ -7,7 +7,6 @@ from copy import deepcopy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.http import Http404

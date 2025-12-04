@@ -6,7 +6,11 @@ from django.contrib.auth.models import User
 from django.db.models import Model
 from django.shortcuts import render
 
-from ..models import Event, Gift, Person, PersonGroup, Relation
+from ..models import Event
+from ..models import Gift
+from ..models import Person
+from ..models import PersonGroup
+from ..models import Relation
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]

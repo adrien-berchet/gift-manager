@@ -22,62 +22,91 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-    (function() {
+    (function () {
         {% if relations %}
         // Relations Grid
         const relationsData = [
             {% for relation in relations %}
-            [
-                {% if relation.person %}"person"{% else %}"group"{% endif %},
-                {% if relation.person %}"{{ relation.person.person_id }}"{% else %}"{{ relation.group.group_id }}"{% endif %},
-                {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %}"{{ relation.group.name|escapejs }}"{% endif %},
-                {% if relation.person %}"{% url 'gift_manager:person_detail' relation.person.person_id %}"{% else %}"{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% endif %},
-                "{{ relation.gift.gift_id }}",
-                "{{ relation.gift.name|escapejs }}",
-                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-                "{{ relation.comment|default:'-'|escapejs }}",
-                "{{ relation.event.name|default:'-'|escapejs }}",
-                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %}
+    [
+        {% if relation.person %}"person"{% else %} "group"{% endif %},
+    {% if relation.person %} "{{ relation.person.person_id }}"{% else %} "{{ relation.group.group_id }}"{% endif %},
+    {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %} "{{ relation.group.name|escapejs }}"{% endif %},
+    {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}"{% else %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% endif %},
+    "{{ relation.gift.gift_id }}",
+        "{{ relation.gift.name|escapejs }}",
+        "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
+        "{{ relation.comment|default:'-'|escapejs }}",
+        "{{ relation.event.name|default:'-'|escapejs }}",
+        {% if relation.due_date %}"{{ relation.due_date }}"{% else %} "-"{% endif %},
+    "{{ relation.relation_id }}",
+        "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+        "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+        "{% url 'gift_manager:relation_delete' relation.relation_id %}",
+        {% if relation.group %}false{% else %} true{% endif %}
             ],
-            {% endfor %}
+    {% endfor %}
         ];
 
-        const relationsColumns = [
-            { name: 'type', hidden: true },
-            { name: 'id', hidden: true },
-            {
-                name: "{% trans 'Person' %} / {% trans 'Group' %}",
-                formatter: (cell, row) => {
-                    const name = row.cells[2].data;
-                    const url = row.cells[3].data;
-                    if (url) {
-                        return gridjs.html(`<a href="${url}">${name}</a>`);
-                    }
-                    return name;
+    const relationsColumns = [
+        { name: 'type', hidden: true },
+        { name: 'id', hidden: true },
+        {
+            name: "{% trans 'Person' %} / {% trans 'Group' %}",
+            formatter: (cell, row) => {
+                const name = row.cells[2].data;
+                const url = row.cells[3].data;
+                if (url) {
+                    return gridjs.html(`<a href="${url}">${name}</a>`);
                 }
-            },
-            { name: 'person_group_url', hidden: true },
-            { name: 'gift_id', hidden: true },
-            {
-                name: "{% trans 'Gift' %}",
-                formatter: (cell, row) => {
-                    const giftName = row.cells[5].data;
-                    const giftUrl = row.cells[6].data;
-                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
-                }
-            },
-            { name: 'gift_url', hidden: true },
-            { name: "{% trans 'Comment' %}" },
-            { name: "{% trans 'Event' %}" },
-            { name: "{% trans 'Due Date' %}" }
-        ];
+                return name;
+            }
+        },
+        { name: 'person_group_url', hidden: true },
+        { name: 'gift_id', hidden: true },
+        {
+            name: "{% trans 'Gift' %}",
+            formatter: (cell, row) => {
+                const giftName = row.cells[5].data;
+                const giftUrl = row.cells[6].data;
+                return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+            }
+        },
+        { name: 'gift_url', hidden: true },
+        { name: "{% trans 'Comment' %}" },
+        { name: "{% trans 'Event' %}" },
+        { name: "{% trans 'Due Date' %}" },
+        { name: 'relation_id', hidden: true },
+        { name: 'relation_detail_url', hidden: true },
+        { name: 'relation_edit_url', hidden: true },
+        { name: 'relation_delete_url', hidden: true },
+        { name: 'canDelete', hidden: true },
+        {
+            name: "{% trans 'Actions' %}",
+            width: '180px',
+            sort: false,
+            formatter: GridUtils.actionButtonsFormatter(
+                {
+                    give: (row) => row.cells[6].data,
+                    details: (row) => row.cells[11].data,
+                    edit: (row) => row.cells[12].data,
+                    delete: (row) => row.cells[13].data
+                },
+                [
+                    'give',
+                    'details',
+                    'edit',
+                    { type: 'delete', condition: (row) => row.cells[14].data }
+                ]
+            )
+        }
+    ];
 
-        GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
-            pagination: { enabled: true, limit: 10 },
-            search: true,
-            sort: true
-        });
-        {% endif %}
-    })();
+    GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
+        pagination: { enabled: true, limit: 10 },
+        search: true,
+        sort: true
+    });
+    {% endif %}
+    }) ();
 </script>
 {% endblock %}

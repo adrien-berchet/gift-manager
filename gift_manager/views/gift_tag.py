@@ -3,14 +3,21 @@
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.views.generic import View
 
 from ..forms import GiftTagForm
-from ..models import Gift, GiftTag
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from ..models import Gift
+from ..models import GiftTag
+from .base import BaseCreateView
+from .base import BaseDeleteView
+from .base import BaseDetailView
+from .base import BaseListView
+from .base import BaseUpdateView
 
 
 class GiftTagExplorerView(LoginRequiredMixin, View):
@@ -43,8 +50,8 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
             try:
                 # Prefetch related tags to optimize hierarchy traversal
                 selected_tag = get_object_or_404(
-                    GiftTag.objects.prefetch_related('parent_tags', 'child_tags'),
-                    tag_id=selected_tag_id
+                    GiftTag.objects.prefetch_related("parent_tags", "child_tags"),
+                    tag_id=selected_tag_id,
                 )
 
                 # Check if the user has access to this tag
@@ -172,7 +179,7 @@ class GiftTagUpdateView(BaseUpdateView):
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""
-        return GiftTag.objects.prefetch_related('parent_tags', 'child_tags')
+        return GiftTag.objects.prefetch_related("parent_tags", "child_tags")
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -203,7 +210,7 @@ class GiftTagDetailView(BaseDetailView):
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""
-        return self.model.objects.prefetch_related('parent_tags', 'child_tags').filter(
+        return self.model.objects.prefetch_related("parent_tags", "child_tags").filter(
             Q(is_public=True) | Q(shared_with=self.request.user)
         )
 
