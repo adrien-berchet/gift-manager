@@ -19,17 +19,25 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // Calculate column indices for clarity
+        // Data columns: {% for col, name in column_names.items %}{{ forloop.counter }}{% if forloop.last %} columns{% endif %}{% endfor %}
+        const numDataColumns = {{ column_names.items|length }};
+        const eventIdIdx = numDataColumns;      // Index of event_id
+        const detailUrlIdx = numDataColumns + 1; // Index of detail URL
+        const editUrlIdx = numDataColumns + 2;   // Index of edit URL
+        const deleteUrlIdx = numDataColumns + 3; // Index of delete URL
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
     [
         {% for col, name in column_names.items %}
-    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-    {% endfor %},
-    "{{ item.event_id }}",
-    "{% url 'gift_manager:event_detail' item.event_id %}",
-    "{% url 'gift_manager:event_edit' item.event_id %}",
-    "{% url 'gift_manager:event_delete' item.event_id %}"
+        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+        {% endfor %},
+        "{{ item.event_id }}",  // cells[numDataColumns]
+        "{% url 'gift_manager:event_detail' item.event_id %}",  // cells[numDataColumns + 1]
+        "{% url 'gift_manager:event_edit' item.event_id %}",     // cells[numDataColumns + 2]
+        "{% url 'gift_manager:event_delete' item.event_id %}"    // cells[numDataColumns + 3]
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -48,9 +56,9 @@
         width: '150px',
         sort: false,
         formatter: GridUtils.actionButtonsFormatter({
-            details: (row) => row.cells[{% for col, name in column_names.items %}{% if forloop.last %}{{ forloop.counter }}{% endif %}{% endfor %}].data,
-            edit: (row) => row.cells[{% for col, name in column_names.items %}{% if forloop.last %}{{ forloop.counter|add:1 }}{% endif %}{% endfor %}].data,
-            delete: (row) => row.cells[{% for col, name in column_names.items %}{% if forloop.last %}{{ forloop.counter|add:2 }}{% endif %}{% endfor %}].data
+            details: (row) => row.cells[detailUrlIdx].data,
+            edit: (row) => row.cells[editUrlIdx].data,
+            delete: (row) => row.cells[deleteUrlIdx].data
         }, ['details', 'edit', 'delete'])
     }
     ];
