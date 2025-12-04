@@ -2,8 +2,10 @@
 
 from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 
 from ..forms import PersonGroupAddMultiplePersonsForm, PersonGroupForm
 from ..models import Person, PersonGroup, Relation, RelationStatus
@@ -100,4 +102,23 @@ class PersonGroupDetailView(BaseDetailView):
             .order_by("status__pk")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
+
+        # Add action buttons
+        is_editor = context["is_editor"]
+        context["action_buttons"] = [
+            {
+                "type": "edit",
+                "url": reverse("gift_manager:person_group_edit", kwargs={"pk": self.object.group_id}),
+                "label": _("Edit group"),
+                "enabled": is_editor,
+                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+            },
+            {
+                "type": "delete",
+                "url": reverse("gift_manager:person_group_delete", kwargs={"pk": self.object.group_id}),
+                "label": _("Delete group"),
+                "enabled": True,
+                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+            },
+        ]
         return context
