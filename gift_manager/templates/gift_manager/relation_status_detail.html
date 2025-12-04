@@ -48,9 +48,29 @@
         const relationsColumns = [
             { name: 'type', hidden: true },
             { name: 'id', hidden: true },
-            { name: "{% trans 'Person' %} / {% trans 'Group' %}" },
+            {
+                name: "{% trans 'Person' %} / {% trans 'Group' %}",
+                formatter: (cell, row) => {
+                    const type = row.cells[0].data;
+                    const id = row.cells[1].data;
+                    const name = row.cells[2].data;
+                    if (type === 'person') {
+                        return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', id)}">${name}</a>`);
+                    } else if (type === 'group') {
+                        return gridjs.html(`<a href="${groupDetailUrl.replace('__ID__', id)}">${name}</a>`);
+                    }
+                    return name;
+                }
+            },
             { name: 'gift_id', hidden: true },
-            { name: "{% trans 'Gift' %}" },
+            {
+                name: "{% trans 'Gift' %}",
+                formatter: (cell, row) => {
+                    const giftId = row.cells[3].data;
+                    const giftName = row.cells[4].data;
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                }
+            },
             { name: "{% trans 'Comment' %}" },
             { name: "{% trans 'Event' %}" },
             { name: "{% trans 'Due Date' %}" }

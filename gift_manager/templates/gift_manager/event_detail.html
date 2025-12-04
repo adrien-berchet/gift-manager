@@ -66,7 +66,17 @@
 
         const relationsColumns = [
             { name: 'person_id', hidden: true },
-            { name: "{% trans 'Person' %}" },
+            {
+                name: "{% trans 'Person' %}",
+                formatter: (cell, row) => {
+                    const personId = row.cells[0].data;
+                    const personName = row.cells[1].data;
+                    if (personId) {
+                        return gridjs.html(`<a href="${personDetailUrl.replace('__ID__', personId)}">${personName}</a>`);
+                    }
+                    return personName;
+                }
+            },
             { name: 'gift_id', hidden: true },
             {
                 name: "{% trans 'Gift' %}",
