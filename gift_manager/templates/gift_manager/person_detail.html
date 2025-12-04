@@ -108,53 +108,20 @@
                 name: "{% trans 'Actions' %}",
                 width: '200px',
                 sort: false,
-                formatter: (cell, row) => {
-                    const giftId = row.cells[0].data;
-                    const relationId = row.cells[7].data;
-                    const canDelete = row.cells[8].data;
-
-                    const buttons = [];
-
-                    // Gift detail button
-                    buttons.push(`
-                        <a href="/{{ LANGUAGE_CODE }}/gifts/${giftId}/"
-                           class="btn btn-primary btn-sm"
-                           title="{% trans 'Show gift' %}">
-                            <i class="fas fa-gift"></i>
-                        </a>
-                    `);
-
-                    // Relation detail button
-                    buttons.push(`
-                        <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/"
-                           class="btn btn-info btn-sm"
-                           title="{% trans 'Details' %}">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    `);
-
-                    // Relation edit button
-                    buttons.push(`
-                        <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/edit/"
-                           class="btn btn-warning btn-sm"
-                           title="{% trans 'Edit' %}">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                    `);
-
-                    // Relation delete button (conditional)
-                    if (canDelete) {
-                        buttons.push(`
-                            <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/delete/"
-                               class="btn btn-danger btn-sm"
-                               title="{% trans 'Delete' %}">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        `);
-                    }
-
-                    return gridjs.html(`<div style="white-space: nowrap;">${buttons.join(' ')}</div>`);
-                }
+                formatter: GridUtils.actionButtonsFormatter(
+                    {
+                        give: (row) => `/{{ LANGUAGE_CODE }}/gifts/${row.cells[0].data}/`,
+                        details: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/`,
+                        edit: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/edit/`,
+                        delete: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/delete/`
+                    },
+                    [
+                        'give',
+                        'details',
+                        'edit',
+                        { type: 'delete', condition: (row) => row.cells[8].data }
+                    ]
+                )
             }
         ];
 

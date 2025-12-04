@@ -35,54 +35,87 @@
      * Create action buttons formatter for CRUD operations
      *
      * @param urls Object with URL templates (e.g., {details: '/persons/{id}/'})
-     * @param actions Array of action names to display
+     *             OR functions that take (row) and return the URL
+     * @param actions Array of action names to display OR objects with {type, condition}
+     *                condition is optional and takes (row) => boolean
+     * @param options Optional {idResolver: function(row) => id} to get ID from row instead of cell
      */
-    function actionButtonsFormatter(urls, actions) {
+    function actionButtonsFormatter(urls, actions, options = {}) {
         return function (cell, row) {
-            // The cell parameter contains the ID value for this column
-            const id = cell;
+            // Get ID - either from cell, or use custom resolver
+            const id = options.idResolver ? options.idResolver(row) : cell;
 
             const buttons = [];
 
-            if (actions.includes('give') && urls.give) {
-                buttons.push(`
-                    <a href="${urls.give.replace('{id}', id)}"
-                       class="btn btn-primary btn-sm"
-                       title="Give">
-                        <i class="fas fa-hand-holding-heart"></i>
-                    </a>
-                `);
-            }
+            // Helper to check if action should be displayed
+            const shouldDisplay = (action) => {
+                if (typeof action === 'string') return true;
+                return !action.condition || action.condition(row);
+            };
 
-            if (actions.includes('details') && urls.details) {
-                buttons.push(`
-                    <a href="${urls.details.replace('{id}', id)}"
-                       class="btn btn-info btn-sm"
-                       title="Details">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                `);
-            }
+            // Helper to get action type
+            const getActionType = (action) => {
+                return typeof action === 'string' ? action : action.type;
+            };
 
-            if (actions.includes('edit') && urls.edit) {
-                buttons.push(`
-                    <a href="${urls.edit.replace('{id}', id)}"
-                       class="btn btn-warning btn-sm"
-                       title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                `);
-            }
+            // Helper to resolve URL
+            const resolveUrl = (urlTemplate, actionId) => {
+                if (typeof urlTemplate === 'function') {
+                    return urlTemplate(row);
+                }
+                return urlTemplate.replace('{id}', actionId || id);
+            };
 
-            if (actions.includes('delete') && urls.delete) {
-                buttons.push(`
-                    <a href="${urls.delete.replace('{id}', id)}"
-                       class="btn btn-danger btn-sm"
-                       title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </a>
-                `);
-            }
+            // Process each action
+            actions.forEach(action => {
+                const actionType = getActionType(action);
+
+                if (!shouldDisplay(action)) return;
+
+                if (actionType === 'give' && urls.give) {
+                    const url = resolveUrl(urls.give, action.id);
+                    buttons.push(`
+                        <a href="${url}"
+                           class="btn btn-primary btn-sm"
+                           title="Give">
+                            <i class="fas fa-hand-holding-heart"></i>
+                        </a>
+                    `);
+                }
+
+                if (actionType === 'details' && urls.details) {
+                    const url = resolveUrl(urls.details, action.id);
+                    buttons.push(`
+                        <a href="${url}"
+                           class="btn btn-info btn-sm"
+                           title="Details">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                    `);
+                }
+
+                if (actionType === 'edit' && urls.edit) {
+                    const url = resolveUrl(urls.edit, action.id);
+                    buttons.push(`
+                        <a href="${url}"
+                           class="btn btn-warning btn-sm"
+                           title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    `);
+                }
+
+                if (actionType === 'delete' && urls.delete) {
+                    const url = resolveUrl(urls.delete, action.id);
+                    buttons.push(`
+                        <a href="${url}"
+                           class="btn btn-danger btn-sm"
+                           title="Delete">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    `);
+                }
+            });
 
             return gridjs.html(`<div style="white-space: nowrap;">${buttons.join(' ')}</div>`);
         };
