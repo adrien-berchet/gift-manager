@@ -1,15 +1,25 @@
 """PersonGroup-related views."""
 
 from django.db import transaction
-from django.shortcuts import get_object_or_404, redirect, render
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
-from ..forms import PersonGroupAddMultiplePersonsForm, PersonGroupForm
-from ..models import Person, PersonGroup, Relation, RelationStatus
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from ..forms import PersonGroupAddMultiplePersonsForm
+from ..forms import PersonGroupForm
+from ..models import Person
+from ..models import PersonGroup
+from ..models import Relation
+from ..models import RelationStatus
+from .base import BaseCreateView
+from .base import BaseDeleteView
+from .base import BaseDetailView
+from .base import BaseListView
+from .base import BaseUpdateView
 
 
 class PersonGroupListView(BaseListView):
@@ -108,17 +118,27 @@ class PersonGroupDetailView(BaseDetailView):
         context["action_buttons"] = [
             {
                 "type": "edit",
-                "url": reverse("gift_manager:person_group_edit", kwargs={"pk": self.object.group_id}),
+                "url": reverse(
+                    "gift_manager:person_group_edit", kwargs={"pk": self.object.group_id}
+                ),
                 "label": _("Edit group"),
                 "enabled": is_editor,
-                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+                "tooltip": _("You do not have permission to edit this object")
+                if not is_editor
+                else None,
             },
             {
                 "type": "delete",
-                "url": reverse("gift_manager:person_group_delete", kwargs={"pk": self.object.group_id}),
+                "url": reverse(
+                    "gift_manager:person_group_delete", kwargs={"pk": self.object.group_id}
+                ),
                 "label": _("Delete group"),
                 "enabled": True,
-                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+                "tooltip": _(
+                    "You do not have permission to delete this object so it will only be unshared with you"
+                )
+                if not is_editor
+                else None,
             },
         ]
         return context

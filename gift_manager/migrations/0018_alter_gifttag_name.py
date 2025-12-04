@@ -1,6 +1,7 @@
 # Generated manually for GiftTag optimization
 
-from django.db import migrations, models
+from django.db import migrations
+from django.db import models
 
 
 class Migration(migrations.Migration):

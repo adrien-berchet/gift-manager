@@ -13,8 +13,7 @@ register = template.Library()
 
 @register.simple_tag
 def grid_action_urls(object_type: str, object_id: str, actions: list[str] | None = None) -> str:
-    """
-    Generate action button URLs for Grid.js.
+    """Generate action button URLs for Grid.js.
 
     Args:
         object_type: The type of object (e.g., 'person', 'gift', 'event')
@@ -52,8 +51,7 @@ def grid_action_urls(object_type: str, object_id: str, actions: list[str] | None
 
 @register.filter
 def to_grid_data(queryset, columns: dict | None = None) -> str:
-    """
-    Convert a Django queryset to Grid.js data format.
+    """Convert a Django queryset to Grid.js data format.
 
     Args:
         queryset: Django queryset or list of dicts
@@ -71,12 +69,11 @@ def to_grid_data(queryset, columns: dict | None = None) -> str:
                 row = [item.get(col, "") for col in columns.keys()]
             else:
                 row = list(item.values())
+        # Handle model instance
+        elif columns:
+            row = [getattr(item, col, "") for col in columns.keys()]
         else:
-            # Handle model instance
-            if columns:
-                row = [getattr(item, col, "") for col in columns.keys()]
-            else:
-                row = [str(item)]
+            row = [str(item)]
 
         data.append(row)
 
@@ -85,8 +82,7 @@ def to_grid_data(queryset, columns: dict | None = None) -> str:
 
 @register.filter
 def to_grid_columns(columns: dict, actions: list[str] | None = None) -> str:
-    """
-    Convert column definitions to Grid.js column format.
+    """Convert column definitions to Grid.js column format.
 
     Args:
         columns: Dict of column_key: column_label
@@ -115,8 +111,7 @@ def to_grid_columns(columns: dict, actions: list[str] | None = None) -> str:
 
 @register.simple_tag
 def grid_data_row(item: dict, columns: dict, id_field: str = "id") -> str:
-    """
-    Convert a single item to a Grid.js data row.
+    """Convert a single item to a Grid.js data row.
 
     Args:
         item: Dict representing a single row
@@ -128,7 +123,7 @@ def grid_data_row(item: dict, columns: dict, id_field: str = "id") -> str:
     """
     row_data = []
 
-    for col_key in columns.keys():
+    for col_key in columns:
         value = item.get(col_key, "")
 
         # Handle special cases
@@ -150,8 +145,7 @@ def grid_data_row(item: dict, columns: dict, id_field: str = "id") -> str:
 
 @register.simple_tag(takes_context=True)
 def grid_create_button(context: dict, object_type: str, label: str | None = None) -> str:
-    """
-    Generate a create button for list views.
+    """Generate a create button for list views.
 
     Args:
         context: Template context (for i18n)
@@ -177,8 +171,7 @@ def grid_create_button(context: dict, object_type: str, label: str | None = None
 
 @register.filter
 def format_grid_value(value: Any, column_type: str = "text") -> str:
-    """
-    Format a value for display in Grid.js based on column type.
+    """Format a value for display in Grid.js based on column type.
 
     Args:
         value: The value to format
@@ -193,16 +186,15 @@ def format_grid_value(value: Any, column_type: str = "text") -> str:
     if column_type == "list" and isinstance(value, (list, tuple)):
         # For lists, return comma-separated values
         return ", ".join(str(v) for v in value)
-    elif column_type == "date":
+    if column_type == "date":
         # Format dates
         if hasattr(value, "strftime"):
             return value.strftime("%Y-%m-%d")
         return str(value)
-    elif column_type == "email":
+    if column_type == "email":
         # Email with mailto link
         return f'<a href="mailto:{value}">{value}</a>'
-    else:
-        return str(value)
+    return str(value)
 
 
 @register.simple_tag
@@ -212,8 +204,7 @@ def grid_config(
     sort: bool = True,
     resizable: bool = True,
 ) -> str:
-    """
-    Generate Grid.js configuration object.
+    """Generate Grid.js configuration object.
 
     Args:
         pagination_limit: Number of items per page

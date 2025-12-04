@@ -143,8 +143,10 @@
 
     /**
      * Create multi-link formatter for arrays of links (e.g., groups)
+     * @param urlTemplate Optional URL template (e.g., '/groups/{id}/'). If not provided, expects items to have a 'url' property
+     * @param separator String to separate links (default: ', ')
      */
-    function multiLinkFormatter(urlTemplate, separator = ', ') {
+    function multiLinkFormatter(urlTemplate = null, separator = ', ') {
         return function (cell) {
             if (!cell || !Array.isArray(cell) || cell.length === 0) {
                 return '';
@@ -153,7 +155,19 @@
             const links = cell.map(item => {
                 const text = item.name || item;
                 const id = item.id;
-                return `<a href="${urlTemplate.replace('{id}', id)}">${text}</a>`;
+
+                // Use item.url if available, otherwise use urlTemplate
+                let url;
+                if (item.url) {
+                    url = item.url;
+                } else if (urlTemplate) {
+                    url = urlTemplate.replace('{id}', id);
+                } else {
+                    // No URL available, just return text
+                    return text;
+                }
+
+                return `<a href="${url}">${text}</a>`;
             }).join(separator);
 
             return gridjs.html(links);

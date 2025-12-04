@@ -65,7 +65,9 @@ class PersonManager(UserPermissionManager):
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""
         from django.contrib.postgres.aggregates import JSONBAgg
-        from django.db.models import F, Func, Value
+        from django.db.models import F
+        from django.db.models import Func
+        from django.db.models import Value
 
         return self.annotate(
             groups_info=JSONBAgg(
@@ -83,13 +85,12 @@ class PersonManager(UserPermissionManager):
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
-        from django.db.models import TextField, Value
+        from django.db.models import TextField
+        from django.db.models import Value
         from django.db.models.functions import Concat
 
         return self.annotate(
-            complete_name=Concat(
-                "family_name", Value(" "), "first_name", output_field=TextField()
-            )
+            complete_name=Concat("family_name", Value(" "), "first_name", output_field=TextField())
         )
 
     def for_list_display(self, user):
@@ -107,7 +108,9 @@ class GiftManager(UserPermissionManager):
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
         from django.contrib.postgres.aggregates import JSONBAgg
-        from django.db.models import F, Func, Value
+        from django.db.models import F
+        from django.db.models import Func
+        from django.db.models import Value
 
         return self.annotate(
             tags_info=JSONBAgg(
@@ -149,8 +152,11 @@ class RelationManager(UserPermissionManager):
 
     def with_related_object_name(self):
         """Return relations with related_object annotation (person or group name)."""
-        from django.db.models import TextField, Value
-        from django.db.models.functions import Coalesce, Concat, NullIf
+        from django.db.models import TextField
+        from django.db.models import Value
+        from django.db.models.functions import Coalesce
+        from django.db.models.functions import Concat
+        from django.db.models.functions import NullIf
 
         return self.annotate(
             related_object=Coalesce(
@@ -355,12 +361,11 @@ class GiftTagManager(models.Manager):
         return self.accessible_by(user).filter(parent_tags=parent_tag)
 
     def with_prefetched_relations(self):
-        """
-        Return queryset with prefetched parent_tags and child_tags.
+        """Return queryset with prefetched parent_tags and child_tags.
 
         Use this method when you need to traverse the hierarchy to avoid N+1 queries.
         """
-        return self.prefetch_related('parent_tags', 'child_tags')
+        return self.prefetch_related("parent_tags", "child_tags")
 
 
 class GiftTag(models.Model):
@@ -388,8 +393,7 @@ class GiftTag(models.Model):
         return self.child_tags.all()
 
     def get_descendants(self, use_cache=True):
-        """
-        Returns all descendant tags (recursively).
+        """Returns all descendant tags (recursively).
 
         Optimized to fetch all descendants in a single query using prefetch_related,
         then traverse the hierarchy in memory to avoid N+1 queries.
@@ -398,7 +402,7 @@ class GiftTag(models.Model):
             use_cache: If True, use cached results when available (default: True)
         """
         # Check cache first
-        cache_key = f'gifttag_descendants_{self.pk}'
+        cache_key = f"gifttag_descendants_{self.pk}"
         if use_cache:
             cached_result = cache.get(cache_key)
             if cached_result is not None:
@@ -408,7 +412,7 @@ class GiftTag(models.Model):
         # We'll prefetch child_tags for efficient traversal
         all_tags = {self.pk: self}
         descendants = set()
-        to_process = list(self.child_tags.prefetch_related('child_tags').all())
+        to_process = list(self.child_tags.prefetch_related("child_tags").all())
         processed_ids = {self.pk}
 
         # Build cache of all tags we'll need
@@ -430,7 +434,7 @@ class GiftTag(models.Model):
                     if child.pk not in all_tags:
                         all_tags[child.pk] = child
                         # Prefetch for next level
-                        child = GiftTag.objects.prefetch_related('child_tags').get(pk=child.pk)
+                        child = GiftTag.objects.prefetch_related("child_tags").get(pk=child.pk)
                     to_process.append(child)
 
         result = list(descendants)
@@ -442,8 +446,7 @@ class GiftTag(models.Model):
         return result
 
     def get_ancestors(self, use_cache=True):
-        """
-        Returns all parent tags (up to the root).
+        """Returns all parent tags (up to the root).
 
         Optimized to fetch all ancestors in a single query using prefetch_related,
         then traverse the hierarchy in memory to avoid N+1 queries.
@@ -452,7 +455,7 @@ class GiftTag(models.Model):
             use_cache: If True, use cached results when available (default: True)
         """
         # Check cache first
-        cache_key = f'gifttag_ancestors_{self.pk}'
+        cache_key = f"gifttag_ancestors_{self.pk}"
         if use_cache:
             cached_result = cache.get(cache_key)
             if cached_result is not None:
@@ -461,7 +464,7 @@ class GiftTag(models.Model):
         # Fetch all potentially needed tags upfront to avoid multiple queries
         all_tags = {self.pk: self}
         ancestors = set()
-        to_process = list(self.parent_tags.prefetch_related('parent_tags').all())
+        to_process = list(self.parent_tags.prefetch_related("parent_tags").all())
         processed_ids = {self.pk}
 
         # Build cache of all tags we'll need
@@ -483,7 +486,7 @@ class GiftTag(models.Model):
                     if parent.pk not in all_tags:
                         all_tags[parent.pk] = parent
                         # Prefetch for next level
-                        parent = GiftTag.objects.prefetch_related('parent_tags').get(pk=parent.pk)
+                        parent = GiftTag.objects.prefetch_related("parent_tags").get(pk=parent.pk)
                     to_process.append(parent)
 
         result = list(ancestors)
@@ -495,8 +498,7 @@ class GiftTag(models.Model):
         return result
 
     def get_primary_ancestors_path(self):
-        """
-        Returns a specific path of ancestors (for breadcrumbs).
+        """Returns a specific path of ancestors (for breadcrumbs).
 
         Optimized to prefetch parent_tags to avoid N+1 queries.
         """
@@ -506,8 +508,8 @@ class GiftTag(models.Model):
         visited = {self.pk}
 
         # Prefetch parent_tags for the initial tag
-        if not hasattr(self, '_prefetched_objects_cache'):
-            current = GiftTag.objects.prefetch_related('parent_tags').get(pk=self.pk)
+        if not hasattr(self, "_prefetched_objects_cache"):
+            current = GiftTag.objects.prefetch_related("parent_tags").get(pk=self.pk)
 
         while True:
             parents = list(current.parent_tags.all())
@@ -527,7 +529,7 @@ class GiftTag(models.Model):
 
             ancestors.append(next_parent)
             # Prefetch for next iteration
-            current = GiftTag.objects.prefetch_related('parent_tags').get(pk=next_parent.pk)
+            current = GiftTag.objects.prefetch_related("parent_tags").get(pk=next_parent.pk)
 
         ancestors.reverse()
         return ancestors
@@ -548,16 +550,16 @@ class GiftTag(models.Model):
     def clear_hierarchy_cache(self):
         """Clear cached hierarchy data for this tag and related tags."""
         # Clear cache for this tag
-        cache.delete(f'gifttag_descendants_{self.pk}')
-        cache.delete(f'gifttag_ancestors_{self.pk}')
+        cache.delete(f"gifttag_descendants_{self.pk}")
+        cache.delete(f"gifttag_ancestors_{self.pk}")
 
         # Clear cache for all ancestors (since their descendants changed)
         for ancestor in self.get_ancestors(use_cache=False):
-            cache.delete(f'gifttag_descendants_{ancestor.pk}')
+            cache.delete(f"gifttag_descendants_{ancestor.pk}")
 
         # Clear cache for all descendants (since their ancestors changed)
         for descendant in self.get_descendants(use_cache=False):
-            cache.delete(f'gifttag_ancestors_{descendant.pk}')
+            cache.delete(f"gifttag_ancestors_{descendant.pk}")
 
     def clean(self):
         """Custom validation to avoid cycles."""
@@ -784,5 +786,5 @@ def clear_gifttag_cache_on_save(sender, instance, **kwargs):
 @receiver(models.signals.m2m_changed, sender=GiftTag.parent_tags.through)
 def clear_gifttag_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_tags relationship changes."""
-    if action in ['post_add', 'post_remove', 'post_clear']:
+    if action in ["post_add", "post_remove", "post_clear"]:
         instance.clear_hierarchy_cache()

@@ -1,14 +1,24 @@
 """Person-related views."""
 
 from django.contrib.postgres.aggregates import JSONBAgg
-from django.db.models import F, Func, Q, Value
+from django.db.models import F
+from django.db.models import Func
+from django.db.models import Q
+from django.db.models import Value
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from ..forms import PersonForm
-from ..models import Person, PersonGroup, Relation, RelationStatus
-from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
+from ..models import Person
+from ..models import PersonGroup
+from ..models import Relation
+from ..models import RelationStatus
+from .base import BaseCreateView
+from .base import BaseDeleteView
+from .base import BaseDetailView
+from .base import BaseListView
+from .base import BaseUpdateView
 
 
 class PersonListView(BaseListView):
@@ -114,6 +124,7 @@ class PersonDetailView(BaseDetailView):
 
         # Build action buttons configuration
         from django.urls import reverse
+
         is_editor = context.get("is_editor", False)
 
         context["action_buttons"] = [
@@ -122,14 +133,20 @@ class PersonDetailView(BaseDetailView):
                 "url": reverse("gift_manager:person_edit", kwargs={"pk": self.object.person_id}),
                 "label": _("Edit person"),
                 "enabled": is_editor,
-                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+                "tooltip": _("You do not have permission to edit this object")
+                if not is_editor
+                else None,
             },
             {
                 "type": "delete",
                 "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
                 "label": _("Delete person"),
                 "enabled": True,  # Always enabled, but tooltip explains behavior
-                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+                "tooltip": _(
+                    "You do not have permission to delete this object so it will only be unshared with you"
+                )
+                if not is_editor
+                else None,
             },
         ]
 
