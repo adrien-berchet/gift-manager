@@ -23,6 +23,12 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // URL templates for links
+        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupRelationCreateUrl = "{% url 'gift_manager:person_group_relation_create' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupEditUrl = "{% url 'gift_manager:person_group_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupDeleteUrl = "{% url 'gift_manager:person_group_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -51,19 +57,19 @@
     {% else %}
     {
         name: '{{ name|escapejs }}',
-            formatter: GridUtils.multiLinkFormatter('/{{ LANGUAGE_CODE }}/person_groups/{id}/')
+            formatter: GridUtils.multiLinkFormatter(groupDetailUrl)
     } {% if not forloop.last %}, {% endif %}
     {% endif %}
     {% endfor %},
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '105px',
+        width: '180px',
         sort: false,
         formatter: GridUtils.actionButtonsFormatter({
-            give: '/{{ LANGUAGE_CODE }}/person_groups/{id}/add_relation/',
-            details: '/{{ LANGUAGE_CODE }}/person_groups/{id}/',
-            edit: '/{{ LANGUAGE_CODE }}/person_groups/{id}/edit/',
-            delete: '/{{ LANGUAGE_CODE }}/person_groups/{id}/delete/'
+            give: groupRelationCreateUrl,
+            details: groupDetailUrl,
+            edit: groupEditUrl,
+            delete: groupDeleteUrl
         }, ['give', 'details', 'edit', 'delete'])
     }
     ];

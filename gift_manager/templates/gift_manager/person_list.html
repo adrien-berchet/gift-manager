@@ -23,6 +23,13 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // URL templates for links
+        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const personRelationCreateUrl = "{% url 'gift_manager:person_relation_create' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const personEditUrl = "{% url 'gift_manager:person_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const personDeleteUrl = "{% url 'gift_manager:person_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -44,7 +51,7 @@
         {
             id: 'groups',
             name: '{{ column_names.groups|escapejs }}',
-            formatter: GridUtils.multiLinkFormatter('/{{ LANGUAGE_CODE }}/person_groups/{id}/')
+            formatter: GridUtils.multiLinkFormatter(groupDetailUrl)
         },
         {
             id: 'actions',
@@ -52,10 +59,10 @@
             width: '180px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                give: '/{{ LANGUAGE_CODE }}/persons/{id}/add_relation/',
-                details: '/{{ LANGUAGE_CODE }}/persons/{id}/',
-                edit: '/{{ LANGUAGE_CODE }}/persons/{id}/edit/',
-                delete: '/{{ LANGUAGE_CODE }}/persons/{id}/delete/'
+                give: personRelationCreateUrl,
+                details: personDetailUrl,
+                edit: personEditUrl,
+                delete: personDeleteUrl
             }, ['give', 'details', 'edit', 'delete'])
         }
     ], data, {

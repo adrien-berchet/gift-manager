@@ -19,6 +19,11 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // URL templates for links
+        const eventDetailUrl = "{% url 'gift_manager:event_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const eventEditUrl = "{% url 'gift_manager:event_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const eventDeleteUrl = "{% url 'gift_manager:event_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -41,9 +46,9 @@
         width: '150px',
         sort: false,
         formatter: GridUtils.actionButtonsFormatter({
-            details: '/{{ LANGUAGE_CODE }}/events/{id}/',
-            edit: '/{{ LANGUAGE_CODE }}/events/{id}/edit/',
-            delete: '/{{ LANGUAGE_CODE }}/events/{id}/delete/'
+            details: eventDetailUrl,
+            edit: eventEditUrl,
+            delete: eventDeleteUrl
         }, ['details', 'edit', 'delete'])
     }
     ];

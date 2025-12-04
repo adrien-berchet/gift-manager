@@ -18,6 +18,9 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // URL templates for links
+        const statusDetailUrl = "{% url 'gift_manager:relation_status_detail' 1 %}".replace('1', '__ID__');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -39,7 +42,7 @@
         name: '{% trans "Actions"|escapejs %}',
             sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: '/{{ LANGUAGE_CODE }}/relation_statuses/{id}/'
+                    details: statusDetailUrl
                 }, ['details'])
             }
         ];
