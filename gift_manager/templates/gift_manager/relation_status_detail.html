@@ -9,41 +9,59 @@
 <p><strong>{% trans "Status" %}:</strong> {{ status.status }}</p>
 
 <h2 class="my-4">{% trans "Giftings with this status" %}</h2>
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{% trans "Beneficiary" %}</th>
-            <th>{% trans "Gift" %}</th>
-            <th>{% trans "Comment" %}</th>
-            <th>{% trans "Event" %}</th>
-            <th>{% trans "Due Date" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for relation in relations %}
-            <tr>
-                {% if relation.person %}
-                <td><a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a></td>
-                {% else %}
-                <td><a href="{% url 'gift_manager:person_group_detail' relation.group.group_id %}">{{ relation.group.name }}</a></td>
-                {% endif %}
-                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
-                <td>{{ relation.comment|default:"-" }}</td>
-                <td>{{ relation.event.name|default:"-" }}</td>
-                <td>{{ relation.due_date|replace_none:"-" }}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if relations %}
+<div id="relations-grid" class="mt-3"></div>
+{% else %}
+<p class="text-center text-muted">{% trans "No giftings with this status" %}</p>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
 <script>
-    $(document).ready(function() {
-        var order = [[1, 'asc']];  // Default order is descending by status
-        $('#data-table').DataTable({
-            "order": order
+    (function() {
+        // URL templates for links
+        const personDetailUrl = "{% url 'gift_manager:person_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const groupDetailUrl = "{% url 'gift_manager:person_group_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
+        {% if relations %}
+        // Relations Grid
+        const relationsData = [
+            {% for relation in relations %}
+            [
+                {% if relation.person %}"person"{% else %}"group"{% endif %},
+                {% if relation.person %}"{{ relation.person.person_id }}"{% else %}"{{ relation.group.group_id }}"{% endif %},
+                {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %}"{{ relation.group.name|escapejs }}"{% endif %},
+                "{{ relation.gift.gift_id }}",
+                "{{ relation.gift.name|escapejs }}",
+                "{{ relation.comment|default:'-'|escapejs }}",
+                "{{ relation.event.name|default:'-'|escapejs }}",
+                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %}
+            ],
+            {% endfor %}
+        ];
+
+        const relationsColumns = [
+            { name: 'type', hidden: true },
+            { name: 'id', hidden: true },
+            { name: "{% trans 'Person' %} / {% trans 'Group' %}" },
+            { name: 'gift_id', hidden: true },
+            { name: "{% trans 'Gift' %}" },
+            { name: "{% trans 'Comment' %}" },
+            { name: "{% trans 'Event' %}" },
+            { name: "{% trans 'Due Date' %}" }
+        ];
+
+        GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
+            pagination: { enabled: true, limit: 10 },
+            search: true,
+            sort: true
         });
-    });
+        {% endif %}
+    })();
 </script>
 {% endblock %}

@@ -1,10 +1,12 @@
 """Event-related views."""
 
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 
 from ..forms import EventForm
-from ..models import Event, Relation
+from ..models import Event, Relation, RelationStatus
 from .base import BaseCreateView, BaseDeleteView, BaseDetailView, BaseListView, BaseUpdateView
 
 
@@ -69,6 +71,27 @@ class EventDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
+            .order_by("status__pk")
         )
+        context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
+
+        # Add action buttons
+        is_editor = context["is_editor"]
+        context["action_buttons"] = [
+            {
+                "type": "edit",
+                "url": reverse("gift_manager:event_edit", kwargs={"pk": self.object.event_id}),
+                "label": _("Edit event"),
+                "enabled": is_editor,
+                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+            },
+            {
+                "type": "delete",
+                "url": reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
+                "label": _("Delete event"),
+                "enabled": True,
+                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+            },
+        ]
         return context

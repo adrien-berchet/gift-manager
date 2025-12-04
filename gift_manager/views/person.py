@@ -4,6 +4,7 @@ from django.contrib.postgres.aggregates import JSONBAgg
 from django.db.models import F, Func, Q, Value
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 
 from ..forms import PersonForm
 from ..models import Person, PersonGroup, Relation, RelationStatus
@@ -107,6 +108,29 @@ class PersonDetailView(BaseDetailView):
             .filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
             .select_related("status", "gift", "event", "person", "group")
             .prefetch_related("gift__tags")
+            .order_by("status__pk")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
+
+        # Build action buttons configuration
+        from django.urls import reverse
+        is_editor = context.get("is_editor", False)
+
+        context["action_buttons"] = [
+            {
+                "type": "edit",
+                "url": reverse("gift_manager:person_edit", kwargs={"pk": self.object.person_id}),
+                "label": _("Edit person"),
+                "enabled": is_editor,
+                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+            },
+            {
+                "type": "delete",
+                "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
+                "label": _("Delete person"),
+                "enabled": True,  # Always enabled, but tooltip explains behavior
+                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+            },
+        ]
+
         return context

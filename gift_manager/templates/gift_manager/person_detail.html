@@ -15,36 +15,7 @@
 <div class="mt-4">
     <h5>{% trans "Shared with:" %}</h5>
     {% if shared_users %}
-    <table id="shares-table" class="table table-striped">
-        <thead>
-            <tr>
-                <th>{% trans "Username" %}</th>
-                <th>{% trans "Permission" %}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for shared_user in shared_users %}
-            <tr>
-                <td>{{ shared_user.user.username }}</td>
-                <td>
-                    {% if shared_user.permission <= 10 %}
-                        <span class="badge bg-primary" title="{% trans 'Can only view this object' %}">
-                        <i class="fas fa-eye me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% elif shared_user.permission <= 20 %}
-                        <span class="badge bg-success" title="{% trans 'Can edit this object' %}">
-                        <i class="fas fa-edit me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark" title="{% trans 'Has full control over this object' %}">
-                        <i class="fas fa-crown me-1"></i> {{ shared_user.permission_label }}
-                        </span>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div id="shares-grid" class="mt-3"></div>
     {% else %}
     <p>{% trans "This person is not shared with any friend." %}</p>
     {% endif %}
@@ -52,81 +23,219 @@
 <div class="mt-4">
 </div>
 
-{% if is_editor %}
-    <a href="{% url 'gift_manager:person_edit' person.person_id %}" class="btn btn-warning mb-3">{% trans "Edit person" %}</a>
-{% else %}
-    <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip" title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit person" %}</button>
-{% endif %}
-<a href="{% url 'gift_manager:person_delete' person.person_id %}" class="btn btn-danger mb-3"{% if not is_editor %} data-toggle="tooltip" title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}"{% endif %}>{% trans 'Delete person' %}</a>
+{% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <h2 class="my-4">{% trans "Gifts for this person" %}</h2>
 <a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "New gifting" %}</a>
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{% trans "Gift" %}</th>
-            <th>{% trans "Comment" %}</th>
-            <th>{% trans "Status" %}</th>
-            <th>{% trans "Event" %}</th>
-            <th>{% trans "Due Date" %}</th>
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for relation in relations %}
-            <tr>
-                <td><a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></td>
-                <td class="{% if not relation.comment %}text-center{% endif %}">{{ relation.comment|replace_empty:"-" }}</td>
-                <td data-order="{{ relation.status.pk }}" data-search="{% for stat in relation_statuses %}{% if relation.status.pk == stat.pk %}{{ stat.status }}{% endif %}{% endfor %}">
-                    {% include "gift_manager/includes/status_select_partial.html" with relation_id=relation.relation_id current_status=relation.status.pk %}
-                </td>
-                <td class="{% if not relation.event %}text-center{% endif %}">{{ relation.event.name|replace_empty:"-" }}</td>
-                <td class="{% if not relation.due_date %}text-center{% endif %}">{{ relation.due_date|replace_empty:"-" }}</td>
-                <td class="text-center">
-                    <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}" class="btn btn-primary btn-sm" data-toggle="tooltip" title="{% trans 'Show' %}">
-                        <i class="fas fa-gift"></i>
-                    </a>
-                    <a href="{% url 'gift_manager:relation_detail' relation.relation_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Show' %}">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <a href="{% url 'gift_manager:relation_edit' relation.relation_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                    {% if not relation.group %}
-                        <a href="{% url 'gift_manager:relation_delete' relation.relation_id %}" class="btn btn-danger btn-sm" data-toggle="tooltip" title="{% trans 'Delete' %}">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    {% endif %}
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="5" class="text-center">{% trans "No gift for this person" %}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if relations %}
+<div id="gifts-grid" class="mt-3"></div>
+{% else %}
+<p class="text-center text-muted">{% trans "No gift for this person" %}</p>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
 <script>
-    $(document).ready(function() {
+    (function() {
+        // URL templates for links
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDetailUrl = "{% url 'gift_manager:relation_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationEditUrl = "{% url 'gift_manager:relation_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const relationDeleteUrl = "{% url 'gift_manager:relation_delete' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+
         {% if relations %}
-            $('#data-table').DataTable({
-                order: [[2, 'desc']]
-            });
+        // Gifts Grid
+        const giftsData = [
+            {% for relation in relations %}
+            [
+                "{{ relation.gift.gift_id }}",
+                "{{ relation.gift.name|escapejs }}",
+                "{{ relation.comment|replace_empty:'-'|escapejs }}",
+                "{{ relation.status.pk }}",
+                "{{ relation.status.status|escapejs }}",
+                {% if relation.event %}"{{ relation.event.name|escapejs }}"{% else %}"-"{% endif %},
+                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
+                "{{ relation.relation_id }}",
+                {% if relation.group %}false{% else %}true{% endif %}
+            ],
+            {% endfor %}
+        ];
+
+        const giftsColumns = [
+            { name: 'gift_id', hidden: true },
+            {
+                name: "{% trans 'Gift' %}",
+                formatter: (cell, row) => {
+                    const giftId = row.cells[0].data;
+                    const giftName = row.cells[1].data;
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                }
+            },
+            { name: "{% trans 'Comment' %}" },
+            {
+                name: "{% trans 'Status' %}",
+                formatter: (cell, row) => {
+                    const statusPk = row.cells[3].data;
+                    const statusLabel = row.cells[4].data;
+                    const relationId = row.cells[7].data;
+                    return gridjs.html(`
+                        <form id="status-form-${relationId}" style="display: inline;">
+                            <select class="form-select form-select-sm status-selector"
+                                    name="new_status"
+                                    data-relation-id="${relationId}"
+                                    data-update-url="${updateStatusUrl}">
+                                {% for status in relation_statuses %}
+                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
+                                    {{ status.status }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    `);
+                }
+            },
+            { name: 'status_label', hidden: true },
+            { name: "{% trans 'Event' %}" },
+            { name: "{% trans 'Due Date' %}" },
+            { name: 'relation_id', hidden: true },
+            { name: 'canDelete', hidden: true },
+            {
+                name: "{% trans 'Actions' %}",
+                width: '180px',
+                sort: false,
+                formatter: GridUtils.actionButtonsFormatter(
+                    {
+                        give: (row) => `/{{ LANGUAGE_CODE }}/gifts/${row.cells[0].data}/`,
+                        details: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/`,
+                        edit: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/edit/`,
+                        delete: (row) => `/{{ LANGUAGE_CODE }}/relations/${row.cells[7].data}/delete/`
+                    },
+                    [
+                        'give',
+                        'details',
+                        'edit',
+                        { type: 'delete', condition: (row) => row.cells[8].data }
+                    ]
+                )
+            }
+        ];
+
+        const giftsGrid = GridUtils.initGrid('gifts-grid', giftsColumns, giftsData, {
+            pagination: { enabled: true, limit: 10 },
+            search: true,
+            sort: true
+        });
+
+        // Trigger initial sort on status column to make Grid.js aware of the sort
+        setTimeout(() => {
+            const statusHeader = document.querySelector('#gifts-grid th:nth-child(3)');
+            if (statusHeader) {
+                statusHeader.click();
+            }
+        }, 100);
+
+        // Handle status selector changes with event delegation
+        document.getElementById('gifts-grid').addEventListener('change', function(e) {
+            if (e.target.classList.contains('status-selector')) {
+                const select = e.target;
+                const relationId = select.dataset.relationId;
+                const updateUrl = select.dataset.updateUrl;
+                const newStatus = select.value;
+                const form = select.closest('form');
+
+                // Get CSRF token
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
+                        }
+                    }
+                    return cookieValue;
+                }
+
+                // Make POST request
+                fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: `relation_id=${relationId}&new_status=${newStatus}`
+                })
+                .then(response => response.text())
+                .then(html => {
+                    // Replace the form with the server response
+                    form.outerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error updating status:', error);
+                    alert('Failed to update status. Please try again.');
+                });
+            }
+        });
         {% endif %}
 
-        // Initialize the DataTable for the shares table
         {% if shared_users %}
-            $('#shares-table').DataTable({
-                paging: true,
-                pageLength: 5,
-                searching: false,
-                info: false,
-                lengthChange: false
-            });
+        // Shares Grid
+        const sharesData = [
+            {% for shared_user in shared_users %}
+            [
+                "{{ shared_user.user.username|escapejs }}",
+                "{{ shared_user.permission }}",
+                "{{ shared_user.permission_label|escapejs }}"
+            ],
+            {% endfor %}
+        ];
+
+        const sharesColumns = [
+            { name: "{% trans 'Username' %}" },
+            { name: 'permission', hidden: true },
+            {
+                name: "{% trans 'Permission' %}",
+                formatter: (cell, row) => {
+                    const permission = parseInt(row.cells[1].data);
+                    const label = row.cells[2].data;
+
+                    let badgeClass = 'bg-primary';
+                    let icon = 'fa-eye';
+                    let title = "{% trans 'Can only view this object' %}";
+
+                    if (permission > 20) {
+                        badgeClass = 'bg-warning text-dark';
+                        icon = 'fa-crown';
+                        title = "{% trans 'Has full control over this object' %}";
+                    } else if (permission > 10) {
+                        badgeClass = 'bg-success';
+                        icon = 'fa-edit';
+                        title = "{% trans 'Can edit this object' %}";
+                    }
+
+                    return gridjs.html(`
+                        <span class="badge ${badgeClass}" title="${title}">
+                            <i class="fas ${icon} me-1"></i> ${label}
+                        </span>
+                    `);
+                }
+            }
+        ];
+
+        GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
+            pagination: { enabled: true, limit: 5 },
+            search: false,
+            sort: false
+        });
         {% endif %}
-    });
+    })();
 </script>
 {% endblock %}

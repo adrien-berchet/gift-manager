@@ -5,13 +5,16 @@ from django.db.models import F
 from django.db.models import Func
 from django.db.models import Q
 from django.db.models import Value
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import GiftForm
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -103,6 +106,27 @@ class GiftDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
+            .order_by("status__pk")
         )
+        context["relation_statuses"] = RelationStatus.objects.all()
         context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
+
+        # Add action buttons
+        is_editor = context["is_editor"]
+        context["action_buttons"] = [
+            {
+                "type": "edit",
+                "url": reverse("gift_manager:gift_edit", kwargs={"pk": self.object.gift_id}),
+                "label": _("Edit gift"),
+                "enabled": is_editor,
+                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+            },
+            {
+                "type": "delete",
+                "url": reverse("gift_manager:gift_delete", kwargs={"pk": self.object.gift_id}),
+                "label": _("Delete gift"),
+                "enabled": True,
+                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+            },
+        ]
         return context

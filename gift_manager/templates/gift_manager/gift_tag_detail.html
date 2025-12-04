@@ -28,36 +28,7 @@
     <p>{% trans "This gift tag is public and is thus shared with all users." %}</p>
     {% else %}
         {% if shared_users %}
-        <table id="shares-table" class="table table-striped">
-            <thead>
-                <tr>
-                    <th>{% trans "Username" %}</th>
-                    <th>{% trans "Permission" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for shared_user in shared_users %}
-                <tr>
-                    <td>{{ shared_user.user.username }}</td>
-                    <td>
-                        {% if shared_user.permission <= 10 %}
-                            <span class="badge bg-primary" title="{% trans 'Can only view this object' %}">
-                            <i class="fas fa-eye me-1"></i> {{ shared_user.permission_label }}
-                            </span>
-                        {% elif shared_user.permission <= 20 %}
-                            <span class="badge bg-success" title="{% trans 'Can edit this object' %}">
-                            <i class="fas fa-edit me-1"></i> {{ shared_user.permission_label }}
-                            </span>
-                        {% else %}
-                            <span class="badge bg-warning text-dark" title="{% trans 'Has full control over this object' %}">
-                            <i class="fas fa-crown me-1"></i> {{ shared_user.permission_label }}
-                            </span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        <div id="shares-grid" class="mt-3"></div>
         {% else %}
         <p>{% trans "This gift tag is not shared with any friend." %}</p>
         {% endif %}
@@ -78,56 +49,106 @@
 {% endif %}
 
 <h2 class="my-4">{% trans "Gifts with this tag" %}</h2>
-<table id="data-table" class="table table-striped">
-    <thead>
-        <tr>
-            <th>{% trans "Name" %}</th>
-            <th>{% trans "Comment" %}</th>
-            <th>{% trans "Actions" %}</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for gift in gifts %}
-            <tr>
-                <td><a href="{% url 'gift_manager:gift_detail' gift.gift_id %}">{{ gift.name }}</a></td>
-                <td>{{ gift.comment|default:"-" }}</td>
-                <td>
-                    <a href="{% url 'gift_manager:gift_detail' gift.gift_id %}" class="btn btn-info btn-sm" data-toggle="tooltip" title="{% trans 'Details' %}">
-                        <i class="fas fa-eye"></i>
-                    </a>
-                    <a href="{% url 'gift_manager:gift_edit' gift.gift_id %}" class="btn btn-warning btn-sm" data-toggle="tooltip" title="{% trans 'Edit' %}">
-                        <i class="fas fa-edit"></i>
-                    </a>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="3" class="text-center">{% trans "No gift with this tag" %}</td>
-            </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if gifts %}
+<div id="gifts-grid" class="mt-3"></div>
+{% else %}
+<p class="text-center text-muted">{% trans "No gift with this tag" %}</p>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
 <script>
-    $(document).ready(function() {
+    (function() {
+        // URL templates for links
+        const giftDetailUrl = "{% url 'gift_manager:gift_detail' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+        const giftEditUrl = "{% url 'gift_manager:gift_edit' '00000000-0000-0000-0000-000000000000' %}".replace('00000000-0000-0000-0000-000000000000', '__ID__');
+
         {% if gifts %}
-            $('#data-table').DataTable({
-                "order": [[0, 'asc']]
-            });
+        // Gifts Grid
+        const giftsData = [
+            {% for gift in gifts %}
+            [
+                "{{ gift.gift_id }}",
+                "{{ gift.name|escapejs }}",
+                "{{ gift.comment|default:'-'|escapejs }}"
+            ],
+            {% endfor %}
+        ];
+
+        const giftsColumns = [
+            { name: 'gift_id', hidden: true },
+            {
+                name: "{% trans 'Name' %}",
+                formatter: (cell, row) => {
+                    const giftId = row.cells[0].data;
+                    const giftName = row.cells[1].data;
+                    return gridjs.html(`<a href="${giftDetailUrl.replace('__ID__', giftId)}">${giftName}</a>`);
+                }
+            },
+            { name: "{% trans 'Comment' %}" }
+        ];
+
+        GridUtils.initGrid('gifts-grid', giftsColumns, giftsData, {
+            pagination: { enabled: true, limit: 10 },
+            search: true,
+            sort: true
+        });
         {% endif %}
 
-        // Initialize the DataTable for the shares table
         {% if shared_users %}
-            $('#shares-table').DataTable({
-                paging: true,
-                pageLength: 5,
-                searching: false,
-                info: false,
-                lengthChange: false
-            });
+        // Shares Grid
+        const sharesData = [
+            {% for shared_user in shared_users %}
+            [
+                "{{ shared_user.user.username|escapejs }}",
+                "{{ shared_user.permission }}",
+                "{{ shared_user.permission_label|escapejs }}"
+            ],
+            {% endfor %}
+        ];
+
+        const sharesColumns = [
+            { name: "{% trans 'Username' %}" },
+            { name: 'permission', hidden: true },
+            {
+                name: "{% trans 'Permission' %}",
+                formatter: (cell, row) => {
+                    const permission = parseInt(row.cells[1].data);
+                    const label = row.cells[2].data;
+
+                    let badgeClass = 'bg-primary';
+                    let icon = 'fa-eye';
+                    let title = "{% trans 'Can only view this object' %}";
+
+                    if (permission > 20) {
+                        badgeClass = 'bg-warning text-dark';
+                        icon = 'fa-crown';
+                        title = "{% trans 'Has full control over this object' %}";
+                    } else if (permission > 10) {
+                        badgeClass = 'bg-success';
+                        icon = 'fa-edit';
+                        title = "{% trans 'Can edit this object' %}";
+                    }
+
+                    return gridjs.html(`
+                        <span class="badge ${badgeClass}" title="${title}">
+                            <i class="fas ${icon} me-1"></i> ${label}
+                        </span>
+                    `);
+                }
+            }
+        ];
+
+        GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
+            pagination: { enabled: true, limit: 5 },
+            search: false,
+            sort: false
+        });
         {% endif %}
-    });
+    })();
 </script>
 {% endblock %}

@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 
 from gift_manager.forms import GiftRelationForm
@@ -196,6 +197,7 @@ class RelationListView(BaseListView):
                     output_field=TextField(),
                 )
             )
+            .order_by("status__pk")
             .values(
                 "relation_id",
                 "gift__name",
@@ -320,6 +322,29 @@ class RelationDetailView(BaseDetailView):
     template_name = "gift_manager/relation_detail.html"
     context_object_name = "relation"
     pk_name = "relation_id"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Add action buttons
+        is_editor = context["is_editor"]
+        context["action_buttons"] = [
+            {
+                "type": "edit",
+                "url": reverse("gift_manager:relation_edit", kwargs={"pk": self.object.relation_id}),
+                "label": _("Edit relation"),
+                "enabled": is_editor,
+                "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
+            },
+            {
+                "type": "delete",
+                "url": reverse("gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}),
+                "label": _("Delete relation"),
+                "enabled": True,
+                "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
+            },
+        ]
+        return context
 
 
 @login_required
