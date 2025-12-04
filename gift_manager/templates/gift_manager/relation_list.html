@@ -117,31 +117,13 @@
         },
         {
             name: '{% trans "Actions"|escapejs %}',
-            width: '160px',
+            width: '150px',
             sort: false,
-            formatter: function(cell, row) {
-                // Get relation ID from the hidden column at index 5
-                const relationId = row.cells[5].data;
-                return gridjs.html(`
-                    <div style="white-space: nowrap;">
-                        <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/"
-                           class="btn btn-info btn-sm"
-                           title="{% trans 'Details' %}">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                        <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/edit/"
-                           class="btn btn-warning btn-sm"
-                           title="{% trans 'Edit' %}">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="/{{ LANGUAGE_CODE }}/relations/${relationId}/delete/"
-                           class="btn btn-danger btn-sm"
-                           title="{% trans 'Delete' %}">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    </div>
-                `);
-            }
+            formatter: GridUtils.actionButtonsFormatter({
+                details: '/{{ LANGUAGE_CODE }}/relations/{id}/',
+                edit: '/{{ LANGUAGE_CODE }}/relations/{id}/edit/',
+                delete: '/{{ LANGUAGE_CODE }}/relations/{id}/delete/'
+            }, ['details', 'edit', 'delete'], { idResolver: row => row.cells[5].data })
         }
     ], data, {
         pagination: {
