@@ -14,34 +14,34 @@
     - css_class: additional CSS classes (optional)
 {% endcomment %}
 
-<div class="action-buttons mb-3" style="white-space: nowrap;">
+<div class="action-buttons" style="white-space: nowrap;">
   {% for button in buttons %}
     {% if button.type == 'give' %}
       <a href="{{ button.url }}"
-         class="btn btn-primary btn-sm {% if button.css_class %}{{ button.css_class }}{% endif %}"
-         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-bs-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
+         class="btn btn-primary mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
         <i class="fas fa-hand-holding-heart"></i>
         {% if button.label %}{{ button.label }}{% else %}{% trans "Give" %}{% endif %}
       </a>
 
     {% elif button.type == 'details' %}
       <a href="{{ button.url }}"
-         class="btn btn-info btn-sm {% if button.css_class %}{{ button.css_class }}{% endif %}"
-         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-bs-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
+         class="btn btn-info mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
         <i class="fas fa-eye"></i>
         {% if button.label %}{{ button.label }}{% else %}{% trans "Details" %}{% endif %}
       </a>
 
     {% elif button.type == 'edit' %}
       {% if button.enabled|default:True %}
-        <a href="{{ button.url }}" class="btn btn-warning btn-sm {% if button.css_class %}{{ button.css_class }}{% endif %}">
+        <a href="{{ button.url }}" class="btn btn-warning mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}">
           <i class="fas fa-edit"></i>
           {% if button.label %}{{ button.label }}{% else %}{% trans "Edit" %}{% endif %}
         </a>
       {% else %}
-        <button class="btn btn-warning btn-sm {% if button.css_class %}{{ button.css_class }}{% endif %}"
+        <button class="btn btn-warning mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
                 disabled style="opacity: 0.5;"
-                data-bs-toggle="tooltip"
+                data-toggle="tooltip"
                 title="{% if button.tooltip %}{{ button.tooltip }}{% else %}{% trans 'You do not have permission to edit this object' %}{% endif %}">
           <i class="fas fa-edit"></i>
           {% if button.label %}{{ button.label }}{% else %}{% trans "Edit" %}{% endif %}
@@ -50,16 +50,16 @@
 
     {% elif button.type == 'delete' %}
       <a href="{{ button.url }}"
-         class="btn btn-danger btn-sm {% if button.css_class %}{{ button.css_class %}{% endif %}"
-         {% if not button.enabled|default:True %}data-bs-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
+         class="btn btn-danger mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if not button.enabled|default:True %}data-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
         <i class="fas fa-trash"></i>
         {% if button.label %}{{ button.label }}{% else %}{% trans "Delete" %}{% endif %}
       </a>
 
     {% elif button.type == 'custom' %}
       <a href="{{ button.url }}"
-         class="btn {{ button.btn_class|default:'btn-secondary' }} btn-sm {% if button.css_class %}{{ button.css_class }}{% endif %}"
-         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-bs-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
+         class="btn {{ button.btn_class|default:'btn-secondary' }} mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
         {% if button.icon %}<i class="{{ button.icon }}"></i>{% endif %}
         {{ button.label }}
       </a>
