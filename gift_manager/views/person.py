@@ -119,14 +119,14 @@ class PersonDetailView(BaseDetailView):
         context["action_buttons"] = [
             {
                 "type": "edit",
-                "url": reverse("gift_manager:person_edit", kwargs={"person_id": self.object.person_id}),
+                "url": reverse("gift_manager:person_edit", kwargs={"pk": self.object.person_id}),
                 "label": _("Edit person"),
                 "enabled": is_editor,
                 "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
             },
             {
                 "type": "delete",
-                "url": reverse("gift_manager:person_delete", kwargs={"person_id": self.object.person_id}),
+                "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
                 "label": _("Delete person"),
                 "enabled": True,  # Always enabled, but tooltip explains behavior
                 "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
