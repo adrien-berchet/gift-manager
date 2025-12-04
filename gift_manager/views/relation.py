@@ -153,7 +153,7 @@ class RelationStatusDetailView(BaseDetailView):
     model = RelationStatus
     template_name = "gift_manager/relation_status_detail.html"
     context_object_name = "status"
-    pk_name = "status_id"
+    pk_name = "pk"  # RelationStatus uses default 'id' field, not 'status_id'
 
     def get_queryset(self):
         """Return all RelationStatus objects without user filtering.
