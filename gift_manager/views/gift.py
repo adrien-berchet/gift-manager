@@ -116,14 +116,14 @@ class GiftDetailView(BaseDetailView):
         context["action_buttons"] = [
             {
                 "type": "edit",
-                "url": reverse("gift_manager:gift_edit", kwargs={"gift_id": self.object.gift_id}),
+                "url": reverse("gift_manager:gift_edit", kwargs={"pk": self.object.gift_id}),
                 "label": _("Edit gift"),
                 "enabled": is_editor,
                 "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
             },
             {
                 "type": "delete",
-                "url": reverse("gift_manager:gift_delete", kwargs={"gift_id": self.object.gift_id}),
+                "url": reverse("gift_manager:gift_delete", kwargs={"pk": self.object.gift_id}),
                 "label": _("Delete gift"),
                 "enabled": True,
                 "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,

@@ -81,14 +81,14 @@ class EventDetailView(BaseDetailView):
         context["action_buttons"] = [
             {
                 "type": "edit",
-                "url": reverse("gift_manager:event_edit", kwargs={"event_id": self.object.event_id}),
+                "url": reverse("gift_manager:event_edit", kwargs={"pk": self.object.event_id}),
                 "label": _("Edit event"),
                 "enabled": is_editor,
                 "tooltip": _("You do not have permission to edit this object") if not is_editor else None,
             },
             {
                 "type": "delete",
-                "url": reverse("gift_manager:event_delete", kwargs={"event_id": self.object.event_id}),
+                "url": reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
                 "label": _("Delete event"),
                 "enabled": True,
                 "tooltip": _("You do not have permission to delete this object so it will only be unshared with you") if not is_editor else None,
