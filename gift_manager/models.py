@@ -694,6 +694,8 @@ class EventPermission(models.Model):
 class RelationStatus(models.Model):
     """Model for a relation status."""
 
+    DEFAULT_STATUS = "Idea"
+
     status = models.TextField(unique=True, null=False)
 
     class Meta:
@@ -702,6 +704,16 @@ class RelationStatus(models.Model):
 
     def __str__(self) -> str:
         return self.status
+
+    @classmethod
+    def get_default_pk(cls):
+        """Get or create the default status and return its primary key.
+
+        This is used as the default for the Relation.status ForeignKey.
+        Using a callable that returns a PK avoids migration issues.
+        """
+        status, _ = cls.objects.get_or_create(status=cls.DEFAULT_STATUS)
+        return status.pk
 
 
 class Relation(models.Model):
@@ -721,8 +733,7 @@ class Relation(models.Model):
     status = models.ForeignKey(
         RelationStatus,
         on_delete=models.PROTECT,
-        null=True,
-        blank=True,
+        default=RelationStatus.get_default_pk,
     )
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)
