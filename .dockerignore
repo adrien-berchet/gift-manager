@@ -1,0 +1,75 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.eggs
+*.egg-info
+*.egg
+.mypy_cache
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+
+# Virtual environments
+.env
+.venv
+env
+venv
+ENV
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Docker
+Dockerfile*
+docker-compose*
+.docker
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Tests
+tests
+**/tests
+.coverage
+coverage.xml
+test-results.xml
+
+# Build artifacts
+dist
+build
+*.egg-info
+reports
+
+# Local development
+.env.local
+*.log
+*.sqlite3
+
+# Static files (will be collected during build)
+staticfiles
+
+# Media files (should be mounted as volume)
+media
+
+# Node (if using frontend build tools)
+node_modules
+npm-debug.log
+
+# OS
+.DS_Store
+Thumbs.db

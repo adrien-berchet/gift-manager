@@ -163,10 +163,10 @@ class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # Ensure that the group is None
-        self.instance.group = None
+        # Ensure person is None since this is a group relation form
+        self.instance.person = None
 
-        # Define the person if the group_id is given
+        # Set the group from the group_id parameter
         if self.group_id:
             try:
                 self.instance.group = PersonGroup.objects.get(group_id=self.group_id)

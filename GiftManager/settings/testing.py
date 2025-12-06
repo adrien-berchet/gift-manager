@@ -1,0 +1,94 @@
+"""Testing settings for GiftManager project.
+
+This module contains settings optimized for running tests.
+These settings prioritize speed and isolation over security.
+"""
+
+from .base import *  # noqa: F401, F403
+
+# Use a simple secret key for testing
+SECRET_KEY = "testing-secret-key-not-for-production"
+
+# Enable debug for better error messages in tests
+DEBUG = False  # Keep False for realistic testing
+
+ALLOWED_HOSTS = ["*"]
+
+# Use a fast password hasher for tests
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.MD5PasswordHasher",
+]
+
+# Use in-memory SQLite for faster tests (optional - can use PostgreSQL)
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "gift_manager_test",
+        "USER": "test_user",
+        "PASSWORD": "test_password",
+        "HOST": "localhost",
+        "PORT": "5432",
+        # Speed up tests by not requiring actual DB transactions
+        "TEST": {
+            "NAME": "gift_manager_test",
+        },
+    }
+}
+
+# Use in-memory email backend
+EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+# Use local memory cache for testing
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "test-cache",
+    }
+}
+
+# Disable security features that slow down tests
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_SSL_REDIRECT = False
+
+# Disable migrations for faster test setup (optional)
+# class DisableMigrations:
+#     def __contains__(self, item):
+#         return True
+#     def __getitem__(self, item):
+#         return None
+# MIGRATION_MODULES = DisableMigrations()
+
+# Minimal logging during tests
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "handlers": {
+        "null": {
+            "class": "logging.NullHandler",
+        },
+    },
+    "root": {
+        "handlers": ["null"],
+        "level": "CRITICAL",
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["null"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+        "gift_manager": {
+            "handlers": ["null"],
+            "level": "CRITICAL",
+            "propagate": False,
+        },
+    },
+}
+
+# Speed up file handling in tests
+DEFAULT_FILE_STORAGE = "django.core.files.storage.InMemoryStorage"
+
+# Celery eager mode for testing (if using Celery)
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True

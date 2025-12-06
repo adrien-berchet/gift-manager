@@ -720,8 +720,9 @@ class Relation(models.Model):
     )
     status = models.ForeignKey(
         RelationStatus,
-        on_delete=models.CASCADE,
-        default="Idea",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
     )
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)
