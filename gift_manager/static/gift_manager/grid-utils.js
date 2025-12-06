@@ -176,16 +176,31 @@
 
     /**
      * Create badge formatter for tags
+     * @param urlTemplate Optional URL template (e.g., '/tags/{id}/'). If not provided, expects items to have a 'url' property
      */
-    function badgeFormatter(urlTemplate) {
+    function badgeFormatter(urlTemplate = null) {
         return function (cell) {
             if (!cell || !Array.isArray(cell) || cell.length === 0) {
                 return '';
             }
 
-            const badges = cell.map(tag =>
-                `<a href="${urlTemplate.replace('{id}', tag.id)}" class="badge bg-primary">${tag.name}</a>`
-            ).join(' ');
+            const badges = cell.map(tag => {
+                const text = tag.name || tag;
+                const id = tag.id;
+
+                // Use tag.url if available, otherwise use urlTemplate
+                let url;
+                if (tag.url) {
+                    url = tag.url;
+                } else if (urlTemplate) {
+                    url = urlTemplate.replace('{id}', id);
+                } else {
+                    // No URL available, just return text as badge without link
+                    return `<span class="badge bg-primary">${text}</span>`;
+                }
+
+                return `<a href="${url}" class="badge bg-primary">${text}</a>`;
+            }).join(' ');
 
             return gridjs.html(badges);
         };
