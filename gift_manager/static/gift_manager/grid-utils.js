@@ -144,7 +144,7 @@
             const text = cell[textField] || cell.name || cell;
             const id = cell[idField] || cell.id;
 
-            if (!id) {
+            if (!id || !urlTemplate) {
                 return text;
             }
 
@@ -164,6 +164,11 @@
             }
 
             const links = cell.map(item => {
+                // Handle null/undefined items
+                if (!item) {
+                    return '';
+                }
+
                 const text = item.name || item;
                 const id = item.id;
 
@@ -196,6 +201,11 @@
             }
 
             const badges = cell.map(tag => {
+                // Handle null/undefined tags
+                if (!tag) {
+                    return '';
+                }
+
                 const text = tag.name || tag;
                 const id = tag.id;
 
