@@ -63,6 +63,9 @@
                 if (typeof urlTemplate === 'function') {
                     return urlTemplate(row);
                 }
+                if (!urlTemplate) {
+                    return null;
+                }
                 return urlTemplate.replace('{id}', actionId || id);
             };
 
@@ -74,46 +77,54 @@
 
                 if (actionType === 'give' && urls.give) {
                     const url = resolveUrl(urls.give, action.id);
-                    buttons.push(`
-                        <a href="${url}"
-                           class="btn btn-primary btn-sm"
-                           title="Give">
-                            <i class="fas fa-hand-holding-heart"></i>
-                        </a>
-                    `);
+                    if (url) {
+                        buttons.push(`
+                            <a href="${url}"
+                               class="btn btn-primary btn-sm"
+                               title="Give">
+                                <i class="fas fa-hand-holding-heart"></i>
+                            </a>
+                        `);
+                    }
                 }
 
                 if (actionType === 'details' && urls.details) {
                     const url = resolveUrl(urls.details, action.id);
-                    buttons.push(`
-                        <a href="${url}"
-                           class="btn btn-info btn-sm"
-                           title="Details">
-                            <i class="fas fa-eye"></i>
-                        </a>
-                    `);
+                    if (url) {
+                        buttons.push(`
+                            <a href="${url}"
+                               class="btn btn-info btn-sm"
+                               title="Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        `);
+                    }
                 }
 
                 if (actionType === 'edit' && urls.edit) {
                     const url = resolveUrl(urls.edit, action.id);
-                    buttons.push(`
-                        <a href="${url}"
-                           class="btn btn-warning btn-sm"
-                           title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                    `);
+                    if (url) {
+                        buttons.push(`
+                            <a href="${url}"
+                               class="btn btn-warning btn-sm"
+                               title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        `);
+                    }
                 }
 
                 if (actionType === 'delete' && urls.delete) {
                     const url = resolveUrl(urls.delete, action.id);
-                    buttons.push(`
-                        <a href="${url}"
-                           class="btn btn-danger btn-sm"
-                           title="Delete">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    `);
+                    if (url) {
+                        buttons.push(`
+                            <a href="${url}"
+                               class="btn btn-danger btn-sm"
+                               title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        `);
+                    }
                 }
             });
 
