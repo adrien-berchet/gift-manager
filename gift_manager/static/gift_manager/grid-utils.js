@@ -41,92 +41,43 @@
      * @param options Optional {idResolver: function(row) => id} to get ID from row instead of cell
      */
     function actionButtonsFormatter(urls, actions, options = {}) {
+        const actionConfig = {
+            give: { class: 'btn-primary', icon: 'fa-hand-holding-heart', title: 'Give' },
+            details: { class: 'btn-info', icon: 'fa-eye', title: 'Details' },
+            edit: { class: 'btn-warning', icon: 'fa-edit', title: 'Edit' },
+            delete: { class: 'btn-danger', icon: 'fa-trash', title: 'Delete' }
+        };
+
         return function (cell, row) {
-            // Get ID - either from cell, or use custom resolver
             const id = options.idResolver ? options.idResolver(row) : cell;
 
-            const buttons = [];
+            const resolveUrl = (urlTemplate, actionId) => {
+                if (typeof urlTemplate === 'function') return urlTemplate(row);
+                return urlTemplate ? urlTemplate.replace('{id}', actionId || id) : null;
+            };
 
-            // Helper to check if action should be displayed
             const shouldDisplay = (action) => {
                 if (typeof action === 'string') return true;
                 return !action.condition || action.condition(row);
             };
 
-            // Helper to get action type
-            const getActionType = (action) => {
-                return typeof action === 'string' ? action : action.type;
-            };
+            const buttons = actions
+                .filter(shouldDisplay)
+                .map(action => {
+                    const actionType = typeof action === 'string' ? action : action.type;
+                    const urlTemplate = urls[actionType];
+                    const config = actionConfig[actionType];
 
-            // Helper to resolve URL
-            const resolveUrl = (urlTemplate, actionId) => {
-                if (typeof urlTemplate === 'function') {
-                    return urlTemplate(row);
-                }
-                if (!urlTemplate) {
-                    return null;
-                }
-                return urlTemplate.replace('{id}', actionId || id);
-            };
+                    if (!urlTemplate || !config) return null;
 
-            // Process each action
-            actions.forEach(action => {
-                const actionType = getActionType(action);
+                    const url = resolveUrl(urlTemplate, typeof action === 'object' ? action.id : null);
+                    if (!url) return null;
 
-                if (!shouldDisplay(action)) return;
-
-                if (actionType === 'give' && urls.give) {
-                    const url = resolveUrl(urls.give, action.id);
-                    if (url) {
-                        buttons.push(`
-                            <a href="${url}"
-                               class="btn btn-primary btn-sm"
-                               title="Give">
-                                <i class="fas fa-hand-holding-heart"></i>
-                            </a>
-                        `);
-                    }
-                }
-
-                if (actionType === 'details' && urls.details) {
-                    const url = resolveUrl(urls.details, action.id);
-                    if (url) {
-                        buttons.push(`
-                            <a href="${url}"
-                               class="btn btn-info btn-sm"
-                               title="Details">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                        `);
-                    }
-                }
-
-                if (actionType === 'edit' && urls.edit) {
-                    const url = resolveUrl(urls.edit, action.id);
-                    if (url) {
-                        buttons.push(`
-                            <a href="${url}"
-                               class="btn btn-warning btn-sm"
-                               title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                        `);
-                    }
-                }
-
-                if (actionType === 'delete' && urls.delete) {
-                    const url = resolveUrl(urls.delete, action.id);
-                    if (url) {
-                        buttons.push(`
-                            <a href="${url}"
-                               class="btn btn-danger btn-sm"
-                               title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        `);
-                    }
-                }
-            });
+                    return `<a href="${url}" class="btn ${config.class} btn-sm" title="${config.title}">
+                        <i class="fas ${config.icon}"></i>
+                    </a>`;
+                })
+                .filter(Boolean);
 
             return gridjs.html(`<div style="white-space: nowrap;">${buttons.join(' ')}</div>`);
         };
@@ -153,40 +104,34 @@
     }
 
     /**
+     * Helper to resolve URL from item or template
+     */
+    function resolveItemUrl(item, urlTemplate) {
+        if (!item) return null;
+        if (item.url) return item.url;
+        if (urlTemplate && item.id) return urlTemplate.replace('{id}', item.id);
+        return null;
+    }
+
+    /**
      * Create multi-link formatter for arrays of links (e.g., groups)
      * @param urlTemplate Optional URL template (e.g., '/groups/{id}/'). If not provided, expects items to have a 'url' property
      * @param separator String to separate links (default: ', ')
      */
     function multiLinkFormatter(urlTemplate = null, separator = ', ') {
         return function (cell) {
-            if (!cell || !Array.isArray(cell) || cell.length === 0) {
-                return '';
-            }
+            if (!cell || !Array.isArray(cell) || cell.length === 0) return '';
 
-            const links = cell.map(item => {
-                // Handle null/undefined items
-                if (!item) {
-                    return '';
-                }
+            const links = cell
+                .map(item => {
+                    if (!item) return '';
+                    const text = item.name || item;
+                    const url = resolveItemUrl(item, urlTemplate);
+                    return url ? `<a href="${url}">${text}</a>` : text;
+                })
+                .filter(Boolean);
 
-                const text = item.name || item;
-                const id = item.id;
-
-                // Use item.url if available, otherwise use urlTemplate
-                let url;
-                if (item.url) {
-                    url = item.url;
-                } else if (urlTemplate) {
-                    url = urlTemplate.replace('{id}', id);
-                } else {
-                    // No URL available, just return text
-                    return text;
-                }
-
-                return `<a href="${url}">${text}</a>`;
-            }).join(separator);
-
-            return gridjs.html(links);
+            return gridjs.html(links.join(separator));
         };
     }
 
@@ -196,34 +141,20 @@
      */
     function badgeFormatter(urlTemplate = null) {
         return function (cell) {
-            if (!cell || !Array.isArray(cell) || cell.length === 0) {
-                return '';
-            }
+            if (!cell || !Array.isArray(cell) || cell.length === 0) return '';
 
-            const badges = cell.map(tag => {
-                // Handle null/undefined tags
-                if (!tag) {
-                    return '';
-                }
+            const badges = cell
+                .map(tag => {
+                    if (!tag) return '';
+                    const text = tag.name || tag;
+                    const url = resolveItemUrl(tag, urlTemplate);
+                    const badgeClass = 'badge bg-primary';
+                    return url ? `<a href="${url}" class="${badgeClass}">${text}</a>`
+                               : `<span class="${badgeClass}">${text}</span>`;
+                })
+                .filter(Boolean);
 
-                const text = tag.name || tag;
-                const id = tag.id;
-
-                // Use tag.url if available, otherwise use urlTemplate
-                let url;
-                if (tag.url) {
-                    url = tag.url;
-                } else if (urlTemplate) {
-                    url = urlTemplate.replace('{id}', id);
-                } else {
-                    // No URL available, just return text as badge without link
-                    return `<span class="badge bg-primary">${text}</span>`;
-                }
-
-                return `<a href="${url}" class="badge bg-primary">${text}</a>`;
-            }).join(' ');
-
-            return gridjs.html(badges);
+            return gridjs.html(badges.join(' '));
         };
     }
 
@@ -236,52 +167,29 @@
      * @param {Function} onReady - Optional callback when grid is ready
      */
     function initGrid(containerId, columns, data, options = {}, onReady = null) {
-        console.log('[GridUtils.initGrid] Starting initialization');
-        console.log('[GridUtils.initGrid] containerId:', containerId);
-        console.log('[GridUtils.initGrid] data length:', data ? data.length : 0);
-        console.log('[GridUtils.initGrid] onReady callback provided:', typeof onReady === 'function');
-
-        const translations = getGridTranslations();
-
-        const defaultOptions = {
+        const config = Object.assign({
             columns: columns,
             data: data,
             search: true,
-            pagination: {
-                enabled: true,
-                limit: 10
-            },
+            pagination: { enabled: true, limit: 10 },
             sort: true,
-            language: translations,
+            language: getGridTranslations(),
             className: {
                 table: 'table table-striped',
                 th: 'gridjs-th',
                 td: 'gridjs-td'
             }
-        };
-
-        const config = Object.assign({}, defaultOptions, options);
-        console.log('[GridUtils.initGrid] Config created');
+        }, options);
 
         try {
             const grid = new gridjs.Grid(config);
-            console.log('[GridUtils.initGrid] Grid object created');
-
-            // Attach ready event listener BEFORE rendering if callback provided
             if (onReady && typeof onReady === 'function') {
-                console.log('[GridUtils.initGrid] Attaching ready event listener');
                 grid.on('ready', onReady);
-                console.log('[GridUtils.initGrid] Ready event listener attached');
             }
-
-            console.log('[GridUtils.initGrid] About to call render()');
             grid.render(document.getElementById(containerId));
-            console.log('[GridUtils.initGrid] Render completed');
-
             return grid;
         } catch (error) {
-            console.error('[GridUtils.initGrid] Error during initialization:', error);
-            console.error('[GridUtils.initGrid] Error stack:', error.stack);
+            console.error('[GridUtils.initGrid] Error:', error);
             throw error;
         }
     }
