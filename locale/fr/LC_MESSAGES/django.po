@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-06 15:36+0100\n"
+"POT-Creation-Date: 2025-12-07 14:52+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -418,7 +418,9 @@ msgstr "Gestion du partage"
 #: gift_manager/templates/gift_manager/create_form.html:22
 #: gift_manager/templates/gift_manager/edit_form.html:23
 msgid "Select permission level for each friend you want to share with."
-msgstr "Sélectionner le niveau de permission pour chaque ami avec qui vous souhaitez partager."
+msgstr ""
+"Sélectionner le niveau de permission pour chaque ami avec qui vous souhaitez "
+"partager."
 
 #: gift_manager/templates/gift_manager/create_form.html:24
 #: gift_manager/templates/gift_manager/edit_form.html:25
@@ -811,7 +813,7 @@ msgstr "Offrir"
 
 #: gift_manager/templates/gift_manager/includes/action_buttons.html:39
 #: gift_manager/templates/gift_manager/includes/action_buttons.html:47
-#: gift_manager/views/base.py:432
+#: gift_manager/views/base.py:435
 msgid "Edit"
 msgstr "Éditer"
 
@@ -1157,26 +1159,26 @@ msgstr "Pas encore de compte ?"
 msgid "Register here"
 msgstr "Inscrivez-vous ici"
 
-#: gift_manager/views/base.py:177
+#: gift_manager/views/base.py:180
 msgid "Create"
 msgstr "Création"
 
-#: gift_manager/views/base.py:310
+#: gift_manager/views/base.py:313
 #, python-brace-format
 msgid "Permission for '{username}' changed to '{permission_level}'"
 msgstr "Le permission pour '{username}' a été changée en '{permission_level}'"
 
-#: gift_manager/views/base.py:346
+#: gift_manager/views/base.py:349
 #, python-brace-format
 msgid "Sharing with '{username}' removed successfully"
 msgstr "Partage avec '{username}' supprimé avec succès"
 
-#: gift_manager/views/base.py:386
+#: gift_manager/views/base.py:389
 #, python-brace-format
 msgid "Object shared with '{username}' successfully"
 msgstr "Objet partagé avec '{username}' avec succès"
 
-#: gift_manager/views/base.py:489
+#: gift_manager/views/base.py:492
 msgid ""
 "You no longer have access to this person, but it remains shared with other "
 "users"
@@ -1184,7 +1186,7 @@ msgstr ""
 "Vous n'avez plus accès à cette personne, mais elle reste partagées avec les "
 "autres utilisateurs"
 
-#: gift_manager/views/base.py:496
+#: gift_manager/views/base.py:499
 msgid "Person successfully deleted"
 msgstr "La personne a été supprimée avec succès"
 

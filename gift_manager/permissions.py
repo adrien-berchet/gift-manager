@@ -1,20 +1,23 @@
 from django.db.models import Model
+from django.utils.text import capfirst
 
+# Use _PERMISSION_LABEL_DICT directly to preserve lazy translations
+from gift_manager.models import _PERMISSION_LABEL_DICT
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
 
 PERMISSION_LEVELS = [
     {
         "value": PermissionLevel.VIEWER,
-        "label": PermissionLevel.get_label(PermissionLevel.VIEWER, case="title"),
+        "label": capfirst(_PERMISSION_LABEL_DICT[PermissionLevel.VIEWER]),
     },
     {
         "value": PermissionLevel.EDITOR,
-        "label": PermissionLevel.get_label(PermissionLevel.EDITOR, case="title"),
+        "label": capfirst(_PERMISSION_LABEL_DICT[PermissionLevel.EDITOR]),
     },
     {
         "value": PermissionLevel.OWNER,
-        "label": PermissionLevel.get_label(PermissionLevel.OWNER, case="title"),
+        "label": capfirst(_PERMISSION_LABEL_DICT[PermissionLevel.OWNER]),
     },
 ]
 

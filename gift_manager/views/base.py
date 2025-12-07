@@ -135,7 +135,10 @@ class CreatePermissionMixin:
             context["unshared_friends"] = self.unshared_friends
 
         # Add the permission levels available for the dropdown menus
-        context["permission_levels"] = deepcopy(PERMISSION_LEVELS)
+        # Force evaluation of lazy translations in the current language context
+        context["permission_levels"] = [
+            {"value": level["value"], "label": str(level["label"])} for level in PERMISSION_LEVELS
+        ]
         return context
 
     def form_valid(self, form):
