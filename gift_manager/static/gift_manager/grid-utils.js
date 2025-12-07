@@ -150,7 +150,7 @@
                     const url = resolveItemUrl(tag, urlTemplate);
                     const badgeClass = 'badge bg-primary';
                     return url ? `<a href="${url}" class="${badgeClass}">${text}</a>`
-                               : `<span class="${badgeClass}">${text}</span>`;
+                        : `<span class="${badgeClass}">${text}</span>`;
                 })
                 .filter(Boolean);
 
@@ -276,6 +276,24 @@
         });
     }
 
+    /**
+     * Create a comparator function for sorting objects by a specific property
+     */
+    function sortByProperty(property) {
+        return function (a, b) {
+            if (!a && !b) return 0;
+            if (!a) return -1;
+            if (!b) return 1;
+
+            const valA = (a[property] || '').toString().toUpperCase();
+            const valB = (b[property] || '').toString().toUpperCase();
+
+            if (valA > valB) return 1;
+            if (valA < valB) return -1;
+            return 0;
+        };
+    }
+
     // Expose utilities to global scope
     window.GridUtils = {
         initGrid: initGrid,
@@ -285,7 +303,8 @@
         badgeFormatter: badgeFormatter,
         setupFilterDropdown: setupFilterDropdown,
         setupCustomColumnFilter: setupCustomColumnFilter,
-        getGridTranslations: getGridTranslations
+        getGridTranslations: getGridTranslations,
+        sortByProperty: sortByProperty
     };
 
 })(window);

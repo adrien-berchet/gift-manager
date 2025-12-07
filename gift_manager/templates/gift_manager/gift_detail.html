@@ -39,7 +39,7 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-    (function() {
+    (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
@@ -47,14 +47,17 @@
         const relationsData = [
             {% for relation in relations %}
             [
-                {% if relation.person %}"person"{% elif relation.group %}"group"{% else %}"bad"{% endif %},
-                {% if relation.person %}"{{ relation.person.person_id }}"{% elif relation.group %}"{{ relation.group.group_id }}"{% else %}""{% endif %},
-                {% if relation.person %}"{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% elif relation.group %}"{{ relation.group.name|escapejs }}"{% else %}"Bad relation"{% endif %},
-                {% if relation.person %}"{% url 'gift_manager:person_detail' relation.person.person_id %}"{% elif relation.group %}"{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% else %}""{% endif %},
+                {% if relation.person %} "person" {% elif relation.group %} "group" {% else %} "bad" {% endif %},
+                {% if relation.person %} "{{ relation.person.person_id }}" {% elif relation.group %} "{{ relation.group.group_id }}" {% else %} "" {% endif %},
+                {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" {% elif relation.group %} "{{ relation.group.name|escapejs }}" {% else %} "Bad relation" {% endif %},
+                {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}" {% elif relation.group %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" {% else %} "" {% endif %},
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
                 {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
-                "{{ relation.relation_id }}"
+                "{{ relation.relation_id }}",
+                "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+                "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+                "{% url 'gift_manager:relation_delete' relation.relation_id %}"
             ],
             {% endfor %}
         ];
@@ -98,7 +101,20 @@
             },
             { name: 'status_label', hidden: true },
             { name: "{% trans 'Due Date' %}" },
-            { name: 'relation_id', hidden: true }
+            { name: 'relation_id', hidden: true },
+            { name: 'relation_detail_url', hidden: true },
+            { name: 'relation_edit_url', hidden: true },
+            { name: 'relation_delete_url', hidden: true },
+            {
+                name: "{% trans 'Actions' %}",
+                width: '150px',
+                sort: false,
+                formatter: GridUtils.actionButtonsFormatter({
+                    details: (row) => row.cells[8].data,
+                    edit: (row) => row.cells[9].data,
+                    delete: (row) => row.cells[10].data
+                }, ['details', 'edit', 'delete'])
+            }
         ];
 
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
@@ -116,7 +132,7 @@
         }, 100);
 
         // Handle status selector changes with event delegation
-        document.getElementById('relations-grid').addEventListener('change', function(e) {
+        document.getElementById('relations-grid').addEventListener('change', function (e) {
             if (e.target.classList.contains('status-selector')) {
                 const select = e.target;
                 const relationId = select.dataset.relationId;
@@ -212,6 +228,6 @@
             sort: false
         });
         {% endif %}
-    })();
+    }) ();
 </script>
 {% endblock %}

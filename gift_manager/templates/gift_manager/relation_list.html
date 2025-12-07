@@ -28,37 +28,41 @@
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
-    [
-        {% if item.gift__gift_id %}
-    { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
-    {% else %}
-    null,
-        {% endif %}
-    {
-        text: "{{ item.related_object|escapejs }}",
-            personId: {% if item.person__person_id %} "{{item.person__person_id}}"{% else %} null{% endif %},
-        groupId: {% if item.group__group_id %} "{{item.group__group_id}}"{% else %} null{% endif %},
-        url: {% if item.person__person_id %}"{% url 'gift_manager:person_detail' item.person__person_id %}"{% elif item.group__group_id %}"{% url 'gift_manager:person_group_detail' item.group__group_id %}"{% else %}null{% endif %}
-    },
-    {% if item.event__event_id %}
-    { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
-    {% else %}
-    null,
-        {% endif %}
-    "{{ item.status }}",
-        "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
-        "{{item.relation_id}}",
-    "{% url 'gift_manager:relation_detail' item.relation_id %}",
-    "{% url 'gift_manager:relation_edit' item.relation_id %}",
-    "{% url 'gift_manager:relation_delete' item.relation_id %}"
+            [
+                {% if item.gift__gift_id %}
+                { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
+                {% else %}
+                null,
+                {% endif %}
+                {
+                    text: "{{ item.related_object|escapejs }}",
+                    personId: {% if item.person__person_id %} "{{item.person__person_id}}" {% else %} null {% endif %},
+                    groupId: {% if item.group__group_id %} "{{item.group__group_id}}" {% else %} null {% endif %},
+                    url: {% if item.person__person_id %} "{% url 'gift_manager:person_detail' item.person__person_id %}" {% elif item.group__group_id %} "{% url 'gift_manager:person_group_detail' item.group__group_id %}" {% else %} null {% endif %}
+                },
+                {% if item.event__event_id %}
+                { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
+                {% else %}
+                null,
+                {% endif %}
+                "{{ item.comment|escapejs }}",
+                "{{ item.status }}",
+                "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
+                "{{item.relation_id}}",
+                "{% url 'gift_manager:relation_detail' item.relation_id %}",
+                "{% url 'gift_manager:relation_edit' item.relation_id %}",
+                "{% url 'gift_manager:relation_delete' item.relation_id %}"
             ]{% if not forloop.last %}, {% endif %}
-    {% endfor %}
+            {% endfor %}
         ];
 
     // Initialize Grid.js
     const grid = GridUtils.initGrid('relation-grid', [
         {
             name: '{{ column_names.gift__name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortByProperty('name')
+            },
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
                 return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
@@ -66,6 +70,9 @@
         },
         {
             name: '{{ column_names.related_object|escapejs }}',
+            sort: {
+                compare: GridUtils.sortByProperty('text')
+            },
             formatter: function (cell) {
                 if (!cell || !cell.text) return '';
                 if (cell.url) {
@@ -76,17 +83,23 @@
         },
         {
             name: '{{ column_names.event|escapejs }}',
+            sort: {
+                compare: GridUtils.sortByProperty('name')
+            },
             formatter: function (cell) {
                 if (!cell || !cell.id) return '';
                 return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
             }
         },
         {
+            name: '{{ column_names.comment|escapejs }}'
+        },
+        {
             name: '{{ column_names.status__status|escapejs }}',
             formatter: function (cell, row) {
-                const statusPk = row.cells[3].data;
-                const statusLabel = row.cells[4].data;
-                const relationId = row.cells[5].data;
+                const statusPk = row.cells[4].data;
+                const statusLabel = row.cells[5].data;
+                const relationId = row.cells[6].data;
                 return gridjs.html(`
                     <form id="status-form-${relationId}" style="display: inline;">
                         <select class="form-select form-select-sm status-selector"
@@ -119,9 +132,9 @@
             width: '150px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
-                details: (row) => row.cells[6].data,
-                edit: (row) => row.cells[7].data,
-                delete: (row) => row.cells[8].data
+                details: (row) => row.cells[7].data,
+                edit: (row) => row.cells[8].data,
+                delete: (row) => row.cells[9].data
             }, ['details', 'edit', 'delete'])
         }
     ], data, {
@@ -137,7 +150,7 @@
 
     // Trigger initial sort on status column to make Grid.js aware of the sort
     setTimeout(() => {
-        const statusHeader = document.querySelector('#relation-grid th:nth-child(4)');
+        const statusHeader = document.querySelector('#relation-grid th:nth-child(5)');
         if (statusHeader) {
             statusHeader.click();
         }
@@ -147,10 +160,10 @@
     GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
 
     // Setup custom status filter
-    GridUtils.setupCustomColumnFilter(grid, 3, '.status-filter');
+    GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
 
     // Handle status selector changes with event delegation
-    document.getElementById('relation-grid').addEventListener('change', function(e) {
+    document.getElementById('relation-grid').addEventListener('change', function (e) {
         if (e.target.classList.contains('status-selector')) {
             const select = e.target;
             const relationId = select.dataset.relationId;

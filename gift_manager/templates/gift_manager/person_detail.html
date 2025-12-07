@@ -51,16 +51,16 @@
                 "{{ relation.gift.gift_id }}",
                 "{{ relation.gift.name|escapejs }}",
                 "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-                "{{ relation.comment|replace_empty:'-'|escapejs }}",
+                "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
-                {% if relation.event %}"{{ relation.event.name|escapejs }}"{% else %}"-"{% endif %},
-                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
+                {% if relation.event %} "{{ relation.event.name|escapejs }}" {% else %} "" {% endif %},
+                {% if relation.due_date %} "{{ relation.due_date }}" {% else %} "" {% endif %},
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
                 "{% url 'gift_manager:relation_delete' relation.relation_id %}",
-                {% if relation.group %}false{% else %}true{% endif %}
+                {% if relation.group %} false {% else %} true {% endif %}
             ],
             {% endfor %}
         ];

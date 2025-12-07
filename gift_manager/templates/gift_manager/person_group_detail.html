@@ -149,7 +149,7 @@
         "{{ relation.gift.gift_id }}",
         "{{ relation.gift.name|escapejs }}",
         "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-        "{{ relation.gift.comment|escapejs }}",
+        "{{ relation.comment|escapejs }}",
         "{{ relation.status.pk }}",
         "{{ relation.status.status|escapejs }}",
         "{{ relation.relation_id }}",
