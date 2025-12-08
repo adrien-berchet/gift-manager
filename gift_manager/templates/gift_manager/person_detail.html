@@ -9,7 +9,8 @@
 <p><strong>{% trans "First name:" %}</strong> {{ person.first_name }}</p>
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
 <p><strong>{% trans "Email address:" %}</strong> {{ person.email_address|replace_none:"" }}</p>
-<p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
+<p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a
+        href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
 <p><strong>{% trans "Creation date:" %}</strong> {{ person.creation_date|replace_none:"" }}</p>
 
 <div class="mt-4">
@@ -36,11 +37,11 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-    (function() {
+    (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
         {% if relations %}
@@ -69,6 +70,9 @@
             { name: 'gift_id', hidden: true },
             {
                 name: "{% trans 'Gift' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
                 formatter: (cell, row) => {
                     const giftName = row.cells[1].data;
                     const giftUrl = row.cells[2].data;
@@ -76,7 +80,12 @@
                 }
             },
             { name: 'gift_url', hidden: true },
-            { name: "{% trans 'Comment' %}" },
+            {
+                name: "{% trans 'Comment' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
@@ -143,7 +152,7 @@
         }, 100);
 
         // Handle status selector changes with event delegation
-        document.getElementById('gifts-grid').addEventListener('change', function(e) {
+        document.getElementById('gifts-grid').addEventListener('change', function (e) {
             if (e.target.classList.contains('status-selector')) {
                 const select = e.target;
                 const relationId = select.dataset.relationId;
@@ -239,6 +248,6 @@
             sort: false
         });
         {% endif %}
-    })();
+    }) ();
 </script>
 {% endblock %}

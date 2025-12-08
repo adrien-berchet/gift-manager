@@ -285,12 +285,26 @@
             if (!a) return -1;
             if (!b) return 1;
 
-            const valA = (a[property] || '').toString().toUpperCase();
-            const valB = (b[property] || '').toString().toUpperCase();
+            const valA = (a[property] || '').toString();
+            const valB = (b[property] || '').toString();
 
-            if (valA > valB) return 1;
-            if (valA < valB) return -1;
-            return 0;
+            return valA.localeCompare(valB, undefined, { sensitivity: 'base' });
+        };
+    }
+
+    /**
+     * Create a comparator function for sorting strings accent-insensitively
+     */
+    function sortString() {
+        return function (a, b) {
+            if (!a && !b) return 0;
+            if (!a) return -1;
+            if (!b) return 1;
+
+            const valA = a.toString();
+            const valB = b.toString();
+
+            return valA.localeCompare(valB, undefined, { sensitivity: 'base' });
         };
     }
 
@@ -304,7 +318,8 @@
         setupFilterDropdown: setupFilterDropdown,
         setupCustomColumnFilter: setupCustomColumnFilter,
         getGridTranslations: getGridTranslations,
-        sortByProperty: sortByProperty
+        sortByProperty: sortByProperty,
+        sortString: sortString
     };
 
 })(window);

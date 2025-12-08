@@ -18,35 +18,36 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
         // Calculate column indices for clarity
-        const numDataColumns = {{ column_names.items|length }};
-        const groupIdIdx = numDataColumns;           // Index of group_id
-        const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
-        const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
-        const editUrlIdx = numDataColumns + 3;       // Index of edit URL
-        const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
+        const numDataColumns = {{ column_names.items| length }};
+    const groupIdIdx = numDataColumns;           // Index of group_id
+    const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
+    const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
+    const editUrlIdx = numDataColumns + 3;       // Index of edit URL
+    const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
 
-        // Prepare data for Grid.js
-        const data = [
-            {% for item in data %}
+    // Prepare data for Grid.js
+    const data = [
+        {% for item in data %}
     [
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
-        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
     {% else %}
-        {% if item.grouped_groups %}
-        [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% if not forloop.last %}, {% endif %}
-        {% else %}
-        []{% if not forloop.last %}, {% endif %}
-        {% endif %}
+    {% if item.grouped_groups %}
+    [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]
+    {% if not forloop.last %}, {% endif %}
+    {% else %}
+    []{% if not forloop.last %}, {% endif %}
+    {% endif %}
     {% endif %}
     {% endfor %},
-        "{{ item.group_id }}",  // cells[numDataColumns]
+    "{{ item.group_id }}",  // cells[numDataColumns]
         "{% url 'gift_manager:person_group_relation_create' item.group_id %}",  // cells[numDataColumns + 1]
         "{% url 'gift_manager:person_group_detail' item.group_id %}",           // cells[numDataColumns + 2]
         "{% url 'gift_manager:person_group_edit' item.group_id %}",             // cells[numDataColumns + 3]
@@ -59,7 +60,12 @@
     const columns = [
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
-    { name: '{{ name|escapejs }}' } {% if not forloop.last %}, {% endif %}
+    {
+        name: '{{ name|escapejs }}',
+            sort: {
+            compare: GridUtils.sortString()
+        }
+    } {% if not forloop.last %}, {% endif %}
     {% else %}
     {
         name: '{{ name|escapejs }}',
@@ -74,14 +80,14 @@
     { name: 'group_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '180px',
-        sort: false,
-        formatter: GridUtils.actionButtonsFormatter({
-            give: (row) => row.cells[giveUrlIdx].data,
-            details: (row) => row.cells[detailUrlIdx].data,
-            edit: (row) => row.cells[editUrlIdx].data,
-            delete: (row) => row.cells[deleteUrlIdx].data
-        }, ['give', 'details', 'edit', 'delete'])
+            width: '180px',
+                sort: false,
+                    formatter: GridUtils.actionButtonsFormatter({
+                        give: (row) => row.cells[giveUrlIdx].data,
+                        details: (row) => row.cells[detailUrlIdx].data,
+                        edit: (row) => row.cells[editUrlIdx].data,
+                        delete: (row) => row.cells[deleteUrlIdx].data
+                    }, ['give', 'details', 'edit', 'delete'])
     }
     ];
 
@@ -92,6 +98,14 @@
             limit: 10
         }
     });
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#person-group-grid th:nth-child(1)');
+        if (statusHeader) {
+            statusHeader.click();
+        }
+    }, 100);
     }) ();
 </script>
 {% endblock %}

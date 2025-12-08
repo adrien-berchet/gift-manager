@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -31,18 +31,28 @@
     [],
         {% endif %}
     "{{ item.gift_id }}",
-    "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
-    "{% url 'gift_manager:gift_detail' item.gift_id %}",
-    "{% url 'gift_manager:gift_edit' item.gift_id %}",
-    "{% url 'gift_manager:gift_delete' item.gift_id %}"
+        "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
+        "{% url 'gift_manager:gift_detail' item.gift_id %}",
+        "{% url 'gift_manager:gift_edit' item.gift_id %}",
+        "{% url 'gift_manager:gift_delete' item.gift_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
 
     // Initialize Grid.js
     GridUtils.initGrid('gift-grid', [
-        { name: '{{ column_names.name|escapejs }}' },
-        { name: '{{ column_names.comment|escapejs }}' },
+        {
+            name: '{{ column_names.name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
+        {
+            name: '{{ column_names.comment|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
         {
             name: '{{ column_names.tags|escapejs }}',
             formatter: GridUtils.badgeFormatter()
@@ -69,6 +79,14 @@
             limit: 10
         }
     });
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#gift-grid th:nth-child(1)');
+        if (statusHeader) {
+            statusHeader.click();
+        }
+    }, 100);
     }) ();
 </script>
 {% endblock %}

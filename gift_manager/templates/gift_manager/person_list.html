@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -32,18 +32,30 @@
         "{{ item.email_address|default:''|escapejs }}",
         {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
     "{{ item.person_id }}",
-    "{% url 'gift_manager:person_relation_create' item.person_id %}",
-    "{% url 'gift_manager:person_detail' item.person_id %}",
-    "{% url 'gift_manager:person_edit' item.person_id %}",
-    "{% url 'gift_manager:person_delete' item.person_id %}"
+        "{% url 'gift_manager:person_relation_create' item.person_id %}",
+        "{% url 'gift_manager:person_detail' item.person_id %}",
+        "{% url 'gift_manager:person_edit' item.person_id %}",
+        "{% url 'gift_manager:person_delete' item.person_id %}"
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
             ];
 
     // Initialize Grid.js
     const grid = GridUtils.initGrid('person-grid', [
-        { id: 'first_name', name: '{{ column_names.first_name|escapejs }}' },
-        { id: 'family_name', name: '{{ column_names.family_name|escapejs }}' },
+        {
+            id: 'first_name',
+            name: '{{ column_names.first_name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
+        {
+            id: 'family_name',
+            name: '{{ column_names.family_name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
         { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
         {
             id: 'groups',
@@ -71,6 +83,9 @@
         pagination: {
             enabled: true,
             limit: 10
+        },
+        sort: {
+            multiColumn: true
         }
     });
 
@@ -80,5 +95,28 @@
     // Setup custom group filter
     GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
     }) ();
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    // Trigger initial sort: Family Name (2) then First Name (1)
+    setTimeout(() => {
+        const familyNameHeader = document.querySelector('#person-grid th:nth-child(2)');
+        const firstNameHeader = document.querySelector('#person-grid th:nth-child(1)');
+
+        if (familyNameHeader && firstNameHeader) {
+            // Primary sort: Family Name
+            familyNameHeader.click();
+
+            // Secondary sort: First Name (simulate Shift+Click)
+            setTimeout(() => {
+                const shiftClick = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: true
+                });
+                firstNameHeader.dispatchEvent(shiftClick);
+            }, 100);
+        }
+    }, 100);
 </script>
 {% endblock %}

@@ -64,7 +64,7 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
@@ -105,6 +105,9 @@
         { name: 'person_id', hidden: true },
         {
             name: "{% trans 'First name' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            },
             formatter: (cell, row) => {
                 const firstName = row.cells[1].data;
                 const personUrl = row.cells[3].data;
@@ -113,6 +116,9 @@
         },
         {
             name: "{% trans 'Family name' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            },
             formatter: (cell, row) => {
                 const familyName = row.cells[2].data;
                 const personUrl = row.cells[3].data;
@@ -164,6 +170,9 @@
         { name: 'gift_id', hidden: true },
         {
             name: "{% trans 'Name' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            },
             formatter: (cell, row) => {
                 const giftName = row.cells[1].data;
                 const giftUrl = row.cells[2].data;
@@ -171,7 +180,12 @@
             }
         },
         { name: 'gift_url', hidden: true },
-        { name: "{% trans 'Comment' %}" },
+        {
+            name: "{% trans 'Comment' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
         {
             name: "{% trans 'Status' %}",
             formatter: (cell, row) => {

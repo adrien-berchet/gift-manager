@@ -14,27 +14,27 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
         // Calculate column indices for clarity
         // Data columns: {% for col, name in column_names.items %}{{ forloop.counter }}{% if forloop.last %} columns{% endif %}{% endfor %}
-        const numDataColumns = {{ column_names.items|length }};
-        const eventIdIdx = numDataColumns;      // Index of event_id
-        const detailUrlIdx = numDataColumns + 1; // Index of detail URL
-        const editUrlIdx = numDataColumns + 2;   // Index of edit URL
-        const deleteUrlIdx = numDataColumns + 3; // Index of delete URL
+        const numDataColumns = {{ column_names.items| length }};
+    const eventIdIdx = numDataColumns;      // Index of event_id
+    const detailUrlIdx = numDataColumns + 1; // Index of detail URL
+    const editUrlIdx = numDataColumns + 2;   // Index of edit URL
+    const deleteUrlIdx = numDataColumns + 3; // Index of delete URL
 
-        // Prepare data for Grid.js
-        const data = [
-            {% for item in data %}
+    // Prepare data for Grid.js
+    const data = [
+        {% for item in data %}
     [
         {% for col, name in column_names.items %}
-        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-        {% endfor %},
-        "{{ item.event_id }}",  // cells[numDataColumns]
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    {% endfor %},
+    "{{ item.event_id }}",  // cells[numDataColumns]
         "{% url 'gift_manager:event_detail' item.event_id %}",  // cells[numDataColumns + 1]
         "{% url 'gift_manager:event_edit' item.event_id %}",     // cells[numDataColumns + 2]
         "{% url 'gift_manager:event_delete' item.event_id %}"    // cells[numDataColumns + 3]
@@ -45,7 +45,12 @@
     // Build columns dynamically
     const columns = [
         {% for col, name in column_names.items %}
-    { name: '{{ name|escapejs }}' } {% if not forloop.last %}, {% endif %}
+    {
+        name: '{{ name|escapejs }}',
+            sort: {
+            compare: GridUtils.sortString()
+        }
+    } {% if not forloop.last %}, {% endif %}
     {% endfor %},
     { name: 'event_id', hidden: true },
     { name: 'event_detail_url', hidden: true },
@@ -53,13 +58,13 @@
     { name: 'event_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '150px',
-        sort: false,
-        formatter: GridUtils.actionButtonsFormatter({
-            details: (row) => row.cells[detailUrlIdx].data,
-            edit: (row) => row.cells[editUrlIdx].data,
-            delete: (row) => row.cells[deleteUrlIdx].data
-        }, ['details', 'edit', 'delete'])
+            width: '150px',
+                sort: false,
+                    formatter: GridUtils.actionButtonsFormatter({
+                        details: (row) => row.cells[detailUrlIdx].data,
+                        edit: (row) => row.cells[editUrlIdx].data,
+                        delete: (row) => row.cells[deleteUrlIdx].data
+                    }, ['details', 'edit', 'delete'])
     }
     ];
 
@@ -70,6 +75,14 @@
             limit: 10
         }
     });
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#event-grid th:nth-child(1)');
+        if (statusHeader) {
+            statusHeader.click();
+        }
+    }, 100);
     }) ();
 </script>
 {% endblock %}

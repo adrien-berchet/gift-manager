@@ -14,7 +14,8 @@
     {% endif %}
 </p>
 <p><strong>{% trans "Gift:" %}</strong> <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></p>
-<p><strong>{% trans "Event:" %}</strong> {% if relation.event %}<a href="{% url 'gift_manager:event_detail' relation.event.event_id %}">{{ relation.event.name }}</a>{% endif %}</p>
+<p><strong>{% trans "Event:" %}</strong> {% if relation.event %}<a href="{% url 'gift_manager:event_detail' relation.event.event_id %}">{{ relation.event.name }}</a>{% endif %}
+</p>
 <p><strong>{% trans "Comment:" %}</strong> {{ relation.comment }}</p>
 <p><strong>{% trans "Status:" %}</strong> <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}">{{ relation.status.status }}</a></p>
 <p><strong>{% trans "Due date:" %}</strong> {{ relation.due_date }}</p>
@@ -36,11 +37,11 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-    (function() {
+    (function () {
         {% if shared_users %}
         // Shares Grid
         const sharesData = [
@@ -54,7 +55,12 @@
         ];
 
         const sharesColumns = [
-            { name: "{% trans 'Username' %}" },
+            {
+                name: "{% trans 'Username' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
             { name: 'permission', hidden: true },
             {
                 name: "{% trans 'Permission' %}",
@@ -77,10 +83,10 @@
                     }
 
                     return gridjs.html(`
-                        <span class="badge ${badgeClass}" title="${title}">
-                            <i class="fas ${icon} me-1"></i> ${label}
-                        </span>
-                    `);
+                            <span class="badge ${badgeClass}" title="${title}">
+                                <i class="fas ${icon} me-1"></i> ${label}
+                            </span>
+                        `);
                 }
             }
         ];
@@ -91,6 +97,6 @@
             sort: false
         });
         {% endif %}
-    })();
+    }) ();
 </script>
 {% endblock %}
