@@ -25,7 +25,8 @@
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
-<a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
+<a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add
+    Relation" %}</a>
 {% if relations %}
 <div id="relations-grid" class="mt-3"></div>
 {% else %}
@@ -53,7 +54,7 @@
                 {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}" {% elif relation.group %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" {% else %} "" {% endif %},
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
-                {% if relation.due_date %}"{{ relation.due_date }}"{% else %}"-"{% endif %},
+                {% if relation.due_date %}"{{ relation.due_date }}"{% else %} "-"{% endif %},
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -67,6 +68,9 @@
             { name: 'id', hidden: true },
             {
                 name: "{% trans 'Person' %} / {% trans 'Group' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
                 formatter: (cell, row) => {
                     const name = row.cells[2].data;
                     const url = row.cells[3].data;
@@ -120,14 +124,32 @@
         GridUtils.initGrid('relations-grid', relationsColumns, relationsData, {
             pagination: { enabled: true, limit: 10 },
             search: true,
-            sort: true
+            sort: {
+                multiColumn: true,
+                enabled: true
+            }
         });
 
         // Trigger initial sort on status column to make Grid.js aware of the sort
+        // Trigger initial sort: Status (2) then Person (1)
         setTimeout(() => {
             const statusHeader = document.querySelector('#relations-grid th:nth-child(2)');
-            if (statusHeader) {
+            const personHeader = document.querySelector('#relations-grid th:nth-child(1)');
+
+            if (statusHeader && personHeader) {
+                // Primary sort: Status
                 statusHeader.click();
+
+                // Secondary sort: Person (simulate Shift+Click)
+                setTimeout(() => {
+                    const shiftClick = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        shiftKey: true
+                    });
+                    personHeader.dispatchEvent(shiftClick);
+                }, 100);
             }
         }, 100);
 
@@ -188,7 +210,7 @@
                 "{{ shared_user.permission_label|escapejs }}"
             ],
             {% endfor %}
-        ];
+            ];
 
         const sharesColumns = [
             { name: "{% trans 'Username' %}" },
@@ -214,9 +236,9 @@
                     }
 
                     return gridjs.html(`
-                        <span class="badge ${badgeClass}" title="${title}">
-                            <i class="fas ${icon} me-1"></i> ${label}
-                        </span>
+                            <span class="badge ${badgeClass}" title="${title}">
+                                <i class="fas ${icon} me-1"></i> ${label}
+                            </span>
                     `);
                 }
             }

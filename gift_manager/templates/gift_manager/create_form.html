@@ -6,60 +6,62 @@
 
 {% block content %}
 <div class="container mb-5 pb-5">
-  <h1>{{ action }} {{ translated_type }}</h1>
-  <form method="post" id="main-form">
-    {% csrf_token %}
-    {{ form.as_p }}
+    <h1>{{ action }} {{ translated_type }}</h1>
+    <form method="post" id="main-form">
+        {% csrf_token %}
+        {{ form.as_p }}
 
-    <div class="mt-5">
-      {% if unshared_friends %}
-      <div class="card">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h4>
+        <div class="mt-5">
+            {% if unshared_friends %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you
+                            want to share with." %}</p>
+                        <ul class="mb-1">
+                            <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
+                            <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
+                            <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage
+                                sharing of the object" %}</li>
+                        </ul>
+                    </div>
+
+                    <!-- Grid.js container -->
+                    <div id="sharing-grid"></div>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-user-friends me-2"></i>
+                {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
+                <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+                    <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
+                </a>
+            </div>
+            {% endif %}
         </div>
-        <div class="card-body">
-          <div class="alert alert-info mb-3">
-            <p><i class="fas fa-info-circle me-2"></i>{% trans "Select permission level for each friend you want to share with." %}</p>
-            <ul class="mb-1">
-              <li><strong>👁️ {% trans "Viewer" %}</strong>: {% trans "Can only see the object" %}</li>
-              <li><strong>✏️ {% trans "Editor" %}</strong>: {% trans "Can modify the object" %}</li>
-              <li><strong>👑 {% trans "Owner" %}</strong>: {% trans "Can modify, delete, and manage sharing of the object" %}</li>
-            </ul>
-          </div>
+    </form>
 
-          <!-- Grid.js container -->
-          <div id="sharing-grid"></div>
-        </div>
-      </div>
-      {% else %}
-      <div class="alert alert-warning">
-        <i class="fas fa-user-friends me-2"></i>
-        {% trans "You don't have any friends to share with. Invite some friends to start sharing objects." %}
-        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
-          <i class="fas fa-envelope me-1"></i> {% trans "Send invitation" %}
-        </a>
-      </div>
-      {% endif %}
-    </div>
-  </form>
-
-  <div style="height: 80px;"></div>
+    <div style="height: 80px;"></div>
 </div>
 {% endblock %}
 
 {% block body_end %}
 <!-- Fixed action buttons moved outside the normal document flow -->
 <div id="fixed-action-bar" class="fixed-action-bar">
-  <div class="container">
-    <div class="action-buttons">
-      <button type="submit" form="main-form" class="btn btn-primary">
-        <i class="fas fa-save me-2"></i>{% trans "Save" %}
-      </button>
-      <a href="{{ cancel_url }}" class="btn btn-secondary">
-        <i class="fas fa-times me-2"></i>{% trans "Cancel" %}
-      </a>
+    <div class="container">
+        <div class="action-buttons">
+            <button type="submit" form="main-form" class="btn btn-primary">
+                <i class="fas fa-save me-2"></i>{% trans "Save" %}
+            </button>
+            <a href="{{ cancel_url }}" class="btn btn-secondary">
+                <i class="fas fa-times me-2"></i>{% trans "Cancel" %}
+            </a>
+        </div>
     </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -70,278 +72,283 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-(function() {
-  // Prepare data for Grid.js
-  const friendsData = [
-    {% for friend in unshared_friends %}
-    [
-      "{{ friend.user.id }}",
-      "{{ friend.user.username|escapejs }}",
-      ""  // Empty value for permission (will be filled by select)
-    ]{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ];
-
-  // Function to update the share counter
-  function updateShareCounter() {
-    const selectedCount = document.querySelectorAll('.gridjs-table .selected-for-sharing').length;
-    const counterEl = document.getElementById('share-counter');
-
-    if (!counterEl && selectedCount > 0) {
-      // Create the counter if it doesn't exist
-      const counter = document.createElement('div');
-      counter.id = 'share-counter';
-      counter.className = 'badge bg-primary position-fixed';
-      counter.style.bottom = '90px';
-      counter.style.right = '20px';
-      counter.style.padding = '10px';
-      counter.style.fontSize = '1rem';
-      counter.style.zIndex = '1000';
-      counter.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
-      counter.style.display = 'flex';
-      counter.style.alignItems = 'center';
-      counter.style.justifyContent = 'center';
-      counter.style.borderRadius = '20px';
-      counter.innerHTML = `<i class="fas fa-share-alt me-2"></i>${selectedCount}`;
-      document.body.appendChild(counter);
-    } else if (counterEl) {
-      // Update the existing counter
-      if (selectedCount > 0) {
-        counterEl.innerHTML = `<i class="fas fa-share-alt me-2"></i>${selectedCount}`;
-        counterEl.style.display = 'flex';
-      } else {
-        counterEl.style.display = 'none';
-      }
-    }
-  }
-
-  // Initialize Grid.js
-  const grid = GridUtils.initGrid('sharing-grid', [
-    {
-      name: 'User ID',
-      hidden: true
-    },
-    {
-      name: '{% trans "User"|escapejs %}',
-      formatter: function(cell) {
-        return gridjs.html('<div class="d-flex align-items-center"><i class="fas fa-user me-2 text-muted"></i>' + cell + '</div>');
-      }
-    },
-    {
-      name: '{% trans "Permission level"|escapejs %}',
-      sort: false,
-      formatter: function(cell, row) {
-        const userId = row.cells[0].data;
-        return gridjs.html(`
-          <select name="share_with_${userId}" class="form-select form-select-sm permission-select" data-user-id="${userId}">
-            <option value="" selected>🚫 {% trans "Not shared"|escapejs %}</option>
-            {% for level in permission_levels %}
-            <option value="{{ level.value }}">
-              {% if level.value <= 10 %}👁️
-              {% elif level.value <= 20 %}✏️
-              {% else %}👑{% endif %}
-              {{ level.label|escapejs }}
-            </option>
+    (function () {
+        // Prepare data for Grid.js
+        const friendsData = [
+            {% for friend in unshared_friends %}
+            [
+                "{{ friend.user.id }}",
+                "{{ friend.user.username|escapejs }}",
+                ""  // Empty value for permission (will be filled by select)
+            ]{% if not forloop.last %}, {% endif %}
             {% endfor %}
-          </select>
-        `);
-      }
-    }
-  ], friendsData, {
-    pagination: {
-      enabled: true,
-      limit: 5
-    },
-    sort: {
-      multiColumn: false,
-      enabled: true
-    }
-  });
+        ];
 
-  // Handle permission select changes with event delegation
-  document.getElementById('sharing-grid').addEventListener('change', function(e) {
-    if (e.target.classList.contains('permission-select')) {
-      const select = e.target;
-      const row = select.closest('tr');
-      const userId = select.dataset.userId;
-      const selectedValue = select.value;
-      const username = row.querySelector('td:nth-child(2)').textContent.trim();
+        // Function to update the share counter
+        function updateShareCounter() {
+            const selectedCount = document.querySelectorAll('.gridjs-table .selected-for-sharing').length;
+            const counterEl = document.getElementById('share-counter');
 
-      // Highlight the modified row
-      if (selectedValue) {
-        row.classList.add('table-primary', 'selected-for-sharing');
-        row.classList.remove('table-secondary');
-        showNotification(`{% trans "Will share with"|escapejs %} ${username}`, 'info', 2000);
-      } else {
-        row.classList.remove('table-primary', 'selected-for-sharing');
-        row.classList.add('table-secondary');
-      }
+            if (!counterEl && selectedCount > 0) {
+                // Create the counter if it doesn't exist
+                const counter = document.createElement('div');
+                counter.id = 'share-counter';
+                counter.className = 'badge bg-primary position-fixed';
+                counter.style.bottom = '90px';
+                counter.style.right = '20px';
+                counter.style.padding = '10px';
+                counter.style.fontSize = '1rem';
+                counter.style.zIndex = '1000';
+                counter.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.2)';
+                counter.style.display = 'flex';
+                counter.style.alignItems = 'center';
+                counter.style.justifyContent = 'center';
+                counter.style.borderRadius = '20px';
+                counter.innerHTML = `<i class="fas fa-share-alt me-2"></i>${selectedCount}`;
+                document.body.appendChild(counter);
+            } else if (counterEl) {
+                // Update the existing counter
+                if (selectedCount > 0) {
+                    counterEl.innerHTML = `<i class="fas fa-share-alt me-2"></i>${selectedCount}`;
+                    counterEl.style.display = 'flex';
+                } else {
+                    counterEl.style.display = 'none';
+                }
+            }
+        }
 
-      // Update the shared objects counter
-      updateShareCounter();
-    }
-  });
+        // Initialize Grid.js
+        const grid = GridUtils.initGrid('sharing-grid', [
+            {
+                name: 'User ID',
+                hidden: true
+            },
+            {
+                name: '{% trans "User"|escapejs %}',
+                sort: {
+                    compare: GridUtils.sortString()
+                },
+                formatter: function (cell) {
+                    return gridjs.html('<div class="d-flex align-items-center"><i class="fas fa-user me-2 text-muted"></i>' + cell + '</div>');
+                }
+            },
+            {
+                name: '{% trans "Permission level"|escapejs %}',
+                sort: false,
+                formatter: function (cell, row) {
+                    const userId = row.cells[0].data;
+                    return gridjs.html(`
+                        <select name="share_with_${userId}" class="form-select form-select-sm permission-select" data-user-id="${userId}">
+                            <option value="" selected>🚫 {% trans "Not shared"|escapejs %}</option>
+                            {% for level in permission_levels %}
+                            <option value="{{ level.value }}">
+                            {% if level.value <= 10 %}👁️
+                            {% elif level.value <= 20 %}✏️
+                            {% else %}👑{% endif %}
+                            {{ level.label|escapejs }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    `);
+                }
+            },
+        ],
+            friendsData,
+            {
+                pagination: {
+                    enabled: true,
+                    limit: 5
+                },
+                sort: {
+                    multiColumn: false,
+                    enabled: true
+                }
+            });
 
-  // Add "Select all" button after grid is rendered
-  grid.on('ready', function() {
-    const gridContainer = document.getElementById('sharing-grid');
-    if (gridContainer && friendsData.length > 0) {
-      const selectAllBtn = document.createElement('button');
-      selectAllBtn.type = 'button';
-      selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-3';
-      selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>{% trans "Select all as Viewers"|escapejs %}';
-      selectAllBtn.onclick = function() {
-        document.querySelectorAll('.gridjs-table .permission-select').forEach(select => {
-          select.value = '10'; // Viewer value
-          const row = select.closest('tr');
-          row.classList.add('table-primary', 'selected-for-sharing');
-          row.classList.remove('table-secondary');
+        // Handle permission select changes with event delegation
+        document.getElementById('sharing-grid').addEventListener('change', function (e) {
+            if (e.target.classList.contains('permission-select')) {
+                const select = e.target;
+                const row = select.closest('tr');
+                const userId = select.dataset.userId;
+                const selectedValue = select.value;
+                const username = row.querySelector('td:nth-child(1)').textContent.trim();
+
+                // Highlight the modified row
+                if (selectedValue) {
+                    row.classList.add('table-primary', 'selected-for-sharing');
+                    row.classList.remove('table-secondary');
+                    showNotification(`{% trans "Will share with"|escapejs %} ${username}`, 'info', 2000);
+                } else {
+                    row.classList.remove('table-primary', 'selected-for-sharing');
+                    row.classList.add('table-secondary');
+                }
+
+                // Update the shared objects counter
+                updateShareCounter();
+            }
         });
-        updateShareCounter();
-        showNotification('{% trans "All friends will be added as Viewers"|escapejs %}', 'success', 3000);
-        return false;
-      };
 
-      // Insert before the grid wrapper
-      const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
-      if (gridWrapper) {
-        gridContainer.insertBefore(selectAllBtn, gridWrapper);
-      }
-    }
-  });
+        // Add "Select all" button after grid is rendered
+        grid.on('ready', function () {
+            const gridContainer = document.getElementById('sharing-grid');
+            if (gridContainer && friendsData.length > 0) {
+                const selectAllBtn = document.createElement('button');
+                selectAllBtn.type = 'button';
+                selectAllBtn.className = 'btn btn-sm btn-outline-primary mb-3';
+                selectAllBtn.innerHTML = '<i class="fas fa-check-square me-2"></i>{% trans "Select all as Viewers"|escapejs %}';
+                selectAllBtn.onclick = function () {
+                    document.querySelectorAll('.gridjs-table .permission-select').forEach(select => {
+                        select.value = '10'; // Viewer value
+                        const row = select.closest('tr');
+                        row.classList.add('table-primary', 'selected-for-sharing');
+                        row.classList.remove('table-secondary');
+                    });
+                    updateShareCounter();
+                    showNotification('{% trans "All friends will be added as Viewers"|escapejs %}', 'success', 3000);
+                    return false;
+                };
 
-  // Ensure the action bar is always visible
-  document.addEventListener('DOMContentLoaded', function() {
-    const fixedBar = document.getElementById('fixed-action-bar');
-    if (fixedBar) {
-      document.body.appendChild(fixedBar);
-      Object.assign(fixedBar.style, {
-        position: 'fixed',
-        bottom: '0',
-        left: '0',
-        right: '0',
-        zIndex: '100000',
-        display: 'block'
-      });
-    }
-  });
-})();
+                // Insert before the grid wrapper
+                const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+                if (gridWrapper) {
+                    gridContainer.insertBefore(selectAllBtn, gridWrapper);
+                }
+            }
+        });
+
+        // Ensure the action bar is always visible
+        document.addEventListener('DOMContentLoaded', function () {
+            const fixedBar = document.getElementById('fixed-action-bar');
+            if (fixedBar) {
+                document.body.appendChild(fixedBar);
+                Object.assign(fixedBar.style, {
+                    position: 'fixed',
+                    bottom: '0',
+                    left: '0',
+                    right: '0',
+                    zIndex: '100000',
+                    display: 'block'
+                });
+            }
+        });
+}) ();
 </script>
 {% endblock %}
 
 {% block extra_css %}
 <style>
-  .fixed-action-bar {
-    position: fixed !important;
-    /* Important override */
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    background-color: rgba(248, 249, 250, 0.95);
-    padding: 15px;
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 100000 !important;
-    /* Ultra high z-index */
-    border-top: 2px solid #007bff;
-  }
+    .fixed-action-bar {
+        position: fixed !important;
+        /* Important override */
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background-color: rgba(248, 249, 250, 0.95);
+        padding: 15px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 100000 !important;
+        /* Ultra high z-index */
+        border-top: 2px solid #007bff;
+    }
 
-  .fixed-action-bar .action-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-  }
+    .fixed-action-bar .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
 
-  /* Add padding to body to prevent content from being hidden */
-  body {
-    padding-bottom: 80px !important;
-    margin-bottom: 0 !important;
-  }
+    /* Add padding to body to prevent content from being hidden */
+    body {
+        padding-bottom: 80px !important;
+        margin-bottom: 0 !important;
+    }
 
-  /* Make buttons more visible */
-  .fixed-action-bar .btn {
-    padding: 0.5rem 2rem;
-    font-weight: 500;
-  }
+    /* Make buttons more visible */
+    .fixed-action-bar .btn {
+        padding: 0.5rem 2rem;
+        font-weight: 500;
+    }
 
-  .fixed-action-bar .btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-    box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
-    transition: all 0.2s;
-  }
+    .fixed-action-bar .btn-primary {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        box-shadow: 0 2px 5px rgba(13, 110, 253, 0.3);
+        transition: all 0.2s;
+    }
 
-  .fixed-action-bar .btn-primary:hover {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
-  }
+    .fixed-action-bar .btn-primary:hover {
+        background-color: #0b5ed7;
+        border-color: #0a58ca;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(13, 110, 253, 0.4);
+    }
 
-  /* Styling for select elements in the Grid */
-  #sharing-grid .permission-select {
-    min-width: 280px !important;
-    width: 280px !important;
-    max-width: 280px !important;
-  }
-
-  /* Styling for rows */
-  .selected-for-sharing {
-    background-color: rgba(13, 110, 253, 0.1) !important;
-    transition: background-color 0.3s ease;
-  }
-
-  /* Grid table styling */
-  #sharing-grid .gridjs-table {
-    border-collapse: separate;
-    border-spacing: 0;
-  }
-
-  #sharing-grid .gridjs-thead th {
-    background-color: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    font-weight: 600;
-  }
-
-  #sharing-grid .gridjs-tbody tr {
-    transition: all 0.2s ease;
-  }
-
-  #sharing-grid .gridjs-tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 992px) {
+    /* Styling for select elements in the Grid */
     #sharing-grid .permission-select {
-      min-width: 200px !important;
-      width: 200px !important;
-    }
-  }
-
-  @media (max-width: 768px) {
-    #sharing-grid .permission-select {
-      min-width: 150px !important;
-      width: 150px !important;
-    }
-  }
-
-  /* Animation for the share counter */
-  @keyframes pulse {
-    0% {
-      transform: scale(1);
+        min-width: 280px !important;
+        width: 280px !important;
+        max-width: 280px !important;
     }
 
-    50% {
-      transform: scale(1.05);
+    /* Styling for rows */
+    .selected-for-sharing {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+        transition: background-color 0.3s ease;
     }
 
-    100% {
-      transform: scale(1);
+    /* Grid table styling */
+    #sharing-grid .gridjs-table {
+        border-collapse: separate;
+        border-spacing: 0;
     }
-  }
 
-  #share-counter {
-    animation: pulse 2s infinite;
-  }
+    #sharing-grid .gridjs-thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    #sharing-grid .gridjs-tbody tr {
+        transition: all 0.2s ease;
+    }
+
+    #sharing-grid .gridjs-tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 992px) {
+        #sharing-grid .permission-select {
+            min-width: 200px !important;
+            width: 200px !important;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #sharing-grid .permission-select {
+            min-width: 150px !important;
+            width: 150px !important;
+        }
+    }
+
+    /* Animation for the share counter */
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    #share-counter {
+        animation: pulse 2s infinite;
+    }
 </style>
 {% endblock %}

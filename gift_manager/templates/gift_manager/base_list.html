@@ -42,7 +42,7 @@
         const grid = GridUtils.initGrid('{{ grid_id }}', columns, data, {
             pagination: {
                 enabled: true,
-                limit: {{ pagination_limit|default:10 }}
+                limit: {{ pagination_limit|default: 10 }}
             },
             search: {
                 enabled: true
@@ -54,8 +54,8 @@
         {% endblock %}
 
         {% block grid_custom_setup %}
-        {# Additional grid setup can go here (filters, etc.) #}
+        {# Additional grid setup can go here(filters, etc.) #}
         {% endblock %}
-    })();
+    }) ();
 </script>
 {% endblock %}

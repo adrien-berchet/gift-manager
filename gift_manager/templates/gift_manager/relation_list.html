@@ -18,12 +18,14 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+
+
 
         // Prepare data for Grid.js
         const data = [
@@ -52,161 +54,189 @@
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
                 "{% url 'gift_manager:relation_delete' item.relation_id %}"
-            ]{% if not forloop.last %}, {% endif %}
+            ]
+            {% if not forloop.last %}, {% endif %}
             {% endfor %}
         ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('relation-grid', [
-        {
-            name: '{{ column_names.gift__name|escapejs }}',
-            sort: {
-                compare: GridUtils.sortByProperty('name')
-            },
-            formatter: function (cell) {
-                if (!cell || !cell.id) return '';
-                return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
-            }
-        },
-        {
-            name: '{{ column_names.related_object|escapejs }}',
-            sort: {
-                compare: GridUtils.sortByProperty('text')
-            },
-            formatter: function (cell) {
-                if (!cell || !cell.text) return '';
-                if (cell.url) {
-                    return gridjs.html(`<a href="${cell.url}">${cell.text}</a>`);
+        // Initialize Grid.js
+        const grid = GridUtils.initGrid('relation-grid', [
+            {
+                name: '{{ column_names.gift__name|escapejs }}',
+                sort: {
+                    compare: GridUtils.sortByProperty('name')
+                },
+                formatter: function (cell) {
+                    if (!cell || !cell.id) return '';
+                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
                 }
-                return cell.text;
-            }
-        },
-        {
-            name: '{{ column_names.event|escapejs }}',
-            sort: {
-                compare: GridUtils.sortByProperty('name')
             },
-            formatter: function (cell) {
-                if (!cell || !cell.id) return '';
-                return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+            {
+                name: '{{ column_names.related_object|escapejs }}',
+                sort: {
+                    compare: GridUtils.sortByProperty('text')
+                },
+                formatter: function (cell) {
+                    if (!cell || !cell.text) return '';
+                    if (cell.url) {
+                        return gridjs.html(`<a href="${cell.url}">${cell.text}</a>`);
+                    }
+                    return cell.text;
+                }
+            },
+            {
+                name: '{{ column_names.event|escapejs }}',
+                sort: {
+                    compare: GridUtils.sortByProperty('name')
+                },
+                formatter: function (cell) {
+                    if (!cell || !cell.id) return '';
+                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+                }
+            },
+            {
+                name: '{{ column_names.comment|escapejs }}'
+            },
+            {
+                name: '{{ column_names.status__status|escapejs }}',
+                formatter: function (cell, row) {
+                    const statusPk = row.cells[4].data;
+                    const statusLabel = row.cells[5].data;
+                    const relationId = row.cells[6].data;
+                    return gridjs.html(`
+                        <form id="status-form-${relationId}" style="display: inline;">
+                            <select class="form-select form-select-sm status-selector"
+                                    name="new_status"
+                                    data-relation-id="${relationId}"
+                                    data-update-url="${updateStatusUrl}">
+                                {% for status in relation_statuses %}
+                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
+                                    {{ status.status }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    `);
+                }
+            },
+            {
+                name: 'Status Label',
+                hidden: true
+            },
+            {
+                name: 'Relation ID',
+                hidden: true
+            },
+            { name: 'relation_detail_url', hidden: true },
+            { name: 'relation_edit_url', hidden: true },
+            { name: 'relation_delete_url', hidden: true },
+            {
+                name: '{% trans "Actions"|escapejs %}',
+                width: '150px',
+                sort: false,
+                formatter: GridUtils.actionButtonsFormatter({
+                    details: (row) => row.cells[7].data,
+                    edit: (row) => row.cells[8].data,
+                    delete: (row) => row.cells[9].data
+                }, ['details', 'edit', 'delete'])
             }
-        },
-        {
-            name: '{{ column_names.comment|escapejs }}'
-        },
-        {
-            name: '{{ column_names.status__status|escapejs }}',
-            formatter: function (cell, row) {
-                const statusPk = row.cells[4].data;
-                const statusLabel = row.cells[5].data;
-                const relationId = row.cells[6].data;
-                return gridjs.html(`
-                    <form id="status-form-${relationId}" style="display: inline;">
-                        <select class="form-select form-select-sm status-selector"
-                                name="new_status"
-                                data-relation-id="${relationId}"
-                                data-update-url="${updateStatusUrl}">
-                            {% for status in relation_statuses %}
-                            <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                {{ status.status }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                `);
+        ], data, {
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: {
+                multiColumn: true,
+                enabled: true
             }
-        },
-        {
-            name: 'Status Label',
-            hidden: true
-        },
-        {
-            name: 'Relation ID',
-            hidden: true
-        },
-        { name: 'relation_detail_url', hidden: true },
-        { name: 'relation_edit_url', hidden: true },
-        { name: 'relation_delete_url', hidden: true },
-        {
-            name: '{% trans "Actions"|escapejs %}',
-            width: '150px',
-            sort: false,
-            formatter: GridUtils.actionButtonsFormatter({
-                details: (row) => row.cells[7].data,
-                edit: (row) => row.cells[8].data,
-                delete: (row) => row.cells[9].data
-            }, ['details', 'edit', 'delete'])
-        }
-    ], data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        },
-        sort: {
-            multiColumn: false,
-            enabled: true
-        }
-    });
+        });
 
-    // Trigger initial sort on status column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const statusHeader = document.querySelector('#relation-grid th:nth-child(5)');
-        if (statusHeader) {
-            statusHeader.click();
-        }
-    }, 100);
+        // Setup filter dropdown UI
+        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
 
-    // Setup filter dropdown UI
-    GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
+        // Setup custom status filter
+        GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
 
-    // Setup custom status filter
-    GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
+        // Handle status selector changes with event delegation
+        document.getElementById('relation-grid').addEventListener('change', function (e) {
+            if (e.target.classList.contains('status-selector')) {
+                const select = e.target;
+                const relationId = select.dataset.relationId;
+                const updateUrl = select.dataset.updateUrl;
+                const newStatus = select.value;
+                const form = select.closest('form');
 
-    // Handle status selector changes with event delegation
-    document.getElementById('relation-grid').addEventListener('change', function (e) {
-        if (e.target.classList.contains('status-selector')) {
-            const select = e.target;
-            const relationId = select.dataset.relationId;
-            const updateUrl = select.dataset.updateUrl;
-            const newStatus = select.value;
-            const form = select.closest('form');
-
-            // Get CSRF token
-            function getCookie(name) {
-                let cookieValue = null;
-                if (document.cookie && document.cookie !== '') {
-                    const cookies = document.cookie.split(';');
-                    for (let i = 0; i < cookies.length; i++) {
-                        const cookie = cookies[i].trim();
-                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                            break;
+                // Get CSRF token
+                function getCookie(name) {
+                    let cookieValue = null;
+                    if (document.cookie && document.cookie !== '') {
+                        const cookies = document.cookie.split(';');
+                        for (let i = 0; i < cookies.length; i++) {
+                            const cookie = cookies[i].trim();
+                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                                break;
+                            }
                         }
                     }
+                    return cookieValue;
                 }
-                return cookieValue;
-            }
 
-            // Make POST request
-            fetch(updateUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: `relation_id=${relationId}&new_status=${newStatus}`
-            })
-            .then(response => response.text())
-            .then(html => {
-                // Replace the form with the server response
-                form.outerHTML = html;
-            })
-            .catch(error => {
-                console.error('Error updating status:', error);
-                alert('Failed to update status. Please try again.');
-            });
-        }
-    });
+                // Make POST request
+                fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: `relation_id=${relationId}&new_status=${newStatus}`
+                })
+                    .then(response => response.text())
+                    .then(html => {
+                        // Replace the form with the server response
+                        form.outerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Error updating status:', error);
+                        alert('Failed to update status. Please try again.');
+                    });
+            }
+        });
+
+        // Trigger initial sort on status column to make Grid.js aware of the sort
+        // Trigger initial sort: Status (5) then Family Name (2) then Gift (1)
+        setTimeout(() => {
+            const statusHeader = document.querySelector('#relation-grid th:nth-child(5)');
+            const familyNameHeader = document.querySelector('#relation-grid th:nth-child(2)');
+            const giftHeader = document.querySelector('#relation-grid th:nth-child(1)');
+
+            if (statusHeader && familyNameHeader && giftHeader) {
+                // Primary sort: Status
+                statusHeader.click();
+
+                // Secondary sort: Family Name (simulate Shift+Click)
+                setTimeout(() => {
+                    const shiftClick = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        shiftKey: true
+                    });
+                    familyNameHeader.dispatchEvent(shiftClick);
+                }, 100);
+
+                // Third sort: Gift (simulate Shift+Click)
+                setTimeout(() => {
+                    const shiftClick = new MouseEvent('click', {
+                        bubbles: true,
+                        cancelable: true,
+                        view: window,
+                        shiftKey: true
+                    });
+                    giftHeader.dispatchEvent(shiftClick);
+                }, 100);
+            }
+        }, 100);
     }) ();
 </script>
 {% endblock %}

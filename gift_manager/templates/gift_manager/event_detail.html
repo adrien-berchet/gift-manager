@@ -71,6 +71,9 @@
             { name: 'person_id', hidden: true },
             {
                 name: "{% trans 'Person' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
                 formatter: (cell, row) => {
                     const personName = row.cells[1].data;
                     const personUrl = row.cells[2].data;
@@ -84,6 +87,9 @@
             { name: 'gift_id', hidden: true },
             {
                 name: "{% trans 'Gift' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                    },
                 formatter: (cell, row) => {
                     const giftName = row.cells[4].data;
                     const giftUrl = row.cells[5].data;
@@ -91,13 +97,19 @@
                 }
             },
             { name: 'gift_url', hidden: true },
-            { name: "{% trans 'Comment' %}" },
+            {
+                name: "{% trans 'Comment' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
+            { name: 'comment', hidden: true },
             {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusPk = row.cells[7].data;
-                    const statusLabel = row.cells[8].data;
-                    const relationId = row.cells[10].data;
+                    const statusPk = row.cells[8].data;
+                    const statusLabel = row.cells[9].data;
+                    const relationId = row.cells[11].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
@@ -140,7 +152,7 @@
 
         // Trigger initial sort on status column to make Grid.js aware of the sort
         setTimeout(() => {
-            const statusHeader = document.querySelector('#relations-grid th:nth-child(3)');
+            const statusHeader = document.querySelector('#relations-grid th:nth-child(4)');
             if (statusHeader) {
                 statusHeader.click();
             }
@@ -180,15 +192,15 @@
                     },
                     body: `relation_id=${relationId}&new_status=${newStatus}`
                 })
-                .then(response => response.text())
-                .then(html => {
-                    // Replace the form with the server response
-                    form.outerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error updating status:', error);
-                    alert('Failed to update status. Please try again.');
-                });
+                    .then(response => response.text())
+                    .then(html => {
+                        // Replace the form with the server response
+                        form.outerHTML = html;
+                    })
+                    .catch(error => {
+                        console.error('Error updating status:', error);
+                        alert('Failed to update status. Please try again.');
+                    });
             }
         });
         {% endif %}
@@ -229,10 +241,10 @@
                     }
 
                     return gridjs.html(`
-                        <span class="badge ${badgeClass}" title="${title}">
-                            <i class="fas ${icon} me-1"></i> ${label}
-                        </span>
-                    `);
+                            <span class="badge ${badgeClass}" title="${title}">
+                                <i class="fas ${icon} me-1"></i> ${label}
+                            </span>
+                        `);
                 }
             }
         ];
