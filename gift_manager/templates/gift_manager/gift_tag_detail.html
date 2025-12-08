@@ -47,8 +47,8 @@
 <button class="btn btn-danger mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip"
     title="{% trans 'You do not have permission to delete this object' %}">{% trans "Delete tag" %}</button>
 {% else %}
-<a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}" class="btn btn-danger mb-3" {% if not is_editor %}
-    data-toggle="tooltip"
+<a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}" class="btn btn-danger mb-3" {% if not is_editor
+    %}data-toggle="tooltip"
     title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}" {% endif
     %}>{% trans 'Delete tag' %}</a>
 {% endif %}
@@ -156,8 +156,7 @@
                         `);
                 }
             }
-        }
-    ];
+        ];
 
         GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
             pagination: { enabled: true, limit: 5 },
