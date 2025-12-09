@@ -9,16 +9,16 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
-from ..forms import PersonForm
-from ..models import Person
-from ..models import PersonGroup
-from ..models import Relation
-from ..models import RelationStatus
-from .base import BaseCreateView
-from .base import BaseDeleteView
-from .base import BaseDetailView
-from .base import BaseListView
-from .base import BaseUpdateView
+from gift_manager.forms import PersonForm
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class PersonListView(BaseListView):
@@ -50,6 +50,7 @@ class PersonListView(BaseListView):
         """Return Persons for the current user or shared with the user."""
         return (
             Person.objects.accessible_by(self.request.user)
+            .order_by("family_name", "first_name")
             .values("person_id", *list(set(self.column_names.keys()).difference(["groups"])))
             .annotate(
                 groups_info=JSONBAgg(
@@ -118,7 +119,7 @@ class PersonDetailView(BaseDetailView):
             .filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
             .select_related("status", "gift", "event", "person", "group")
             .prefetch_related("gift__tags")
-            .order_by("status__pk")
+            .order_by("status__pk", "gift__name")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
 
@@ -143,7 +144,8 @@ class PersonDetailView(BaseDetailView):
                 "label": _("Delete person"),
                 "enabled": True,  # Always enabled, but tooltip explains behavior
                 "tooltip": _(
-                    "You do not have permission to delete this object so it will only be unshared with you"
+                    "You do not have permission to delete this object so it will only be "
+                    "unshared with you"
                 )
                 if not is_editor
                 else None,

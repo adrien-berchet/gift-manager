@@ -75,7 +75,7 @@
             [
                 "{{ gift.gift_id }}",
                 "{{ gift.name|escapejs }}",
-                "{{ gift.comment|default:'-'|escapejs }}",
+                "{{ gift.comment|default:''|escapejs }}",
                 "{% url 'gift_manager:gift_detail' gift.gift_id %}"
             ],
             {% endfor %}
@@ -103,23 +103,32 @@
             { name: 'url', hidden: true }
         ];
 
-    const sharesColumns = [
-        {
-            name: "{% trans 'Username' %}",
-            sort: {
-                compare: GridUtils.sortString()
-            }
-        },
-        { name: 'permission', hidden: true },
-        {
-            name: "{% trans 'Permission' %}",
-            formatter: (cell, row) => {
-                const permission = parseInt(row.cells[1].data);
-                const label = row.cells[2].data;
+        GridUtils.initGrid('gifts-grid', giftsColumns, giftsData, {
+            pagination: { enabled: true, limit: 10 },
+            search: true,
+            sort: true
+        });
 
-                let badgeClass = 'bg-primary';
-                let icon = 'fa-eye';
-                let title = "{% trans 'Can only view this object' %}";
+        // Trigger initial sort on gift column to make Grid.js aware of the sort
+        setTimeout(() => {
+            const giftHeader = document.querySelector('#gifts-grid th:nth-child(1)');
+            if (giftHeader) {
+                giftHeader.click();
+            }
+        }, 100);
+        {% endif %}
+
+        {% if shared_users %}
+        // Shares Grid
+        const sharesData = [
+            {% for shared_user in shared_users %}
+            [
+                "{{ shared_user.user.username|escapejs }}",
+                "{{ shared_user.permission }}",
+                "{{ shared_user.permission_label|escapejs }}"
+            ],
+            {% endfor %}
+        ];
 
         const sharesColumns = [
             {

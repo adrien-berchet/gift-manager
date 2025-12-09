@@ -21,8 +21,6 @@
     <p>{% trans "This person is not shared with any friend." %}</p>
     {% endif %}
 </div>
-<div class="mt-4">
-</div>
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
@@ -143,11 +141,21 @@
             sort: true
         });
 
-        // Trigger initial sort on status column to make Grid.js aware of the sort
+        // Trigger initial sort on status and gift name columns to make Grid.js aware of the sort
         setTimeout(() => {
             const statusHeader = document.querySelector('#gifts-grid th:nth-child(3)');
-            if (statusHeader) {
+            const giftHeader = document.querySelector('#gifts-grid th:nth-child(1)');
+            if (statusHeader && giftHeader) {
                 statusHeader.click();
+
+                // Secondary sort: Gift Name (simulate Shift+Click)
+                const shiftClick = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: true
+                });
+                giftHeader.dispatchEvent(shiftClick);
             }
         }, 100);
 

@@ -97,7 +97,7 @@ class SharedUsersMixin:
 
         # Get the users with whom this object is shared, with their permissions
         shared_users = []
-        for user in self.object.shared_with.exclude(id=self.request.user.id):
+        for user in self.object.shared_with.exclude(id=self.request.user.id).order_by("username"):
             permission = PermissionService.get_permission(self.object, user)
             permission_label = PermissionLevel.get_label(permission)
             shared_users.append(

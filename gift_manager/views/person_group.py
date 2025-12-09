@@ -9,17 +9,17 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
-from ..forms import PersonGroupAddMultiplePersonsForm
-from ..forms import PersonGroupForm
-from ..models import Person
-from ..models import PersonGroup
-from ..models import Relation
-from ..models import RelationStatus
-from .base import BaseCreateView
-from .base import BaseDeleteView
-from .base import BaseDetailView
-from .base import BaseListView
-from .base import BaseUpdateView
+from gift_manager.forms import PersonGroupAddMultiplePersonsForm
+from gift_manager.forms import PersonGroupForm
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class PersonGroupListView(BaseListView):
@@ -34,8 +34,10 @@ class PersonGroupListView(BaseListView):
         }
 
     def get_queryset(self):
-        return PersonGroup.objects.accessible_by(self.request.user).values(
-            "group_id", *self.column_names
+        return (
+            PersonGroup.objects.accessible_by(self.request.user)
+            .values("group_id", *self.column_names)
+            .order_by("name")
         )
 
 
@@ -103,13 +105,14 @@ class PersonGroupDetailView(BaseDetailView):
             Person.objects.accessible_by(self.request.user)
             .filter(groups=self.object)
             .prefetch_related("groups")
+            .order_by("family_name", "first_name")
         )
         context["gifts"] = (
             Relation.objects.accessible_by(self.request.user)
             .filter(group=self.object, gift__isnull=False)
             .select_related("gift", "event", "status")
             .prefetch_related("gift__tags")
-            .order_by("status__pk")
+            .order_by("status__pk", "gift__name")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
 
@@ -135,7 +138,8 @@ class PersonGroupDetailView(BaseDetailView):
                 "label": _("Delete group"),
                 "enabled": True,
                 "tooltip": _(
-                    "You do not have permission to delete this object so it will only be unshared with you"
+                    "You do not have permission to delete this object so it will only be "
+                    "unshared with you"
                 )
                 if not is_editor
                 else None,

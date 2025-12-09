@@ -10,14 +10,14 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.views.generic import View
 
-from ..forms import GiftTagForm
-from ..models import Gift
-from ..models import GiftTag
-from .base import BaseCreateView
-from .base import BaseDeleteView
-from .base import BaseDetailView
-from .base import BaseListView
-from .base import BaseUpdateView
+from gift_manager.forms import GiftTagForm
+from gift_manager.models import Gift
+from gift_manager.models import GiftTag
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class GiftTagExplorerView(LoginRequiredMixin, View):
@@ -216,7 +216,9 @@ class GiftTagDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["gifts"] = Gift.objects.accessible_by(self.request.user).filter(tags=self.object)
+        context["gifts"] = (
+            Gift.objects.accessible_by(self.request.user).filter(tags=self.object).order_by("name")
+        )
         context["parent_tags"] = self.object.parent_tags.filter(
             Q(is_public=True) | Q(shared_with=self.request.user)
         ).order_by("name")

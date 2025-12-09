@@ -146,7 +146,7 @@ class RelationStatusListView(BaseListView):
 
     def get_queryset(self):
         """Return RelationStatus."""
-        return RelationStatus.objects.values("pk", *self.column_names)
+        return RelationStatus.objects.values("pk", *self.column_names).order_by("pk")
 
 
 class RelationStatusDetailView(BaseDetailView):
@@ -211,7 +211,7 @@ class RelationListView(BaseListView):
                     output_field=TextField(),
                 )
             )
-            .order_by("status__pk")
+            .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
             .values(
                 "relation_id",
                 "gift__name",
@@ -362,7 +362,8 @@ class RelationDetailView(BaseDetailView):
                 "label": _("Delete relation"),
                 "enabled": True,
                 "tooltip": _(
-                    "You do not have permission to delete this object so it will only be unshared with you"
+                    "You do not have permission to delete this object so it will only be "
+                    "unshared with you"
                 )
                 if not is_editor
                 else None,
