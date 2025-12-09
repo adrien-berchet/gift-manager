@@ -215,26 +215,16 @@
                 statusHeader.click();
 
                 // Secondary sort: Family Name (simulate Shift+Click)
-                setTimeout(() => {
-                    const shiftClick = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        shiftKey: true
-                    });
-                    familyNameHeader.dispatchEvent(shiftClick);
-                }, 100);
+                const shiftClick = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: true
+                });
+                familyNameHeader.dispatchEvent(shiftClick);
 
                 // Third sort: Gift (simulate Shift+Click)
-                setTimeout(() => {
-                    const shiftClick = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        shiftKey: true
-                    });
-                    giftHeader.dispatchEvent(shiftClick);
-                }, 100);
+                giftHeader.dispatchEvent(shiftClick);
             }
         }, 100);
     }) ();

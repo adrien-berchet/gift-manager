@@ -107,15 +107,13 @@
             familyNameHeader.click();
 
             // Secondary sort: First Name (simulate Shift+Click)
-            setTimeout(() => {
-                const shiftClick = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    shiftKey: true
-                });
-                firstNameHeader.dispatchEvent(shiftClick);
-            }, 100);
+            const shiftClick = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: true
+            });
+            firstNameHeader.dispatchEvent(shiftClick);
         }
     }, 100);
 </script>

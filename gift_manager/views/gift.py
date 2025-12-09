@@ -39,6 +39,7 @@ class GiftListView(BaseListView):
         """Return Gifts for the current user or shared with the user."""
         return (
             Gift.objects.accessible_by(self.request.user)
+            .order_by("name")
             .annotate(
                 tags_info=JSONBAgg(
                     Func(
@@ -106,10 +107,15 @@ class GiftDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
-            .order_by("status__pk")
+            .order_by(
+                "status__pk",
+                "person__first_name",
+                "person__family_name",
+                "group__name",
+                "event__name",
+            )
         )
         context["relation_statuses"] = RelationStatus.objects.all()
-        context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
 
         # Add action buttons
         is_editor = context["is_editor"]
@@ -129,7 +135,8 @@ class GiftDetailView(BaseDetailView):
                 "label": _("Delete gift"),
                 "enabled": True,
                 "tooltip": _(
-                    "You do not have permission to delete this object so it will only be unshared with you"
+                    "You do not have permission to delete this object so it will only be "
+                    "unshared with you"
                 )
                 if not is_editor
                 else None,

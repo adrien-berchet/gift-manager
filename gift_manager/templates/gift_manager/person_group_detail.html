@@ -16,8 +16,6 @@
     <p>{% trans "This group is not shared with any friend." %}</p>
     {% endif %}
 </div>
-<div class="mt-4">
-</div>
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
@@ -145,6 +143,22 @@
         search: true,
         sort: true
     });
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const firstNameHeader = document.querySelector('#persons-grid th:nth-child(1)');
+        const familyNameHeader = document.querySelector('#persons-grid th:nth-child(2)');
+        if (firstNameHeader && familyNameHeader) {
+            familyNameHeader.click();
+            const shiftClick = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: true
+            });
+            firstNameHeader.dispatchEvent(shiftClick);
+        }
+    }, 100);
     {% endif %}
 
     {% if gifts %}
@@ -238,8 +252,16 @@
     // Trigger initial sort on status column to make Grid.js aware of the sort
     setTimeout(() => {
         const statusHeader = document.querySelector('#gifts-grid th:nth-child(3)');
-        if (statusHeader) {
+        const giftHeader = document.querySelector('#gifts-grid th:nth-child(1)');
+        if (statusHeader && giftHeader) {
             statusHeader.click();
+            const shiftClick = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: true
+            });
+            giftHeader.dispatchEvent(shiftClick);
         }
     }, 100);
 

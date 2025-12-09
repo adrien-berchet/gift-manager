@@ -19,14 +19,11 @@
     <p>{% trans "This gift is not shared with any friend." %}</p>
     {% endif %}
 </div>
-<div class="mt-4">
-</div>
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
-<a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add
-    Relation" %}</a>
+<a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Relation" %}</a>
 {% if relations %}
 <div id="relations-grid" class="mt-3"></div>
 {% else %}
@@ -141,15 +138,13 @@
                 statusHeader.click();
 
                 // Secondary sort: Person (simulate Shift+Click)
-                setTimeout(() => {
-                    const shiftClick = new MouseEvent('click', {
-                        bubbles: true,
-                        cancelable: true,
-                        view: window,
-                        shiftKey: true
-                    });
-                    personHeader.dispatchEvent(shiftClick);
-                }, 100);
+                const shiftClick = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: true
+                });
+                personHeader.dispatchEvent(shiftClick);
             }
         }, 100);
 

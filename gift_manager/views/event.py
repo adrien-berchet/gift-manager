@@ -5,15 +5,15 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
-from ..forms import EventForm
-from ..models import Event
-from ..models import Relation
-from ..models import RelationStatus
-from .base import BaseCreateView
-from .base import BaseDeleteView
-from .base import BaseDetailView
-from .base import BaseListView
-from .base import BaseUpdateView
+from gift_manager.forms import EventForm
+from gift_manager.models import Event
+from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
+from gift_manager.views.base import BaseCreateView
+from gift_manager.views.base import BaseDeleteView
+from gift_manager.views.base import BaseDetailView
+from gift_manager.views.base import BaseListView
+from gift_manager.views.base import BaseUpdateView
 
 
 class EventListView(BaseListView):
@@ -38,7 +38,11 @@ class EventListView(BaseListView):
 
     def get_queryset(self):
         """Return Events for the current user or shared with the user."""
-        return Event.objects.accessible_by(self.request.user).values("event_id", *self.column_names)
+        return (
+            Event.objects.accessible_by(self.request.user)
+            .values("event_id", *self.column_names)
+            .order_by("name")
+        )
 
 
 class EventCreateView(BaseCreateView):
@@ -77,10 +81,9 @@ class EventDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
-            .order_by("status__pk")
+            .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
-        context["shared_with"] = self.object.shared_with.exclude(id=self.request.user.id)
 
         # Add action buttons
         is_editor = context["is_editor"]
@@ -100,7 +103,8 @@ class EventDetailView(BaseDetailView):
                 "label": _("Delete event"),
                 "enabled": True,
                 "tooltip": _(
-                    "You do not have permission to delete this object so it will only be unshared with you"
+                    "You do not have permission to delete this object so it will only be "
+                    "unshared with you"
                 )
                 if not is_editor
                 else None,

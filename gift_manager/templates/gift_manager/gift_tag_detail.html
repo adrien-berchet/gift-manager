@@ -75,7 +75,7 @@
             [
                 "{{ gift.gift_id }}",
                 "{{ gift.name|escapejs }}",
-                "{{ gift.comment|default:'-'|escapejs }}",
+                "{{ gift.comment|default:''|escapejs }}",
                 "{% url 'gift_manager:gift_detail' gift.gift_id %}"
             ],
             {% endfor %}
@@ -108,6 +108,14 @@
             search: true,
             sort: true
         });
+
+        // Trigger initial sort on gift column to make Grid.js aware of the sort
+        setTimeout(() => {
+            const giftHeader = document.querySelector('#gifts-grid th:nth-child(1)');
+            if (giftHeader) {
+                giftHeader.click();
+            }
+        }, 100);
         {% endif %}
 
         {% if shared_users %}
