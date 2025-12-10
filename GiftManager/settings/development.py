@@ -6,17 +6,18 @@ DO NOT use these settings in production.
 
 from dotenv import load_dotenv
 
-from .base import *  # noqa: F401, F403
 from .base import BASE_DIR
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
+from .base import *  # noqa: F403
+from .base import get_env_variable
 
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # In development, we use a default key for convenience
-SECRET_KEY = "dev-secret-key-do-not-use-in-production-change-me-immediately"
+SECRET_KEY = "dev-secret-key-do-not-use-in-production-change-me-immediately"  # noqa: S105
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -40,11 +41,11 @@ MIDDLEWARE = [
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": "gift_manager_dev",
-        "USER": "dev_user",
-        "PASSWORD": "dev_password",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": get_env_variable("DB_NAME", "gift_manager_test"),
+        "USER": get_env_variable("DB_USER", "test_user"),
+        "PASSWORD": get_env_variable("DB_PASSWORD", "test_password"),
+        "HOST": get_env_variable("DB_HOST", "localhost"),
+        "PORT": get_env_variable("DB_PORT", "5432"),
     }
 }
 
@@ -65,7 +66,7 @@ CACHES = {
 
 # Debug Toolbar settings
 DEBUG_TOOLBAR_CONFIG = {
-    "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,
+    "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,  # noqa: ARG005
 }
 
 # Logging - more verbose in development

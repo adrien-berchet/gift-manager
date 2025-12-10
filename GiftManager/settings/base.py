@@ -15,12 +15,15 @@ from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
+load_dotenv()
 
-def get_env_variable(var_name: str, default: str | None = None, required: bool = False) -> str:
+
+def get_env_variable(var_name: str, default: str | None = None, *, required: bool = False) -> str:
     """Get an environment variable or raise an exception if required and not set.
 
     Args:
@@ -41,7 +44,7 @@ def get_env_variable(var_name: str, default: str | None = None, required: bool =
     return value
 
 
-def get_bool_env(var_name: str, default: bool = False) -> bool:
+def get_bool_env(var_name: str, *, default: bool = False) -> bool:
     """Get a boolean environment variable.
 
     Args:
@@ -226,7 +229,12 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "format": '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}',
+            "format": (
+                '{"level": "%(levelname)s",'
+                ' "time": "%(asctime)s",'
+                ' "module": "%(module)s",'
+                ' "message": "%(message)s"}'
+            ),
         },
     },
     "filters": {

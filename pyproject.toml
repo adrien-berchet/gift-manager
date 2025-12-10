@@ -80,6 +80,7 @@ convention = "google"
 profile = "black"
 line_length = 100
 force_single_line = true
+skip_gitignore = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "GiftManager.settings"
@@ -115,8 +116,6 @@ ignore = [
     "ANN204",  # TODO: Fix and remove this one
     "ANN002",
     "ANN003",
-    "ANN101",
-    "ANN102",
     "BLE001",
     "B905",
     "COM812",
