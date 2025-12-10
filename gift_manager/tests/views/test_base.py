@@ -12,6 +12,8 @@ from gift_manager.models import Person
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.permissions import get_permission
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import UserFactory
 from gift_manager.views import FilterByUserMixin
 from gift_manager.views import GetObjectByTokenMixin
 
@@ -80,10 +82,8 @@ class TestBaseCreateView:
     @override_settings(USE_I18N=False)
     def test_gift_create_view_with_shared_permissions(self):
         """Test creating an object with sharing permissions."""
-        # Create a friend user
-        friend = User.objects.create_user(
-            username="testfriend", email="friend@example.com", password="password123"
-        )
+        # Create a friend user using factory
+        friend = UserFactory(username="testfriend", email="friend@example.com")
         # Add the friend to the user's profile
         self.user.profile.friends.add(friend.profile)
 
@@ -115,15 +115,13 @@ class TestEditPermissionMixin:
     """Tests for EditPermissionMixin."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, user, userpassword, person):
+    def setup(self, user, person):
         """Setup test fixtures."""
         self.user = user
         self.person = person
 
-        # Create a friend
-        self.friend = User.objects.create_user(
-            username="testfriend", email="friend@example.com", password=userpassword
-        )
+        # Create a friend using factory
+        self.friend = UserFactory(username="testfriend", email="friend@example.com")
 
         # Add the friend to the user's profile
         self.user.profile.friends.add(self.friend.profile)
@@ -140,32 +138,24 @@ class TestDeleteSharedMixin:
     """Tests for DeleteSharedMixin."""
 
     @pytest.fixture(autouse=True)
-    def setup(self, user, userpassword):
+    def setup(self, user):
         """Setup test fixtures."""
         self.user = user
         self.client = Client()
         self.client.force_login(user)
 
-        # Create another user
-        self.other_user = User.objects.create_user(
-            username="otheruser", email="other@example.com", password=userpassword
-        )
+        # Create another user using factory
+        self.other_user = UserFactory(username="otheruser", email="other@example.com")
 
-        # Create a test person shared with both users
-        self.person = Person.objects.create(
-            first_name="Shared",
-            family_name="Person",
-        )
+        # Create a test person shared with both users using factory
+        self.person = PersonFactory(first_name="Shared", family_name="Person")
         create_or_update_permission(user, self.person, permission_level=PermissionLevel.OWNER)
         create_or_update_permission(
             self.other_user, self.person, permission_level=PermissionLevel.VIEWER
         )
 
         # Create a test person shared only with current user
-        self.person_not_shared = Person.objects.create(
-            first_name="Not",
-            family_name="Shared",
-        )
+        self.person_not_shared = PersonFactory(first_name="Not", family_name="Shared")
         create_or_update_permission(
             user, self.person_not_shared, permission_level=PermissionLevel.OWNER
         )

@@ -14,8 +14,8 @@ def get_item(dictionary, key):
 
 
 @register.filter
-def get_attr(obj, attr):
-    return getattr(obj, attr, "")
+def get_attr(obj, attr_name):
+    return getattr(obj, attr_name, "")
 
 
 @register.filter

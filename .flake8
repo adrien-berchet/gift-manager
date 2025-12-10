@@ -1,0 +1,11 @@
+[flake8]
+# ignore the following:
+#    E203: whitespace before ':'
+#    W503: line break before binary operator
+ignore = E203, W503
+max-line-length = 120
+per-file-ignores =
+    GiftManager/settings/__init__.py:F401
+    GiftManager/settings/development.py:F401
+    GiftManager/settings/production.py:F401
+    GiftManager/settings/testing.py:F401

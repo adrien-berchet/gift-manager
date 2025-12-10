@@ -76,6 +76,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 reports/
+pip-audit-report.json
+bandit-report.json
 
 # Translations
 *.mo

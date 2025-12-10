@@ -5,6 +5,7 @@ from django.db.models import F
 from django.db.models import Func
 from django.db.models import Q
 from django.db.models import Value
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
@@ -124,8 +125,6 @@ class PersonDetailView(BaseDetailView):
         context["relation_statuses"] = RelationStatus.objects.all()
 
         # Build action buttons configuration
-        from django.urls import reverse
-
         is_editor = context.get("is_editor", False)
 
         context["action_buttons"] = [

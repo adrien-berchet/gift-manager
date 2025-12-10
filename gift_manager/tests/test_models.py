@@ -14,7 +14,6 @@ from gift_manager.models import EventPermission
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
-from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroupPermission
@@ -23,6 +22,9 @@ from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.tests.factories import InvitationFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import UserFactory
 
 
 @pytest.mark.django_db
@@ -30,9 +32,9 @@ class TestProfile:
     """Tests for the Profile model."""
 
     @pytest.fixture
-    def friend(self, userpassword):
-        """Create a second test user."""
-        return User.objects.create_user(username="testfriend", password=userpassword)
+    def friend(self):
+        """Create a second test user using factory."""
+        return UserFactory(username="testfriend")
 
     def test_save_user_profile_with_existing_profile(self, user):
         """Test saving a user that already has a profile."""
@@ -93,17 +95,14 @@ class TestInvitation:
     """Tests for the Invitation model."""
 
     @pytest.fixture
-    def sender(self, userpassword):
-        """Create a test sender user."""
-        return User.objects.create_user(username="sender", password=userpassword)
+    def sender(self):
+        """Create a test sender user using factory."""
+        return UserFactory(username="sender")
 
     @pytest.fixture
     def invitation(self, sender):
-        """Create a test invitation."""
-        return Invitation.objects.create(
-            sender=sender,
-            recipient_email="recipient@example.com",
-        )
+        """Create a test invitation using factory."""
+        return InvitationFactory(sender=sender, recipient_email="recipient@example.com")
 
     def test_invitation_creation(self, invitation):
         """Test creating an invitation."""
@@ -166,9 +165,9 @@ class TestUserPermissionManager:
 
     def test_accessible_by_for_person(self, user, person):
         """Test the accessible_by method for Person model."""
-        # Create another user and person
-        user2 = User.objects.create_user(username="testuser2", password="password")
-        person2 = Person.objects.create(first_name="Jane", family_name="Smith")
+        # Create another user and person using factories
+        user2 = UserFactory(username="testuser2")
+        person2 = PersonFactory(first_name="Jane", family_name="Smith")
 
         # Share person with user
         PersonPermission.objects.create(
@@ -372,7 +371,7 @@ class TestGiftTag:
         assert set(all_descendants) == expected_tags
         assert len(all_descendants) == len(expected_tags)
 
-    def test_tag_get_ancestors(self):  # noqa: PLR0915
+    def test_tag_get_ancestors(self):  # noqa: PLR0915 ; pylint: disable=too-many-statements
         """Test the get_ancestors method, including with diamond structures."""
         # Basic hierarchical structure
         root_tag = GiftTag.objects.create(name="Electronics")

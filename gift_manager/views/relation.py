@@ -9,12 +9,15 @@ from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
+from django.http import HttpResponse
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
+from django.views.generic import DetailView
 
 from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
@@ -166,8 +169,6 @@ class RelationStatusDetailView(BaseDetailView):
     def get_context_data(self, **kwargs):
         # Skip BaseDetailView's mixins that expect 'shared_with' field
         # Call DetailView's get_context_data directly
-        from django.views.generic import DetailView
-
         context = DetailView.get_context_data(self, **kwargs)
 
         # Add relations that have this status (filtered by user)
@@ -375,8 +376,6 @@ class RelationDetailView(BaseDetailView):
 @login_required
 @require_POST
 def update_relation_status(request):
-    from django.template.loader import render_to_string
-
     relation_id = request.POST.get("relation_id")
     new_status = int(request.POST.get("new_status"))
 
@@ -395,8 +394,6 @@ def update_relation_status(request):
             },
             request=request,
         )
-        from django.http import HttpResponse
-
         return HttpResponse(html)
 
     except Relation.DoesNotExist:

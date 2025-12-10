@@ -161,8 +161,12 @@ class CreatePermissionMixin:
                         user, self.object, permission_level=permission
                     )
 
-                except Exception as e:
-                    messages.error(self.request, str(e))
+                except (ValueError, TypeError) as e:
+                    logger.warning("Invalid permission value: %s", e)
+                    messages.error(self.request, gettext("Invalid permission value."))
+                except User.DoesNotExist:
+                    logger.warning("User not found: %s", user_id)
+                    messages.error(self.request, gettext("User not found."))
 
         return response
 
@@ -335,8 +339,12 @@ class EditPermissionMixin:
             messages.success(request, message)
             return self.get(request)
 
-        except Exception as e:
-            return self._handle_error(request, e)
+        except User.DoesNotExist:
+            logger.warning("User not found for permission update: %s", request.POST.get("user_id"))
+            return self._handle_error(request, gettext("User not found."))
+        except (ValueError, TypeError) as e:
+            logger.warning("Invalid permission value: %s", e)
+            return self._handle_error(request, gettext("Invalid permission value."))
 
     def _handle_remove_share(self, request) -> HttpResponse:
         """Remove an existing sharing."""
@@ -371,14 +379,14 @@ class EditPermissionMixin:
             messages.success(request, message)
             return self.get(request)
 
-        except Exception as e:
-            return self._handle_error(request, e)
+        except User.DoesNotExist:
+            logger.warning("User not found for share removal: %s", request.POST.get("user_id"))
+            return self._handle_error(request, gettext("User not found."))
 
     def _handle_share_with(self, request) -> HttpResponse:
         """Share the object with a new user."""
-        permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
-
         try:
+            permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
             user, username = get_user(request.POST.get("user_id"))
 
             # Create or update the permission
@@ -411,12 +419,21 @@ class EditPermissionMixin:
             messages.success(request, message)
             return self.get(request)
 
-        except Exception as e:
-            return self._handle_error(request, e)
+        except User.DoesNotExist:
+            logger.warning("User not found for sharing: %s", request.POST.get("user_id"))
+            return self._handle_error(request, gettext("User not found."))
+        except (ValueError, TypeError) as e:
+            logger.warning("Invalid permission value for sharing: %s", e)
+            return self._handle_error(request, gettext("Invalid permission value."))
 
-    def _handle_error(self, request, exception) -> HttpResponse:
-        """Handle exceptions by returning appropriate response."""
-        messages.error(request, str(exception))
+    def _handle_error(self, request, error_message: str) -> HttpResponse:
+        """Handle errors by returning appropriate response.
+
+        Args:
+            request: The HTTP request.
+            error_message: The error message to display to the user.
+        """
+        messages.error(request, error_message)
         return self.get(request)
 
 

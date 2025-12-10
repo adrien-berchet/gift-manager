@@ -209,13 +209,13 @@ class Profile(models.Model):
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def create_user_profile(sender, instance, created, **kwargs):  # noqa: ARG001
+def create_user_profile(sender, instance, created, **kwargs):
     if created:  # pragma: no branch
         Profile.objects.create(user=instance)
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
-def save_user_profile(sender, instance, **kwargs):  # noqa: ARG001
+def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, "profile"):
         instance.profile.save()
     else:  # pragma: no branch
@@ -321,7 +321,7 @@ class PersonGroup(models.Model):
         verbose_name_plural = gettext_lazy("Person groups")
 
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name}"
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:person_group_edit", kwargs={"pk": self.pk})
@@ -386,7 +386,7 @@ class GiftTag(models.Model):
     objects = GiftTagManager()
 
     def __str__(self):
-        return self.name
+        return f"{self.name}"
 
     def get_children(self):
         """Returns all direct child tags."""
@@ -613,7 +613,7 @@ class Gift(models.Model):
         verbose_name_plural = gettext_lazy("Gifts")
 
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name}"
 
 
 class GiftPermission(models.Model):
@@ -668,7 +668,7 @@ class Event(models.Model):
         verbose_name_plural = gettext_lazy("Events")
 
     def __str__(self) -> str:
-        return self.name
+        return f"{self.name}"
 
 
 class EventPermission(models.Model):
@@ -694,6 +694,8 @@ class EventPermission(models.Model):
 class RelationStatus(models.Model):
     """Model for a relation status."""
 
+    DEFAULT_STATUS = "Idea"
+
     status = models.TextField(unique=True, null=False)
 
     class Meta:
@@ -701,7 +703,17 @@ class RelationStatus(models.Model):
         verbose_name_plural = gettext_lazy("Relation Statuses")
 
     def __str__(self) -> str:
-        return self.status
+        return f"{self.status}"
+
+    @classmethod
+    def get_default_pk(cls):
+        """Get or create the default status and return its primary key.
+
+        This is used as the default for the Relation.status ForeignKey.
+        Using a callable that returns a PK avoids migration issues.
+        """
+        status, _ = cls.objects.get_or_create(status=cls.DEFAULT_STATUS)
+        return status.pk
 
 
 class Relation(models.Model):
@@ -720,8 +732,8 @@ class Relation(models.Model):
     )
     status = models.ForeignKey(
         RelationStatus,
-        on_delete=models.CASCADE,
-        default="Idea",
+        on_delete=models.PROTECT,
+        default=RelationStatus.get_default_pk,
     )
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)

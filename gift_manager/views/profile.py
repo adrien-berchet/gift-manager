@@ -30,7 +30,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
     template_name = "gift_manager/profile_detail.html"
     context_object_name = "profile"
 
-    def get_object(self):
+    def get_object(self, *args):
         return Profile.objects.get(user=self.request.user)
 
 
