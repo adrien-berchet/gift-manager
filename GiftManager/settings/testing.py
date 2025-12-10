@@ -46,6 +46,12 @@ CACHES = {
     }
 }
 
+# Use non-manifest storage in tests so collectstatic isn't required
+STORAGES["staticfiles"] = {  # noqa: F405
+    "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+}
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
 # Disable security features that slow down tests
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
