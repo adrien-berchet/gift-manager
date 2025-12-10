@@ -14,7 +14,6 @@ from gift_manager.models import EventPermission
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
-from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroupPermission
@@ -372,7 +371,7 @@ class TestGiftTag:
         assert set(all_descendants) == expected_tags
         assert len(all_descendants) == len(expected_tags)
 
-    def test_tag_get_ancestors(self):  # noqa: PLR0915
+    def test_tag_get_ancestors(self):  # noqa: PLR0915 ; pylint: disable=too-many-statements
         """Test the get_ancestors method, including with diamond structures."""
         # Basic hierarchical structure
         root_tag = GiftTag.objects.create(name="Electronics")

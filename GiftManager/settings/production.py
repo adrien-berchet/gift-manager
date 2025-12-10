@@ -4,9 +4,7 @@ This module contains security-hardened settings for production deployment.
 All sensitive values MUST be set via environment variables.
 """
 
-import os
-
-from .base import *  # noqa: F401, F403
+from .base import *  # noqa: F403
 from .base import get_bool_env
 from .base import get_env_variable
 
@@ -64,9 +62,7 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = [
     origin.strip()
-    for origin in get_env_variable(
-        "CSRF_TRUSTED_ORIGINS", "https://*.vercel.app"
-    ).split(",")
+    for origin in get_env_variable("CSRF_TRUSTED_ORIGINS", "https://*.vercel.app").split(",")
     if origin.strip()
 ]
 
@@ -136,7 +132,10 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "format": '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "module": "%(module)s", "message": "%(message)s"}',
+            "format": (
+                '{"timestamp": "%(asctime)s", "level": "%(levelname)s", '
+                '"logger": "%(name)s", "module": "%(module)s", "message": "%(message)s"}'
+            ),
         },
         "verbose": {
             "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",

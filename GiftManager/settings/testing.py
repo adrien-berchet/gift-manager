@@ -4,7 +4,7 @@ This module contains settings optimized for running tests.
 These settings prioritize speed and isolation over security.
 """
 
-from .base import *  # noqa: F401, F403
+from .base import *  # noqa: F403
 
 # Use a simple secret key for testing
 SECRET_KEY = "testing-secret-key-not-for-production"

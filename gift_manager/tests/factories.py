@@ -82,8 +82,8 @@ class PersonFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         for user in extracted:
-            from gift_manager.models import PersonPermission
             from gift_manager.models import PermissionLevel
+            from gift_manager.models import PersonPermission
 
             PersonPermission.objects.create(
                 user=user, person=self, permission_type=PermissionLevel.VIEWER
@@ -104,8 +104,8 @@ class PersonGroupFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         for user in extracted:
-            from gift_manager.models import PersonGroupPermission
             from gift_manager.models import PermissionLevel
+            from gift_manager.models import PersonGroupPermission
 
             PersonGroupPermission.objects.create(
                 user=user, group=self, permission_type=PermissionLevel.VIEWER

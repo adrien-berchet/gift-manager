@@ -57,7 +57,7 @@ class PermissionService:
                 object_attr = obj.__class__.__name__.lower()
         filter_kwargs = {"user": user, object_attr: obj}
 
-        permission_obj, created = model.objects.get_or_create(
+        permission_obj, _ = model.objects.get_or_create(
             **filter_kwargs, defaults={"permission_type": permission_level}
         )
 

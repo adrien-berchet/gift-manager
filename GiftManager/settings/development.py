@@ -6,10 +6,10 @@ DO NOT use these settings in production.
 
 from dotenv import load_dotenv
 
+from .base import *  # noqa: F403
 from .base import BASE_DIR
 from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
-from .base import *  # noqa: F403
 from .base import get_env_variable
 
 # Load environment variables from .env file

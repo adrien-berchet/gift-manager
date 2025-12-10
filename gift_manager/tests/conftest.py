@@ -9,6 +9,7 @@ Usage:
         assert person.first_name is not None
 """
 
+# pylint: disable=redefined-outer-name
 from datetime import date
 
 import pytest
@@ -34,7 +35,6 @@ from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.tests.factories import UserFactory
-
 
 # =============================================================================
 # User Fixtures
