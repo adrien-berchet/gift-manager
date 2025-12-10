@@ -79,6 +79,16 @@ LOGGING = {
             "style": "{",
         },
     },
+    "filters": {
+        "ignore_debug_toolbar_serialization": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": lambda record: "serialize" not in record.getMessage().lower(),
+        },
+        "ignore_session_corruption": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": lambda record: "corrupted" not in record.getMessage().lower(),
+        },
+    },
     "handlers": {
         "console": {
             "level": "DEBUG",
@@ -94,6 +104,7 @@ LOGGING = {
         "django": {
             "handlers": ["console"],
             "level": "INFO",
+            "filters": ["ignore_debug_toolbar_serialization", "ignore_session_corruption"],
             "propagate": False,
         },
         "django.db.backends": {

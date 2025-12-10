@@ -244,6 +244,10 @@ LOGGING = {
         "require_debug_true": {
             "()": "django.utils.log.RequireDebugTrue",
         },
+        "ignore_chrome_devtools": {
+            "()": "django.utils.log.CallbackFilter",
+            "callback": lambda record: "/.well-known/appspecific/" not in record.getMessage(),
+        },
     },
     "handlers": {
         "console": {
@@ -270,6 +274,7 @@ LOGGING = {
         "django.request": {
             "handlers": ["mail_admins"],
             "level": "ERROR",
+            "filters": ["ignore_chrome_devtools"],
             "propagate": False,
         },
         "gift_manager": {
