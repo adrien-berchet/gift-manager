@@ -1,6 +1,10 @@
 """PersonGroup-related views."""
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -8,6 +12,7 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
+from django.views import View
 
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
@@ -166,3 +171,111 @@ class PersonGroupDetailView(BaseDetailView):
             },
         ]
         return context
+
+
+class PersonGroupExplorerView(LoginRequiredMixin, View):
+    """View for exploring persons by hierarchical groups."""
+
+    template_name = "gift_manager/person_group_explorer.html"
+
+    def get(self, request, *args, **kwargs):
+        # Get the selected group (or None for the root level)
+        selected_group_id = kwargs.get("pk")
+
+        # Context to be sent to the template
+        context = {
+            "selected_group": None,
+            "root_groups": [],
+            "parent_groups": [],
+            "child_groups": [],
+            "members": [],
+            "breadcrumbs": [],
+        }
+
+        # Initialize the navigation history in session if it doesn't exist
+        if "group_navigation_history" not in request.session:
+            request.session["group_navigation_history"] = {}
+
+        navigation_history = request.session["group_navigation_history"]
+
+        # If a group is selected, retrieve it
+        if selected_group_id:
+            try:
+                # Prefetch related groups to optimize hierarchy traversal
+                selected_group = get_object_or_404(
+                    PersonGroup.objects.prefetch_related("parent_groups", "child_groups"),
+                    group_id=selected_group_id,
+                )
+
+                # Check if the user has access to this group
+                if not selected_group.shared_with.filter(id=request.user.id).exists():
+                    messages.error(
+                        request,
+                        gettext(
+                            "You do not have access to this group or this group does not exist."
+                        ),
+                    )
+                    return redirect("gift_manager:person_group_explorer")
+
+                context["selected_group"] = selected_group
+
+                # Get the source/referring group if present in the query string
+                referring_group_id = request.GET.get("from_group")
+                if referring_group_id:
+                    # Store the relationship: current group came from this referring group
+                    navigation_history[str(selected_group_id)] = referring_group_id
+                    request.session.modified = True
+
+                # Build the breadcrumbs based on navigation history
+                breadcrumbs = []
+                current_group_id = str(selected_group_id)
+                visited = set()  # To prevent infinite loops
+
+                while current_group_id and current_group_id not in visited:
+                    visited.add(current_group_id)
+                    try:
+                        group = PersonGroup.objects.get(group_id=current_group_id)
+                        breadcrumbs.insert(0, group)
+                        # Move to parent in the navigation history
+                        current_group_id = navigation_history.get(current_group_id)
+                    except PersonGroup.DoesNotExist:
+                        break
+
+                context["breadcrumbs"] = breadcrumbs
+
+                # Get parent groups and child groups
+                context["parent_groups"] = (
+                    selected_group.parent_groups.filter(Q(shared_with=request.user))
+                    .prefetch_related("person_set")
+                    .order_by("name")
+                )
+
+                context["child_groups"] = (
+                    selected_group.child_groups.filter(Q(shared_with=request.user))
+                    .prefetch_related("person_set")
+                    .order_by("name")
+                )
+
+                # Get members in this group (direct members)
+                context["members"] = (
+                    Person.objects.accessible_by(request.user)
+                    .filter(groups=selected_group)
+                    .order_by("family_name", "first_name")
+                )
+
+            except PersonGroup.DoesNotExist:
+                messages.error(
+                    request,
+                    gettext("This group does not exist or you do not have access to it."),
+                )
+                return redirect("gift_manager:person_group_explorer")
+        else:
+            # No group selected: show root level groups
+            context["root_groups"] = (
+                PersonGroup.objects.accessible_by(request.user)
+                .filter(parent_groups__isnull=True)
+                .prefetch_related("person_set")
+                .order_by("name")
+            )
+
+        return render(request, self.template_name, context)

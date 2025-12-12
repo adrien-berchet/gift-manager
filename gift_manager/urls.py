@@ -39,6 +39,16 @@ urlpatterns = [
     ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
     path(
+        "person_groups/explore/",
+        views.PersonGroupExplorerView.as_view(),
+        name="person_group_explorer",
+    ),
+    path(
+        "person_groups/explore/<uuid:pk>/",
+        views.PersonGroupExplorerView.as_view(),
+        name="person_group_explorer_with_group",
+    ),
+    path(
         "person_groups/create/", views.PersonGroupCreateView.as_view(), name="person_group_create"
     ),
     path(
