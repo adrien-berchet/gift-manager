@@ -41,9 +41,74 @@ class PersonGroupListView(BaseListView):
     def get_queryset(self):
         return (
             PersonGroup.objects.accessible_by(self.request.user)
-            .values("group_id", *self.column_names)
+            .prefetch_related("parent_groups", "child_groups", "person_set")
             .order_by("name")
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # Build hierarchical tree data for tree view
+        all_groups = list(self.get_queryset())
+
+        # Create a mapping of groups by ID for quick lookup
+        groups_by_id = {g.pk: g for g in all_groups}
+
+        # Build tree structure
+        def build_tree_node(group, depth=0, visited=None):
+            """Recursively build tree nodes with hierarchy information."""
+            if visited is None:
+                visited = set()
+
+            # Prevent infinite loops
+            if group.pk in visited:
+                return None
+            visited.add(group.pk)
+
+            node = {
+                'group': group,
+                'group_id': str(group.group_id),
+                'name': group.name,
+                'depth': depth,
+                'member_count': group.person_set.count(),
+                'has_children': group.child_groups.exists(),
+                'parent_ids': [str(p.group_id) for p in group.parent_groups.all()],
+                'children': []
+            }
+
+            # Add children recursively
+            for child in group.child_groups.all():
+                child_node = build_tree_node(child, depth + 1, visited.copy())
+                if child_node:
+                    node['children'].append(child_node)
+
+            return node
+
+        # Find root groups (those without parents)
+        root_groups = [g for g in all_groups if not g.parent_groups.exists()]
+
+        # Build tree from roots
+        tree_data = []
+        for root in root_groups:
+            tree_node = build_tree_node(root)
+            if tree_node:
+                tree_data.append(tree_node)
+
+        # Flatten tree for easier rendering
+        def flatten_tree(nodes, result=None):
+            """Flatten tree structure for template rendering."""
+            if result is None:
+                result = []
+            for node in nodes:
+                result.append(node)
+                if node['children']:
+                    flatten_tree(node['children'], result)
+            return result
+
+        context['tree_data'] = flatten_tree(tree_data)
+        context['has_hierarchy'] = any(g.parent_groups.exists() or g.child_groups.exists() for g in all_groups)
+
+        return context
 
 
 class PersonGroupCreateView(BaseCreateView):
