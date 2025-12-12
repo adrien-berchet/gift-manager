@@ -51,6 +51,7 @@ from .person import PersonUpdateView
 from .person_group import PersonGroupCreateView
 from .person_group import PersonGroupDeleteView
 from .person_group import PersonGroupDetailView
+from .person_group import PersonGroupExplorerView
 from .person_group import PersonGroupListView
 from .person_group import PersonGroupUpdateView
 from .person_group import add_multiple_persons_to_group
@@ -119,6 +120,7 @@ __all__ = [
     "PersonGroupCreateView",
     "PersonGroupDeleteView",
     "PersonGroupDetailView",
+    "PersonGroupExplorerView",
     "PersonGroupListView",
     "PersonGroupRelationCreateView",
     "PersonGroupUpdateView",
