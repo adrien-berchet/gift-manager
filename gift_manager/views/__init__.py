@@ -56,6 +56,7 @@ from .person_group import PersonGroupListView
 from .person_group import PersonGroupUpdateView
 from .person_group import add_multiple_persons_to_group
 from .person_group import remove_person_from_group
+from .person_group import reparent_group
 
 # Profile views
 from .profile import AcceptInvitationView
@@ -143,5 +144,6 @@ __all__ = [
     "get_user",
     "home",
     "remove_person_from_group",
+    "reparent_group",
     "update_relation_status",
 ]

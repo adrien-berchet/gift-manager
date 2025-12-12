@@ -1,10 +1,14 @@
 """PersonGroup-related views."""
 
+import json
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -13,6 +17,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.views import View
+from django.views.decorators.http import require_POST
 
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
@@ -20,6 +25,8 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionLevel
+from gift_manager.services import PermissionService
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -344,3 +351,146 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
             )
 
         return render(request, self.template_name, context)
+
+
+@login_required
+@require_POST
+def reparent_group(request):
+    """API endpoint for reparenting groups (used by drag-and-drop and bulk operations).
+
+    Accepts JSON payload with:
+    - group_id: UUID of the group to reparent
+    - parent_ids: List of parent group UUIDs (can be empty for root groups)
+    - action: "set" (replace all parents), "add" (add parents), or "remove" (remove parents)
+
+    Returns JSON with:
+    - success: boolean
+    - message: string
+    - errors: list of error messages (if any)
+    """
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"success": False, "message": gettext("Invalid JSON data")}, status=400
+        )
+
+    group_id = data.get("group_id")
+    parent_ids = data.get("parent_ids", [])
+    action = data.get("action", "set")  # "set", "add", or "remove"
+
+    # Validate required fields
+    if not group_id:
+        return JsonResponse(
+            {"success": False, "message": gettext("group_id is required")}, status=400
+        )
+
+    if action not in ["set", "add", "remove"]:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": gettext("action must be 'set', 'add', or 'remove'"),
+            },
+            status=400,
+        )
+
+    # Get the group
+    try:
+        group = PersonGroup.objects.get(group_id=group_id)
+    except PersonGroup.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "message": gettext("Group not found")}, status=404
+        )
+
+    # Check permissions - user must be an editor of the group
+    permission = PermissionService.get_permission(group, request.user, "group")
+    if permission < PermissionLevel.EDITOR:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": gettext("You do not have permission to edit this group"),
+            },
+            status=403,
+        )
+
+    # Get parent groups
+    parent_groups = []
+    if parent_ids:
+        for parent_id in parent_ids:
+            try:
+                parent_group = PersonGroup.objects.get(group_id=parent_id)
+                # Check user has access to parent group
+                if not parent_group.shared_with.filter(id=request.user.id).exists():
+                    return JsonResponse(
+                        {
+                            "success": False,
+                            "message": gettext(
+                                "You do not have access to parent group: %(name)s"
+                            )
+                            % {"name": parent_group.name},
+                        },
+                        status=403,
+                    )
+                parent_groups.append(parent_group)
+            except PersonGroup.DoesNotExist:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": gettext("Parent group not found: %(id)s")
+                        % {"id": parent_id},
+                    },
+                    status=404,
+                )
+
+    # Check for cycles before making changes
+    errors = []
+    for parent_group in parent_groups:
+        if group.has_cycle_with(parent_group):
+            errors.append(
+                gettext("Adding '%(parent)s' as a parent would create a cycle")
+                % {"parent": parent_group.name}
+            )
+
+    if errors:
+        return JsonResponse(
+            {"success": False, "message": gettext("Cycle detected"), "errors": errors},
+            status=400,
+        )
+
+    # Perform the reparenting operation
+    try:
+        with transaction.atomic():
+            if action == "set":
+                # Replace all parents
+                group.parent_groups.set(parent_groups)
+                message = gettext("Group parents updated successfully")
+            elif action == "add":
+                # Add new parents
+                for parent_group in parent_groups:
+                    group.parent_groups.add(parent_group)
+                message = gettext("Parents added successfully")
+            elif action == "remove":
+                # Remove parents
+                for parent_group in parent_groups:
+                    group.parent_groups.remove(parent_group)
+                message = gettext("Parents removed successfully")
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": message,
+                "group_id": str(group.group_id),
+                "parent_ids": [str(p.group_id) for p in group.parent_groups.all()],
+            }
+        )
+
+    except ValidationError as e:
+        return JsonResponse(
+            {"success": False, "message": str(e), "errors": e.messages if hasattr(e, "messages") else [str(e)]},
+            status=400,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "message": gettext("An error occurred: %(error)s") % {"error": str(e)}},
+            status=500,
+        )

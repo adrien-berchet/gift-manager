@@ -81,6 +81,11 @@ urlpatterns = [
         views.remove_person_from_group,
         name="remove_person_group_person",
     ),
+    path(
+        "api/person_groups/reparent/",
+        views.reparent_group,
+        name="api_reparent_group",
+    ),
     path("gifts/", views.GiftListView.as_view(), name="gifts"),
     path("gifts/create/", views.GiftCreateView.as_view(), name="gift_create"),
     path("gifts/<uuid:pk>/", views.GiftDetailView.as_view(), name="gift_detail"),

@@ -70,6 +70,32 @@
     .badge-count {
         font-size: 0.75rem;
     }
+
+    /* Drag-and-drop styles */
+    .tree-node[draggable="true"] {
+        cursor: move;
+    }
+    .tree-node.dragging {
+        opacity: 0.5;
+        background-color: #d1ecf1;
+    }
+    .tree-node.drag-over {
+        border-left: 4px solid #0d6efd;
+        background-color: #e7f3ff;
+    }
+    .tree-node.drop-invalid {
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+    }
+    .drag-handle {
+        cursor: move;
+        color: #6c757d;
+        margin-right: 0.5rem;
+        padding: 0 0.25rem;
+    }
+    .drag-handle:hover {
+        color: #495057;
+    }
 </style>
 {% endblock %}
 
@@ -109,9 +135,14 @@
                 <div class="tree-node"
                      data-depth="{{ node.depth }}"
                      data-group-id="{{ node.group_id }}"
+                     data-group-name="{{ node.name }}"
                      data-has-children="{{ node.has_children|yesno:'true,false' }}"
-                     {% if node.parent_ids %}data-parent-ids="{{ node.parent_ids|join:',' }}"{% endif %}>
+                     {% if node.parent_ids %}data-parent-ids="{{ node.parent_ids|join:',' }}"{% endif %}
+                     draggable="true">
                     <div class="tree-node-content">
+                        <span class="drag-handle" title="{% trans 'Drag to reparent' %}">
+                            <i class="fas fa-grip-vertical"></i>
+                        </span>
                         {% if node.has_children %}
                             <span class="tree-node-icon toggle-icon">
                                 <i class="fas fa-chevron-down"></i>
@@ -431,16 +462,138 @@
             const hasChildren = node.dataset.hasChildren === 'true';
 
             if (hasChildren) {
-                // Make the whole node except actions clickable
-                const content = node.querySelector('.tree-node-content');
-                if (content) {
-                    content.style.cursor = 'pointer';
-                    content.addEventListener('click', (e) => {
+                // Make the toggle icon clickable (not the whole content, to avoid conflict with drag)
+                const toggleIcon = node.querySelector('.toggle-icon');
+                if (toggleIcon) {
+                    toggleIcon.style.cursor = 'pointer';
+                    toggleIcon.addEventListener('click', (e) => {
                         e.stopPropagation();
                         toggleNode(node);
                     });
                 }
             }
+        });
+
+        // Drag-and-Drop functionality
+        let draggedNode = null;
+
+        function getCsrfToken() {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) return csrfInput.value;
+            const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+            return csrfCookie ? csrfCookie.split('=')[1] : '';
+        }
+
+        function wouldCreateCycle(draggedGroupId, targetGroupId) {
+            // Check if making target a parent of dragged would create a cycle
+            // This happens if dragged is an ancestor of target
+            const descendants = getAllDescendants(draggedGroupId);
+            return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
+        }
+
+        treeNodes.forEach(node => {
+            // Drag start
+            node.addEventListener('dragstart', (e) => {
+                draggedNode = node;
+                node.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', node.dataset.groupId);
+            });
+
+            // Drag end
+            node.addEventListener('dragend', (e) => {
+                node.classList.remove('dragging');
+                // Remove all drag-over and drop-invalid classes
+                treeNodes.forEach(n => {
+                    n.classList.remove('drag-over', 'drop-invalid');
+                });
+                draggedNode = null;
+            });
+
+            // Drag over - check if drop is valid
+            node.addEventListener('dragover', (e) => {
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
+
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                // Remove classes from all nodes first
+                treeNodes.forEach(n => {
+                    n.classList.remove('drag-over', 'drop-invalid');
+                });
+
+                // Check if this would create a cycle
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const targetGroupId = node.dataset.groupId;
+
+                if (draggedGroupId === targetGroupId || wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    node.classList.add('drop-invalid');
+                } else {
+                    node.classList.add('drag-over');
+                }
+            });
+
+            // Drag leave
+            node.addEventListener('dragleave', (e) => {
+                node.classList.remove('drag-over', 'drop-invalid');
+            });
+
+            // Drop
+            node.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                node.classList.remove('drag-over', 'drop-invalid');
+
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
+
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const draggedGroupName = draggedNode.dataset.groupName;
+                const targetGroupId = node.dataset.groupId;
+                const targetGroupName = node.dataset.groupName;
+
+                // Check for cycle one more time
+                if (wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    alert("{% trans 'Cannot move group: this would create a cycle in the hierarchy' %}");
+                    return;
+                }
+
+                // Confirm the action
+                const confirmMessage = "{% trans 'Move' %} '" + draggedGroupName + "' {% trans 'under' %} '" + targetGroupName + "'?";
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                // Call API to reparent
+                try {
+                    const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            group_id: draggedGroupId,
+                            parent_ids: [targetGroupId],
+                            action: 'set'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Success - reload the page to show updated hierarchy
+                        window.location.reload();
+                    } else {
+                        alert("{% trans 'Error:' %} " + data.message);
+                    }
+                } catch (error) {
+                    console.error('Reparenting error:', error);
+                    alert("{% trans 'An error occurred while moving the group' %}");
+                }
+            });
         });
     })();
 </script>
