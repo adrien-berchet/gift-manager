@@ -57,9 +57,17 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
 
 
 class PersonGroupForm(BaseFormMixin, forms.ModelForm):
+    parent_groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label=gettext_lazy("Parent groups"),
+        help_text=gettext_lazy("Select parent groups for this group (optional)"),
+    )
+
     class Meta:
         model = PersonGroup
-        fields = ["name"]
+        fields = ["name", "parent_groups"]
         labels = {
             "name": gettext_lazy("Name"),
         }
@@ -70,6 +78,43 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["name"].required = False
+
+        user = self.request.user if hasattr(self, "request") else None
+
+        if user:
+            # Show only groups accessible by the user
+            available_groups = PersonGroup.objects.accessible_by(user)
+
+            # If editing an existing group, exclude self and descendants to prevent cycles
+            if self.instance and self.instance.pk:
+                descendants = self.instance.get_descendants()
+                descendant_ids = [self.instance.pk] + [d.pk for d in descendants]
+                available_groups = available_groups.exclude(pk__in=descendant_ids)
+
+            self.fields["parent_groups"].queryset = available_groups
+
+            # Set initial value if editing
+            if self.instance and self.instance.pk:
+                self.fields["parent_groups"].initial = self.instance.parent_groups.all()
+
+    def clean_parent_groups(self):
+        """Validate that adding parent groups won't create a cycle."""
+        parent_groups = self.cleaned_data.get("parent_groups")
+
+        if not self.instance or not self.instance.pk:
+            # For new groups, no cycle check needed
+            return parent_groups
+
+        for parent in parent_groups:
+            if self.instance.has_cycle_with(parent):
+                raise forms.ValidationError(
+                    gettext_lazy(
+                        "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
+                    )
+                    % {"parent": parent.name}
+                )
+
+        return parent_groups
 
 
 class PersonGroupAddMultiplePersonsForm(forms.Form):

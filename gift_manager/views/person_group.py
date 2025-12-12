@@ -101,12 +101,32 @@ class PersonGroupDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Hierarchy information
+        context["parent_groups"] = self.object.parent_groups.all()
+        context["child_groups"] = self.object.get_children()
+
+        # Direct members only
         context["persons"] = (
             Person.objects.accessible_by(self.request.user)
             .filter(groups=self.object)
             .prefetch_related("groups")
             .order_by("family_name", "first_name")
         )
+
+        # All members (including from nested groups)
+        nested_member_qs = self.object.get_all_members(include_nested=True)
+        context["nested_members"] = (
+            nested_member_qs.filter(pk__in=Person.objects.accessible_by(self.request.user))
+            .prefetch_related("groups")
+            .order_by("family_name", "first_name")
+        )
+
+        # Member counts
+        context["direct_member_count"] = context["persons"].count()
+        context["nested_member_count"] = context["nested_members"].count()
+
+        # Relations/gifts for this group
         context["gifts"] = (
             Relation.objects.accessible_by(self.request.user)
             .filter(group=self.object, gift__isnull=False)

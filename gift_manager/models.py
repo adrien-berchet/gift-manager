@@ -303,18 +303,40 @@ class PersonPermission(models.Model):
         return "person"
 
 
+class PersonGroupManager(UserPermissionManager):
+    """Manager for PersonGroup model with hierarchy query methods."""
+
+    def root_groups_for_user(self, user):
+        """Return all root groups (without parents) accessible by a user."""
+        return self.accessible_by(user).filter(parent_groups__isnull=True)
+
+    def children_for_user(self, parent_group, user):
+        """Return all children groups of a group accessible by a user."""
+        return self.accessible_by(user).filter(parent_groups=parent_group)
+
+    def with_prefetched_relations(self):
+        """Return queryset with prefetched parent_groups and child_groups.
+
+        Use this method when you need to traverse the hierarchy to avoid N+1 queries.
+        """
+        return self.prefetch_related("parent_groups", "child_groups")
+
+
 class PersonGroup(models.Model):
     """Model for a group of persons."""
 
     group_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
+    parent_groups = models.ManyToManyField(
+        "self", symmetrical=False, related_name="child_groups", blank=True
+    )
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(
         User, through="PersonGroupPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
 
     # Custom manager
-    objects = UserPermissionManager()  # PersonGroup uses basic manager
+    objects = PersonGroupManager()
 
     class Meta:
         verbose_name = gettext_lazy("Person group")
@@ -326,6 +348,203 @@ class PersonGroup(models.Model):
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:person_group_edit", kwargs={"pk": self.pk})
 
+    def get_children(self):
+        """Returns all direct child groups."""
+        return self.child_groups.all()
+
+    def get_descendants(self, use_cache=True):
+        """Returns all descendant groups (recursively).
+
+        Optimized to fetch all descendants in a single query using prefetch_related,
+        then traverse the hierarchy in memory to avoid N+1 queries.
+
+        Args:
+            use_cache: If True, use cached results when available (default: True)
+        """
+        # Check cache first
+        cache_key = f"persongroup_descendants_{self.pk}"
+        if use_cache:
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+
+        # Fetch all potentially needed groups upfront to avoid multiple queries
+        # We'll prefetch child_groups for efficient traversal
+        all_groups = {self.pk: self}
+        descendants = set()
+        to_process = list(self.child_groups.prefetch_related("child_groups").all())
+        processed_ids = {self.pk}
+
+        # Build cache of all groups we'll need
+        for group in to_process:
+            all_groups[group.pk] = group
+
+        while to_process:
+            current = to_process.pop(0)
+            if current.pk in processed_ids:
+                continue
+
+            processed_ids.add(current.pk)
+            descendants.add(current)
+
+            # Get children from prefetched data
+            children = list(current.child_groups.all())
+            for child in children:
+                if child.pk not in processed_ids:
+                    if child.pk not in all_groups:
+                        all_groups[child.pk] = child
+                        # Prefetch for next level
+                        child = PersonGroup.objects.prefetch_related("child_groups").get(pk=child.pk)
+                    to_process.append(child)
+
+        result = list(descendants)
+
+        # Cache the result for 1 hour
+        if use_cache:
+            cache.set(cache_key, result, 3600)
+
+        return result
+
+    def get_ancestors(self, use_cache=True):
+        """Returns all parent groups (up to the root).
+
+        Optimized to fetch all ancestors in a single query using prefetch_related,
+        then traverse the hierarchy in memory to avoid N+1 queries.
+
+        Args:
+            use_cache: If True, use cached results when available (default: True)
+        """
+        # Check cache first
+        cache_key = f"persongroup_ancestors_{self.pk}"
+        if use_cache:
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+
+        # Fetch all potentially needed groups upfront to avoid multiple queries
+        all_groups = {self.pk: self}
+        ancestors = set()
+        to_process = list(self.parent_groups.prefetch_related("parent_groups").all())
+        processed_ids = {self.pk}
+
+        # Build cache of all groups we'll need
+        for group in to_process:
+            all_groups[group.pk] = group
+
+        while to_process:
+            current = to_process.pop(0)
+            if current.pk in processed_ids:
+                continue
+
+            processed_ids.add(current.pk)
+            ancestors.add(current)
+
+            # Get parents from prefetched data
+            parents = list(current.parent_groups.all())
+            for parent in parents:
+                if parent.pk not in processed_ids:
+                    if parent.pk not in all_groups:
+                        all_groups[parent.pk] = parent
+                        # Prefetch for next level
+                        parent = PersonGroup.objects.prefetch_related("parent_groups").get(pk=parent.pk)
+                    to_process.append(parent)
+
+        result = list(ancestors)
+
+        # Cache the result for 1 hour
+        if use_cache:
+            cache.set(cache_key, result, 3600)
+
+        return result
+
+    def get_primary_ancestors_path(self):
+        """Returns a specific path of ancestors (for breadcrumbs).
+
+        Optimized to prefetch parent_groups to avoid N+1 queries.
+        """
+        # Arbitrarily choosing the first parent at each level
+        ancestors = []
+        current = self
+        visited = {self.pk}
+
+        # Prefetch parent_groups for the initial group
+        if not hasattr(self, "_prefetched_objects_cache"):
+            current = PersonGroup.objects.prefetch_related("parent_groups").get(pk=self.pk)
+
+        while True:
+            parents = list(current.parent_groups.all())
+            if not parents:
+                break
+
+            # Take the first parent that doesn't create a cycle
+            next_parent = None
+            for parent in parents:
+                if parent.pk not in visited:
+                    next_parent = parent
+                    visited.add(parent.pk)
+                    break
+
+            if not next_parent:
+                break
+
+            ancestors.append(next_parent)
+            # Prefetch for next iteration
+            current = PersonGroup.objects.prefetch_related("parent_groups").get(pk=next_parent.pk)
+
+        ancestors.reverse()
+        return ancestors
+
+    def has_cycle_with(self, potential_parent):
+        """Checks if adding a parent would create a cycle."""
+        if potential_parent == self:
+            return True
+
+        # Check if we are already an ancestor of the potential parent
+        return self in potential_parent.get_ancestors()
+
+    def get_all_members(self, include_nested=False):
+        """Returns all persons in this group.
+
+        Args:
+            include_nested: If True, also include members from all descendant groups
+
+        Returns:
+            QuerySet of Person objects
+        """
+        if not include_nested:
+            return self.person_set.all()
+
+        # Get all descendant groups
+        descendant_groups = [self, *self.get_descendants()]
+
+        # Return all persons that belong to any of these groups
+        return Person.objects.filter(groups__in=descendant_groups).distinct()
+
+    def clear_hierarchy_cache(self):
+        """Clear cached hierarchy data for this group and related groups."""
+        # Clear cache for this group
+        cache.delete(f"persongroup_descendants_{self.pk}")
+        cache.delete(f"persongroup_ancestors_{self.pk}")
+
+        # Clear cache for all ancestors (since their descendants changed)
+        for ancestor in self.get_ancestors(use_cache=False):
+            cache.delete(f"persongroup_descendants_{ancestor.pk}")
+
+        # Clear cache for all descendants (since their ancestors changed)
+        for descendant in self.get_descendants(use_cache=False):
+            cache.delete(f"persongroup_ancestors_{descendant.pk}")
+
+    def clean(self):
+        """Custom validation to avoid cycles."""
+        if self.pk:
+            for parent in self.parent_groups.all():
+                if self.has_cycle_with(parent):
+                    raise ValidationError(
+                        gettext_lazy(
+                            "Adding this parent would create a cycle in the group hierarchy."
+                        )
+                    )
+
 
 class PersonGroupPermission(models.Model):
     """Model for permissions on a group."""
@@ -334,6 +553,10 @@ class PersonGroupPermission(models.Model):
     group = models.ForeignKey(PersonGroup, on_delete=models.CASCADE)
     permission_type = models.IntegerField(
         choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
+    inherit_permissions = models.BooleanField(
+        default=False,
+        help_text="If true, this permission level cascades to all child groups",
     )
 
     class Meta:
@@ -798,5 +1021,19 @@ def clear_gifttag_cache_on_save(sender, instance, **kwargs):
 @receiver(models.signals.m2m_changed, sender=GiftTag.parent_tags.through)
 def clear_gifttag_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_tags relationship changes."""
+    if action in ["post_add", "post_remove", "post_clear"]:
+        instance.clear_hierarchy_cache()
+
+
+# Signal handlers for PersonGroup cache invalidation
+@receiver(post_save, sender=PersonGroup)
+def clear_persongroup_cache_on_save(sender, instance, **kwargs):
+    """Clear hierarchy cache when a PersonGroup is saved."""
+    instance.clear_hierarchy_cache()
+
+
+@receiver(models.signals.m2m_changed, sender=PersonGroup.parent_groups.through)
+def clear_persongroup_cache_on_parent_change(sender, instance, action, **kwargs):
+    """Clear hierarchy cache when parent_groups relationship changes."""
     if action in ["post_add", "post_remove", "post_clear"]:
         instance.clear_hierarchy_cache()

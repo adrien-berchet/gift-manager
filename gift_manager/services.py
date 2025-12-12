@@ -35,6 +35,44 @@ class PermissionService:
         return permission.permission_type if permission else PermissionLevel.NONE
 
     @classmethod
+    def get_effective_permission_for_group(cls, group, user) -> int:
+        """Get the effective permission for a user on a PersonGroup, considering cascade inheritance.
+
+        This method checks:
+        1. Direct permission on the group
+        2. If no direct permission, check parent groups with inherit_permissions=True
+        3. Returns the highest permission level found
+
+        Args:
+            group: PersonGroup instance
+            user: User instance
+
+        Returns:
+            int: The effective permission level
+        """
+        from gift_manager.models import PersonGroupPermission
+
+        # Check direct permission on this group
+        direct_permission = PersonGroupPermission.objects.filter(
+            user=user, group=group
+        ).first()
+
+        if direct_permission:
+            return direct_permission.permission_type
+
+        # Check parent groups with cascade inheritance
+        ancestors = group.get_ancestors()
+        inherited_permissions = PersonGroupPermission.objects.filter(
+            user=user, group__in=ancestors, inherit_permissions=True
+        )
+
+        # Return the highest permission level found
+        if inherited_permissions.exists():
+            return max(p.permission_type for p in inherited_permissions)
+
+        return PermissionLevel.NONE
+
+    @classmethod
     def get_permission_label(cls, obj, user, filter_name, case="lower") -> str:
         """Get the permission label for the user on the object."""
         permission_value = cls.get_permission(obj, user, filter_name)

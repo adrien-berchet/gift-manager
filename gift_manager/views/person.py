@@ -115,9 +115,19 @@ class PersonDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Get all groups this person belongs to
+        person_groups = list(self.object.groups.all())
+
+        # Get all ancestor groups (parent groups) for inheritance
+        all_groups_with_ancestors = set(person_groups)
+        for group in person_groups:
+            all_groups_with_ancestors.update(group.get_ancestors())
+
+        # Query relations for person directly and all related groups (including ancestors)
         context["relations"] = (
             Relation.objects.accessible_by(self.request.user)
-            .filter(Q(person=self.object) | Q(group__in=self.object.groups.all()))
+            .filter(Q(person=self.object) | Q(group__in=all_groups_with_ancestors))
             .select_related("status", "gift", "event", "person", "group")
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
