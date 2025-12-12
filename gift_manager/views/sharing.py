@@ -131,8 +131,9 @@ class ShareObjectsView(LoginRequiredMixin, View):
                     messages.error(request, gettext("Invalid permission level selected."))
                     return self.get(request)
 
-                # Option to share persons in a group
+                # Options for sharing groups
                 share_group_persons = "share_group_persons" in request.POST
+                share_child_groups = "share_child_groups" in request.POST
 
                 # Perform sharing for each object type
                 shared_items = {}
@@ -147,6 +148,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
                         selection["person_group_ids"],
                         friends,
                         share_members=share_group_persons,
+                        share_children=share_child_groups,
                         permission_level=permission_level,
                     )
 
