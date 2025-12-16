@@ -65,9 +65,17 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         help_text=gettext_lazy("Select parent groups for this group (optional)"),
     )
 
+    persons = forms.ModelMultipleChoiceField(
+        queryset=Person.objects.none(),
+        required=False,
+        widget=forms.CheckboxSelectMultiple,
+        label=gettext_lazy("Members"),
+        help_text=gettext_lazy("Select persons who belong to this group (optional)"),
+    )
+
     class Meta:
         model = PersonGroup
-        fields = ["name", "parent_groups"]
+        fields = ["name", "parent_groups", "persons"]
         labels = {
             "name": gettext_lazy("Name"),
         }
@@ -97,6 +105,30 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
             # Set initial value if editing
             if self.instance and self.instance.pk:
                 self.fields["parent_groups"].initial = self.instance.parent_groups.all()
+
+            # Show only persons accessible by the user
+            self.fields["persons"].queryset = Person.objects.accessible_by(user).order_by(
+                "family_name", "first_name"
+            )
+
+            # Set initial value if editing
+            if self.instance and self.instance.pk:
+                self.fields["persons"].initial = self.instance.person_set.all()
+
+    def save(self, commit=True):
+        """Save the group and update the many-to-many relationships."""
+        instance = super().save(commit=commit)
+
+        if commit:
+            # Update parent_groups relationship
+            if "parent_groups" in self.cleaned_data:
+                instance.parent_groups.set(self.cleaned_data["parent_groups"])
+
+            # Update persons relationship
+            if "persons" in self.cleaned_data:
+                instance.person_set.set(self.cleaned_data["persons"])
+
+        return instance
 
     def clean_parent_groups(self):
         """Validate that adding parent groups won't create a cycle."""
