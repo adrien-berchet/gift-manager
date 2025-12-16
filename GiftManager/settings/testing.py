@@ -20,16 +20,15 @@ PASSWORD_HASHERS = [
 ]
 
 # Use SQLite for faster tests
-# IMPORTANT: Use file-based database, not :memory:, for live_server compatibility
-# In-memory databases are thread-local and not visible to live_server
+# For live_server tests, use a real file (not in-memory) so it's visible across threads
+# The file will be created/destroyed automatically by Django's test runner
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        # Use file with shared cache for thread visibility
-        # See: https://www.sqlite.org/inmemorydb.html#sharedmemdb
-        "NAME": "file:memorydb_default?mode=memory&cache=shared",
+        # Use a temporary file instead of memory for live_server compatibility
+        "NAME": "/tmp/test_gift_manager.db",
         "TEST": {
-            "NAME": "file:memorydb_default?mode=memory&cache=shared",
+            "NAME": "/tmp/test_gift_manager.db",
         },
     }
 }
