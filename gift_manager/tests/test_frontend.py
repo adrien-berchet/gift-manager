@@ -115,13 +115,40 @@ def setup_group_hierarchy(db, setup_test_user):
 
 
 def login_user(page: Page, live_server, username="testuser", password="testpass123"):
-    """Helper to log in a user."""
-    page.goto(f"{live_server.url}/accounts/login/")
-    page.fill('input[name="username"]', username)
-    page.fill('input[name="password"]', password)
-    page.click('button[type="submit"]')
-    # Wait for redirect after login
-    page.wait_for_url(f"{live_server.url}/**", timeout=5000)
+    """Helper to log in a user.
+
+    This app uses django-allauth which has different field names than standard Django auth.
+    """
+    # Navigate to login page
+    page.goto(f"{live_server.url}/accounts/login/", wait_until="networkidle")
+
+    # Wait for page to load by checking for the login form
+    page.wait_for_selector('form', timeout=10000)
+
+    # django-allauth uses 'login' for username field, not 'username'
+    # Try allauth field first (#id_login), fallback to standard Django (#id_username)
+    try:
+        login_field = page.locator('#id_login')
+        login_field.wait_for(state='visible', timeout=5000)
+        login_field.fill(username)
+    except Exception:
+        # Fallback to standard Django auth field
+        username_field = page.locator('#id_username')
+        username_field.wait_for(state='visible', timeout=5000)
+        username_field.fill(username)
+
+    # Fill in the password field (same for both allauth and standard Django)
+    password_field = page.locator('#id_password')
+    password_field.wait_for(state='visible', timeout=5000)
+    password_field.fill(password)
+
+    # Submit the form
+    submit_button = page.locator('button[type="submit"]')
+    submit_button.click()
+
+    # Wait for redirect after login (should go to home page or next URL)
+    # Increase timeout as login processing might take a moment
+    page.wait_for_load_state("networkidle", timeout=15000)
 
 
 @pytest.mark.django_db(transaction=True)
