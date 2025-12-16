@@ -301,3 +301,29 @@ def db_obj(request, person, gift, event, group, person_relation):
         "persongroup": group,
         "relation": person_relation,
     }[obj_type]
+
+# =============================================================================
+# Playwright Fixtures for Frontend Tests
+# =============================================================================
+
+
+@pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    """Configure browser context for Playwright tests."""
+    return {
+        **browser_context_args,
+        "viewport": {"width": 1920, "height": 1080},
+        "ignore_https_errors": True,
+    }
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args):
+    """Configure browser launch arguments."""
+    return {
+        **browser_type_launch_args,
+        "headless": True,  # Run in headless mode for CI
+        "args": [
+            "--disable-blink-features=AutomationControlled",
+        ],
+    }

@@ -59,6 +59,11 @@ DJANGO_SETTINGS_MODULE = "GiftManager.settings.testing"
 python_files = ["test_*.py"]
 testpaths = ["gift_manager/tests"]
 filterwarnings = []
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "frontend: marks tests as frontend/browser tests",
+]
+addopts = "-v"
 
 
 [tool.ruff]
