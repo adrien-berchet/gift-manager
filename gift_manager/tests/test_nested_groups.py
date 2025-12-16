@@ -221,12 +221,12 @@ class TestNestedGroupMembers:
         # Make child_group a child of parent_group
         child_group.parent_groups.add(parent_group)
 
-        # Parent group should have both members
-        all_members = parent_group.get_all_members()
+        # Parent group should have both members when include_nested=True
+        all_members = parent_group.get_all_members(include_nested=True)
         assert set(all_members) == {parent_member, child_member}
 
         # Child group should only have its direct member
-        child_members = child_group.get_all_members()
+        child_members = child_group.get_all_members(include_nested=False)
         assert set(child_members) == {child_member}
 
     def test_get_all_members_deep_hierarchy(self):
@@ -250,16 +250,16 @@ class TestNestedGroupMembers:
         level2.parent_groups.add(level1)
         level3.parent_groups.add(level2)
 
-        # Level1 should have all members
-        all_members = level1.get_all_members()
+        # Level1 should have all members when include_nested=True
+        all_members = level1.get_all_members(include_nested=True)
         assert set(all_members) == {member1, member2, member3}
 
         # Level2 should have member2 and member3
-        all_members = level2.get_all_members()
+        all_members = level2.get_all_members(include_nested=True)
         assert set(all_members) == {member2, member3}
 
         # Level3 should only have member3
-        all_members = level3.get_all_members()
+        all_members = level3.get_all_members(include_nested=False)
         assert set(all_members) == {member3}
 
     def test_get_all_members_no_duplicates(self):
@@ -280,8 +280,8 @@ class TestNestedGroupMembers:
         middle2.parent_groups.add(root)
         leaf.parent_groups.add(middle1, middle2)
 
-        # Root should have member exactly once
-        all_members = root.get_all_members()
+        # Root should have member exactly once when include_nested=True
+        all_members = root.get_all_members(include_nested=True)
         assert list(all_members).count(member) == 1
         assert set(all_members) == {member}
 
@@ -290,10 +290,9 @@ class TestNestedGroupMembers:
 class TestNestedRelationQueries:
     """Tests for querying relations through nested groups."""
 
-    def test_relations_from_parent_group(self):
-        """Test that relations can query nested group members."""
+    def test_group_includes_nested_members(self):
+        """Test that parent groups include nested group members."""
         user = UserFactory()
-        giver = PersonFactory(first_name="Giver")
 
         # Create parent and child groups
         parent_group = PersonGroupFactory(name="Parent")
@@ -306,23 +305,13 @@ class TestNestedRelationQueries:
         # Make child_group a child of parent_group
         child_group.parent_groups.add(parent_group)
 
-        # Create relation from giver to parent_group
-        relation = RelationFactory(
-            giver=giver,
-            receiver_person_group=parent_group,
-        )
-
-        # The relation should be accessible through the parent group
-        assert relation.receiver_person_group == parent_group
-
-        # All members of parent group (including nested) should be receivers
-        all_receivers = parent_group.get_all_members()
+        # All members of parent group (including nested) should include receiver
+        all_receivers = parent_group.get_all_members(include_nested=True)
         assert receiver in all_receivers
 
-    def test_person_inherits_group_relations(self):
-        """Test that persons inherit relations from parent groups."""
+    def test_person_membership_through_nested_groups(self):
+        """Test that persons can be accessed through parent group hierarchy."""
         user = UserFactory()
-        giver = PersonFactory(first_name="Giver")
 
         # Create hierarchy
         grandparent_group = PersonGroupFactory(name="Grandparent")
@@ -333,15 +322,8 @@ class TestNestedRelationQueries:
         parent_group.parent_groups.add(grandparent_group)
         parent_group.person_set.add(receiver)
 
-        # Create relation to grandparent group
-        relation = RelationFactory(
-            giver=giver,
-            receiver_person_group=grandparent_group,
-        )
-
-        # Receiver should inherit this relation through group membership
-        # The receiver is a member of parent_group, which is a child of grandparent_group
-        all_members = grandparent_group.get_all_members()
+        # Receiver should be accessible through grandparent group's nested members
+        all_members = grandparent_group.get_all_members(include_nested=True)
         assert receiver in all_members
 
 
@@ -355,15 +337,28 @@ class TestPermissionInheritance:
         viewer = UserFactory(username="viewer")
 
         # Create hierarchy
-        parent_group = PersonGroupFactory(owner=owner, name="Parent")
-        child_group = PersonGroupFactory(owner=owner, name="Child")
+        parent_group = PersonGroupFactory(name="Parent")
+        child_group = PersonGroupFactory(name="Child")
+
+        # Set owner permissions
+        PersonGroupPermission.objects.create(
+            user=owner,
+            group=parent_group,
+            permission_type=PermissionLevel.OWNER,
+        )
+        PersonGroupPermission.objects.create(
+            user=owner,
+            group=child_group,
+            permission_type=PermissionLevel.OWNER,
+        )
+
         child_group.parent_groups.add(parent_group)
 
         # Grant viewer permission to parent group only
         PersonGroupPermission.objects.create(
             user=viewer,
-            person_group=parent_group,
-            permission_level=PermissionLevel.VIEWER,
+            group=parent_group,
+            permission_type=PermissionLevel.VIEWER,
         )
 
         # Child group should be accessible to viewer through inheritance
@@ -377,9 +372,17 @@ class TestPermissionInheritance:
         owner = UserFactory()
 
         # Create deep hierarchy
-        level1 = PersonGroupFactory(owner=owner, name="Level1")
-        level2 = PersonGroupFactory(owner=owner, name="Level2")
-        level3 = PersonGroupFactory(owner=owner, name="Level3")
+        level1 = PersonGroupFactory(name="Level1")
+        level2 = PersonGroupFactory(name="Level2")
+        level3 = PersonGroupFactory(name="Level3")
+
+        # Grant owner permissions to all levels
+        for group in [level1, level2, level3]:
+            PersonGroupPermission.objects.create(
+                user=owner,
+                group=group,
+                permission_type=PermissionLevel.OWNER,
+            )
 
         level2.parent_groups.add(level1)
         level3.parent_groups.add(level2)
@@ -401,11 +404,24 @@ class TestCascadeSharing:
         friend = UserFactory(username="friend")
 
         # Make them friends
-        owner.profile.friends.add(friend)
+        owner.profile.friends.add(friend.profile)
 
         # Create hierarchy
-        parent_group = PersonGroupFactory(owner=owner, name="Parent")
-        child_group = PersonGroupFactory(owner=owner, name="Child")
+        parent_group = PersonGroupFactory(name="Parent")
+        child_group = PersonGroupFactory(name="Child")
+
+        # Set owner permissions
+        PersonGroupPermission.objects.create(
+            user=owner,
+            group=parent_group,
+            permission_type=PermissionLevel.OWNER,
+        )
+        PersonGroupPermission.objects.create(
+            user=owner,
+            group=child_group,
+            permission_type=PermissionLevel.OWNER,
+        )
+
         child_group.parent_groups.add(parent_group)
 
         # Share parent only (without cascade)
@@ -419,9 +435,9 @@ class TestCascadeSharing:
         accessible_groups = PersonGroup.objects.accessible_by(friend)
         assert parent_group in accessible_groups
 
-        # Child is owned by same owner, so friend should also see it
-        # (because friend has permission on parent which can query child members)
-        assert child_group in PersonGroup.objects.accessible_by(friend)
+        # Child is NOT automatically shared (no cascade)
+        # Friend can only see parent group, not child group
+        assert child_group not in PersonGroup.objects.accessible_by(friend)
 
     def test_cascade_share_includes_children(self):
         """Test that cascade sharing explicitly shares all children."""
@@ -429,12 +445,20 @@ class TestCascadeSharing:
         friend = UserFactory(username="friend")
 
         # Make them friends
-        owner.profile.friends.add(friend)
+        owner.profile.friends.add(friend.profile)
 
         # Create hierarchy
-        parent_group = PersonGroupFactory(owner=owner, name="Parent")
-        child_group = PersonGroupFactory(owner=owner, name="Child")
-        grandchild_group = PersonGroupFactory(owner=owner, name="Grandchild")
+        parent_group = PersonGroupFactory(name="Parent")
+        child_group = PersonGroupFactory(name="Child")
+        grandchild_group = PersonGroupFactory(name="Grandchild")
+
+        # Set owner permissions
+        for group in [parent_group, child_group, grandchild_group]:
+            PersonGroupPermission.objects.create(
+                user=owner,
+                group=group,
+                permission_type=PermissionLevel.OWNER,
+            )
 
         child_group.parent_groups.add(parent_group)
         grandchild_group.parent_groups.add(child_group)
@@ -467,7 +491,7 @@ class TestCascadeSharing:
         # Verify permissions exist
         assert PersonGroupPermission.objects.filter(
             user=friend,
-            person_group__in=[parent_group, child_group, grandchild_group]
+            group__in=[parent_group, child_group, grandchild_group]
         ).count() == 3
 
 
