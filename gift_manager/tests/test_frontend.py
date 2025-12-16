@@ -46,8 +46,11 @@ pytestmark = [
 
 
 @pytest.fixture
-def setup_test_user(db):
-    """Create a test user and log them in."""
+def setup_test_user(transactional_db):
+    """Create a test user and log them in.
+
+    Uses transactional_db to ensure data is committed and visible to live_server.
+    """
     user = UserFactory(username="testuser")
     user.set_password("testpass123")
     user.save()
@@ -55,8 +58,12 @@ def setup_test_user(db):
 
 
 @pytest.fixture
-def setup_group_hierarchy(db, setup_test_user):
+def setup_group_hierarchy(transactional_db, setup_test_user):
     """Create a hierarchy of person groups for testing.
+
+    Uses transactional_db to ensure data is committed and visible to live_server.
+    This is required because live_server runs in a separate thread with its own
+    database connection.
 
     Structure:
         Root
@@ -165,27 +172,9 @@ class TestPersonGroupTreeView:
         # Navigate to person groups list
         page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
 
-        # Check if tree view button exists (only shows if hierarchy exists)
+        # Wait for tree view button (only shows if hierarchy exists)
         tree_view_btn = page.locator('#tree-view-btn')
-
-        # If no tree view button, check why
-        if tree_view_btn.count() == 0:
-            # Save screenshot for debugging
-            page.screenshot(path="debug_no_tree_view.png")
-
-            # Check if any groups are visible
-            grid_element = page.locator('#person-group-grid')
-            page_content = page.content()
-
-            # This might mean the hierarchy wasn't created or isn't visible
-            pytest.skip(
-                "Tree view button not found - hierarchy may not be visible to live_server. "
-                "This is a known limitation with django live_server and transaction isolation. "
-                "Screenshot saved to debug_no_tree_view.png"
-            )
-
-        # Wait for tree view button to be visible
-        tree_view_btn.wait_for(state='visible', timeout=5000)
+        tree_view_btn.wait_for(state='visible', timeout=10000)
 
         # Switch to tree view
         tree_view_btn.click()
@@ -198,11 +187,11 @@ class TestPersonGroupTreeView:
         root_node = page.locator('.tree-node:has-text("Root Group")')
         expect(root_node).to_be_visible()
 
-        # Verify child groups exist in the DOM (may be collapsed)
+        # Verify child groups exist in the DOM
         child1_node = page.locator('.tree-node:has-text("Child Group 1")')
         child2_node = page.locator('.tree-node:has-text("Child Group 2")')
 
-        # At least one child should be visible or in DOM
+        # Both children should be visible in the tree
         expect(child1_node.or_(child2_node)).to_have_count(2)
 
     def test_tree_view_expand_collapse(

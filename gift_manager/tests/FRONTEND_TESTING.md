@@ -129,10 +129,12 @@ Videos are saved to `test-results/` directory.
 
 ### Fixtures
 
-- `setup_test_user`: Creates a test user with credentials
-- `setup_group_hierarchy`: Creates a test hierarchy of person groups
+- `setup_test_user`: Creates a test user with credentials (uses `transactional_db`)
+- `setup_group_hierarchy`: Creates a test hierarchy of person groups (uses `transactional_db`)
 - `browser_context_args`: Configures browser viewport and settings
 - `browser_type_launch_args`: Configures headless mode
+
+**Important**: Fixtures that create database objects for `live_server` tests **must** use `transactional_db` instead of `db`. This ensures data is committed and visible to the live_server thread, which runs in a separate process with its own database connection.
 
 ### Test Classes
 
@@ -180,13 +182,31 @@ class TestMyFeature:
         expect(my_element).to_have_class('active')
 ```
 
+### Creating Fixtures for Live Server Tests
+
+If you need to create database objects for your tests:
+
+```python
+@pytest.fixture
+def my_test_data(transactional_db):
+    """Create test data visible to live_server.
+
+    IMPORTANT: Use transactional_db, not db!
+    """
+    user = UserFactory(username="testuser")
+    group = PersonGroupFactory(name="Test Group")
+    # Data is automatically committed and visible to live_server
+    return {'user': user, 'group': group}
+```
+
 ### Best Practices
 
 1. **Use `@pytest.mark.slow`**: Mark all frontend tests as slow
 2. **Use `@pytest.mark.django_db(transaction=True)`**: Required for live server
-3. **Wait for elements**: Use `page.wait_for_selector()` or `expect()` assertions
-4. **Keep tests focused**: Test one interaction per test method
-5. **Use meaningful selectors**: Prefer data attributes or classes over generic tags
+3. **Use `transactional_db` in fixtures**: Database fixtures must use `transactional_db` instead of `db` to ensure data is committed and visible to live_server
+4. **Wait for elements**: Use `page.wait_for_selector()` or `expect()` assertions
+5. **Keep tests focused**: Test one interaction per test method
+6. **Use meaningful selectors**: Prefer data attributes or classes over generic tags
 
 ## Troubleshooting
 
@@ -209,7 +229,25 @@ print(page.content())  # Print HTML
 
 ### Database Issues
 
-Frontend tests use `transaction=True` which may conflict with SQLite. If you see database errors, the tests might need PostgreSQL for the live server.
+**Data not visible in live_server tests:**
+
+If your test times out waiting for elements that should exist, the data created in fixtures may not be visible to live_server. **Solution**: Ensure all database fixtures use `transactional_db` instead of `db`:
+
+```python
+# ❌ Wrong - data not visible to live_server
+@pytest.fixture
+def my_data(db):
+    return MyModel.objects.create(...)
+
+# ✅ Correct - data is committed and visible
+@pytest.fixture
+def my_data(transactional_db):
+    return MyModel.objects.create(...)
+```
+
+**Database backend issues:**
+
+Frontend tests use `transaction=True` which may have issues with SQLite. If you see database locking errors, consider using PostgreSQL for testing.
 
 ## Performance
 
