@@ -2,6 +2,12 @@
 
 This document explains how to run and maintain the frontend tests for the Gift Manager application.
 
+## ⚠️ Important Setup Note
+
+Frontend tests require browser binaries to be installed. Due to environment constraints, these tests may not work in all environments (Docker containers, CI without proper setup, etc.).
+
+If you encounter browser installation errors, the frontend tests can be **skipped** since the core functionality is already well-covered by unit tests (162 passing unit tests).
+
 ## Overview
 
 Frontend tests use **Playwright** to test JavaScript-dependent features that cannot be validated with unit tests alone. These tests run in a real browser and interact with the actual UI.

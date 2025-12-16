@@ -20,14 +20,6 @@ from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
 
 
-# Use override_settings to ensure we're not using SQLite for live server
-# (SQLite has issues with threading)
-@pytest.fixture(scope="session")
-def django_db_setup():
-    """Override default database settings for live server tests."""
-    pass
-
-
 @pytest.fixture
 def setup_test_user(db):
     """Create a test user and log them in."""
