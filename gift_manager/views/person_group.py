@@ -19,6 +19,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views import View
 from django.views.decorators.http import require_POST
 
+from gift_manager.forms import PersonGroupAddMultipleChildGroupsForm
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
 from gift_manager.models import Person
@@ -169,6 +170,29 @@ def add_multiple_persons_to_group(request, pk):
         "gift_manager/person_group_add_person_form.html",
         {
             "group": group,
+            "form": form,
+        },
+    )
+
+
+def add_multiple_child_groups_to_group(request, pk):
+    """Add multiple child groups to a parent group."""
+    parent_group = get_object_or_404(PersonGroup, group_id=pk)
+    if request.method == "POST":
+        form = PersonGroupAddMultipleChildGroupsForm(
+            request.POST, user=request.user, group=parent_group
+        )
+        if form.is_valid():
+            form.save(parent_group)
+            return redirect("gift_manager:person_group_detail", pk=pk)
+    else:
+        form = PersonGroupAddMultipleChildGroupsForm(user=request.user, group=parent_group)
+
+    return render(
+        request,
+        "gift_manager/person_group_add_child_groups_form.html",
+        {
+            "group": parent_group,
             "form": form,
         },
     )

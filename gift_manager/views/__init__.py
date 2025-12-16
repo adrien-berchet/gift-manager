@@ -54,6 +54,7 @@ from .person_group import PersonGroupDetailView
 from .person_group import PersonGroupExplorerView
 from .person_group import PersonGroupListView
 from .person_group import PersonGroupUpdateView
+from .person_group import add_multiple_child_groups_to_group
 from .person_group import add_multiple_persons_to_group
 from .person_group import remove_person_from_group
 from .person_group import reparent_group
@@ -140,6 +141,7 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "get_user",
     "home",

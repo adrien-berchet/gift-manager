@@ -9,7 +9,6 @@
 <p><strong>{% trans "Creation date:" %}</strong> {{ group.creation_date|replace_none:"" }}</p>
 
 <!-- Hierarchy Information -->
-{% if parent_groups or child_groups %}
 <div class="card mb-4">
     <div class="card-body">
         <h5 class="card-title">{% trans "Hierarchy" %}</h5>
@@ -23,19 +22,23 @@
             {% endfor %}
         </p>
         {% endif %}
-        {% if child_groups %}
-        <p class="mb-0">
+        <div class="mb-2">
             <strong>{% trans "Child groups:" %}</strong>
-            {% for child in child_groups %}
-            <a href="{% url 'gift_manager:person_group_detail' child.group_id %}" class="badge bg-secondary text-decoration-none me-1">
-                {{ child.name }}
-            </a>
-            {% endfor %}
-        </p>
-        {% endif %}
+            {% if child_groups %}
+                {% for child in child_groups %}
+                <a href="{% url 'gift_manager:person_group_detail' child.group_id %}" class="badge bg-secondary text-decoration-none me-1">
+                    {{ child.name }}
+                </a>
+                {% endfor %}
+            {% else %}
+                <span class="text-muted">{% trans "No child groups" %}</span>
+            {% endif %}
+        </div>
+        <a href="{% url 'gift_manager:add_child_groups_to_group' group.group_id %}" class="btn btn-sm btn-primary mt-2">
+            <i class="fas fa-plus me-1"></i>{% trans "Add child groups" %}
+        </a>
     </div>
 </div>
-{% endif %}
 
 <div class="mt-4">
     <h5>{% trans "Shared with:" %}</h5>

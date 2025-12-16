@@ -72,6 +72,11 @@ urlpatterns = [
         name="add_person_group_person",
     ),
     path(
+        "person_groups/<uuid:pk>/add_child_groups/",
+        views.add_multiple_child_groups_to_group,
+        name="add_child_groups_to_group",
+    ),
+    path(
         "person_groups/<uuid:pk>/add_relation/",
         views.PersonGroupRelationCreateView.as_view(),
         name="person_group_relation_create",

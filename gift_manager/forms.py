@@ -178,6 +178,46 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
             i.save()
 
 
+class PersonGroupAddMultipleChildGroupsForm(forms.Form):
+    child_groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label=gettext_lazy("Child groups"),
+        help_text=gettext_lazy("Select groups to add as children of this group"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        parent_group = kwargs.pop("group", None)
+        super().__init__(*args, **kwargs)
+
+        if user and parent_group:
+            # Get all accessible groups
+            available_groups = PersonGroup.objects.accessible_by(user)
+
+            # Exclude groups that would create cycles:
+            # 1. The parent group itself
+            # 2. Current children (already added)
+            # 3. All ancestors of the parent (would create cycle)
+            exclude_ids = [parent_group.pk]
+
+            # Add current children
+            exclude_ids.extend([child.pk for child in parent_group.get_children()])
+
+            # Add ancestors (adding them as children would create a cycle)
+            exclude_ids.extend([ancestor.pk for ancestor in parent_group.get_ancestors()])
+
+            available_groups = available_groups.exclude(pk__in=exclude_ids)
+
+            self.fields["child_groups"].queryset = available_groups.order_by("name")
+
+    def save(self, parent_group: PersonGroup):
+        """Add all selected groups as children of the parent group."""
+        for child in self.cleaned_data["child_groups"]:
+            parent_group.child_groups.add(child)
+        parent_group.save()
+
+
 class PersonRelationForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
