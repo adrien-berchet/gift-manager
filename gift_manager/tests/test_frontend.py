@@ -172,8 +172,38 @@ class TestPersonGroupTreeView:
         # Navigate to person groups list
         page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
 
-        # Wait for tree view button (only shows if hierarchy exists)
+        # Debug: Check what's on the page
+        page.screenshot(path="debug_page_loaded.png")
+
+        # Check if Grid.js table loaded with data
+        grid_wrapper = page.locator('#person-group-grid')
+        if grid_wrapper.count() > 0:
+            print("Grid wrapper found")
+            # Check for Grid.js table
+            grid_table = page.locator('#person-group-grid table')
+            if grid_table.count() > 0:
+                print(f"Grid table found, rows: {page.locator('#person-group-grid tbody tr').count()}")
+
+        # Check if tree view button exists
         tree_view_btn = page.locator('#tree-view-btn')
+
+        if tree_view_btn.count() == 0:
+            # Tree view button doesn't exist - hierarchy wasn't detected
+            print("ERROR: Tree view button not found!")
+            print("Page HTML:", page.content()[:1000])  # First 1000 chars
+
+            # Try to understand why
+            pytest.fail(
+                "Tree view button (#tree-view-btn) not found on page. "
+                "This means has_hierarchy=False in the template context. "
+                "Possible causes:\n"
+                "1. Database not using shared-cache mode (check testing.py)\n"
+                "2. Fixtures not using transactional_db\n"
+                "3. Groups created but parent_groups relationship not saved\n"
+                "Screenshot saved to debug_page_loaded.png"
+            )
+
+        # Wait for tree view button to be visible
         tree_view_btn.wait_for(state='visible', timeout=10000)
 
         # Switch to tree view
