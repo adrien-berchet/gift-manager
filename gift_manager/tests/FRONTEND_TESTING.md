@@ -59,9 +59,16 @@ If you're in a local development environment without network restrictions:
 ```bash
 # Use Python Playwright (not Node.js version)
 python3 -m playwright install chromium
+
+# Or install webkit (Safari engine) or firefox
+python3 -m playwright install webkit
+python3 -m playwright install firefox
+
+# Or install all browsers
+python3 -m playwright install
 ```
 
-This downloads Chromium browser (~170MB) needed for testing.
+This downloads browser binaries (~170MB each) needed for testing.
 
 If you see 403 errors, your environment blocks Playwright CDN downloads - **this is expected and OK**. The frontend tests will remain skipped, which is fine since all critical functionality is covered by unit tests.
 
@@ -71,6 +78,21 @@ If you see 403 errors, your environment blocks Playwright CDN downloads - **this
 
 ```bash
 pytest gift_manager/tests/test_frontend.py -v
+```
+
+### Run with a Specific Browser
+
+By default, tests run on Chromium. To test with WebKit or Firefox:
+
+```bash
+# Test with WebKit (Safari engine)
+pytest --browser webkit gift_manager/tests/test_frontend.py -v
+
+# Test with Firefox
+pytest --browser firefox gift_manager/tests/test_frontend.py -v
+
+# Test with all browsers
+pytest --browser chromium --browser webkit --browser firefox gift_manager/tests/test_frontend.py -v
 ```
 
 ### Run Only Non-Slow Tests (Skip Frontend)
@@ -219,12 +241,13 @@ Example GitHub Actions:
 
 Frontend tests do NOT cover:
 
-- Cross-browser compatibility (only Chromium is installed)
-- Mobile/responsive layouts
+- Mobile/responsive layouts (tests run at desktop viewport size)
 - Performance/load testing
 - Accessibility testing
+- Real Safari/Edge (we use WebKit/Chromium engines, not the actual browsers)
 
-For these, consider additional tools like:
-- BrowserStack (cross-browser)
+For comprehensive testing, consider additional tools like:
+- BrowserStack (real Safari/Edge testing)
 - Lighthouse (performance)
 - axe-core (accessibility)
+- Responsive design mode testing

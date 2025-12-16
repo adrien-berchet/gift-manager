@@ -2,8 +2,14 @@
 
 These tests verify JavaScript-dependent features that unit tests cannot cover.
 
-NOTE: These tests require Chromium browser to be installed via:
-    playwright install chromium
+NOTE: These tests require browser binaries to be installed via:
+    python3 -m playwright install chromium
+    # or for webkit/firefox:
+    python3 -m playwright install webkit
+    python3 -m playwright install firefox
+
+To run with a specific browser:
+    pytest --browser webkit gift_manager/tests/test_frontend.py
 
 If browser installation fails, these tests can be skipped with:
     pytest -m "not slow"
@@ -106,6 +112,23 @@ def setup_group_hierarchy(db, setup_test_user):
         'person1': person1,
         'person2': person2,
     }
+
+
+@pytest.fixture
+def browser_type_launch_args(browser_name):
+    """Configure browser launch arguments based on browser type.
+
+    Different browsers support different flags. This fixture ensures we only
+    pass valid arguments to each browser.
+    """
+    if browser_name == "chromium":
+        return {
+            "args": [
+                "--disable-blink-features=AutomationControlled",
+            ]
+        }
+    # WebKit and Firefox don't support Chromium-specific flags
+    return {}
 
 
 def login_user(page: Page, live_server, username="testuser", password="testpass123"):
