@@ -114,23 +114,6 @@ def setup_group_hierarchy(db, setup_test_user):
     }
 
 
-@pytest.fixture
-def browser_type_launch_args(browser_name):
-    """Configure browser launch arguments based on browser type.
-
-    Different browsers support different flags. This fixture ensures we only
-    pass valid arguments to each browser.
-    """
-    if browser_name == "chromium":
-        return {
-            "args": [
-                "--disable-blink-features=AutomationControlled",
-            ]
-        }
-    # WebKit and Firefox don't support Chromium-specific flags
-    return {}
-
-
 def login_user(page: Page, live_server, username="testuser", password="testpass123"):
     """Helper to log in a user."""
     page.goto(f"{live_server.url}/accounts/login/")
