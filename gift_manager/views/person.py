@@ -121,8 +121,15 @@ class PersonDetailView(BaseDetailView):
 
         # Get all ancestor groups (parent groups) for inheritance
         all_groups_with_ancestors = set(person_groups)
+        ancestor_groups_only = set()
         for group in person_groups:
-            all_groups_with_ancestors.update(group.get_ancestors())
+            ancestors = group.get_ancestors()
+            ancestor_groups_only.update(ancestors)
+            all_groups_with_ancestors.update(ancestors)
+
+        # Add groups to context for display
+        context["direct_groups"] = person_groups
+        context["ancestor_groups"] = sorted(ancestor_groups_only, key=lambda g: g.name)
 
         # Query relations for person directly and all related groups (including ancestors)
         context["relations"] = (

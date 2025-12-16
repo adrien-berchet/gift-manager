@@ -9,8 +9,29 @@
 <p><strong>{% trans "First name:" %}</strong> {{ person.first_name }}</p>
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
 <p><strong>{% trans "Email address:" %}</strong> {{ person.email_address|replace_none:"" }}</p>
-<p><strong>{% trans "Groups:" %}</strong> {% for group in person.groups.all %}<a
-        href="{% url 'gift_manager:person_group_detail' group.group_id %}">{{ group.name }}</a> {% endfor %}</p>
+<p>
+    <strong>{% trans "Groups:" %}</strong>
+    {% if direct_groups or ancestor_groups %}
+        {% for group in direct_groups %}
+            <a href="{% url 'gift_manager:person_group_detail' group.group_id %}"
+               class="badge bg-primary text-decoration-none me-1"
+               title="{% trans 'Direct member of this group' %}">
+                {{ group.name }}
+            </a>
+        {% endfor %}
+        {% if ancestor_groups %}
+            {% for group in ancestor_groups %}
+                <a href="{% url 'gift_manager:person_group_detail' group.group_id %}"
+                   class="badge bg-secondary text-decoration-none me-1"
+                   title="{% trans 'Inherited from parent group' %}">
+                    <i class="fas fa-level-up-alt fa-xs me-1"></i>{{ group.name }}
+                </a>
+            {% endfor %}
+        {% endif %}
+    {% else %}
+        <span class="text-muted">{% trans "No groups" %}</span>
+    {% endif %}
+</p>
 <p><strong>{% trans "Creation date:" %}</strong> {{ person.creation_date|replace_none:"" }}</p>
 
 <div class="mt-4">
