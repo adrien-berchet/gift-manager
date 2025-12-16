@@ -106,7 +106,7 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
                 descendant_ids = [self.instance.pk] + [d.pk for d in descendants]
                 available_groups = available_groups.exclude(pk__in=descendant_ids)
 
-            self.fields["parent_groups"].queryset = available_groups
+            self.fields["parent_groups"].queryset = available_groups.order_by("name")
 
             # Set initial value if editing
             if self.instance and self.instance.pk:
