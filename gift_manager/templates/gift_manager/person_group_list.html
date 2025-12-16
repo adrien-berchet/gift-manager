@@ -156,30 +156,7 @@
                         <span class="badge bg-secondary badge-count ms-2">{{ node.member_count }} {% trans "members" %}</span>
                     </div>
                     <div class="tree-node-actions">
-                        <a href="{% url 'gift_manager:person_group_relation_create' node.group_id %}"
-                           class="btn btn-sm btn-success"
-                           title="{% trans 'Give' %}"
-                           onclick="event.stopPropagation();">
-                            <i class="fas fa-gift"></i>
-                        </a>
-                        <a href="{% url 'gift_manager:person_group_detail' node.group_id %}"
-                           class="btn btn-sm btn-info"
-                           title="{% trans 'Details' %}"
-                           onclick="event.stopPropagation();">
-                            <i class="fas fa-info-circle"></i>
-                        </a>
-                        <a href="{% url 'gift_manager:person_group_edit' node.group_id %}"
-                           class="btn btn-sm btn-warning"
-                           title="{% trans 'Edit' %}"
-                           onclick="event.stopPropagation();">
-                            <i class="fas fa-edit"></i>
-                        </a>
-                        <a href="{% url 'gift_manager:person_group_delete' node.group_id %}"
-                           class="btn btn-sm btn-danger"
-                           title="{% trans 'Delete' %}"
-                           onclick="event.stopPropagation();">
-                            <i class="fas fa-trash"></i>
-                        </a>
+                        {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True %}
                     </div>
                 </div>
                 {% endfor %}
