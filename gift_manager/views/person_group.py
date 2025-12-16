@@ -55,13 +55,20 @@ class PersonGroupListView(BaseListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Build hierarchical tree data for tree view
+        # Get all groups as model instances for tree view
         all_groups = list(self.get_queryset())
 
-        # Create a mapping of groups by ID for quick lookup
-        groups_by_id = {g.pk: g for g in all_groups}
+        # Also provide data as dictionaries for Grid.js view compatibility
+        # (Grid.js template expects dictionaries with .get() method)
+        context['data'] = [
+            {
+                'group_id': g.group_id,
+                'name': g.name,
+            }
+            for g in all_groups
+        ]
 
-        # Build tree structure
+        # Build hierarchical tree data for tree view
         def build_tree_node(group, depth=0, visited=None):
             """Recursively build tree nodes with hierarchy information."""
             if visited is None:
