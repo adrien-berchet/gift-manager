@@ -67,6 +67,7 @@ CACHES = {
 # Debug Toolbar settings
 DEBUG_TOOLBAR_CONFIG = {
     "SHOW_TOOLBAR_CALLBACK": lambda request: DEBUG,  # noqa: ARG005
+    "IS_RUNNING_TESTS": False,
 }
 
 # Logging - more verbose in development

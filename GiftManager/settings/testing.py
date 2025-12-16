@@ -19,19 +19,11 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Use in-memory SQLite for faster tests (optional - can use PostgreSQL)
+# Use in-memory SQLite for faster tests
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "gift_manager_test",
-        "USER": "test_user",
-        "PASSWORD": "test_password",
-        "HOST": "localhost",
-        "PORT": "5432",
-        # Speed up tests by not requiring actual DB transactions
-        "TEST": {
-            "NAME": "gift_manager_test",
-        },
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
     }
 }
 

@@ -55,7 +55,7 @@ skip_gitignore = true
 skip = ["GiftManager/settings"]
 
 [tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "GiftManager.settings"
+DJANGO_SETTINGS_MODULE = "GiftManager.settings.testing"
 python_files = ["test_*.py"]
 testpaths = ["gift_manager/tests"]
 filterwarnings = []
