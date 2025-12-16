@@ -171,13 +171,36 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     password_field.wait_for(state='visible', timeout=5000)
     password_field.fill(password)
 
+    # Take screenshot before submitting
+    page.screenshot(path="debug_before_login.png")
+
     # Submit the form
     submit_button = page.locator('button[type="submit"]')
     submit_button.click()
 
-    # Wait for redirect after login (should go to home page or next URL)
-    # Increase timeout as login processing might take a moment
+    # Wait for page to load
     page.wait_for_load_state("networkidle", timeout=15000)
+
+    # Take screenshot after login attempt
+    page.screenshot(path="debug_after_login.png")
+
+    # Debug: Check if login succeeded or failed
+    current_url = page.url
+    print(f"DEBUG login_user: Current URL after login: {current_url}")
+
+    if "/accounts/login/" in current_url:
+        # Still on login page - login failed
+        print("DEBUG login_user: Login FAILED - still on login page")
+
+        # Check for error messages
+        error_messages = page.locator('.alert-danger, .errorlist, .invalid-feedback').all_text_contents()
+        if error_messages:
+            print(f"DEBUG login_user: Error messages: {error_messages}")
+
+        # Check if user exists by trying to query the database through the page
+        print("DEBUG login_user: Taking screenshot of failed login page")
+    else:
+        print("DEBUG login_user: Login appeared to succeed - navigated away from login page")
 
 
 @pytest.mark.slow
