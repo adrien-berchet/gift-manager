@@ -247,7 +247,36 @@ def my_data(transactional_db):
 
 **Database backend issues:**
 
-Frontend tests use `transaction=True` which may have issues with SQLite. If you see database locking errors, consider using PostgreSQL for testing.
+Frontend tests use `transaction=True` which may have issues with SQLite. Additionally, **SQLite `:memory:` databases do NOT work with live_server** because they are thread-local.
+
+**Required database configuration:**
+
+Your `testing.py` settings **must** use a shared-cache SQLite database:
+
+```python
+# ❌ Wrong - thread-local, live_server can't see data
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": ":memory:",
+    }
+}
+
+# ✅ Correct - shared across threads
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": "file:memorydb_default?mode=memory&cache=shared",
+        "TEST": {
+            "NAME": "file:memorydb_default?mode=memory&cache=shared",
+        },
+    }
+}
+```
+
+This uses SQLite's shared-cache mode which allows multiple threads (including live_server) to access the same in-memory database. See: https://www.sqlite.org/inmemorydb.html#sharedmemdb
+
+Alternatively, use PostgreSQL for testing which handles multi-threaded access naturally.
 
 ## Performance
 
