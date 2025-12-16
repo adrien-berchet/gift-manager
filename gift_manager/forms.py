@@ -60,17 +60,23 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
     parent_groups = forms.ModelMultipleChoiceField(
         queryset=PersonGroup.objects.none(),
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select searchable-select',
+            'size': '8',
+        }),
         label=gettext_lazy("Parent groups"),
-        help_text=gettext_lazy("Select parent groups for this group (optional)"),
+        help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
     )
 
     persons = forms.ModelMultipleChoiceField(
         queryset=Person.objects.none(),
         required=False,
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.SelectMultiple(attrs={
+            'class': 'form-select searchable-select',
+            'size': '10',
+        }),
         label=gettext_lazy("Members"),
-        help_text=gettext_lazy("Select persons who belong to this group (optional)"),
+        help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
     )
 
     class Meta:
