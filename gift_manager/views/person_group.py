@@ -132,6 +132,12 @@ class PersonGroupCreateView(BaseCreateView):
     context_object_name = "group"
     object_type = "Person group"
 
+    def get_form_kwargs(self):
+        """Pass the user to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
 
 class PersonGroupUpdateView(BaseUpdateView):
     model = PersonGroup
@@ -140,6 +146,12 @@ class PersonGroupUpdateView(BaseUpdateView):
     context_object_name = "group"
     object_type = "Person group"
     detail_url_name = "person_group_detail"
+
+    def get_form_kwargs(self):
+        """Pass the user to the form."""
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
 
 def add_multiple_persons_to_group(request, pk):

@@ -76,10 +76,11 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract user from kwargs before calling super().__init__
+        user = kwargs.pop("user", None)
+
         super().__init__(*args, **kwargs)
         self.fields["name"].required = False
-
-        user = self.request.user if hasattr(self, "request") else None
 
         if user:
             # Show only groups accessible by the user
