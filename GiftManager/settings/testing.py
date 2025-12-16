@@ -19,11 +19,18 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Use in-memory SQLite for faster tests
+# Use SQLite for faster tests
+# IMPORTANT: Use file-based database, not :memory:, for live_server compatibility
+# In-memory databases are thread-local and not visible to live_server
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": ":memory:",
+        # Use file with shared cache for thread visibility
+        # See: https://www.sqlite.org/inmemorydb.html#sharedmemdb
+        "NAME": "file:memorydb_default?mode=memory&cache=shared",
+        "TEST": {
+            "NAME": "file:memorydb_default?mode=memory&cache=shared",
+        },
     }
 }
 
