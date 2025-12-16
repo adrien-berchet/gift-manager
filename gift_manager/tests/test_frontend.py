@@ -51,9 +51,15 @@ def setup_test_user(transactional_db):
 
     Uses transactional_db to ensure data is committed and visible to live_server.
     """
+    from django.db import transaction
+
     user = UserFactory(username="testuser")
     user.set_password("testpass123")
     user.save()
+
+    # Explicitly commit to ensure visibility to live_server
+    transaction.commit()
+
     return user
 
 
@@ -71,6 +77,8 @@ def setup_group_hierarchy(transactional_db, setup_test_user):
         │   └── Grandchild 1
         └── Child 2
     """
+    from django.db import transaction
+
     user = setup_test_user
 
     # Create groups
@@ -109,6 +117,9 @@ def setup_group_hierarchy(transactional_db, setup_test_user):
 
     root.person_set.add(person1)
     child1.person_set.add(person2)
+
+    # Explicitly commit to ensure visibility to live_server
+    transaction.commit()
 
     return {
         'user': user,
