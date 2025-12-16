@@ -51,14 +51,19 @@ def setup_test_user(transactional_db):
 
     Uses transactional_db to ensure data is committed and visible to live_server.
     """
-    from django.db import transaction
+    from django.db import connection
+    from django.contrib.auth.models import User
 
     user = UserFactory(username="testuser")
     user.set_password("testpass123")
     user.save()
 
-    # Explicitly commit to ensure visibility to live_server
-    transaction.commit()
+    # Explicitly commit using database connection
+    connection.commit()
+
+    # Debug: verify user exists
+    user_check = User.objects.filter(username="testuser").exists()
+    print(f"DEBUG: User 'testuser' exists in database: {user_check}")
 
     return user
 
@@ -77,7 +82,7 @@ def setup_group_hierarchy(transactional_db, setup_test_user):
         │   └── Grandchild 1
         └── Child 2
     """
-    from django.db import transaction
+    from django.db import connection
 
     user = setup_test_user
 
@@ -118,8 +123,14 @@ def setup_group_hierarchy(transactional_db, setup_test_user):
     root.person_set.add(person1)
     child1.person_set.add(person2)
 
-    # Explicitly commit to ensure visibility to live_server
-    transaction.commit()
+    # Explicitly commit using database connection
+    connection.commit()
+
+    # Debug: verify groups exist and have hierarchy
+    from gift_manager.models import PersonGroup
+    group_count = PersonGroup.objects.count()
+    root_children_count = root.get_children().count()
+    print(f"DEBUG: Created {group_count} groups, root has {root_children_count} children")
 
     return {
         'user': user,
