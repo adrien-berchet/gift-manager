@@ -169,10 +169,15 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     page.wait_for_load_state("networkidle", timeout=15000)
 
 
-@pytest.mark.django_db(transaction=True)
 @pytest.mark.slow
 class TestPersonGroupTreeView:
-    """Tests for the person group tree view functionality."""
+    """Tests for the person group tree view functionality.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits. The test-level
+    transaction wrapper would prevent those commits from being visible
+    to live_server.
+    """
 
     def test_tree_view_renders_hierarchy(
         self, page: Page, live_server, setup_group_hierarchy
@@ -291,10 +296,13 @@ class TestPersonGroupTreeView:
         expect(level1_node).to_be_visible()
 
 
-@pytest.mark.django_db(transaction=True)
 @pytest.mark.slow
 class TestSearchableMultiSelect:
-    """Tests for searchable multi-select form functionality."""
+    """Tests for searchable multi-select form functionality.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits.
+    """
 
     def test_searchable_select_filter_works(
         self, page: Page, live_server, setup_group_hierarchy
@@ -390,10 +398,13 @@ class TestSearchableMultiSelect:
             expect(selected_options).to_have_count(0)
 
 
-@pytest.mark.django_db(transaction=True)
 @pytest.mark.slow
 class TestGroupFormCyclePrevention:
-    """Tests for cycle prevention in the UI."""
+    """Tests for cycle prevention in the UI.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits.
+    """
 
     def test_form_prevents_selecting_self_as_parent(
         self, page: Page, live_server, setup_group_hierarchy
