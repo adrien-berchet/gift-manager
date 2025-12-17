@@ -53,17 +53,29 @@ def setup_test_user(transactional_db):
     """
     from django.db import connection
     from django.contrib.auth.models import User
+    from allauth.account.models import EmailAddress
 
-    user = UserFactory(username="testuser")
+    user = UserFactory(username="testuser", email="testuser@example.com")
     user.set_password("testpass123")
     user.save()
+
+    # Create verified email address for allauth
+    # Without this, allauth will redirect to email verification page
+    EmailAddress.objects.create(
+        user=user,
+        email="testuser@example.com",
+        verified=True,
+        primary=True,
+    )
 
     # Explicitly commit using database connection
     connection.commit()
 
     # Debug: verify user exists
     user_check = User.objects.filter(username="testuser").exists()
+    email_check = EmailAddress.objects.filter(user=user, verified=True).exists()
     print(f"DEBUG: User 'testuser' exists in database: {user_check}")
+    print(f"DEBUG: User has verified email: {email_check}")
 
     return user
 
