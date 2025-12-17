@@ -275,16 +275,17 @@ class TestPersonGroupTreeView:
         tree_view_container = page.locator('.tree-view-container.active')
         tree_view_container.wait_for(state='visible', timeout=5000)
 
-        # Verify root group is visible
-        root_node = page.locator('.tree-node:has-text("Root Group")')
+        # Verify root group is visible (using data attribute for exact match)
+        root_node = page.locator('.tree-node[data-group-name="Root Group"]')
         expect(root_node).to_be_visible()
 
-        # Verify child groups exist in the DOM
-        child1_node = page.locator('.tree-node:has-text("Child Group 1")')
-        child2_node = page.locator('.tree-node:has-text("Child Group 2")')
+        # Verify child groups exist in the DOM (using exact data attributes)
+        child1_node = page.locator('.tree-node[data-group-name="Child Group 1"]')
+        child2_node = page.locator('.tree-node[data-group-name="Child Group 2"]')
 
         # Both children should be visible in the tree
-        expect(child1_node.or_(child2_node)).to_have_count(2)
+        expect(child1_node).to_be_visible()
+        expect(child2_node).to_be_visible()
 
     def test_tree_view_expand_collapse(
         self, page: Page, live_server, setup_group_hierarchy
