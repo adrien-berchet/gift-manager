@@ -6,13 +6,23 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache License 2.0" }
 classifiers = ["Programming Language :: Python"]
-dynamic = ["dependencies", "version"]
+dynamic = ["version"]
+dependencies = [
+    "django>=5.1,<6.0",
+    "django-allauth>=0.61",
+    "django-debug-toolbar>=4.2",
+    "django-grappelli>=4.0",
+    "django-modeltranslation>=0.18",
+    "psycopg[binary]>=3.1",
+    "python-dotenv>=1.0",
+    "whitenoise>=6.6",
+    "gunicorn>=21.0",
+    "werkzeug>=1.0.1",
+    "uvicorn>=0.24",
+]
 
 [tool.setuptools]
 include-package-data = true
-
-[tool.setuptools.dynamic]
-dependencies = { file = ["requirements.txt"] }
 
 [project.optional-dependencies]
 docs = ["mkdocs>=1.5", "mkdocs-material>=9"]
@@ -24,11 +34,12 @@ test = [
     "pytest-html>=4",
     "factory-boy>=3.3",
     "faker>=24",
+    "playwright>=1.39",
 ]
 
 mypy = ["pytest-mypy>=0.10", "django-stubs>=4"]
 
-dev = ["gift-manager[test,mypy]", "pre-commit>=3", "ipython>=8"]
+dev = ["gift-manager[test,mypy]", "pre-commit>=3", "ipython>=8", "ruff>=0.3"]
 
 production = ["sentry-sdk[django]>=1.40", "django-redis>=5"]
 
@@ -116,6 +127,8 @@ ignore-variadic-names = true
 "*/tests/*" = [
     "ANN202",
     "ANN206",
+    "ARG001",
+    "ARG002",
     "ARG003",
     "DTZ011",
     "PLC0415",
@@ -124,6 +137,7 @@ ignore-variadic-names = true
     "S105",
     "S106",
     "SLF001",
+    "S107",
     "T201",
 ]
 "docs/*" = ["INP001"]
