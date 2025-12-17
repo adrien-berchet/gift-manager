@@ -460,7 +460,10 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
     parent_groups = []
     if parent_ids:
         # Fetch all candidate groups in one query
-        groups_map = PersonGroup.objects.in_bulk(parent_ids, field_name="group_id")
+        groups_map = {
+            str(k): v
+            for k, v in PersonGroup.objects.in_bulk(parent_ids, field_name="group_id").items()
+        }
 
         # Fetch all accessible group IDs in one query
         accessible_group_ids = set(
