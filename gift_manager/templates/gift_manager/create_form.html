@@ -230,12 +230,132 @@
                 });
             }
         });
-}) ();
+    })();
+
+    // Searchable multi-select enhancement
+    (function() {
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchableSelects = document.querySelectorAll('.searchable-select');
+
+            searchableSelects.forEach(function(select) {
+                // Create wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'searchable-select-wrapper';
+
+                // Create search input
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.className = 'searchable-select-search';
+                searchInput.placeholder = '🔍 Type to search...';
+
+                // Create helper buttons
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'btn-group btn-group-sm select-all-btn';
+                buttonContainer.role = 'group';
+
+                const selectAllBtn = document.createElement('button');
+                selectAllBtn.type = 'button';
+                selectAllBtn.className = 'btn btn-outline-primary';
+                selectAllBtn.textContent = 'Select All';
+                selectAllBtn.onclick = function() {
+                    Array.from(select.options).forEach(opt => {
+                        if (opt.style.display !== 'none') opt.selected = true;
+                    });
+                };
+
+                const clearAllBtn = document.createElement('button');
+                clearAllBtn.type = 'button';
+                clearAllBtn.className = 'btn btn-outline-secondary';
+                clearAllBtn.textContent = 'Clear All';
+                clearAllBtn.onclick = function() {
+                    Array.from(select.options).forEach(opt => opt.selected = false);
+                };
+
+                buttonContainer.appendChild(selectAllBtn);
+                buttonContainer.appendChild(clearAllBtn);
+
+                // Insert wrapper before select
+                select.parentNode.insertBefore(wrapper, select);
+                wrapper.appendChild(searchInput);
+                wrapper.appendChild(buttonContainer);
+                wrapper.appendChild(select);
+
+                // Filter options on search
+                searchInput.addEventListener('input', function() {
+                    const filter = this.value.toLowerCase();
+                    let visibleCount = 0;
+
+                    Array.from(select.options).forEach(function(option) {
+                        const text = option.textContent.toLowerCase();
+                        if (text.includes(filter)) {
+                            option.style.display = '';
+                            visibleCount++;
+                        } else {
+                            option.style.display = 'none';
+                        }
+                    });
+
+                    // Update placeholder
+                    if (visibleCount === 0) {
+                        searchInput.style.borderColor = '#dc3545';
+                    } else {
+                        searchInput.style.borderColor = '#ced4da';
+                    }
+                });
+
+                // Allow deselect by clicking on selected option
+                select.addEventListener('mousedown', function(e) {
+                    if (e.target.tagName === 'OPTION' && e.target.selected) {
+                        e.preventDefault();
+                        e.target.selected = false;
+                    }
+                });
+            });
+        });
+    })();
 </script>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+    /* Searchable select styling */
+    .searchable-select-wrapper {
+        position: relative;
+        margin-bottom: 0.5rem;
+    }
+
+    .searchable-select-search {
+        width: 100%;
+        padding: 0.375rem 0.75rem;
+        font-size: 1rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .searchable-select-search:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    .searchable-select {
+        width: 100%;
+    }
+
+    .searchable-select option {
+        padding: 0.5rem;
+    }
+
+    .searchable-select option:checked {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .select-all-btn {
+        margin-bottom: 0.5rem;
+    }
+
     .fixed-action-bar {
         position: fixed !important;
         /* Important override */

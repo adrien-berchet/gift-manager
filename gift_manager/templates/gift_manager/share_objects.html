@@ -74,9 +74,18 @@
                 </div>
 
                 <!-- Optional sharing of persons of a group -->
-                <div class="custom-control custom-switch">
+                <div class="custom-control custom-switch mb-2">
                     <input type="checkbox" class="custom-control-input" id="share-group-persons" name="share_group_persons">
                     <label class="custom-control-label" for="share-group-persons">{% trans "When sharing groups, also share all persons in those groups" %}</label>
+                </div>
+
+                <!-- Optional sharing of child groups -->
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" class="custom-control-input" id="share-child-groups" name="share_child_groups">
+                    <label class="custom-control-label" for="share-child-groups">{% trans "When sharing groups, also share all child groups (nested groups)" %}</label>
+                    <small class="form-text text-muted">
+                        {{ _("If enabled, sharing a group will also share all its descendant groups in the hierarchy") }}
+                    </small>
                 </div>
             </div>
         </div>

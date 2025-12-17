@@ -9,7 +9,7 @@ python3.12 -m pip install -U pip
 echo "Installing project dependencies..."
 npm i gettext
 export PATH=/python312/bin:$PATH
-python3.12 -m pip install -r requirements.txt
+python3.12 -m pip install .
 
 # Make migrations
 echo "Making migrations..."

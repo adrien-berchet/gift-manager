@@ -39,6 +39,16 @@ urlpatterns = [
     ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
     path(
+        "person_groups/explore/",
+        views.PersonGroupExplorerView.as_view(),
+        name="person_group_explorer",
+    ),
+    path(
+        "person_groups/explore/<uuid:pk>/",
+        views.PersonGroupExplorerView.as_view(),
+        name="person_group_explorer_with_group",
+    ),
+    path(
         "person_groups/create/", views.PersonGroupCreateView.as_view(), name="person_group_create"
     ),
     path(
@@ -62,6 +72,11 @@ urlpatterns = [
         name="add_person_group_person",
     ),
     path(
+        "person_groups/<uuid:pk>/add_child_groups/",
+        views.add_multiple_child_groups_to_group,
+        name="add_child_groups_to_group",
+    ),
+    path(
         "person_groups/<uuid:pk>/add_relation/",
         views.PersonGroupRelationCreateView.as_view(),
         name="person_group_relation_create",
@@ -70,6 +85,11 @@ urlpatterns = [
         "person_groups/<uuid:pk>/remove_person/<uuid:person_id>/",
         views.remove_person_from_group,
         name="remove_person_group_person",
+    ),
+    path(
+        "api/person_groups/reparent/",
+        views.reparent_group,
+        name="api_reparent_group",
     ),
     path("gifts/", views.GiftListView.as_view(), name="gifts"),
     path("gifts/create/", views.GiftCreateView.as_view(), name="gift_create"),

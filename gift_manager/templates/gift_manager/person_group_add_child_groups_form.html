@@ -1,0 +1,14 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% block title %}Gift Manager - {% trans "Add Child Groups" %}{% endblock %}
+
+{% block content %}
+<h1 class="my-4">{% trans "Add Child Groups to" %} {{ group.name }}</h1>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
+  <a href="{% url 'gift_manager:person_group_detail' group.group_id %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+</form>
+{% endblock %}

@@ -131,8 +131,9 @@ class ShareObjectsView(LoginRequiredMixin, View):
                     messages.error(request, gettext("Invalid permission level selected."))
                     return self.get(request)
 
-                # Option to share persons in a group
+                # Options for sharing groups
                 share_group_persons = "share_group_persons" in request.POST
+                share_child_groups = "share_child_groups" in request.POST
 
                 # Perform sharing for each object type
                 shared_items = {}
@@ -147,6 +148,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
                         selection["person_group_ids"],
                         friends,
                         share_members=share_group_persons,
+                        share_children=share_child_groups,
                         permission_level=permission_level,
                     )
 
@@ -253,6 +255,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
         friends: Sequence[User],
         *,
         share_members: bool = False,
+        share_children: bool = False,
         permission_level: int,
     ) -> int:
         """Share selected groups with selected friends.
@@ -261,6 +264,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             person_group_ids: List of group IDs to share
             friends: Sequence of friends to share with
             share_members: If True, the persons in the groups are also shared
+            share_children: If True, all child groups are also shared
             permission_level: Permission level to apply
 
         Returns:
@@ -268,8 +272,16 @@ class ShareObjectsView(LoginRequiredMixin, View):
         """
         groups = PersonGroup.objects.filter(group_id__in=person_group_ids)
 
+        # Collect all groups to share (including children if requested)
+        all_groups_to_share = set()
         for group in groups:
-            # Share the group
+            all_groups_to_share.add(group)
+            if share_children:
+                # Add all descendant groups
+                all_groups_to_share.update(group.get_descendants())
+
+        # Share all groups
+        for group in all_groups_to_share:
             for friend in friends:
                 with transaction.atomic():
                     create_or_update_permission(
@@ -283,7 +295,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
                                 friend, person, permission_level=permission_level
                             )
 
-        return len(groups)
+        return len(all_groups_to_share)
 
     def _share_gifts(
         self, gift_ids: list[str], friends: Sequence[User], permission_level: int

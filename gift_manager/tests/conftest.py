@@ -301,3 +301,54 @@ def db_obj(request, person, gift, event, group, person_relation):
         "persongroup": group,
         "relation": person_relation,
     }[obj_type]
+
+
+# =============================================================================
+# Playwright Fixtures for Frontend Tests
+# =============================================================================
+
+
+@pytest.fixture(scope="session", autouse=True)
+def allow_django_async_unsafe():
+    """Allow Django to run sync operations in async context for Playwright tests.
+
+    Playwright creates an async event loop even when using sync fixtures.
+    Django detects this and raises SynchronousOnlyOperation errors during
+    database setup. This fixture tells Django it's safe to proceed.
+    """
+    import os
+
+    os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
+    yield
+    os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)
+
+
+@pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    """Configure browser context for Playwright tests."""
+    return {
+        **browser_context_args,
+        "viewport": {"width": 1920, "height": 1080},
+        "ignore_https_errors": True,
+    }
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args, browser_name):
+    """Configure browser launch arguments based on browser type.
+
+    Different browsers support different flags. This fixture ensures we only
+    pass valid arguments to each browser.
+    """
+    base_args = {
+        **browser_type_launch_args,
+        "headless": True,  # Run in headless mode for CI
+    }
+
+    # Only add Chromium-specific flags for Chromium browser
+    if browser_name == "chromium":
+        base_args["args"] = [
+            "--disable-blink-features=AutomationControlled",
+        ]
+
+    return base_args

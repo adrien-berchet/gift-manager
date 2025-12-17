@@ -1,0 +1,27 @@
+{% load i18n %}
+{# Reusable action buttons for person groups - used in both grid and tree views #}
+{# Parameters: group_id, stop_propagation (optional, default false) #}
+<a href="{% url 'gift_manager:person_group_relation_create' group_id %}"
+   class="btn btn-primary btn-sm"
+   title="{% trans 'Give' %}"
+   {% if stop_propagation %}onclick="event.stopPropagation();"{% endif %}>
+    <i class="fas fa-hand-holding-heart"></i>
+</a>
+<a href="{% url 'gift_manager:person_group_detail' group_id %}"
+   class="btn btn-info btn-sm"
+   title="{% trans 'Details' %}"
+   {% if stop_propagation %}onclick="event.stopPropagation();"{% endif %}>
+    <i class="fas fa-eye"></i>
+</a>
+<a href="{% url 'gift_manager:person_group_edit' group_id %}"
+   class="btn btn-warning btn-sm"
+   title="{% trans 'Edit' %}"
+   {% if stop_propagation %}onclick="event.stopPropagation();"{% endif %}>
+    <i class="fas fa-edit"></i>
+</a>
+<a href="{% url 'gift_manager:person_group_delete' group_id %}"
+   class="btn btn-danger btn-sm"
+   title="{% trans 'Delete' %}"
+   {% if stop_propagation %}onclick="event.stopPropagation();"{% endif %}>
+    <i class="fas fa-trash"></i>
+</a>

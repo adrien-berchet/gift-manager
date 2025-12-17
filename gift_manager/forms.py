@@ -57,9 +57,35 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
 
 
 class PersonGroupForm(BaseFormMixin, forms.ModelForm):
+    parent_groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "form-select searchable-select",
+                "size": "8",
+            }
+        ),
+        label=gettext_lazy("Parent groups"),
+        help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
+    )
+
+    persons = forms.ModelMultipleChoiceField(
+        queryset=Person.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "form-select searchable-select",
+                "size": "10",
+            }
+        ),
+        label=gettext_lazy("Members"),
+        help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
+    )
+
     class Meta:
         model = PersonGroup
-        fields = ["name"]
+        fields = ["name", "parent_groups", "persons"]
         labels = {
             "name": gettext_lazy("Name"),
         }
@@ -68,8 +94,71 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # Extract user from kwargs before calling super().__init__
+        user = kwargs.pop("user", None)
+
         super().__init__(*args, **kwargs)
         self.fields["name"].required = False
+
+        if user:
+            # Show only groups accessible by the user
+            available_groups = PersonGroup.objects.accessible_by(user)
+
+            # If editing an existing group, exclude self and descendants to prevent cycles
+            if self.instance and self.instance.pk:
+                descendants = self.instance.get_descendants()
+                descendant_ids = [self.instance.pk] + [d.pk for d in descendants]
+                available_groups = available_groups.exclude(pk__in=descendant_ids)
+
+            self.fields["parent_groups"].queryset = available_groups.order_by("name")
+
+            # Set initial value if editing
+            if self.instance and self.instance.pk:
+                self.fields["parent_groups"].initial = self.instance.parent_groups.all()
+
+            # Show only persons accessible by the user
+            self.fields["persons"].queryset = Person.objects.accessible_by(user).order_by(
+                "family_name", "first_name"
+            )
+
+            # Set initial value if editing
+            if self.instance and self.instance.pk:
+                self.fields["persons"].initial = self.instance.person_set.all()
+
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
+        """Save the group and update the many-to-many relationships."""
+        instance = super().save(commit=commit)
+
+        if commit:
+            # Update parent_groups relationship
+            if "parent_groups" in self.cleaned_data:
+                instance.parent_groups.set(self.cleaned_data["parent_groups"])
+
+            # Update persons relationship
+            if "persons" in self.cleaned_data:
+                instance.person_set.set(self.cleaned_data["persons"])
+
+        return instance
+
+    def clean_parent_groups(self):
+        """Validate that adding parent groups won't create a cycle."""
+        parent_groups = self.cleaned_data.get("parent_groups")
+
+        if not self.instance or not self.instance.pk:
+            # For new groups, no cycle check needed
+            return parent_groups
+
+        for parent in parent_groups:
+            if self.instance.has_cycle_with(parent):
+                raise forms.ValidationError(
+                    gettext_lazy(
+                        "Adding '%(parent)s' as a parent would create a cycle in the group "
+                        "hierarchy."
+                    )
+                    % {"parent": parent.name}
+                )
+
+        return parent_groups
 
 
 class PersonGroupAddMultiplePersonsForm(forms.Form):
@@ -98,6 +187,46 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
         for i in self.cleaned_data["persons"]:
             i.groups.add(group)
             i.save()
+
+
+class PersonGroupAddMultipleChildGroupsForm(forms.Form):
+    child_groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        widget=forms.CheckboxSelectMultiple,
+        label=gettext_lazy("Child groups"),
+        help_text=gettext_lazy("Select groups to add as children of this group"),
+    )
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
+        parent_group = kwargs.pop("group", None)
+        super().__init__(*args, **kwargs)
+
+        if user and parent_group:
+            # Get all accessible groups
+            available_groups = PersonGroup.objects.accessible_by(user)
+
+            # Exclude groups that would create cycles:
+            # 1. The parent group itself
+            # 2. Current children (already added)
+            # 3. All ancestors of the parent (would create cycle)
+            exclude_ids = [parent_group.pk]
+
+            # Add current children
+            exclude_ids.extend([child.pk for child in parent_group.get_children()])
+
+            # Add ancestors (adding them as children would create a cycle)
+            exclude_ids.extend([ancestor.pk for ancestor in parent_group.get_ancestors()])
+
+            available_groups = available_groups.exclude(pk__in=exclude_ids)
+
+            self.fields["child_groups"].queryset = available_groups.order_by("name")
+
+    def save(self, parent_group: PersonGroup):
+        """Add all selected groups as children of the parent group."""
+        for child in self.cleaned_data["child_groups"]:
+            parent_group.child_groups.add(child)
+        parent_group.save()
 
 
 class PersonRelationForm(BaseFormMixin, forms.ModelForm):

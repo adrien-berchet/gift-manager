@@ -8,6 +8,38 @@
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p><strong>{% trans "Creation date:" %}</strong> {{ group.creation_date|replace_none:"" }}</p>
 
+<!-- Hierarchy Information -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">{% trans "Hierarchy" %}</h5>
+        {% if parent_groups %}
+        <p class="mb-2">
+            <strong>{% trans "Parent groups:" %}</strong>
+            {% for parent in parent_groups %}
+            <a href="{% url 'gift_manager:person_group_detail' parent.group_id %}" class="badge bg-primary text-decoration-none me-1">
+                {{ parent.name }}
+            </a>
+            {% endfor %}
+        </p>
+        {% endif %}
+        <div class="mb-2">
+            <strong>{% trans "Child groups:" %}</strong>
+            {% if child_groups %}
+                {% for child in child_groups %}
+                <a href="{% url 'gift_manager:person_group_detail' child.group_id %}" class="badge bg-secondary text-decoration-none me-1">
+                    {{ child.name }}
+                </a>
+                {% endfor %}
+            {% else %}
+                <span class="text-muted">{% trans "No child groups" %}</span>
+            {% endif %}
+        </div>
+        <a href="{% url 'gift_manager:add_child_groups_to_group' group.group_id %}" class="btn btn-sm btn-primary mt-2">
+            <i class="fas fa-plus me-1"></i>{% trans "Add child groups" %}
+        </a>
+    </div>
+</div>
+
 <div class="mt-4">
     <h5>{% trans "Shared with:" %}</h5>
     {% if shared_users %}
@@ -24,7 +56,13 @@
     <li class="nav-item" role="presentation">
         <button class="nav-link active" id="persons-tab" data-bs-toggle="tab" data-bs-target="#persons-list"
             type="button" role="tab" aria-controls="persons-list" aria-selected="true">
-            {% trans "Persons in this group" %}
+            {% trans "Direct members" %} ({{ direct_member_count }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="nested-members-tab" data-bs-toggle="tab" data-bs-target="#nested-members-list"
+            type="button" role="tab" aria-controls="nested-members-list" aria-selected="false">
+            {% trans "All members (including nested)" %} ({{ nested_member_count }})
         </button>
     </li>
     <li class="nav-item" role="presentation">
@@ -45,6 +83,17 @@
         <div id="persons-grid" class="mt-3"></div>
         {% else %}
         <p class="text-center text-muted">{% trans "No person in this group" %}</p>
+        {% endif %}
+    </div>
+    <div class="tab-pane fade" id="nested-members-list" role="tabpanel" aria-labelledby="nested-members-tab">
+        <p class="text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            {% trans "This view shows all members from this group and all nested child groups." %}
+        </p>
+        {% if nested_members %}
+        <div id="nested-members-grid" class="mt-3"></div>
+        {% else %}
+        <p class="text-center text-muted">{% trans "No members in this group or nested groups" %}</p>
         {% endif %}
     </div>
     <div class="tab-pane fade" id="gifts-list" role="tabpanel" aria-labelledby="gifts-tab">
@@ -78,6 +127,10 @@
 
         document.querySelector('#persons-tab').addEventListener('click', function (e) {
             history.pushState(null, null, '?tab=persons');
+        });
+
+        document.querySelector('#nested-members-tab').addEventListener('click', function (e) {
+            history.pushState(null, null, '?tab=nested');
         });
 
         document.querySelector('#gifts-tab').addEventListener('click', function (e) {
@@ -148,6 +201,80 @@
     setTimeout(() => {
         const firstNameHeader = document.querySelector('#persons-grid th:nth-child(1)');
         const familyNameHeader = document.querySelector('#persons-grid th:nth-child(2)');
+        if (firstNameHeader && familyNameHeader) {
+            familyNameHeader.click();
+            const shiftClick = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: true
+            });
+            firstNameHeader.dispatchEvent(shiftClick);
+        }
+    }, 100);
+    {% endif %}
+
+    {% if nested_members %}
+    // Nested Members Grid
+    const nestedMembersData = [
+        {% for person in nested_members %}
+    [
+        "{{ person.person_id }}",
+        "{{ person.first_name|escapejs }}",
+        "{{ person.family_name|escapejs }}",
+        "{% url 'gift_manager:person_detail' person.person_id %}",
+        "{% url 'gift_manager:person_edit' person.person_id %}"
+    ],
+        {% endfor %}
+        ];
+
+    const nestedMembersColumns = [
+        { name: 'person_id', hidden: true },
+        {
+            name: "{% trans 'First name' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            },
+            formatter: (cell, row) => {
+                const firstName = row.cells[1].data;
+                const personUrl = row.cells[3].data;
+                return gridjs.html(`<a href="${personUrl}">${firstName}</a>`);
+            }
+        },
+        {
+            name: "{% trans 'Family name' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            },
+            formatter: (cell, row) => {
+                const familyName = row.cells[2].data;
+                const personUrl = row.cells[3].data;
+                return gridjs.html(`<a href="${personUrl}">${familyName}</a>`);
+            }
+        },
+        { name: 'person_detail_url', hidden: true },
+        { name: 'person_edit_url', hidden: true },
+        {
+            name: "{% trans 'Actions' %}",
+            width: '150px',
+            sort: false,
+            formatter: GridUtils.actionButtonsFormatter({
+                details: (row) => row.cells[3].data,
+                edit: (row) => row.cells[4].data
+            }, ['details', 'edit'])
+        }
+    ];
+
+    GridUtils.initGrid('nested-members-grid', nestedMembersColumns, nestedMembersData, {
+        pagination: { enabled: true, limit: 10 },
+        search: true,
+        sort: true
+    });
+
+    // Trigger initial sort
+    setTimeout(() => {
+        const firstNameHeader = document.querySelector('#nested-members-grid th:nth-child(1)');
+        const familyNameHeader = document.querySelector('#nested-members-grid th:nth-child(2)');
         if (firstNameHeader && familyNameHeader) {
             familyNameHeader.click();
             const shiftClick = new MouseEvent('click', {
