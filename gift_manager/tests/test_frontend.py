@@ -15,6 +15,7 @@ If browser installation fails, these tests can be skipped with:
     pytest -m "not slow"
 """
 
+# pylint: disable=redefined-outer-name
 import pytest
 from django.contrib.auth.models import User
 

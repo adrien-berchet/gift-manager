@@ -1,17 +1,13 @@
 """Tests for nested groups functionality."""
 
 import pytest
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 from gift_manager.models import PermissionLevel
-from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
-from gift_manager.models import Relation
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
-from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
 
 
@@ -45,7 +41,6 @@ class TestPersonGroupHierarchy:
 
     def test_get_descendants(self):
         """Test getting all descendants (children at all levels) of a group."""
-        user = UserFactory()
         root = PersonGroupFactory(name="Root")
         level1_child1 = PersonGroupFactory(name="L1-C1")
         level1_child2 = PersonGroupFactory(name="L1-C2")
@@ -64,7 +59,6 @@ class TestPersonGroupHierarchy:
 
     def test_get_ancestors(self):
         """Test getting all ancestors (parents at all levels) of a group."""
-        user = UserFactory()
         root = PersonGroupFactory(name="Root")
         middle = PersonGroupFactory(name="Middle")
         leaf = PersonGroupFactory(name="Leaf")
@@ -87,7 +81,6 @@ class TestPersonGroupHierarchy:
 
     def test_multiple_parents(self):
         """Test that a group can have multiple parents."""
-        user = UserFactory()
         parent1 = PersonGroupFactory(name="Parent1")
         parent2 = PersonGroupFactory(name="Parent2")
         child = PersonGroupFactory(name="Child")
@@ -100,7 +93,6 @@ class TestPersonGroupHierarchy:
 
     def test_diamond_hierarchy(self):
         """Test diamond-shaped hierarchy (multiple paths to same ancestor)."""
-        user = UserFactory()
         root = PersonGroupFactory(name="Root")
         middle1 = PersonGroupFactory(name="Middle1")
         middle2 = PersonGroupFactory(name="Middle2")
@@ -129,7 +121,6 @@ class TestCyclePrevention:
 
     def test_has_cycle_with_direct_parent(self):
         """Test detecting a direct cycle (A -> B -> A)."""
-        user = UserFactory()
         group_a = PersonGroupFactory(name="A")
         group_b = PersonGroupFactory(name="B")
 
@@ -140,7 +131,6 @@ class TestCyclePrevention:
 
     def test_has_cycle_with_indirect_parent(self):
         """Test detecting an indirect cycle (A -> B -> C -> A)."""
-        user = UserFactory()
         group_a = PersonGroupFactory(name="A")
         group_b = PersonGroupFactory(name="B")
         group_c = PersonGroupFactory(name="C")
@@ -154,14 +144,12 @@ class TestCyclePrevention:
 
     def test_has_cycle_with_self(self):
         """Test that a group cannot be its own parent."""
-        user = UserFactory()
         group = PersonGroupFactory()
 
         assert group.has_cycle_with(group) is True
 
     def test_has_no_cycle_with_unrelated_group(self):
         """Test that unrelated groups don't create cycles."""
-        user = UserFactory()
         group_a = PersonGroupFactory(name="A")
         group_b = PersonGroupFactory(name="B")
 
@@ -171,7 +159,6 @@ class TestCyclePrevention:
 
     def test_clean_prevents_cycle(self):
         """Test that clean() method prevents cycles."""
-        user = UserFactory()
         group_a = PersonGroupFactory(name="A")
         group_b = PersonGroupFactory(name="B")
 
@@ -194,7 +181,6 @@ class TestNestedGroupMembers:
 
     def test_get_all_members_direct_only(self):
         """Test getting members when only direct members exist."""
-        user = UserFactory()
         group = PersonGroupFactory()
         person1 = PersonFactory()
         person2 = PersonFactory()
@@ -206,7 +192,6 @@ class TestNestedGroupMembers:
 
     def test_get_all_members_with_nested_groups(self):
         """Test getting members including from nested groups."""
-        user = UserFactory()
         parent_group = PersonGroupFactory(name="Parent")
         child_group = PersonGroupFactory(name="Child")
 
@@ -231,7 +216,6 @@ class TestNestedGroupMembers:
 
     def test_get_all_members_deep_hierarchy(self):
         """Test getting members from a deep hierarchy."""
-        user = UserFactory()
         level1 = PersonGroupFactory(name="Level1")
         level2 = PersonGroupFactory(name="Level2")
         level3 = PersonGroupFactory(name="Level3")
@@ -264,7 +248,6 @@ class TestNestedGroupMembers:
 
     def test_get_all_members_no_duplicates(self):
         """Test that members aren't duplicated in diamond hierarchies."""
-        user = UserFactory()
         root = PersonGroupFactory(name="Root")
         middle1 = PersonGroupFactory(name="Middle1")
         middle2 = PersonGroupFactory(name="Middle2")
@@ -292,8 +275,6 @@ class TestNestedRelationQueries:
 
     def test_group_includes_nested_members(self):
         """Test that parent groups include nested group members."""
-        user = UserFactory()
-
         # Create parent and child groups
         parent_group = PersonGroupFactory(name="Parent")
         child_group = PersonGroupFactory(name="Child")
@@ -311,8 +292,6 @@ class TestNestedRelationQueries:
 
     def test_person_membership_through_nested_groups(self):
         """Test that persons can be accessed through parent group hierarchy."""
-        user = UserFactory()
-
         # Create hierarchy
         grandparent_group = PersonGroupFactory(name="Grandparent")
         parent_group = PersonGroupFactory(name="Parent")
@@ -464,7 +443,7 @@ class TestCascadeSharing:
         grandchild_group.parent_groups.add(child_group)
 
         # Share parent with cascade (share all descendants)
-        parent_permission = PersonGroupPermission.objects.create(
+        PersonGroupPermission.objects.create(
             user=friend,
             group=parent_group,
             permission_type=PermissionLevel.VIEWER,
@@ -489,10 +468,12 @@ class TestCascadeSharing:
         assert grandchild_group in accessible_groups
 
         # Verify permissions exist
-        assert PersonGroupPermission.objects.filter(
-            user=friend,
-            group__in=[parent_group, child_group, grandchild_group]
-        ).count() == 3
+        assert (
+            PersonGroupPermission.objects.filter(
+                user=friend, group__in=[parent_group, child_group, grandchild_group]
+            ).count()
+            == 3
+        )
 
 
 @pytest.mark.django_db
@@ -501,7 +482,6 @@ class TestGroupFormValidation:
 
     def test_cannot_add_self_as_parent(self):
         """Test that a group cannot be its own parent."""
-        user = UserFactory()
         group = PersonGroupFactory()
 
         # Try to add itself as parent
@@ -513,7 +493,6 @@ class TestGroupFormValidation:
 
     def test_cannot_create_cycle_through_form(self):
         """Test that form validation prevents cycle creation."""
-        user = UserFactory()
         group_a = PersonGroupFactory(name="A")
         group_b = PersonGroupFactory(name="B")
         group_c = PersonGroupFactory(name="C")

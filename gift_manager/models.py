@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 import uuid
 from datetime import timedelta
 
@@ -394,7 +395,9 @@ class PersonGroup(models.Model):
                     if child.pk not in all_groups:
                         all_groups[child.pk] = child
                         # Prefetch for next level
-                        child = PersonGroup.objects.prefetch_related("child_groups").get(pk=child.pk)
+                        child = PersonGroup.objects.prefetch_related("child_groups").get(
+                            pk=child.pk
+                        )
                     to_process.append(child)
 
         result = list(descendants)
@@ -446,7 +449,9 @@ class PersonGroup(models.Model):
                     if parent.pk not in all_groups:
                         all_groups[parent.pk] = parent
                         # Prefetch for next level
-                        parent = PersonGroup.objects.prefetch_related("parent_groups").get(pk=parent.pk)
+                        parent = PersonGroup.objects.prefetch_related("parent_groups").get(
+                            pk=parent.pk
+                        )
                     to_process.append(parent)
 
         result = list(ancestors)

@@ -61,16 +61,16 @@ class PersonGroupListView(BaseListView):
 
         # Also provide data as dictionaries for Grid.js view compatibility
         # (Grid.js template expects dictionaries with .get() method)
-        context['data'] = [
+        context["data"] = [
             {
-                'group_id': g.group_id,
-                'name': g.name,
+                "group_id": g.group_id,
+                "name": g.name,
             }
             for g in all_groups
         ]
 
         # Build hierarchical tree data for tree view
-        def build_tree_node(group, depth=0, visited=None):
+        def build_tree_node(group, depth=0, visited=None) -> dict:
             """Recursively build tree nodes with hierarchy information."""
             if visited is None:
                 visited = set()
@@ -81,21 +81,21 @@ class PersonGroupListView(BaseListView):
             visited.add(group.pk)
 
             node = {
-                'group': group,
-                'group_id': str(group.group_id),
-                'name': group.name,
-                'depth': depth,
-                'member_count': group.person_set.count(),
-                'has_children': group.child_groups.exists(),
-                'parent_ids': [str(p.group_id) for p in group.parent_groups.all()],
-                'children': []
+                "group": group,
+                "group_id": str(group.group_id),
+                "name": group.name,
+                "depth": depth,
+                "member_count": group.person_set.count(),
+                "has_children": group.child_groups.exists(),
+                "parent_ids": [str(p.group_id) for p in group.parent_groups.all()],
+                "children": [],
             }
 
             # Add children recursively
             for child in group.child_groups.all():
                 child_node = build_tree_node(child, depth + 1, visited.copy())
                 if child_node:
-                    node['children'].append(child_node)
+                    node["children"].append(child_node)
 
             return node
 
@@ -110,18 +110,20 @@ class PersonGroupListView(BaseListView):
                 tree_data.append(tree_node)
 
         # Flatten tree for easier rendering
-        def flatten_tree(nodes, result=None):
+        def flatten_tree(nodes, result=None) -> list:
             """Flatten tree structure for template rendering."""
             if result is None:
                 result = []
             for node in nodes:
                 result.append(node)
-                if node['children']:
-                    flatten_tree(node['children'], result)
+                if node["children"]:
+                    flatten_tree(node["children"], result)
             return result
 
-        context['tree_data'] = flatten_tree(tree_data)
-        context['has_hierarchy'] = any(g.parent_groups.exists() or g.child_groups.exists() for g in all_groups)
+        context["tree_data"] = flatten_tree(tree_data)
+        context["has_hierarchy"] = any(
+            g.parent_groups.exists() or g.child_groups.exists() for g in all_groups
+        )
 
         return context
 
@@ -136,7 +138,7 @@ class PersonGroupCreateView(BaseCreateView):
     def get_form_kwargs(self):
         """Pass the user to the form."""
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs["user"] = self.request.user
         return kwargs
 
 
@@ -151,7 +153,7 @@ class PersonGroupUpdateView(BaseUpdateView):
     def get_form_kwargs(self):
         """Pass the user to the form."""
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs["user"] = self.request.user
         return kwargs
 
 
@@ -398,7 +400,9 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
 
 @login_required
 @require_POST
-def reparent_group(request):
+def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-branches, too-many-return-statements
+    request,
+) -> JsonResponse:
     """API endpoint for reparenting groups (used by drag-and-drop and bulk operations).
 
     Accepts JSON payload with:
@@ -414,9 +418,7 @@ def reparent_group(request):
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return JsonResponse(
-            {"success": False, "message": gettext("Invalid JSON data")}, status=400
-        )
+        return JsonResponse({"success": False, "message": gettext("Invalid JSON data")}, status=400)
 
     group_id = data.get("group_id")
     parent_ids = data.get("parent_ids", [])
@@ -441,9 +443,7 @@ def reparent_group(request):
     try:
         group = PersonGroup.objects.get(group_id=group_id)
     except PersonGroup.DoesNotExist:
-        return JsonResponse(
-            {"success": False, "message": gettext("Group not found")}, status=404
-        )
+        return JsonResponse({"success": False, "message": gettext("Group not found")}, status=404)
 
     # Check permissions - user must be an editor of the group
     permission = PermissionService.get_permission(group, request.user, "group")
@@ -459,40 +459,51 @@ def reparent_group(request):
     # Get parent groups
     parent_groups = []
     if parent_ids:
+        # Fetch all candidate groups in one query
+        groups_map = PersonGroup.objects.in_bulk(parent_ids, field_name="group_id")
+
+        # Fetch all accessible group IDs in one query
+        accessible_group_ids = set(
+            PersonGroup.objects.filter(
+                group_id__in=parent_ids, shared_with=request.user
+            ).values_list("group_id", flat=True)
+        )
+
         for parent_id in parent_ids:
-            try:
-                parent_group = PersonGroup.objects.get(group_id=parent_id)
-                # Check user has access to parent group
-                if not parent_group.shared_with.filter(id=request.user.id).exists():
-                    return JsonResponse(
-                        {
-                            "success": False,
-                            "message": gettext(
-                                "You do not have access to parent group: %(name)s"
-                            )
-                            % {"name": parent_group.name},
-                        },
-                        status=403,
-                    )
-                parent_groups.append(parent_group)
-            except PersonGroup.DoesNotExist:
+            # Check existence
+            if parent_id not in groups_map:
                 return JsonResponse(
                     {
                         "success": False,
-                        "message": gettext("Parent group not found: %(id)s")
-                        % {"id": parent_id},
+                        "message": gettext("Parent group not found: %(id)s") % {"id": parent_id},
                     },
                     status=404,
                 )
 
+            parent_group = groups_map[parent_id]
+
+            # Check permissions
+            # Note: The original code checked shared_with.filter(id=user.id).exists()
+            # which means direct shared_with membership is required.
+            if parent_group.group_id not in accessible_group_ids:
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "message": gettext("You do not have access to parent group: %(name)s")
+                        % {"name": parent_group.name},
+                    },
+                    status=403,
+                )
+
+            parent_groups.append(parent_group)
+
     # Check for cycles before making changes
-    errors = []
-    for parent_group in parent_groups:
-        if group.has_cycle_with(parent_group):
-            errors.append(
-                gettext("Adding '%(parent)s' as a parent would create a cycle")
-                % {"parent": parent_group.name}
-            )
+    errors = [
+        gettext("Adding '%(parent)s' as a parent would create a cycle")
+        % {"parent": parent_group.name}
+        for parent_group in parent_groups
+        if group.has_cycle_with(parent_group)
+    ]
 
     if errors:
         return JsonResponse(
@@ -517,6 +528,8 @@ def reparent_group(request):
                 for parent_group in parent_groups:
                     group.parent_groups.remove(parent_group)
                 message = gettext("Parents removed successfully")
+            else:
+                message = gettext("Invalid action")
 
         return JsonResponse(
             {
@@ -529,11 +542,18 @@ def reparent_group(request):
 
     except ValidationError as e:
         return JsonResponse(
-            {"success": False, "message": str(e), "errors": e.messages if hasattr(e, "messages") else [str(e)]},
+            {
+                "success": False,
+                "message": str(e),
+                "errors": e.messages if hasattr(e, "messages") else [str(e)],
+            },
             status=400,
         )
     except Exception as e:
         return JsonResponse(
-            {"success": False, "message": gettext("An error occurred: %(error)s") % {"error": str(e)}},
+            {
+                "success": False,
+                "message": gettext("An error occurred: %(error)s") % {"error": str(e)},
+            },
             status=500,
         )

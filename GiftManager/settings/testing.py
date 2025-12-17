@@ -4,6 +4,8 @@ This module contains settings optimized for running tests.
 These settings prioritize speed and isolation over security.
 """
 
+import tempfile
+
 from .base import *  # noqa: F403
 
 # Use a simple secret key for testing
@@ -19,16 +21,22 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
+# Create a temporary file for the database
+# We keep the file open only to get its name, then close it.
+# delete=False is necessary so the file persists for the duration of the tests.
+# It allows sharing the DB between the test runner and the live server thread.
+_temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)  # noqa: SIM115
+_temp_db.close()
+
 # Use SQLite for faster tests
 # For live_server tests, use a real file (not in-memory) so it's visible across threads
 # The file will be created/destroyed automatically by Django's test runner
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        # Use a temporary file instead of memory for live_server compatibility
-        "NAME": "/tmp/test_gift_manager.db",
+        "NAME": _temp_db.name,
         "TEST": {
-            "NAME": "/tmp/test_gift_manager.db",
+            "NAME": _temp_db.name,
         },
     }
 }

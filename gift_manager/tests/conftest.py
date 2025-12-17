@@ -302,6 +302,7 @@ def db_obj(request, person, gift, event, group, person_relation):
         "relation": person_relation,
     }[obj_type]
 
+
 # =============================================================================
 # Playwright Fixtures for Frontend Tests
 # =============================================================================
@@ -316,6 +317,7 @@ def allow_django_async_unsafe():
     database setup. This fixture tells Django it's safe to proceed.
     """
     import os
+
     os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
     yield
     os.environ.pop("DJANGO_ALLOW_ASYNC_UNSAFE", None)

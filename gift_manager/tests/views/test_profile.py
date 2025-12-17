@@ -320,7 +320,7 @@ class TestRemoveFriendView:
         self.client = Client()
 
     @override_settings(USE_I18N=False)
-    def test_post_remove_friend(self, setup_users):  # noqa: ARG002
+    def test_post_remove_friend(self, setup_users):
         """Test that post method correctly removes a friend."""
         # Authenticate the user
         self.client.force_login(self.user1)
@@ -343,7 +343,7 @@ class TestRemoveFriendView:
         assert self.profile1 not in self.profile2.friends.all()
 
     @override_settings(USE_I18N=False)
-    def test_post_remove_friend_unauthenticated(self, setup_users):  # noqa: ARG002
+    def test_post_remove_friend_unauthenticated(self, setup_users):
         """Test that friend removal fails for an unauthenticated user."""
         # URL to remove a friend without being logged in
         url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})

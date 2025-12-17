@@ -60,10 +60,12 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
     parent_groups = forms.ModelMultipleChoiceField(
         queryset=PersonGroup.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-select searchable-select',
-            'size': '8',
-        }),
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "form-select searchable-select",
+                "size": "8",
+            }
+        ),
         label=gettext_lazy("Parent groups"),
         help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
     )
@@ -71,10 +73,12 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
     persons = forms.ModelMultipleChoiceField(
         queryset=Person.objects.none(),
         required=False,
-        widget=forms.SelectMultiple(attrs={
-            'class': 'form-select searchable-select',
-            'size': '10',
-        }),
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "form-select searchable-select",
+                "size": "10",
+            }
+        ),
         label=gettext_lazy("Members"),
         help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
     )
@@ -121,7 +125,7 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
             if self.instance and self.instance.pk:
                 self.fields["persons"].initial = self.instance.person_set.all()
 
-    def save(self, commit=True):
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
         """Save the group and update the many-to-many relationships."""
         instance = super().save(commit=commit)
 
@@ -148,7 +152,8 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
             if self.instance.has_cycle_with(parent):
                 raise forms.ValidationError(
                     gettext_lazy(
-                        "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
+                        "Adding '%(parent)s' as a parent would create a cycle in the group "
+                        "hierarchy."
                     )
                     % {"parent": parent.name}
                 )

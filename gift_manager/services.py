@@ -2,6 +2,7 @@ from django.db.models import Model
 from django.utils.translation import gettext
 
 from gift_manager.models import PermissionLevel
+from gift_manager.models import PersonGroupPermission
 
 
 class PermissionService:
@@ -36,7 +37,7 @@ class PermissionService:
 
     @classmethod
     def get_effective_permission_for_group(cls, group, user) -> int:
-        """Get the effective permission for a user on a PersonGroup, considering cascade inheritance.
+        """Get the permission for a user on a PersonGroup, considering cascade inheritance.
 
         This method checks:
         1. Direct permission on the group
@@ -50,12 +51,8 @@ class PermissionService:
         Returns:
             int: The effective permission level
         """
-        from gift_manager.models import PersonGroupPermission
-
         # Check direct permission on this group
-        direct_permission = PersonGroupPermission.objects.filter(
-            user=user, group=group
-        ).first()
+        direct_permission = PersonGroupPermission.objects.filter(user=user, group=group).first()
 
         if direct_permission:
             return direct_permission.permission_type
