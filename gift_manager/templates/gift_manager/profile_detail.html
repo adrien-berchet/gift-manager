@@ -9,7 +9,7 @@
 <div class="container mt-4 card p-3">
     <h1>{% trans "My Profile" %}</h1>
     <p><strong>{% trans "User name:" %}</strong> {{ profile.user.username }}</p>
-    <p><strong>{% trans "Email address:" %}</strong> {{ profile.user.email }}
+    <p><strong>{% trans "Email address:" %}</strong> {{ profile.user.email|decode_email }}
        <a href="{% url 'account_email' %}" class="btn btn-secondary ml-4">{% trans 'Update' %}</a>
     </p>
     <h2 class="d-flex justify-content-between align-items-center">
@@ -30,7 +30,7 @@
                     {% for friend in profile.friends.all %}
                         <tr>
                             <td>{{ friend.user.username }}</td>
-                            <td>{{ friend.user.email }}</td>
+                            <td>{{ friend.user.email|decode_email }}</td>
                             <td>
                                 <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}" style="display:inline;">
                                     {% csrf_token %}

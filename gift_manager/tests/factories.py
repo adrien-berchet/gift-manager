@@ -26,6 +26,7 @@ import factory
 from django.contrib.auth.models import User
 from factory.django import DjangoModelFactory
 
+from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -44,7 +45,8 @@ class UserFactory(DjangoModelFactory):
         skip_postgeneration_save = True
 
     username = factory.Sequence(lambda n: f"user{n}")
-    email = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")
+    # Email is stored encoded for privacy
+    email = factory.LazyAttribute(lambda obj: encode_email(f"{obj.username}@example.com"))
     password = factory.PostGenerationMethodCall("set_password", "testpass123")
     first_name = factory.Faker("first_name")
     last_name = factory.Faker("last_name")
@@ -65,8 +67,9 @@ class PersonFactory(DjangoModelFactory):
 
     first_name = factory.Faker("first_name")
     family_name = factory.Faker("last_name")
+    # Email is stored encoded for privacy
     email_address = factory.LazyAttribute(
-        lambda obj: f"{obj.first_name.lower()}.{obj.family_name.lower()}@example.com"
+        lambda obj: encode_email(f"{obj.first_name.lower()}.{obj.family_name.lower()}@example.com")
     )
 
     @factory.post_generation
@@ -236,5 +239,6 @@ class InvitationFactory(DjangoModelFactory):
         model = Invitation
 
     sender = factory.SubFactory(UserFactory)
-    recipient_email = factory.Faker("email")
+    # Email is stored encoded for privacy
+    recipient_email = factory.LazyAttribute(lambda obj: encode_email(factory.Faker("email").generate()))
     accepted = False

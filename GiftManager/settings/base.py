@@ -151,6 +151,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Allauth configuration
+ACCOUNT_ADAPTER = "gift_manager.adapters.EncodedEmailAccountAdapter"
 ACCOUNT_SIGNUP_FIELDS = ["email*", "email2*", "username*", "password1*", "password2*"]
 ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1

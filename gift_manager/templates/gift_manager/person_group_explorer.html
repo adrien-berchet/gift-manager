@@ -1,5 +1,6 @@
 {% extends "gift_manager/base.html" %}
 {% load i18n %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="container">
@@ -107,7 +108,7 @@
                                 <div class="card-body">
                                     <h5 class="card-title">{{ person.first_name }} {{ person.family_name }}</h5>
                                     {% if person.email_address %}
-                                    <p class="card-text text-muted">{{ person.email_address }}</p>
+                                    <p class="card-text text-muted">{{ person.email_address|decode_email }}</p>
                                     {% endif %}
                                 </div>
                                 <div class="card-footer">
