@@ -1,75 +1,92 @@
-"""Migration to encode email addresses for privacy."""
+"""Migration to encrypt email addresses for privacy using Fernet encryption."""
 
-import base64
-
+from cryptography.fernet import Fernet
+from cryptography.fernet import InvalidToken
+from django.conf import settings
 from django.db import migrations
 from django.db import models
 
 
-def encode_email(email):
-    """Encode an email address using base64."""
+def _get_cipher():
+    """Get the Fernet cipher using the configured encryption key."""
+    key = getattr(settings, "EMAIL_ENCRYPTION_KEY", None)
+    if not key:
+        raise ValueError(
+            "EMAIL_ENCRYPTION_KEY must be configured in Django settings before running this migration."
+        )
+    if isinstance(key, str):
+        key = key.encode("utf-8")
+    return Fernet(key)
+
+
+def encrypt_email(email):
+    """Encrypt an email address using Fernet encryption."""
     if email is None or email == "":
         return email
-    return base64.b64encode(email.encode("utf-8")).decode("utf-8")
+    cipher = _get_cipher()
+    encrypted = cipher.encrypt(email.encode("utf-8"))
+    return encrypted.decode("utf-8")
 
 
-def decode_email(encoded_email):
-    """Decode a base64-encoded email address."""
-    if encoded_email is None or encoded_email == "":
-        return encoded_email
+def decrypt_email(encrypted_email):
+    """Decrypt an encrypted email address."""
+    if encrypted_email is None or encrypted_email == "":
+        return encrypted_email
     try:
-        return base64.b64decode(encoded_email.encode("utf-8")).decode("utf-8")
-    except (ValueError, UnicodeDecodeError):
-        return encoded_email
+        cipher = _get_cipher()
+        decrypted = cipher.decrypt(encrypted_email.encode("utf-8"))
+        return decrypted.decode("utf-8")
+    except (InvalidToken, ValueError):
+        return encrypted_email
 
 
-def encode_existing_emails(apps, schema_editor):
-    """Encode all existing email addresses in the database."""
+def encrypt_existing_emails(apps, schema_editor):
+    """Encrypt all existing email addresses in the database."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")
     User = apps.get_model("auth", "User")
 
-    # Encode Person email addresses
+    # Encrypt Person email addresses
     for person in Person.objects.all():
         if person.email_address:
-            person.email_address = encode_email(person.email_address)
+            person.email_address = encrypt_email(person.email_address)
             person.save(update_fields=["email_address"])
 
-    # Encode Invitation recipient emails
+    # Encrypt Invitation recipient emails
     for invitation in Invitation.objects.all():
         if invitation.recipient_email:
-            invitation.recipient_email = encode_email(invitation.recipient_email)
+            invitation.recipient_email = encrypt_email(invitation.recipient_email)
             invitation.save(update_fields=["recipient_email"])
 
-    # Encode User emails
+    # Encrypt User emails
     for user in User.objects.all():
         if user.email:
-            user.email = encode_email(user.email)
+            user.email = encrypt_email(user.email)
             user.save(update_fields=["email"])
 
 
-def decode_existing_emails(apps, schema_editor):
-    """Decode all existing email addresses in the database (for reverse migration)."""
+def decrypt_existing_emails(apps, schema_editor):
+    """Decrypt all existing email addresses in the database (for reverse migration)."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")
     User = apps.get_model("auth", "User")
 
-    # Decode Person email addresses
+    # Decrypt Person email addresses
     for person in Person.objects.all():
         if person.email_address:
-            person.email_address = decode_email(person.email_address)
+            person.email_address = decrypt_email(person.email_address)
             person.save(update_fields=["email_address"])
 
-    # Decode Invitation recipient emails
+    # Decrypt Invitation recipient emails
     for invitation in Invitation.objects.all():
         if invitation.recipient_email:
-            invitation.recipient_email = decode_email(invitation.recipient_email)
+            invitation.recipient_email = decrypt_email(invitation.recipient_email)
             invitation.save(update_fields=["recipient_email"])
 
-    # Decode User emails
+    # Decrypt User emails
     for user in User.objects.all():
         if user.email:
-            user.email = decode_email(user.email)
+            user.email = decrypt_email(user.email)
             user.save(update_fields=["email"])
 
 
@@ -91,6 +108,6 @@ class Migration(migrations.Migration):
             name="recipient_email",
             field=models.TextField(),
         ),
-        # Encode existing email addresses
-        migrations.RunPython(encode_existing_emails, decode_existing_emails),
+        # Encrypt existing email addresses
+        migrations.RunPython(encrypt_existing_emails, decrypt_existing_emails),
     ]

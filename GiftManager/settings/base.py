@@ -164,6 +164,15 @@ ACCOUNT_RATE_LIMITS = {
 # Invitation settings
 INVITATION_EXPIRY_DAYS = 7
 
+# Email encryption key for privacy
+# Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+# IMPORTANT: Keep this key secure and never commit it to version control in production!
+EMAIL_ENCRYPTION_KEY = get_env_variable(
+    "EMAIL_ENCRYPTION_KEY",
+    # Default key for development only - MUST be overridden in production
+    default="X2Rldl9vbmx5X2tleV9jaGFuZ2VfaW5fcHJvZHVjdGlvbj0=",
+)
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/

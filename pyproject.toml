@@ -8,6 +8,7 @@ license = { text = "Apache License 2.0" }
 classifiers = ["Programming Language :: Python"]
 dynamic = ["version"]
 dependencies = [
+    "cryptography>=42.0",
     "django>=5.1,<6.0",
     "django-allauth>=0.61",
     "django-debug-toolbar>=4.2",
