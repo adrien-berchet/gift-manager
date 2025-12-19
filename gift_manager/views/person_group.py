@@ -256,6 +256,22 @@ class PersonGroupDetailView(BaseDetailView):
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
         )
+
+        # All gifts (including direct members and nested members)
+        # We perform the query on Relation to catch:
+        # 1. Gifts to the group itself (self.object)
+        # 2. Gifts to any person in the nested members list (nested_member_qs)
+        context["nested_gifts"] = (
+            Relation.objects.accessible_by(self.request.user)
+            .filter(
+                Q(group=self.object) | Q(person__in=nested_member_qs),
+                gift__isnull=False,
+            )
+            .select_related("person", "group", "gift", "event", "status")
+            .prefetch_related("gift__tags")
+            .order_by("status__pk", "gift__name")
+        )
+
         context["relation_statuses"] = RelationStatus.objects.all()
 
         # Add action buttons
