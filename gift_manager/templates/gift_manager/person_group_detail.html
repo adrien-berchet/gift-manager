@@ -4,8 +4,7 @@
 <h1 class="my-4">{% trans "Group details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p>
-  <strong>{% trans "Creation date:" %}</strong> {{
-  group.creation_date|replace_none:"" }}
+  <strong>{% trans "Creation date:" %}</strong> {{ group.creation_date|replace_none:"" }}
 </p>
 
 <!-- Hierarchy Information -->
@@ -113,7 +112,7 @@
       aria-controls="nested-gifts-list"
       aria-selected="false"
     >
-      {% trans "All gifts (including members)" %}
+      {% trans "All gifts (including members)" %} ({{ nested_gift_count }})
     </button>
   </li>
 </ul>
@@ -536,8 +535,8 @@
       "{{ relation.gift.gift_id }}",
       "{{ relation.gift.name|escapejs }}",
       "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-      "{{ relation.comment|escapejs }}",
       "{{ relation.status.pk }}",
+      "{{ relation.comment|escapejs }}",
       "{{ relation.status.status|escapejs }}",
       "{{ relation.relation_id }}",
       "{% url 'gift_manager:relation_detail' relation.relation_id %}",
@@ -591,13 +590,25 @@
       },
       {
           name: "{% trans 'Status' %}",
-          formatter: (cell, row) => {
-              const statusPk = row.cells[4].data;
-              const statusLabel = row.cells[5].data;
-              const relationId = row.cells[6].data;
-              // Read-only status for this view to avoid complexity with permissions across different objects
-              return statusLabel;
-          }
+            formatter: (cell, row) => {
+                const statusPk = row.cells[3].data;
+                const statusLabel = row.cells[5].data;
+                const relationId = row.cells[6].data;
+                return gridjs.html(`
+                    <form id="status-form-${relationId}" style="display: inline;">
+                        <select class="form-select form-select-sm status-selector"
+                                name="new_status"
+                                data-relation-id="${relationId}"
+                                data-update-url="${updateStatusUrl}">
+                            {% for status in relation_statuses %}
+                            <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
+                                {{ status.status }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </form>
+                `);
+            }
       },
       { name: 'status_label', hidden: true },
       { name: 'relation_id', hidden: true },
@@ -626,6 +637,52 @@
       pagination: { enabled: true, limit: 10 },
       search: true,
       sort: true
+  });
+
+  // Handle status selector changes with event delegation for nested gifts
+  document.getElementById('nested-gifts-grid').addEventListener('change', function (e) {
+      if (e.target.classList.contains('status-selector')) {
+          const select = e.target;
+          const relationId = select.dataset.relationId;
+          const updateUrl = select.dataset.updateUrl;
+          const newStatus = select.value;
+          const form = select.closest('form');
+
+          // Get CSRF token
+          function getCookie(name) {
+              let cookieValue = null;
+              if (document.cookie && document.cookie !== '') {
+                  const cookies = document.cookie.split(';');
+                  for (let i = 0; i < cookies.length; i++) {
+                      const cookie = cookies[i].trim();
+                      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                          break;
+                      }
+                  }
+              }
+              return cookieValue;
+          }
+
+          // Make POST request
+          fetch(updateUrl, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+                  'X-CSRFToken': getCookie('csrftoken')
+              },
+              body: `relation_id=${relationId}&new_status=${newStatus}`
+          })
+              .then(response => response.text())
+              .then(html => {
+                  // Replace the form with the server response
+                  form.outerHTML = html;
+              })
+              .catch(error => {
+                  console.error('Error updating status:', error);
+                  alert('Failed to update status. Please try again.');
+              });
+      }
   });
   {% endif %}
 

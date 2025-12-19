@@ -244,10 +244,6 @@ class PersonGroupDetailView(BaseDetailView):
             .order_by("family_name", "first_name")
         )
 
-        # Member counts
-        context["direct_member_count"] = context["persons"].count()
-        context["nested_member_count"] = context["nested_members"].count()
-
         # Relations/gifts for this group
         context["gifts"] = (
             Relation.objects.accessible_by(self.request.user)
@@ -273,6 +269,11 @@ class PersonGroupDetailView(BaseDetailView):
         )
 
         context["relation_statuses"] = RelationStatus.objects.all()
+
+        # Member counts
+        context["direct_member_count"] = context["persons"].count()
+        context["nested_member_count"] = context["nested_members"].count()
+        context["nested_gift_count"] = context["nested_gifts"].count()
 
         # Add action buttons
         is_editor = context["is_editor"]

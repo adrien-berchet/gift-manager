@@ -83,9 +83,22 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
     )
 
+    child_groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        required=False,
+        widget=forms.SelectMultiple(
+            attrs={
+                "class": "form-select searchable-select",
+                "size": "8",
+            }
+        ),
+        label=gettext_lazy("Child groups"),
+        help_text=gettext_lazy("Hold Ctrl/Cmd to select multiple. Use the search box to filter."),
+    )
+
     class Meta:
         model = PersonGroup
-        fields = ["name", "parent_groups", "persons"]
+        fields = ["name", "parent_groups", "child_groups", "persons"]
         labels = {
             "name": gettext_lazy("Name"),
         }
@@ -103,8 +116,10 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         if user:
             # Show only groups accessible by the user
             available_groups = PersonGroup.objects.accessible_by(user)
+            available_child_groups = PersonGroup.objects.accessible_by(user)
 
             # If editing an existing group, exclude self and descendants to prevent cycles
+            # for parent_groups field
             if self.instance and self.instance.pk:
                 descendants = self.instance.get_descendants()
                 descendant_ids = [self.instance.pk] + [d.pk for d in descendants]
@@ -112,9 +127,19 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
 
             self.fields["parent_groups"].queryset = available_groups.order_by("name")
 
+            # Logic for child_groups
+            # Exclude ancestors (and self) to prevent cycles
+            if self.instance and self.instance.pk:
+                ancestors = self.instance.get_ancestors()
+                ancestor_ids = [self.instance.pk] + [a.pk for a in ancestors]
+                available_child_groups = available_child_groups.exclude(pk__in=ancestor_ids)
+
+            self.fields["child_groups"].queryset = available_child_groups.order_by("name")
+
             # Set initial value if editing
             if self.instance and self.instance.pk:
                 self.fields["parent_groups"].initial = self.instance.parent_groups.all()
+                self.fields["child_groups"].initial = self.instance.child_groups.all()
 
             # Show only persons accessible by the user
             self.fields["persons"].queryset = Person.objects.accessible_by(user).order_by(
@@ -133,6 +158,10 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
             # Update parent_groups relationship
             if "parent_groups" in self.cleaned_data:
                 instance.parent_groups.set(self.cleaned_data["parent_groups"])
+
+            # Update child_groups relationship
+            if "child_groups" in self.cleaned_data:
+                instance.child_groups.set(self.cleaned_data["child_groups"])
 
             # Update persons relationship
             if "persons" in self.cleaned_data:
@@ -159,6 +188,85 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
                 )
 
         return parent_groups
+
+    def clean(self):
+        cleaned_data = super().clean()
+        parent_groups = cleaned_data.get("parent_groups", [])
+        child_groups = cleaned_data.get("child_groups", [])
+
+        # Check for direct intersection: a group cannot be both a parent and a child
+        intersection = set(parent_groups).intersection(set(child_groups))
+        if intersection:
+            names = ", ".join([g.name for g in intersection])
+            raise forms.ValidationError(
+                gettext_lazy("The following groups cannot be both parent and child: %(names)s")
+                % {"names": names}
+            )
+
+        # Check for deep/indirect cycles via new relationships
+        # Scenario: Adding Parent P and Child C, where C is already an ancestor of P.
+        # This creates G -> C -> ... -> P -> G (Cycle).
+        # We need to ensure no selected child is an ancestor of any selected parent.
+        children_set = set(child_groups)
+        for parent in parent_groups:
+            # We can use get_ancestors() which is cached/optimized on the model
+            parent_ancestors = set(parent.get_ancestors())
+            cycle_children = children_set.intersection(parent_ancestors)
+
+            if cycle_children:
+                names = ", ".join([c.name for c in cycle_children])
+                raise forms.ValidationError(
+                    gettext_lazy(
+                        "Cannot add parent '%(parent)s' and child(ren) '%(children)s' "
+                        "simultaneously because the child(ren) are ancestors of the parent "
+                        "(Cycle: Group -> Child -> ... -> Parent -> Group)."
+                    )
+                    % {"parent": parent.name, "children": names}
+                )
+
+        return cleaned_data
+
+    def clean_child_groups(self):
+        """Validate that adding child groups won't create a cycle."""
+        child_groups = self.cleaned_data.get("child_groups")
+
+        if not self.instance or not self.instance.pk:
+            # For new groups, no cycle check needed
+            # (assuming the new group hasn't been saved yet, so it can't be an ancestor of anyone)
+            return child_groups
+
+        # Checking if 'self' is an ancestor of the potential child
+        # If 'self' IS an ancestor of 'child', then 'child' is a descendant of 'self'.
+        # Making 'child' a child of 'self' is fine (it's redundant but not a cycle unless child is
+        # also an ancestor).
+        # Wait. A cycle is formed if A -> B -> ... -> A.
+        # If we make C a child of P (P -> C), we must ensure C is not an ancestor of P.
+        # self.instance is P. child is C.
+        # We need to check if P (self) is in C.get_descendants() ?? No.
+        # We need to check if C is an ancestor of P.
+        # P.has_cycle_with(ancestor) checks "if ancestor == self OR self in
+        # ancestor.get_ancestors()"
+        # Here we are adding children.
+        # Cycle if: P -> C implies we cannot have C -> ... -> P.
+        # So we check if P is already in C's descendants? No, that means C is an ancestor of P.
+        # Essentially, creating P -> C is invalid if C is already an ancestor of P.
+
+        for child in child_groups:
+            # Check if 'child' is an ancestor of 'self' (the group we are editing)
+            if child in self.instance.get_ancestors():
+                raise forms.ValidationError(
+                    gettext_lazy(
+                        "Adding '%(child)s' as a child would create a cycle in the group "
+                        "hierarchy (it is already an ancestor)."
+                    )
+                    % {"child": child.name}
+                )
+
+            # Also self cannot be child of self
+            if child == self.instance:
+                raise forms.ValidationError(gettext_lazy("A group cannot be a child of itself."))
+
+        return child_groups
 
 
 class PersonGroupAddMultiplePersonsForm(forms.Form):
