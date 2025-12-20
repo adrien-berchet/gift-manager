@@ -170,8 +170,7 @@ INVITATION_EXPIRY_DAYS = 7
 # IMPORTANT: Keep this key secure and never commit it to version control in production!
 EMAIL_ENCRYPTION_KEY = get_env_variable(
     "EMAIL_ENCRYPTION_KEY",
-    # Default key for development only - MUST be overridden in production
-    default="X2Rldl9vbmx5X2tleV9jaGFuZ2VfaW5fcHJvZHVjdGlvbj0=",
+    # MUST be given in production
 )
 
 
