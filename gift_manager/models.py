@@ -15,6 +15,9 @@ from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.translation import gettext_lazy
 
+from .email_encoding import decode_email
+from .email_encoding import encode_email
+
 _PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
 _PERMISSION_LABEL_DICT = {
     0: gettext_lazy("none"),
@@ -208,6 +211,16 @@ class Profile(models.Model):
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:profile_detail")
 
+    @property
+    def email(self) -> str | None:
+        """Get the decoded user email address."""
+        return decode_email(self.user.email)
+
+    def set_user_email(self, value: str | None) -> None:
+        """Set the user email address, encoding it for storage."""
+        self.user.email = encode_email(value)
+        self.user.save()
+
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):
@@ -232,16 +245,23 @@ class Invitation(models.Model):
         related_name="%(app_label)s_%(class)s_invitations_sent",
         on_delete=models.CASCADE,
     )
-    recipient_email = models.EmailField()
+    # Email is stored encoded for privacy - use email property for decoded access
+    recipient_email = models.TextField()
     accepted = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
-        return (
-            f"{gettext_lazy('Invitation from')} {self.sender} "
-            f"{gettext_lazy('to')} {self.recipient_email}"
-        )
+        return f"{gettext_lazy('Invitation from')} {self.sender} {gettext_lazy('to')} {self.email}"
+
+    @property
+    def email(self) -> str | None:
+        """Get the decoded recipient email address."""
+        return decode_email(self.recipient_email)
+
+    def set_email(self, value: str | None) -> None:
+        """Set the recipient email address, encoding it for storage."""
+        self.recipient_email = encode_email(value)
 
     def is_expired(self):
         """Check if the invitation has expired."""
@@ -259,7 +279,8 @@ class Person(models.Model):
     person_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     first_name = models.TextField(unique=False, null=False)
     family_name = models.TextField(unique=False, null=True, blank=True)
-    email_address = models.EmailField(unique=False, null=True, blank=True)
+    # Email is stored encoded for privacy - use email property for decoded access
+    email_address = models.TextField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     groups = models.ManyToManyField("PersonGroup", blank=True)
     shared_with = models.ManyToManyField(
@@ -282,6 +303,15 @@ class Person(models.Model):
 
     def __str__(self) -> str:
         return (self.first_name + " " + (self.family_name or "")).strip()
+
+    @property
+    def email(self) -> str | None:
+        """Get the decoded email address."""
+        return decode_email(self.email_address)
+
+    def set_email(self, value: str | None) -> None:
+        """Set the email address, encoding it for storage."""
+        self.email_address = encode_email(value)
 
 
 class PersonPermission(models.Model):

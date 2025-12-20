@@ -16,6 +16,7 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic import View
 
+from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import Invitation
@@ -40,10 +41,13 @@ class SendInvitationView(LoginRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         recipient_email = request.POST.get("recipient_email")
-        invitation = Invitation.objects.create(sender=request.user, recipient_email=recipient_email)
+        # Store the email encoded for privacy
+        encoded_email = encode_email(recipient_email)
+        invitation = Invitation.objects.create(sender=request.user, recipient_email=encoded_email)
         invitation_link = request.build_absolute_uri(
             reverse("gift_manager:accept_invitation", args=[invitation.token])
         )
+        # Use the plain email for sending
         send_mail(
             subject=gettext("Join my friends on Gift Manager"),
             message=(

@@ -2,6 +2,8 @@ from django import forms
 from django.db.models import Q
 from django.utils.translation import gettext_lazy
 
+from .email_encoding import decode_email
+from .email_encoding import encode_email
 from .models import Event
 from .models import Gift
 from .models import GiftTag
@@ -26,13 +28,21 @@ class BaseFormMixin:
 
 
 class PersonForm(BaseFormMixin, forms.ModelForm):
+    # Use a separate field for the decoded email to display properly in the form
+    email_address = forms.EmailField(
+        required=False,
+        label=gettext_lazy("Email address"),
+        error_messages={
+            "invalid": gettext_lazy("Enter a valid email address."),
+        },
+    )
+
     class Meta:
         model = Person
         fields = ["first_name", "family_name", "email_address", "groups"]
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
-            "email_address": gettext_lazy("Email address"),
             "groups": gettext_lazy("Groups"),
         }
         widgets = {
@@ -46,14 +56,24 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             "family_name": {
                 "max_length": gettext_lazy("This family name is too long."),
             },
-            "email_address": {
-                "invalid": gettext_lazy("Enter a valid email address."),
-            },
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["groups"].required = False
+        # Decode the email address for display in the form
+        if self.instance and self.instance.pk:
+            self.initial["email_address"] = decode_email(self.instance.email_address)
+
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
+        instance = super().save(commit=False)
+        # Encode the email address before saving
+        email = self.cleaned_data.get("email_address")
+        instance.email_address = encode_email(email)
+        if commit:
+            instance.save()
+            self._save_m2m()
+        return instance
 
 
 class PersonGroupForm(BaseFormMixin, forms.ModelForm):

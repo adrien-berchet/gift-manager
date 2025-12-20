@@ -1,5 +1,7 @@
 from django import template
 
+from gift_manager.email_encoding import decode_email as _decode_email
+
 register = template.Library()
 
 
@@ -26,3 +28,9 @@ def replace_none(value, replacement="-"):
 @register.filter
 def replace_empty(value, replacement="-"):
     return value if value == 0 or value else replacement
+
+
+@register.filter
+def decode_email(value):
+    """Decode a base64-encoded email address for display."""
+    return _decode_email(value)

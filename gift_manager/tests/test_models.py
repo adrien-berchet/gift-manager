@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from django.test import override_settings
 from django.utils import timezone
 
+from gift_manager.email_encoding import encode_email
 from gift_manager.models import EventPermission
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
@@ -102,13 +103,17 @@ class TestInvitation:
     @pytest.fixture
     def invitation(self, sender):
         """Create a test invitation using factory."""
-        return InvitationFactory(sender=sender, recipient_email="recipient@example.com")
+        # Email is stored encoded
+        return InvitationFactory(
+            sender=sender, recipient_email=encode_email("recipient@example.com")
+        )
 
     def test_invitation_creation(self, invitation):
         """Test creating an invitation."""
         assert invitation.token is not None
         assert isinstance(invitation.token, uuid.UUID)
-        assert invitation.recipient_email == "recipient@example.com"
+        # recipient_email is stored encoded, use email property for decoded value
+        assert invitation.email == "recipient@example.com"
         assert invitation.accepted is False
         assert invitation.accepted_at is None
         assert isinstance(invitation.created_at, datetime)
@@ -117,7 +122,8 @@ class TestInvitation:
         """Test the string representation of an invitation."""
         assert "Invitation from" in str(invitation)
         assert sender.username in str(invitation)
-        assert invitation.recipient_email in str(invitation)
+        # __str__ uses the decoded email property
+        assert invitation.email in str(invitation)
 
     @override_settings(INVITATION_EXPIRY_DAYS=7)
     def test_invitation_is_expired_with_setting(self, invitation):

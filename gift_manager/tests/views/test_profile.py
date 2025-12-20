@@ -10,6 +10,7 @@ from django.test import override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from gift_manager.email_encoding import encode_email
 from gift_manager.models import Invitation
 from gift_manager.models import Profile
 from gift_manager.views import ProfileDetailView
@@ -89,9 +90,9 @@ class TestSendInvitationView:
         assert response.status_code == 302
         assert reverse("gift_manager:profile_detail") in response.url
 
-        # Verify invitation was created
-        invitation = Invitation.objects.get(recipient_email="recipient@example.com")
-        assert invitation.sender == self.user
+        # Verify invitation was created (email is stored encrypted)
+        invitation = Invitation.objects.get(sender=self.user)
+        assert invitation.email == "recipient@example.com"  # Use decoded property
         assert invitation.token is not None
 
         # Verify email was sent
@@ -114,19 +115,23 @@ class TestAcceptInvitationView:
     @pytest.fixture(autouse=True)
     def setup_invitation(self):
         """Prepares the test environment with users and invitation."""
-        # Create a sender user
+        # Create a sender user (email stored encrypted)
         self.sender = User.objects.create_user(
-            username="sender_user", email="sender@example.com", password="testpass123"
+            username="sender_user",
+            email=encode_email("sender@example.com"),
+            password="testpass123",
         )
-        # Create a recipient user
+        # Create a recipient user (email stored encrypted)
         self.recipient = User.objects.create_user(
-            username="recipient_user", email="recipient@example.com", password="testpass123"
+            username="recipient_user",
+            email=encode_email("recipient@example.com"),
+            password="testpass123",
         )
-        # Create an invitation with a valid UUID token
+        # Create an invitation with a valid UUID token (email stored encrypted)
         self.token = str(uuid.uuid4())
         self.invitation = Invitation.objects.create(
             sender=self.sender,
-            recipient_email="recipient@example.com",
+            recipient_email=encode_email("recipient@example.com"),
             token=self.token,
             accepted=False,
         )
@@ -186,19 +191,23 @@ class TestAcceptInvitationViewExpiration:
     @pytest.fixture(autouse=True)
     def setup_invitation(self):
         """Prepares the test environment with users and invitation."""
-        # Create a sender user
+        # Create a sender user (email stored encrypted)
         self.sender = User.objects.create_user(
-            username="sender_user", email="sender@example.com", password="testpass123"
+            username="sender_user",
+            email=encode_email("sender@example.com"),
+            password="testpass123",
         )
-        # Create a recipient user
+        # Create a recipient user (email stored encrypted)
         self.recipient = User.objects.create_user(
-            username="recipient_user", email="recipient@example.com", password="testpass123"
+            username="recipient_user",
+            email=encode_email("recipient@example.com"),
+            password="testpass123",
         )
-        # Create an invitation with a valid UUID token
+        # Create an invitation with a valid UUID token (email stored encrypted)
         self.token = str(uuid.uuid4())
         self.invitation = Invitation.objects.create(
             sender=self.sender,
-            recipient_email="recipient@example.com",
+            recipient_email=encode_email("recipient@example.com"),
             token=self.token,
             accepted=False,
         )

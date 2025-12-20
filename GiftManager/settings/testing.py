@@ -43,6 +43,7 @@ DATABASES = {
 
 # Use in-memory email backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+EMAIL_ENCRYPTION_KEY = "THIS-IS-NOT-A-SECURE-KEY-FOR-TESTING-ONLY--="
 
 # Use local memory cache for testing
 CACHES = {
