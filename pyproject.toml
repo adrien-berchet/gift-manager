@@ -9,17 +9,19 @@ classifiers = ["Programming Language :: Python"]
 dynamic = ["version"]
 dependencies = [
     "cryptography>=42.0",
-    "django>=5.1,<6.0",
     "django-allauth>=0.61",
     "django-debug-toolbar>=4.2",
     "django-grappelli>=4.0",
     "django-modeltranslation>=0.18",
+    "django-redis>=5",
+    "django>=5.1,<6.0",
+    "gunicorn>=21.0",
     "psycopg[binary]>=3.1",
     "python-dotenv>=1.0",
-    "whitenoise>=6.6",
-    "gunicorn>=21.0",
-    "werkzeug>=1.0.1",
+    "sentry-sdk[django]>=1.40",
     "uvicorn>=0.24",
+    "werkzeug>=1.0.1",
+    "whitenoise>=6.6",
 ]
 
 [tool.setuptools]
@@ -42,8 +44,6 @@ test = [
 mypy = ["pytest-mypy>=0.10", "django-stubs>=4"]
 
 dev = ["gift-manager[test,mypy]", "pre-commit>=3", "ipython>=8", "ruff>=0.3"]
-
-production = ["sentry-sdk[django]>=1.40", "django-redis>=5"]
 
 [build-system]
 requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
