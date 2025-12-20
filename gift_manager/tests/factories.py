@@ -239,8 +239,8 @@ class InvitationFactory(DjangoModelFactory):
         model = Invitation
 
     sender = factory.SubFactory(UserFactory)
-    # Email is stored encoded for privacy
+    # Email is stored encrypted for privacy
     recipient_email = factory.LazyAttribute(
-        lambda _obj: encode_email(factory.Faker("email").generate())
+        lambda obj: encode_email(f"recipient{obj.sender.username}@example.com")
     )
     accepted = False
