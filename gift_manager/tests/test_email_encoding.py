@@ -2,7 +2,6 @@
 
 import pytest
 from django.contrib.auth.models import User
-from django.test import override_settings
 
 from gift_manager.email_encoding import decrypt_email
 from gift_manager.email_encoding import encrypt_email
@@ -10,7 +9,6 @@ from gift_manager.email_encoding import generate_encryption_key
 from gift_manager.email_encoding import is_encrypted_email
 from gift_manager.models import Invitation
 from gift_manager.models import Person
-from gift_manager.models import Profile
 from gift_manager.tests.factories import InvitationFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import UserFactory

@@ -6,10 +6,10 @@ from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
 
 
-class EncodedEmailAccountAdapter(DefaultAccountAdapter):
+class EncryptedEmailAccountAdapter(DefaultAccountAdapter):  # pylint: disable=abstract-method
     """Custom account adapter that encrypts email addresses for privacy."""
 
-    def save_user(self, request, user, form, commit=True):
+    def save_user(self, request, user, form, *, commit=True):  # pylint: disable=arguments-differ
         """Save user with encrypted email address."""
         # Get the plain email from the form
         plain_email = form.cleaned_data.get("email")

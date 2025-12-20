@@ -252,10 +252,7 @@ class Invitation(models.Model):
     accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
-        return (
-            f"{gettext_lazy('Invitation from')} {self.sender} "
-            f"{gettext_lazy('to')} {self.email}"
-        )
+        return f"{gettext_lazy('Invitation from')} {self.sender} {gettext_lazy('to')} {self.email}"
 
     @property
     def email(self) -> str | None:

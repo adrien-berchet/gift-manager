@@ -151,7 +151,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Allauth configuration
-ACCOUNT_ADAPTER = "gift_manager.adapters.EncodedEmailAccountAdapter"
+ACCOUNT_ADAPTER = "gift_manager.adapters.EncryptedEmailAccountAdapter"
 ACCOUNT_SIGNUP_FIELDS = ["email*", "email2*", "username*", "password1*", "password2*"]
 ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
@@ -165,7 +165,8 @@ ACCOUNT_RATE_LIMITS = {
 INVITATION_EXPIRY_DAYS = 7
 
 # Email encryption key for privacy
-# Generate with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
+# Generate with:
+# python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'
 # IMPORTANT: Keep this key secure and never commit it to version control in production!
 EMAIL_ENCRYPTION_KEY = get_env_variable(
     "EMAIL_ENCRYPTION_KEY",

@@ -7,19 +7,21 @@ from django.db import migrations
 from django.db import models
 
 
-def _get_cipher():
+def _get_cipher() -> Fernet:
     """Get the Fernet cipher using the configured encryption key."""
     key = getattr(settings, "EMAIL_ENCRYPTION_KEY", None)
     if not key:
-        raise ValueError(
-            "EMAIL_ENCRYPTION_KEY must be configured in Django settings before running this migration."
+        msg = (
+            "EMAIL_ENCRYPTION_KEY must be configured in Django settings before running this "
+            "migration."
         )
+        raise ValueError(msg)
     if isinstance(key, str):
         key = key.encode("utf-8")
     return Fernet(key)
 
 
-def encrypt_email(email):
+def encrypt_email(email) -> str | None:
     """Encrypt an email address using Fernet encryption."""
     if email is None or email == "":
         return email
@@ -28,7 +30,7 @@ def encrypt_email(email):
     return encrypted.decode("utf-8")
 
 
-def decrypt_email(encrypted_email):
+def decrypt_email(encrypted_email) -> str | None:
     """Decrypt an encrypted email address."""
     if encrypted_email is None or encrypted_email == "":
         return encrypted_email
@@ -40,7 +42,7 @@ def decrypt_email(encrypted_email):
         return encrypted_email
 
 
-def encrypt_existing_emails(apps, schema_editor):
+def encrypt_existing_emails(apps, schema_editor) -> None:  # noqa: ARG001
     """Encrypt all existing email addresses in the database."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")
@@ -65,7 +67,7 @@ def encrypt_existing_emails(apps, schema_editor):
             user.save(update_fields=["email"])
 
 
-def decrypt_existing_emails(apps, schema_editor):
+def decrypt_existing_emails(apps, schema_editor) -> None:  # noqa: ARG001
     """Decrypt all existing email addresses in the database (for reverse migration)."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")

@@ -20,10 +20,13 @@ def _get_cipher() -> Fernet:
     """
     key = getattr(settings, "EMAIL_ENCRYPTION_KEY", None)
     if not key:
-        raise ValueError(
+        msg = (
             "EMAIL_ENCRYPTION_KEY must be configured in Django settings. "
-            "Generate a key with: python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+            "Generate a key with: "
+            "python -c 'from cryptography.fernet import Fernet; "
+            "print(Fernet.generate_key().decode())'"
         )
+        raise ValueError(msg)
     # Ensure key is bytes
     if isinstance(key, str):
         key = key.encode("utf-8")
@@ -90,9 +93,10 @@ def is_encrypted_email(value: str | None) -> bool:
     try:
         cipher = _get_cipher()
         decrypted = cipher.decrypt(value.encode("utf-8")).decode("utf-8")
-        return "@" in decrypted
     except (InvalidToken, ValueError):
         return False
+    else:
+        return "@" in decrypted
 
 
 # Aliases for backwards compatibility with existing code

@@ -10,7 +10,6 @@ from django.db import IntegrityError
 from django.test import override_settings
 from django.utils import timezone
 
-from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import EventPermission
 from gift_manager.models import GiftPermission

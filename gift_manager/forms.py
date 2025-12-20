@@ -65,7 +65,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         if self.instance and self.instance.pk:
             self.initial["email_address"] = decode_email(self.instance.email_address)
 
-    def save(self, commit=True):
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
         instance = super().save(commit=False)
         # Encode the email address before saving
         email = self.cleaned_data.get("email_address")
