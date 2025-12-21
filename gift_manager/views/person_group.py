@@ -80,19 +80,24 @@ class PersonGroupListView(BaseListView):
                 return None
             visited.add(group.pk)
 
+            # Use len() on prefetched data instead of .count()/.exists()
+            # to avoid extra database queries
+            prefetched_members = list(group.person_set.all())
+            prefetched_children = list(group.child_groups.all())
+
             node = {
                 "group": group,
                 "group_id": str(group.group_id),
                 "name": group.name,
                 "depth": depth,
-                "member_count": group.person_set.count(),
-                "has_children": group.child_groups.exists(),
+                "member_count": len(prefetched_members),
+                "has_children": len(prefetched_children) > 0,
                 "parent_ids": [str(p.group_id) for p in group.parent_groups.all()],
                 "children": [],
             }
 
-            # Add children recursively
-            for child in group.child_groups.all():
+            # Add children recursively (use prefetched_children to avoid extra query)
+            for child in prefetched_children:
                 child_node = build_tree_node(child, depth + 1, visited.copy())
                 if child_node:
                     node["children"].append(child_node)
@@ -100,7 +105,8 @@ class PersonGroupListView(BaseListView):
             return node
 
         # Find root groups (those without parents)
-        root_groups = [g for g in all_groups if not g.parent_groups.exists()]
+        # Use len() on prefetched parent_groups instead of .exists() to avoid N queries
+        root_groups = [g for g in all_groups if len(g.parent_groups.all()) == 0]
 
         # Build tree from roots
         tree_data = []
@@ -121,8 +127,10 @@ class PersonGroupListView(BaseListView):
             return result
 
         context["tree_data"] = flatten_tree(tree_data)
+        # Use len() on prefetched data instead of .exists() to avoid 2N queries
         context["has_hierarchy"] = any(
-            g.parent_groups.exists() or g.child_groups.exists() for g in all_groups
+            len(g.parent_groups.all()) > 0 or len(g.child_groups.all()) > 0
+            for g in all_groups
         )
 
         return context
@@ -400,19 +408,28 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                     request.session.modified = True
 
                 # Build the breadcrumbs based on navigation history
-                breadcrumbs = []
+                # First, collect all group IDs we need from the navigation path
+                breadcrumb_ids = []
                 current_group_id = str(selected_group_id)
                 visited = set()  # To prevent infinite loops
 
                 while current_group_id and current_group_id not in visited:
                     visited.add(current_group_id)
-                    try:
-                        group = PersonGroup.objects.get(group_id=current_group_id)
-                        breadcrumbs.insert(0, group)
-                        # Move to parent in the navigation history
-                        current_group_id = navigation_history.get(current_group_id)
-                    except PersonGroup.DoesNotExist:
-                        break
+                    breadcrumb_ids.append(current_group_id)
+                    current_group_id = navigation_history.get(current_group_id)
+
+                # Batch fetch all groups in ONE query instead of N queries
+                groups_by_id = {
+                    str(g.group_id): g
+                    for g in PersonGroup.objects.filter(group_id__in=breadcrumb_ids)
+                }
+
+                # Build breadcrumbs in correct order (reversed, since we collected child-first)
+                breadcrumbs = [
+                    groups_by_id[gid]
+                    for gid in reversed(breadcrumb_ids)
+                    if gid in groups_by_id
+                ]
 
                 context["breadcrumbs"] = breadcrumbs
 
