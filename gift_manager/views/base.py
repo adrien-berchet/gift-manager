@@ -187,7 +187,15 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
 
     def get_cancel_url(self) -> str:
         """URL to redirect to when the cancel button is clicked."""
-        return self.success_url
+        # Prefer dynamic success URL if provided by subclass
+        try:
+            url = self.get_success_url()
+            if url:
+                return url
+        except Exception:  # noqa: S110
+            pass
+        # Fallback to static success_url if defined
+        return getattr(self, "success_url", "/")
 
     def form_valid(self, form):
         with transaction.atomic():
