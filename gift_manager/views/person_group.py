@@ -157,8 +157,34 @@ class PersonGroupUpdateView(BaseUpdateView):
         return kwargs
 
 
+def _check_editor_permission(
+    request,
+    group: PersonGroup,
+) -> bool:
+    """Check if the user has permission to modify the group.
+
+    Args:
+        request: The HTTP request object.
+        group: The PersonGroup instance.
+
+    Returns:
+        bool: True if the user has permission to modify the group, False otherwise.
+    """
+    permission = PermissionService.get_permission(group, request.user, "group")
+    if permission < PermissionLevel.EDITOR:
+        messages.error(request, _("You do not have permission to edit this group"))
+        return False
+    return True
+
+
+@login_required
 def add_multiple_persons_to_group(request, pk):
     group = get_object_or_404(PersonGroup, group_id=pk)
+
+    # Permission: require at least Editor on the group
+    if not _check_editor_permission(request, group):
+        return redirect("gift_manager:person_group_detail", pk=pk)
+
     if request.method == "POST":
         form = PersonGroupAddMultiplePersonsForm(request.POST, user=request.user, group=group)
         if form.is_valid():
@@ -177,9 +203,15 @@ def add_multiple_persons_to_group(request, pk):
     )
 
 
+@login_required
 def add_multiple_child_groups_to_group(request, pk):
     """Add multiple child groups to a parent group."""
     parent_group = get_object_or_404(PersonGroup, group_id=pk)
+
+    # Permission: require at least Editor on the group
+    if not _check_editor_permission(request, parent_group):
+        return redirect("gift_manager:person_group_detail", pk=pk)
+
     if request.method == "POST":
         form = PersonGroupAddMultipleChildGroupsForm(
             request.POST, user=request.user, group=parent_group
@@ -200,11 +232,18 @@ def add_multiple_child_groups_to_group(request, pk):
     )
 
 
-def remove_person_from_group(request, pk, person_id):  # noqa: ARG001
+@login_required
+def remove_person_from_group(request, pk, person_id):
     with transaction.atomic():
         group = get_object_or_404(PersonGroup, group_id=pk)
+
+        # Permission: require at least Editor on the group
+        if not _check_editor_permission(request, group):
+            return redirect("gift_manager:person_group_detail", pk=pk)
+
         person = get_object_or_404(Person, person_id=person_id)
         person.groups.remove(group)
+        messages.success(request, _("Person removed from group"))
         return redirect("gift_manager:person_group_detail", pk=pk)
 
 
