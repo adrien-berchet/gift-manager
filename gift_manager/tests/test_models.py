@@ -7,6 +7,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 
@@ -28,6 +29,18 @@ from gift_manager.tests.factories import InvitationFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
+
+
+def is_sqlite():
+    """Check if the test database is SQLite."""
+    return connection.vendor == "sqlite"
+
+
+# Marker for tests that require PostgreSQL (use JSONB functions, etc.)
+requires_postgresql = pytest.mark.skipif(
+    is_sqlite(),
+    reason="PostgreSQL-specific features (JSONB) not available in SQLite",
+)
 
 
 @pytest.mark.django_db
@@ -1375,10 +1388,7 @@ class TestPersonGroupHierarchy:
 class TestPersonManager:
     """Tests for PersonManager query methods."""
 
-    @pytest.mark.skipif(
-        True,  # Skip for SQLite which doesn't support jsonb_build_object
-        reason="PostgreSQL-specific JSONB functions not available in SQLite"
-    )
+    @requires_postgresql
     def test_with_groups_annotated(self, user):
         """Test with_groups_annotated annotates persons with groups info."""
         # Create person and groups
@@ -1408,10 +1418,7 @@ class TestPersonManager:
         assert hasattr(annotated_person, "complete_name")
         assert annotated_person.complete_name == "Doe John"
 
-    @pytest.mark.skipif(
-        True,  # Skip for SQLite which doesn't support jsonb_build_object
-        reason="PostgreSQL-specific JSONB functions not available in SQLite"
-    )
+    @requires_postgresql
     def test_for_list_display(self, user):
         """Test for_list_display returns optimized queryset."""
         person = PersonFactory(first_name="John", family_name="Doe")
@@ -1439,10 +1446,7 @@ class TestPersonManager:
 class TestGiftManagerMethods:
     """Tests for GiftManager query methods."""
 
-    @pytest.mark.skipif(
-        True,  # Skip for SQLite which doesn't support jsonb_build_object
-        reason="PostgreSQL-specific JSONB functions not available in SQLite"
-    )
+    @requires_postgresql
     def test_with_tags_annotated(self, gift, gift_tag):
         """Test with_tags_annotated annotates gifts with tags info."""
         from gift_manager.models import Gift
@@ -1457,10 +1461,7 @@ class TestGiftManagerMethods:
         assert tags_info is not None
         assert len(tags_info) == 1
 
-    @pytest.mark.skipif(
-        True,  # Skip for SQLite which doesn't support jsonb_build_object
-        reason="PostgreSQL-specific JSONB functions not available in SQLite"
-    )
+    @requires_postgresql
     def test_for_list_display(self, user, gift, gift_tag):
         """Test for_list_display returns optimized queryset."""
         from gift_manager.models import Gift
@@ -1542,10 +1543,7 @@ class TestRelationManagerMethods:
         assert hasattr(fetched, "related_object")
         assert fetched.related_object == group.name
 
-    @pytest.mark.skipif(
-        True,  # Skip for SQLite - uses with_related_object_name which has complex SQL
-        reason="Manager method chaining issue with accessible_by"
-    )
+    @requires_postgresql
     def test_for_list_display(self, user, person, gift, status):
         """Test for_list_display returns optimized queryset."""
         relation = Relation.objects.create(person=person, gift=gift, status=status)
