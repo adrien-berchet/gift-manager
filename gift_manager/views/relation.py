@@ -224,6 +224,7 @@ class RelationListView(BaseListView):
                 "event__name",
                 "event__event_id",
                 "status",
+                "due_date",
             )
         )
 

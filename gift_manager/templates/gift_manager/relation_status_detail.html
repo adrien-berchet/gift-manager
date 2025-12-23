@@ -35,9 +35,10 @@
     "{{ relation.gift.gift_id }}",
         "{{ relation.gift.name|escapejs }}",
         "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-        "{{ relation.comment|default:'-'|escapejs }}",
-        "{{ relation.event.name|default:'-'|escapejs }}",
-        {% if relation.due_date %}"{{ relation.due_date }}"{% else %} "-"{% endif %},
+        "{{ relation.comment|escapejs }}",
+        "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+        "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+        "{{ relation.due_date|date|default:'' }}",
     "{{ relation.relation_id }}",
         "{% url 'gift_manager:relation_detail' relation.relation_id %}",
         "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -88,9 +89,23 @@
             name: "{% trans 'Event' %}",
             sort: {
                 compare: GridUtils.sortString()
+            },
+            formatter: (cell, row) => {
+                const eventName = row.cells[8].data;
+                const eventUrl = row.cells[9].data;
+                if (eventName && eventUrl) {
+                    return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                }
+                return eventName;
             }
         },
-        { name: "{% trans 'Due Date' %}" },
+        { name: 'event_url', hidden: true },
+        {
+            name: "{% trans 'Due date' %}",
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
         { name: 'relation_id', hidden: true },
         { name: 'relation_detail_url', hidden: true },
         { name: 'relation_edit_url', hidden: true },
@@ -103,15 +118,15 @@
             formatter: GridUtils.actionButtonsFormatter(
                 {
                     give: (row) => row.cells[6].data,
-                    details: (row) => row.cells[11].data,
-                    edit: (row) => row.cells[12].data,
-                    delete: (row) => row.cells[13].data
+                    details: (row) => row.cells[12].data,
+                    edit: (row) => row.cells[13].data,
+                    delete: (row) => row.cells[14].data
                 },
                 [
                     'give',
                     'details',
                     'edit',
-                    { type: 'delete', condition: (row) => row.cells[14].data }
+                    { type: 'delete', condition: (row) => row.cells[15].data }
                 ]
             )
         }

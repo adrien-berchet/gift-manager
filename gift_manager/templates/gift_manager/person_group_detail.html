@@ -70,7 +70,7 @@
       aria-controls="persons-list"
       aria-selected="true"
     >
-      {% trans "Direct members" %} ({{ direct_member_count }})
+      {% trans "Direct members" %} [{{ direct_member_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -84,7 +84,7 @@
       aria-controls="nested-members-list"
       aria-selected="false"
     >
-      {% trans "All members (including nested)" %} ({{ nested_member_count }})
+      {% trans "All members (including nested)" %} [{{ nested_member_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -98,7 +98,7 @@
       aria-controls="gifts-list"
       aria-selected="false"
     >
-      {% trans "Gifts for this group" %}
+      {% trans "Gifts for this group" %} [{{ gift_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -112,7 +112,7 @@
       aria-controls="nested-gifts-list"
       aria-selected="false"
     >
-      {% trans "All gifts (including members)" %} ({{ nested_gift_count }})
+      {% trans "All gifts (including members)" %} [{{ nested_gift_count }}]
     </button>
   </li>
 </ul>
@@ -390,7 +390,10 @@
       "{{ relation.relation_id }}",
       "{% url 'gift_manager:relation_detail' relation.relation_id %}",
       "{% url 'gift_manager:relation_edit' relation.relation_id %}",
-      "{% url 'gift_manager:relation_delete' relation.relation_id %}"
+      "{% url 'gift_manager:relation_delete' relation.relation_id %}",
+      "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+      "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+      "{{ relation.due_date|date|default:'' }}"
   ],
       {% endfor %}
       ];
@@ -442,6 +445,27 @@
       { name: 'relation_detail_url', hidden: true },
       { name: 'relation_edit_url', hidden: true },
       { name: 'relation_delete_url', hidden: true },
+      {
+          name: "{% trans 'Event' %}",
+          sort: {
+              compare: GridUtils.sortString()
+          },
+          formatter: (cell, row) => {
+              const eventName = row.cells[10].data;
+              const eventUrl = row.cells[11].data;
+              if (eventName && eventUrl) {
+                  return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+              }
+              return eventName;
+          }
+      },
+      { name: 'event_url', hidden: true },
+      {
+          name: "{% trans 'Due date' %}",
+          sort: {
+              compare: GridUtils.sortString()
+          }
+      },
       {
           name: "{% trans 'Actions' %}",
           width: '180px',
@@ -535,13 +559,6 @@
       "{{ relation.gift.gift_id }}",
       "{{ relation.gift.name|escapejs }}",
       "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-      "{{ relation.status.pk }}",
-      "{{ relation.comment|escapejs }}",
-      "{{ relation.status.status|escapejs }}",
-      "{{ relation.relation_id }}",
-      "{% url 'gift_manager:relation_detail' relation.relation_id %}",
-      "{% url 'gift_manager:relation_edit' relation.relation_id %}",
-      "{% url 'gift_manager:relation_delete' relation.relation_id %}",
       // Recipient info
       "{% if relation.person %}" +
           "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" +
@@ -552,7 +569,17 @@
           "{% url 'gift_manager:person_detail' relation.person.person_id %}" +
       "{% else %}" +
           "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" +
-      "{% endif %}"
+      "{% endif %}",
+      "{{ relation.comment|escapejs }}",
+      "{{ relation.status.pk }}",
+      "{{ relation.status.status|escapejs }}",
+      "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+      "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+      "{{ relation.due_date|date|default:'' }}",
+      "{{ relation.relation_id }}",
+      "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+      "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+      "{% url 'gift_manager:relation_delete' relation.relation_id %}"
   ],
       {% endfor %}
       ];
@@ -577,11 +604,12 @@
               compare: GridUtils.sortString()
           },
           formatter: (cell, row) => {
-              const recipientName = row.cells[10].data;
-              const recipientUrl = row.cells[11].data;
+              const recipientName = row.cells[3].data;
+              const recipientUrl = row.cells[4].data;
               return gridjs.html(`<a href="${recipientUrl}">${recipientName}</a>`);
           }
       },
+      { name: 'recipient_url', hidden: true },
       {
           name: "{% trans 'Comment' %}",
           sort: {
@@ -591,9 +619,9 @@
       {
           name: "{% trans 'Status' %}",
             formatter: (cell, row) => {
-                const statusPk = row.cells[3].data;
-                const statusLabel = row.cells[5].data;
-                const relationId = row.cells[6].data;
+                const statusPk = row.cells[6].data;
+                const statusLabel = row.cells[7].data;
+                const relationId = row.cells[11].data;
                 return gridjs.html(`
                     <form id="status-form-${relationId}" style="display: inline;">
                         <select class="form-select form-select-sm status-selector"
@@ -611,12 +639,31 @@
             }
       },
       { name: 'status_label', hidden: true },
+      {
+          name: "{% trans 'Event' %}",
+          sort: {
+              compare: GridUtils.sortString()
+          },
+          formatter: (cell, row) => {
+              const eventName = row.cells[8].data;
+              const eventUrl = row.cells[9].data;
+              if (eventName && eventUrl) {
+                  return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+              }
+              return eventName;
+          }
+      },
+      { name: 'event_url', hidden: true },
+      {
+          name: "{% trans 'Due date' %}",
+          sort: {
+              compare: GridUtils.sortString()
+          }
+      },
       { name: 'relation_id', hidden: true },
       { name: 'relation_detail_url', hidden: true },
       { name: 'relation_edit_url', hidden: true },
       { name: 'relation_delete_url', hidden: true },
-      { name: 'recipient_name', hidden: true },
-      { name: 'recipient_url', hidden: true },
       {
           name: "{% trans 'Actions' %}",
           width: '180px',
@@ -624,9 +671,9 @@
           formatter: GridUtils.actionButtonsFormatter(
               {
                   give: (row) => row.cells[2].data,
-                  details: (row) => row.cells[7].data,
-                  edit: (row) => row.cells[8].data,
-                  delete: (row) => row.cells[9].data
+                  details: (row) => row.cells[12].data,
+                  edit: (row) => row.cells[13].data,
+                  delete: (row) => row.cells[14].data
               },
               ['give', 'details', 'edit']
           )
@@ -638,6 +685,31 @@
       search: true,
       sort: true
   });
+
+    // Trigger initial sort on status column to make Grid.js aware of the sort
+    // Trigger initial sort: Status (5) then Family Name (2) then Gift (1)
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#nested-gifts-grid th:nth-child(4)');
+        const familyNameHeader = document.querySelector('#nested-gifts-grid th:nth-child(2)');
+        const giftHeader = document.querySelector('#nested-gifts-grid th:nth-child(1)');
+
+        if (statusHeader && familyNameHeader && giftHeader) {
+            // Primary sort: Status
+            statusHeader.click();
+
+            // Secondary sort: Family Name (simulate Shift+Click)
+            const shiftClick = new MouseEvent('click', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                shiftKey: true
+            });
+            familyNameHeader.dispatchEvent(shiftClick);
+
+            // Third sort: Gift (simulate Shift+Click)
+            giftHeader.dispatchEvent(shiftClick);
+        }
+    }, 100);
 
   // Handle status selector changes with event delegation for nested gifts
   document.getElementById('nested-gifts-grid').addEventListener('change', function (e) {

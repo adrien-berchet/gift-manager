@@ -1019,7 +1019,8 @@ class RelationStatus(models.Model):
         This is used as the default for the Relation.status ForeignKey.
         Using a callable that returns a PK avoids migration issues.
         """
-        status, _ = cls.objects.get_or_create(status=cls.DEFAULT_STATUS)
+        # Use status_en to avoid issues with modeltranslation when the site is in another language
+        status, _ = cls.objects.get_or_create(status_en=cls.DEFAULT_STATUS)
         return status.pk
 
 
