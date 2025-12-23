@@ -2,8 +2,13 @@
 
 This module contains settings optimized for running tests.
 These settings prioritize speed and isolation over security.
+
+Database selection:
+- If DB_* environment variables are set: Uses PostgreSQL (for CI and full compatibility)
+- Otherwise: Falls back to SQLite (for quick local testing, but some features may not work)
 """
 
+import os
 import tempfile
 
 from .base import *  # noqa: F403
@@ -21,25 +26,49 @@ PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",
 ]
 
-# Create a temporary file for the database
-# We keep the file open only to get its name, then close it.
-# delete=False is necessary so the file persists for the duration of the tests.
-# It allows sharing the DB between the test runner and the live server thread.
-_temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)  # noqa: SIM115
-_temp_db.close()
 
-# Use SQLite for faster tests
-# For live_server tests, use a real file (not in-memory) so it's visible across threads
-# The file will be created/destroyed automatically by Django's test runner
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": _temp_db.name,
-        "TEST": {
-            "NAME": _temp_db.name,
-        },
+def _get_test_database_config() -> dict:
+    """Get database configuration for tests.
+
+    Returns PostgreSQL config if DB_* env vars are set, otherwise SQLite.
+    """
+    db_name = os.environ.get("DB_NAME")
+    db_user = os.environ.get("DB_USER")
+    db_password = os.environ.get("DB_PASSWORD")
+    db_host = os.environ.get("DB_HOST")
+
+    # If PostgreSQL environment variables are set, use PostgreSQL
+    if all([db_name, db_user, db_password, db_host]):
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": db_name,
+                "USER": db_user,
+                "PASSWORD": db_password,
+                "HOST": db_host,
+                "PORT": os.environ.get("DB_PORT", "5432"),
+                "TEST": {
+                    "NAME": f"test_{db_name}",
+                },
+            }
+        }
+
+    # Otherwise, fall back to SQLite for quick local testing
+    # Note: Some PostgreSQL-specific features (JSONB) won't work with SQLite
+    temp_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)  # noqa: SIM115
+    temp_db.close()
+    return {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": temp_db.name,
+            "TEST": {
+                "NAME": temp_db.name,
+            },
+        }
     }
-}
+
+
+DATABASES = _get_test_database_config()
 
 # Use in-memory email backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

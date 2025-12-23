@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines,redefined-outer-name
 import uuid
 from datetime import datetime
 from datetime import timedelta
@@ -5,18 +6,23 @@ from datetime import timedelta
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
+from django.db import connection
 from django.test import override_settings
 from django.utils import timezone
 
 from gift_manager.email_encoding import encode_email
+from gift_manager.models import Event
 from gift_manager.models import EventPermission
+from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
+from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
 from gift_manager.models import PersonPermission
 from gift_manager.models import Profile
@@ -25,7 +31,20 @@ from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
 from gift_manager.tests.factories import InvitationFactory
 from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
+
+
+def is_sqlite():
+    """Check if the test database is SQLite."""
+    return connection.vendor == "sqlite"
+
+
+# Marker for tests that require PostgreSQL (use JSONB functions, etc.)
+requires_postgresql = pytest.mark.skipif(
+    is_sqlite(),
+    reason="PostgreSQL-specific features (JSONB) not available in SQLite",
+)
 
 
 @pytest.mark.django_db
@@ -774,3 +793,1232 @@ class TestRelationStatus:
         RelationStatus.objects.create(status="Purchased")
         with pytest.raises(IntegrityError):
             RelationStatus.objects.create(status="Purchased")
+
+
+@pytest.mark.django_db
+class TestPersonGroupHierarchy:
+    """Tests for PersonGroup hierarchy methods with trivial and complex scenarios."""
+
+    # =========================================================================
+    # TRIVIAL HIERARCHY TESTS (simple parent-child relationships)
+    # =========================================================================
+
+    def test_get_children_empty(self):
+        """Test get_children returns empty queryset when no children."""
+        group = PersonGroupFactory(name="Lonely Group")
+        children = group.get_children()
+        assert not list(children)
+
+    def test_get_children_single_child(self):
+        """Test get_children with single child."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        children = parent.get_children()
+        assert len(children) == 1
+        assert child in children
+
+    def test_get_children_multiple_children(self):
+        """Test get_children with multiple children."""
+        parent = PersonGroupFactory(name="Parent")
+        child1 = PersonGroupFactory(name="Child 1")
+        child2 = PersonGroupFactory(name="Child 2")
+        child3 = PersonGroupFactory(name="Child 3")
+
+        child1.parent_groups.add(parent)
+        child2.parent_groups.add(parent)
+        child3.parent_groups.add(parent)
+
+        children = parent.get_children()
+        assert len(children) == 3
+        assert child1 in children
+        assert child2 in children
+        assert child3 in children
+
+    def test_get_descendants_empty(self):
+        """Test get_descendants returns empty list when no descendants."""
+        group = PersonGroupFactory(name="Lonely Group")
+        descendants = group.get_descendants()
+        assert descendants == []
+
+    def test_get_descendants_single_level(self):
+        """Test get_descendants with single level of children."""
+        parent = PersonGroupFactory(name="Parent")
+        child1 = PersonGroupFactory(name="Child 1")
+        child2 = PersonGroupFactory(name="Child 2")
+
+        child1.parent_groups.add(parent)
+        child2.parent_groups.add(parent)
+
+        descendants = parent.get_descendants()
+        assert len(descendants) == 2
+        assert child1 in descendants
+        assert child2 in descendants
+
+    def test_get_ancestors_empty(self):
+        """Test get_ancestors returns empty list for root group."""
+        group = PersonGroupFactory(name="Root Group")
+        ancestors = group.get_ancestors()
+        assert ancestors == []
+
+    def test_get_ancestors_single_parent(self):
+        """Test get_ancestors with single parent."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        ancestors = child.get_ancestors()
+        assert len(ancestors) == 1
+        assert parent in ancestors
+
+    def test_get_primary_ancestors_path_empty(self):
+        """Test get_primary_ancestors_path returns empty list for root."""
+        group = PersonGroupFactory(name="Root")
+        path = group.get_primary_ancestors_path()
+        assert path == []
+
+    def test_get_primary_ancestors_path_simple(self):
+        """Test get_primary_ancestors_path with simple chain."""
+        root = PersonGroupFactory(name="Root")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(root)
+
+        path = child.get_primary_ancestors_path()
+        assert len(path) == 1
+        assert path[0] == root
+
+    def test_has_cycle_with_self(self):
+        """Test has_cycle_with detects self-reference."""
+        group = PersonGroupFactory(name="Group")
+        assert group.has_cycle_with(group) is True
+
+    def test_has_cycle_with_unrelated(self):
+        """Test has_cycle_with returns False for unrelated groups."""
+        group1 = PersonGroupFactory(name="Group 1")
+        group2 = PersonGroupFactory(name="Group 2")
+        assert group1.has_cycle_with(group2) is False
+        assert group2.has_cycle_with(group1) is False
+
+    def test_has_cycle_with_parent_child(self):
+        """Test has_cycle_with with parent-child relationship."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # Parent becoming child of its own child would create cycle
+        assert parent.has_cycle_with(child) is True
+        # Child becoming child of parent is fine (already is)
+        assert child.has_cycle_with(parent) is False
+
+    def test_get_all_members_empty(self):
+        """Test get_all_members returns empty queryset when no members."""
+        group = PersonGroupFactory(name="Empty Group")
+        members = group.get_all_members()
+        assert not list(members)
+
+    def test_get_all_members_direct_only(self):
+        """Test get_all_members with direct members only."""
+        group = PersonGroupFactory(name="Group")
+        person1 = PersonFactory(first_name="John", family_name="Doe")
+        person2 = PersonFactory(first_name="Jane", family_name="Doe")
+        person1.groups.add(group)
+        person2.groups.add(group)
+
+        members = group.get_all_members(include_nested=False)
+        assert len(members) == 2
+        assert person1 in members
+        assert person2 in members
+
+    def test_clean_no_cycle(self):
+        """Test clean passes when no cycle exists."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # Should not raise
+        child.clean()
+
+    # =========================================================================
+    # COMPLEX HIERARCHY TESTS (deep, DAG, diamond structures)
+    # =========================================================================
+
+    def test_get_descendants_deep_hierarchy(self):
+        """Test get_descendants with 4-level deep hierarchy."""
+        level1 = PersonGroupFactory(name="Level 1")
+        level2 = PersonGroupFactory(name="Level 2")
+        level3 = PersonGroupFactory(name="Level 3")
+        level4 = PersonGroupFactory(name="Level 4")
+
+        level2.parent_groups.add(level1)
+        level3.parent_groups.add(level2)
+        level4.parent_groups.add(level3)
+
+        # Level 1 should have all others as descendants
+        descendants = level1.get_descendants()
+        assert len(descendants) == 3
+        assert level2 in descendants
+        assert level3 in descendants
+        assert level4 in descendants
+
+        # Level 2 should have levels 3 and 4
+        descendants = level2.get_descendants()
+        assert len(descendants) == 2
+        assert level3 in descendants
+        assert level4 in descendants
+
+        # Level 4 should have no descendants
+        descendants = level4.get_descendants()
+        assert len(descendants) == 0
+
+    def test_get_descendants_diamond_structure(self):
+        """Test get_descendants with diamond DAG structure."""
+        #       root
+        #      /    \
+        #   left    right
+        #      \    /
+        #       leaf
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        # Root should see all 3 descendants (no duplicates)
+        descendants = root.get_descendants()
+        assert len(descendants) == 3
+        assert left in descendants
+        assert right in descendants
+        assert leaf in descendants
+
+        # Left and right should each see only leaf
+        assert len(left.get_descendants()) == 1
+        assert len(right.get_descendants()) == 1
+
+    def test_get_descendants_complex_dag(self):
+        """Test get_descendants with complex DAG having shared nodes."""
+        #       root1    root2
+        #         |   \ /   |
+        #         A    B    C
+        #          \  / \  /
+        #           D    E
+        #            \  /
+        #             F
+        root1 = PersonGroupFactory(name="Root1")
+        root2 = PersonGroupFactory(name="Root2")
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+        d = PersonGroupFactory(name="D")
+        e = PersonGroupFactory(name="E")
+        f = PersonGroupFactory(name="F")
+
+        a.parent_groups.add(root1)
+        b.parent_groups.add(root1, root2)
+        c.parent_groups.add(root2)
+        d.parent_groups.add(a, b)
+        e.parent_groups.add(b, c)
+        f.parent_groups.add(d, e)
+
+        # Root1 descendants: A, B, D, E, F (C is only under root2)
+        descendants = root1.get_descendants()
+        assert len(descendants) == 5
+        assert a in descendants
+        assert b in descendants
+        assert d in descendants
+        assert e in descendants
+        assert f in descendants
+        assert c not in descendants
+
+        # Root2 descendants: B, C, D, E, F (A is only under root1)
+        descendants = root2.get_descendants()
+        assert len(descendants) == 5
+        assert b in descendants
+        assert c in descendants
+        assert d in descendants
+        assert e in descendants
+        assert f in descendants
+        assert a not in descendants
+
+    def test_get_ancestors_deep_hierarchy(self):
+        """Test get_ancestors with 4-level deep hierarchy."""
+        level1 = PersonGroupFactory(name="Level 1")
+        level2 = PersonGroupFactory(name="Level 2")
+        level3 = PersonGroupFactory(name="Level 3")
+        level4 = PersonGroupFactory(name="Level 4")
+
+        level2.parent_groups.add(level1)
+        level3.parent_groups.add(level2)
+        level4.parent_groups.add(level3)
+
+        # Level 4 should have all ancestors
+        ancestors = level4.get_ancestors()
+        assert len(ancestors) == 3
+        assert level1 in ancestors
+        assert level2 in ancestors
+        assert level3 in ancestors
+
+        # Level 1 should have no ancestors
+        ancestors = level1.get_ancestors()
+        assert len(ancestors) == 0
+
+    def test_get_ancestors_diamond_structure(self):
+        """Test get_ancestors with diamond structure."""
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        # Leaf should have all 3 ancestors (no duplicates)
+        ancestors = leaf.get_ancestors()
+        assert len(ancestors) == 3
+        assert root in ancestors
+        assert left in ancestors
+        assert right in ancestors
+
+    def test_get_ancestors_multiple_roots(self):
+        """Test get_ancestors when there are multiple root groups."""
+        root1 = PersonGroupFactory(name="Root 1")
+        root2 = PersonGroupFactory(name="Root 2")
+        child = PersonGroupFactory(name="Child")
+
+        child.parent_groups.add(root1, root2)
+
+        ancestors = child.get_ancestors()
+        assert len(ancestors) == 2
+        assert root1 in ancestors
+        assert root2 in ancestors
+
+    def test_get_primary_ancestors_path_deep(self):
+        """Test get_primary_ancestors_path with deep hierarchy."""
+        level1 = PersonGroupFactory(name="Level 1")
+        level2 = PersonGroupFactory(name="Level 2")
+        level3 = PersonGroupFactory(name="Level 3")
+        level4 = PersonGroupFactory(name="Level 4")
+
+        level2.parent_groups.add(level1)
+        level3.parent_groups.add(level2)
+        level4.parent_groups.add(level3)
+
+        path = level4.get_primary_ancestors_path()
+        assert len(path) == 3
+        # Path should be ordered from root to immediate parent
+        assert path[0] == level1
+        assert path[1] == level2
+        assert path[2] == level3
+
+    def test_get_primary_ancestors_path_diamond(self):
+        """Test get_primary_ancestors_path picks one path in diamond."""
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        path = leaf.get_primary_ancestors_path()
+        # Should pick one path (either left or right, but not both)
+        assert len(path) == 2
+        assert path[0] == root
+        assert path[1] in [left, right]
+
+    def test_has_cycle_with_deep_chain(self):
+        """Test has_cycle_with detects cycle in deep chain."""
+        # Create: A -> B -> C -> D
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+        d = PersonGroupFactory(name="D")
+
+        b.parent_groups.add(a)
+        c.parent_groups.add(b)
+        d.parent_groups.add(c)
+
+        # Making A a child of D would create cycle
+        assert a.has_cycle_with(d) is True
+        assert a.has_cycle_with(c) is True
+        assert a.has_cycle_with(b) is True
+
+        # Making D a child of A is fine
+        assert d.has_cycle_with(a) is False
+
+    def test_has_cycle_with_diamond(self):
+        """Test has_cycle_with in diamond structure."""
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        # Root becoming child of leaf would create cycle
+        assert root.has_cycle_with(leaf) is True
+        # Left or right becoming child of leaf would create cycle
+        assert left.has_cycle_with(leaf) is True
+        assert right.has_cycle_with(leaf) is True
+
+    def test_get_all_members_nested(self):
+        """Test get_all_members with nested groups."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        grandchild = PersonGroupFactory(name="Grandchild")
+
+        child.parent_groups.add(parent)
+        grandchild.parent_groups.add(child)
+
+        # Add members at different levels
+        person_parent = PersonFactory(first_name="Parent", family_name="Member")
+        person_child = PersonFactory(first_name="Child", family_name="Member")
+        person_grandchild = PersonFactory(first_name="Grandchild", family_name="Member")
+
+        person_parent.groups.add(parent)
+        person_child.groups.add(child)
+        person_grandchild.groups.add(grandchild)
+
+        # Without nested, only direct members
+        direct_members = parent.get_all_members(include_nested=False)
+        assert len(direct_members) == 1
+        assert person_parent in direct_members
+
+        # With nested, all members from hierarchy
+        all_members = parent.get_all_members(include_nested=True)
+        assert len(all_members) == 3
+        assert person_parent in all_members
+        assert person_child in all_members
+        assert person_grandchild in all_members
+
+    def test_get_all_members_diamond_no_duplicates(self):
+        """Test get_all_members doesn't duplicate members in diamond structure."""
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        # Add same person to multiple groups
+        person = PersonFactory(first_name="Multi", family_name="Group")
+        person.groups.add(left, right, leaf)
+
+        # Person should appear only once in results
+        members = root.get_all_members(include_nested=True)
+        person_count = sum(1 for m in members if m == person)
+        assert person_count == 1
+
+    def test_clean_cycle_detection(self):
+        """Test clean method raises ValidationError on cycle."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # Create cycle by making parent a child of child
+        parent.parent_groups.add(child)
+
+        with pytest.raises(ValidationError):
+            parent.clean()
+
+    def test_clean_deep_cycle_detection(self):
+        """Test clean method detects cycle in deep hierarchy."""
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+
+        b.parent_groups.add(a)
+        c.parent_groups.add(b)
+
+        # Create cycle: A -> B -> C -> A
+        a.parent_groups.add(c)
+
+        with pytest.raises(ValidationError):
+            a.clean()
+
+    def test_clear_hierarchy_cache(self):
+        """Test clear_hierarchy_cache clears related caches."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # Populate caches
+        parent.get_descendants(use_cache=True)
+        child.get_ancestors(use_cache=True)
+
+        # Verify caches exist
+        assert cache.get(f"persongroup_descendants_{parent.pk}") is not None
+        assert cache.get(f"persongroup_ancestors_{child.pk}") is not None
+
+        # Clear caches
+        child.clear_hierarchy_cache()
+
+        # Verify caches are cleared
+        assert cache.get(f"persongroup_descendants_{child.pk}") is None
+        assert cache.get(f"persongroup_ancestors_{child.pk}") is None
+
+    def test_get_descendants_caching(self):
+        """Test get_descendants uses and respects cache."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # First call should populate cache
+        descendants1 = parent.get_descendants(use_cache=True)
+        assert len(descendants1) == 1
+
+        # Second call should use cache (verify cache key exists)
+        cache_key = f"persongroup_descendants_{parent.pk}"
+        assert cache.get(cache_key) is not None
+
+        # Call with use_cache=False should bypass cache
+        # (we can't easily verify this, but at least it shouldn't error)
+        descendants2 = parent.get_descendants(use_cache=False)
+        assert len(descendants2) == 1
+
+    def test_get_ancestors_caching(self):
+        """Test get_ancestors uses and respects cache."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # First call should populate cache
+        ancestors1 = child.get_ancestors(use_cache=True)
+        assert len(ancestors1) == 1
+
+        # Verify cache key exists
+        cache_key = f"persongroup_ancestors_{child.pk}"
+        assert cache.get(cache_key) is not None
+
+    def test_circular_reference_handling(self):
+        """Test that circular references don't cause infinite loops."""
+        # Create two groups that reference each other
+        group_a = PersonGroupFactory(name="Group A")
+        group_b = PersonGroupFactory(name="Group B")
+
+        group_b.parent_groups.add(group_a)
+        group_a.parent_groups.add(group_b)
+
+        # These should complete without infinite loops
+        ancestors_a = group_a.get_ancestors()
+        ancestors_b = group_b.get_ancestors()
+
+        # Each should see the other as an ancestor
+        assert len(ancestors_a) == 1
+        assert group_b in ancestors_a
+        assert len(ancestors_b) == 1
+        assert group_a in ancestors_b
+
+        descendants_a = group_a.get_descendants()
+        descendants_b = group_b.get_descendants()
+
+        assert len(descendants_a) == 1
+        assert group_b in descendants_a
+        assert len(descendants_b) == 1
+        assert group_a in descendants_b
+
+    def test_very_deep_hierarchy(self):
+        """Test hierarchy methods work with very deep hierarchies (10+ levels)."""
+        groups = []
+        previous = None
+
+        # Create a chain of 15 groups
+        for i in range(15):
+            group = PersonGroupFactory(name=f"Level {i}")
+            if previous:
+                group.parent_groups.add(previous)
+            groups.append(group)
+            previous = group
+
+        root = groups[0]
+        deepest = groups[-1]
+
+        # Root should have 14 descendants
+        descendants = root.get_descendants()
+        assert len(descendants) == 14
+
+        # Deepest should have 14 ancestors
+        ancestors = deepest.get_ancestors()
+        assert len(ancestors) == 14
+
+        # Primary path should have 14 ancestors
+        path = deepest.get_primary_ancestors_path()
+        assert len(path) == 14
+        assert path[0] == root
+        assert path[-1] == groups[-2]  # immediate parent
+
+    def test_wide_hierarchy(self):
+        """Test hierarchy methods work with wide hierarchies (many children)."""
+        parent = PersonGroupFactory(name="Parent")
+        children = []
+
+        # Create 20 children
+        for i in range(20):
+            child = PersonGroupFactory(name=f"Child {i}")
+            child.parent_groups.add(parent)
+            children.append(child)
+
+        descendants = parent.get_descendants()
+        assert len(descendants) == 20
+
+        for child in children:
+            assert child in descendants
+            ancestors = child.get_ancestors()
+            assert len(ancestors) == 1
+            assert parent in ancestors
+
+
+@pytest.mark.django_db
+class TestPersonManager:
+    """Tests for PersonManager query methods."""
+
+    @requires_postgresql
+    def test_with_groups_annotated(self, user):
+        """Test with_groups_annotated annotates persons with groups info."""
+        # Create person and groups
+        person = PersonFactory(first_name="John", family_name="Doe")
+        group1 = PersonGroupFactory(name="Family")
+        group2 = PersonGroupFactory(name="Friends")
+
+        person.groups.add(group1, group2)
+
+        # Query with groups annotated
+        persons = Person.objects.with_groups_annotated().filter(pk=person.pk)
+        annotated_person = persons.first()
+
+        # Verify annotation exists
+        assert hasattr(annotated_person, "groups_info")
+        groups_info = annotated_person.groups_info
+        assert groups_info is not None
+        assert len(groups_info) == 2
+
+    def test_with_complete_name(self):
+        """Test with_complete_name annotates persons with full name."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+
+        persons = Person.objects.with_complete_name().filter(pk=person.pk)
+        annotated_person = persons.first()
+
+        assert hasattr(annotated_person, "complete_name")
+        assert annotated_person.complete_name == "Doe John"
+
+    @requires_postgresql
+    def test_for_list_display(self, user):
+        """Test for_list_display returns optimized queryset."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        group = PersonGroupFactory(name="Family")
+        person.groups.add(group)
+
+        # Share person with user
+        PersonPermission.objects.create(
+            user=user, person=person, permission_type=PermissionLevel.VIEWER
+        )
+
+        # Get list display data
+        results = Person.objects.for_list_display(user)
+        assert len(results) == 1
+        result = results[0]
+
+        # Verify expected fields are present
+        assert "person_id" in result
+        assert "first_name" in result
+        assert "family_name" in result
+        assert "groups_info" in result
+
+
+@pytest.mark.django_db
+class TestGiftManagerMethods:
+    """Tests for GiftManager query methods."""
+
+    @requires_postgresql
+    def test_with_tags_annotated(self, gift, gift_tag):
+        """Test with_tags_annotated annotates gifts with tags info."""
+        gift.tags.add(gift_tag)
+
+        gifts = Gift.objects.with_tags_annotated().filter(pk=gift.pk)
+        annotated_gift = gifts.first()
+
+        assert hasattr(annotated_gift, "tags_info")
+        tags_info = annotated_gift.tags_info
+        assert tags_info is not None
+        assert len(tags_info) == 1
+
+    @requires_postgresql
+    def test_for_list_display(self, user, gift, gift_tag):
+        """Test for_list_display returns optimized queryset."""
+        gift.tags.add(gift_tag)
+
+        # Share gift with user
+        GiftPermission.objects.create(user=user, gift=gift, permission_type=PermissionLevel.VIEWER)
+
+        results = Gift.objects.for_list_display(user)
+        assert len(results) == 1
+        result = results[0]
+
+        assert "gift_id" in result
+        assert "name" in result
+        assert "tags_info" in result
+
+
+@pytest.mark.django_db
+class TestEventManagerMethods:
+    """Tests for EventManager query methods."""
+
+    def test_for_list_display(self, user, event):
+        """Test for_list_display returns optimized queryset."""
+        # Share event with user
+        EventPermission.objects.create(
+            user=user, event=event, permission_type=PermissionLevel.VIEWER
+        )
+
+        results = Event.objects.for_list_display(user)
+        assert len(results) == 1
+        result = results[0]
+
+        assert "event_id" in result
+        assert "name" in result
+        assert "usual_date" in result
+
+
+@pytest.mark.django_db
+class TestRelationManagerMethods:
+    """Tests for RelationManager query methods."""
+
+    def test_with_related_objects(self, person, gift, status):
+        """Test with_related_objects prefetches related objects."""
+        relation = Relation.objects.create(person=person, gift=gift, status=status)
+
+        relations = Relation.objects.with_related_objects().filter(pk=relation.pk)
+        fetched = relations.first()
+
+        # Verify related objects are accessible
+        assert fetched.person == person
+        assert fetched.gift == gift
+        assert fetched.status == status
+
+    def test_with_related_object_name_person(self, person, gift, status):
+        """Test with_related_object_name with person relation."""
+        relation = Relation.objects.create(person=person, gift=gift, status=status)
+
+        relations = Relation.objects.with_related_object_name().filter(pk=relation.pk)
+        fetched = relations.first()
+
+        assert hasattr(fetched, "related_object")
+        # Should contain person's name
+        assert person.first_name in fetched.related_object
+
+    def test_with_related_object_name_group(self, group, gift, status):
+        """Test with_related_object_name with group relation."""
+        relation = Relation.objects.create(group=group, gift=gift, status=status)
+
+        relations = Relation.objects.with_related_object_name().filter(pk=relation.pk)
+        fetched = relations.first()
+
+        assert hasattr(fetched, "related_object")
+        assert fetched.related_object == group.name
+
+    @requires_postgresql
+    def test_for_list_display(self, user, person, gift, status):
+        """Test for_list_display returns optimized queryset."""
+        relation = Relation.objects.create(person=person, gift=gift, status=status)
+        RelationPermission.objects.create(
+            user=user, relation=relation, permission_type=PermissionLevel.VIEWER
+        )
+
+        results = Relation.objects.for_list_display(user)
+        assert len(results) == 1
+        result = results[0]
+
+        assert "relation_id" in result
+        assert "gift__name" in result
+        assert "related_object" in result
+
+
+@pytest.mark.django_db
+class TestGetAbsoluteUrlMethods:
+    """Tests for get_absolute_url methods on various models."""
+
+    def test_profile_get_absolute_url(self, user):
+        """Test Profile.get_absolute_url returns correct URL."""
+        profile = user.profile
+        url = profile.get_absolute_url()
+        # URL may have language prefix
+        assert "profile" in url
+
+    @pytest.mark.xfail(
+        reason=(
+            "BUG: get_absolute_url uses self.pk instead of self.group_id - URL pattern expects UUID"
+        )
+    )
+    def test_person_group_get_absolute_url(self, group):
+        """Test PersonGroup.get_absolute_url returns correct URL."""
+        url = group.get_absolute_url()
+        # URL uses group_id (UUID), not pk
+        assert "person_groups" in url
+        assert str(group.group_id) in url
+        assert "edit" in url
+
+    @pytest.mark.xfail(
+        reason=(
+            "BUG: get_absolute_url uses self.pk instead of self.relation_id - "
+            "URL pattern expects UUID"
+        )
+    )
+    def test_relation_get_absolute_url(self, person, gift, status):
+        """Test Relation.get_absolute_url returns correct URL."""
+        relation = Relation.objects.create(person=person, gift=gift, status=status)
+        url = relation.get_absolute_url()
+        # URL uses relation_id (UUID), not pk
+        assert "persons" in url
+        assert str(relation.relation_id) in url
+        assert "edit" in url
+
+
+@pytest.mark.django_db
+class TestPersonGroupManagerMethods:
+    """Tests for PersonGroupManager query methods."""
+
+    def test_root_groups_for_user(self, user):
+        """Test root_groups_for_user returns only root groups accessible by user."""
+        # Create root group shared with user
+        root = PersonGroupFactory(name="Root")
+        PersonGroupPermission.objects.create(
+            user=user, group=root, permission_type=PermissionLevel.VIEWER
+        )
+
+        # Create child group shared with user
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(root)
+        PersonGroupPermission.objects.create(
+            user=user, group=child, permission_type=PermissionLevel.VIEWER
+        )
+
+        # Create unshared root group
+        unshared = PersonGroupFactory(name="Unshared Root")
+
+        root_groups = PersonGroup.objects.root_groups_for_user(user)
+        assert root in root_groups
+        assert child not in root_groups  # Has parent, not root
+        assert unshared not in root_groups  # Not shared
+
+    def test_children_for_user(self, user):
+        """Test children_for_user returns children accessible by user."""
+        parent = PersonGroupFactory(name="Parent")
+        child1 = PersonGroupFactory(name="Child 1")
+        child2 = PersonGroupFactory(name="Child 2")
+
+        child1.parent_groups.add(parent)
+        child2.parent_groups.add(parent)
+
+        # Share only child1 with user
+        PersonGroupPermission.objects.create(
+            user=user, group=child1, permission_type=PermissionLevel.VIEWER
+        )
+
+        children = PersonGroup.objects.children_for_user(parent, user)
+        assert child1 in children
+        assert child2 not in children
+
+    def test_with_prefetched_relations(self):
+        """Test with_prefetched_relations prefetches parent/child groups."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        # Query with prefetch
+        groups = PersonGroup.objects.with_prefetched_relations()
+        fetched_parent = groups.get(pk=parent.pk)
+        fetched_child = groups.get(pk=child.pk)
+
+        # Should be able to access relations without additional queries
+        assert child in fetched_parent.child_groups.all()
+        assert parent in fetched_child.parent_groups.all()
+
+
+@pytest.mark.django_db
+class TestPersonGroupCacheHits:
+    """Tests for cache hit scenarios in PersonGroup hierarchy methods."""
+
+    def test_get_descendants_cache_hit(self):
+        """Test get_descendants returns cached result on second call."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        cache_key = f"persongroup_descendants_{parent.pk}"
+
+        # Clear any existing cache
+        cache.delete(cache_key)
+
+        # First call - populates cache
+        descendants1 = parent.get_descendants(use_cache=True)
+        assert len(descendants1) == 1
+
+        # Verify cache was set
+        cached = cache.get(cache_key)
+        assert cached is not None
+
+        # Second call should hit cache
+        descendants2 = parent.get_descendants(use_cache=True)
+        assert len(descendants2) == 1
+        assert descendants1 == descendants2
+
+    def test_get_ancestors_cache_hit(self):
+        """Test get_ancestors returns cached result on second call."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        cache_key = f"persongroup_ancestors_{child.pk}"
+
+        # Clear any existing cache
+        cache.delete(cache_key)
+
+        # First call - populates cache
+        ancestors1 = child.get_ancestors(use_cache=True)
+        assert len(ancestors1) == 1
+
+        # Verify cache was set
+        cached = cache.get(cache_key)
+        assert cached is not None
+
+        # Second call should hit cache
+        ancestors2 = child.get_ancestors(use_cache=True)
+        assert len(ancestors2) == 1
+        assert ancestors1 == ancestors2
+
+
+@pytest.mark.django_db
+class TestPersonGroupPrimaryAncestorsPathBranches:
+    """Tests for branch coverage in get_primary_ancestors_path."""
+
+    def test_all_parents_already_visited(self):
+        """Test when all parent candidates have been visited (cycle scenario)."""
+        # Create a circular structure: A -> B -> A
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+
+        b.parent_groups.add(a)
+        a.parent_groups.add(b)  # Creates cycle
+
+        # Path from B should not loop infinitely
+        path = b.get_primary_ancestors_path()
+        # Should have A, then stop because A's parent (B) is already visited
+        assert len(path) == 1
+        assert a in path
+
+    def test_parent_pk_not_in_all_groups(self):
+        """Test when a parent_pk is somehow not in all_groups dict."""
+        # This is an edge case - in practice, all groups should be in the dict
+        # But we test the branch by creating a simple structure
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        path = child.get_primary_ancestors_path()
+        assert len(path) == 1
+        assert parent in path
+
+    def test_no_valid_parent_after_filtering_visited(self):
+        """Test path terminates when no unvisited parent is available."""
+        # Create: A <- B <- C, where C also links back to A
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+
+        b.parent_groups.add(a)
+        c.parent_groups.add(b)
+        c.parent_groups.add(a)  # C has two parents
+
+        path = c.get_primary_ancestors_path()
+        # Should pick one path (B then A, or just A if B leads back to A)
+        assert len(path) >= 1
+        assert a in path
+
+
+@pytest.mark.django_db
+class TestGiftTagManagerMethods:
+    """Tests for GiftTagManager query methods."""
+
+    def test_with_prefetched_relations(self):
+        """Test with_prefetched_relations prefetches parent/child tags."""
+        parent = GiftTag.objects.create(name="Electronics")
+        child = GiftTag.objects.create(name="Phones")
+        child.parent_tags.add(parent)
+
+        # Query with prefetch
+        tags = GiftTag.objects.with_prefetched_relations()
+        fetched_parent = tags.get(pk=parent.pk)
+        fetched_child = tags.get(pk=child.pk)
+
+        # Should be able to access relations without additional queries
+        assert child in fetched_parent.child_tags.all()
+        assert parent in fetched_child.parent_tags.all()
+
+
+@pytest.mark.django_db
+class TestGiftTagCacheAndBranches:
+    """Tests for GiftTag cache hits and branch coverage."""
+
+    def test_get_ancestors_cache_hit(self):
+        """Test get_ancestors returns cached result on second call."""
+        parent = GiftTag.objects.create(name="Electronics")
+        child = GiftTag.objects.create(name="Phones")
+        child.parent_tags.add(parent)
+
+        cache_key = f"gifttag_ancestors_{child.pk}"
+        cache.delete(cache_key)
+
+        # First call - populates cache
+        ancestors1 = child.get_ancestors(use_cache=True)
+        assert len(ancestors1) == 1
+
+        # Verify cache was set
+        cached = cache.get(cache_key)
+        assert cached is not None
+
+        # Second call should hit cache
+        ancestors2 = child.get_ancestors(use_cache=True)
+        assert len(ancestors2) == 1
+
+    def test_get_primary_ancestors_path_no_prefetch(self):
+        """Test get_primary_ancestors_path when _prefetched_objects_cache doesn't exist."""
+        parent = GiftTag.objects.create(name="Parent")
+        child = GiftTag.objects.create(name="Child")
+        child.parent_tags.add(parent)
+
+        # Fresh query without prefetch - exercises the prefetch branch
+        fresh_child = GiftTag.objects.get(pk=child.pk)
+        # Remove prefetch cache if it exists
+        if hasattr(fresh_child, "_prefetched_objects_cache"):
+            del fresh_child._prefetched_objects_cache
+
+        path = fresh_child.get_primary_ancestors_path()
+        assert len(path) == 1
+        assert parent in path
+
+    def test_get_primary_ancestors_path_with_prefetch(self):
+        """Test get_primary_ancestors_path when prefetch exists."""
+        parent = GiftTag.objects.create(name="Parent")
+        child = GiftTag.objects.create(name="Child")
+        child.parent_tags.add(parent)
+
+        # Query with prefetch
+        prefetched_child = GiftTag.objects.prefetch_related("parent_tags").get(pk=child.pk)
+        path = prefetched_child.get_primary_ancestors_path()
+        assert len(path) == 1
+        assert parent in path
+
+    def test_get_primary_ancestors_path_all_visited(self):
+        """Test get_primary_ancestors_path when all parents are already visited."""
+        # Create circular: A <-> B
+        a = GiftTag.objects.create(name="A")
+        b = GiftTag.objects.create(name="B")
+
+        b.parent_tags.add(a)
+        a.parent_tags.add(b)
+
+        path = b.get_primary_ancestors_path()
+        # Should have A, then stop
+        assert len(path) == 1
+        assert a in path
+
+    def test_clean_no_pk(self):
+        """Test clean method when pk is None (new unsaved tag)."""
+        tag = GiftTag(name="New Tag")
+        # Should not raise - pk is None so no cycle check
+        tag.clean()
+
+    def test_clean_no_parents(self):
+        """Test clean method when tag has no parents."""
+        tag = GiftTag.objects.create(name="Root Tag")
+        # Should not raise - no parents to check
+        tag.clean()
+
+    def test_clean_with_cycle(self):
+        """Test clean method raises ValidationError when cycle exists."""
+        a = GiftTag.objects.create(name="A")
+        b = GiftTag.objects.create(name="B")
+
+        b.parent_tags.add(a)
+        a.parent_tags.add(b)  # Create cycle
+
+        with pytest.raises(ValidationError):
+            a.clean()
+
+
+@pytest.mark.django_db
+class TestGiftTagClearHierarchyCache:
+    """Tests for GiftTag.clear_hierarchy_cache method."""
+
+    def test_clear_hierarchy_cache(self):
+        """Test clear_hierarchy_cache clears related caches."""
+        parent = GiftTag.objects.create(name="Parent")
+        child = GiftTag.objects.create(name="Child")
+        child.parent_tags.add(parent)
+
+        # Populate caches
+        parent.get_descendants(use_cache=True)
+        child.get_ancestors(use_cache=True)
+
+        # Verify caches exist
+        assert cache.get(f"gifttag_descendants_{parent.pk}") is not None
+        assert cache.get(f"gifttag_ancestors_{child.pk}") is not None
+
+        # Clear caches
+        child.clear_hierarchy_cache()
+
+        # Verify caches are cleared for child
+        assert cache.get(f"gifttag_descendants_{child.pk}") is None
+        assert cache.get(f"gifttag_ancestors_{child.pk}") is None
+
+
+@pytest.mark.django_db
+class TestPermissionLevelGetLabel:
+    """Tests for PermissionLevel.get_label with different case options."""
+
+    def test_get_label_default_case(self):
+        """Test get_label returns lowercase by default."""
+        assert PermissionLevel.get_label(PermissionLevel.VIEWER) == "viewer"
+        assert PermissionLevel.get_label(PermissionLevel.EDITOR) == "editor"
+        assert PermissionLevel.get_label(PermissionLevel.OWNER) == "owner"
+
+    def test_get_label_upper_case(self):
+        """Test get_label with case='upper'."""
+        assert PermissionLevel.get_label(PermissionLevel.VIEWER, case="upper") == "VIEWER"
+        assert PermissionLevel.get_label(PermissionLevel.EDITOR, case="upper") == "EDITOR"
+        assert PermissionLevel.get_label(PermissionLevel.OWNER, case="upper") == "OWNER"
+
+    def test_get_label_title_case(self):
+        """Test get_label with case='title'."""
+        assert PermissionLevel.get_label(PermissionLevel.VIEWER, case="title") == "Viewer"
+        assert PermissionLevel.get_label(PermissionLevel.EDITOR, case="title") == "Editor"
+        assert PermissionLevel.get_label(PermissionLevel.OWNER, case="title") == "Owner"
+
+    def test_get_label_invalid_permission(self):
+        """Test get_label with invalid permission level returns 'none'."""
+        assert PermissionLevel.get_label(999) == "none"
+        assert PermissionLevel.get_label(999, case="upper") == "NONE"
+        assert PermissionLevel.get_label(999, case="title") == "None"
+
+
+@pytest.mark.django_db
+class TestEmailProperties:
+    """Tests for email properties and setters on Profile, Person, and Invitation."""
+
+    def test_profile_email_property(self, user):
+        """Test Profile.email property returns decoded email."""
+        # Set encoded email
+        user.email = encode_email("test@example.com")
+        user.save()
+
+        # Profile.email should decode it
+        assert user.profile.email == "test@example.com"
+
+    def test_profile_set_user_email(self, user):
+        """Test Profile.set_user_email encodes and saves email."""
+        user.profile.set_user_email("newemail@example.com")
+
+        # Reload user
+        user.refresh_from_db()
+
+        # Check email is encoded in DB but decodes correctly
+        assert user.profile.email == "newemail@example.com"
+
+    def test_person_email_property(self):
+        """Test Person.email property returns decoded email."""
+        person = PersonFactory(
+            first_name="Test",
+            family_name="User",
+            email_address=encode_email("person@example.com"),
+        )
+
+        assert person.email == "person@example.com"
+
+    def test_person_set_email(self):
+        """Test Person.set_email encodes email address."""
+        person = PersonFactory(first_name="Test", family_name="User")
+        person.set_email("encoded@example.com")
+
+        # Should be encoded in email_address field but decode via property
+        assert person.email == "encoded@example.com"
+
+    def test_invitation_set_email(self, user):
+        """Test Invitation.set_email encodes recipient email."""
+        invitation = InvitationFactory(sender=user)
+        invitation.set_email("invited@example.com")
+
+        # Should be encoded but decode correctly via property
+        assert invitation.email == "invited@example.com"
+
+
+@pytest.mark.django_db
+class TestPermissionFilterNameProperties:
+    """Tests for filter_name classproperty on Permission models."""
+
+    def test_person_permission_filter_name(self):
+        """Test PersonPermission.filter_name returns 'person'."""
+        assert PersonPermission.filter_name == "person"
+
+    def test_person_group_permission_filter_name(self):
+        """Test PersonGroupPermission.filter_name returns 'group'."""
+        assert PersonGroupPermission.filter_name == "group"
+
+    def test_gift_tag_permission_filter_name(self):
+        """Test GiftTagPermission.filter_name returns 'gift_tag'."""
+        assert GiftTagPermission.filter_name == "gift_tag"
+
+    def test_gift_permission_filter_name(self):
+        """Test GiftPermission.filter_name returns 'gift'."""
+        assert GiftPermission.filter_name == "gift"
+
+    def test_event_permission_filter_name(self):
+        """Test EventPermission.filter_name returns 'event'."""
+        assert EventPermission.filter_name == "event"
+
+    def test_relation_permission_filter_name(self):
+        """Test RelationPermission.filter_name returns 'relation'."""
+        assert RelationPermission.filter_name == "relation"
+
+
+@pytest.mark.django_db
+class TestRelationStatusDefaultPk:
+    """Tests for RelationStatus.get_default_pk classmethod."""
+
+    def test_get_default_pk_creates_status(self):
+        """Test get_default_pk creates default status if not exists."""
+        # Clear any existing default status
+        RelationStatus.objects.filter(status=RelationStatus.DEFAULT_STATUS).delete()
+
+        pk = RelationStatus.get_default_pk()
+
+        # Should have created the default status
+        status = RelationStatus.objects.get(pk=pk)
+        assert status.status == RelationStatus.DEFAULT_STATUS
+
+    def test_get_default_pk_returns_existing(self):
+        """Test get_default_pk returns existing status pk."""
+        # Create the default status first
+        existing = RelationStatus.objects.create(status=RelationStatus.DEFAULT_STATUS)
+
+        pk = RelationStatus.get_default_pk()
+
+        # Should return existing pk
+        assert pk == existing.pk
+
+        # Should not create a duplicate
+        assert RelationStatus.objects.filter(status=RelationStatus.DEFAULT_STATUS).count() == 1

@@ -1,0 +1,7 @@
+[run]
+omit =
+    gift_manager/tests/*
+
+[report]
+omit =
+    gift_manager/tests/*

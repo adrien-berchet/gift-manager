@@ -51,16 +51,27 @@ class PermissionLevel:
         return label
 
 
-class UserPermissionManager(models.Manager):
-    """Base manager for models with user permissions."""
+class UserPermissionQuerySet(models.QuerySet):
+    """Base QuerySet for models with user permissions."""
 
     def accessible_by(self, user):
         """Return all objects accessible by a user (shared with the user)."""
         return self.filter(Q(shared_with=user))
 
 
-class PersonManager(UserPermissionManager):
-    """Manager for Person model with additional query methods."""
+class UserPermissionManager(models.Manager):
+    """Base manager for models with user permissions."""
+
+    def get_queryset(self):
+        return UserPermissionQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+
+class PersonQuerySet(UserPermissionQuerySet):
+    """QuerySet for Person model with additional query methods."""
 
     def accessible_by(self, user):
         """Return all persons accessible by a user (user_link or shared_with)."""
@@ -97,6 +108,25 @@ class PersonManager(UserPermissionManager):
             complete_name=Concat("family_name", Value(" "), "first_name", output_field=TextField())
         )
 
+
+class PersonManager(models.Manager):
+    """Manager for Person model with additional query methods."""
+
+    def get_queryset(self):
+        return PersonQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all persons accessible by a user (user_link or shared_with)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_groups_annotated(self):
+        """Return persons with groups information annotated for Grid.js."""
+        return self.get_queryset().with_groups_annotated()
+
+    def with_complete_name(self):
+        """Return persons with complete_name annotation (family_name + first_name)."""
+        return self.get_queryset().with_complete_name()
+
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -106,8 +136,8 @@ class PersonManager(UserPermissionManager):
         )
 
 
-class GiftManager(UserPermissionManager):
-    """Manager for Gift model with additional query methods."""
+class GiftQuerySet(UserPermissionQuerySet):
+    """QuerySet for Gift model with additional query methods."""
 
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
@@ -130,6 +160,21 @@ class GiftManager(UserPermissionManager):
             )
         )
 
+
+class GiftManager(models.Manager):
+    """Manager for Gift model with additional query methods."""
+
+    def get_queryset(self):
+        return GiftQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_tags_annotated(self):
+        """Return gifts with tags information annotated for Grid.js."""
+        return self.get_queryset().with_tags_annotated()
+
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -147,8 +192,8 @@ class EventManager(UserPermissionManager):
         return self.accessible_by(user).values("event_id", "name", "comment", "usual_date")
 
 
-class RelationManager(UserPermissionManager):
-    """Manager for Relation model with additional query methods."""
+class RelationQuerySet(UserPermissionQuerySet):
+    """QuerySet for Relation model with additional query methods."""
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -177,6 +222,25 @@ class RelationManager(UserPermissionManager):
                 output_field=TextField(),
             )
         )
+
+
+class RelationManager(models.Manager):
+    """Manager for Relation model with additional query methods."""
+
+    def get_queryset(self):
+        return RelationQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_related_objects(self):
+        """Return relations with all related objects selected."""
+        return self.get_queryset().with_related_objects()
+
+    def with_related_object_name(self):
+        """Return relations with related_object annotation (person or group name)."""
+        return self.get_queryset().with_related_object_name()
 
     def for_list_display(self, user):
         """Return queryset optimized for list display with all annotations."""
@@ -386,8 +450,8 @@ class PersonGroup(models.Model):
     def get_descendants(self, use_cache=True):
         """Returns all descendant groups (recursively).
 
-        Optimized to fetch all descendants in a single query using prefetch_related,
-        then traverse the hierarchy in memory to avoid N+1 queries.
+        Optimized to fetch all groups in a single query, then traverse
+        the hierarchy purely in memory to avoid N+1 queries.
 
         Args:
             use_cache: If True, use cached results when available (default: True)
@@ -399,36 +463,31 @@ class PersonGroup(models.Model):
             if cached_result is not None:
                 return cached_result
 
-        # Fetch all potentially needed groups upfront to avoid multiple queries
-        # We'll prefetch child_groups for efficient traversal
-        all_groups = {self.pk: self}
+        # Fetch ALL groups with child relationships in ONE query
+        # This avoids N+1 queries regardless of hierarchy depth
+        all_groups_qs = PersonGroup.objects.prefetch_related("child_groups").all()
+        all_groups = {group.pk: group for group in all_groups_qs}
+
+        # Build a child lookup: parent_pk -> [child_pks]
+        child_lookup = {}
+        for group in all_groups.values():
+            child_lookup[group.pk] = [child.pk for child in group.child_groups.all()]
+
+        # Traverse the hierarchy in memory
         descendants = set()
-        to_process = list(self.child_groups.prefetch_related("child_groups").all())
+        to_process = list(child_lookup.get(self.pk, []))
         processed_ids = {self.pk}
 
-        # Build cache of all groups we'll need
-        for group in to_process:
-            all_groups[group.pk] = group
-
         while to_process:
-            current = to_process.pop(0)
-            if current.pk in processed_ids:
+            current_pk = to_process.pop(0)
+            if current_pk in processed_ids:
                 continue
 
-            processed_ids.add(current.pk)
-            descendants.add(current)
-
-            # Get children from prefetched data
-            children = list(current.child_groups.all())
-            for child in children:
-                if child.pk not in processed_ids:
-                    if child.pk not in all_groups:
-                        all_groups[child.pk] = child
-                        # Prefetch for next level
-                        child = PersonGroup.objects.prefetch_related("child_groups").get(
-                            pk=child.pk
-                        )
-                    to_process.append(child)
+            processed_ids.add(current_pk)
+            if current_pk in all_groups:
+                descendants.add(all_groups[current_pk])
+                # Add children to process
+                to_process.extend(child_lookup.get(current_pk, []))
 
         result = list(descendants)
 
@@ -441,8 +500,8 @@ class PersonGroup(models.Model):
     def get_ancestors(self, use_cache=True):
         """Returns all parent groups (up to the root).
 
-        Optimized to fetch all ancestors in a single query using prefetch_related,
-        then traverse the hierarchy in memory to avoid N+1 queries.
+        Optimized to fetch all groups in a single query, then traverse
+        the hierarchy purely in memory to avoid N+1 queries.
 
         Args:
             use_cache: If True, use cached results when available (default: True)
@@ -454,35 +513,31 @@ class PersonGroup(models.Model):
             if cached_result is not None:
                 return cached_result
 
-        # Fetch all potentially needed groups upfront to avoid multiple queries
-        all_groups = {self.pk: self}
+        # Fetch ALL groups with parent relationships in ONE query
+        # This avoids N+1 queries regardless of hierarchy depth
+        all_groups_qs = PersonGroup.objects.prefetch_related("parent_groups").all()
+        all_groups = {group.pk: group for group in all_groups_qs}
+
+        # Build a parent lookup: child_pk -> [parent_pks]
+        parent_lookup = {}
+        for group in all_groups.values():
+            parent_lookup[group.pk] = [parent.pk for parent in group.parent_groups.all()]
+
+        # Traverse the hierarchy in memory
         ancestors = set()
-        to_process = list(self.parent_groups.prefetch_related("parent_groups").all())
+        to_process = list(parent_lookup.get(self.pk, []))
         processed_ids = {self.pk}
 
-        # Build cache of all groups we'll need
-        for group in to_process:
-            all_groups[group.pk] = group
-
         while to_process:
-            current = to_process.pop(0)
-            if current.pk in processed_ids:
+            current_pk = to_process.pop(0)
+            if current_pk in processed_ids:
                 continue
 
-            processed_ids.add(current.pk)
-            ancestors.add(current)
-
-            # Get parents from prefetched data
-            parents = list(current.parent_groups.all())
-            for parent in parents:
-                if parent.pk not in processed_ids:
-                    if parent.pk not in all_groups:
-                        all_groups[parent.pk] = parent
-                        # Prefetch for next level
-                        parent = PersonGroup.objects.prefetch_related("parent_groups").get(
-                            pk=parent.pk
-                        )
-                    to_process.append(parent)
+            processed_ids.add(current_pk)
+            if current_pk in all_groups:
+                ancestors.add(all_groups[current_pk])
+                # Add parents to process
+                to_process.extend(parent_lookup.get(current_pk, []))
 
         result = list(ancestors)
 
@@ -495,36 +550,42 @@ class PersonGroup(models.Model):
     def get_primary_ancestors_path(self):
         """Returns a specific path of ancestors (for breadcrumbs).
 
-        Optimized to prefetch parent_groups to avoid N+1 queries.
+        Optimized to fetch all groups in a single query, then traverse
+        purely in memory to avoid N+1 queries.
         """
+        # Fetch ALL groups with parent relationships in ONE query
+        all_groups_qs = PersonGroup.objects.prefetch_related("parent_groups").all()
+        all_groups = {group.pk: group for group in all_groups_qs}
+
+        # Build a parent lookup: child_pk -> [parent_pks]
+        parent_lookup = {}
+        for group in all_groups.values():
+            parent_lookup[group.pk] = [parent.pk for parent in group.parent_groups.all()]
+
         # Arbitrarily choosing the first parent at each level
         ancestors = []
-        current = self
+        current_pk = self.pk
         visited = {self.pk}
 
-        # Prefetch parent_groups for the initial group
-        if not hasattr(self, "_prefetched_objects_cache"):
-            current = PersonGroup.objects.prefetch_related("parent_groups").get(pk=self.pk)
-
         while True:
-            parents = list(current.parent_groups.all())
-            if not parents:
+            parent_pks = parent_lookup.get(current_pk, [])
+            if not parent_pks:
                 break
 
             # Take the first parent that doesn't create a cycle
-            next_parent = None
-            for parent in parents:
-                if parent.pk not in visited:
-                    next_parent = parent
-                    visited.add(parent.pk)
+            next_parent_pk = None
+            for parent_pk in parent_pks:
+                if parent_pk not in visited:
+                    next_parent_pk = parent_pk
+                    visited.add(parent_pk)
                     break
 
-            if not next_parent:
+            if not next_parent_pk:
                 break
 
-            ancestors.append(next_parent)
-            # Prefetch for next iteration
-            current = PersonGroup.objects.prefetch_related("parent_groups").get(pk=next_parent.pk)
+            if next_parent_pk in all_groups:
+                ancestors.append(all_groups[next_parent_pk])
+            current_pk = next_parent_pk
 
         ancestors.reverse()
         return ancestors
