@@ -4,10 +4,18 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import F
+from django.db.models import Func
 from django.db.models import Q
+from django.db.models import TextField
+from django.db.models import Value
+from django.db.models.functions import Coalesce
+from django.db.models.functions import Concat
+from django.db.models.functions import NullIf
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
@@ -79,11 +87,6 @@ class PersonQuerySet(UserPermissionQuerySet):
 
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""
-        from django.contrib.postgres.aggregates import JSONBAgg
-        from django.db.models import F
-        from django.db.models import Func
-        from django.db.models import Value
-
         return self.annotate(
             groups_info=JSONBAgg(
                 Func(
@@ -100,10 +103,6 @@ class PersonQuerySet(UserPermissionQuerySet):
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
-        from django.db.models import TextField
-        from django.db.models import Value
-        from django.db.models.functions import Concat
-
         return self.annotate(
             complete_name=Concat("family_name", Value(" "), "first_name", output_field=TextField())
         )
@@ -141,11 +140,6 @@ class GiftQuerySet(UserPermissionQuerySet):
 
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
-        from django.contrib.postgres.aggregates import JSONBAgg
-        from django.db.models import F
-        from django.db.models import Func
-        from django.db.models import Value
-
         return self.annotate(
             tags_info=JSONBAgg(
                 Func(
@@ -201,12 +195,6 @@ class RelationQuerySet(UserPermissionQuerySet):
 
     def with_related_object_name(self):
         """Return relations with related_object annotation (person or group name)."""
-        from django.db.models import TextField
-        from django.db.models import Value
-        from django.db.models.functions import Coalesce
-        from django.db.models.functions import Concat
-        from django.db.models.functions import NullIf
-
         return self.annotate(
             related_object=Coalesce(
                 NullIf(
