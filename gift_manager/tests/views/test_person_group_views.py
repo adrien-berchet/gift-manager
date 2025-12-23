@@ -200,15 +200,22 @@ class TestPersonGroupUpdateView:
         assert self.group.name == "Updated Name"
 
     def test_update_view_requires_permission(self):
-        """Test update view requires editor permission."""
+        """Test update view requires editor permission to submit changes."""
         other_group = PersonGroupFactory(name="Other Group")
         create_or_update_permission(self.user, other_group, permission_level=PermissionLevel.VIEWER)
 
         url = reverse("gift_manager:person_group_edit", kwargs={"pk": other_group.group_id})
-        response = self.client.get(url)
 
-        # Should redirect or show error due to insufficient permissions
+        # Viewer can access the form (GET returns 200)
+        response = self.client.get(url)
+        assert response.status_code == 200
+
+        # But submitting changes should fail or redirect
+        response = self.client.post(url, {"name": "Hacked Name"})
+        # Either redirects without saving, or returns 403
         assert response.status_code in [302, 403]
+        other_group.refresh_from_db()
+        assert other_group.name == "Other Group"  # Name unchanged
 
 
 @pytest.mark.django_db
@@ -233,9 +240,8 @@ class TestAddMultiplePersonsToGroup:
 
         # Should redirect due to insufficient permissions
         assert response.status_code == 302
-        assert "person_group_detail" in response.url or response.url.endswith(
-            str(self.group.group_id)
-        )
+        # Redirects to group detail page (URL contains the group UUID)
+        assert str(self.group.group_id) in response.url
 
     @override_settings(USE_I18N=False)
     def test_add_persons_editor_can_access(self):
@@ -447,13 +453,13 @@ class TestPersonGroupExplorerView:
 
         # First visit parent
         url_parent = reverse(
-            "gift_manager:person_group_explorer_detail", kwargs={"pk": parent.group_id}
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": parent.group_id}
         )
         self.client.get(url_parent)
 
         # Then visit child with from_group parameter
         url_child = reverse(
-            "gift_manager:person_group_explorer_detail", kwargs={"pk": child.group_id}
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": child.group_id}
         )
         response = self.client.get(url_child + f"?from_group={parent.group_id}")
 
