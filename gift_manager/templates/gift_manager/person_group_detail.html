@@ -70,7 +70,7 @@
       aria-controls="persons-list"
       aria-selected="true"
     >
-      {% trans "Direct members" %} ({{ direct_member_count }})
+      {% trans "Direct members" %} [{{ direct_member_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -84,7 +84,7 @@
       aria-controls="nested-members-list"
       aria-selected="false"
     >
-      {% trans "All members (including nested)" %} ({{ nested_member_count }})
+      {% trans "All members (including nested)" %} [{{ nested_member_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -98,7 +98,7 @@
       aria-controls="gifts-list"
       aria-selected="false"
     >
-      {% trans "Gifts for this group" %}
+      {% trans "Gifts for this group" %} [{{ gift_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -112,7 +112,7 @@
       aria-controls="nested-gifts-list"
       aria-selected="false"
     >
-      {% trans "All gifts (including members)" %} ({{ nested_gift_count }})
+      {% trans "All gifts (including members)" %} [{{ nested_gift_count }}]
     </button>
   </li>
 </ul>

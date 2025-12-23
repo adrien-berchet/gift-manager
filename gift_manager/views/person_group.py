@@ -328,6 +328,7 @@ class PersonGroupDetailView(BaseDetailView):
         # Member counts
         context["direct_member_count"] = context["persons"].count()
         context["nested_member_count"] = context["nested_members"].count()
+        context["gift_count"] = context["gifts"].count()
         context["nested_gift_count"] = context["nested_gifts"].count()
 
         # Add action buttons
