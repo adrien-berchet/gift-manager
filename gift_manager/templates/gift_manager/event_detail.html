@@ -58,7 +58,7 @@
                 "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
-                {% if relation.due_date %}"{{ relation.due_date }}"{% else %} "" {% endif %},
+                "{{ relation.due_date|date|default:'' }}",
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -126,7 +126,12 @@
                 }
             },
             { name: 'status_label', hidden: true },
-            { name: "{% trans 'Due Date' %}" },
+            {
+                name: "{% trans 'Due date' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
             { name: 'relation_id', hidden: true },
             { name: 'relation_detail_url', hidden: true },
             { name: 'relation_edit_url', hidden: true },

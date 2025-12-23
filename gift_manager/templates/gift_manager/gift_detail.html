@@ -49,9 +49,12 @@
                 {% if relation.person %} "{{ relation.person.person_id }}" {% elif relation.group %} "{{ relation.group.group_id }}" {% else %} "" {% endif %},
                 {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" {% elif relation.group %} "{{ relation.group.name|escapejs }}" {% else %} "Bad relation" {% endif %},
                 {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}" {% elif relation.group %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" {% else %} "" {% endif %},
+                "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
-                {% if relation.due_date %}"{{ relation.due_date }}"{% else %} "-"{% endif %},
+                "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+                "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+                "{{ relation.due_date|date|default:'' }}",
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -79,11 +82,17 @@
             },
             { name: 'url', hidden: true },
             {
+                name: "{% trans 'Comment' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
+            {
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
-                    const statusPk = row.cells[4].data;
-                    const statusLabel = row.cells[5].data;
-                    const relationId = row.cells[7].data;
+                    const statusPk = row.cells[5].data;
+                    const statusLabel = row.cells[6].data;
+                    const relationId = row.cells[10].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
@@ -101,7 +110,27 @@
                 }
             },
             { name: 'status_label', hidden: true },
-            { name: "{% trans 'Due Date' %}" },
+            {
+                name: "{% trans 'Event' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
+                formatter: (cell, row) => {
+                    const eventName = row.cells[7].data;
+                    const eventUrl = row.cells[8].data;
+                    if (eventName && eventUrl) {
+                        return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                    }
+                    return eventName;
+                }
+            },
+            { name: 'event_url', hidden: true },
+            {
+                name: "{% trans 'Due date' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
             { name: 'relation_id', hidden: true },
             { name: 'relation_detail_url', hidden: true },
             { name: 'relation_edit_url', hidden: true },
@@ -111,9 +140,9 @@
                 width: '150px',
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: (row) => row.cells[8].data,
-                    edit: (row) => row.cells[9].data,
-                    delete: (row) => row.cells[10].data
+                    details: (row) => row.cells[11].data,
+                    edit: (row) => row.cells[12].data,
+                    delete: (row) => row.cells[13].data
                 }, ['details', 'edit', 'delete'])
             }
         ];

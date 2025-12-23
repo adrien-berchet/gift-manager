@@ -50,6 +50,7 @@
                 "{{ item.comment|escapejs }}",
                 "{{ item.status }}",
                 "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
+                "{{ item.due_date|date|default:'' }}",
                 "{{item.relation_id}}",
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
@@ -95,14 +96,17 @@
                 }
             },
             {
-                name: '{{ column_names.comment|escapejs }}'
+                name: '{{ column_names.comment|escapejs }}',
+                sort: {
+                    compare: GridUtils.sortString()
+                }
             },
             {
                 name: '{{ column_names.status__status|escapejs }}',
                 formatter: function (cell, row) {
                     const statusPk = row.cells[4].data;
                     const statusLabel = row.cells[5].data;
-                    const relationId = row.cells[6].data;
+                    const relationId = row.cells[7].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
@@ -124,6 +128,12 @@
                 hidden: true
             },
             {
+                name: '{{ column_names.due_date|escapejs }}',
+                sort: {
+                    compare: GridUtils.sortString()
+                }
+            },
+            {
                 name: 'Relation ID',
                 hidden: true
             },
@@ -135,9 +145,9 @@
                 width: '150px',
                 sort: false,
                 formatter: GridUtils.actionButtonsFormatter({
-                    details: (row) => row.cells[7].data,
-                    edit: (row) => row.cells[8].data,
-                    delete: (row) => row.cells[9].data
+                    details: (row) => row.cells[8].data,
+                    edit: (row) => row.cells[9].data,
+                    delete: (row) => row.cells[10].data
                 }, ['details', 'edit', 'delete'])
             }
         ], data, {
