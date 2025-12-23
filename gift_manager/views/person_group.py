@@ -164,6 +164,15 @@ class PersonGroupUpdateView(BaseUpdateView):
         kwargs["user"] = self.request.user
         return kwargs
 
+    def post(self, request, *args, **kwargs):
+        """Check editor permission before processing the form."""
+        self.object = self.get_object()
+        permission = PermissionService.get_permission(self.object, request.user, "group")
+        if permission < PermissionLevel.EDITOR:
+            messages.error(request, _("You do not have permission to edit this group"))
+            return redirect("gift_manager:person_group_detail", pk=self.object.group_id)
+        return super().post(request, *args, **kwargs)
+
 
 def _check_editor_permission(
     request,
