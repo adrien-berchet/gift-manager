@@ -775,3 +775,430 @@ class TestCheckEditorPermissionHelper:
 
         result = _check_editor_permission(request, group)
         assert result is False
+
+
+@pytest.mark.django_db
+class TestComplexHierarchies:
+    """Tests for complex group hierarchies with multiple levels."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user):
+        """Setup test fixtures."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+
+    def _grant_access(self, *groups):
+        """Grant viewer access to multiple groups."""
+        for group in groups:
+            create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
+
+    def _grant_editor(self, *groups):
+        """Grant editor access to multiple groups."""
+        for group in groups:
+            create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
+
+    def test_deep_hierarchy_tree_view(self):
+        """Test list view handles deep hierarchies (4 levels)."""
+        # Create: grandparent -> parent -> child -> grandchild
+        grandparent = PersonGroupFactory(name="Grandparent")
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        grandchild = PersonGroupFactory(name="Grandchild")
+
+        parent.parent_groups.add(grandparent)
+        child.parent_groups.add(parent)
+        grandchild.parent_groups.add(child)
+
+        self._grant_access(grandparent, parent, child, grandchild)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        tree_data = response.context["tree_data"]
+
+        # Should have 4 nodes in the flattened tree
+        assert len(tree_data) == 4
+
+        # Check depths are correct
+        depths = {node["name"]: node["depth"] for node in tree_data}
+        assert depths["Grandparent"] == 0
+        assert depths["Parent"] == 1
+        assert depths["Child"] == 2
+        assert depths["Grandchild"] == 3
+
+    def test_multiple_parents_dag_structure(self):
+        """Test handling of DAG structure (group with multiple parents)."""
+        # Create diamond structure:
+        #       root
+        #      /    \
+        #   left    right
+        #      \    /
+        #       leaf
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left Branch")
+        right = PersonGroupFactory(name="Right Branch")
+        leaf = PersonGroupFactory(name="Leaf")
+
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        leaf.parent_groups.add(left)
+        leaf.parent_groups.add(right)
+
+        self._grant_access(root, left, right, leaf)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        tree_data = response.context["tree_data"]
+
+        # Leaf should have multiple parent_ids
+        leaf_node = next(n for n in tree_data if n["name"] == "Leaf")
+        assert len(leaf_node["parent_ids"]) == 2
+
+    def test_multiple_children_tree_view(self):
+        """Test handling of groups with multiple children."""
+        parent = PersonGroupFactory(name="Parent")
+        child1 = PersonGroupFactory(name="Child 1")
+        child2 = PersonGroupFactory(name="Child 2")
+        child3 = PersonGroupFactory(name="Child 3")
+
+        child1.parent_groups.add(parent)
+        child2.parent_groups.add(parent)
+        child3.parent_groups.add(parent)
+
+        self._grant_access(parent, child1, child2, child3)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        tree_data = response.context["tree_data"]
+
+        # Parent should show has_children = True
+        parent_node = next(n for n in tree_data if n["name"] == "Parent")
+        assert parent_node["has_children"] is True
+
+        # All children should be in the tree
+        child_names = {n["name"] for n in tree_data if n["depth"] == 1}
+        assert child_names == {"Child 1", "Child 2", "Child 3"}
+
+    def test_deep_hierarchy_explorer_navigation(self):
+        """Test explorer navigation through deep hierarchy."""
+        # Create 4-level hierarchy
+        level1 = PersonGroupFactory(name="Level 1")
+        level2 = PersonGroupFactory(name="Level 2")
+        level3 = PersonGroupFactory(name="Level 3")
+        level4 = PersonGroupFactory(name="Level 4")
+
+        level2.parent_groups.add(level1)
+        level3.parent_groups.add(level2)
+        level4.parent_groups.add(level3)
+
+        self._grant_access(level1, level2, level3, level4)
+
+        # Navigate through hierarchy building breadcrumbs
+        # Visit level 1
+        url1 = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": level1.group_id}
+        )
+        self.client.get(url1)
+
+        # Visit level 2 from level 1
+        url2 = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": level2.group_id}
+        )
+        self.client.get(url2 + f"?from_group={level1.group_id}")
+
+        # Visit level 3 from level 2
+        url3 = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": level3.group_id}
+        )
+        self.client.get(url3 + f"?from_group={level2.group_id}")
+
+        # Visit level 4 from level 3 - should have full breadcrumb trail
+        url4 = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": level4.group_id}
+        )
+        response = self.client.get(url4 + f"?from_group={level3.group_id}")
+
+        assert response.status_code == 200
+        breadcrumbs = response.context["breadcrumbs"]
+        assert len(breadcrumbs) == 4
+        assert [b.name for b in breadcrumbs] == ["Level 1", "Level 2", "Level 3", "Level 4"]
+
+    def test_explorer_child_groups_in_hierarchy(self):
+        """Test explorer shows correct child groups at each level."""
+        parent = PersonGroupFactory(name="Parent")
+        child1 = PersonGroupFactory(name="Child 1")
+        child2 = PersonGroupFactory(name="Child 2")
+        grandchild = PersonGroupFactory(name="Grandchild")
+
+        child1.parent_groups.add(parent)
+        child2.parent_groups.add(parent)
+        grandchild.parent_groups.add(child1)
+
+        self._grant_access(parent, child1, child2, grandchild)
+
+        # Check parent's children
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": parent.group_id}
+        )
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        child_names = {g.name for g in response.context["child_groups"]}
+        assert child_names == {"Child 1", "Child 2"}
+
+        # Check child1's children
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": child1.group_id}
+        )
+        response = self.client.get(url)
+
+        child_names = {g.name for g in response.context["child_groups"]}
+        assert child_names == {"Grandchild"}
+
+    def test_explorer_parent_groups_in_hierarchy(self):
+        """Test explorer shows correct parent groups."""
+        grandparent = PersonGroupFactory(name="Grandparent")
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+
+        parent.parent_groups.add(grandparent)
+        child.parent_groups.add(parent)
+
+        self._grant_access(grandparent, parent, child)
+
+        # Check child's parents
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": child.group_id}
+        )
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        parent_names = {g.name for g in response.context["parent_groups"]}
+        assert parent_names == {"Parent"}
+
+    def test_reparent_in_deep_hierarchy(self):
+        """Test reparenting a group in a deep hierarchy."""
+        level1 = PersonGroupFactory(name="Level 1")
+        level2 = PersonGroupFactory(name="Level 2")
+        level3 = PersonGroupFactory(name="Level 3")
+        level4 = PersonGroupFactory(name="Level 4")
+
+        level2.parent_groups.add(level1)
+        level3.parent_groups.add(level2)
+        level4.parent_groups.add(level3)
+
+        self._grant_editor(level4)
+        self._grant_access(level1, level2, level3)
+
+        # Move level4 to be a direct child of level1 (skip levels 2 and 3)
+        url = reverse("gift_manager:api_reparent_group")
+        response = self.client.post(
+            url,
+            json.dumps({
+                "group_id": str(level4.group_id),
+                "parent_ids": [str(level1.group_id)],
+                "action": "set",
+            }),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        level4.refresh_from_db()
+        assert level1 in level4.parent_groups.all()
+        assert level3 not in level4.parent_groups.all()
+
+    def test_reparent_add_second_parent(self):
+        """Test adding a second parent to create DAG."""
+        parent1 = PersonGroupFactory(name="Parent 1")
+        parent2 = PersonGroupFactory(name="Parent 2")
+        child = PersonGroupFactory(name="Child")
+
+        child.parent_groups.add(parent1)
+
+        self._grant_editor(child)
+        self._grant_access(parent1, parent2)
+
+        # Add parent2 as additional parent
+        url = reverse("gift_manager:api_reparent_group")
+        response = self.client.post(
+            url,
+            json.dumps({
+                "group_id": str(child.group_id),
+                "parent_ids": [str(parent2.group_id)],
+                "action": "add",
+            }),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        child.refresh_from_db()
+        assert parent1 in child.parent_groups.all()
+        assert parent2 in child.parent_groups.all()
+        assert child.parent_groups.count() == 2
+
+    def test_reparent_remove_one_of_multiple_parents(self):
+        """Test removing one parent from a group with multiple parents."""
+        parent1 = PersonGroupFactory(name="Parent 1")
+        parent2 = PersonGroupFactory(name="Parent 2")
+        parent3 = PersonGroupFactory(name="Parent 3")
+        child = PersonGroupFactory(name="Child")
+
+        child.parent_groups.add(parent1, parent2, parent3)
+
+        self._grant_editor(child)
+        self._grant_access(parent1, parent2, parent3)
+
+        # Remove parent2
+        url = reverse("gift_manager:api_reparent_group")
+        response = self.client.post(
+            url,
+            json.dumps({
+                "group_id": str(child.group_id),
+                "parent_ids": [str(parent2.group_id)],
+                "action": "remove",
+            }),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        child.refresh_from_db()
+        assert parent1 in child.parent_groups.all()
+        assert parent2 not in child.parent_groups.all()
+        assert parent3 in child.parent_groups.all()
+        assert child.parent_groups.count() == 2
+
+    def test_cycle_detection_in_deep_hierarchy(self):
+        """Test cycle detection prevents creating cycles in deep hierarchies."""
+        # Create: A -> B -> C -> D
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+        d = PersonGroupFactory(name="D")
+
+        b.parent_groups.add(a)
+        c.parent_groups.add(b)
+        d.parent_groups.add(c)
+
+        self._grant_editor(a)
+        self._grant_access(b, c, d)
+
+        # Try to make A a child of D (would create cycle: A -> B -> C -> D -> A)
+        url = reverse("gift_manager:api_reparent_group")
+        response = self.client.post(
+            url,
+            json.dumps({
+                "group_id": str(a.group_id),
+                "parent_ids": [str(d.group_id)],
+                "action": "add",
+            }),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        data = response.json()
+        assert data["success"] is False
+        assert "cycle" in data["message"].lower()
+
+    def test_detail_view_nested_members_in_hierarchy(self):
+        """Test detail view shows nested members from child groups."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        grandchild = PersonGroupFactory(name="Grandchild")
+
+        child.parent_groups.add(parent)
+        grandchild.parent_groups.add(child)
+
+        # Add members at different levels
+        person_parent = PersonFactory(first_name="Parent", family_name="Member")
+        person_child = PersonFactory(first_name="Child", family_name="Member")
+        person_grandchild = PersonFactory(first_name="Grandchild", family_name="Member")
+
+        person_parent.groups.add(parent)
+        person_child.groups.add(child)
+        person_grandchild.groups.add(grandchild)
+
+        self._grant_access(parent, child, grandchild)
+        create_or_update_permission(self.user, person_parent, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, person_child, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, person_grandchild, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": parent.group_id})
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+
+        # Direct members should only include parent's member
+        direct_members = list(response.context["persons"])
+        assert len(direct_members) == 1
+        assert direct_members[0].first_name == "Parent"
+
+        # Nested members should include all members from hierarchy
+        nested_members = list(response.context["nested_members"])
+        nested_names = {m.first_name for m in nested_members}
+        assert nested_names == {"Parent", "Child", "Grandchild"}
+
+    def test_list_view_handles_complex_dag(self):
+        """Test list view correctly handles complex DAG with shared descendants."""
+        #       root1    root2
+        #         |   \ /   |
+        #         A    B    C
+        #          \  / \  /
+        #           D    E
+        #            \  /
+        #             F
+        root1 = PersonGroupFactory(name="Root1")
+        root2 = PersonGroupFactory(name="Root2")
+        a = PersonGroupFactory(name="A")
+        b = PersonGroupFactory(name="B")
+        c = PersonGroupFactory(name="C")
+        d = PersonGroupFactory(name="D")
+        e = PersonGroupFactory(name="E")
+        f = PersonGroupFactory(name="F")
+
+        a.parent_groups.add(root1)
+        b.parent_groups.add(root1, root2)
+        c.parent_groups.add(root2)
+        d.parent_groups.add(a, b)
+        e.parent_groups.add(b, c)
+        f.parent_groups.add(d, e)
+
+        self._grant_access(root1, root2, a, b, c, d, e, f)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        tree_data = response.context["tree_data"]
+
+        # All 8 groups should be present
+        all_names = {n["name"] for n in tree_data}
+        assert all_names == {"Root1", "Root2", "A", "B", "C", "D", "E", "F"}
+
+        # Check that has_hierarchy is True
+        assert response.context["has_hierarchy"] is True
+
+    def test_explorer_with_multiple_roots(self):
+        """Test explorer shows multiple root groups."""
+        root1 = PersonGroupFactory(name="Root 1")
+        root2 = PersonGroupFactory(name="Root 2")
+        root3 = PersonGroupFactory(name="Root 3")
+        child = PersonGroupFactory(name="Child of Root 1")
+        child.parent_groups.add(root1)
+
+        self._grant_access(root1, root2, root3, child)
+
+        # Visit explorer without selecting a group
+        url = reverse("gift_manager:person_group_explorer")
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        root_names = {g.name for g in response.context["root_groups"]}
+        # Only groups without parents should be shown as roots
+        assert root_names == {"Root 1", "Root 2", "Root 3"}
+
