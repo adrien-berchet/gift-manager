@@ -51,16 +51,27 @@ class PermissionLevel:
         return label
 
 
-class UserPermissionManager(models.Manager):
-    """Base manager for models with user permissions."""
+class UserPermissionQuerySet(models.QuerySet):
+    """Base QuerySet for models with user permissions."""
 
     def accessible_by(self, user):
         """Return all objects accessible by a user (shared with the user)."""
         return self.filter(Q(shared_with=user))
 
 
-class PersonManager(UserPermissionManager):
-    """Manager for Person model with additional query methods."""
+class UserPermissionManager(models.Manager):
+    """Base manager for models with user permissions."""
+
+    def get_queryset(self):
+        return UserPermissionQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+
+class PersonQuerySet(UserPermissionQuerySet):
+    """QuerySet for Person model with additional query methods."""
 
     def accessible_by(self, user):
         """Return all persons accessible by a user (user_link or shared_with)."""
@@ -97,6 +108,25 @@ class PersonManager(UserPermissionManager):
             complete_name=Concat("family_name", Value(" "), "first_name", output_field=TextField())
         )
 
+
+class PersonManager(models.Manager):
+    """Manager for Person model with additional query methods."""
+
+    def get_queryset(self):
+        return PersonQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all persons accessible by a user (user_link or shared_with)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_groups_annotated(self):
+        """Return persons with groups information annotated for Grid.js."""
+        return self.get_queryset().with_groups_annotated()
+
+    def with_complete_name(self):
+        """Return persons with complete_name annotation (family_name + first_name)."""
+        return self.get_queryset().with_complete_name()
+
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -106,8 +136,8 @@ class PersonManager(UserPermissionManager):
         )
 
 
-class GiftManager(UserPermissionManager):
-    """Manager for Gift model with additional query methods."""
+class GiftQuerySet(UserPermissionQuerySet):
+    """QuerySet for Gift model with additional query methods."""
 
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
@@ -130,6 +160,21 @@ class GiftManager(UserPermissionManager):
             )
         )
 
+
+class GiftManager(models.Manager):
+    """Manager for Gift model with additional query methods."""
+
+    def get_queryset(self):
+        return GiftQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_tags_annotated(self):
+        """Return gifts with tags information annotated for Grid.js."""
+        return self.get_queryset().with_tags_annotated()
+
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -147,8 +192,8 @@ class EventManager(UserPermissionManager):
         return self.accessible_by(user).values("event_id", "name", "comment", "usual_date")
 
 
-class RelationManager(UserPermissionManager):
-    """Manager for Relation model with additional query methods."""
+class RelationQuerySet(UserPermissionQuerySet):
+    """QuerySet for Relation model with additional query methods."""
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -177,6 +222,25 @@ class RelationManager(UserPermissionManager):
                 output_field=TextField(),
             )
         )
+
+
+class RelationManager(models.Manager):
+    """Manager for Relation model with additional query methods."""
+
+    def get_queryset(self):
+        return RelationQuerySet(self.model, using=self._db)
+
+    def accessible_by(self, user):
+        """Return all objects accessible by a user (shared with the user)."""
+        return self.get_queryset().accessible_by(user)
+
+    def with_related_objects(self):
+        """Return relations with all related objects selected."""
+        return self.get_queryset().with_related_objects()
+
+    def with_related_object_name(self):
+        """Return relations with related_object annotation (person or group name)."""
+        return self.get_queryset().with_related_object_name()
 
     def for_list_display(self, user):
         """Return queryset optimized for list display with all annotations."""
