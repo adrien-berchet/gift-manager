@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines,redefined-outer-name
 import uuid
 from datetime import datetime
 from datetime import timedelta
@@ -5,6 +6,7 @@ from datetime import timedelta
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db import connection
@@ -12,7 +14,9 @@ from django.test import override_settings
 from django.utils import timezone
 
 from gift_manager.email_encoding import encode_email
+from gift_manager.models import Event
 from gift_manager.models import EventPermission
+from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
@@ -803,7 +807,7 @@ class TestPersonGroupHierarchy:
         """Test get_children returns empty queryset when no children."""
         group = PersonGroupFactory(name="Lonely Group")
         children = group.get_children()
-        assert list(children) == []
+        assert not list(children)
 
     def test_get_children_single_child(self):
         """Test get_children with single child."""
@@ -911,7 +915,7 @@ class TestPersonGroupHierarchy:
         """Test get_all_members returns empty queryset when no members."""
         group = PersonGroupFactory(name="Empty Group")
         members = group.get_all_members()
-        assert list(members) == []
+        assert not list(members)
 
     def test_get_all_members_direct_only(self):
         """Test get_all_members with direct members only."""
@@ -1248,8 +1252,6 @@ class TestPersonGroupHierarchy:
 
     def test_clear_hierarchy_cache(self):
         """Test clear_hierarchy_cache clears related caches."""
-        from django.core.cache import cache
-
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
@@ -1271,8 +1273,6 @@ class TestPersonGroupHierarchy:
 
     def test_get_descendants_caching(self):
         """Test get_descendants uses and respects cache."""
-        from django.core.cache import cache
-
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
@@ -1292,8 +1292,6 @@ class TestPersonGroupHierarchy:
 
     def test_get_ancestors_caching(self):
         """Test get_ancestors uses and respects cache."""
-        from django.core.cache import cache
-
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
@@ -1449,8 +1447,6 @@ class TestGiftManagerMethods:
     @requires_postgresql
     def test_with_tags_annotated(self, gift, gift_tag):
         """Test with_tags_annotated annotates gifts with tags info."""
-        from gift_manager.models import Gift
-
         gift.tags.add(gift_tag)
 
         gifts = Gift.objects.with_tags_annotated().filter(pk=gift.pk)
@@ -1464,15 +1460,10 @@ class TestGiftManagerMethods:
     @requires_postgresql
     def test_for_list_display(self, user, gift, gift_tag):
         """Test for_list_display returns optimized queryset."""
-        from gift_manager.models import Gift
-        from gift_manager.models import GiftPermission
-
         gift.tags.add(gift_tag)
 
         # Share gift with user
-        GiftPermission.objects.create(
-            user=user, gift=gift, permission_type=PermissionLevel.VIEWER
-        )
+        GiftPermission.objects.create(user=user, gift=gift, permission_type=PermissionLevel.VIEWER)
 
         results = Gift.objects.for_list_display(user)
         assert len(results) == 1
@@ -1489,9 +1480,6 @@ class TestEventManagerMethods:
 
     def test_for_list_display(self, user, event):
         """Test for_list_display returns optimized queryset."""
-        from gift_manager.models import Event
-        from gift_manager.models import EventPermission
-
         # Share event with user
         EventPermission.objects.create(
             user=user, event=event, permission_type=PermissionLevel.VIEWER
@@ -1572,7 +1560,9 @@ class TestGetAbsoluteUrlMethods:
         assert "profile" in url
 
     @pytest.mark.xfail(
-        reason="BUG: get_absolute_url uses self.pk instead of self.group_id - URL pattern expects UUID"
+        reason=(
+            "BUG: get_absolute_url uses self.pk instead of self.group_id - URL pattern expects UUID"
+        )
     )
     def test_person_group_get_absolute_url(self, group):
         """Test PersonGroup.get_absolute_url returns correct URL."""
@@ -1583,7 +1573,10 @@ class TestGetAbsoluteUrlMethods:
         assert "edit" in url
 
     @pytest.mark.xfail(
-        reason="BUG: get_absolute_url uses self.pk instead of self.relation_id - URL pattern expects UUID"
+        reason=(
+            "BUG: get_absolute_url uses self.pk instead of self.relation_id - "
+            "URL pattern expects UUID"
+        )
     )
     def test_relation_get_absolute_url(self, person, gift, status):
         """Test Relation.get_absolute_url returns correct URL."""
@@ -1662,8 +1655,6 @@ class TestPersonGroupCacheHits:
 
     def test_get_descendants_cache_hit(self):
         """Test get_descendants returns cached result on second call."""
-        from django.core.cache import cache
-
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
@@ -1688,8 +1679,6 @@ class TestPersonGroupCacheHits:
 
     def test_get_ancestors_cache_hit(self):
         """Test get_ancestors returns cached result on second call."""
-        from django.core.cache import cache
-
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
@@ -1787,8 +1776,6 @@ class TestGiftTagCacheAndBranches:
 
     def test_get_ancestors_cache_hit(self):
         """Test get_ancestors returns cached result on second call."""
-        from django.core.cache import cache
-
         parent = GiftTag.objects.create(name="Electronics")
         child = GiftTag.objects.create(name="Phones")
         child.parent_tags.add(parent)
@@ -1880,8 +1867,6 @@ class TestGiftTagClearHierarchyCache:
 
     def test_clear_hierarchy_cache(self):
         """Test clear_hierarchy_cache clears related caches."""
-        from django.core.cache import cache
-
         parent = GiftTag.objects.create(name="Parent")
         child = GiftTag.objects.create(name="Child")
         child.parent_tags.add(parent)
@@ -1937,8 +1922,6 @@ class TestEmailProperties:
 
     def test_profile_email_property(self, user):
         """Test Profile.email property returns decoded email."""
-        from gift_manager.email_encoding import encode_email
-
         # Set encoded email
         user.email = encode_email("test@example.com")
         user.save()
@@ -1958,8 +1941,6 @@ class TestEmailProperties:
 
     def test_person_email_property(self):
         """Test Person.email property returns decoded email."""
-        from gift_manager.email_encoding import encode_email
-
         person = PersonFactory(
             first_name="Test",
             family_name="User",

@@ -129,8 +129,7 @@ class PersonGroupListView(BaseListView):
         context["tree_data"] = flatten_tree(tree_data)
         # Use len() on prefetched data instead of .exists() to avoid 2N queries
         context["has_hierarchy"] = any(
-            len(g.parent_groups.all()) > 0 or len(g.child_groups.all()) > 0
-            for g in all_groups
+            len(g.parent_groups.all()) > 0 or len(g.child_groups.all()) > 0 for g in all_groups
         )
 
         return context
@@ -435,9 +434,7 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
 
                 # Build breadcrumbs in correct order (reversed, since we collected child-first)
                 breadcrumbs = [
-                    groups_by_id[gid]
-                    for gid in reversed(breadcrumb_ids)
-                    if gid in groups_by_id
+                    groups_by_id[gid] for gid in reversed(breadcrumb_ids) if gid in groups_by_id
                 ]
 
                 context["breadcrumbs"] = breadcrumbs

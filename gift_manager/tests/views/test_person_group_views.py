@@ -1,19 +1,22 @@
 """Tests for PersonGroup views."""
 
+# pylint: disable=too-many-lines
 import json
 
 import pytest
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import Client
+from django.test import RequestFactory
 from django.test import override_settings
 from django.urls import reverse
 
-from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
+from gift_manager.views.person_group import _check_editor_permission
 
 
 @pytest.mark.django_db
@@ -52,8 +55,8 @@ class TestPersonGroupListView:
 
     def test_list_view_only_shows_accessible_groups(self):
         """Test that only groups shared with user are shown."""
+        PersonGroupFactory(name="Inaccessible")
         accessible = PersonGroupFactory(name="Accessible")
-        inaccessible = PersonGroupFactory(name="Inaccessible")
         create_or_update_permission(self.user, accessible, permission_level=PermissionLevel.VIEWER)
 
         url = reverse("gift_manager:person_groups")
@@ -426,7 +429,9 @@ class TestPersonGroupExplorerView:
         group = PersonGroupFactory(name="Selected Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
 
-        url = reverse("gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id})
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id}
+        )
         response = self.client.get(url)
 
         assert response.status_code == 200
@@ -437,7 +442,9 @@ class TestPersonGroupExplorerView:
         group = PersonGroupFactory(name="Private Group")
         # No permission granted
 
-        url = reverse("gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id})
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id}
+        )
         response = self.client.get(url)
 
         assert response.status_code == 302
@@ -478,7 +485,9 @@ class TestPersonGroupExplorerView:
         create_or_update_permission(self.user, parent, permission_level=PermissionLevel.VIEWER)
         create_or_update_permission(self.user, child, permission_level=PermissionLevel.VIEWER)
 
-        url = reverse("gift_manager:person_group_explorer_with_group", kwargs={"pk": parent.group_id})
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": parent.group_id}
+        )
         response = self.client.get(url)
 
         assert response.status_code == 200
@@ -494,7 +503,9 @@ class TestPersonGroupExplorerView:
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
         create_or_update_permission(self.user, person, permission_level=PermissionLevel.VIEWER)
 
-        url = reverse("gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id})
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id}
+        )
         response = self.client.get(url)
 
         assert response.status_code == 200
@@ -734,10 +745,6 @@ class TestCheckEditorPermissionHelper:
 
     def test_returns_true_for_editor(self):
         """Test helper returns True for editor."""
-        from django.test import RequestFactory
-
-        from gift_manager.views.person_group import _check_editor_permission
-
         group = PersonGroupFactory(name="Test Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
 
@@ -745,21 +752,16 @@ class TestCheckEditorPermissionHelper:
         request = factory.get("/")
         request.user = self.user
         # Mock messages framework
-        from django.contrib.messages.storage.fallback import FallbackStorage
 
-        setattr(request, "session", "session")
+        request.session = "session"
         messages = FallbackStorage(request)
-        setattr(request, "_messages", messages)
+        request._messages = messages  # pylint: disable=protected-access
 
         result = _check_editor_permission(request, group)
         assert result is True
 
     def test_returns_false_for_viewer(self):
         """Test helper returns False for viewer."""
-        from django.test import RequestFactory
-
-        from gift_manager.views.person_group import _check_editor_permission
-
         group = PersonGroupFactory(name="Test Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
 
@@ -767,11 +769,10 @@ class TestCheckEditorPermissionHelper:
         request = factory.get("/")
         request.user = self.user
         # Mock messages framework
-        from django.contrib.messages.storage.fallback import FallbackStorage
 
-        setattr(request, "session", "session")
+        request.session = "session"
         messages = FallbackStorage(request)
-        setattr(request, "_messages", messages)
+        request._messages = messages  # pylint: disable=protected-access
 
         result = _check_editor_permission(request, group)
         assert result is False
@@ -1000,11 +1001,13 @@ class TestComplexHierarchies:
         url = reverse("gift_manager:api_reparent_group")
         response = self.client.post(
             url,
-            json.dumps({
-                "group_id": str(level4.group_id),
-                "parent_ids": [str(level1.group_id)],
-                "action": "set",
-            }),
+            json.dumps(
+                {
+                    "group_id": str(level4.group_id),
+                    "parent_ids": [str(level1.group_id)],
+                    "action": "set",
+                }
+            ),
             content_type="application/json",
         )
 
@@ -1028,11 +1031,13 @@ class TestComplexHierarchies:
         url = reverse("gift_manager:api_reparent_group")
         response = self.client.post(
             url,
-            json.dumps({
-                "group_id": str(child.group_id),
-                "parent_ids": [str(parent2.group_id)],
-                "action": "add",
-            }),
+            json.dumps(
+                {
+                    "group_id": str(child.group_id),
+                    "parent_ids": [str(parent2.group_id)],
+                    "action": "add",
+                }
+            ),
             content_type="application/json",
         )
 
@@ -1058,11 +1063,13 @@ class TestComplexHierarchies:
         url = reverse("gift_manager:api_reparent_group")
         response = self.client.post(
             url,
-            json.dumps({
-                "group_id": str(child.group_id),
-                "parent_ids": [str(parent2.group_id)],
-                "action": "remove",
-            }),
+            json.dumps(
+                {
+                    "group_id": str(child.group_id),
+                    "parent_ids": [str(parent2.group_id)],
+                    "action": "remove",
+                }
+            ),
             content_type="application/json",
         )
 
@@ -1092,11 +1099,13 @@ class TestComplexHierarchies:
         url = reverse("gift_manager:api_reparent_group")
         response = self.client.post(
             url,
-            json.dumps({
-                "group_id": str(a.group_id),
-                "parent_ids": [str(d.group_id)],
-                "action": "add",
-            }),
+            json.dumps(
+                {
+                    "group_id": str(a.group_id),
+                    "parent_ids": [str(d.group_id)],
+                    "action": "add",
+                }
+            ),
             content_type="application/json",
         )
 
@@ -1124,9 +1133,15 @@ class TestComplexHierarchies:
         person_grandchild.groups.add(grandchild)
 
         self._grant_access(parent, child, grandchild)
-        create_or_update_permission(self.user, person_parent, permission_level=PermissionLevel.VIEWER)
-        create_or_update_permission(self.user, person_child, permission_level=PermissionLevel.VIEWER)
-        create_or_update_permission(self.user, person_grandchild, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(
+            self.user, person_parent, permission_level=PermissionLevel.VIEWER
+        )
+        create_or_update_permission(
+            self.user, person_child, permission_level=PermissionLevel.VIEWER
+        )
+        create_or_update_permission(
+            self.user, person_grandchild, permission_level=PermissionLevel.VIEWER
+        )
 
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": parent.group_id})
         response = self.client.get(url)
@@ -1201,4 +1216,3 @@ class TestComplexHierarchies:
         root_names = {g.name for g in response.context["root_groups"]}
         # Only groups without parents should be shown as roots
         assert root_names == {"Root 1", "Root 2", "Root 3"}
-

@@ -27,7 +27,7 @@ PASSWORD_HASHERS = [
 ]
 
 
-def _get_test_database_config():
+def _get_test_database_config() -> dict:
     """Get database configuration for tests.
 
     Returns PostgreSQL config if DB_* env vars are set, otherwise SQLite.
