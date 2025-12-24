@@ -1,44 +1,67 @@
-{% extends "gift_manager/base_list.html" %}
+{% extends "gift_manager/base.html" %}
 
 {% load i18n %}
 {% load static %}
-{% load custom_filters %}
 
-{% block page_actions %}
-<a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary">
-    <i class="fas fa-plus me-2"></i>{% trans "Create new event" %}
-</a>
+{% block title %}Gift Manager - {{ translated_type }}{% endblock %}
+
+{% block content %}
+{# Page header with title and actions #}
+<div class="page-header">
+    <h1>{{ translated_type }}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new event" %}
+        </a>
+    </div>
+</div>
+
+{# Filter panel #}
+{% include "gift_manager/includes/filter_panel.html" with grid_id="event-grid" %}
+
+<!-- Grid.js container -->
+<div id="event-grid" class="mt-3"></div>
 {% endblock %}
 
-{% block grid_data %}
-const numDataColumns = {{ column_names.items|length }};
-const eventIdIdx = numDataColumns;
-const detailUrlIdx = numDataColumns + 1;
-const editUrlIdx = numDataColumns + 2;
-const deleteUrlIdx = numDataColumns + 3;
+{% block extra_js %}
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+<script>
+    {% load custom_filters %}
+    (function () {
+        // Calculate column indices for clarity
+        // Data columns: {% for col, name in column_names.items %}{{ forloop.counter }}{% if forloop.last %} columns{% endif %}{% endfor %}
+        const numDataColumns = {{ column_names.items| length }};
+    const eventIdIdx = numDataColumns;      // Index of event_id
+    const detailUrlIdx = numDataColumns + 1; // Index of detail URL
+    const editUrlIdx = numDataColumns + 2;   // Index of edit URL
+    const deleteUrlIdx = numDataColumns + 3; // Index of delete URL
 
-const data = [
-    {% for item in data %}
+    // Prepare data for Grid.js
+    const data = [
+        {% for item in data %}
     [
         {% for col, name in column_names.items %}
-        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-        {% endfor %},
-        "{{ item.event_id }}",
-        "{% url 'gift_manager:event_detail' item.event_id %}",
-        "{% url 'gift_manager:event_edit' item.event_id %}",
-        "{% url 'gift_manager:event_delete' item.event_id %}"
-    ]{% if not forloop.last %},{% endif %}
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    {% endfor %},
+    "{{ item.event_id }}",  // cells[numDataColumns]
+        "{% url 'gift_manager:event_detail' item.event_id %}",  // cells[numDataColumns + 1]
+        "{% url 'gift_manager:event_edit' item.event_id %}",     // cells[numDataColumns + 2]
+        "{% url 'gift_manager:event_delete' item.event_id %}"    // cells[numDataColumns + 3]
+            ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
-];
-{% endblock %}
+        ];
 
-{% block grid_columns %}
-const columns = [
-    {% for col, name in column_names.items %}
+    // Build columns dynamically
+    const columns = [
+        {% for col, name in column_names.items %}
     {
         name: '{{ name|escapejs }}',
-        sort: { compare: GridUtils.sortString() }
-    }{% if not forloop.last %},{% endif %}
+            sort: {
+            compare: GridUtils.sortString()
+        }
+    } {% if not forloop.last %}, {% endif %}
     {% endfor %},
     { name: 'event_id', hidden: true },
     { name: 'event_detail_url', hidden: true },
@@ -46,21 +69,34 @@ const columns = [
     { name: 'event_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '150px',
-        sort: false,
-        formatter: GridUtils.actionButtonsFormatter({
-            details: (row) => row.cells[detailUrlIdx].data,
-            edit: (row) => row.cells[editUrlIdx].data,
-            delete: (row) => row.cells[deleteUrlIdx].data
-        }, ['details', 'edit', 'delete'])
+            width: '150px',
+                sort: false,
+                    formatter: GridUtils.actionButtonsFormatter({
+                        details: (row) => row.cells[detailUrlIdx].data,
+                        edit: (row) => row.cells[editUrlIdx].data,
+                        delete: (row) => row.cells[deleteUrlIdx].data
+                    }, ['details', 'edit', 'delete'])
     }
-];
-{% endblock %}
+    ];
 
-{% block grid_post_init %}
-// Trigger initial sort on first column
-setTimeout(() => {
-    const header = document.querySelector('#{{ grid_id }} th:nth-child(1)');
-    if (header) header.click();
-}, 100);
+    // Initialize Grid.js
+    const grid = GridUtils.initGrid('event-grid', columns, data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
+    });
+
+    // Initialize filter panel
+    FilterPanel.init('event-grid', grid, columns);
+
+    // Trigger initial sort on first column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#event-grid th:nth-child(1)');
+        if (statusHeader) {
+            statusHeader.click();
+        }
+    }, 100);
+    }) ();
+</script>
 {% endblock %}

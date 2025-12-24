@@ -1,10 +1,9 @@
-{% extends "gift_manager/base_list.html" %}
+{% extends "gift_manager/base.html" %}
 
 {% load i18n %}
 {% load static %}
-{% load custom_filters %}
 
-{% block list_extra_head %}
+{% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
 <style>
     /* Tree view styles */
@@ -100,16 +99,25 @@
 </style>
 {% endblock %}
 
-{% block page_actions %}
-<a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">
-    <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
-</a>
-<a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-secondary">
-    <i class="fas fa-folder-tree me-2"></i>{% trans "Explorer View" %}
-</a>
-{% endblock %}
+{% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
-{% block before_grid %}
+{% block content %}
+{# Page header with title and actions #}
+<div class="page-header">
+    <h1>{{ translated_type }}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
+        </a>
+        <a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-secondary">
+            <i class="fas fa-folder-tree me-2"></i>{% trans "Explorer View" %}
+        </a>
+    </div>
+</div>
+
+{# Filter panel #}
+{% include "gift_manager/includes/filter_panel.html" with grid_id="person-group-grid" %}
+
 <!-- View Toggle Buttons (only show if hierarchy exists) -->
 {% if has_hierarchy %}
 <div class="view-toggle-buttons mt-3">
@@ -124,12 +132,10 @@
 </div>
 {% endif %}
 
-<!-- Grid View Container - wraps the default grid from base_list.html -->
+<!-- Grid View Container -->
 <div class="grid-view-container active mt-3">
-{% endblock %}
-
-{% block after_grid %}
-</div><!-- End Grid View Container -->
+    <div id="person-group-grid"></div>
+</div>
 
 <!-- Tree View Container -->
 {% if has_hierarchy %}
@@ -175,54 +181,61 @@
 {% endif %}
 {% endblock %}
 
-{% block grid_data %}
-// Calculate column indices for clarity
-const numDataColumns = {{ column_names.items|length }};
-const groupIdIdx = numDataColumns;           // Index of group_id
-const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
-const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
-const editUrlIdx = numDataColumns + 3;       // Index of edit URL
-const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
+{% block extra_js %}
+<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+<script>
+    {% load custom_filters %}
+    (function () {
+        // Calculate column indices for clarity
+        const numDataColumns = {{ column_names.items| length }};
+    const groupIdIdx = numDataColumns;           // Index of group_id
+    const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
+    const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
+    const editUrlIdx = numDataColumns + 3;       // Index of edit URL
+    const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
 
-// Prepare data for Grid.js
-const data = [
-    {% for item in data %}
+    // Prepare data for Grid.js
+    const data = [
+        {% for item in data %}
     [
         {% for col, name in column_names.items %}
-        {% if col != "groups" %}
-        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-        {% else %}
-        {% if item.grouped_groups %}
-        [{% for group_name, group_id in item.grouped_groups %}{ id: {{ group_id }}, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" }{% if not forloop.last %}, {% endif %}{% endfor %}]{% if not forloop.last %}, {% endif %}
-        {% else %}
-        []{% if not forloop.last %}, {% endif %}
-        {% endif %}
-        {% endif %}
-        {% endfor %},
-        "{{ item.group_id }}",
-        "{% url 'gift_manager:person_group_relation_create' item.group_id %}",
-        "{% url 'gift_manager:person_group_detail' item.group_id %}",
-        "{% url 'gift_manager:person_group_edit' item.group_id %}",
-        "{% url 'gift_manager:person_group_delete' item.group_id %}"
-    ]{% if not forloop.last %},{% endif %}
+    {% if col != "groups" %}
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    {% else %}
+    {% if item.grouped_groups %}
+    [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]
+    {% if not forloop.last %}, {% endif %}
+    {% else %}
+    []{% if not forloop.last %}, {% endif %}
+    {% endif %}
+    {% endif %}
+    {% endfor %},
+    "{{ item.group_id }}",  // cells[numDataColumns]
+        "{% url 'gift_manager:person_group_relation_create' item.group_id %}",  // cells[numDataColumns + 1]
+        "{% url 'gift_manager:person_group_detail' item.group_id %}",           // cells[numDataColumns + 2]
+        "{% url 'gift_manager:person_group_edit' item.group_id %}",             // cells[numDataColumns + 3]
+        "{% url 'gift_manager:person_group_delete' item.group_id %}"            // cells[numDataColumns + 4]
+            ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
-];
-{% endblock %}
+        ];
 
-{% block grid_columns %}
-// Build columns dynamically
-const columns = [
-    {% for col, name in column_names.items %}
+    // Build columns dynamically
+    const columns = [
+        {% for col, name in column_names.items %}
     {% if col != "groups" %}
     {
         name: '{{ name|escapejs }}',
-        sort: { compare: GridUtils.sortString() }
-    }{% if not forloop.last %},{% endif %}
+            sort: {
+            compare: GridUtils.sortString()
+        }
+    } {% if not forloop.last %}, {% endif %}
     {% else %}
     {
         name: '{{ name|escapejs }}',
-        formatter: GridUtils.multiLinkFormatter()
-    }{% if not forloop.last %},{% endif %}
+            formatter: GridUtils.multiLinkFormatter()
+    } {% if not forloop.last %}, {% endif %}
     {% endif %}
     {% endfor %},
     { name: 'group_id', hidden: true },
@@ -232,340 +245,349 @@ const columns = [
     { name: 'group_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-        width: '180px',
-        sort: false,
-        formatter: GridUtils.actionButtonsFormatter({
-            give: (row) => row.cells[giveUrlIdx].data,
-            details: (row) => row.cells[detailUrlIdx].data,
-            edit: (row) => row.cells[editUrlIdx].data,
-            delete: (row) => row.cells[deleteUrlIdx].data
-        }, ['give', 'details', 'edit', 'delete'])
+            width: '180px',
+                sort: false,
+                    formatter: GridUtils.actionButtonsFormatter({
+                        give: (row) => row.cells[giveUrlIdx].data,
+                        details: (row) => row.cells[detailUrlIdx].data,
+                        edit: (row) => row.cells[editUrlIdx].data,
+                        delete: (row) => row.cells[deleteUrlIdx].data
+                    }, ['give', 'details', 'edit', 'delete'])
     }
-];
-{% endblock %}
+    ];
 
-{% block grid_post_init %}
-// Trigger initial sort on first column
-setTimeout(() => {
-    const statusHeader = document.querySelector('#{{ grid_id }} th:nth-child(1)');
-    if (statusHeader) {
-        statusHeader.click();
-    }
-}, 100);
-{% endblock %}
-
-{% block grid_extra_js %}
-// Tree View functionality
-(function() {
-    const gridViewBtn = document.getElementById('grid-view-btn');
-    const treeViewBtn = document.getElementById('tree-view-btn');
-    const gridViewContainer = document.querySelector('.grid-view-container');
-    const treeViewContainer = document.querySelector('.tree-view-container');
-
-    // Only proceed if tree view elements exist
-    if (!gridViewBtn || !treeViewBtn || !treeViewContainer) {
-        return;
-    }
-
-    // Restore view preference from localStorage
-    const savedView = localStorage.getItem('personGroupView') || 'grid';
-
-    function showGridView() {
-        gridViewContainer.classList.add('active');
-        treeViewContainer.classList.remove('active');
-        gridViewBtn.classList.add('active');
-        treeViewBtn.classList.remove('active');
-        localStorage.setItem('personGroupView', 'grid');
-    }
-
-    function showTreeView() {
-        gridViewContainer.classList.remove('active');
-        treeViewContainer.classList.add('active');
-        gridViewBtn.classList.remove('active');
-        treeViewBtn.classList.add('active');
-        localStorage.setItem('personGroupView', 'tree');
-    }
-
-    // Set initial view based on saved preference
-    if (savedView === 'tree') {
-        showTreeView();
-    } else {
-        showGridView();
-    }
-
-    // View toggle button event listeners
-    gridViewBtn.addEventListener('click', showGridView);
-    treeViewBtn.addEventListener('click', showTreeView);
-
-    // Tree node expand/collapse functionality
-    const treeNodes = document.querySelectorAll('.tree-node');
-    const collapsedNodes = new Set();
-
-    // Build a map of parent-child relationships
-    const childrenMap = new Map();
-    treeNodes.forEach(node => {
-        const groupId = node.dataset.groupId;
-        const depth = parseInt(node.dataset.depth);
-
-        // Find all direct children (nodes with depth = current depth + 1 that come after this node)
-        const children = [];
-        let foundCurrent = false;
-
-        treeNodes.forEach(potentialChild => {
-            if (potentialChild === node) {
-                foundCurrent = true;
-                return;
-            }
-
-            if (foundCurrent) {
-                const childDepth = parseInt(potentialChild.dataset.depth);
-
-                // If we hit a node at same or lower depth, stop looking for children
-                if (childDepth <= depth) {
-                    foundCurrent = false;
-                    return;
-                }
-
-                // Direct child is exactly one level deeper
-                if (childDepth === depth + 1) {
-                    children.push(potentialChild);
-                }
-            }
-        });
-
-        childrenMap.set(groupId, children);
+    // Initialize Grid.js
+    const grid = GridUtils.initGrid('person-group-grid', columns, data, {
+        pagination: {
+            enabled: true,
+            limit: 10
+        }
     });
 
-    // Function to get all descendants recursively
-    function getAllDescendants(groupId) {
-        const descendants = [];
-        const directChildren = childrenMap.get(groupId) || [];
+    // Initialize filter panel
+    FilterPanel.init('person-group-grid', grid, columns);
 
-        directChildren.forEach(child => {
-            descendants.push(child);
-            const childId = child.dataset.groupId;
-            const childDescendants = getAllDescendants(childId);
-            descendants.push(...childDescendants);
-        });
+    // Trigger initial sort on first column to make Grid.js aware of the sort
+    setTimeout(() => {
+        const statusHeader = document.querySelector('#person-group-grid th:nth-child(1)');
+        if (statusHeader) {
+            statusHeader.click();
+        }
+    }, 100);
+    }) ();
 
-        return descendants;
-    }
+    // Tree View functionality
+    (function() {
+        const gridViewBtn = document.getElementById('grid-view-btn');
+        const treeViewBtn = document.getElementById('tree-view-btn');
+        const gridViewContainer = document.querySelector('.grid-view-container');
+        const treeViewContainer = document.querySelector('.tree-view-container');
 
-    // Function to toggle node collapse state
-    function toggleNode(node) {
-        const groupId = node.dataset.groupId;
-        const hasChildren = node.dataset.hasChildren === 'true';
-
-        if (!hasChildren) {
+        // Only proceed if tree view elements exist
+        if (!gridViewBtn || !treeViewBtn || !treeViewContainer) {
             return;
         }
 
-        const isCollapsed = collapsedNodes.has(groupId);
-        const toggleIcon = node.querySelector('.toggle-icon i');
+        // Restore view preference from localStorage
+        const savedView = localStorage.getItem('personGroupView') || 'grid';
 
-        if (isCollapsed) {
-            // Expand
-            collapsedNodes.delete(groupId);
-            if (toggleIcon) {
-                toggleIcon.classList.remove('fa-chevron-right');
-                toggleIcon.classList.add('fa-chevron-down');
+        function showGridView() {
+            gridViewContainer.classList.add('active');
+            treeViewContainer.classList.remove('active');
+            gridViewBtn.classList.add('active');
+            treeViewBtn.classList.remove('active');
+            localStorage.setItem('personGroupView', 'grid');
+        }
+
+        function showTreeView() {
+            gridViewContainer.classList.remove('active');
+            treeViewContainer.classList.add('active');
+            gridViewBtn.classList.remove('active');
+            treeViewBtn.classList.add('active');
+            localStorage.setItem('personGroupView', 'tree');
+        }
+
+        // Set initial view based on saved preference
+        if (savedView === 'tree') {
+            showTreeView();
+        } else {
+            showGridView();
+        }
+
+        // View toggle button event listeners
+        gridViewBtn.addEventListener('click', showGridView);
+        treeViewBtn.addEventListener('click', showTreeView);
+
+        // Tree node expand/collapse functionality
+        const treeNodes = document.querySelectorAll('.tree-node');
+        const collapsedNodes = new Set();
+
+        // Build a map of parent-child relationships
+        const childrenMap = new Map();
+        treeNodes.forEach(node => {
+            const groupId = node.dataset.groupId;
+            const depth = parseInt(node.dataset.depth);
+
+            // Find all direct children (nodes with depth = current depth + 1 that come after this node)
+            const children = [];
+            let foundCurrent = false;
+
+            treeNodes.forEach(potentialChild => {
+                if (potentialChild === node) {
+                    foundCurrent = true;
+                    return;
+                }
+
+                if (foundCurrent) {
+                    const childDepth = parseInt(potentialChild.dataset.depth);
+
+                    // If we hit a node at same or lower depth, stop looking for children
+                    if (childDepth <= depth) {
+                        foundCurrent = false;
+                        return;
+                    }
+
+                    // Direct child is exactly one level deeper
+                    if (childDepth === depth + 1) {
+                        children.push(potentialChild);
+                    }
+                }
+            });
+
+            childrenMap.set(groupId, children);
+        });
+
+        // Function to get all descendants recursively
+        function getAllDescendants(groupId) {
+            const descendants = [];
+            const directChildren = childrenMap.get(groupId) || [];
+
+            directChildren.forEach(child => {
+                descendants.push(child);
+                const childId = child.dataset.groupId;
+                const childDescendants = getAllDescendants(childId);
+                descendants.push(...childDescendants);
+            });
+
+            return descendants;
+        }
+
+        // Function to toggle node collapse state
+        function toggleNode(node) {
+            const groupId = node.dataset.groupId;
+            const hasChildren = node.dataset.hasChildren === 'true';
+
+            if (!hasChildren) {
+                return;
             }
 
-            // Show all descendants
-            const descendants = getAllDescendants(groupId);
-            descendants.forEach(descendant => {
-                // Only show if none of its ancestors are collapsed
-                const descendantId = descendant.dataset.groupId;
-                let shouldShow = true;
+            const isCollapsed = collapsedNodes.has(groupId);
+            const toggleIcon = node.querySelector('.toggle-icon i');
 
-                // Check if any ancestor is collapsed
-                let currentNode = descendant;
-                while (currentNode) {
-                    const prevDepth = parseInt(currentNode.dataset.depth);
-                    let found = false;
+            if (isCollapsed) {
+                // Expand
+                collapsedNodes.delete(groupId);
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
 
-                    // Find parent node
-                    for (let i = 0; i < treeNodes.length; i++) {
-                        if (treeNodes[i] === currentNode) {
-                            // Look backwards for parent
-                            for (let j = i - 1; j >= 0; j--) {
-                                const parentDepth = parseInt(treeNodes[j].dataset.depth);
-                                if (parentDepth < prevDepth) {
-                                    const parentId = treeNodes[j].dataset.groupId;
-                                    if (collapsedNodes.has(parentId)) {
-                                        shouldShow = false;
+                // Show all descendants
+                const descendants = getAllDescendants(groupId);
+                descendants.forEach(descendant => {
+                    // Only show if none of its ancestors are collapsed
+                    const descendantId = descendant.dataset.groupId;
+                    let shouldShow = true;
+
+                    // Check if any ancestor is collapsed
+                    let currentNode = descendant;
+                    while (currentNode) {
+                        const prevDepth = parseInt(currentNode.dataset.depth);
+                        let found = false;
+
+                        // Find parent node
+                        for (let i = 0; i < treeNodes.length; i++) {
+                            if (treeNodes[i] === currentNode) {
+                                // Look backwards for parent
+                                for (let j = i - 1; j >= 0; j--) {
+                                    const parentDepth = parseInt(treeNodes[j].dataset.depth);
+                                    if (parentDepth < prevDepth) {
+                                        const parentId = treeNodes[j].dataset.groupId;
+                                        if (collapsedNodes.has(parentId)) {
+                                            shouldShow = false;
+                                        }
+                                        currentNode = treeNodes[j];
+                                        found = true;
+                                        break;
                                     }
-                                    currentNode = treeNodes[j];
-                                    found = true;
-                                    break;
                                 }
+                                break;
                             }
+                        }
+
+                        if (!found || parseInt(currentNode.dataset.depth) === 0) {
                             break;
                         }
                     }
 
-                    if (!found || parseInt(currentNode.dataset.depth) === 0) {
-                        break;
+                    if (shouldShow) {
+                        descendant.style.display = '';
                     }
-                }
-
-                if (shouldShow) {
-                    descendant.style.display = '';
-                }
-            });
-        } else {
-            // Collapse
-            collapsedNodes.add(groupId);
-            if (toggleIcon) {
-                toggleIcon.classList.remove('fa-chevron-down');
-                toggleIcon.classList.add('fa-chevron-right');
-            }
-
-            // Hide all descendants
-            const descendants = getAllDescendants(groupId);
-            descendants.forEach(descendant => {
-                descendant.style.display = 'none';
-            });
-        }
-    }
-
-    // Add click handlers to tree nodes with children
-    treeNodes.forEach(node => {
-        const hasChildren = node.dataset.hasChildren === 'true';
-
-        if (hasChildren) {
-            // Make the toggle icon clickable (not the whole content, to avoid conflict with drag)
-            const toggleIcon = node.querySelector('.toggle-icon');
-            if (toggleIcon) {
-                toggleIcon.style.cursor = 'pointer';
-                toggleIcon.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    toggleNode(node);
                 });
-            }
-        }
-    });
-
-    // Drag-and-Drop functionality
-    let draggedNode = null;
-
-    function getCsrfToken() {
-        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (csrfInput) return csrfInput.value;
-        const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
-        return csrfCookie ? csrfCookie.split('=')[1] : '';
-    }
-
-    function wouldCreateCycle(draggedGroupId, targetGroupId) {
-        // Check if making target a parent of dragged would create a cycle
-        // This happens if dragged is an ancestor of target
-        const descendants = getAllDescendants(draggedGroupId);
-        return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
-    }
-
-    treeNodes.forEach(node => {
-        // Drag start
-        node.addEventListener('dragstart', (e) => {
-            draggedNode = node;
-            node.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', node.dataset.groupId);
-        });
-
-        // Drag end
-        node.addEventListener('dragend', (e) => {
-            node.classList.remove('dragging');
-            // Remove all drag-over and drop-invalid classes
-            treeNodes.forEach(n => {
-                n.classList.remove('drag-over', 'drop-invalid');
-            });
-            draggedNode = null;
-        });
-
-        // Drag over - check if drop is valid
-        node.addEventListener('dragover', (e) => {
-            if (!draggedNode || draggedNode === node) {
-                return;
-            }
-
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-
-            // Remove classes from all nodes first
-            treeNodes.forEach(n => {
-                n.classList.remove('drag-over', 'drop-invalid');
-            });
-
-            // Check if this would create a cycle
-            const draggedGroupId = draggedNode.dataset.groupId;
-            const targetGroupId = node.dataset.groupId;
-
-            if (draggedGroupId === targetGroupId || wouldCreateCycle(draggedGroupId, targetGroupId)) {
-                node.classList.add('drop-invalid');
             } else {
-                node.classList.add('drag-over');
+                // Collapse
+                collapsedNodes.add(groupId);
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('fa-chevron-down');
+                    toggleIcon.classList.add('fa-chevron-right');
+                }
+
+                // Hide all descendants
+                const descendants = getAllDescendants(groupId);
+                descendants.forEach(descendant => {
+                    descendant.style.display = 'none';
+                });
+            }
+        }
+
+        // Add click handlers to tree nodes with children
+        treeNodes.forEach(node => {
+            const hasChildren = node.dataset.hasChildren === 'true';
+
+            if (hasChildren) {
+                // Make the toggle icon clickable (not the whole content, to avoid conflict with drag)
+                const toggleIcon = node.querySelector('.toggle-icon');
+                if (toggleIcon) {
+                    toggleIcon.style.cursor = 'pointer';
+                    toggleIcon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleNode(node);
+                    });
+                }
             }
         });
 
-        // Drag leave
-        node.addEventListener('dragleave', (e) => {
-            node.classList.remove('drag-over', 'drop-invalid');
-        });
+        // Drag-and-Drop functionality
+        let draggedNode = null;
 
-        // Drop
-        node.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            node.classList.remove('drag-over', 'drop-invalid');
+        function getCsrfToken() {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) return csrfInput.value;
+            const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+            return csrfCookie ? csrfCookie.split('=')[1] : '';
+        }
 
-            if (!draggedNode || draggedNode === node) {
-                return;
-            }
+        function wouldCreateCycle(draggedGroupId, targetGroupId) {
+            // Check if making target a parent of dragged would create a cycle
+            // This happens if dragged is an ancestor of target
+            const descendants = getAllDescendants(draggedGroupId);
+            return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
+        }
 
-            const draggedGroupId = draggedNode.dataset.groupId;
-            const draggedGroupName = draggedNode.dataset.groupName;
-            const targetGroupId = node.dataset.groupId;
-            const targetGroupName = node.dataset.groupName;
+        treeNodes.forEach(node => {
+            // Drag start
+            node.addEventListener('dragstart', (e) => {
+                draggedNode = node;
+                node.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', node.dataset.groupId);
+            });
 
-            // Check for cycle one more time
-            if (wouldCreateCycle(draggedGroupId, targetGroupId)) {
-                alert("{% trans 'Cannot move group: this would create a cycle in the hierarchy' %}");
-                return;
-            }
+            // Drag end
+            node.addEventListener('dragend', (e) => {
+                node.classList.remove('dragging');
+                // Remove all drag-over and drop-invalid classes
+                treeNodes.forEach(n => {
+                    n.classList.remove('drag-over', 'drop-invalid');
+                });
+                draggedNode = null;
+            });
 
-            // Confirm the action
-            const confirmMessage = "{% trans 'Move' %} '" + draggedGroupName + "' {% trans 'under' %} '" + targetGroupName + "'?";
-            if (!confirm(confirmMessage)) {
-                return;
-            }
+            // Drag over - check if drop is valid
+            node.addEventListener('dragover', (e) => {
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
 
-            // Call API to reparent
-            try {
-                const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCsrfToken()
-                    },
-                    body: JSON.stringify({
-                        group_id: draggedGroupId,
-                        parent_ids: [targetGroupId],
-                        action: 'set'
-                    })
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                // Remove classes from all nodes first
+                treeNodes.forEach(n => {
+                    n.classList.remove('drag-over', 'drop-invalid');
                 });
 
-                const data = await response.json();
+                // Check if this would create a cycle
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const targetGroupId = node.dataset.groupId;
 
-                if (data.success) {
-                    // Success - reload the page to show updated hierarchy
-                    window.location.reload();
+                if (draggedGroupId === targetGroupId || wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    node.classList.add('drop-invalid');
                 } else {
-                    alert("{% trans 'Error:' %} " + data.message);
+                    node.classList.add('drag-over');
                 }
-            } catch (error) {
-                console.error('Reparenting error:', error);
-                alert("{% trans 'An error occurred while moving the group' %}");
-            }
+            });
+
+            // Drag leave
+            node.addEventListener('dragleave', (e) => {
+                node.classList.remove('drag-over', 'drop-invalid');
+            });
+
+            // Drop
+            node.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                node.classList.remove('drag-over', 'drop-invalid');
+
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
+
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const draggedGroupName = draggedNode.dataset.groupName;
+                const targetGroupId = node.dataset.groupId;
+                const targetGroupName = node.dataset.groupName;
+
+                // Check for cycle one more time
+                if (wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    alert("{% trans 'Cannot move group: this would create a cycle in the hierarchy' %}");
+                    return;
+                }
+
+                // Confirm the action
+                const confirmMessage = "{% trans 'Move' %} '" + draggedGroupName + "' {% trans 'under' %} '" + targetGroupName + "'?";
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                // Call API to reparent
+                try {
+                    const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCsrfToken()
+                        },
+                        body: JSON.stringify({
+                            group_id: draggedGroupId,
+                            parent_ids: [targetGroupId],
+                            action: 'set'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Success - reload the page to show updated hierarchy
+                        window.location.reload();
+                    } else {
+                        alert("{% trans 'Error:' %} " + data.message);
+                    }
+                } catch (error) {
+                    console.error('Reparenting error:', error);
+                    alert("{% trans 'An error occurred while moving the group' %}");
+                }
+            });
         });
-    });
-})();
+    })();
+</script>
 {% endblock %}
