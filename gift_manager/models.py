@@ -254,8 +254,32 @@ class RelationManager(models.Manager):
 class Profile(models.Model):
     """Model for a user profile."""
 
+    # View preference choices
+    VIEW_LIST = "list"
+    VIEW_CARD = "card"
+    VIEW_CHOICES = [
+        (VIEW_LIST, gettext_lazy("List")),
+        (VIEW_CARD, gettext_lazy("Card")),
+    ]
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     friends = models.ManyToManyField("self", symmetrical=True, blank=True)
+
+    # View preferences for list pages
+    default_view_desktop = models.CharField(
+        max_length=10,
+        choices=VIEW_CHOICES,
+        default=VIEW_LIST,
+        verbose_name=gettext_lazy("Default view for desktop"),
+        help_text=gettext_lazy("Default view mode for desktop/large screens"),
+    )
+    default_view_mobile = models.CharField(
+        max_length=10,
+        choices=VIEW_CHOICES,
+        default=VIEW_CARD,
+        verbose_name=gettext_lazy("Default view for mobile"),
+        help_text=gettext_lazy("Default view mode for mobile/small screens"),
+    )
 
     def __str__(self):
         return f"{gettext_lazy('Profile of')} {self.user.username}"

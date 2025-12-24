@@ -1826,3 +1826,287 @@ h4, h5, h6 {
     cursor: pointer;
     accent-color: var(--color-primary);
 }
+
+/* ==========================================================================
+   View Toggle Component
+   ========================================================================== */
+
+.view-toggle {
+    display: inline-flex;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 2px;
+    gap: 2px;
+}
+
+.view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2) var(--space-3);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: var(--text-sm);
+    font-weight: 500;
+    gap: var(--space-2);
+    min-height: 36px;
+}
+
+.view-toggle-btn:hover {
+    background: var(--color-gray-100);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .view-toggle-btn:hover {
+    background: var(--surface-elevated);
+}
+
+.view-toggle-btn.active {
+    background: var(--color-primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.view-toggle-btn.active:hover {
+    background: var(--color-primary-hover);
+}
+
+.view-toggle-btn i {
+    font-size: var(--text-base);
+}
+
+/* Mobile view toggle - icon only */
+@media (max-width: 576px) {
+    .view-toggle-btn span {
+        display: none;
+    }
+
+    .view-toggle-btn {
+        padding: var(--space-2);
+        min-width: 40px;
+    }
+}
+
+/* ==========================================================================
+   Improved Card View (All Screen Sizes)
+   ========================================================================== */
+
+/* Container with card view mode */
+.grid-container[data-view="card"] .gridjs-wrapper {
+    background: transparent;
+    border: none;
+    overflow: visible;
+}
+
+.grid-container[data-view="card"] .gridjs-thead {
+    display: none;
+}
+
+.grid-container[data-view="card"] .gridjs-table {
+    display: block;
+}
+
+.grid-container[data-view="card"] .gridjs-tbody {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-4);
+}
+
+/* Individual card styling */
+.grid-container[data-view="card"] .gridjs-tr {
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: 0;
+    box-shadow: var(--shadow-sm);
+    transition: all var(--transition-fast);
+    overflow: hidden;
+}
+
+.grid-container[data-view="card"] .gridjs-tr:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+}
+
+/* Card header - first cell (usually name/title) */
+.grid-container[data-view="card"] .gridjs-td:first-child {
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--surface-card) 100%);
+    padding: var(--space-4) var(--space-5) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .grid-container[data-view="card"] .gridjs-td:first-child {
+    background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface-card) 100%);
+}
+
+.grid-container[data-view="card"] .gridjs-td:first-child::before {
+    display: none;
+}
+
+.grid-container[data-view="card"] .gridjs-td:first-child a {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Card body - other cells */
+.grid-container[data-view="card"] .gridjs-td {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: var(--space-3) var(--space-5) !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    background: transparent !important;
+    gap: var(--space-3);
+}
+
+.grid-container[data-view="card"] .gridjs-td:last-child {
+    border-bottom: none !important;
+    padding-top: var(--space-4) !important;
+    padding-bottom: var(--space-4) !important;
+    background: var(--color-gray-50) !important;
+}
+
+[data-theme="dark"] .grid-container[data-view="card"] .gridjs-td:last-child {
+    background: var(--surface-elevated) !important;
+}
+
+/* Card field labels */
+.grid-container[data-view="card"] .gridjs-td::before {
+    content: attr(data-column-id);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+/* Card field values */
+.grid-container[data-view="card"] .gridjs-td > * {
+    text-align: right;
+    flex: 1;
+}
+
+/* Action buttons in card view */
+.grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    width: 100%;
+}
+
+.grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
+    flex: 1;
+    max-width: 120px;
+}
+
+/* Card view responsive adjustments */
+@media (max-width: 768px) {
+    .grid-container[data-view="card"] .gridjs-tbody {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--space-3);
+    }
+}
+
+@media (max-width: 576px) {
+    .grid-container[data-view="card"] .gridjs-tbody {
+        grid-template-columns: 1fr;
+        gap: var(--space-3);
+    }
+
+    .grid-container[data-view="card"] .gridjs-td {
+        padding: var(--space-2) var(--space-4) !important;
+    }
+
+    .grid-container[data-view="card"] .gridjs-td:first-child {
+        padding: var(--space-3) var(--space-4) !important;
+    }
+
+    .grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
+        max-width: none;
+    }
+}
+
+/* ==========================================================================
+   List View Styling (Enhanced)
+   ========================================================================== */
+
+.grid-container[data-view="list"] .gridjs-wrapper {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.grid-container[data-view="list"] .gridjs-thead {
+    display: table-header-group;
+}
+
+.grid-container[data-view="list"] .gridjs-tbody {
+    display: table-row-group;
+}
+
+.grid-container[data-view="list"] .gridjs-tr {
+    display: table-row;
+}
+
+.grid-container[data-view="list"] .gridjs-td {
+    display: table-cell;
+}
+
+.grid-container[data-view="list"] .gridjs-td::before {
+    display: none;
+}
+
+/* ==========================================================================
+   List Page Header
+   ========================================================================== */
+
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.page-header h1 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+    }
+
+    .page-header h1 {
+        font-size: var(--text-xl);
+    }
+
+    .page-header-actions {
+        justify-content: space-between;
+    }
+}

@@ -349,55 +349,122 @@
     }
 
     // =========================================================================
-    // View Toggle (Card/Grid View)
+    // View Toggle (Card/List View) with User Preferences
     // =========================================================================
 
+    // User preferences (can be set from server-side template)
+    const viewPreferences = {
+        defaultDesktop: window.userViewPreferences?.desktop || 'list',
+        defaultMobile: window.userViewPreferences?.mobile || 'card',
+        mobileBreakpoint: 768
+    };
+
+    function isMobileView() {
+        return window.innerWidth < viewPreferences.mobileBreakpoint;
+    }
+
+    function getDefaultView() {
+        return isMobileView() ? viewPreferences.defaultMobile : viewPreferences.defaultDesktop;
+    }
+
+    function setView(container, view) {
+        if (!container) return;
+
+        // Update container data attribute
+        container.setAttribute('data-view', view);
+
+        // Update toggle buttons
+        const toggleButtons = container.querySelectorAll('.view-toggle-btn');
+        toggleButtons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
+
+        // Dispatch event for other components to react
+        container.dispatchEvent(new CustomEvent('viewchange', {
+            detail: { view },
+            bubbles: true
+        }));
+    }
+
     function initViewToggle() {
-        const toggleContainers = document.querySelectorAll('[data-view-toggle]');
+        // Find all grid containers with view toggle
+        const gridContainers = document.querySelectorAll('.grid-container');
 
-        toggleContainers.forEach(container => {
-            const gridId = container.dataset.viewToggle;
-            const gridContainer = document.getElementById(gridId);
+        gridContainers.forEach(container => {
+            // Skip if already initialized
+            if (container.dataset.viewToggleInit) return;
+            container.dataset.viewToggleInit = 'true';
 
-            if (!gridContainer) return;
+            const gridId = container.id || 'grid-' + Math.random().toString(36).substr(2, 9);
+            if (!container.id) container.id = gridId;
 
-            // Create toggle buttons
-            const toggleHtml = `
-                <div class="view-toggle btn-group btn-group-sm" role="group" aria-label="View toggle">
-                    <button type="button" class="btn btn-outline-secondary view-btn active" data-view="table" title="${getTranslation('tableView', 'Table view')}">
-                        <i class="fas fa-list"></i>
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary view-btn" data-view="card" title="${getTranslation('cardView', 'Card view')}">
-                        <i class="fas fa-th-large"></i>
-                    </button>
-                </div>
-            `;
+            // Get saved preference or use default
+            const savedView = localStorage.getItem(`view-preference-${gridId}`);
+            const initialView = savedView || getDefaultView();
 
-            container.insertAdjacentHTML('beforeend', toggleHtml);
+            // Set initial view
+            setView(container, initialView);
 
-            // Handle toggle clicks
-            container.querySelectorAll('.view-btn').forEach(btn => {
+            // Find or create toggle container
+            let toggleContainer = container.querySelector('.view-toggle');
+            if (!toggleContainer) {
+                // Look for a header element to insert toggle
+                const header = container.previousElementSibling;
+                if (header && header.classList.contains('page-header')) {
+                    const actionsContainer = header.querySelector('.page-header-actions') || header;
+                    toggleContainer = document.createElement('div');
+                    toggleContainer.className = 'view-toggle';
+                    toggleContainer.innerHTML = `
+                        <button type="button" class="view-toggle-btn ${initialView === 'list' ? 'active' : ''}" data-view="list" title="${getTranslation('listView', 'List view')}">
+                            <i class="fas fa-list"></i>
+                            <span>${getTranslation('list', 'List')}</span>
+                        </button>
+                        <button type="button" class="view-toggle-btn ${initialView === 'card' ? 'active' : ''}" data-view="card" title="${getTranslation('cardView', 'Card view')}">
+                            <i class="fas fa-th-large"></i>
+                            <span>${getTranslation('cards', 'Cards')}</span>
+                        </button>
+                    `;
+                    actionsContainer.appendChild(toggleContainer);
+                }
+            }
+
+            if (!toggleContainer) return;
+
+            // Handle toggle button clicks
+            toggleContainer.querySelectorAll('.view-toggle-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const view = btn.dataset.view;
 
-                    // Update active state
-                    container.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+                    // Update view
+                    setView(container, view);
 
-                    // Toggle view
-                    gridContainer.classList.toggle('card-view', view === 'card');
-
-                    // Save preference
-                    localStorage.setItem(`view-${gridId}`, view);
+                    // Save preference for this specific grid
+                    localStorage.setItem(`view-preference-${gridId}`, view);
                 });
             });
-
-            // Restore saved preference
-            const savedView = localStorage.getItem(`view-${gridId}`);
-            if (savedView === 'card') {
-                container.querySelector('[data-view="card"]').click();
-            }
         });
+
+        // Listen for screen size changes to update default if no preference saved
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                gridContainers.forEach(container => {
+                    const gridId = container.id;
+                    const savedView = localStorage.getItem(`view-preference-${gridId}`);
+
+                    // Only apply default if no user preference saved
+                    if (!savedView) {
+                        setView(container, getDefaultView());
+                    }
+                });
+            }, 250);
+        });
+    }
+
+    function setUserViewPreferences(desktop, mobile) {
+        viewPreferences.defaultDesktop = desktop || 'list';
+        viewPreferences.defaultMobile = mobile || 'card';
     }
 
     // =========================================================================
@@ -659,6 +726,10 @@
 
         // View toggle
         initViewToggle,
+        setView,
+        setUserViewPreferences,
+        getDefaultView,
+        isMobileView,
 
         // Keyboard shortcuts
         registerShortcut,

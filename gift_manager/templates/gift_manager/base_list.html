@@ -7,17 +7,34 @@
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ translated_type }}</h1>
+{# Page header with title and actions #}
+<div class="page-header">
+    <h1>{{ translated_type }}</h1>
+    <div class="page-header-actions">
+        {# View toggle #}
+        <div class="view-toggle">
+            <button type="button" class="view-toggle-btn active" data-view="list" title="{% trans 'List view' %}">
+                <i class="fas fa-list"></i>
+                <span>{% trans "List" %}</span>
+            </button>
+            <button type="button" class="view-toggle-btn" data-view="card" title="{% trans 'Card view' %}">
+                <i class="fas fa-th-large"></i>
+                <span>{% trans "Cards" %}</span>
+            </button>
+        </div>
+        {# Create button - can be overridden in child templates #}
+        {% block create_button %}
+        <a href="{% url create_url %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new" %} {{ object_type|lower }}
+        </a>
+        {% endblock %}
+    </div>
+</div>
 
-{# Create button - can be overridden in child templates #}
-{% block create_button %}
-<a href="{% url create_url %}" class="btn btn-primary mb-3">
-    <i class="fas fa-plus me-2"></i>{% trans "Create new" %} {{ object_type|lower }}
-</a>
-{% endblock %}
-
-{# Grid container - unique ID per model type #}
-<div id="{{ grid_id }}" class="mt-3"></div>
+{# Grid container - unique ID per model type, wrapped for view toggle #}
+<div id="{{ grid_id }}-container" class="grid-container" data-view="list">
+    <div id="{{ grid_id }}" class="mt-3"></div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -56,6 +73,58 @@
         {% block grid_custom_setup %}
         {# Additional grid setup can go here(filters, etc.) #}
         {% endblock %}
+
+        // View Toggle initialization
+        (function() {
+            const gridContainer = document.getElementById('{{ grid_id }}-container');
+            const viewToggle = document.querySelector('.view-toggle');
+
+            if (!gridContainer || !viewToggle) return;
+
+            const gridId = '{{ grid_id }}';
+            const mobileBreakpoint = 768;
+
+            function isMobile() {
+                return window.innerWidth < mobileBreakpoint;
+            }
+
+            function getDefaultView() {
+                const prefs = window.userViewPreferences || { desktop: 'list', mobile: 'card' };
+                return isMobile() ? prefs.mobile : prefs.desktop;
+            }
+
+            function setView(view) {
+                gridContainer.setAttribute('data-view', view);
+                viewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.view === view);
+                });
+            }
+
+            // Get saved preference or use default
+            const savedView = localStorage.getItem('view-preference-' + gridId);
+            const initialView = savedView || getDefaultView();
+            setView(initialView);
+
+            // Handle toggle button clicks
+            viewToggle.querySelectorAll('.view-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const view = btn.dataset.view;
+                    setView(view);
+                    localStorage.setItem('view-preference-' + gridId, view);
+                });
+            });
+
+            // Update default on resize if no preference saved
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(() => {
+                    if (!localStorage.getItem('view-preference-' + gridId)) {
+                        setView(getDefaultView());
+                    }
+                }, 250);
+            });
+        })();
     }) ();
 </script>
 {% endblock %}

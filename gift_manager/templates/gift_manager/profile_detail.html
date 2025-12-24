@@ -5,59 +5,266 @@
 
 {% block title %}Gift Manager - {% trans "My Profile" %}{% endblock %}
 
-{% block content %}
-<div class="container mt-4 card p-3">
-    <h1>{% trans "My Profile" %}</h1>
-    <p><strong>{% trans "User name:" %}</strong> {{ profile.user.username }}</p>
-    <p><strong>{% trans "Email address:" %}</strong> {{ profile.user.email|decode_email }}
-       <a href="{% url 'account_email' %}" class="btn btn-secondary ml-4">{% trans 'Update' %}</a>
-    </p>
-    <h2 class="d-flex justify-content-between align-items-center">
-        <span>{% trans "My friends:" %}</span>
-        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-primary">{% trans "Invite friend" %}</a>
-    </h2>
-    {% if profile.friends.all %}
-        <div class="table-responsive mt-3">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>{% trans "Username" %}</th>
-                        <th>{% trans "Email address" %}</th>
-                        <th>{% trans "Actions" %}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for friend in profile.friends.all %}
-                        <tr>
-                            <td>{{ friend.user.username }}</td>
-                            <td>{{ friend.user.email|decode_email }}</td>
-                            <td>
-                                <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}" style="display:inline;">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Remove friend' %}">
-                                        <i class="fas fa-trash-alt"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p>{% trans "You don't have any friend yet." %}</p>
-    {% endif %}
+{% block extra_css %}
+<style>
+    .profile-section {
+        background: var(--surface-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        margin-bottom: var(--space-5);
+    }
 
-    <hr class="my-4">
-    <div class="mt-4">
-        <h2>{% trans "Account management" %}</h2>
-        <p>{% trans "Manage your account:" %}</p>
-        <a href="{% url 'deactivate_account' %}?cancel_url={% url 'gift_manager:profile_detail' %}" class="btn btn-warning mr-2">
-            {% trans "Deactivate my account" %}
-        </a>
-        <a href="{% url 'delete_account' %}?cancel_url={% url 'gift_manager:profile_detail' %}" class="btn btn-danger">
-            {% trans "Delete my account" %}
-        </a>
+    .profile-section h2 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+        padding-bottom: var(--space-3);
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .profile-section h2 i {
+        color: var(--color-primary);
+    }
+
+    .profile-field {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        padding: var(--space-3) 0;
+        flex-wrap: wrap;
+    }
+
+    .profile-field label {
+        font-weight: 600;
+        min-width: 150px;
+        color: var(--text-secondary);
+    }
+
+    .profile-field .value {
+        flex: 1;
+    }
+
+    .view-preference-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--space-4);
+        margin-top: var(--space-3);
+    }
+
+    .view-preference-card {
+        background: var(--surface-card);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-lg);
+        padding: var(--space-4);
+    }
+
+    .view-preference-card h4 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin-bottom: var(--space-3);
+        font-size: var(--text-base);
+    }
+
+    .view-preference-card h4 i {
+        color: var(--text-muted);
+    }
+
+    .view-options {
+        display: flex;
+        gap: var(--space-2);
+    }
+
+    .view-option {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: var(--space-3);
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+
+    .view-option:hover {
+        border-color: var(--color-primary-light);
+        background: var(--color-primary-light);
+    }
+
+    .view-option input[type="radio"] {
+        display: none;
+    }
+
+    .view-option input[type="radio"]:checked + .view-option-content {
+        color: var(--color-primary);
+    }
+
+    .view-option:has(input[type="radio"]:checked) {
+        border-color: var(--color-primary);
+        background: var(--color-primary-light);
+    }
+
+    .view-option-content {
+        text-align: center;
+    }
+
+    .view-option-content i {
+        font-size: var(--text-xl);
+        margin-bottom: var(--space-2);
+        display: block;
+    }
+
+    .view-option-content span {
+        font-size: var(--text-sm);
+        font-weight: 500;
+    }
+
+    @media (max-width: 576px) {
+        .profile-field {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .profile-field label {
+            min-width: auto;
+        }
+
+        .view-preference-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Profile Info Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-user-circle"></i> {% trans "My Profile" %}</h2>
+        <div class="profile-field">
+            <label>{% trans "User name:" %}</label>
+            <span class="value">{{ profile.user.username }}</span>
+        </div>
+        <div class="profile-field">
+            <label>{% trans "Email address:" %}</label>
+            <span class="value">{{ profile.user.email|decode_email }}</span>
+            <a href="{% url 'account_email' %}" class="btn btn-secondary btn-sm">{% trans 'Update' %}</a>
+        </div>
+    </div>
+
+    <!-- Display Preferences Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-sliders-h"></i> {% trans "Display Preferences" %}</h2>
+        <p class="text-muted mb-4">{% trans "Choose how you want to view lists by default on different screen sizes." %}</p>
+
+        <form method="post" action="{% url 'gift_manager:update_view_preferences' %}" id="view-preferences-form">
+            {% csrf_token %}
+            <div class="view-preference-grid">
+                <div class="view-preference-card">
+                    <h4><i class="fas fa-desktop"></i> {% trans "Desktop / Large Screens" %}</h4>
+                    <div class="view-options">
+                        <label class="view-option">
+                            <input type="radio" name="default_view_desktop" value="list" {% if profile.default_view_desktop == 'list' %}checked{% endif %}>
+                            <div class="view-option-content">
+                                <i class="fas fa-list"></i>
+                                <span>{% trans "List" %}</span>
+                            </div>
+                        </label>
+                        <label class="view-option">
+                            <input type="radio" name="default_view_desktop" value="card" {% if profile.default_view_desktop == 'card' %}checked{% endif %}>
+                            <div class="view-option-content">
+                                <i class="fas fa-th-large"></i>
+                                <span>{% trans "Cards" %}</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="view-preference-card">
+                    <h4><i class="fas fa-mobile-alt"></i> {% trans "Mobile / Small Screens" %}</h4>
+                    <div class="view-options">
+                        <label class="view-option">
+                            <input type="radio" name="default_view_mobile" value="list" {% if profile.default_view_mobile == 'list' %}checked{% endif %}>
+                            <div class="view-option-content">
+                                <i class="fas fa-list"></i>
+                                <span>{% trans "List" %}</span>
+                            </div>
+                        </label>
+                        <label class="view-option">
+                            <input type="radio" name="default_view_mobile" value="card" {% if profile.default_view_mobile == 'card' %}checked{% endif %}>
+                            <div class="view-option-content">
+                                <i class="fas fa-th-large"></i>
+                                <span>{% trans "Cards" %}</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>{% trans "Save Preferences" %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Friends Section -->
+    <div class="profile-section">
+        <h2>
+            <i class="fas fa-users"></i> {% trans "My Friends" %}
+            <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-primary btn-sm ms-auto">
+                <i class="fas fa-user-plus me-1"></i>{% trans "Invite friend" %}
+            </a>
+        </h2>
+        {% if profile.friends.all %}
+            <div class="table-responsive mt-3">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Username" %}</th>
+                            <th>{% trans "Email address" %}</th>
+                            <th>{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for friend in profile.friends.all %}
+                            <tr>
+                                <td>{{ friend.user.username }}</td>
+                                <td>{{ friend.user.email|decode_email }}</td>
+                                <td>
+                                    <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Remove friend' %}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">{% trans "You don't have any friend yet." %}</p>
+        {% endif %}
+    </div>
+
+    <!-- Account Management Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-cog"></i> {% trans "Account management" %}</h2>
+        <p class="text-muted">{% trans "Manage your account:" %}</p>
+        <div class="d-flex gap-3 flex-wrap">
+            <a href="{% url 'deactivate_account' %}?cancel_url={% url 'gift_manager:profile_detail' %}" class="btn btn-warning">
+                <i class="fas fa-pause-circle me-2"></i>{% trans "Deactivate my account" %}
+            </a>
+            <a href="{% url 'delete_account' %}?cancel_url={% url 'gift_manager:profile_detail' %}" class="btn btn-danger">
+                <i class="fas fa-trash-alt me-2"></i>{% trans "Delete my account" %}
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}

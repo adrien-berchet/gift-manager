@@ -559,6 +559,18 @@
     {% if LANGUAGE_CODE == 'fr' %}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
     {% endif %}
+    <!-- User View Preferences -->
+    <script>
+        window.userViewPreferences = {
+            {% if user.is_authenticated and user.profile %}
+            desktop: '{{ user.profile.default_view_desktop|default:"list" }}',
+            mobile: '{{ user.profile.default_view_mobile|default:"card" }}'
+            {% else %}
+            desktop: 'list',
+            mobile: 'card'
+            {% endif %}
+        };
+    </script>
     <!-- UI Enhancements -->
     <script src="{% static 'gift_manager/ui-enhancements.js' %}"></script>
 

@@ -65,6 +65,7 @@ from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import UpdateViewPreferencesView
 
 # Relation views
 from .relation import GiftRelationCreateView
@@ -140,6 +141,7 @@ __all__ = [
     "RemoveFriendView",
     "SendInvitationView",
     "ShareObjectsView",
+    "UpdateViewPreferencesView",
     "SharedUsersMixin",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
