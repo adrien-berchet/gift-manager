@@ -2120,9 +2120,9 @@ h4, h5, h6 {
     margin-bottom: var(--space-4);
 }
 
-/* Filter toggle button - only shown on mobile */
+/* Filter toggle button - always visible */
 .filter-toggle-btn {
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-2);
@@ -2136,6 +2136,7 @@ h4, h5, h6 {
     font-size: var(--text-sm);
     cursor: pointer;
     transition: all var(--transition-fast);
+    margin-bottom: var(--space-3);
 }
 
 .filter-toggle-btn:hover {
@@ -2162,12 +2163,21 @@ h4, h5, h6 {
     transform: rotate(180deg);
 }
 
-/* Filter content container */
+/* Filter content container - hidden by default, shown when expanded */
 .filter-content {
-    display: flex;
+    display: none;
     flex-wrap: wrap;
     gap: var(--space-4);
     align-items: flex-start;
+    padding: var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-3);
+}
+
+.filter-content.expanded {
+    display: flex;
 }
 
 /* Filter section styling */
@@ -2229,26 +2239,11 @@ h4, h5, h6 {
     opacity: 0.8;
 }
 
-/* Mobile filter panel behavior */
+/* Mobile filter panel behavior - stacked layout */
 @media (max-width: 768px) {
-    .filter-toggle-btn {
-        display: flex;
-        margin-bottom: var(--space-3);
-    }
-
     .filter-content {
-        display: none;
         flex-direction: column;
         gap: var(--space-3);
-        padding: var(--space-4);
-        background: var(--surface-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
-        margin-bottom: var(--space-3);
-    }
-
-    .filter-content.expanded {
-        display: flex;
     }
 
     .filter-section {
@@ -2266,37 +2261,17 @@ h4, h5, h6 {
         justify-content: center;
     }
 
-    /* Move Grid.js search into filter panel on mobile */
-    .grid-filter-panel .gridjs-search {
-        width: 100%;
-        margin: 0;
-    }
-
-    .grid-filter-panel .gridjs-search-input {
-        width: 100% !important;
-    }
-
     /* Hide the original Grid.js search on mobile when filter panel is present */
     .grid-container.has-filter-panel .gridjs-head {
         display: none;
     }
 }
 
-/* Desktop - filters always visible, side by side */
+/* Desktop filter panel behavior - side by side layout */
 @media (min-width: 769px) {
-    .filter-toggle-btn {
-        display: none !important;
-    }
-
     .filter-content {
-        display: flex !important;
         flex-direction: row;
         align-items: center;
-        gap: var(--space-4);
-        padding: var(--space-3);
-        background: var(--surface-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-md);
     }
 
     .filter-section {
@@ -2312,5 +2287,10 @@ h4, h5, h6 {
 
     .sort-options {
         flex-wrap: nowrap;
+    }
+
+    /* Hide the original Grid.js search on desktop when filter panel is present */
+    .grid-container.has-filter-panel .gridjs-head {
+        display: none;
     }
 }

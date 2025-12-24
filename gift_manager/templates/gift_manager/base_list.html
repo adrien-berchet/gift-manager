@@ -159,10 +159,37 @@
             const filterContent = document.getElementById(gridId + '-filter-content');
             const searchInput = document.getElementById(gridId + '-search');
             const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
+            const mobileBreakpoint = 768;
 
             if (!filterToggle || !filterContent) return;
 
-            // Toggle filter panel (mobile only)
+            // Check if we're on desktop
+            function isDesktop() {
+                return window.innerWidth > mobileBreakpoint;
+            }
+
+            // Expand by default on desktop, collapsed on mobile
+            function setDefaultState() {
+                if (isDesktop()) {
+                    filterContent.classList.add('expanded');
+                    filterToggle.classList.add('active');
+                } else {
+                    filterContent.classList.remove('expanded');
+                    filterToggle.classList.remove('active');
+                }
+            }
+
+            // Set initial state
+            setDefaultState();
+
+            // Update on resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(setDefaultState, 250);
+            });
+
+            // Toggle filter panel
             filterToggle.addEventListener('click', () => {
                 const isExpanded = filterContent.classList.toggle('expanded');
                 filterToggle.classList.toggle('active', isExpanded);
