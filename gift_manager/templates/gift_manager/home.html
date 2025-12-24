@@ -380,35 +380,217 @@
         color: var(--color-danger);
     }
 
-    /* Responsive */
-    @media (max-width: 576px) {
+    /* Responsive - Tablet */
+    @media (max-width: 768px) {
         .hero-section {
-            padding: var(--space-6) var(--space-4);
+            padding: var(--space-6) var(--space-5);
         }
 
         .hero-section h1 {
             font-size: var(--text-2xl);
         }
 
-        .hero-icon {
-            width: 60px;
-            height: 60px;
-        }
-
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
+        .hero-section p {
+            font-size: var(--text-base);
         }
 
         .dashboard-grid {
             grid-template-columns: 1fr;
+            gap: var(--space-4);
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-3);
+        }
+
+        .stat-card {
+            padding: var(--space-4);
+        }
+
+        .stat-value {
+            font-size: var(--text-2xl);
+        }
+    }
+
+    /* Responsive - Mobile */
+    @media (max-width: 576px) {
+        .hero-section {
+            padding: var(--space-5) var(--space-4);
+            text-align: center;
+        }
+
+        .hero-section .d-flex.align-items-center {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .hero-section h1 {
+            font-size: var(--text-xl);
+        }
+
+        .hero-section p {
+            font-size: var(--text-sm);
+        }
+
+        .hero-icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: var(--space-3);
+        }
+
+        .hero-section::before,
+        .hero-section::after {
+            display: none;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: var(--space-2);
+        }
+
+        .stat-card {
+            padding: var(--space-3);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: var(--text-base);
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-value {
+            font-size: var(--text-xl);
+        }
+
+        .stat-label {
+            font-size: var(--text-xs);
+        }
+
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+            gap: var(--space-3);
+        }
+
+        .dashboard-card-header {
+            padding: var(--space-3) var(--space-4);
+            flex-wrap: wrap;
+            gap: var(--space-2);
+        }
+
+        .dashboard-card-header h3 {
+            font-size: var(--text-sm);
+        }
+
+        .dashboard-card-body {
+            padding: var(--space-3) var(--space-4);
         }
 
         .quick-actions {
             flex-direction: column;
+            gap: var(--space-2);
         }
 
         .quick-action-btn {
             justify-content: center;
+            padding: var(--space-3);
+            min-height: 44px;
+        }
+
+        .item-list li {
+            padding: var(--space-2) 0;
+            gap: var(--space-2);
+        }
+
+        .item-icon {
+            width: 32px;
+            height: 32px;
+            font-size: var(--text-xs);
+        }
+
+        .item-title {
+            font-size: var(--text-sm);
+        }
+
+        .item-subtitle {
+            font-size: 10px;
+        }
+
+        .status-list {
+            gap: var(--space-1);
+        }
+
+        .status-pill {
+            font-size: var(--text-xs);
+            padding: var(--space-1) var(--space-2);
+        }
+
+        .empty-state {
+            padding: var(--space-4) var(--space-2);
+        }
+
+        .empty-state i {
+            font-size: 32px;
+            margin-bottom: var(--space-2);
+        }
+
+        .empty-state p {
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-2);
+        }
+
+        /* Welcome section for non-authenticated */
+        .welcome-section {
+            padding: var(--space-6) var(--space-3);
+        }
+
+        .welcome-section h1 {
+            font-size: var(--text-2xl);
+        }
+
+        .welcome-section p {
+            font-size: var(--text-sm);
+            margin-bottom: var(--space-4);
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: var(--space-4);
+        }
+
+        .welcome-section .d-flex.gap-3 {
+            flex-direction: column;
+            gap: var(--space-2) !important;
+        }
+
+        .welcome-section .btn-lg {
+            width: 100%;
+        }
+
+        .feature-grid {
+            grid-template-columns: 1fr;
+            gap: var(--space-3);
+            margin-top: var(--space-6);
+        }
+
+        .feature-card {
+            padding: var(--space-4);
+        }
+
+        .feature-card i {
+            font-size: 24px;
+            margin-bottom: var(--space-2);
+        }
+
+        .feature-card h3 {
+            font-size: var(--text-base);
+            margin-bottom: var(--space-1);
+        }
+
+        .feature-card p {
+            font-size: var(--text-xs);
         }
     }
 </style>

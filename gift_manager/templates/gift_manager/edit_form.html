@@ -436,18 +436,39 @@
     /* Responsive */
     @media (max-width: 768px) {
         #sharing-grid .permission-select {
-            min-width: 200px !important;
-            width: 200px !important;
+            min-width: 180px !important;
+            width: auto !important;
         }
 
         #sharing-grid .update-permission-btn {
             width: 42px;
         }
+
+        #sharing-grid .permission-form {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
     }
 
     @media (max-width: 576px) {
         #sharing-grid .permission-select {
-            min-width: 160px !important;
+            min-width: 100% !important;
+            width: 100% !important;
+        }
+
+        #sharing-grid .permission-form {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .fixed-action-bar .action-buttons {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+
+        .fixed-action-bar .btn {
+            flex: 1 1 45%;
+            min-width: 100px;
         }
     }
 

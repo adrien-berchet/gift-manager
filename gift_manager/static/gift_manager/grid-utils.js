@@ -79,7 +79,7 @@
                 })
                 .filter(Boolean);
 
-            return gridjs.html(`<div style="white-space: nowrap;">${buttons.join(' ')}</div>`);
+            return gridjs.html(`<div class="action-buttons-cell">${buttons.join(' ')}</div>`);
         };
     }
 

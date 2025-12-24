@@ -769,7 +769,7 @@ h4, h5, h6 {
    Responsive Improvements
    ========================================================================== */
 
-/* Mobile devices */
+/* Mobile devices - Small */
 @media (max-width: 576px) {
     :root {
         --navbar-height: 56px;
@@ -783,32 +783,88 @@ h4, h5, h6 {
         font-size: var(--text-2xl);
     }
 
+    /* Ensure minimum touch target sizes (44px minimum for accessibility) */
     .btn {
+        padding: var(--space-3) var(--space-4);
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .btn-sm {
         padding: var(--space-2) var(--space-3);
+        min-height: 44px;
+        min-width: 44px;
     }
 
+    .btn-icon, .btn-icon.btn-sm {
+        width: 44px;
+        height: 44px;
+        padding: var(--space-2);
+    }
+
+    .nav-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Card adjustments */
     .card-body {
-        padding: var(--space-4);
+        padding: var(--space-3);
     }
 
-    .fixed-action-bar {
+    .card-header {
         padding: var(--space-3) var(--space-4);
     }
 
+    /* Fixed action bar - reduced padding, horizontal layout on very small screens */
+    .fixed-action-bar {
+        padding: var(--space-3);
+    }
+
     .fixed-action-bar .action-buttons {
-        flex-direction: column;
-        gap: var(--space-3);
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        justify-content: center;
     }
 
     .fixed-action-bar .btn {
-        width: 100%;
+        flex: 1 1 auto;
+        min-width: 120px;
+        max-width: 180px;
     }
 
     body.has-fixed-action-bar {
-        padding-bottom: 140px !important;
+        padding-bottom: 100px !important;
     }
 
-    /* Mobile table card view */
+    /* Form elements - ensure they fit screen */
+    .form-control,
+    .form-select {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        max-width: 100%;
+    }
+
+    /* Permission selects - responsive width */
+    .permission-select,
+    select.permission-select {
+        min-width: 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Grid.js mobile card view */
+    .gridjs-wrapper {
+        border: none;
+        border-radius: 0;
+        overflow: visible;
+    }
+
+    .gridjs-container {
+        padding: 0;
+    }
+
     .gridjs-table {
         display: block;
     }
@@ -818,37 +874,191 @@ h4, h5, h6 {
     }
 
     .gridjs-tbody {
-        display: block;
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-3);
     }
 
     .gridjs-tr {
-        display: block;
+        display: flex;
+        flex-direction: column;
         background: var(--surface-card);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-lg);
-        margin-bottom: var(--space-4);
         padding: var(--space-4);
         box-shadow: var(--shadow-sm);
+        margin-bottom: 0;
     }
 
     .gridjs-td {
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
         padding: var(--space-2) 0 !important;
         border-bottom: 1px solid var(--border-color) !important;
         background: transparent !important;
+        width: 100%;
     }
 
     .gridjs-td:last-child {
         border-bottom: none !important;
+        padding-bottom: 0 !important;
     }
 
     .gridjs-td::before {
         content: attr(data-column-id);
         font-weight: 600;
         color: var(--text-secondary);
+        font-size: var(--text-xs);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: var(--space-1);
+    }
+
+    /* Action buttons in mobile cards - wrap and stack */
+    .gridjs-td .btn-group,
+    .gridjs-td [style*="white-space: nowrap"] {
+        white-space: normal !important;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        width: 100%;
+    }
+
+    .gridjs-td .btn {
+        flex: 1 1 auto;
+        min-width: 60px;
+    }
+
+    /* Grid.js search and pagination on mobile */
+    .gridjs-search {
+        width: 100%;
+        margin-bottom: var(--space-3);
+    }
+
+    .gridjs-search-input {
+        width: 100% !important;
+    }
+
+    .gridjs-pagination {
+        flex-direction: column;
+        gap: var(--space-3);
+        padding: var(--space-3);
+    }
+
+    .gridjs-summary {
+        text-align: center;
         font-size: var(--text-sm);
+    }
+
+    .gridjs-pages {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+    }
+
+    .gridjs-pages button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Container padding on mobile */
+    .container {
+        padding-left: var(--space-3);
+        padding-right: var(--space-3);
+    }
+
+    /* Alert boxes on mobile */
+    .alert {
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+    }
+
+    /* Tables that aren't Grid.js */
+    table:not(.gridjs-table) {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Modal adjustments for mobile */
+    .modal-dialog {
+        margin: var(--space-2);
+        max-height: calc(100vh - var(--space-4));
+    }
+
+    .modal-content {
+        max-height: calc(100vh - var(--space-8));
+        overflow-y: auto;
+    }
+
+    /* Search modal specific */
+    .search-modal .modal-dialog {
+        margin: var(--space-2);
+        max-width: calc(100vw - var(--space-4));
+    }
+
+    .search-results {
+        max-height: calc(100vh - 200px);
+    }
+
+    /* Tabs on mobile - horizontal scroll */
+    .nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .nav-tabs .nav-link {
+        white-space: nowrap;
+        flex-shrink: 0;
+        padding: var(--space-3) var(--space-4);
+    }
+
+    /* Spacing reductions */
+    h1 {
+        margin-bottom: var(--space-4);
+    }
+
+    /* Lists and flex layouts */
+    .d-flex.gap-3,
+    .d-flex.gap-4 {
+        gap: var(--space-2) !important;
+    }
+
+    /* Badge sizing on mobile */
+    .badge {
+        font-size: var(--text-xs);
+        padding: var(--space-1) var(--space-2);
+    }
+}
+
+/* Action buttons cell - responsive */
+.action-buttons-cell {
+    white-space: nowrap;
+    display: flex;
+    gap: var(--space-1);
+    align-items: center;
+}
+
+@media (max-width: 576px) {
+    .action-buttons-cell {
+        white-space: normal;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .action-buttons-cell .btn {
+        flex: 0 0 auto;
     }
 }
 
@@ -861,6 +1071,32 @@ h4, h5, h6 {
     .navbar-nav .nav-link {
         padding: var(--space-2) !important;
         font-size: var(--text-sm);
+    }
+
+    /* Touch targets for tablet */
+    .btn, .btn-sm {
+        min-height: 40px;
+    }
+
+    /* Grid cards on tablet - 2 columns */
+    .gridjs-tbody {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-3);
+    }
+
+    .gridjs-tr {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Fixed action bar on tablet */
+    .fixed-action-bar {
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .fixed-action-bar .action-buttons {
+        gap: var(--space-3);
     }
 }
 
