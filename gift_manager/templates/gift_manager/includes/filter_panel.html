@@ -1,13 +1,5 @@
 {% load i18n %}
-{#
-    Collapsible Filter Panel Component
-
-    Required variables:
-    - grid_id: The ID of the grid container (e.g., 'gift-grid', 'person-grid')
-
-    Usage:
-    {% include "gift_manager/includes/filter_panel.html" with grid_id="gift-grid" %}
-#}
+{# Collapsible Filter Panel Component - pass grid_id variable when including #}
 
 <div class="grid-filter-panel" id="{{ grid_id }}-filter-panel">
     <button type="button" class="filter-toggle-btn" id="{{ grid_id }}-filter-toggle">
