@@ -31,8 +31,34 @@
     </div>
 </div>
 
+{# Filter panel - collapsible on mobile, always visible on desktop #}
+{% block filter_panel %}
+<div class="grid-filter-panel" id="{{ grid_id }}-filter-panel">
+    <button type="button" class="filter-toggle-btn" id="{{ grid_id }}-filter-toggle">
+        <i class="fas fa-sliders-h"></i>
+        <span>{% trans "Filters & Sort" %}</span>
+        <i class="fas fa-chevron-down ms-auto"></i>
+    </button>
+    <div class="filter-content" id="{{ grid_id }}-filter-content">
+        {# Search section #}
+        <div class="filter-section search-section">
+            <label class="filter-section-label">{% trans "Search" %}</label>
+            <input type="text" class="form-control filter-search-input" id="{{ grid_id }}-search"
+                   placeholder="{% trans 'Search...' %}">
+        </div>
+        {# Sort section #}
+        <div class="filter-section sort-section">
+            <label class="filter-section-label">{% trans "Sort by" %}</label>
+            <div class="sort-options" id="{{ grid_id }}-sort-options">
+                {# Sort options will be dynamically generated based on columns #}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {# Grid container - unique ID per model type, wrapped for view toggle #}
-<div id="{{ grid_id }}-container" class="grid-container" data-view="list">
+<div id="{{ grid_id }}-container" class="grid-container has-filter-panel" data-view="list">
     <div id="{{ grid_id }}" class="mt-3"></div>
 </div>
 {% endblock %}
@@ -124,6 +150,115 @@
                     }
                 }, 250);
             });
+        })();
+
+        // Filter Panel initialization
+        (function() {
+            const gridId = '{{ grid_id }}';
+            const filterToggle = document.getElementById(gridId + '-filter-toggle');
+            const filterContent = document.getElementById(gridId + '-filter-content');
+            const searchInput = document.getElementById(gridId + '-search');
+            const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
+
+            if (!filterToggle || !filterContent) return;
+
+            // Toggle filter panel (mobile only)
+            filterToggle.addEventListener('click', () => {
+                const isExpanded = filterContent.classList.toggle('expanded');
+                filterToggle.classList.toggle('active', isExpanded);
+            });
+
+            // Connect custom search to Grid.js
+            if (searchInput && typeof grid !== 'undefined') {
+                let searchTimeout;
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        const searchValue = e.target.value;
+                        grid.updateConfig({
+                            search: {
+                                enabled: true,
+                                keyword: searchValue
+                            }
+                        }).forceRender();
+                    }, 300);
+                });
+            }
+
+            // Generate sort buttons from columns
+            if (sortOptionsContainer && typeof columns !== 'undefined') {
+                // Track current sort state
+                let currentSort = { column: null, direction: 1 }; // 1 = asc, -1 = desc
+
+                // Filter sortable columns (exclude Actions column)
+                const sortableColumns = columns.filter(col => {
+                    const name = typeof col === 'object' ? (col.name || col.id) : col;
+                    return name && name.toLowerCase() !== 'actions' &&
+                           name.toLowerCase() !== window.gridTranslations?.actions?.toLowerCase();
+                });
+
+                sortableColumns.forEach((col, index) => {
+                    const colName = typeof col === 'object' ? (col.name || col.id) : col;
+                    const colId = typeof col === 'object' ? col.id : index;
+
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'sort-option';
+                    btn.dataset.columnId = colId;
+                    btn.dataset.columnIndex = index;
+                    btn.innerHTML = `
+                        <span>${colName}</span>
+                        <span class="sort-direction"><i class="fas fa-sort"></i></span>
+                    `;
+
+                    btn.addEventListener('click', () => {
+                        // Toggle sort direction if same column, otherwise reset
+                        if (currentSort.column === colId) {
+                            currentSort.direction = currentSort.direction === 1 ? -1 : 1;
+                        } else {
+                            currentSort.column = colId;
+                            currentSort.direction = 1;
+                        }
+
+                        // Update button states
+                        sortOptionsContainer.querySelectorAll('.sort-option').forEach(b => {
+                            b.classList.remove('active');
+                            b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
+                        });
+
+                        btn.classList.add('active');
+                        btn.querySelector('.sort-direction').innerHTML = currentSort.direction === 1
+                            ? '<i class="fas fa-sort-up"></i>'
+                            : '<i class="fas fa-sort-down"></i>';
+
+                        // Apply sort to Grid.js
+                        if (typeof grid !== 'undefined') {
+                            grid.updateConfig({
+                                sort: {
+                                    enabled: true,
+                                    multiColumn: false,
+                                    server: false
+                                }
+                            }).forceRender();
+
+                            // Trigger click on the Grid.js header to sort
+                            setTimeout(() => {
+                                const headers = document.querySelectorAll('#' + gridId + ' .gridjs-th');
+                                if (headers[index]) {
+                                    // Grid.js handles sort toggle internally
+                                    headers[index].click();
+                                    if (currentSort.direction === -1) {
+                                        // Click again for descending
+                                        headers[index].click();
+                                    }
+                                }
+                            }, 100);
+                        }
+                    });
+
+                    sortOptionsContainer.appendChild(btn);
+                });
+            }
         })();
     }) ();
 </script>
