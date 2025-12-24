@@ -1,77 +1,44 @@
-{% extends "gift_manager/base.html" %}
+{% extends "gift_manager/base_list.html" %}
 
 {% load i18n %}
 {% load static %}
 
-{% block title %}Gift Manager - {{ translated_type }}{% endblock %}
+{# No page_actions - status list has no create button #}
 
-{% block content %}
-{# Page header with title #}
-<div class="page-header">
-    <h1>{{ translated_type }}</h1>
-</div>
+{% block grid_data %}
+const numDataColumns = {{ column_names.items|length }};
+const statusPkIdx = numDataColumns;
+const detailUrlIdx = numDataColumns + 1;
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="status-grid" %}
-
-<!-- Grid.js container -->
-<div id="status-grid" class="mt-3"></div>
+const data = [
+    {% for item in data %}
+    [
+        {% for col, name in column_names.items %}
+        "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+        {% endfor %},
+        "{{ item.pk }}",
+        "{% url 'gift_manager:relation_status_detail' item.pk %}"
+    ]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
 {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
-<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
-{% include "gift_manager/includes/grid-translations.html" %}
-<script>
-    {% load custom_filters %}
-    (function () {
-        // Calculate column indices for clarity
-        const numDataColumns = {{ column_names.items| length }};
-        const statusPkIdx = numDataColumns;      // Index of status_pk
-        const detailUrlIdx = numDataColumns + 1; // Index of detail URL
-
-        // Prepare data for Grid.js
-        const data = [
-            {% for item in data %}
-            [
-                {% for col, name in column_names.items %}
-                    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-                {% endfor %},
-                "{{ item.pk }}",  // cells[numDataColumns]
-                "{% url 'gift_manager:relation_status_detail' item.pk %}"  // cells[numDataColumns + 1]
-            ]{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        ];
-
-        // Build columns dynamically
-        const columns = [
-            {% for col, name in column_names.items %}
-            {
-                name: '{{ name|escapejs }}',
-                sort: false,
-            } {% if not forloop.last %}, {% endif %}
-            {% endfor %},
-            { name: 'status_pk', hidden: true },
-            { name: 'status_detail_url', hidden: true },
-            {
-                name: '{% trans "Actions"|escapejs %}',
-                sort: false,
-                formatter: GridUtils.actionButtonsFormatter({
-                    details: (row) => row.cells[detailUrlIdx].data
-                }, ['details'])
-            }
-        ];
-
-        // Initialize Grid.js
-        const grid = GridUtils.initGrid('status-grid', columns, data, {
-            pagination: {
-                enabled: true,
-                limit: 10
-            },
-        });
-
-        // Initialize filter panel
-        FilterPanel.init('status-grid', grid, columns);
-    }) ();
-</script>
+{% block grid_columns %}
+const columns = [
+    {% for col, name in column_names.items %}
+    {
+        name: '{{ name|escapejs }}',
+        sort: false
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %},
+    { name: 'status_pk', hidden: true },
+    { name: 'status_detail_url', hidden: true },
+    {
+        name: '{% trans "Actions"|escapejs %}',
+        sort: false,
+        formatter: GridUtils.actionButtonsFormatter({
+            details: (row) => row.cells[detailUrlIdx].data
+        }, ['details'])
+    }
+];
 {% endblock %}
