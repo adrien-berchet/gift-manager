@@ -102,9 +102,21 @@
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ translated_type }}</h1>
-<a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">{% trans "Create new group" %}</a>
-<a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-secondary">{% trans "Explorer View" %}</a>
+{# Page header with title and actions #}
+<div class="page-header">
+    <h1>{{ translated_type }}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
+        </a>
+        <a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-secondary">
+            <i class="fas fa-folder-tree me-2"></i>{% trans "Explorer View" %}
+        </a>
+    </div>
+</div>
+
+{# Filter panel #}
+{% include "gift_manager/includes/filter_panel.html" with grid_id="person-group-grid" %}
 
 <!-- View Toggle Buttons (only show if hierarchy exists) -->
 {% if has_hierarchy %}
@@ -171,6 +183,7 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -244,14 +257,17 @@
     ];
 
     // Initialize Grid.js
-    GridUtils.initGrid('person-group-grid', columns, data, {
+    const grid = GridUtils.initGrid('person-group-grid', columns, data, {
         pagination: {
             enabled: true,
             limit: 10
         }
     });
 
-    // Trigger initial sort on status column to make Grid.js aware of the sort
+    // Initialize filter panel
+    FilterPanel.init('person-group-grid', grid, columns);
+
+    // Trigger initial sort on first column to make Grid.js aware of the sort
     setTimeout(() => {
         const statusHeader = document.querySelector('#person-group-grid th:nth-child(1)');
         if (statusHeader) {
