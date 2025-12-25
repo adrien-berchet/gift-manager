@@ -216,6 +216,14 @@
 
                 sortOptionsContainer.appendChild(btn);
             });
+
+            // Sync with initial sort state after Grid.js renders
+            setTimeout(function() {
+                const allHeaders = document.querySelectorAll('#' + gridId + ' .gridjs-th');
+                if (allHeaders.length > 0) {
+                    updateSortButtonStates(sortOptionsContainer, allHeaders);
+                }
+            }, 200);
         }
 
         // Hide the original Grid.js search since we have our own
