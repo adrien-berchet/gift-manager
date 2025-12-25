@@ -77,9 +77,6 @@
 
         // Generate sort buttons from columns
         if (sortOptionsContainer && columns) {
-            // Track current sort state
-            let currentSort = { column: null, direction: 1 }; // 1 = asc, -1 = desc
-
             // Get translations
             const actionsText = (window.gridTranslations && window.gridTranslations.actions) || 'Actions';
 
@@ -128,39 +125,40 @@
                     '<span class="sort-direction"><i class="fas fa-sort"></i></span>';
 
                 btn.addEventListener('click', function() {
-                    // Toggle sort direction if same column, otherwise reset
-                    if (currentSort.column === visibleIndex) {
-                        currentSort.direction = currentSort.direction === 1 ? -1 : 1;
-                    } else {
-                        currentSort.column = visibleIndex;
-                        currentSort.direction = 1;
-                    }
-
-                    // Update button states
-                    sortOptionsContainer.querySelectorAll('.sort-option').forEach(function(b) {
-                        b.classList.remove('active');
-                        b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
-                    });
-
-                    btn.classList.add('active');
-                    btn.querySelector('.sort-direction').innerHTML = currentSort.direction === 1
-                        ? '<i class="fas fa-sort-up"></i>'
-                        : '<i class="fas fa-sort-down"></i>';
-
-                    // Trigger click on the Grid.js header to sort
-                    const headers = document.querySelectorAll('#' + gridId + ' .gridjs-th[data-column-id]');
+                    // Just click the Grid.js header - it will cycle through states
                     const allHeaders = document.querySelectorAll('#' + gridId + ' .gridjs-th');
 
                     if (allHeaders[visibleIndex]) {
-                        // Reset other sorts first by clicking twice if needed
                         allHeaders[visibleIndex].click();
 
-                        // If we need descending, click again
-                        if (currentSort.direction === -1) {
-                            setTimeout(function() {
-                                allHeaders[visibleIndex].click();
-                            }, 50);
-                        }
+                        // After Grid.js updates, sync our button states with actual Grid.js state
+                        setTimeout(function() {
+                            // Reset all button states first
+                            sortOptionsContainer.querySelectorAll('.sort-option').forEach(function(b) {
+                                b.classList.remove('active');
+                                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
+                            });
+
+                            // Find the currently sorted column in Grid.js and update corresponding button
+                            allHeaders.forEach(function(header, idx) {
+                                const sortIndicator = header.querySelector('.gridjs-sort');
+                                if (sortIndicator) {
+                                    const isAsc = sortIndicator.classList.contains('gridjs-sort-asc');
+                                    const isDesc = sortIndicator.classList.contains('gridjs-sort-desc');
+
+                                    if (isAsc || isDesc) {
+                                        // Find the matching sort button
+                                        const matchingBtn = sortOptionsContainer.querySelector('.sort-option[data-column-index="' + idx + '"]');
+                                        if (matchingBtn) {
+                                            matchingBtn.classList.add('active');
+                                            matchingBtn.querySelector('.sort-direction').innerHTML = isAsc
+                                                ? '<i class="fas fa-sort-up"></i>'
+                                                : '<i class="fas fa-sort-down"></i>';
+                                        }
+                                    }
+                                }
+                            });
+                        }, 100);
                     }
                 });
 
