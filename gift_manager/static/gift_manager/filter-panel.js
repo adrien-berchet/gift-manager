@@ -24,17 +24,19 @@
             return;
         }
 
-        // Check if we're on desktop
-        function isDesktop() {
-            return window.innerWidth > mobileBreakpoint;
+        // Check if we're on mobile
+        function isMobile() {
+            return window.innerWidth <= mobileBreakpoint;
         }
 
-        // Expand by default on desktop, collapsed on mobile
+        // On mobile: collapsed by default. On desktop: CSS handles visibility
         function setDefaultState() {
-            if (isDesktop()) {
-                filterContent.classList.add('expanded');
-                filterToggle.classList.add('active');
+            if (isMobile()) {
+                // Mobile: collapsed by default
+                filterContent.classList.remove('expanded');
+                filterToggle.classList.remove('active');
             } else {
+                // Desktop: CSS shows content, no need for expanded class
                 filterContent.classList.remove('expanded');
                 filterToggle.classList.remove('active');
             }
