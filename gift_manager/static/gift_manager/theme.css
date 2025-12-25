@@ -2509,13 +2509,16 @@ h4, h5, h6 {
 
 [data-view="list"] .gridjs-wrapper {
     border-radius: var(--radius-lg);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
     border: 1px solid var(--border-color);
 }
 
 [data-view="list"] .gridjs-table {
     display: table;
     width: 100%;
+    min-width: max-content;
 }
 
 [data-view="list"] .gridjs-thead {
