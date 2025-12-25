@@ -175,10 +175,118 @@
                 gridHead.style.display = 'none';
             }
         }, 100);
+
+        // View toggle functionality
+        initViewToggle(gridId);
+    }
+
+    /**
+     * Initialize view toggle (list/card) for a grid
+     * @param {string} gridId - The ID of the grid container
+     */
+    function initViewToggle(gridId) {
+        const viewOptionsContainer = document.getElementById(gridId + '-view-options');
+        const gridContainer = document.getElementById(gridId);
+
+        if (!viewOptionsContainer || !gridContainer) {
+            return;
+        }
+
+        // Get saved preference or default to list
+        const savedView = localStorage.getItem('view-preference-' + gridId) || 'list';
+
+        // Apply initial view
+        setGridView(gridId, savedView);
+
+        // Update button states
+        updateViewButtons(viewOptionsContainer, savedView);
+
+        // Handle view toggle button clicks
+        viewOptionsContainer.querySelectorAll('.view-option').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const view = btn.dataset.view;
+
+                // Apply view
+                setGridView(gridId, view);
+
+                // Update button states
+                updateViewButtons(viewOptionsContainer, view);
+
+                // Save preference
+                localStorage.setItem('view-preference-' + gridId, view);
+            });
+        });
+    }
+
+    /**
+     * Set the grid view mode
+     * @param {string} gridId - The ID of the grid container
+     * @param {string} view - 'list' or 'card'
+     */
+    function setGridView(gridId, view) {
+        const gridContainer = document.getElementById(gridId);
+        if (!gridContainer) return;
+
+        // Remove existing view classes
+        gridContainer.classList.remove('grid-view-list', 'grid-view-card');
+
+        // Add new view class
+        gridContainer.classList.add('grid-view-' + view);
+
+        // Set data attribute for CSS targeting
+        gridContainer.setAttribute('data-view', view);
+
+        // For card view, add data-label attributes to cells
+        if (view === 'card') {
+            addCardLabels(gridContainer);
+        }
+    }
+
+    /**
+     * Add data-label attributes to table cells for card view
+     * @param {Element} container - The grid container
+     */
+    function addCardLabels(container) {
+        const table = container.querySelector('.gridjs-table');
+        if (!table) {
+            // Table might not be rendered yet, retry after a short delay
+            setTimeout(function() {
+                addCardLabels(container);
+            }, 100);
+            return;
+        }
+
+        // Get headers
+        const headers = Array.from(table.querySelectorAll('th')).map(function(th) {
+            return th.textContent.trim();
+        });
+
+        // Add data-label attributes to cells
+        const rows = table.querySelectorAll('tbody tr');
+        rows.forEach(function(row) {
+            const cells = row.querySelectorAll('td');
+            cells.forEach(function(cell, index) {
+                if (headers[index]) {
+                    cell.setAttribute('data-label', headers[index]);
+                }
+            });
+        });
+    }
+
+    /**
+     * Update view toggle button states
+     * @param {Element} container - The view options container
+     * @param {string} activeView - The currently active view
+     */
+    function updateViewButtons(container, activeView) {
+        container.querySelectorAll('.view-option').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.view === activeView);
+        });
     }
 
     // Expose to global scope
     window.FilterPanel = {
-        init: initFilterPanel
+        init: initFilterPanel,
+        setView: setGridView
     };
 })();

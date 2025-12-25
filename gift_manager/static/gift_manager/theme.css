@@ -1893,149 +1893,93 @@ h4, h5, h6 {
 }
 
 /* ==========================================================================
-   Improved Card View (All Screen Sizes)
+   Card View (Simple Mobile-First Design)
    ========================================================================== */
 
 /* Container with card view mode */
-.grid-container[data-view="card"] .gridjs-wrapper {
+[data-view="card"] .gridjs-wrapper {
     background: transparent;
     border: none;
     overflow: visible;
 }
 
-.grid-container[data-view="card"] .gridjs-thead {
+[data-view="card"] .gridjs-thead {
     display: none;
 }
 
-.grid-container[data-view="card"] .gridjs-table {
+[data-view="card"] .gridjs-table {
     display: block;
 }
 
-.grid-container[data-view="card"] .gridjs-tbody {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: var(--space-4);
+/* Single column layout for all screen sizes */
+[data-view="card"] .gridjs-tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
 }
 
-/* Individual card styling */
-.grid-container[data-view="card"] .gridjs-tr {
+/* Individual card styling - simple and clean */
+[data-view="card"] .gridjs-tr {
     display: flex;
     flex-direction: column;
     background: var(--surface-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl);
-    padding: 0;
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-fast);
+    border-radius: var(--radius-lg);
     overflow: hidden;
 }
 
-.grid-container[data-view="card"] .gridjs-tr:hover {
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
-    border-color: var(--color-primary);
-}
-
-/* Card header - first cell (usually name/title) */
-.grid-container[data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--surface-card) 100%);
-    padding: var(--space-4) var(--space-5) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-}
-
-[data-theme="dark"] .grid-container[data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, var(--surface-elevated) 0%, var(--surface-card) 100%);
-}
-
-.grid-container[data-view="card"] .gridjs-td:first-child::before {
-    display: none;
-}
-
-.grid-container[data-view="card"] .gridjs-td:first-child a {
-    font-size: var(--text-lg);
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-/* Card body - other cells */
-.grid-container[data-view="card"] .gridjs-td {
+/* Card cells */
+[data-view="card"] .gridjs-td {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: var(--space-3) var(--space-5) !important;
+    align-items: center;
+    padding: var(--space-3) var(--space-4) !important;
     border-bottom: 1px solid var(--border-color) !important;
     background: transparent !important;
     gap: var(--space-3);
 }
 
-.grid-container[data-view="card"] .gridjs-td:last-child {
+[data-view="card"] .gridjs-td:last-child {
     border-bottom: none !important;
-    padding-top: var(--space-4) !important;
-    padding-bottom: var(--space-4) !important;
-    background: var(--color-gray-50) !important;
 }
 
-[data-theme="dark"] .grid-container[data-view="card"] .gridjs-td:last-child {
-    background: var(--surface-elevated) !important;
-}
-
-/* Card field labels */
-.grid-container[data-view="card"] .gridjs-td::before {
-    content: attr(data-column-id);
+/* Card field labels - use data-label attribute set by enhanceMobileTables */
+[data-view="card"] .gridjs-td::before {
+    content: attr(data-label);
     font-weight: 600;
     color: var(--text-muted);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    font-size: var(--text-sm);
     flex-shrink: 0;
-    min-width: 80px;
+    min-width: 100px;
 }
 
-/* Card field values */
-.grid-container[data-view="card"] .gridjs-td > * {
-    text-align: right;
-    flex: 1;
+/* Hide label for hidden columns and action column */
+[data-view="card"] .gridjs-td[data-column-id=""]::before,
+[data-view="card"] .gridjs-td:last-child::before {
+    display: none;
 }
 
 /* Action buttons in card view */
-.grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell {
+[data-view="card"] .gridjs-td:last-child {
+    justify-content: center;
+    padding: var(--space-3) var(--space-4) !important;
+    background: var(--color-gray-50) !important;
+}
+
+[data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
+    background: var(--surface-elevated) !important;
+}
+
+[data-view="card"] .gridjs-td:last-child .action-buttons-cell {
     display: flex;
     justify-content: center;
     gap: var(--space-2);
     width: 100%;
 }
 
-.grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
+[data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
     flex: 1;
-    max-width: 120px;
-}
-
-/* Card view responsive adjustments */
-@media (max-width: 768px) {
-    .grid-container[data-view="card"] .gridjs-tbody {
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: var(--space-3);
-    }
-}
-
-@media (max-width: 576px) {
-    .grid-container[data-view="card"] .gridjs-tbody {
-        grid-template-columns: 1fr;
-        gap: var(--space-3);
-    }
-
-    .grid-container[data-view="card"] .gridjs-td {
-        padding: var(--space-2) var(--space-4) !important;
-    }
-
-    .grid-container[data-view="card"] .gridjs-td:first-child {
-        padding: var(--space-3) var(--space-4) !important;
-    }
-
-    .grid-container[data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
-        max-width: none;
-    }
 }
 
 /* ==========================================================================
@@ -2237,6 +2181,44 @@ h4, h5, h6 {
 .sort-option .sort-direction {
     font-size: var(--text-xs);
     opacity: 0.8;
+}
+
+/* View toggle options */
+.view-toggle-options {
+    display: flex;
+    gap: var(--space-1);
+}
+
+.view-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: var(--text-base);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.view-option:hover {
+    background: var(--color-gray-100);
+    color: var(--text-primary);
+    border-color: var(--border-color-hover);
+}
+
+[data-theme="dark"] .view-option:hover {
+    background: var(--surface-elevated);
+}
+
+.view-option.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
 }
 
 /* Mobile filter panel behavior - stacked layout */
