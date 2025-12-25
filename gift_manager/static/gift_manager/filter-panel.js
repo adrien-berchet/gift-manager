@@ -75,6 +75,61 @@
             });
         }
 
+        /**
+         * Update sort button states to reflect Grid.js sort state
+         * Shows priority numbers for multi-column sorting
+         */
+        function updateSortButtonStates(container, headers) {
+            // Reset all button states first
+            container.querySelectorAll('.sort-option').forEach(function(b) {
+                b.classList.remove('active');
+                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
+            });
+
+            // Collect all sorted columns with their order
+            const sortedColumns = [];
+            headers.forEach(function(header, idx) {
+                const sortIndicator = header.querySelector('.gridjs-sort');
+                if (sortIndicator) {
+                    const isAsc = sortIndicator.classList.contains('gridjs-sort-asc');
+                    const isDesc = sortIndicator.classList.contains('gridjs-sort-desc');
+
+                    if (isAsc || isDesc) {
+                        // Get sort order from data attribute if available, otherwise use index
+                        const order = header.dataset.sortOrder || sortedColumns.length;
+                        sortedColumns.push({
+                            idx: idx,
+                            isAsc: isAsc,
+                            order: parseInt(order, 10)
+                        });
+                    }
+                }
+            });
+
+            // Sort by order to get correct priority
+            sortedColumns.sort(function(a, b) {
+                return a.order - b.order;
+            });
+
+            // Update buttons with sort state and priority numbers
+            sortedColumns.forEach(function(col, priority) {
+                const matchingBtn = container.querySelector('.sort-option[data-column-index="' + col.idx + '"]');
+                if (matchingBtn) {
+                    matchingBtn.classList.add('active');
+
+                    // Show priority number only if multiple columns are sorted
+                    const priorityIndicator = sortedColumns.length > 1
+                        ? '<span class="sort-priority">' + (priority + 1) + '</span>'
+                        : '';
+
+                    matchingBtn.querySelector('.sort-direction').innerHTML = priorityIndicator +
+                        (col.isAsc
+                            ? '<i class="fas fa-sort-up"></i>'
+                            : '<i class="fas fa-sort-down"></i>');
+                }
+            });
+        }
+
         // Generate sort buttons from columns
         if (sortOptionsContainer && columns) {
             // Get translations
@@ -121,43 +176,27 @@
                 btn.type = 'button';
                 btn.className = 'sort-option';
                 btn.dataset.columnIndex = visibleIndex;
+                btn.title = colName + ' (Shift+click to add as secondary sort)';
                 btn.innerHTML = '<span>' + colName + '</span>' +
                     '<span class="sort-direction"><i class="fas fa-sort"></i></span>';
 
-                btn.addEventListener('click', function() {
-                    // Just click the Grid.js header - it will cycle through states
+                btn.addEventListener('click', function(event) {
+                    // Get all Grid.js headers
                     const allHeaders = document.querySelectorAll('#' + gridId + ' .gridjs-th');
 
                     if (allHeaders[visibleIndex]) {
-                        allHeaders[visibleIndex].click();
+                        // Create a click event with the same Shift key state
+                        // This enables multi-column sorting when Shift is held
+                        const clickEvent = new MouseEvent('click', {
+                            bubbles: true,
+                            cancelable: true,
+                            shiftKey: event.shiftKey
+                        });
+                        allHeaders[visibleIndex].dispatchEvent(clickEvent);
 
                         // After Grid.js updates, sync our button states with actual Grid.js state
                         setTimeout(function() {
-                            // Reset all button states first
-                            sortOptionsContainer.querySelectorAll('.sort-option').forEach(function(b) {
-                                b.classList.remove('active');
-                                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
-                            });
-
-                            // Find the currently sorted column in Grid.js and update corresponding button
-                            allHeaders.forEach(function(header, idx) {
-                                const sortIndicator = header.querySelector('.gridjs-sort');
-                                if (sortIndicator) {
-                                    const isAsc = sortIndicator.classList.contains('gridjs-sort-asc');
-                                    const isDesc = sortIndicator.classList.contains('gridjs-sort-desc');
-
-                                    if (isAsc || isDesc) {
-                                        // Find the matching sort button
-                                        const matchingBtn = sortOptionsContainer.querySelector('.sort-option[data-column-index="' + idx + '"]');
-                                        if (matchingBtn) {
-                                            matchingBtn.classList.add('active');
-                                            matchingBtn.querySelector('.sort-direction').innerHTML = isAsc
-                                                ? '<i class="fas fa-sort-up"></i>'
-                                                : '<i class="fas fa-sort-down"></i>';
-                                        }
-                                    }
-                                }
-                            });
+                            updateSortButtonStates(sortOptionsContainer, allHeaders);
                         }, 100);
                     }
                 });

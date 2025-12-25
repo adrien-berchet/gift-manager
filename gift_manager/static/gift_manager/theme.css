@@ -2709,8 +2709,36 @@ h4, h5, h6 {
 }
 
 .sort-option .sort-direction {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
     font-size: var(--text-xs);
     opacity: 0.8;
+}
+
+.sort-option .sort-priority {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    margin-right: 2px;
+}
+
+.sort-option.active .sort-priority {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+[data-theme="dark"] .sort-option .sort-priority {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .sort-option.active .sort-priority {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* View toggle options */
