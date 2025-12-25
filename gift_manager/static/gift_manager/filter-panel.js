@@ -180,6 +180,24 @@
         initViewToggle(gridId);
     }
 
+    // View toggle configuration
+    var mobileBreakpoint = 768;
+
+    /**
+     * Check if we're on mobile
+     */
+    function isMobile() {
+        return window.innerWidth <= mobileBreakpoint;
+    }
+
+    /**
+     * Get default view based on screen size
+     * Mobile defaults to card view, desktop to list view
+     */
+    function getDefaultView() {
+        return isMobile() ? 'card' : 'list';
+    }
+
     /**
      * Initialize view toggle (list/card) for a grid
      * @param {string} gridId - The ID of the grid container
@@ -192,14 +210,15 @@
             return;
         }
 
-        // Get saved preference or default to list
-        const savedView = localStorage.getItem('view-preference-' + gridId) || 'list';
+        // Get saved preference or use screen-size-based default
+        const savedView = localStorage.getItem('view-preference-' + gridId);
+        const initialView = savedView || getDefaultView();
 
         // Apply initial view
-        setGridView(gridId, savedView);
+        setGridView(gridId, initialView);
 
         // Update button states
-        updateViewButtons(viewOptionsContainer, savedView);
+        updateViewButtons(viewOptionsContainer, initialView);
 
         // Handle view toggle button clicks
         viewOptionsContainer.querySelectorAll('.view-option').forEach(function(btn) {
@@ -215,6 +234,20 @@
                 // Save preference
                 localStorage.setItem('view-preference-' + gridId, view);
             });
+        });
+
+        // Update view on resize if no saved preference
+        var resizeTimeout;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                // Only apply default if user hasn't set a preference
+                if (!localStorage.getItem('view-preference-' + gridId)) {
+                    const newView = getDefaultView();
+                    setGridView(gridId, newView);
+                    updateViewButtons(viewOptionsContainer, newView);
+                }
+            }, 250);
         });
     }
 
