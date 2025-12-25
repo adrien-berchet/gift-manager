@@ -130,6 +130,17 @@
             });
         }
 
+        // Multi-sort mode toggle
+        const multiSortToggle = document.getElementById(gridId + '-multi-sort-toggle');
+        let multiSortMode = false;
+
+        if (multiSortToggle) {
+            multiSortToggle.addEventListener('click', function() {
+                multiSortMode = !multiSortMode;
+                multiSortToggle.classList.toggle('active', multiSortMode);
+            });
+        }
+
         // Generate sort buttons from columns
         if (sortOptionsContainer && columns) {
             // Get translations
@@ -176,7 +187,7 @@
                 btn.type = 'button';
                 btn.className = 'sort-option';
                 btn.dataset.columnIndex = visibleIndex;
-                btn.title = colName + ' (Shift+click to add as secondary sort)';
+                btn.title = colName + ' (Shift+click or enable Multi mode to add as secondary sort)';
                 btn.innerHTML = '<span>' + colName + '</span>' +
                     '<span class="sort-direction"><i class="fas fa-sort"></i></span>';
 
@@ -185,12 +196,14 @@
                     const allHeaders = document.querySelectorAll('#' + gridId + ' .gridjs-th');
 
                     if (allHeaders[visibleIndex]) {
-                        // Create a click event with the same Shift key state
-                        // This enables multi-column sorting when Shift is held
+                        // Use multi-sort if Shift is held OR multi-sort mode is active
+                        const useMultiSort = event.shiftKey || multiSortMode;
+
+                        // Create a click event with the appropriate Shift key state
                         const clickEvent = new MouseEvent('click', {
                             bubbles: true,
                             cancelable: true,
-                            shiftKey: event.shiftKey
+                            shiftKey: useMultiSort
                         });
                         allHeaders[visibleIndex].dispatchEvent(clickEvent);
 

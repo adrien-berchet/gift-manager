@@ -2670,6 +2670,56 @@ h4, h5, h6 {
     margin-bottom: var(--space-2);
 }
 
+/* Sort section header with multi-sort toggle */
+.sort-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+}
+
+.sort-section-header .filter-section-label {
+    margin-bottom: 0;
+}
+
+.multi-sort-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.multi-sort-toggle:hover {
+    background: var(--color-gray-100);
+    border-color: var(--border-color-hover);
+    color: var(--text-secondary);
+}
+
+.multi-sort-toggle.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
+[data-theme="dark"] .multi-sort-toggle:hover {
+    background: var(--color-gray-700);
+}
+
+[data-theme="dark"] .multi-sort-toggle.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+
 /* Sort options styling */
 .sort-options {
     display: flex;
