@@ -330,22 +330,56 @@
         // For card view, add data-label attributes to cells
         if (view === 'card') {
             addCardLabels(gridContainer);
+            // Also set up observer to add labels when Grid.js re-renders
+            observeGridChanges(gridContainer);
         }
     }
 
     /**
-     * Add data-label attributes to table cells for card view
+     * Observe grid changes and add card labels when content changes
      * @param {Element} container - The grid container
      */
-    function addCardLabels(container) {
-        const table = container.querySelector('.gridjs-table');
-        if (!table) {
-            // Table might not be rendered yet, retry after a short delay
-            setTimeout(function() {
-                addCardLabels(container);
-            }, 100);
+    function observeGridChanges(container) {
+        // Don't add multiple observers
+        if (container._cardLabelObserver) {
             return;
         }
+
+        const observer = new MutationObserver(function(mutations) {
+            // Check if we're still in card view
+            if (container.getAttribute('data-view') !== 'card') {
+                return;
+            }
+
+            // Check if any relevant changes occurred
+            let shouldUpdate = false;
+            for (const mutation of mutations) {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    shouldUpdate = true;
+                    break;
+                }
+            }
+
+            if (shouldUpdate) {
+                addCardLabelsImmediate(container);
+            }
+        });
+
+        observer.observe(container, {
+            childList: true,
+            subtree: true
+        });
+
+        container._cardLabelObserver = observer;
+    }
+
+    /**
+     * Add data-label attributes to table cells for card view (immediate, no retry)
+     * @param {Element} container - The grid container
+     */
+    function addCardLabelsImmediate(container) {
+        const table = container.querySelector('.gridjs-table');
+        if (!table) return;
 
         // Get headers
         const headers = Array.from(table.querySelectorAll('th')).map(function(th) {
@@ -357,11 +391,44 @@
         rows.forEach(function(row) {
             const cells = row.querySelectorAll('td');
             cells.forEach(function(cell, index) {
-                if (headers[index]) {
+                if (headers[index] && !cell.hasAttribute('data-label')) {
                     cell.setAttribute('data-label', headers[index]);
                 }
             });
         });
+    }
+
+    /**
+     * Add data-label attributes to table cells for card view
+     * @param {Element} container - The grid container
+     */
+    function addCardLabels(container) {
+        const table = container.querySelector('.gridjs-table');
+        if (!table) {
+            // Table might not be rendered yet, use MutationObserver for efficiency
+            const tempObserver = new MutationObserver(function(mutations, obs) {
+                const table = container.querySelector('.gridjs-table');
+                if (table) {
+                    obs.disconnect();
+                    addCardLabelsImmediate(container);
+                }
+            });
+
+            tempObserver.observe(container, {
+                childList: true,
+                subtree: true
+            });
+
+            // Fallback timeout in case observer doesn't fire
+            setTimeout(function() {
+                tempObserver.disconnect();
+                addCardLabelsImmediate(container);
+            }, 2000);
+
+            return;
+        }
+
+        addCardLabelsImmediate(container);
     }
 
     /**
