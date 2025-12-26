@@ -1448,6 +1448,24 @@ h4, h5, h6 {
         padding: var(--space-2) var(--space-3) !important;
     }
 
+    /* Actions column needs more width to keep buttons on fewer lines */
+    [data-view="list"] .gridjs-td:last-child {
+        white-space: normal;
+        min-width: 180px;
+    }
+
+    [data-view="list"] .gridjs-td:last-child .action-buttons-cell {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        justify-content: flex-start;
+    }
+
+    [data-view="list"] .gridjs-td:last-child .action-buttons-cell .btn {
+        padding: var(--space-1) var(--space-2);
+        font-size: var(--text-xs);
+    }
+
     [data-view="list"] .gridjs-td::before {
         display: none !important;
     }
