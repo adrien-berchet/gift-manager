@@ -2516,7 +2516,7 @@ h4, h5, h6 {
 [data-view="list"] .gridjs-table {
     display: table;
     width: 100%;
-    min-width: max-content;
+    table-layout: auto;
 }
 
 [data-view="list"] .gridjs-thead {
