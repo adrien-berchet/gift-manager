@@ -2849,9 +2849,24 @@ h4, h5, h6 {
 
 /* Mobile filter panel behavior - stacked layout */
 @media (max-width: 768px) {
+    /* Make filter panel a positioned container for the overlay */
+    .grid-filter-panel {
+        position: sticky;
+        top: var(--navbar-height, 60px);
+        z-index: 1000;
+    }
+
+    /* Filter content overlays the page content */
     .filter-content {
+        position: absolute;
+        left: 0;
+        right: 0;
         flex-direction: column;
         gap: var(--space-3);
+        box-shadow: var(--shadow-lg);
+        z-index: 1000;
+        max-height: 70vh;
+        overflow-y: auto;
     }
 
     .filter-section {
