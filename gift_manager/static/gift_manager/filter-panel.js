@@ -15,6 +15,7 @@
     function initFilterPanel(gridId, grid, columns) {
         const filterToggle = document.getElementById(gridId + '-filter-toggle');
         const filterContent = document.getElementById(gridId + '-filter-content');
+        const filterPanel = document.getElementById(gridId + '-filter-panel');
         const searchInput = document.getElementById(gridId + '-search');
         const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
         const mobileBreakpoint = 768;
@@ -22,6 +23,11 @@
         if (!filterToggle || !filterContent) {
             console.warn('Filter panel elements not found for grid:', gridId);
             return;
+        }
+
+        // Detect when filter panel becomes sticky
+        if (filterPanel) {
+            initStickyDetection(filterPanel);
         }
 
         // Check if we're on mobile
@@ -440,6 +446,34 @@
         container.querySelectorAll('.view-option').forEach(function(btn) {
             btn.classList.toggle('active', btn.dataset.view === activeView);
         });
+    }
+
+    /**
+     * Detect when filter panel becomes sticky and add visual indicator
+     * @param {Element} panel - The filter panel element
+     */
+    function initStickyDetection(panel) {
+        // Create a sentinel element to detect when sticky kicks in
+        const sentinel = document.createElement('div');
+        sentinel.className = 'sticky-sentinel';
+        sentinel.style.cssText = 'position: absolute; top: 0; left: 0; right: 0; height: 1px; pointer-events: none;';
+        panel.parentNode.insertBefore(sentinel, panel);
+
+        // Use IntersectionObserver to detect when sentinel leaves viewport
+        const observer = new IntersectionObserver(
+            function(entries) {
+                entries.forEach(function(entry) {
+                    // When sentinel is not intersecting, panel is sticky
+                    panel.classList.toggle('is-sticky', !entry.isIntersecting);
+                });
+            },
+            {
+                threshold: [0],
+                rootMargin: '-' + (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--navbar-height')) || 60) + 'px 0px 0px 0px'
+            }
+        );
+
+        observer.observe(sentinel);
     }
 
     // Expose to global scope
