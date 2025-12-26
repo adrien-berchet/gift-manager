@@ -2873,12 +2873,17 @@ h4, h5, h6 {
 }
 
 /* Mobile filter panel behavior - stacked layout */
-@media (max-width: 768px) {
+@media (max-width: 768px), (max-height: 600px) {
     /* Make filter panel a positioned container for the overlay */
     .grid-filter-panel {
         position: sticky;
         top: var(--navbar-height, 60px);
         z-index: 1000;
+    }
+
+    /* Show toggle button on small screens */
+    .filter-toggle-btn {
+        display: flex;
     }
 
     /* Filter content overlays the page content */
@@ -2892,6 +2897,11 @@ h4, h5, h6 {
         z-index: 1000;
         max-height: 70vh;
         overflow-y: auto;
+        display: none;
+    }
+
+    .filter-content.expanded {
+        display: flex;
     }
 
     .filter-section {
@@ -2915,8 +2925,8 @@ h4, h5, h6 {
     }
 }
 
-/* Desktop filter panel behavior - side by side layout */
-@media (min-width: 769px) {
+/* Desktop filter panel behavior - side by side layout (requires both sufficient width AND height) */
+@media (min-width: 769px) and (min-height: 601px) {
     /* Hide toggle button on desktop - panel is always visible */
     .filter-toggle-btn {
         display: none;
@@ -2927,11 +2937,16 @@ h4, h5, h6 {
         display: flex;
         flex-direction: row;
         align-items: center;
+        position: static;
+        box-shadow: none;
+        max-height: none;
+        overflow-y: visible;
     }
 
     .filter-section {
         flex: 0 0 auto;
         min-width: unset;
+        width: auto;
     }
 
     .filter-section.search-section {
@@ -2942,6 +2957,11 @@ h4, h5, h6 {
 
     .sort-options {
         flex-wrap: nowrap;
+        flex-direction: row;
+    }
+
+    .sort-option {
+        width: auto;
     }
 
     /* Hide the original Grid.js search on desktop when filter panel is present */
