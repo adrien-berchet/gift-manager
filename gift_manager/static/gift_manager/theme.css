@@ -2462,6 +2462,7 @@ h4, h5, h6 {
     background: transparent !important;
     gap: var(--space-3);
     box-sizing: border-box;
+    order: 0;
 }
 
 /* Card field labels - use data-label attribute set by enhanceMobileTables */
@@ -2474,14 +2475,40 @@ h4, h5, h6 {
     min-width: 100px;
 }
 
+/* Comment field - grows to fill available space */
+[data-view="card"] .gridjs-td[data-label*="omment"],
+[data-view="card"] .gridjs-td[data-label*="ommentaire"],
+[data-view="card"] .gridjs-td[data-label*="escription"] {
+    flex-grow: 1;
+    align-items: flex-start;
+    order: 1;
+}
+
+/* Status field - move to bottom section */
+[data-view="card"] .gridjs-td[data-label*="tatus"],
+[data-view="card"] .gridjs-td[data-label*="tat"] {
+    order: 10;
+    margin-top: auto;
+    padding-top: var(--space-3) !important;
+    border-top: 1px solid var(--border-color) !important;
+}
+
+/* Due date field - move to bottom section */
+[data-view="card"] .gridjs-td[data-label*="ue"],
+[data-view="card"] .gridjs-td[data-label*="ate"],
+[data-view="card"] .gridjs-td[data-label*="échéance"] {
+    order: 11;
+}
+
 /* Hide label for hidden columns and action column */
 [data-view="card"] .gridjs-td[data-column-id=""]::before,
 [data-view="card"] .gridjs-td:last-child::before {
     display: none;
 }
 
-/* Action buttons in card view */
+/* Action buttons in card view - always at the very bottom */
 [data-view="card"] .gridjs-td:last-child {
+    order: 20;
     justify-content: center;
     padding: var(--space-2) var(--space-1) !important;
     margin-top: var(--space-2);
