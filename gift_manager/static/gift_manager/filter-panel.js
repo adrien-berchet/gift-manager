@@ -224,12 +224,13 @@
             });
 
             // Sync with initial sort state after Grid.js renders
+            // Use 300ms to ensure this runs after the initial sort click (which happens at 100ms)
             setTimeout(function() {
                 const allHeaders = document.querySelectorAll('#' + gridId + ' .gridjs-th');
                 if (allHeaders.length > 0) {
                     updateSortButtonStates(sortOptionsContainer, allHeaders);
                 }
-            }, 200);
+            }, 300);
         }
 
         // Hide the original Grid.js search since we have our own
