@@ -2592,6 +2592,12 @@ h4, h5, h6 {
 /* Filter panel wrapper */
 .grid-filter-panel {
     margin-bottom: var(--space-4);
+    position: sticky;
+    top: var(--navbar-height, 60px);
+    z-index: 100;
+    background: var(--surface-body);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
 }
 
 /* Filter toggle button - always visible */
