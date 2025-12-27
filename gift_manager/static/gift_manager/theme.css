@@ -2555,7 +2555,7 @@ h4, h5, h6 {
 /* Action buttons in card view - always at the very bottom */
 [data-view="card"] .gridjs-td:last-child {
     order: 20;
-    justify-content: stretch;
+    justify-content: center;
     padding: var(--space-3) var(--space-4) !important;
     margin-top: 0;
     background: var(--color-gray-50) !important;
