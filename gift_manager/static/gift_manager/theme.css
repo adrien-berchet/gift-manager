@@ -628,11 +628,14 @@
 /* Dark mode card view */
 [data-theme="dark"] [data-view="card"] .gridjs-tr {
     background-color: #1e293b;
-    border-color: #475569;
+    border-color: #475569 !important;
+    border: 1px solid #475569 !important;
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td {
+    border-color: #475569 !important;
     border-bottom-color: #475569 !important;
+    border-top-color: #475569 !important;
     color: #f8fafc;
 }
 
@@ -2581,7 +2584,7 @@ h4, h5, h6 {
 /* Dark mode adjustments for cards */
 [data-theme="dark"] [data-view="card"] .gridjs-tr {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-color: var(--border-color) !important;
+    border: 1px solid var(--border-color) !important;
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-tr:hover {
@@ -2589,16 +2592,18 @@ h4, h5, h6 {
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td {
-    border-bottom-color: var(--border-color) !important;
+    border: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td:first-child {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%) !important;
-    border-bottom-color: var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
-    border-top-color: var(--border-color) !important;
+    border: none !important;
+    border-top: 1px solid var(--border-color) !important;
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="tatus"],
