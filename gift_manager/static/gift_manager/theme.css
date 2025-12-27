@@ -1000,11 +1000,29 @@ body,
     border-radius: var(--radius-lg);
     overflow: hidden;
     border: 1px solid var(--border-color);
+    background-color: var(--surface-card);
+}
+
+[data-theme="dark"] .gridjs-wrapper {
+    background-color: var(--surface-card);
 }
 
 .gridjs-table {
     border-collapse: separate;
     border-spacing: 0;
+    background-color: var(--surface-card);
+}
+
+[data-theme="dark"] .gridjs-table {
+    background-color: var(--surface-card);
+}
+
+.gridjs-tbody {
+    background-color: var(--surface-card);
+}
+
+[data-theme="dark"] .gridjs-tbody {
+    background-color: var(--surface-card);
 }
 
 .gridjs-thead {
