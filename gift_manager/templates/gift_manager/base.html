@@ -604,6 +604,16 @@
         });
     </script>
 
+    {% if user.is_authenticated %}
+    <script>
+        // User view preferences from profile
+        window.userViewPreferences = {
+            desktop: '{{ user.profile.default_view_desktop|default:"list" }}',
+            mobile: '{{ user.profile.default_view_mobile|default:"card" }}'
+        };
+    </script>
+    {% endif %}
+
     {% block extra_js %}{% endblock %}
 
     <script>

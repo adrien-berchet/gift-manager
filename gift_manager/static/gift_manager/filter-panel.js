@@ -256,10 +256,16 @@
     }
 
     /**
-     * Get default view based on screen size
-     * Mobile defaults to card view, desktop to list view
+     * Get default view based on screen size and user preferences
+     * Uses user's profile preferences if available, otherwise defaults to
+     * card view on mobile and list view on desktop
      */
     function getDefaultView() {
+        var prefs = window.userViewPreferences;
+        if (prefs) {
+            return isMobile() ? prefs.mobile : prefs.desktop;
+        }
+        // Fallback if preferences not set
         return isMobile() ? 'card' : 'list';
     }
 
