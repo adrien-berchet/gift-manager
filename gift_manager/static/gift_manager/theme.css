@@ -2497,10 +2497,6 @@ h4, h5, h6 {
     border-bottom: 1px solid var(--border-color) !important;
 }
 
-[data-view="card"] .gridjs-td:first-child::before {
-    display: none;
-}
-
 [data-view="card"] .gridjs-td:first-child > * {
     font-size: var(--text-lg);
     font-weight: 600;
