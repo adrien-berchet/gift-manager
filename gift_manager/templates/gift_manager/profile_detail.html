@@ -270,3 +270,20 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+    // Clear all view preference localStorage when profile preferences are updated
+    document.getElementById('view-preferences-form').addEventListener('submit', function() {
+        // Get all localStorage keys
+        const keys = Object.keys(localStorage);
+
+        // Remove all view-preference-* keys
+        keys.forEach(key => {
+            if (key.startsWith('view-preference-')) {
+                localStorage.removeItem(key);
+            }
+        });
+    });
+</script>
+{% endblock %}

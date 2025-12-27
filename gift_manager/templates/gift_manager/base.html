@@ -611,6 +611,22 @@
             desktop: '{{ user.profile.default_view_desktop|default:"list" }}',
             mobile: '{{ user.profile.default_view_mobile|default:"card" }}'
         };
+
+        // Clear view preferences localStorage once per session (at login)
+        if (!sessionStorage.getItem('viewPreferencesCleared')) {
+            // Get all localStorage keys
+            const keys = Object.keys(localStorage);
+
+            // Remove all view-preference-* keys
+            keys.forEach(key => {
+                if (key.startsWith('view-preference-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // Mark as cleared for this session
+            sessionStorage.setItem('viewPreferencesCleared', 'true');
+        }
     </script>
     {% endif %}
 
