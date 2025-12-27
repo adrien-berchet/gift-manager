@@ -642,8 +642,13 @@
         (function() {
             const searchModal = document.getElementById('searchModal');
             const searchInput = document.getElementById('globalSearchInput');
+            const searchResults = document.getElementById('searchResults');
 
-            if (!searchModal || !searchInput) return;
+            if (!searchModal || !searchInput || !searchResults) return;
+
+            let searchTimeout = null;
+            let selectedIndex = -1;
+            const quickLinksHTML = searchResults.innerHTML;
 
             // Keyboard shortcut to open search (Ctrl+K or Cmd+K)
             document.addEventListener('keydown', (e) => {
@@ -660,13 +665,100 @@
                 searchInput.select();
             });
 
-            // Clear input when modal closes
+            // Clear input and reset results when modal closes
             searchModal.addEventListener('hidden.bs.modal', () => {
                 searchInput.value = '';
+                searchResults.innerHTML = quickLinksHTML;
+                selectedIndex = -1;
+            });
+
+            // Perform search
+            async function performSearch(query) {
+                if (!query || query.length < 2) {
+                    searchResults.innerHTML = quickLinksHTML;
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+
+                    if (data.results.length === 0) {
+                        searchResults.innerHTML = `
+                            <div class="search-no-results">
+                                <i class="fas fa-search fa-2x mb-3" style="opacity: 0.3;"></i>
+                                <p>{% trans "No results found for" %} "<strong>${escapeHtml(query)}</strong>"</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    // Group results by type
+                    const grouped = {};
+                    const typeLabels = {
+                        gift: '{% trans "Gifts" %}',
+                        person: '{% trans "Persons" %}',
+                        group: '{% trans "Groups" %}',
+                        event: '{% trans "Events" %}',
+                        tag: '{% trans "Tags" %}'
+                    };
+
+                    data.results.forEach(result => {
+                        if (!grouped[result.type]) {
+                            grouped[result.type] = [];
+                        }
+                        grouped[result.type].push(result);
+                    });
+
+                    let html = '';
+                    for (const [type, results] of Object.entries(grouped)) {
+                        html += `<div class="search-category">${typeLabels[type] || type}</div>`;
+                        results.forEach(result => {
+                            html += `
+                                <a href="${result.url}" class="search-result-item">
+                                    <div class="search-result-icon"><i class="fas ${result.icon}"></i></div>
+                                    <div class="search-result-content">
+                                        <div class="search-result-title">${escapeHtml(result.title)}</div>
+                                        ${result.subtitle ? `<div class="search-result-subtitle">${escapeHtml(result.subtitle)}</div>` : ''}
+                                    </div>
+                                </a>
+                            `;
+                        });
+                    }
+
+                    searchResults.innerHTML = html;
+                    selectedIndex = -1;
+                } catch (error) {
+                    console.error('Search error:', error);
+                    searchResults.innerHTML = `
+                        <div class="search-no-results">
+                            <p>{% trans "An error occurred while searching." %}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Debounced search on input
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                selectedIndex = -1;
+
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
+
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 200);
             });
 
             // Keyboard navigation in search results
-            let selectedIndex = -1;
             const getVisibleItems = () => document.querySelectorAll('#searchResults .search-result-item');
 
             searchInput.addEventListener('keydown', (e) => {
@@ -694,11 +786,6 @@
                     }
                 });
             }
-
-            // Reset selection when typing
-            searchInput.addEventListener('input', () => {
-                selectedIndex = -1;
-            });
         })();
 
         // Dynamically adjust body padding to match navbar height

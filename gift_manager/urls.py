@@ -9,6 +9,7 @@ app_name = "gift_manager"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("api/search/", views.global_search, name="global_search"),
     path("admin/", admin.site.urls),
     path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
     path("send-invitation/", views.SendInvitationView.as_view(), name="send_invitation"),
