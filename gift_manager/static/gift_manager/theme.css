@@ -1046,6 +1046,7 @@ body,
 
 [data-theme="dark"] .gridjs-th {
     background-color: var(--surface-elevated) !important;
+    border-bottom-color: var(--border-color) !important;
 }
 
 .gridjs-td {
@@ -1057,6 +1058,7 @@ body,
 
 [data-theme="dark"] .gridjs-td {
     background-color: var(--surface-card);
+    border-bottom-color: var(--border-color) !important;
 }
 
 .gridjs-tr:hover .gridjs-td {
