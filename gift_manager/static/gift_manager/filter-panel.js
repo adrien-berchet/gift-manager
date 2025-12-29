@@ -111,6 +111,46 @@
             });
         }
 
+        /**
+         * Show/hide empty state message based on data
+         */
+        function updateEmptyState(hasData, searchValue) {
+            const gridContainer = document.getElementById(gridId);
+            if (!gridContainer) return;
+
+            // Remove existing empty state
+            let emptyState = gridContainer.querySelector('.grid-empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+
+            // Show empty state if no data
+            if (!hasData) {
+                emptyState = document.createElement('div');
+                emptyState.className = 'grid-empty-state';
+
+                let message, icon;
+                if (searchValue && searchValue.trim() !== '') {
+                    // No search results
+                    icon = 'fa-search';
+                    message = window.gridTranslations?.noRecordsFound || 'No matching records found';
+                } else {
+                    // No data at all
+                    icon = 'fa-inbox';
+                    message = window.gridTranslations?.noData || 'No data available';
+                }
+
+                emptyState.innerHTML = `
+                    <div class="empty-state-content">
+                        <i class="fas ${icon} empty-state-icon"></i>
+                        <p class="empty-state-message">${message}</p>
+                    </div>
+                `;
+
+                gridContainer.appendChild(emptyState);
+            }
+        }
+
         // Connect custom search to Grid.js
         if (searchInput && grid) {
             let searchTimeout;
@@ -124,9 +164,17 @@
                     grid.updateConfig({
                         data: filteredData
                     }).forceRender();
+
+                    // Update empty state
+                    updateEmptyState(filteredData.length > 0, searchValue);
                 }, 300);
             });
         }
+
+        // Show initial empty state if needed
+        setTimeout(function() {
+            updateEmptyState(originalData.length > 0, '');
+        }, 100);
 
         /**
          * Update sort button states to reflect Grid.js sort state

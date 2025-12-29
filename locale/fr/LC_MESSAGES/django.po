@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-29 19:05+0100\n"
+"POT-Creation-Date: 2025-12-29 23:18+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -806,7 +806,7 @@ msgstr "Offert à"
 #: gift_manager/templates/gift_manager/event_list.html:71
 #: gift_manager/templates/gift_manager/gift_detail.html:139
 #: gift_manager/templates/gift_manager/gift_list.html:77
-#: gift_manager/templates/gift_manager/includes/grid-translations.html:15
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:16
 #: gift_manager/templates/gift_manager/person_detail.html:159
 #: gift_manager/templates/gift_manager/person_group_detail.html:271
 #: gift_manager/templates/gift_manager/person_group_detail.html:346
@@ -1156,7 +1156,6 @@ msgid "Edit"
 msgstr "Éditer"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:7
-#: gift_manager/templates/gift_manager/includes/filter_panel.html:7
 msgid "Search, Filters & Sort"
 msgstr "Recherche, Filtres et tri"
 
@@ -1165,7 +1164,6 @@ msgid "Search..."
 msgstr "Rechercher..."
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:20
-#: gift_manager/templates/gift_manager/includes/grid-translations.html:17
 msgid "Sort by"
 msgstr "Trier par"
 
@@ -1218,16 +1216,16 @@ msgid "No matching records found"
 msgstr "Aucune entrée trouvée"
 
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:13
+msgid "No data available"
+msgstr "Aucune donnée disponible"
+
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:14
 msgid "Loading..."
 msgstr "Chargement..."
 
-#: gift_manager/templates/gift_manager/includes/grid-translations.html:14
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:15
 msgid "An error occurred"
 msgstr "Une erreur s'est produite"
-
-#: gift_manager/templates/gift_manager/includes/grid-translations.html:16
-msgid "Filters & Sort"
-msgstr "Filtres et tri"
 
 #: gift_manager/templates/gift_manager/invitation_expired.html:4
 #: gift_manager/templates/gift_manager/invitation_expired.html:13
@@ -1952,3 +1950,6 @@ msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 #: gift_manager/views/sharing.py:199
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
+
+#~ msgid "Filters & Sort"
+#~ msgstr "Filtres et tri"
