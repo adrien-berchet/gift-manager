@@ -71,12 +71,8 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(function() {
                     const searchValue = e.target.value;
-                    grid.updateConfig({
-                        search: {
-                            enabled: true,
-                            keyword: searchValue
-                        }
-                    }).forceRender();
+                    // Use Grid.js's search() method for programmatic search
+                    grid.search(searchValue);
                 }, 300);
             });
         }
