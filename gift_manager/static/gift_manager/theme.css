@@ -1073,15 +1073,23 @@ body,
     box-shadow: 0 0 0 3px var(--color-primary-light) !important;
 }
 
-/* Grid.js footer and pagination */
-.gridjs-footer,
+/* Grid.js footer - transparent background */
+.gridjs-footer {
+    padding: var(--space-4);
+    background: transparent;
+}
+
+[data-theme="dark"] .gridjs-footer {
+    background: transparent;
+}
+
+/* Grid.js pagination - colored background */
 .gridjs-pagination {
     padding: var(--space-4);
     background-color: var(--color-gray-50);
     border-top: 1px solid var(--border-color);
 }
 
-[data-theme="dark"] .gridjs-footer,
 [data-theme="dark"] .gridjs-pagination {
     background-color: var(--surface-elevated);
     border-top-color: var(--border-color);
