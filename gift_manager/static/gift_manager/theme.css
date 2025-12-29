@@ -1026,17 +1026,20 @@ body,
     letter-spacing: 0.05em;
     padding: var(--space-4) !important;
     border-bottom: 2px solid var(--border-color) !important;
+    border-right: 1px solid var(--border-color) !important;
 }
 
 [data-theme="dark"] .gridjs-wrapper .gridjs-th {
     background-color: var(--surface-elevated) !important;
     border-bottom-color: var(--border-color) !important;
+    border-right-color: var(--border-color) !important;
 }
 
 /* Grid.js table cells */
 .gridjs-wrapper .gridjs-td {
     padding: var(--space-4) !important;
     border-bottom: 1px solid var(--border-color) !important;
+    border-right: 1px solid var(--border-color) !important;
     color: var(--text-primary);
     background-color: var(--surface-card);
 }
@@ -1044,6 +1047,7 @@ body,
 [data-theme="dark"] .gridjs-wrapper .gridjs-td {
     background-color: var(--surface-card);
     border-bottom-color: var(--border-color) !important;
+    border-right-color: var(--border-color) !important;
 }
 
 /* Hover states */
