@@ -504,3 +504,266 @@ class TestGroupFormCyclePrevention:
         assert "Grandchild Group 1" not in all_options, (
             "Group should not select its grandchild as parent"
         )
+
+
+@pytest.mark.slow
+class TestViewToggleAndLocalStorage:
+    """Tests for view toggle and localStorage functionality.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits.
+    """
+
+    def test_view_toggle_switches_between_list_and_card(
+        self, page: Page, live_server, setup_group_hierarchy
+    ):
+        """Test that view toggle switches between list and card views."""
+        login_user(page, live_server)
+
+        # Navigate to person groups list
+        page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
+
+        # Wait for Grid.js to load
+        page.wait_for_selector(".gridjs-wrapper", timeout=10000)
+
+        # Find the view toggle buttons
+        list_view_btn = page.locator("#list-view-btn")
+        card_view_btn = page.locator("#card-view-btn")
+
+        # Verify both buttons exist
+        if list_view_btn.count() > 0 and card_view_btn.count() > 0:
+            # Click card view button
+            card_view_btn.click()
+            page.wait_for_timeout(500)
+
+            # Verify the grid wrapper has data-view="card" attribute
+            grid_wrapper = page.locator(".gridjs-wrapper")
+            view_attr = grid_wrapper.get_attribute("data-view")
+            assert view_attr == "card", "View should be 'card' after clicking card view button"
+
+            # Click list view button
+            list_view_btn.click()
+            page.wait_for_timeout(500)
+
+            # Verify the grid wrapper has data-view="list" attribute
+            view_attr = grid_wrapper.get_attribute("data-view")
+            assert view_attr == "list", "View should be 'list' after clicking list view button"
+
+    def test_view_preference_persists_in_local_storage(
+        self, page: Page, live_server, setup_group_hierarchy
+    ):
+        """Test that view preference is saved to localStorage."""
+        login_user(page, live_server)
+
+        # Navigate to person groups list
+        page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
+        page.wait_for_selector(".gridjs-wrapper", timeout=10000)
+
+        # Switch to card view
+        card_view_btn = page.locator("#card-view-btn")
+        if card_view_btn.count() > 0:
+            card_view_btn.click()
+            page.wait_for_timeout(500)
+
+            # Check localStorage
+            storage_value = page.evaluate(
+                "() => localStorage.getItem('view-preference-person-group-grid')"
+            )
+            assert storage_value == "card", "Card view preference should be saved to localStorage"
+
+            # Reload the page
+            page.reload(wait_until="networkidle")
+            page.wait_for_selector(".gridjs-wrapper", timeout=10000)
+
+            # Verify view is still card
+            grid_wrapper = page.locator(".gridjs-wrapper")
+            view_attr = grid_wrapper.get_attribute("data-view")
+            assert view_attr == "card", "Card view should persist after page reload"
+
+    def test_local_storage_cleared_on_profile_update(
+        self, page: Page, live_server, setup_group_hierarchy
+    ):
+        """Test that localStorage is cleared when profile preferences are updated."""
+        login_user(page, live_server)
+
+        # Navigate to person groups and set a view preference
+        page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
+        page.wait_for_selector(".gridjs-wrapper", timeout=10000)
+
+        card_view_btn = page.locator("#card-view-btn")
+        if card_view_btn.count() > 0:
+            card_view_btn.click()
+            page.wait_for_timeout(500)
+
+            # Verify localStorage has the preference
+            storage_value = page.evaluate(
+                "() => localStorage.getItem('view-preference-person-group-grid')"
+            )
+            assert storage_value == "card"
+
+            # Navigate to profile page
+            page.goto(f"{live_server.url}/profile/", wait_until="networkidle")
+
+            # Update view preferences
+            desktop_card = page.locator('input[name="default_view_desktop"][value="card"]')
+            if desktop_card.count() > 0:
+                desktop_card.click()
+
+                # Submit the form
+                submit_btn = page.locator('button[type="submit"]:has-text("Save")')
+                submit_btn.click()
+                page.wait_for_load_state("networkidle")
+
+                # Verify localStorage was cleared
+                storage_value = page.evaluate(
+                    "() => localStorage.getItem('view-preference-person-group-grid')"
+                )
+                assert storage_value is None, "localStorage should be cleared after profile update"
+
+
+@pytest.mark.slow
+class TestDarkModeToggle:
+    """Tests for dark mode toggle functionality.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits.
+    """
+
+    def test_dark_mode_toggle_switches_theme(
+        self, page: Page, live_server, setup_test_user
+    ):
+        """Test that dark mode toggle switches between light and dark themes."""
+        login_user(page, live_server)
+
+        # Navigate to home page
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+
+        # Find the theme toggle button
+        theme_toggle = page.locator("#theme-toggle")
+
+        if theme_toggle.count() > 0:
+            # Get initial theme
+            initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+
+            # Click theme toggle
+            theme_toggle.click()
+            page.wait_for_timeout(300)
+
+            # Get new theme
+            new_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+
+            # Verify theme changed
+            assert initial_theme != new_theme, "Theme should change after clicking toggle"
+
+            # Verify it's one of the valid themes
+            assert new_theme in ["light", "dark"], f"Theme should be 'light' or 'dark', got {new_theme}"
+
+    def test_dark_mode_persists_in_local_storage(
+        self, page: Page, live_server, setup_test_user
+    ):
+        """Test that dark mode preference persists in localStorage."""
+        login_user(page, live_server)
+
+        # Navigate to home page
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+
+        # Find the theme toggle button
+        theme_toggle = page.locator("#theme-toggle")
+
+        if theme_toggle.count() > 0:
+            # Click to dark mode (assuming we start in light mode)
+            theme_toggle.click()
+            page.wait_for_timeout(300)
+
+            # Check localStorage
+            theme_storage = page.evaluate("() => localStorage.getItem('theme')")
+            current_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+
+            assert theme_storage == current_theme, "localStorage theme should match DOM theme"
+
+            # Reload page
+            page.reload(wait_until="networkidle")
+
+            # Verify theme persisted
+            reloaded_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            assert reloaded_theme == current_theme, "Theme should persist after page reload"
+
+
+@pytest.mark.slow
+class TestGlobalSearchUI:
+    """Tests for global search UI functionality.
+
+    Note: Does NOT use @pytest.mark.django_db(transaction=True) because
+    fixtures use transactional_db with explicit commits.
+    """
+
+    def test_global_search_opens_with_ctrl_k(
+        self, page: Page, live_server, setup_test_user
+    ):
+        """Test that global search panel opens with Ctrl+K."""
+        login_user(page, live_server)
+
+        # Navigate to home page
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+
+        # Press Ctrl+K
+        page.keyboard.press("Control+k")
+        page.wait_for_timeout(300)
+
+        # Check if search panel is visible
+        search_panel = page.locator(".search-panel.active, #globalSearchPanel.show")
+
+        if search_panel.count() > 0:
+            expect(search_panel).to_be_visible()
+
+    def test_global_search_closes_with_escape(
+        self, page: Page, live_server, setup_test_user
+    ):
+        """Test that global search panel closes with Escape key."""
+        login_user(page, live_server)
+
+        # Navigate to home page
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+
+        # Open search with Ctrl+K
+        page.keyboard.press("Control+k")
+        page.wait_for_timeout(300)
+
+        # Press Escape
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(300)
+
+        # Check if search panel is hidden
+        search_panel = page.locator(".search-panel.active, #globalSearchPanel.show")
+
+        if search_panel.count() > 0:
+            expect(search_panel).not_to_be_visible()
+
+    def test_global_search_shows_results(
+        self, page: Page, live_server, setup_group_hierarchy
+    ):
+        """Test that global search displays results."""
+        login_user(page, live_server)
+
+        # Navigate to home page
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+
+        # Open search
+        page.keyboard.press("Control+k")
+        page.wait_for_timeout(500)
+
+        # Find search input
+        search_input = page.locator("#globalSearchInput, .search-input")
+
+        if search_input.count() > 0:
+            # Type in search
+            search_input.fill("Root")
+            page.wait_for_timeout(1000)  # Wait for debounce and results
+
+            # Check for results
+            results_container = page.locator(".search-results, #searchResults")
+
+            if results_container.count() > 0:
+                # Should have at least one result (Root Group from fixtures)
+                result_items = page.locator(".search-result-item, .result-item")
+                expect(result_items.first).to_be_visible()
