@@ -1059,7 +1059,12 @@ body,
     background-color: var(--surface-elevated) !important;
 }
 
-/* Grid.js search input */
+/* Grid.js search - Hidden because we use custom search in filter panel */
+.gridjs-search {
+    display: none !important;
+}
+
+/* Grid.js search input (kept for reference, not used) */
 .gridjs-search-input {
     background-color: var(--surface-card) !important;
     border: 1px solid var(--border-color) !important;
@@ -1492,15 +1497,7 @@ h4, h5, h6 {
         display: none !important;
     }
 
-    /* Grid.js search and pagination on mobile */
-    .gridjs-search {
-        width: 100%;
-        margin-bottom: var(--space-3);
-    }
-
-    .gridjs-search-input {
-        width: 100% !important;
-    }
+    /* Grid.js pagination on mobile */
 
     .gridjs-pagination {
         flex-direction: column;

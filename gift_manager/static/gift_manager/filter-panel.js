@@ -233,14 +233,6 @@
             }, 300);
         }
 
-        // Hide the original Grid.js search since we have our own
-        setTimeout(function() {
-            const gridHead = document.querySelector('#' + gridId + ' .gridjs-head');
-            if (gridHead) {
-                gridHead.style.display = 'none';
-            }
-        }, 100);
-
         // View toggle functionality
         initViewToggle(gridId);
     }
