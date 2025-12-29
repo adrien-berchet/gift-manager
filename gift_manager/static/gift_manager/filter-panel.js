@@ -64,6 +64,53 @@
             filterToggle.classList.toggle('active', isExpanded);
         });
 
+        // Store original data for filtering
+        const originalData = grid.config.data;
+
+        /**
+         * Extract searchable text from a cell value (handles complex objects)
+         */
+        function extractSearchableText(cell) {
+            if (cell === null || cell === undefined) return '';
+
+            // Handle objects with common properties
+            if (typeof cell === 'object') {
+                // Try common text properties
+                if (cell.name) return String(cell.name);
+                if (cell.text) return String(cell.text);
+                if (cell.label) return String(cell.label);
+
+                // For arrays, extract text from each item
+                if (Array.isArray(cell)) {
+                    return cell.map(extractSearchableText).join(' ');
+                }
+
+                // For other objects, try to stringify
+                return JSON.stringify(cell);
+            }
+
+            return String(cell);
+        }
+
+        /**
+         * Filter data based on search term
+         */
+        function filterData(data, searchTerm) {
+            if (!searchTerm || searchTerm.trim() === '') {
+                return data;
+            }
+
+            const term = searchTerm.toLowerCase().trim();
+
+            return data.filter(function(row) {
+                // Search through all cells in the row
+                return row.some(function(cell) {
+                    const cellText = extractSearchableText(cell).toLowerCase();
+                    return cellText.includes(term);
+                });
+            });
+        }
+
         // Connect custom search to Grid.js
         if (searchInput && grid) {
             let searchTimeout;
@@ -71,11 +118,11 @@
                 clearTimeout(searchTimeout);
                 searchTimeout = setTimeout(function() {
                     const searchValue = e.target.value;
+                    const filteredData = filterData(originalData, searchValue);
+
+                    // Update grid with filtered data
                     grid.updateConfig({
-                        search: {
-                            enabled: true,
-                            keyword: searchValue
-                        }
+                        data: filteredData
                     }).forceRender();
                 }, 300);
             });

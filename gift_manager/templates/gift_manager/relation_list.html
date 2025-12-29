@@ -172,23 +172,6 @@
             sort: {
                 multiColumn: true,
                 enabled: true
-            },
-            search: {
-                enabled: true,
-                keyword: '',
-                // Custom selector to extract searchable text from complex cells
-                selector: (cell, rowIndex, cellIndex) => {
-                    // Handle object cells with name property (gift, event)
-                    if (cell && typeof cell === 'object' && cell.name) {
-                        return cell.name;
-                    }
-                    // Handle related_object cell with text property
-                    if (cell && typeof cell === 'object' && cell.text) {
-                        return cell.text;
-                    }
-                    // For regular cells, return as-is
-                    return cell;
-                }
             }
         });
 
