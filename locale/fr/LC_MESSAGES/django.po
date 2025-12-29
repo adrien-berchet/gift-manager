@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-29 17:54+0100\n"
+"POT-Creation-Date: 2025-12-29 18:50+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -113,11 +113,10 @@ msgid "Name"
 msgstr "Nom"
 
 #: gift_manager/forms.py:204
-#, fuzzy, python-format
-#| msgid "Adding this parent would create a cycle in the tag hierarchy."
+#, python-format
 msgid ""
 "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
-msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
+msgstr "Ajouter le parent '%(parent)s' créerait un cycle dans la hiérarchie des tags."
 
 #: gift_manager/forms.py:222
 #, python-format
@@ -508,139 +507,103 @@ msgid "My profile"
 msgstr "Mon profil"
 
 #: gift_manager/templates/gift_manager/base.html:427
-#, fuzzy
-#| msgid "My Profile"
 msgid "Profile"
-msgstr "Mon profil"
+msgstr "Profil"
 
 #: gift_manager/templates/gift_manager/base.html:471
 msgid "Search gifts, persons, groups, events..."
-msgstr ""
+msgstr "Chercher des cadeaux, des personnes, des groupes, des événements..."
 
 #: gift_manager/templates/gift_manager/base.html:479
 msgid "Quick Links"
-msgstr ""
+msgstr "Liens rapides"
 
 #: gift_manager/templates/gift_manager/base.html:483
-#, fuzzy
-#| msgid "Gifts"
 msgid "All Gifts"
-msgstr "Cadeaux"
+msgstr "Tous les cadeaux"
 
 #: gift_manager/templates/gift_manager/base.html:484
 msgid "View all your gifts"
-msgstr ""
+msgstr "Voir tous vos cadeaux"
 
 #: gift_manager/templates/gift_manager/base.html:490
-#, fuzzy
-#| msgid "Add Persons"
 msgid "All Persons"
-msgstr "Ajouter des personnes"
+msgstr "Toutes les personnes"
 
 #: gift_manager/templates/gift_manager/base.html:491
-#, fuzzy
-#| msgid "Delete person"
 msgid "View all persons"
-msgstr "Supprimer la personne"
+msgstr "Voir toutes les personne"
 
 #: gift_manager/templates/gift_manager/base.html:497
-#, fuzzy
-#| msgid "All groups"
 msgid "All Groups"
 msgstr "Tous les groupes"
 
 #: gift_manager/templates/gift_manager/base.html:498
-#, fuzzy
-#| msgid "All groups"
 msgid "View all groups"
-msgstr "Tous les groupes"
+msgstr "Voir tous les groupes"
 
 #: gift_manager/templates/gift_manager/base.html:504
-#, fuzzy
-#| msgid "Events"
 msgid "All Events"
-msgstr "Événements"
+msgstr "Tous les événements"
 
 #: gift_manager/templates/gift_manager/base.html:505
 msgid "View all events"
-msgstr ""
+msgstr "Voir tous les événements"
 
 #: gift_manager/templates/gift_manager/base.html:511
-#, fuzzy
-#| msgid "Giftings"
 msgid "All Giftings"
-msgstr "Remises"
+msgstr "Toutes les remises"
 
 #: gift_manager/templates/gift_manager/base.html:512
-#, fuzzy
-#| msgid "New gifting"
 msgid "View all giftings"
-msgstr "Nouvelle remise"
+msgstr "Voir toutes les remises"
 
 #: gift_manager/templates/gift_manager/base.html:515
-#, fuzzy
-#| msgid "Create new"
 msgid "Create New"
-msgstr "Créer un nouveau cadeau"
+msgstr "Créer"
 
 #: gift_manager/templates/gift_manager/base.html:519
 #: gift_manager/templates/gift_manager/home.html:663
-#, fuzzy
-#| msgid "New gifting"
 msgid "New Gift"
-msgstr "Nouvelle remise"
+msgstr "Nouveau cadeau"
 
 #: gift_manager/templates/gift_manager/base.html:520
-#, fuzzy
-#| msgid "Create new gift"
 msgid "Add a new gift"
-msgstr "Créer un nouveau cadeau"
+msgstr "Ajouter un nouveau cadeau"
 
 #: gift_manager/templates/gift_manager/base.html:526
 #: gift_manager/templates/gift_manager/home.html:667
-#, fuzzy
-#| msgid "Person"
 msgid "New Person"
-msgstr "Personne"
+msgstr "Nouvelle Personne"
 
 #: gift_manager/templates/gift_manager/base.html:527
-#, fuzzy
-#| msgid "Add persons"
 msgid "Add a new person"
-msgstr "Ajouter des personnes"
+msgstr "Ajouter une nouvelle personne"
 
 #: gift_manager/templates/gift_manager/base.html:533
 #: gift_manager/templates/gift_manager/home.html:675
-#, fuzzy
-#| msgid "Event"
 msgid "New Event"
-msgstr "Événement"
+msgstr "Nouvel Événement"
 
 #: gift_manager/templates/gift_manager/base.html:534
-#, fuzzy
-#| msgid "Create new event"
 msgid "Add a new event"
-msgstr "Créer un nouvel événement"
+msgstr "Ajouter un nouvel événement"
 
 #: gift_manager/templates/gift_manager/base.html:541
 msgid "to navigate"
-msgstr ""
+msgstr "pour naviguer"
 
 #: gift_manager/templates/gift_manager/base.html:544
 msgid "to select"
-msgstr ""
+msgstr "pour sélectionner"
 
 #: gift_manager/templates/gift_manager/base.html:724
-#, fuzzy
-#| msgid "No groups found."
 msgid "No results found for"
-msgstr "Aucun groupe trouvé."
+msgstr "Aucun résultat trouvé pour"
 
 #: gift_manager/templates/gift_manager/base.html:769
-#, fuzzy
-#| msgid "An error occurred while moving the group"
 msgid "An error occurred while searching."
-msgstr "Une erreur s'est produite lors du déplacement du groupe"
+msgstr "Une erreur s'est produite lors de la recherche."
 
 #: gift_manager/templates/gift_manager/confirm_delete.html:4
 #: gift_manager/templates/gift_manager/confirm_delete.html:7
@@ -1061,28 +1024,20 @@ msgid ""
 msgstr ""
 
 #: gift_manager/templates/gift_manager/home.html:657
-#, fuzzy
-#| msgid "Actions"
 msgid "Quick Actions"
-msgstr "Actions"
+msgstr "Actions Rapides"
 
 #: gift_manager/templates/gift_manager/home.html:671
-#, fuzzy
-#| msgid "Group"
 msgid "New Group"
-msgstr "Groupe"
+msgstr "Nouveau Groupe"
 
 #: gift_manager/templates/gift_manager/home.html:679
-#, fuzzy
-#| msgid "New gifting"
 msgid "New Gifting"
-msgstr "Nouvelle remise"
+msgstr "Nouvelle Remise"
 
 #: gift_manager/templates/gift_manager/home.html:690
-#, fuzzy
-#| msgid "Giftings"
 msgid "Upcoming Giftings"
-msgstr "Remises"
+msgstr "Prochaines Remises"
 
 #: gift_manager/templates/gift_manager/home.html:691
 #: gift_manager/templates/gift_manager/home.html:759
@@ -1101,16 +1056,12 @@ msgid "No upcoming giftings in the next 30 days"
 msgstr "Aucune remise prévue dans les 30 prochains jours"
 
 #: gift_manager/templates/gift_manager/home.html:734
-#, fuzzy
-#| msgid "Giftings with this status"
 msgid "Giftings by Status"
-msgstr "Remises avec ce statut"
+msgstr "Remises par Statut"
 
 #: gift_manager/templates/gift_manager/home.html:749
-#, fuzzy
-#| msgid "New gifting"
 msgid "No giftings yet"
-msgstr "Nouvelle remise"
+msgstr "Aucune remise pour l'instant"
 
 #: gift_manager/templates/gift_manager/home.html:758
 msgid "Recent Gifts"
@@ -1125,22 +1076,16 @@ msgid "Add your first gift"
 msgstr "Ajoutez votre premier cadeau"
 
 #: gift_manager/templates/gift_manager/home.html:795
-#, fuzzy
-#| msgid "Persons"
 msgid "Recent Persons"
-msgstr "Personnes"
+msgstr "Personnes récentes"
 
 #: gift_manager/templates/gift_manager/home.html:817
-#, fuzzy
-#| msgid "No persons related to this gift"
 msgid "No persons added yet"
-msgstr "Personnes associées à ce cadeau"
+msgstr "Aucune personnes ajoutée pour l'instant"
 
 #: gift_manager/templates/gift_manager/home.html:819
-#, fuzzy
-#| msgid "Add persons"
 msgid "Add your first person"
-msgstr "Ajouter des personnes"
+msgstr "Ajouter votre premiere personne"
 
 #: gift_manager/templates/gift_manager/home.html:831
 msgid "Welcome to Gift Manager"
@@ -1151,16 +1096,18 @@ msgid ""
 "The perfect tool to organize your gift-giving. Track gifts, manage "
 "recipients, and never miss a special occasion."
 msgstr ""
+"L'outil parfait pour organiser vos cadeaux. Suivez vos cadeaux, gérez vos "
+"destinataires et ne manquez jamais une occasion spéciale."
 
 #: gift_manager/templates/gift_manager/home.html:846
-#, fuzzy
-#| msgid "Gifts"
 msgid "Track Gifts"
-msgstr "Cadeaux"
+msgstr "Suivez vos Cadeaux"
 
 #: gift_manager/templates/gift_manager/home.html:847
 msgid "Keep a catalog of gift ideas and track what you've given to whom."
-msgstr "Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert à qui."
+msgstr ""
+"Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert "
+"à qui."
 
 #: gift_manager/templates/gift_manager/home.html:851
 msgid "Manage Recipients"
@@ -1181,6 +1128,8 @@ msgid ""
 "Set up events and due dates to remember birthdays, holidays, and special "
 "occasions."
 msgstr ""
+"Configurez des événements et des dates limites pour vous souvenir des "
+"anniversaires, des fêtes et des occasions spéciales."
 
 #: gift_manager/templates/gift_manager/home.html:861
 msgid "Share & Collaborate"
@@ -1188,7 +1137,9 @@ msgstr "Partager et collaborer"
 
 #: gift_manager/templates/gift_manager/home.html:862
 msgid "Share your gift lists with family members and coordinate together."
-msgstr "Partagez vos listes de cadeaux avec les membres de votre famille et coordonnez-vous ensemble."
+msgstr ""
+"Partagez vos listes de cadeaux avec les membres de votre famille et "
+"coordonnez-vous ensemble."
 
 #: gift_manager/templates/gift_manager/includes/action_buttons.html:24
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:6
@@ -1206,13 +1157,11 @@ msgstr "Éditer"
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:7
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:16
 msgid "Filters & Sort"
-msgstr ""
+msgstr "Filtres et tri"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:15
-#, fuzzy
-#| msgid "Search"
 msgid "Search..."
-msgstr "Rechercher"
+msgstr "Rechercher..."
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:20
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:17
@@ -1228,18 +1177,16 @@ msgid "Multi"
 msgstr ""
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:33
-#, fuzzy
-#| msgid "Viewer"
 msgid "View"
-msgstr "Lecteur"
+msgstr "Lecture"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:35
 msgid "List view"
-msgstr ""
+msgstr "Vue en liste"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:38
 msgid "Card view"
-msgstr ""
+msgstr "Vue en cartes"
 
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:6
 msgid "Showing"
@@ -1582,10 +1529,8 @@ msgid "Save Preferences"
 msgstr ""
 
 #: gift_manager/templates/gift_manager/profile_detail.html:220
-#, fuzzy
-#| msgid "My friends:"
 msgid "My Friends"
-msgstr "Mes amis :"
+msgstr "Mes amis"
 
 #: gift_manager/templates/gift_manager/profile_detail.html:222
 msgid "Invite friend"
@@ -1716,11 +1661,10 @@ msgstr ""
 "Lors du partage de groupes, partager également les personnes de ces groupes"
 
 #: gift_manager/templates/gift_manager/share_objects.html:85
-#, fuzzy
-#| msgid "When sharing groups, also share all persons in those groups"
 msgid "When sharing groups, also share all child groups (nested groups)"
 msgstr ""
-"Lors du partage de groupes, partager également les personnes de ces groupes"
+"Lors du partage de groupes, partager également les groupes enfants (groupes "
+"imbriqués)"
 
 #: gift_manager/templates/gift_manager/share_objects.html:87
 msgid ""
@@ -1875,10 +1819,8 @@ msgid "You do not have permission to edit this group"
 msgstr "Vous n'avez pas la permission d'éditer ce groupe"
 
 #: gift_manager/views/person_group.py:262
-#, fuzzy
-#| msgid "Person group"
 msgid "Person removed from group"
-msgstr "Groupe de personnes"
+msgstr "Personne supprimée du groupe"
 
 #: gift_manager/views/person_group.py:342
 msgid "Edit group"
@@ -1961,10 +1903,8 @@ msgid "You are now friend with {}"
 msgstr "Vous êtes maintenant ami avec {}"
 
 #: gift_manager/views/profile.py:121
-#, fuzzy
-#| msgid "Parents added successfully"
 msgid "Display preferences saved successfully."
-msgstr "Parents ajoutés avec succès"
+msgstr "Préférences d'affichage enregistrées avec succès"
 
 #: gift_manager/views/relation.py:353
 msgid "Edit relation"
@@ -2007,15 +1947,3 @@ msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 #: gift_manager/views/sharing.py:199
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
-
-#~ msgid "Gift tags"
-#~ msgstr "Tags de cadeau"
-
-#~ msgid "Due Date"
-#~ msgstr "Échéance"
-
-#~ msgid "This web site will help you to manage all your gifts!"
-#~ msgstr "Ce site web va vous aider à gérer tous vos cadeaux !"
-
-#~ msgid "Persons in this group"
-#~ msgstr "Personnes dans ce groupe"
