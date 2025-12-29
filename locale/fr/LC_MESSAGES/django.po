@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-29 23:18+0100\n"
+"POT-Creation-Date: 2025-12-30 00:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -70,8 +70,8 @@ msgstr "Prénom"
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: gift_manager/forms.py:46 gift_manager/templates/gift_manager/base.html:360
-#: gift_manager/templates/gift_manager/base.html:735
+#: gift_manager/forms.py:46 gift_manager/templates/gift_manager/base.html:377
+#: gift_manager/templates/gift_manager/base.html:740
 #: gift_manager/templates/gift_manager/home.html:629
 #: gift_manager/views/person.py:36
 msgid "Groups"
@@ -223,8 +223,8 @@ msgstr "La personne demandée n'existe pas."
 msgid "The specified person group does not exist."
 msgstr "Le groupe demandé n'existe pas."
 
-#: gift_manager/forms.py:445 gift_manager/templates/gift_manager/base.html:370
-#: gift_manager/templates/gift_manager/base.html:737
+#: gift_manager/forms.py:445 gift_manager/templates/gift_manager/base.html:387
+#: gift_manager/templates/gift_manager/base.html:742
 #: gift_manager/views/gift.py:35
 msgid "Tags"
 msgstr "Tags"
@@ -316,8 +316,8 @@ msgstr "Vue par défaut pour mobile"
 msgid "Default view mode for mobile/small screens"
 msgstr "Vue par défaut pour petits écrans"
 
-#: gift_manager/models.py:378 gift_manager/templates/gift_manager/base.html:355
-#: gift_manager/templates/gift_manager/base.html:734
+#: gift_manager/models.py:378 gift_manager/templates/gift_manager/base.html:372
+#: gift_manager/templates/gift_manager/base.html:739
 #: gift_manager/templates/gift_manager/home.html:622
 #: gift_manager/templates/gift_manager/share_objects.html:99
 msgid "Persons"
@@ -335,15 +335,15 @@ msgstr "Groupe de personnes"
 msgid "Adding this parent would create a cycle in the group hierarchy."
 msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des groupes."
 
-#: gift_manager/models.py:944 gift_manager/templates/gift_manager/base.html:365
-#: gift_manager/templates/gift_manager/base.html:733
+#: gift_manager/models.py:944 gift_manager/templates/gift_manager/base.html:382
+#: gift_manager/templates/gift_manager/base.html:738
 #: gift_manager/templates/gift_manager/home.html:636
 #: gift_manager/templates/gift_manager/share_objects.html:165
 msgid "Gifts"
 msgstr "Cadeaux"
 
-#: gift_manager/models.py:999 gift_manager/templates/gift_manager/base.html:375
-#: gift_manager/templates/gift_manager/base.html:736
+#: gift_manager/models.py:999 gift_manager/templates/gift_manager/base.html:392
+#: gift_manager/templates/gift_manager/base.html:741
 #: gift_manager/templates/gift_manager/home.html:643
 #: gift_manager/templates/gift_manager/share_objects.html:198
 #: gift_manager/views/event.py:35
@@ -466,12 +466,12 @@ msgid "Select Language"
 msgstr "Sélectionner la langue"
 
 #: gift_manager/templates/allauth/layouts/base.html:68
-#: gift_manager/templates/gift_manager/base.html:448
+#: gift_manager/templates/gift_manager/base.html:465
 msgid "Sign Out"
 msgstr "Déconnexion"
 
 #: gift_manager/templates/allauth/layouts/base.html:70
-#: gift_manager/templates/gift_manager/base.html:454
+#: gift_manager/templates/gift_manager/base.html:471
 #: gift_manager/templates/gift_manager/home.html:835
 msgid "Sign In"
 msgstr "Connexion"
@@ -482,127 +482,127 @@ msgstr "Connexion"
 msgid "Sign Up"
 msgstr "Inscription"
 
-#: gift_manager/templates/gift_manager/base.html:380
+#: gift_manager/templates/gift_manager/base.html:397
 #: gift_manager/templates/gift_manager/home.html:650
 #: gift_manager/templates/gift_manager/share_objects.html:231
 msgid "Giftings"
 msgstr "Remises"
 
-#: gift_manager/templates/gift_manager/base.html:385
+#: gift_manager/templates/gift_manager/base.html:402
 msgid "Statuses"
 msgstr "Statuts"
 
-#: gift_manager/templates/gift_manager/base.html:390
+#: gift_manager/templates/gift_manager/base.html:407
 msgid "Share"
 msgstr "Partager"
 
-#: gift_manager/templates/gift_manager/base.html:399
-#: gift_manager/templates/gift_manager/base.html:401
+#: gift_manager/templates/gift_manager/base.html:416
+#: gift_manager/templates/gift_manager/base.html:418
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:13
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:5
 msgid "Search"
 msgstr "Rechercher"
 
-#: gift_manager/templates/gift_manager/base.html:426
+#: gift_manager/templates/gift_manager/base.html:443
 msgid "My profile"
 msgstr "Mon profil"
 
-#: gift_manager/templates/gift_manager/base.html:427
+#: gift_manager/templates/gift_manager/base.html:444
 msgid "Profile"
 msgstr "Profil"
 
-#: gift_manager/templates/gift_manager/base.html:471
+#: gift_manager/templates/gift_manager/base.html:488
 msgid "Search gifts, persons, groups, events..."
 msgstr "Chercher des cadeaux, des personnes, des groupes, des événements..."
 
-#: gift_manager/templates/gift_manager/base.html:479
+#: gift_manager/templates/gift_manager/base.html:496
 msgid "Quick Links"
 msgstr "Liens rapides"
 
-#: gift_manager/templates/gift_manager/base.html:483
+#: gift_manager/templates/gift_manager/base.html:500
 msgid "All Gifts"
 msgstr "Tous les cadeaux"
 
-#: gift_manager/templates/gift_manager/base.html:484
+#: gift_manager/templates/gift_manager/base.html:501
 msgid "View all your gifts"
 msgstr "Voir tous vos cadeaux"
 
-#: gift_manager/templates/gift_manager/base.html:490
+#: gift_manager/templates/gift_manager/base.html:507
 msgid "All Persons"
 msgstr "Toutes les personnes"
 
-#: gift_manager/templates/gift_manager/base.html:491
+#: gift_manager/templates/gift_manager/base.html:508
 msgid "View all persons"
 msgstr "Voir toutes les personne"
 
-#: gift_manager/templates/gift_manager/base.html:497
+#: gift_manager/templates/gift_manager/base.html:514
 msgid "All Groups"
 msgstr "Tous les groupes"
 
-#: gift_manager/templates/gift_manager/base.html:498
+#: gift_manager/templates/gift_manager/base.html:515
 msgid "View all groups"
 msgstr "Voir tous les groupes"
 
-#: gift_manager/templates/gift_manager/base.html:504
+#: gift_manager/templates/gift_manager/base.html:521
 msgid "All Events"
 msgstr "Tous les événements"
 
-#: gift_manager/templates/gift_manager/base.html:505
+#: gift_manager/templates/gift_manager/base.html:522
 msgid "View all events"
 msgstr "Voir tous les événements"
 
-#: gift_manager/templates/gift_manager/base.html:511
+#: gift_manager/templates/gift_manager/base.html:528
 msgid "All Giftings"
 msgstr "Toutes les remises"
 
-#: gift_manager/templates/gift_manager/base.html:512
+#: gift_manager/templates/gift_manager/base.html:529
 msgid "View all giftings"
 msgstr "Voir toutes les remises"
 
-#: gift_manager/templates/gift_manager/base.html:515
+#: gift_manager/templates/gift_manager/base.html:532
 msgid "Create New"
 msgstr "Créer"
 
-#: gift_manager/templates/gift_manager/base.html:519
+#: gift_manager/templates/gift_manager/base.html:536
 #: gift_manager/templates/gift_manager/home.html:663
 msgid "New Gift"
 msgstr "Nouveau cadeau"
 
-#: gift_manager/templates/gift_manager/base.html:520
+#: gift_manager/templates/gift_manager/base.html:537
 msgid "Add a new gift"
 msgstr "Ajouter un nouveau cadeau"
 
-#: gift_manager/templates/gift_manager/base.html:526
+#: gift_manager/templates/gift_manager/base.html:543
 #: gift_manager/templates/gift_manager/home.html:667
 msgid "New Person"
 msgstr "Nouvelle Personne"
 
-#: gift_manager/templates/gift_manager/base.html:527
+#: gift_manager/templates/gift_manager/base.html:544
 msgid "Add a new person"
 msgstr "Ajouter une nouvelle personne"
 
-#: gift_manager/templates/gift_manager/base.html:533
+#: gift_manager/templates/gift_manager/base.html:550
 #: gift_manager/templates/gift_manager/home.html:675
 msgid "New Event"
 msgstr "Nouvel Événement"
 
-#: gift_manager/templates/gift_manager/base.html:534
+#: gift_manager/templates/gift_manager/base.html:551
 msgid "Add a new event"
 msgstr "Ajouter un nouvel événement"
 
-#: gift_manager/templates/gift_manager/base.html:541
+#: gift_manager/templates/gift_manager/base.html:558
 msgid "to navigate"
 msgstr "pour naviguer"
 
-#: gift_manager/templates/gift_manager/base.html:544
+#: gift_manager/templates/gift_manager/base.html:561
 msgid "to select"
 msgstr "pour sélectionner"
 
-#: gift_manager/templates/gift_manager/base.html:724
+#: gift_manager/templates/gift_manager/base.html:729
 msgid "No results found for"
 msgstr "Aucun résultat trouvé pour"
 
-#: gift_manager/templates/gift_manager/base.html:769
+#: gift_manager/templates/gift_manager/base.html:774
 msgid "An error occurred while searching."
 msgstr "Une erreur s'est produite lors de la recherche."
 
@@ -1950,4 +1950,3 @@ msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 #: gift_manager/views/sharing.py:199
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
-
