@@ -31,15 +31,19 @@ class TestGetUser:
         assert retrieved_user == (user, username, user.id)
 
 
+@pytest.mark.django_db
 @patch("gift_manager.views.common.render")
-def test_home_view(mock_render):
+def test_home_view(mock_render, user):
     """Test that home view renders correct template."""
     # Arrange
     mock_request = Mock()
+    mock_request.user = user
 
     # Act
     result = home(mock_request)
 
     # Assert
-    mock_render.assert_called_once_with(mock_request, "gift_manager/home.html")
+    mock_render.assert_called_once()
+    assert mock_render.call_args[0][0] == mock_request
+    assert mock_render.call_args[0][1] == "gift_manager/home.html"
     assert result == mock_render.return_value
