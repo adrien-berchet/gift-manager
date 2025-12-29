@@ -629,9 +629,7 @@ class TestDarkModeToggle:
     fixtures use transactional_db with explicit commits.
     """
 
-    def test_dark_mode_toggle_switches_theme(
-        self, page: Page, live_server, setup_test_user
-    ):
+    def test_dark_mode_toggle_switches_theme(self, page: Page, live_server, setup_test_user):
         """Test that dark mode toggle switches between light and dark themes."""
         login_user(page, live_server)
 
@@ -643,7 +641,9 @@ class TestDarkModeToggle:
 
         if theme_toggle.count() > 0:
             # Get initial theme
-            initial_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            initial_theme = page.evaluate(
+                "() => document.documentElement.getAttribute('data-theme')"
+            )
 
             # Click theme toggle
             theme_toggle.click()
@@ -656,11 +656,11 @@ class TestDarkModeToggle:
             assert initial_theme != new_theme, "Theme should change after clicking toggle"
 
             # Verify it's one of the valid themes
-            assert new_theme in ["light", "dark"], f"Theme should be 'light' or 'dark', got {new_theme}"
+            assert new_theme in ["light", "dark"], (
+                f"Theme should be 'light' or 'dark', got {new_theme}"
+            )
 
-    def test_dark_mode_persists_in_local_storage(
-        self, page: Page, live_server, setup_test_user
-    ):
+    def test_dark_mode_persists_in_local_storage(self, page: Page, live_server, setup_test_user):
         """Test that dark mode preference persists in localStorage."""
         login_user(page, live_server)
 
@@ -677,7 +677,9 @@ class TestDarkModeToggle:
 
             # Check localStorage
             theme_storage = page.evaluate("() => localStorage.getItem('theme')")
-            current_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            current_theme = page.evaluate(
+                "() => document.documentElement.getAttribute('data-theme')"
+            )
 
             assert theme_storage == current_theme, "localStorage theme should match DOM theme"
 
@@ -685,7 +687,9 @@ class TestDarkModeToggle:
             page.reload(wait_until="networkidle")
 
             # Verify theme persisted
-            reloaded_theme = page.evaluate("() => document.documentElement.getAttribute('data-theme')")
+            reloaded_theme = page.evaluate(
+                "() => document.documentElement.getAttribute('data-theme')"
+            )
             assert reloaded_theme == current_theme, "Theme should persist after page reload"
 
 
@@ -697,9 +701,7 @@ class TestGlobalSearchUI:
     fixtures use transactional_db with explicit commits.
     """
 
-    def test_global_search_opens_with_ctrl_k(
-        self, page: Page, live_server, setup_test_user
-    ):
+    def test_global_search_opens_with_ctrl_k(self, page: Page, live_server, setup_test_user):
         """Test that global search panel opens with Ctrl+K."""
         login_user(page, live_server)
 
@@ -716,9 +718,7 @@ class TestGlobalSearchUI:
         if search_panel.count() > 0:
             expect(search_panel).to_be_visible()
 
-    def test_global_search_closes_with_escape(
-        self, page: Page, live_server, setup_test_user
-    ):
+    def test_global_search_closes_with_escape(self, page: Page, live_server, setup_test_user):
         """Test that global search panel closes with Escape key."""
         login_user(page, live_server)
 
@@ -739,9 +739,7 @@ class TestGlobalSearchUI:
         if search_panel.count() > 0:
             expect(search_panel).not_to_be_visible()
 
-    def test_global_search_shows_results(
-        self, page: Page, live_server, setup_group_hierarchy
-    ):
+    def test_global_search_shows_results(self, page: Page, live_server, setup_group_hierarchy):
         """Test that global search displays results."""
         login_user(page, live_server)
 

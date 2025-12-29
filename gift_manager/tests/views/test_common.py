@@ -4,16 +4,10 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
-from django.test import override_settings
 from django.urls import reverse
 
-from gift_manager.models import Event
-from gift_manager.models import Gift
-from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
-from gift_manager.models import Person
-from gift_manager.models import PersonGroup
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
@@ -103,10 +97,8 @@ class TestGlobalSearchView:
     def test_search_finds_gifts_by_comment(self):
         """Test that search finds gifts by comment."""
         # Arrange
-        gift = GiftFactory(
-            name="Generic Gift",
-            comment="This is a special vintage item",
-            shared_with=[self.user]
+        GiftFactory(
+            name="Generic Gift", comment="This is a special vintage item", shared_with=[self.user]
         )
         url = reverse("gift_manager:global_search")
 
@@ -142,7 +134,7 @@ class TestGlobalSearchView:
     def test_search_finds_persons_by_family_name(self):
         """Test that search finds persons by family name."""
         # Arrange
-        person = PersonFactory(first_name="Jane", family_name="Smith", shared_with=[self.user])
+        PersonFactory(first_name="Jane", family_name="Smith", shared_with=[self.user])
         url = reverse("gift_manager:global_search")
 
         # Act
@@ -200,9 +192,7 @@ class TestGlobalSearchView:
         # They're created and queried directly
         tag = GiftTagFactory(name="Electronics")
         GiftTagPermission.objects.create(
-            user=self.user,
-            gift_tag=tag,
-            permission_type=PermissionLevel.OWNER
+            user=self.user, gift_tag=tag, permission_type=PermissionLevel.OWNER
         )
         url = reverse("gift_manager:global_search")
 
@@ -240,9 +230,7 @@ class TestGlobalSearchView:
         # Arrange
         # Create another user and their gift
         other_user = User.objects.create_user(
-            username="otheruser",
-            email="other@example.com",
-            password="testpass123"
+            username="otheruser", email="other@example.com", password="testpass123"
         )
         GiftFactory(name="Private Gift", shared_with=[other_user])
 
@@ -287,11 +275,7 @@ class TestGlobalSearchView:
         """Test that long gift comments are truncated in subtitles."""
         # Arrange
         long_comment = "a" * 100  # 100 characters
-        GiftFactory(
-            name="Test Gift",
-            comment=long_comment,
-            shared_with=[self.user]
-        )
+        GiftFactory(name="Test Gift", comment=long_comment, shared_with=[self.user])
         url = reverse("gift_manager:global_search")
 
         # Act
