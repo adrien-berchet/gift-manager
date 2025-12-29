@@ -3018,9 +3018,9 @@ h4, h5, h6 {
     }
 
     .filter-section.search-section {
-        flex: 1;
+        flex: 1 1 100%;
         min-width: 200px;
-        max-width: 400px;
+        max-width: 100%;
     }
 
     .sort-options {
