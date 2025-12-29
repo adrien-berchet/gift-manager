@@ -2998,14 +2998,14 @@ h4, h5, h6 {
 
 /* Desktop filter panel behavior - side by side layout */
 @media (min-width: 769px) {
-    /* Hide toggle button on desktop - panel is always visible */
+    /* Show toggle button on desktop - panel is collapsible */
     .filter-toggle-btn {
-        display: none;
+        display: flex;
     }
 
-    /* Always show filter content on desktop */
+    /* Filter content hidden by default, shown when expanded */
     .filter-content {
-        display: flex;
+        display: none;
         flex-direction: row;
         flex-wrap: wrap;
         align-items: flex-end;
@@ -3013,6 +3013,10 @@ h4, h5, h6 {
         box-shadow: none;
         max-height: none;
         overflow-y: visible;
+    }
+
+    .filter-content.expanded {
+        display: flex;
     }
 
     .filter-section {
