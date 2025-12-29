@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-12-29 18:50+0100\n"
+"POT-Creation-Date: 2025-12-29 19:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -116,7 +116,8 @@ msgstr "Nom"
 #, python-format
 msgid ""
 "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
-msgstr "Ajouter le parent '%(parent)s' créerait un cycle dans la hiérarchie des tags."
+msgstr ""
+"Ajouter le parent '%(parent)s' créerait un cycle dans la hiérarchie des tags."
 
 #: gift_manager/forms.py:222
 #, python-format
@@ -1155,9 +1156,9 @@ msgid "Edit"
 msgstr "Éditer"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:7
-#: gift_manager/templates/gift_manager/includes/grid-translations.html:16
-msgid "Filters & Sort"
-msgstr "Filtres et tri"
+#: gift_manager/templates/gift_manager/includes/filter_panel.html:7
+msgid "Search, Filters & Sort"
+msgstr "Recherche, Filtres et tri"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:15
 msgid "Search..."
@@ -1223,6 +1224,10 @@ msgstr "Chargement..."
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:14
 msgid "An error occurred"
 msgstr "Une erreur s'est produite"
+
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:16
+msgid "Filters & Sort"
+msgstr "Filtres et tri"
 
 #: gift_manager/templates/gift_manager/invitation_expired.html:4
 #: gift_manager/templates/gift_manager/invitation_expired.html:13
