@@ -1052,7 +1052,7 @@ msgstr "Accueil"
 
 #: gift_manager/templates/gift_manager/home.html:608
 msgid "Welcome back"
-msgstr ""
+msgstr "Bienvenue"
 
 #: gift_manager/templates/gift_manager/home.html:609
 msgid ""
@@ -1088,7 +1088,7 @@ msgstr "Remises"
 #: gift_manager/templates/gift_manager/home.html:759
 #: gift_manager/templates/gift_manager/home.html:796
 msgid "View all"
-msgstr ""
+msgstr "Voir tout"
 
 #: gift_manager/templates/gift_manager/home.html:707
 #: gift_manager/templates/gift_manager/home.html:709
@@ -1098,7 +1098,7 @@ msgstr "Pour"
 
 #: gift_manager/templates/gift_manager/home.html:725
 msgid "No upcoming giftings in the next 30 days"
-msgstr ""
+msgstr "Aucune remise prévue dans les 30 prochains jours"
 
 #: gift_manager/templates/gift_manager/home.html:734
 #, fuzzy
@@ -1114,15 +1114,15 @@ msgstr "Nouvelle remise"
 
 #: gift_manager/templates/gift_manager/home.html:758
 msgid "Recent Gifts"
-msgstr ""
+msgstr "Cadeaux récents"
 
 #: gift_manager/templates/gift_manager/home.html:783
 msgid "No gifts added yet"
-msgstr ""
+msgstr "Aucun cadeau ajouté"
 
 #: gift_manager/templates/gift_manager/home.html:785
 msgid "Add your first gift"
-msgstr ""
+msgstr "Ajoutez votre premier cadeau"
 
 #: gift_manager/templates/gift_manager/home.html:795
 #, fuzzy
@@ -1160,11 +1160,11 @@ msgstr "Cadeaux"
 
 #: gift_manager/templates/gift_manager/home.html:847
 msgid "Keep a catalog of gift ideas and track what you've given to whom."
-msgstr ""
+msgstr "Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert à qui."
 
 #: gift_manager/templates/gift_manager/home.html:851
 msgid "Manage Recipients"
-msgstr ""
+msgstr "Gérer les destinataires"
 
 #: gift_manager/templates/gift_manager/home.html:852
 msgid ""
@@ -1174,7 +1174,7 @@ msgstr ""
 
 #: gift_manager/templates/gift_manager/home.html:856
 msgid "Never Forget"
-msgstr ""
+msgstr "N'oubliez jamais"
 
 #: gift_manager/templates/gift_manager/home.html:857
 msgid ""
@@ -1184,11 +1184,11 @@ msgstr ""
 
 #: gift_manager/templates/gift_manager/home.html:861
 msgid "Share & Collaborate"
-msgstr ""
+msgstr "Partager et collaborer"
 
 #: gift_manager/templates/gift_manager/home.html:862
 msgid "Share your gift lists with family members and coordinate together."
-msgstr ""
+msgstr "Partagez vos listes de cadeaux avec les membres de votre famille et coordonnez-vous ensemble."
 
 #: gift_manager/templates/gift_manager/includes/action_buttons.html:24
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:6
