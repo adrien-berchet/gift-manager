@@ -3008,7 +3008,7 @@ h4, h5, h6 {
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-end;
         position: static;
         box-shadow: none;
         max-height: none;
