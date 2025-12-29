@@ -118,10 +118,17 @@
             const gridContainer = document.getElementById(gridId);
             if (!gridContainer) return;
 
+            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+
             // Remove existing empty state
             let emptyState = gridContainer.querySelector('.grid-empty-state');
             if (emptyState) {
                 emptyState.remove();
+            }
+
+            // Show/hide grid wrapper based on data
+            if (gridWrapper) {
+                gridWrapper.style.display = hasData ? '' : 'none';
             }
 
             // Show empty state if no data
@@ -147,7 +154,15 @@
                     </div>
                 `;
 
-                gridContainer.appendChild(emptyState);
+                // Insert empty state before the footer (or append if no wrapper found)
+                const gridFooter = gridContainer.querySelector('.gridjs-footer');
+                if (gridFooter) {
+                    gridContainer.insertBefore(emptyState, gridFooter);
+                } else if (gridWrapper) {
+                    gridContainer.insertBefore(emptyState, gridWrapper.nextSibling);
+                } else {
+                    gridContainer.appendChild(emptyState);
+                }
             }
         }
 
