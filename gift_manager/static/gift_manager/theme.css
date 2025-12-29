@@ -1073,15 +1073,18 @@ body,
     box-shadow: 0 0 0 3px var(--color-primary-light) !important;
 }
 
-/* Grid.js pagination */
+/* Grid.js footer and pagination */
+.gridjs-footer,
 .gridjs-pagination {
     padding: var(--space-4);
     background-color: var(--color-gray-50);
     border-top: 1px solid var(--border-color);
 }
 
+[data-theme="dark"] .gridjs-footer,
 [data-theme="dark"] .gridjs-pagination {
     background-color: var(--surface-elevated);
+    border-top-color: var(--border-color);
 }
 
 .gridjs-pages button {
