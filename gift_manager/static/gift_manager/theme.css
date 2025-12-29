@@ -2992,8 +2992,8 @@ h4, h5, h6 {
     }
 }
 
-/* Desktop filter panel behavior - side by side layout (requires both sufficient width AND height) */
-@media (min-width: 769px) and (min-height: 601px) {
+/* Desktop filter panel behavior - side by side layout */
+@media (min-width: 769px) {
     /* Hide toggle button on desktop - panel is always visible */
     .filter-toggle-btn {
         display: none;
