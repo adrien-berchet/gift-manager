@@ -1077,10 +1077,12 @@ body,
 .gridjs-footer {
     padding: var(--space-4);
     background: transparent;
+    border: none !important;
 }
 
 [data-theme="dark"] .gridjs-footer {
     background: transparent;
+    border: none !important;
 }
 
 /* Grid.js pagination - colored background */
