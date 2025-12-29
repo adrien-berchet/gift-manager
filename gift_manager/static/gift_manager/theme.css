@@ -2502,13 +2502,18 @@ h4, h5, h6 {
 
 /* Hide label for hidden columns and action column */
 [data-view="card"] .gridjs-td[data-column-id=""]::before,
-[data-view="card"] .gridjs-td:last-child::before {
+[data-view="card"] .gridjs-td:last-child::before,
+[data-view="card"] .gridjs-td[data-label*="ction"]::before,
+[data-view="card"] .gridjs-td[data-label*="Actions"]::before {
     display: none;
 }
 
 /* Action buttons in card view - always at the very bottom */
+/* Target by data-label to ensure correct positioning regardless of column order */
+[data-view="card"] .gridjs-td[data-label*="ction"],
+[data-view="card"] .gridjs-td[data-label*="Actions"],
 [data-view="card"] .gridjs-td:last-child {
-    order: 20;
+    order: 999 !important;
     justify-content: center;
     padding: var(--space-3) var(--space-4) !important;
     margin-top: 0;
