@@ -2413,6 +2413,7 @@ h4, h5, h6 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: var(--space-5);
+    background: transparent !important;
 }
 
 /* Individual card styling - modern and clean */
