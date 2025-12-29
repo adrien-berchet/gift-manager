@@ -20,6 +20,23 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Theme Initialization (must run before page renders to prevent flicker) -->
+    <script>
+        (function() {
+            // Get saved theme or default
+            function getTheme() {
+                const saved = localStorage.getItem('theme');
+                if (saved) return saved;
+                // Check system preference
+                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    return 'dark';
+                }
+                return 'light';
+            }
+            // Apply theme immediately
+            document.documentElement.setAttribute('data-theme', getTheme());
+        })();
+    </script>
     <!-- Theme & Custom Styles -->
     <link rel="stylesheet" href="{% static 'gift_manager/theme.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/main.css' %}">
@@ -633,21 +650,12 @@
     {% block extra_js %}{% endblock %}
 
     <script>
-        // Theme management
+        // Theme toggle (initialization happens in <head> to prevent flicker)
         (function() {
             const themeToggle = document.getElementById('theme-toggle');
-            const html = document.documentElement;
+            if (!themeToggle) return;
 
-            // Get saved theme or default to light
-            function getTheme() {
-                const saved = localStorage.getItem('theme');
-                if (saved) return saved;
-                // Check system preference
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    return 'dark';
-                }
-                return 'light';
-            }
+            const html = document.documentElement;
 
             // Apply theme
             function setTheme(theme) {
@@ -655,16 +663,13 @@
                 localStorage.setItem('theme', theme);
             }
 
-            // Initialize theme
-            setTheme(getTheme());
-
             // Toggle theme on button click
             themeToggle.addEventListener('click', () => {
                 const current = html.getAttribute('data-theme') || 'light';
                 setTheme(current === 'dark' ? 'light' : 'dark');
             });
 
-            // Listen for system theme changes
+            // Listen for system theme changes (only if no manual preference set)
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
                 if (!localStorage.getItem('theme')) {
                     setTheme(e.matches ? 'dark' : 'light');

@@ -189,7 +189,7 @@
         // Show initial empty state if needed (wait for Grid.js to render)
         setTimeout(function() {
             updateEmptyState(originalData.length > 0, '');
-        }, 500);
+        }, 200);
 
         /**
          * Update sort button states to reflect Grid.js sort state

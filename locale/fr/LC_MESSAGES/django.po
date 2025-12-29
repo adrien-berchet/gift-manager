@@ -1157,7 +1157,7 @@ msgstr "Éditer"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:7
 msgid "Search, Filters & Sort"
-msgstr "Recherche, Filtres et tri"
+msgstr "Recherche, Filtres et Tri"
 
 #: gift_manager/templates/gift_manager/includes/filter_panel.html:15
 msgid "Search..."
@@ -1951,5 +1951,3 @@ msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
 
-#~ msgid "Filters & Sort"
-#~ msgstr "Filtres et tri"
