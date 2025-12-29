@@ -3003,6 +3003,7 @@ h4, h5, h6 {
     .filter-content {
         display: flex;
         flex-direction: row;
+        flex-wrap: wrap;
         align-items: center;
         position: static;
         box-shadow: none;
