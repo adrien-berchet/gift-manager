@@ -118,17 +118,19 @@
             const gridContainer = document.getElementById(gridId);
             if (!gridContainer) return;
 
-            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
-
             // Remove existing empty state
             let emptyState = gridContainer.querySelector('.grid-empty-state');
             if (emptyState) {
                 emptyState.remove();
             }
 
-            // Show/hide grid wrapper based on data
-            if (gridWrapper) {
-                gridWrapper.style.display = hasData ? '' : 'none';
+            // Find Grid.js elements
+            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+            const gridTable = gridContainer.querySelector('.gridjs-table');
+
+            // Show/hide grid table based on data
+            if (gridTable) {
+                gridTable.style.display = hasData ? '' : 'none';
             }
 
             // Show empty state if no data
@@ -154,12 +156,10 @@
                     </div>
                 `;
 
-                // Insert empty state before the footer (or append if no wrapper found)
+                // Insert before footer if it exists, otherwise just append
                 const gridFooter = gridContainer.querySelector('.gridjs-footer');
                 if (gridFooter) {
-                    gridContainer.insertBefore(emptyState, gridFooter);
-                } else if (gridWrapper) {
-                    gridContainer.insertBefore(emptyState, gridWrapper.nextSibling);
+                    gridFooter.parentNode.insertBefore(emptyState, gridFooter);
                 } else {
                     gridContainer.appendChild(emptyState);
                 }
@@ -186,10 +186,10 @@
             });
         }
 
-        // Show initial empty state if needed
+        // Show initial empty state if needed (wait for Grid.js to render)
         setTimeout(function() {
             updateEmptyState(originalData.length > 0, '');
-        }, 100);
+        }, 500);
 
         /**
          * Update sort button states to reflect Grid.js sort state
