@@ -2473,7 +2473,7 @@ h4, h5, h6 {
     min-width: 90px;
 }
 
-/* Comment field - grows to fill available space */
+/* Comment/Description fields - grow to fill available space */
 [data-view="card"] .gridjs-td[data-label*="omment"],
 [data-view="card"] .gridjs-td[data-label*="ommentaire"],
 [data-view="card"] .gridjs-td[data-label*="escription"] {
@@ -2482,6 +2482,14 @@ h4, h5, h6 {
     order: 1;
     color: var(--text-secondary);
     line-height: 1.5;
+}
+
+/* Groups/Email fields - also grow to fill space when no comment field exists */
+[data-view="card"] .gridjs-td[data-label*="roup"],
+[data-view="card"] .gridjs-td[data-label*="roupe"],
+[data-view="card"] .gridjs-td[data-label*="mail"] {
+    flex-grow: 1;
+    align-items: flex-start;
 }
 
 /* Status field - move to bottom section */
