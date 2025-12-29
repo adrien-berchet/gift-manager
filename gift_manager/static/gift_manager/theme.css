@@ -626,27 +626,7 @@
 }
 
 /* Dark mode card view */
-[data-theme="dark"] [data-view="card"] .gridjs-tr {
-    background-color: #1e293b;
-    border-color: #475569 !important;
-    border: 1px solid #475569 !important;
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td {
-    border-color: #475569 !important;
-    border-bottom-color: #475569 !important;
-    border-top-color: #475569 !important;
-    color: #f8fafc;
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td::before {
-    color: #94a3b8;
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
-    background: transparent !important;
-    border-top-color: #475569 !important;
-}
+/* NOTE: Dark mode card view styles moved to line ~2585 for better organization */
 
 /* ==========================================================================
    Base Styles
@@ -1036,7 +1016,8 @@ body,
     background-color: var(--surface-elevated);
 }
 
-.gridjs-th {
+/* Grid.js table headers - !important needed to override CDN styles */
+.gridjs-wrapper .gridjs-th {
     background-color: var(--color-gray-50) !important;
     color: var(--text-secondary) !important;
     font-weight: 600;
@@ -1047,28 +1028,30 @@ body,
     border-bottom: 2px solid var(--border-color) !important;
 }
 
-[data-theme="dark"] .gridjs-th {
+[data-theme="dark"] .gridjs-wrapper .gridjs-th {
     background-color: var(--surface-elevated) !important;
     border-bottom-color: var(--border-color) !important;
 }
 
-.gridjs-td {
+/* Grid.js table cells */
+.gridjs-wrapper .gridjs-td {
     padding: var(--space-4) !important;
     border-bottom: 1px solid var(--border-color) !important;
     color: var(--text-primary);
     background-color: var(--surface-card);
 }
 
-[data-theme="dark"] .gridjs-td {
+[data-theme="dark"] .gridjs-wrapper .gridjs-td {
     background-color: var(--surface-card);
     border-bottom-color: var(--border-color) !important;
 }
 
-.gridjs-tr:hover .gridjs-td {
+/* Hover states */
+.gridjs-wrapper .gridjs-tr:hover .gridjs-td {
     background-color: var(--color-primary-light) !important;
 }
 
-[data-theme="dark"] .gridjs-tr:hover .gridjs-td {
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:hover .gridjs-td {
     background-color: var(--surface-elevated) !important;
 }
 
@@ -2112,58 +2095,7 @@ h4, h5, h6 {
     background: var(--surface-elevated);
 }
 
-/* Card view for grids */
-.card-view .gridjs-wrapper {
-    background: transparent;
-    border: none;
-}
-
-.card-view .gridjs-table {
-    display: none;
-}
-
-.card-view .gridjs-tbody {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--space-4);
-}
-
-.card-view .gridjs-tr {
-    display: flex;
-    flex-direction: column;
-    background: var(--surface-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--space-4);
-    box-shadow: var(--shadow-sm);
-    transition: all var(--transition-fast);
-}
-
-.card-view .gridjs-tr:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
-}
-
-.card-view .gridjs-td {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--space-2) 0 !important;
-    border: none !important;
-    background: transparent !important;
-}
-
-.card-view .gridjs-td::before {
-    content: attr(data-label);
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: var(--text-sm);
-}
-
-.card-view .gridjs-search,
-.card-view .gridjs-pagination {
-    background: transparent;
-    padding: var(--space-4) 0;
-}
+/* NOTE: .card-view class removed - using [data-view="card"] attribute selector exclusively (see line ~2462) */
 
 /* ==========================================================================
    Improved Notifications
@@ -2499,15 +2431,16 @@ h4, h5, h6 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* Card cells */
+/* Card cells - higher specificity removes need for !important */
 [data-view="card"] .gridjs-td {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-3) var(--space-4) !important;
-    border-bottom: none !important;
-    background: transparent !important;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: none;
+    border-top: none;
+    background: transparent;
     gap: var(--space-3);
     box-sizing: border-box;
     order: 0;
@@ -2515,9 +2448,9 @@ h4, h5, h6 {
 
 /* First cell (Name/Title) - make it stand out */
 [data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%) !important;
-    padding: var(--space-4) !important;
-    border-bottom: 1px solid var(--border-color) !important;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border-color);
 }
 
 [data-view="card"] .gridjs-td:first-child > * {
@@ -2554,7 +2487,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label*="tat"] {
     order: 10;
     margin-top: auto;
-    background: var(--color-gray-50) !important;
+    background: var(--color-gray-50);
 }
 
 /* Due date field - move to bottom section */
@@ -2562,7 +2495,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label*="ate"],
 [data-view="card"] .gridjs-td[data-label*="échéance"] {
     order: 11;
-    background: var(--color-gray-50) !important;
+    background: var(--color-gray-50);
 }
 
 /* Hide label for hidden columns and action column */
@@ -2575,16 +2508,18 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td:last-child {
     order: 20;
     justify-content: center;
-    padding: var(--space-3) var(--space-4) !important;
+    padding: var(--space-3) var(--space-4);
     margin-top: 0;
-    background: var(--color-gray-50) !important;
-    border-top: 1px solid var(--border-color) !important;
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
 }
 
 /* Dark mode adjustments for cards */
 [data-theme="dark"] [data-view="card"] .gridjs-tr {
+    background-color: var(--surface-card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
-    border: 1px solid var(--border-color) !important;
+    border-color: var(--border-color);
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-tr:hover {
@@ -2592,18 +2527,17 @@ h4, h5, h6 {
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td {
-    border: none !important;
-    border-bottom: 1px solid var(--border-color) !important;
+    color: var(--text-primary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] [data-view="card"] .gridjs-td::before {
+    color: var(--text-muted);
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
-    border: none !important;
-    border-top: 1px solid var(--border-color) !important;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
+    border-bottom-color: var(--border-color);
 }
 
 [data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="tatus"],
@@ -2612,7 +2546,7 @@ h4, h5, h6 {
 [data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="ate"],
 [data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="échéance"],
 [data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
-    background: var(--surface-elevated) !important;
+    background: var(--surface-elevated);
 }
 
 [data-view="card"] .gridjs-td:last-child .action-buttons-cell {
