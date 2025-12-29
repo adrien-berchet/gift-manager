@@ -16,6 +16,7 @@ from .base import FilterByUserMixin
 from .base import GetObjectByTokenMixin
 from .base import SharedUsersMixin
 from .common import get_user
+from .common import global_search
 from .common import home
 
 # Event views
@@ -65,6 +66,7 @@ from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import UpdateViewPreferencesView
 
 # Relation views
 from .relation import GiftRelationCreateView
@@ -141,9 +143,11 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "UpdateViewPreferencesView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "get_user",
+    "global_search",
     "home",
     "remove_person_from_group",
     "reparent_group",

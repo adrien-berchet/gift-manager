@@ -306,6 +306,162 @@ class TestInvitationExpiredView:
 
 
 @pytest.mark.django_db
+class TestUpdateViewPreferencesView:
+    """Tests for UpdateViewPreferencesView."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, user):
+        """Create a test user and authenticate the client."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    @override_settings(USE_I18N=False)
+    def test_update_desktop_to_card(self):
+        """Test updating desktop view preference to card."""
+        # Arrange
+        url = reverse("gift_manager:update_view_preferences")
+        data = {"default_view_desktop": "card", "default_view_mobile": "card"}
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302
+        assert reverse("gift_manager:profile_detail") in response.url
+
+        # Verify the preference was saved
+        self.user.profile.refresh_from_db()
+        assert self.user.profile.default_view_desktop == "card"
+        assert self.user.profile.default_view_mobile == "card"
+
+    @override_settings(USE_I18N=False)
+    def test_update_mobile_to_list(self):
+        """Test updating mobile view preference to list."""
+        # Arrange
+        url = reverse("gift_manager:update_view_preferences")
+        data = {"default_view_desktop": "list", "default_view_mobile": "list"}
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302
+
+        # Verify the preference was saved
+        self.user.profile.refresh_from_db()
+        assert self.user.profile.default_view_desktop == "list"
+        assert self.user.profile.default_view_mobile == "list"
+
+    @override_settings(USE_I18N=False)
+    def test_invalid_value_ignored(self):
+        """Test that invalid view preference values are ignored."""
+        # Arrange
+        # First set valid values
+        self.user.profile.default_view_desktop = "list"
+        self.user.profile.default_view_mobile = "card"
+        self.user.profile.save()
+
+        url = reverse("gift_manager:update_view_preferences")
+        data = {"default_view_desktop": "invalid", "default_view_mobile": "also_invalid"}
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302
+
+        # Verify the invalid values were ignored (preferences remain unchanged)
+        self.user.profile.refresh_from_db()
+        assert self.user.profile.default_view_desktop == "list"
+        assert self.user.profile.default_view_mobile == "card"
+
+    @override_settings(USE_I18N=False)
+    def test_unauthenticated_user_redirected(self):
+        """Test that unauthenticated users are redirected to login."""
+        # Arrange
+        client = Client()  # New client without authentication
+        url = reverse("gift_manager:update_view_preferences")
+        data = {"default_view_desktop": "card", "default_view_mobile": "list"}
+
+        # Act
+        response = client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302
+        assert "login" in response.url
+
+
+@pytest.mark.django_db
+class TestViewPreferencesInTemplates:
+    """Tests for view preferences being passed to templates."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, user):
+        """Create a test user and authenticate the client."""
+        self.user = user
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    @override_settings(USE_I18N=False)
+    def test_preferences_in_gift_list_page(self):
+        """Test that view preferences are included in the gift list page."""
+        # Arrange
+        self.user.profile.default_view_desktop = "card"
+        self.user.profile.default_view_mobile = "list"
+        self.user.profile.save()
+
+        url = reverse("gift_manager:gifts")
+
+        # Act
+        response = self.client.get(url)
+
+        # Assert
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "window.userViewPreferences" in content
+        assert "desktop: 'card'" in content
+        assert "mobile: 'list'" in content
+
+    @override_settings(USE_I18N=False)
+    def test_preferences_in_person_list_page(self):
+        """Test that view preferences are included in the person list page."""
+        # Arrange
+        self.user.profile.default_view_desktop = "list"
+        self.user.profile.default_view_mobile = "card"
+        self.user.profile.save()
+
+        url = reverse("gift_manager:persons")
+
+        # Act
+        response = self.client.get(url)
+
+        # Assert
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "window.userViewPreferences" in content
+        assert "desktop: 'list'" in content
+        assert "mobile: 'card'" in content
+
+    @override_settings(USE_I18N=False)
+    def test_preferences_default_values(self):
+        """Test that default view preferences are used when not explicitly set."""
+        # Arrange - use default profile values (list for desktop, card for mobile)
+        url = reverse("gift_manager:gifts")
+
+        # Act
+        response = self.client.get(url)
+
+        # Assert
+        assert response.status_code == 200
+        content = response.content.decode("utf-8")
+        assert "window.userViewPreferences" in content
+        # Default values from Profile model
+        assert "desktop: 'list'" in content
+        assert "mobile: 'card'" in content
+
+
+@pytest.mark.django_db
 class TestRemoveFriendView:
     """Tests for RemoveFriendView."""
 

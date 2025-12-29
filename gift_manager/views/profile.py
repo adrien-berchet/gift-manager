@@ -102,6 +102,26 @@ class InvitationExpiredView(TemplateView):
     template_name = "gift_manager/invitation_expired.html"
 
 
+class UpdateViewPreferencesView(LoginRequiredMixin, View):
+    """View to update user view preferences."""
+
+    def post(self, request, *args, **kwargs):
+        profile = request.user.profile
+        default_view_desktop = request.POST.get("default_view_desktop", "list")
+        default_view_mobile = request.POST.get("default_view_mobile", "card")
+
+        # Validate values
+        valid_views = [Profile.VIEW_LIST, Profile.VIEW_CARD]
+        if default_view_desktop in valid_views:
+            profile.default_view_desktop = default_view_desktop
+        if default_view_mobile in valid_views:
+            profile.default_view_mobile = default_view_mobile
+
+        profile.save()
+        messages.success(request, gettext("Display preferences saved successfully."))
+        return redirect("gift_manager:profile_detail")
+
+
 class RemoveFriendView(LoginRequiredMixin, View):
     def post(self, request, friend_id, *args, **kwargs):  # noqa: C901
         with transaction.atomic():

@@ -79,7 +79,7 @@
                 })
                 .filter(Boolean);
 
-            return gridjs.html(`<div style="white-space: nowrap;">${buttons.join(' ')}</div>`);
+            return gridjs.html(`<div class="action-buttons-cell">${buttons.join(' ')}</div>`);
         };
     }
 
@@ -170,7 +170,7 @@
         const config = Object.assign({
             columns: columns,
             data: data,
-            search: true,
+            search: false, // Disabled - using custom search in filter panel
             pagination: { enabled: true, limit: 10 },
             sort: true,
             language: getGridTranslations(),

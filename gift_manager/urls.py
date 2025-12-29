@@ -9,6 +9,7 @@ app_name = "gift_manager"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    path("api/search/", views.global_search, name="global_search"),
     path("admin/", admin.site.urls),
     path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
     path("send-invitation/", views.SendInvitationView.as_view(), name="send_invitation"),
@@ -26,6 +27,11 @@ urlpatterns = [
         "profile/remove-friend/<int:friend_id>/",
         views.RemoveFriendView.as_view(),
         name="remove_friend",
+    ),
+    path(
+        "profile/update-view-preferences/",
+        views.UpdateViewPreferencesView.as_view(),
+        name="update_view_preferences",
     ),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),

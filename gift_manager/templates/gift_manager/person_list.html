@@ -11,8 +11,18 @@
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ translated_type }}</h1>
-<a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary">{% trans "Create new person" %}</a>
+{# Page header with title and actions #}
+<div class="page-header">
+    <h1>{{ translated_type }}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new person" %}
+        </a>
+    </div>
+</div>
+
+{# Filter panel #}
+{% include "gift_manager/includes/filter_panel.html" with grid_id="person-grid" %}
 
 <!-- Grid.js container -->
 <div id="person-grid"></div>
@@ -20,6 +30,7 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -41,8 +52,8 @@
     {% endfor %}
             ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('person-grid', [
+    // Define columns
+    const columns = [
         {
             id: 'first_name',
             name: '{{ column_names.first_name|escapejs }}',
@@ -80,7 +91,10 @@
                 delete: (row) => row.cells[8].data
             }, ['give', 'details', 'edit', 'delete'])
         }
-    ], data, {
+    ];
+
+    // Initialize Grid.js
+    const grid = GridUtils.initGrid('person-grid', columns, data, {
         pagination: {
             enabled: true,
             limit: 10
@@ -89,6 +103,9 @@
             multiColumn: true
         }
     });
+
+    // Initialize filter panel
+    FilterPanel.init('person-grid', grid, columns);
 
     // Setup filter dropdown UI
     GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
