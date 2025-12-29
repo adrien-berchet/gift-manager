@@ -2397,7 +2397,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-wrapper {
     background: transparent;
     border: none;
-    overflow: visible;
+    overflow: visible !important;
 }
 
 [data-view="card"] .gridjs-thead {
@@ -2407,6 +2407,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-table {
     display: block;
     background: transparent !important;
+    overflow: visible !important;
 }
 
 /* Responsive grid layout for cards */
@@ -2415,6 +2416,8 @@ h4, h5, h6 {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: var(--space-5);
     background: transparent !important;
+    overflow: visible !important;
+    padding-top: 4px;
 }
 
 /* Individual card styling - modern and clean */
