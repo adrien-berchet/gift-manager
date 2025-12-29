@@ -170,7 +170,10 @@
         const config = Object.assign({
             columns: columns,
             data: data,
-            search: true,
+            search: {
+                enabled: true,
+                keyword: ''
+            },
             pagination: { enabled: true, limit: 10 },
             sort: true,
             language: getGridTranslations(),
