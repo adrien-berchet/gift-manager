@@ -1022,7 +1022,7 @@ msgstr "Bienvenue"
 msgid ""
 "Manage your gifts, track special occasions, and never forget a thoughtful "
 "present."
-msgstr ""
+msgstr "Gérez vos cadeaux, suivez les occasions spéciales et n'oubliez jamais un cadeau important."
 
 #: gift_manager/templates/gift_manager/home.html:657
 msgid "Quick Actions"
