@@ -18,7 +18,7 @@
 
 {% block extra_js %}
 {% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
@@ -38,7 +38,7 @@
         "{{ relation.comment|escapejs }}",
         "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
         "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
-        "{{ relation.due_date|date|default:'' }}",
+        {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
     "{{ relation.relation_id }}",
         "{% url 'gift_manager:relation_detail' relation.relation_id %}",
         "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -102,9 +102,10 @@
         { name: 'event_url', hidden: true },
         {
             name: "{% trans 'Due date' %}",
-            sort: {
-                compare: GridUtils.sortString()
-            }
+                sort: {
+                    compare: GridUtils.sortDateObject()
+                },
+                formatter: GridUtils.dateObjectFormatter
         },
         { name: 'relation_id', hidden: true },
         { name: 'relation_detail_url', hidden: true },

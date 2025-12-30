@@ -28,7 +28,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}?v=4"></script>
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
@@ -61,7 +61,7 @@
                 "{{ item.comment|escapejs }}",
                 "{{ item.status }}",
                 "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
-                "{{ item.due_date|date|default:'' }}",
+                {% if item.due_date %}{ iso: "{{ item.due_date|date:'Y-m-d' }}", display: "{{ item.due_date|date }}" }{% else %}null{% endif %},
                 "{{item.relation_id}}",
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
@@ -141,8 +141,9 @@
             {
                 name: '{{ column_names.due_date|escapejs }}',
                 sort: {
-                    compare: GridUtils.sortString()
-                }
+                    compare: GridUtils.sortDateObject()
+                },
+                formatter: GridUtils.dateObjectFormatter
             },
             {
                 name: 'Relation ID',

@@ -308,6 +308,38 @@
         };
     }
 
+    /**
+     * Create a comparator function for sorting date objects with iso/display properties
+     * Expected format: { iso: "YYYY-MM-DD", display: "localized date" } or null
+     */
+    function sortDateObject() {
+        return function (a, b) {
+            // Extract ISO date for sorting
+            const isoA = (a && typeof a === 'object' && a.iso) ? a.iso : null;
+            const isoB = (b && typeof b === 'object' && b.iso) ? b.iso : null;
+
+            // Handle null/empty values - sort them to the end
+            if (!isoA && !isoB) return 0;
+            if (!isoA) return 1;
+            if (!isoB) return -1;
+
+            // Compare ISO date strings directly (YYYY-MM-DD format)
+            // This works because ISO format is lexicographically sortable
+            if (isoA < isoB) return -1;
+            if (isoA > isoB) return 1;
+            return 0;
+        };
+    }
+
+    /**
+     * Formatter for date objects with iso/display properties
+     * Displays the localized date string
+     */
+    function dateObjectFormatter(cell) {
+        if (!cell) return '';
+        return cell.display || cell;
+    }
+
     // Expose utilities to global scope
     window.GridUtils = {
         initGrid: initGrid,
@@ -319,7 +351,9 @@
         setupCustomColumnFilter: setupCustomColumnFilter,
         getGridTranslations: getGridTranslations,
         sortByProperty: sortByProperty,
-        sortString: sortString
+        sortString: sortString,
+        sortDateObject: sortDateObject,
+        dateObjectFormatter: dateObjectFormatter
     };
 
 })(window);

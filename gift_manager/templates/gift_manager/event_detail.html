@@ -58,7 +58,7 @@
                 "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
-                "{{ relation.due_date|date|default:'' }}",
+                {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
@@ -129,8 +129,9 @@
             {
                 name: "{% trans 'Due date' %}",
                 sort: {
-                    compare: GridUtils.sortString()
-                }
+                    compare: GridUtils.sortDateObject()
+                },
+                formatter: GridUtils.dateObjectFormatter
             },
             { name: 'relation_id', hidden: true },
             { name: 'relation_detail_url', hidden: true },
