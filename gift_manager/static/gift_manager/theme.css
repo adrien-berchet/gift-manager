@@ -368,6 +368,11 @@
     color: #a5b4fc !important;
 }
 
+/* Dark mode navbar toggler icon */
+[data-theme="dark"] .navbar-toggler-icon {
+    filter: invert(1) brightness(1.2);
+}
+
 /* Dark mode cards */
 [data-theme="dark"] .card {
     background-color: #1e293b;
