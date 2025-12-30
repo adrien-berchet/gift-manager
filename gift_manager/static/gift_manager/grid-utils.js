@@ -183,10 +183,32 @@
 
         try {
             const grid = new gridjs.Grid(config);
+
+            // Call user-provided onReady callback if exists
             if (onReady && typeof onReady === 'function') {
                 grid.on('ready', onReady);
             }
+
             grid.render(document.getElementById(containerId));
+
+            // Hide pagination footer if only one page
+            // Use a longer timeout to ensure Grid.js has fully rendered
+            const paginationLimit = config.pagination && config.pagination.limit ? config.pagination.limit : 10;
+            const totalRows = data.length;
+
+            if (config.pagination && config.pagination.enabled && totalRows <= paginationLimit) {
+                setTimeout(function() {
+                    const container = document.getElementById(containerId);
+                    const footer = container ? container.querySelector('.gridjs-footer') : null;
+                    if (footer) {
+                        // Add a class to hide the footer permanently
+                        footer.classList.add('gridjs-footer-hidden');
+                        // Also set inline style with !important via cssText
+                        footer.style.cssText = 'display: none !important;';
+                    }
+                }, 100);
+            }
+
             return grid;
         } catch (error) {
             console.error('[GridUtils.initGrid] Error:', error);
