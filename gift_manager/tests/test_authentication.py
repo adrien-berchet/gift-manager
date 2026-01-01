@@ -12,7 +12,7 @@ class TestEmailVerification:
     """Test email verification during signup and login."""
 
     def test_user_cannot_login_before_email_verification(self):
-        """Test that users must verify email before logging in when ACCOUNT_EMAIL_VERIFICATION is mandatory."""
+        """Test that users must verify email before logging in when verification is mandatory."""
         client = Client()
 
         # Create a user programmatically (simulating signup without email verification)
@@ -21,7 +21,9 @@ class TestEmailVerification:
         )
 
         # Create unverified email address
-        EmailAddress.objects.create(user=user, email="test@example.com", primary=True, verified=False)
+        EmailAddress.objects.create(
+            user=user, email="test@example.com", primary=True, verified=False
+        )
 
         # Attempt to login
         login_url = reverse("account_login")
@@ -44,7 +46,9 @@ class TestEmailVerification:
         )
 
         # Create verified email address
-        EmailAddress.objects.create(user=user, email="test@example.com", primary=True, verified=True)
+        EmailAddress.objects.create(
+            user=user, email="test@example.com", primary=True, verified=True
+        )
 
         # Attempt to login
         login_url = reverse("account_login")
@@ -66,7 +70,7 @@ class TestEmailVerification:
 
         # Signup with new account
         signup_url = reverse("account_signup")
-        response = client.post(
+        client.post(
             signup_url,
             {
                 "username": "newuser",
@@ -93,7 +97,7 @@ class TestEmailVerification:
 
         # Attempt to signup without email (should fail with ACCOUNT_EMAIL_REQUIRED=True)
         signup_url = reverse("account_signup")
-        response = client.post(
+        client.post(
             signup_url,
             {
                 "username": "nousermail",
@@ -105,4 +109,6 @@ class TestEmailVerification:
 
         # Check that user was NOT created
         user = User.objects.filter(username="nousermail").first()
-        assert user is None, "User should not be created without email when ACCOUNT_EMAIL_REQUIRED=True"
+        assert user is None, (
+            "User should not be created without email when ACCOUNT_EMAIL_REQUIRED=True"
+        )
