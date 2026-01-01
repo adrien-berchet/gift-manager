@@ -172,8 +172,12 @@ class RelationStatusDetailView(BaseDetailView):
         context = DetailView.get_context_data(self, **kwargs)
 
         # Add relations that have this status (filtered by user)
-        context["relations"] = Relation.objects.accessible_by(self.request.user).filter(
-            status=self.object
+        # Use with_related_objects() to avoid N+1 queries when accessing
+        # person, group, gift, event in the template
+        context["relations"] = (
+            Relation.objects.accessible_by(self.request.user)
+            .with_related_objects()
+            .filter(status=self.object)
         )
         return context
 
