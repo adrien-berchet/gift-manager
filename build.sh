@@ -1,27 +1,20 @@
 #!/bin/bash
 
-# Update pip
-echo "Updating pip..."
-python3.12 -m pip install -U pip
-
 # Install dependencies
-
 echo "Installing project dependencies..."
 npm i gettext
 export PATH=/python312/bin:$PATH
-python3.12 -m pip install .
+export UV_PYTHON=3.12
+export UV_LINK_MODE=copy
+uv venv && uv pip install .
 
 # Make migrations
 echo "Making migrations..."
-python3.12 manage.py makemigrations --noinput
-python3.12 manage.py migrate --noinput
+uv run python manage.py makemigrations --noinput
+uv run python manage.py migrate --noinput
 
 # Collect staticfiles
 echo "Collect static..."
-python3.12 manage.py collectstatic --noinput --clear
-
-# Compile locale files
-echo "Compile locale files..."
-django-admin compilemessages
+uv run python manage.py collectstatic --noinput --clear
 
 echo "Build process completed!"

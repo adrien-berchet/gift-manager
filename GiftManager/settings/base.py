@@ -201,6 +201,11 @@ STATIC_URL = "/staticfiles/"
 STATICFILES_DIRS = [
     BASE_DIR / "gift_manager" / "static",
 ]
+STATICFILES_IGNORE_PATTERNS = [
+    ".venv/*",
+    ".vercel/*",
+    "build/*",
+]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {
