@@ -41,6 +41,7 @@ class PersonRelationCreateView(BaseCreateView):
     form_class = PersonRelationForm
     context_object_name = "relation"
     object_type = "Relation"
+    htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -66,6 +67,7 @@ class PersonGroupRelationCreateView(BaseCreateView):
     form_class = PersonGroupRelationForm
     context_object_name = "relation"
     object_type = "Relation"
+    htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -93,6 +95,7 @@ class GiftRelationCreateView(BaseCreateView):
     form_class = GiftRelationForm
     context_object_name = "relation"
     object_type = "Relation"
+    htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -244,6 +247,7 @@ class RelationCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:relations")
     context_object_name = "relation"
     object_type = "Gifting"
+    htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -286,6 +290,7 @@ class RelationUpdateView(BaseUpdateView):
     context_object_name = "relation"
     object_type = "Relation"
     detail_url_name = "relation_detail"
+    htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

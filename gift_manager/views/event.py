@@ -51,6 +51,7 @@ class EventCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:events")
     context_object_name = "event"
     object_type = "Event"
+    htmx_template_name = "gift_manager/includes/event_form_partial.html"
 
 
 class EventUpdateView(BaseUpdateView):
@@ -60,6 +61,7 @@ class EventUpdateView(BaseUpdateView):
     context_object_name = "event"
     object_type = "Event"
     detail_url_name = "event_detail"
+    htmx_template_name = "gift_manager/includes/event_form_partial.html"
 
 
 class EventDeleteView(BaseDeleteView):

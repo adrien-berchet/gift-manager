@@ -16,6 +16,8 @@ If browser installation fails, these tests can be skipped with:
 """
 
 # pylint: disable=redefined-outer-name
+import tempfile
+
 import pytest
 from django.contrib.auth.models import User
 
@@ -185,7 +187,7 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     password_field.fill(password)
 
     # Take screenshot before submitting
-    page.screenshot(path="debug_before_login.png")
+    page.screenshot(path=f"{tempfile.gettempdir()}/debug_before_login.png")
 
     # Submit the form
     submit_button = page.locator('button[type="submit"]')
@@ -195,7 +197,7 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     page.wait_for_load_state("networkidle", timeout=15000)
 
     # Take screenshot after login attempt
-    page.screenshot(path="debug_after_login.png")
+    page.screenshot(path=f"{tempfile.gettempdir()}/debug_after_login.png")
 
     # Debug: Check if login succeeded or failed
     current_url = page.url
@@ -236,7 +238,7 @@ class TestPersonGroupTreeView:
         page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
 
         # Debug: Check what's on the page
-        page.screenshot(path="debug_page_loaded.png")
+        page.screenshot(path=f"{tempfile.gettempdir()}/debug_page_loaded.png")
 
         # Check if Grid.js table loaded with data
         grid_wrapper = page.locator("#person-group-grid")
@@ -265,7 +267,7 @@ class TestPersonGroupTreeView:
                 "1. Database not using shared-cache mode (check testing.py)\n"
                 "2. Fixtures not using transactional_db\n"
                 "3. Groups created but parent_groups relationship not saved\n"
-                "Screenshot saved to debug_page_loaded.png"
+                f"Screenshot saved to {tempfile.gettempdir()}/debug_page_loaded.png"
             )
 
         # Wait for tree view button to be visible

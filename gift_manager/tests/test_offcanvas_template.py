@@ -5,6 +5,8 @@ from django.template import Context, Template
 from django.test import RequestFactory
 from django.contrib.auth import get_user_model
 
+from .utils import text_in_rendered
+
 User = get_user_model()
 
 
@@ -36,10 +38,10 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check that essential elements are present
-        assert 'id="editPanel"' in rendered
-        assert 'id="detailPanel"' in rendered
-        assert 'offcanvas-end' in rendered
-        assert 'offcanvas-panel' in rendered
+        assert text_in_rendered('id="editPanel"', rendered)
+        assert text_in_rendered('id="detailPanel"', rendered)
+        assert text_in_rendered('offcanvas-end', rendered)
+        assert text_in_rendered('offcanvas-panel', rendered)
 
     def test_offcanvas_has_required_elements(self):
         """Test that the offcanvas template has all required elements for functionality."""
@@ -55,16 +57,16 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for edit panel elements
-        assert 'id="editPanelLabel"' in rendered
-        assert 'id="offcanvasContent"' in rendered
-        assert 'id="offcanvasLoading"' in rendered
-        assert 'id="offcanvasError"' in rendered
+        assert text_in_rendered('id="editPanelLabel"', rendered)
+        assert text_in_rendered('id="offcanvasContent"', rendered)
+        assert text_in_rendered('id="offcanvasLoading"', rendered)
+        assert text_in_rendered('id="offcanvasError"', rendered)
 
         # Check for detail panel elements
-        assert 'id="detailPanelLabel"' in rendered
-        assert 'id="detailContent"' in rendered
-        assert 'id="detailLoading"' in rendered
-        assert 'id="detailError"' in rendered
+        assert text_in_rendered('id="detailPanelLabel"', rendered)
+        assert text_in_rendered('id="detailContent"', rendered)
+        assert text_in_rendered('id="detailLoading"', rendered)
+        assert text_in_rendered('id="detailError"', rendered)
 
     def test_offcanvas_has_accessibility_features(self):
         """Test that the offcanvas template includes proper accessibility features."""
@@ -80,10 +82,10 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for accessibility attributes
-        assert 'tabindex="-1"' in rendered
-        assert 'aria-labelledby=' in rendered
-        assert 'aria-label=' in rendered
-        assert 'data-bs-keyboard="true"' in rendered
+        assert text_in_rendered('tabindex="-1"', rendered)
+        assert text_in_rendered('aria-labelledby=', rendered)
+        assert text_in_rendered('aria-label=', rendered)
+        assert text_in_rendered('data-bs-keyboard="true"', rendered)
 
     def test_offcanvas_has_mobile_responsive_classes(self):
         """Test that the offcanvas template includes mobile responsive classes."""
@@ -99,8 +101,8 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for responsive classes
-        assert 'offcanvas-panel' in rendered
-        assert 'offcanvas-end' in rendered
+        assert text_in_rendered('offcanvas-panel', rendered)
+        assert text_in_rendered('offcanvas-end', rendered)
 
     def test_offcanvas_has_loading_and_error_states(self):
         """Test that the offcanvas template includes loading and error state elements."""
@@ -116,17 +118,16 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for loading states
-        assert 'loading-state' in rendered
-        assert 'loading-spinner' in rendered
+        assert text_in_rendered('loading-state', rendered)
+        assert text_in_rendered('loading-spinner', rendered)
 
         # Check for error states
-        assert 'error-state' in rendered
-        assert 'alert-danger' in rendered
+        assert text_in_rendered('error-state', rendered)
+        assert text_in_rendered('alert-danger', rendered)
 
         # Check for retry functionality
-        assert 'retryOffcanvasLoad' in rendered
-        assert 'retryDetailLoad' in rendered
-
+        assert text_in_rendered('retryOffcanvasLoad', rendered)
+        assert text_in_rendered('retryDetailLoad', rendered)
     def test_offcanvas_javascript_functions_defined(self):
         """Test that the offcanvas template defines required JavaScript functions."""
         template = Template(
@@ -141,11 +142,11 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for JavaScript function definitions
-        assert 'showOffcanvasLoading' in rendered
-        assert 'hideOffcanvasLoading' in rendered
-        assert 'showOffcanvasError' in rendered
-        assert 'retryOffcanvasLoad' in rendered
-        assert 'retryDetailLoad' in rendered
+        assert text_in_rendered('showOffcanvasLoading', rendered)
+        assert text_in_rendered('hideOffcanvasLoading', rendered)
+        assert text_in_rendered('showOffcanvasError', rendered)
+        assert text_in_rendered('retryOffcanvasLoad', rendered)
+        assert text_in_rendered('retryDetailLoad', rendered)
 
     def test_form_partial_template_renders(self):
         """Test that the form partial template renders correctly."""
@@ -165,9 +166,9 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for form elements
-        assert 'offcanvas-form' in rendered
-        assert 'panel-form-actions' in rendered
-        assert 'hx-post="/test/"' in rendered
+        assert text_in_rendered('offcanvas-form', rendered)
+        assert text_in_rendered('panel-form-actions', rendered)
+        assert text_in_rendered('hx-post="/test/"', rendered)
         # Just check that the form structure is correct, CSRF token rendering depends on context
 
     def test_form_partial_has_htmx_integration(self):
@@ -188,7 +189,7 @@ class TestOffcanvasTemplate:
         rendered = template.render(context)
 
         # Check for HTMX attributes
-        assert 'hx-post=' in rendered
-        assert 'hx-target=' in rendered
-        assert 'hx-swap=' in rendered
-        assert 'hx-indicator=' in rendered
+        assert text_in_rendered('hx-post=', rendered)
+        assert text_in_rendered('hx-target=', rendered)
+        assert text_in_rendered('hx-swap=', rendered)
+        assert text_in_rendered('hx-indicator=', rendered)

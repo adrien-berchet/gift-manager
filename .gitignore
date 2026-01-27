@@ -133,3 +133,6 @@ dmypy.json
 .claude/
 .kilocode/
 .kiro/
+
+# Playwright
+playwright-report/

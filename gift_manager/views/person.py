@@ -75,6 +75,7 @@ class PersonCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:persons")
     context_object_name = "person"
     object_type = "Person"
+    htmx_template_name = "gift_manager/includes/person_form_partial.html"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -91,6 +92,7 @@ class PersonUpdateView(BaseUpdateView):
     context_object_name = "person"
     object_type = "Person"
     detail_url_name = "person_detail"
+    htmx_template_name = "gift_manager/includes/person_form_partial.html"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

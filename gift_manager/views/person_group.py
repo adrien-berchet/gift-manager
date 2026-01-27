@@ -141,6 +141,7 @@ class PersonGroupCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:person_groups")
     context_object_name = "group"
     object_type = "Person group"
+    htmx_template_name = "gift_manager/includes/person_group_form_partial.html"
 
     def get_form_kwargs(self):
         """Pass the user to the form."""
@@ -156,6 +157,7 @@ class PersonGroupUpdateView(BaseUpdateView):
     context_object_name = "group"
     object_type = "Person group"
     detail_url_name = "person_group_detail"
+    htmx_template_name = "gift_manager/includes/person_group_form_partial.html"
 
     def get_form_kwargs(self):
         """Pass the user to the form."""

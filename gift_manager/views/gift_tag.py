@@ -160,6 +160,7 @@ class GiftTagCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:gift_tag_explorer")
     context_object_name = "gift_tag"
     object_type = "Gift Tag"
+    htmx_template_name = "gift_manager/includes/gift_tag_form_partial.html"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -176,6 +177,7 @@ class GiftTagUpdateView(BaseUpdateView):
     context_object_name = "gift_tag"
     object_type = "Gift tag"
     detail_url_name = "gift_tag_detail"
+    htmx_template_name = "gift_manager/includes/gift_tag_form_partial.html"
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""

@@ -1,0 +1,328 @@
+{% load i18n %}
+<!--
+  Relation Form Partial Template for Offcanvas Panel
+
+  This template renders the relation edit/create form for use within
+  the reusable offcanvas panel system with HTMX integration.
+-->
+
+<form method="post"
+      hx-post="{{ request.path }}"
+      hx-target="#offcanvasContent"
+      hx-swap="innerHTML"
+      hx-indicator="#formLoading"
+      class="offcanvas-form relation-form">
+
+  {% csrf_token %}
+
+  <!-- Form Loading Indicator -->
+  <div id="formLoading" class="htmx-indicator">
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
+
+  <!-- Form Fields Container -->
+  <div class="form-fields">
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <strong>{% trans "Please correct the following errors:" %}</strong>
+      <ul class="mb-0 mt-2">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <!-- Relation-specific form fields -->
+    {% if form.person %}
+    <div class="form-group mb-3">
+      <label for="{{ form.person.id_for_label }}" class="form-label">
+        {{ form.person.label }}
+        {% if form.person.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.person }}
+      {% if form.person.help_text %}
+      <div class="form-text">{{ form.person.help_text }}</div>
+      {% endif %}
+      {% if form.person.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.person.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.group %}
+    <div class="form-group mb-3">
+      <label for="{{ form.group.id_for_label }}" class="form-label">
+        {{ form.group.label }}
+        {% if form.group.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.group }}
+      {% if form.group.help_text %}
+      <div class="form-text">{{ form.group.help_text }}</div>
+      {% endif %}
+      {% if form.group.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.group.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if form.gift %}
+    <div class="form-group mb-3">
+      <label for="{{ form.gift.id_for_label }}" class="form-label">
+        {{ form.gift.label }}
+        {% if form.gift.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.gift }}
+      {% if form.gift.help_text %}
+      <div class="form-text">{{ form.gift.help_text }}</div>
+      {% endif %}
+      {% if form.gift.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.gift.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="form-group mb-3">
+      <label for="{{ form.comment.id_for_label }}" class="form-label">
+        {{ form.comment.label }}
+        {% if form.comment.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.comment }}
+      {% if form.comment.help_text %}
+      <div class="form-text">{{ form.comment.help_text }}</div>
+      {% endif %}
+      {% if form.comment.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.comment.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="{{ form.event.id_for_label }}" class="form-label">
+        {{ form.event.label }}
+        {% if form.event.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.event }}
+      {% if form.event.help_text %}
+      <div class="form-text">{{ form.event.help_text }}</div>
+      {% endif %}
+      {% if form.event.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.event.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="{{ form.status.id_for_label }}" class="form-label">
+        {{ form.status.label }}
+        {% if form.status.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.status }}
+      {% if form.status.help_text %}
+      <div class="form-text">{{ form.status.help_text }}</div>
+      {% endif %}
+      {% if form.status.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.status.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="form-group mb-3">
+      <label for="{{ form.due_date.id_for_label }}" class="form-label">
+        {{ form.due_date.label }}
+        {% if form.due_date.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.due_date }}
+      {% if form.due_date.help_text %}
+      <div class="form-text">{{ form.due_date.help_text }}</div>
+      {% endif %}
+      {% if form.due_date.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.due_date.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Sharing Management Section (for edit forms) -->
+    {% if friends_list %}
+    <div class="card mt-4">
+      <div class="card-header bg-light">
+        <h6 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h6>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info alert-sm mb-3">
+          <small>
+            <i class="fas fa-info-circle me-1"></i>
+            {% trans "Manage who can access this relation" %}
+          </small>
+        </div>
+
+        <!-- Simplified sharing controls for offcanvas -->
+        <div class="sharing-controls">
+          {% for friend in friends_list %}
+          <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-user me-2 text-muted"></i>
+              <span>{{ friend.user.username }}</span>
+            </div>
+            <form method="post" class="permission-form d-inline" data-user-id="{{ friend.user.id }}">
+              {% csrf_token %}
+              <input type="hidden" name="user_id" value="{{ friend.user.id }}">
+              <select name="permission"
+                      class="form-select form-select-sm permission-select"
+                      hx-post="{{ request.path }}"
+                      hx-swap="none"
+                      hx-trigger="change"
+                      hx-include="closest form">
+                <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
+                {% for level in permission_levels %}
+                <option value="{{ level.value }}" {% if friend.is_shared and friend.permission == level.value %}selected{% endif %}>
+                  {% if level.value <= 10 %}👁️{% elif level.value <= 20 %}✏️{% else %}👑{% endif %}
+                  {{ level.label }}
+                </option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Form Actions - Sticky at bottom -->
+  <div class="panel-form-actions">
+    <button type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Cancel' %}">
+      <i class="fas fa-times me-1"></i>
+      {% trans "Cancel" %}
+    </button>
+
+    <button type="submit"
+            class="btn btn-primary"
+            data-loading-text="{% trans 'Saving...' %}"
+            aria-label="{% trans 'Save changes' %}">
+      <i class="fas fa-save me-1"></i>
+      {% trans "Save" %}
+    </button>
+  </div>
+</form>
+
+<!-- Form-specific JavaScript for enhanced functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.relation-form');
+    if (!form) return;
+
+    // Enhanced form submission handling
+    form.addEventListener('submit', function(e) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const originalText = submitBtn.innerHTML;
+            const loadingText = submitBtn.dataset.loadingText || 'Saving...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + loadingText;
+
+            // Re-enable button after request completes
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }, 3000); // Fallback timeout
+        }
+    });
+
+    // Auto-focus first form field
+    const firstField = form.querySelector('input:not([type="hidden"]), select, textarea');
+    if (firstField) {
+        firstField.focus();
+    }
+
+    // Form validation feedback
+    const fields = form.querySelectorAll('input, select, textarea');
+    fields.forEach(field => {
+        field.addEventListener('blur', function() {
+            // Clear previous validation state
+            field.classList.remove('is-valid', 'is-invalid');
+
+            // Basic client-side validation
+            if (field.required && !field.value.trim()) {
+                field.classList.add('is-invalid');
+            } else if (field.value.trim()) {
+                field.classList.add('is-valid');
+            }
+        });
+    });
+
+    // Unsaved changes warning
+    let formChanged = false;
+    fields.forEach(field => {
+        field.addEventListener('input', function() {
+            formChanged = true;
+        });
+    });
+
+    // Warn before closing if there are unsaved changes
+    const offcanvas = form.closest('.offcanvas');
+    if (offcanvas) {
+        const closeButtons = offcanvas.querySelectorAll('[data-bs-dismiss="offcanvas"]');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (formChanged && !confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        });
+    }
+
+    // Initialize HTMX for permission selects
+    if (typeof htmx !== 'undefined') {
+        htmx.process(form);
+    }
+});
+</script>

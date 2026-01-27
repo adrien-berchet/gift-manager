@@ -63,6 +63,7 @@ class GiftCreateView(BaseCreateView):
     success_url = reverse_lazy("gift_manager:gifts")
     context_object_name = "gift"
     object_type = "Gift"
+    htmx_template_name = "gift_manager/includes/gift_form_partial.html"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -79,6 +80,7 @@ class GiftUpdateView(BaseUpdateView):
     context_object_name = "gift"
     object_type = "Gift"
     detail_url_name = "gift_detail"
+    htmx_template_name = "gift_manager/includes/gift_form_partial.html"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
