@@ -128,3 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .vercel
+
+# AI agents
+.claude/
+.kilocode/
+.kiro/

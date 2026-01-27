@@ -1,0 +1,57 @@
+{% load i18n %}
+<!-- Partial template for detail views in offcanvas panels -->
+<div class="detail-content">
+    <div class="detail-header mb-4">
+        <h4 class="mb-1">{{ object }}</h4>
+        {% if object_type %}
+        <small class="text-muted">{{ object_type|title }}</small>
+        {% endif %}
+    </div>
+
+    <div class="detail-actions mb-4">
+        <div class="btn-group" role="group">
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    data-action="edit"
+                    data-edit-url="{% block edit_url %}#{% endblock %}"
+                    title="{% trans 'Edit' %}">
+                <i class="fas fa-edit me-1"></i>{% trans "Edit" %}
+            </button>
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    data-action="delete"
+                    data-delete-url="{% block delete_url %}#{% endblock %}"
+                    title="{% trans 'Delete' %}">
+                <i class="fas fa-trash me-1"></i>{% trans "Delete" %}
+            </button>
+            {% if object.get_absolute_url %}
+            <a href="{{ object.get_absolute_url }}"
+               class="btn btn-outline-secondary btn-sm"
+               title="{% trans 'View full page' %}">
+                <i class="fas fa-external-link-alt me-1"></i>{% trans "Full view" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="detail-fields">
+        {% block detail_fields %}
+        <!-- Override in specific templates -->
+        {% endblock %}
+    </div>
+
+    {% if related_objects %}
+    <div class="related-objects mt-4">
+        <h6 class="text-muted mb-3">{% trans "Related Items" %}</h6>
+        {% for related in related_objects %}
+        <div class="related-item mb-2">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-{{ related.icon }} me-2 text-muted"></i>
+                <span class="fw-medium">{{ related.name }}</span>
+                <span class="badge bg-secondary ms-auto">{{ related.count }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

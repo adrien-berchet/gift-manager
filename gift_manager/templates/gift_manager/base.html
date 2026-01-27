@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="{% static 'gift_manager/theme.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/main.css' %}">
     <link rel="stylesheet" href="{% static 'css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'gift_manager/modern-ux.css' %}">
     <style>
         /* Body padding will be set dynamically by JavaScript based on navbar height */
         body {
@@ -567,6 +568,10 @@
     </div>
     {% endif %}
 
+    <!-- Modern UX Interface Components -->
+    {% include 'gift_manager/includes/modal_base.html' %}
+    {% include 'gift_manager/includes/offcanvas_base.html' %}
+
     <div class="container mt-4">
         {% block content %}{% endblock %}
     </div>
@@ -841,6 +846,264 @@
 
         // Adjust on window resize for responsive navbar
         window.addEventListener('resize', adjustBodyPadding);
+
+        // Modern UX Interface Event System
+        (function() {
+            // Global event handlers for modal and offcanvas coordination
+
+            // Modal event handlers
+            document.addEventListener('modal:show', function(e) {
+                const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                modal.show();
+            });
+
+            document.addEventListener('modal:close', function(e) {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+                if (modal) modal.hide();
+            });
+
+            // Offcanvas event handlers
+            document.addEventListener('offcanvas:show', function(e) {
+                const target = e.detail?.target || 'editPanel';
+                const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
+                offcanvas.show();
+            });
+
+            document.addEventListener('offcanvas:close', function(e) {
+                const target = e.detail?.target || 'editPanel';
+                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById(target));
+                if (offcanvas) offcanvas.hide();
+            });
+
+            // List update event handler
+            document.addEventListener('list:update', function(e) {
+                // Trigger HTMX refresh of list containers
+                const listContainers = document.querySelectorAll('[data-list-container]');
+                listContainers.forEach(container => {
+                    htmx.trigger(container, 'refresh');
+                });
+            });
+
+            // Notification system
+            document.addEventListener('showNotification', function(e) {
+                const data = e.detail;
+                showNotification(data.message, data.type || 'info');
+            });
+
+            // Global notification function
+            window.showNotification = function(message, type = 'info') {
+                // Create toast notification
+                const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+
+                const toastId = 'toast-' + Date.now();
+                const iconClass = {
+                    'success': 'fas fa-check-circle text-success',
+                    'error': 'fas fa-exclamation-circle text-danger',
+                    'warning': 'fas fa-exclamation-triangle text-warning',
+                    'info': 'fas fa-info-circle text-info'
+                }[type] || 'fas fa-info-circle text-info';
+
+                const toastHtml = `
+                    <div id="${toastId}" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body d-flex align-items-center">
+                                <i class="${iconClass} me-2"></i>
+                                ${message}
+                            </div>
+                            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    </div>
+                `;
+
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                const toastElement = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+                toast.show();
+
+                // Remove toast element after it's hidden
+                toastElement.addEventListener('hidden.bs.toast', function() {
+                    toastElement.remove();
+                });
+            };
+
+            function createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container position-fixed top-0 end-0 p-3';
+                container.style.zIndex = '1055';
+                document.body.appendChild(container);
+                return container;
+            }
+
+            // Enhanced HTMX configuration for modern UX
+            document.body.addEventListener('htmx:beforeRequest', function(e) {
+                // Add loading states to buttons and forms
+                const trigger = e.detail.elt;
+                if (trigger.tagName === 'BUTTON') {
+                    trigger.disabled = true;
+                    const originalText = trigger.innerHTML;
+                    trigger.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + (trigger.dataset.loadingText || 'Loading...');
+                    trigger.dataset.originalText = originalText;
+                }
+            });
+
+            document.body.addEventListener('htmx:afterRequest', function(e) {
+                // Remove loading states
+                const trigger = e.detail.elt;
+                if (trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
+                    trigger.disabled = false;
+                    trigger.innerHTML = trigger.dataset.originalText;
+                    delete trigger.dataset.originalText;
+                }
+            });
+
+            // Handle delete confirmation
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('[data-action="delete"]') || e.target.closest('[data-action="delete"]')) {
+                    e.preventDefault();
+                    const button = e.target.matches('[data-action="delete"]') ? e.target : e.target.closest('[data-action="delete"]');
+                    const deleteUrl = button.getAttribute('href') || button.dataset.deleteUrl;
+
+                    if (deleteUrl) {
+                        // Load delete confirmation content
+                        fetch(deleteUrl, {
+                            headers: {
+                                'HX-Request': 'true',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('modalBody').innerHTML = html;
+                            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                            modal.show();
+
+                            // Set up confirm button
+                            const confirmBtn = document.getElementById('confirmAction');
+                            if (confirmBtn) {
+                                confirmBtn.onclick = function() {
+                                    const form = document.getElementById('deleteForm');
+                                    if (form) {
+                                        // Submit form via HTMX
+                                        htmx.trigger(form, 'submit');
+                                    }
+                                };
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading delete confirmation:', error);
+                            showNotification('Error loading confirmation dialog', 'error');
+                        });
+                    }
+                }
+            });
+
+            // Handle edit/create buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('[data-action="edit"]') || e.target.closest('[data-action="edit"]')) {
+                    e.preventDefault();
+                    const button = e.target.matches('[data-action="edit"]') ? e.target : e.target.closest('[data-action="edit"]');
+                    const editUrl = button.getAttribute('href') || button.dataset.editUrl;
+                    const target = button.dataset.target || 'editPanel';
+
+                    if (editUrl) {
+                        // Load edit form content
+                        fetch(editUrl, {
+                            headers: {
+                                'HX-Request': 'true',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            const targetBody = target === 'detailPanel' ? 'detailPanelBody' : 'offcanvasBody';
+                            document.getElementById(targetBody).innerHTML = html;
+                            const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
+                            offcanvas.show();
+                        })
+                        .catch(error => {
+                            console.error('Error loading edit form:', error);
+                            showNotification('Error loading form', 'error');
+                        });
+                    }
+                }
+            });
+
+            // Handle create buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('[data-action="create"]') || e.target.closest('[data-action="create"]')) {
+                    e.preventDefault();
+                    const button = e.target.matches('[data-action="create"]') ? e.target : e.target.closest('[data-action="create"]');
+                    const createUrl = button.getAttribute('href') || button.dataset.createUrl;
+
+                    if (createUrl) {
+                        // Load create form content
+                        fetch(createUrl, {
+                            headers: {
+                                'HX-Request': 'true',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('offcanvasBody').innerHTML = html;
+                            const offcanvas = new bootstrap.Offcanvas(document.getElementById('editPanel'));
+                            offcanvas.show();
+                        })
+                        .catch(error => {
+                            console.error('Error loading create form:', error);
+                            showNotification('Error loading form', 'error');
+                        });
+                    }
+                }
+            });
+
+            // Handle detail view buttons
+            document.addEventListener('click', function(e) {
+                if (e.target.matches('[data-action="detail"]') || e.target.closest('[data-action="detail"]')) {
+                    e.preventDefault();
+                    const button = e.target.matches('[data-action="detail"]') ? e.target : e.target.closest('[data-action="detail"]');
+                    const detailUrl = button.getAttribute('href') || button.dataset.detailUrl;
+
+                    if (detailUrl) {
+                        // Load detail content
+                        fetch(detailUrl, {
+                            headers: {
+                                'HX-Request': 'true',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            }
+                        })
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('detailPanelBody').innerHTML = html;
+                            const offcanvas = new bootstrap.Offcanvas(document.getElementById('detailPanel'));
+                            offcanvas.show();
+                        })
+                        .catch(error => {
+                            console.error('Error loading details:', error);
+                            showNotification('Error loading details', 'error');
+                        });
+                    }
+                }
+            });
+
+            // Helper function to get CSRF cookie
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+        })();
     </script>
 
     <!-- Block for custom JS scripts -->

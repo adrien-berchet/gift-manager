@@ -1,0 +1,30 @@
+{% load i18n %}
+<!-- Base Offcanvas Template for Edit/Create Forms and Detail Views -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="editPanel" aria-labelledby="editPanelLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="editPanelLabel">
+      {% block offcanvas_title %}{% trans "Edit" %}{% endblock %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+  </div>
+  <div class="offcanvas-body" id="offcanvasBody">
+    {% block offcanvas_body %}
+    <!-- Dynamic content will be loaded here via HTMX -->
+    {% endblock %}
+  </div>
+</div>
+
+<!-- Detail Panel for viewing entity details -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="detailPanel" aria-labelledby="detailPanelLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="detailPanelLabel">
+      {% block detail_title %}{% trans "Details" %}{% endblock %}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+  </div>
+  <div class="offcanvas-body" id="detailPanelBody">
+    {% block detail_body %}
+    <!-- Dynamic content will be loaded here via HTMX -->
+    {% endblock %}
+  </div>
+</div>

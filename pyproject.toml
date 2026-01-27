@@ -32,6 +32,7 @@ docs = ["mkdocs>=1.5", "mkdocs-material>=9"]
 test = [
     "factory-boy>=3.3",
     "faker>=24",
+    "hypothesis>=6.0",
     "mock>=5",
     "playwright>=1.39",
     "pytest-cov>=6",

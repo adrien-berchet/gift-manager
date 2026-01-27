@@ -1,0 +1,170 @@
+{% load i18n %}
+<!-- Reusable Delete Confirmation Modal Content Template -->
+<!-- This template is designed to be loaded dynamically via HTMX -->
+
+<div class="d-flex align-items-start mb-4">
+  <div class="text-danger me-3 flex-shrink-0">
+    <i class="fas fa-exclamation-triangle fa-2x"></i>
+  </div>
+  <div class="flex-grow-1">
+    <h6 class="mb-2 fw-semibold">
+      {% blocktrans with entity_type=entity_type|title %}Are you sure you want to delete this {{ entity_type }}?{% endblocktrans %}
+    </h6>
+    <p class="text-muted mb-0 small">
+      {% trans "This action cannot be undone." %}
+    </p>
+  </div>
+</div>
+
+<!-- Entity Information Display -->
+<div class="border rounded-3 p-3 mb-3" style="background-color: var(--bs-gray-50);">
+  <div class="d-flex align-items-center">
+    <div class="me-3">
+      <i class="fas fa-{{ entity_icon|default:'cube' }} fa-lg text-primary"></i>
+    </div>
+    <div class="flex-grow-1">
+      <div class="fw-semibold">{{ entity_name }}</div>
+      {% if entity_description %}
+        <div class="text-muted small">{{ entity_description }}</div>
+      {% endif %}
+      {% if entity_details %}
+        <div class="text-muted small mt-1">
+          {% for detail in entity_details %}
+            <span class="me-2">{{ detail }}</span>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Related Objects Warning (if any) -->
+{% if related_objects %}
+<div class="alert alert-warning py-2 px-3 mb-3">
+  <div class="d-flex align-items-start">
+    <i class="fas fa-exclamation-circle text-warning me-2 mt-1 flex-shrink-0"></i>
+    <div class="flex-grow-1">
+      <div class="fw-semibold small mb-1">
+        {% trans "This will also affect:" %}
+      </div>
+      <ul class="list-unstyled mb-0 small">
+        {% for related in related_objects %}
+        <li class="d-flex align-items-center mb-1">
+          <i class="fas fa-{{ related.icon|default:'link' }} me-2 text-muted"></i>
+          <span>
+            {% if related.count > 1 %}
+              {{ related.count }} {{ related.name_plural|default:related.name }}
+            {% else %}
+              {{ related.count }} {{ related.name }}
+            {% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Cascade Deletion Warning (if applicable) -->
+{% if cascade_warning %}
+<div class="alert alert-danger py-2 px-3 mb-3">
+  <div class="d-flex align-items-start">
+    <i class="fas fa-exclamation-triangle text-danger me-2 mt-1 flex-shrink-0"></i>
+    <div class="flex-grow-1 small">
+      <div class="fw-semibold mb-1">{% trans "Warning: Cascade Deletion" %}</div>
+      <div>{{ cascade_warning }}</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Hidden form for actual deletion -->
+<form id="deleteForm"
+      method="post"
+      action="{{ delete_url }}"
+      hx-post="{{ delete_url }}"
+      hx-trigger="submit"
+      hx-target="body"
+      hx-swap="outerHTML"
+      hx-confirm="false">
+  {% csrf_token %}
+  {% if additional_fields %}
+    {% for field_name, field_value in additional_fields.items %}
+      <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
+    {% endfor %}
+  {% endif %}
+</form>
+
+<!-- Update modal footer buttons with proper actions -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update modal title
+    const modalTitle = document.getElementById('confirmModalLabel');
+    if (modalTitle) {
+        modalTitle.textContent = '{% trans "Confirm Deletion" %}';
+    }
+
+    // Update confirm button
+    const confirmBtn = document.getElementById('confirmAction');
+    if (confirmBtn) {
+        confirmBtn.textContent = '{% trans "Delete" %}';
+        confirmBtn.className = 'btn btn-danger';
+
+        // Set up click handler for deletion
+        confirmBtn.onclick = function(e) {
+            e.preventDefault();
+
+            // Disable button and show loading state
+            confirmBtn.disabled = true;
+            const originalText = confirmBtn.textContent;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>{% trans "Deleting..." %}';
+
+            // Submit the form via HTMX
+            const form = document.getElementById('deleteForm');
+            if (form) {
+                htmx.trigger(form, 'submit');
+            }
+        };
+    }
+
+    // Handle successful deletion
+    document.body.addEventListener('htmx:afterRequest', function(e) {
+        if (e.detail.elt.id === 'deleteForm' && e.detail.xhr.status === 200) {
+            // Close modal on successful deletion
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+            if (modal) {
+                modal.hide();
+            }
+
+            // Show success notification
+            if (window.showNotification) {
+                window.showNotification('{% trans "Item deleted successfully" %}', 'success');
+            }
+
+            // Trigger list update event
+            document.dispatchEvent(new CustomEvent('list:update'));
+        }
+    });
+
+    // Handle deletion errors
+    document.body.addEventListener('htmx:responseError', function(e) {
+        if (e.detail.elt.id === 'deleteForm') {
+            // Re-enable button
+            const confirmBtn = document.getElementById('confirmAction');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '{% trans "Delete" %}';
+            }
+
+            // Show error notification
+            if (window.showNotification) {
+                const errorMsg = e.detail.xhr.status === 403
+                    ? '{% trans "You do not have permission to delete this item" %}'
+                    : '{% trans "An error occurred while deleting the item" %}';
+                window.showNotification(errorMsg, 'error');
+            }
+        }
+    });
+});
+</script>

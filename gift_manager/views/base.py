@@ -32,6 +32,79 @@ from gift_manager.views.common import get_user
 logger = logging.getLogger(__name__)
 
 
+class HTMXResponseMixin:
+    """Mixin to handle HTMX-specific responses and template selection."""
+
+    htmx_template_name = None
+    close_modal = False
+    close_offcanvas = False
+
+    def dispatch(self, request, *args, **kwargs):
+        """Detect HTMX requests and store the flag."""
+        self.is_htmx = request.headers.get('HX-Request') == 'true'
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_template_names(self):
+        """Return HTMX-specific template if available and request is HTMX."""
+        if self.is_htmx and hasattr(self, 'htmx_template_name') and self.htmx_template_name:
+            return [self.htmx_template_name]
+        return super().get_template_names()
+
+    def form_valid(self, form):
+        """Handle successful form submission with HTMX-specific responses."""
+        response = super().form_valid(form)
+
+        if self.is_htmx:
+            # Build HX-Trigger events
+            triggers = []
+
+            # Always trigger list update for CRUD operations
+            triggers.append('list:update')
+
+            # Add modal/offcanvas close triggers if specified
+            if getattr(self, 'close_modal', False):
+                triggers.append('modal:close')
+            if getattr(self, 'close_offcanvas', False):
+                triggers.append('offcanvas:close')
+
+            # Add success notification
+            if hasattr(self, 'get_success_message'):
+                success_message = self.get_success_message()
+                if success_message:
+                    triggers.append(json.dumps({'showNotification': {
+                        'message': success_message,
+                        'type': 'success'
+                    }}))
+
+            # Set HX-Trigger header
+            if triggers:
+                response['HX-Trigger'] = ', '.join(triggers)
+
+            # For HTMX requests, don't redirect - return empty response
+            if hasattr(response, 'status_code') and response.status_code == 302:
+                return HttpResponse('')
+
+        return response
+
+    def form_invalid(self, form):
+        """Handle form validation errors with HTMX-specific responses."""
+        response = super().form_invalid(form)
+
+        if self.is_htmx:
+            # Add error notification trigger
+            error_message = "Please correct the errors below."
+            response['HX-Trigger'] = json.dumps({'showNotification': {
+                'message': error_message,
+                'type': 'error'
+            }})
+
+        return response
+
+    def get_success_message(self):
+        """Override in subclasses to provide success messages."""
+        return None
+
+
 class FilterByUserMixin:
     """Mixin to filter objects by the current user."""
 
@@ -171,10 +244,12 @@ class CreatePermissionMixin:
         return response
 
 
-class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
+class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixin, CreateView):
     """Base class for create views."""
 
     template_name = "gift_manager/create_form.html"
+    htmx_template_name = "gift_manager/includes/form_partial.html"
+    close_offcanvas = True
     login_url = "/accounts/login/"
 
     def get_context_data(self, **kwargs) -> dict:
@@ -208,6 +283,10 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, CreateView):
                 object_attr=self.context_object_name,
             )
             return response
+
+    def get_success_message(self):
+        """Return success message for create operations."""
+        return gettext("{} created successfully").format(gettext(self.object_type))
 
 
 class EditPermissionMixin:
@@ -446,11 +525,13 @@ class EditPermissionMixin:
 
 
 class BaseUpdateView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, UpdateView
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, HTMXResponseMixin, UpdateView
 ):
     """Base class for update views."""
 
     template_name = "gift_manager/edit_form.html"
+    htmx_template_name = "gift_manager/includes/form_partial.html"
+    close_offcanvas = True
     login_url = "/accounts/login/"
 
     def get_context_data(self, **kwargs) -> dict:
@@ -484,6 +565,10 @@ class BaseUpdateView(
             f"gift_manager:{self.detail_url_name}",
             kwargs={"pk": getattr(self.object, self.pk_name)},
         )
+
+    def get_success_message(self):
+        """Return success message for update operations."""
+        return gettext("{} updated successfully").format(gettext(self.object_type))
 
 
 class DeleteSharedMixin:
@@ -537,17 +622,121 @@ class CancelToPreviousMixin:
         return context
 
 
+class DeleteConfirmationMixin:
+    """Mixin to provide delete confirmation data for modal templates."""
+
+    def get_entity_icon(self):
+        """Return the FontAwesome icon class for the entity type."""
+        icon_map = {
+            'person': 'user',
+            'gift': 'gift',
+            'event': 'calendar-alt',
+            'relation': 'hand-holding-heart',
+            'persongroup': 'layer-group',
+            'gifttag': 'tag',
+        }
+        return icon_map.get(self.object_type.lower(), 'cube')
+
+    def get_entity_details(self):
+        """Return a list of additional details to display for the entity."""
+        details = []
+
+        # Add common details based on object attributes
+        if hasattr(self.object, 'email_address') and self.object.email_address:
+            details.append(f"Email: {self.object.email_address}")
+
+        if hasattr(self.object, 'created_at') and self.object.created_at:
+            details.append(f"Created: {self.object.created_at.strftime('%Y-%m-%d')}")
+
+        if hasattr(self.object, 'usual_date') and self.object.usual_date:
+            details.append(f"Date: {self.object.usual_date}")
+
+        if hasattr(self.object, 'price') and self.object.price:
+            details.append(f"Price: ${self.object.price}")
+
+        return details
+
+    def get_related_objects(self):
+        """Return information about related objects that will be affected."""
+        related = []
+
+        # Check for common relationships
+        if hasattr(self.object, 'gifts') and hasattr(self.object.gifts, 'count'):
+            count = self.object.gifts.count()
+            if count > 0:
+                related.append({
+                    'name': 'gift',
+                    'name_plural': 'gifts',
+                    'count': count,
+                    'icon': 'gift'
+                })
+
+        if hasattr(self.object, 'events') and hasattr(self.object.events, 'count'):
+            count = self.object.events.count()
+            if count > 0:
+                related.append({
+                    'name': 'event',
+                    'name_plural': 'events',
+                    'count': count,
+                    'icon': 'calendar-alt'
+                })
+
+        if hasattr(self.object, 'relations') and hasattr(self.object.relations, 'count'):
+            count = self.object.relations.count()
+            if count > 0:
+                related.append({
+                    'name': 'relation',
+                    'name_plural': 'relations',
+                    'count': count,
+                    'icon': 'hand-holding-heart'
+                })
+
+        return related
+
+    def get_cascade_warning(self):
+        """Return a warning message about cascade deletions if applicable."""
+        # Override in subclasses for specific cascade warnings
+        return None
+
+    def get_additional_fields(self):
+        """Return additional form fields needed for deletion."""
+        return {}
+
+
 class BaseDeleteView(
     FilterByUserMixin,
     GetObjectByTokenMixin,
     LoginRequiredMixin,
     DeleteSharedMixin,
     CancelToPreviousMixin,
+    DeleteConfirmationMixin,
+    HTMXResponseMixin,
     DeleteView,
 ):
     """Base class for delete views."""
 
     template_name = "gift_manager/confirm_delete.html"
+    htmx_template_name = "gift_manager/includes/delete_confirmation_modal.html"
+    close_modal = True
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            'entity_type': gettext(self.object_type),
+            'entity_name': str(self.object),
+            'entity_description': getattr(self.object, 'description', None),
+            'entity_icon': self.get_entity_icon(),
+            'entity_details': self.get_entity_details(),
+            'delete_url': self.request.path,
+            'related_objects': self.get_related_objects(),
+            'cascade_warning': self.get_cascade_warning(),
+            'additional_fields': self.get_additional_fields(),
+        })
+        return context
+
+    def get_success_message(self):
+        """Return success message for delete operations."""
+        return gettext("{} deleted successfully").format(gettext(self.object_type))
 
 
 class BaseDetailView(
@@ -556,9 +745,11 @@ class BaseDetailView(
     LoginRequiredMixin,
     ContextPermissionMixin,
     SharedUsersMixin,
+    HTMXResponseMixin,
     DetailView,
 ):
     """Base class for detail views."""
 
+    htmx_template_name = "gift_manager/includes/detail_partial.html"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
