@@ -1,51 +1,159 @@
 {% load i18n %}
-<!-- Partial template for forms in offcanvas panels -->
+<!--
+  Example Form Partial Template for Offcanvas Panel
+
+  This template demonstrates how to structure forms for use within
+  the reusable offcanvas panel system. It includes:
+  - Proper form structure with HTMX integration
+  - Loading states and error handling
+  - Responsive form actions
+  - Accessibility features
+-->
+
 <form method="post"
-      hx-post="{{ request.path }}"
-      hx-swap="none"
-      hx-trigger="submit"
-      class="modern-form">
-    {% csrf_token %}
+      hx-post="{{ form_action_url }}"
+      hx-target="#offcanvasContent"
+      hx-swap="innerHTML"
+      hx-indicator="#formLoading"
+      class="offcanvas-form">
 
-    <div class="form-content">
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger">
-            {{ form.non_field_errors }}
-        </div>
-        {% endif %}
+  {% csrf_token %}
 
-        {% for field in form %}
-        <div class="form-group mb-3">
-            <label for="{{ field.id_for_label }}" class="form-label">
-                {{ field.label }}
-                {% if field.field.required %}
-                <span class="text-danger">*</span>
-                {% endif %}
-            </label>
+  <!-- Form Loading Indicator -->
+  <div id="formLoading" class="htmx-indicator">
+    <div class="loading-overlay">
+      <div class="loading-spinner"></div>
+    </div>
+  </div>
 
-            {% if field.help_text %}
-            <small class="form-text text-muted d-block mb-1">{{ field.help_text }}</small>
-            {% endif %}
-
-            {{ field }}
-
-            {% if field.errors %}
-            <div class="invalid-feedback d-block">
-                {{ field.errors }}
-            </div>
-            {% endif %}
-        </div>
+  <!-- Form Fields Container -->
+  <div class="form-fields">
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert">
+      <i class="fas fa-exclamation-triangle me-2"></i>
+      <strong>{% trans "Please correct the following errors:" %}</strong>
+      <ul class="mb-0 mt-2">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
         {% endfor %}
+      </ul>
     </div>
+    {% endif %}
 
-    <div class="panel-form-actions">
-        <button type="submit" class="btn btn-primary">
-            <i class="fas fa-save me-1"></i>
-            {% if object %}{% trans "Update" %}{% else %}{% trans "Create" %}{% endif %}
-        </button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">
-            <i class="fas fa-times me-1"></i>
-            {% trans "Cancel" %}
-        </button>
+    <!-- Example form fields - replace with actual form rendering -->
+    {% for field in form %}
+    <div class="form-group mb-3">
+      <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label }}
+        {% if field.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+
+      {{ field }}
+
+      {% if field.help_text %}
+      <div class="form-text">{{ field.help_text }}</div>
+      {% endif %}
+
+      {% if field.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in field.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
+    {% endfor %}
+  </div>
+
+  <!-- Form Actions - Sticky at bottom -->
+  <div class="panel-form-actions">
+    <button type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Cancel' %}">
+      <i class="fas fa-times me-1"></i>
+      {% trans "Cancel" %}
+    </button>
+
+    <button type="submit"
+            class="btn btn-primary"
+            data-loading-text="{% trans 'Saving...' %}"
+            aria-label="{% trans 'Save changes' %}">
+      <i class="fas fa-save me-1"></i>
+      {% trans "Save" %}
+    </button>
+  </div>
 </form>
+
+<!-- Form-specific JavaScript for enhanced functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.offcanvas-form');
+    if (!form) return;
+
+    // Enhanced form submission handling
+    form.addEventListener('submit', function(e) {
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            const originalText = submitBtn.innerHTML;
+            const loadingText = submitBtn.dataset.loadingText || 'Saving...';
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + loadingText;
+
+            // Re-enable button after request completes
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }, 3000); // Fallback timeout
+        }
+    });
+
+    // Auto-focus first form field
+    const firstField = form.querySelector('input:not([type="hidden"]), select, textarea');
+    if (firstField) {
+        firstField.focus();
+    }
+
+    // Form validation feedback
+    const fields = form.querySelectorAll('input, select, textarea');
+    fields.forEach(field => {
+        field.addEventListener('blur', function() {
+            // Clear previous validation state
+            field.classList.remove('is-valid', 'is-invalid');
+
+            // Basic client-side validation
+            if (field.required && !field.value.trim()) {
+                field.classList.add('is-invalid');
+            } else if (field.value.trim()) {
+                field.classList.add('is-valid');
+            }
+        });
+    });
+
+    // Unsaved changes warning
+    let formChanged = false;
+    fields.forEach(field => {
+        field.addEventListener('input', function() {
+            formChanged = true;
+        });
+    });
+
+    // Warn before closing if there are unsaved changes
+    const offcanvas = form.closest('.offcanvas');
+    if (offcanvas) {
+        const closeButtons = offcanvas.querySelectorAll('[data-bs-dismiss="offcanvas"]');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (formChanged && !confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+        });
+    }
+});
+</script>

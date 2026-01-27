@@ -1,30 +1,283 @@
 {% load i18n %}
-<!-- Base Offcanvas Template for Edit/Create Forms and Detail Views -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="editPanel" aria-labelledby="editPanelLabel">
+<!--
+  Reusable Offcanvas Panel Template for Modern UX Interface
+
+  Features:
+  - Bootstrap 5 offcanvas with responsive behavior
+  - Full-screen on mobile devices (screens < 768px)
+  - HTMX integration for dynamic form loading
+  - Proper focus management and accessibility
+  - Loading states and error handling
+  - Support for both edit/create forms and detail views
+-->
+
+<!-- Edit/Create Panel - Slides in from right, full-screen on mobile -->
+<div class="offcanvas offcanvas-end offcanvas-panel"
+     tabindex="-1"
+     id="editPanel"
+     aria-labelledby="editPanelLabel"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true">
+
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="editPanelLabel">
       {% block offcanvas_title %}{% trans "Edit" %}{% endblock %}
     </h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Close' %}"
+            title="{% trans 'Close' %} (Esc)"></button>
   </div>
+
   <div class="offcanvas-body" id="offcanvasBody">
     {% block offcanvas_body %}
-    <!-- Dynamic content will be loaded here via HTMX -->
+    <!-- Loading state template -->
+    <div class="loading-state d-none" id="offcanvasLoading">
+      <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+          <div class="loading-spinner mb-3"></div>
+          <p class="text-muted">{% trans "Loading..." %}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error state template -->
+    <div class="error-state d-none" id="offcanvasError">
+      <div class="alert alert-danger" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>{% trans "Error" %}</strong>
+        <p class="mb-0 mt-2" id="offcanvasErrorMessage">{% trans "Failed to load content. Please try again." %}</p>
+        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryOffcanvasLoad()">
+          <i class="fas fa-redo me-1"></i>{% trans "Retry" %}
+        </button>
+      </div>
+    </div>
+
+    <!-- Content container -->
+    <div class="content-container" id="offcanvasContent">
+      <!-- Dynamic content will be loaded here via HTMX -->
+    </div>
     {% endblock %}
   </div>
 </div>
 
-<!-- Detail Panel for viewing entity details -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="detailPanel" aria-labelledby="detailPanelLabel">
+<!-- Detail Panel - For viewing entity details -->
+<div class="offcanvas offcanvas-end offcanvas-panel"
+     tabindex="-1"
+     id="detailPanel"
+     aria-labelledby="detailPanelLabel"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true">
+
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="detailPanelLabel">
       {% block detail_title %}{% trans "Details" %}{% endblock %}
     </h5>
-    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Close' %}"
+            title="{% trans 'Close' %} (Esc)"></button>
   </div>
+
   <div class="offcanvas-body" id="detailPanelBody">
     {% block detail_body %}
-    <!-- Dynamic content will be loaded here via HTMX -->
+    <!-- Loading state template -->
+    <div class="loading-state d-none" id="detailLoading">
+      <div class="d-flex justify-content-center align-items-center h-100">
+        <div class="text-center">
+          <div class="loading-spinner mb-3"></div>
+          <p class="text-muted">{% trans "Loading details..." %}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error state template -->
+    <div class="error-state d-none" id="detailError">
+      <div class="alert alert-danger" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>{% trans "Error" %}</strong>
+        <p class="mb-0 mt-2" id="detailErrorMessage">{% trans "Failed to load details. Please try again." %}</p>
+        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryDetailLoad()">
+          <i class="fas fa-redo me-1"></i>{% trans "Retry" %}
+        </button>
+      </div>
+    </div>
+
+    <!-- Content container -->
+    <div class="content-container" id="detailContent">
+      <!-- Dynamic content will be loaded here via HTMX -->
+    </div>
     {% endblock %}
   </div>
 </div>
+
+<!-- Offcanvas Panel JavaScript for Enhanced Functionality -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enhanced offcanvas functionality
+    const editPanel = document.getElementById('editPanel');
+    const detailPanel = document.getElementById('detailPanel');
+
+    // Focus management for accessibility
+    function setupFocusManagement(panel) {
+        if (!panel) return;
+
+        panel.addEventListener('shown.bs.offcanvas', function() {
+            // Focus first focusable element or close button
+            const firstFocusable = panel.querySelector('input, select, textarea, button:not(.btn-close)');
+            if (firstFocusable) {
+                firstFocusable.focus();
+            } else {
+                panel.querySelector('.btn-close').focus();
+            }
+        });
+
+        // Trap focus within panel
+        panel.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                const focusableElements = panel.querySelectorAll(
+                    'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
+                );
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+
+                if (e.shiftKey && document.activeElement === firstElement) {
+                    e.preventDefault();
+                    lastElement.focus();
+                } else if (!e.shiftKey && document.activeElement === lastElement) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        });
+    }
+
+    setupFocusManagement(editPanel);
+    setupFocusManagement(detailPanel);
+
+    // Loading state management
+    window.showOffcanvasLoading = function(panelId = 'editPanel') {
+        const panel = document.getElementById(panelId);
+        const loadingId = panelId === 'editPanel' ? 'offcanvasLoading' : 'detailLoading';
+        const contentId = panelId === 'editPanel' ? 'offcanvasContent' : 'detailContent';
+        const errorId = panelId === 'editPanel' ? 'offcanvasError' : 'detailError';
+
+        document.getElementById(loadingId).classList.remove('d-none');
+        document.getElementById(contentId).classList.add('d-none');
+        document.getElementById(errorId).classList.add('d-none');
+    };
+
+    window.hideOffcanvasLoading = function(panelId = 'editPanel') {
+        const loadingId = panelId === 'editPanel' ? 'offcanvasLoading' : 'detailLoading';
+        const contentId = panelId === 'editPanel' ? 'offcanvasContent' : 'detailContent';
+
+        document.getElementById(loadingId).classList.add('d-none');
+        document.getElementById(contentId).classList.remove('d-none');
+    };
+
+    window.showOffcanvasError = function(message, panelId = 'editPanel') {
+        const loadingId = panelId === 'editPanel' ? 'offcanvasLoading' : 'detailLoading';
+        const contentId = panelId === 'editPanel' ? 'offcanvasContent' : 'detailContent';
+        const errorId = panelId === 'editPanel' ? 'offcanvasError' : 'detailError';
+        const messageId = panelId === 'editPanel' ? 'offcanvasErrorMessage' : 'detailErrorMessage';
+
+        document.getElementById(loadingId).classList.add('d-none');
+        document.getElementById(contentId).classList.add('d-none');
+        document.getElementById(errorId).classList.remove('d-none');
+        document.getElementById(messageId).textContent = message;
+    };
+
+    // Retry functions
+    window.retryOffcanvasLoad = function() {
+        // This will be called by the retry button
+        // The actual retry logic should be implemented by the calling code
+        document.dispatchEvent(new CustomEvent('offcanvas:retry', {
+            detail: { panelId: 'editPanel' }
+        }));
+    };
+
+    window.retryDetailLoad = function() {
+        document.dispatchEvent(new CustomEvent('offcanvas:retry', {
+            detail: { panelId: 'detailPanel' }
+        }));
+    };
+
+    // Enhanced keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Escape key to close any open offcanvas
+        if (e.key === 'Escape') {
+            const openOffcanvas = document.querySelector('.offcanvas.show');
+            if (openOffcanvas) {
+                const offcanvasInstance = bootstrap.Offcanvas.getInstance(openOffcanvas);
+                if (offcanvasInstance) {
+                    offcanvasInstance.hide();
+                }
+            }
+        }
+
+        // Ctrl+S to save forms in offcanvas (prevent default browser save)
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            const openOffcanvas = document.querySelector('.offcanvas.show');
+            if (openOffcanvas) {
+                e.preventDefault();
+                const saveButton = openOffcanvas.querySelector('button[type="submit"], .btn-primary');
+                if (saveButton && !saveButton.disabled) {
+                    saveButton.click();
+                }
+            }
+        }
+    });
+
+    // Mobile-specific enhancements
+    function handleMobileResize() {
+        const isMobile = window.innerWidth < 768;
+        const offcanvasPanels = document.querySelectorAll('.offcanvas-panel');
+
+        offcanvasPanels.forEach(panel => {
+            if (isMobile) {
+                panel.classList.add('offcanvas-mobile-fullscreen');
+            } else {
+                panel.classList.remove('offcanvas-mobile-fullscreen');
+            }
+        });
+    }
+
+    // Initial check and resize listener
+    handleMobileResize();
+    window.addEventListener('resize', handleMobileResize);
+
+    // HTMX integration for form submissions
+    document.body.addEventListener('htmx:beforeRequest', function(e) {
+        const trigger = e.detail.elt;
+        const offcanvas = trigger.closest('.offcanvas');
+
+        if (offcanvas) {
+            // Show loading state for forms in offcanvas
+            if (trigger.tagName === 'FORM') {
+                const panelId = offcanvas.id;
+                showOffcanvasLoading(panelId);
+            }
+        }
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function(e) {
+        const trigger = e.detail.elt;
+        const offcanvas = trigger.closest('.offcanvas');
+
+        if (offcanvas) {
+            const panelId = offcanvas.id;
+
+            if (e.detail.successful) {
+                hideOffcanvasLoading(panelId);
+            } else {
+                const errorMessage = e.detail.xhr.status === 403
+                    ? '{% trans "You do not have permission to perform this action." %}'
+                    : '{% trans "An error occurred. Please try again." %}';
+                showOffcanvasError(errorMessage, panelId);
+            }
+        }
+    });
+});
+</script>

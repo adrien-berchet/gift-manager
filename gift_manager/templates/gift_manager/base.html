@@ -1007,6 +1007,13 @@
                     const target = button.dataset.target || 'editPanel';
 
                     if (editUrl) {
+                        // Show loading state
+                        showOffcanvasLoading(target);
+
+                        // Show the panel first
+                        const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
+                        offcanvas.show();
+
                         // Load edit form content
                         fetch(editUrl, {
                             headers: {
@@ -1014,16 +1021,23 @@
                                 'X-CSRFToken': getCookie('csrftoken')
                             }
                         })
-                        .then(response => response.text())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            return response.text();
+                        })
                         .then(html => {
-                            const targetBody = target === 'detailPanel' ? 'detailPanelBody' : 'offcanvasBody';
+                            const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
                             document.getElementById(targetBody).innerHTML = html;
-                            const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
-                            offcanvas.show();
+                            hideOffcanvasLoading(target);
                         })
                         .catch(error => {
                             console.error('Error loading edit form:', error);
-                            showNotification('Error loading form', 'error');
+                            const errorMessage = error.message.includes('403')
+                                ? 'You do not have permission to perform this action.'
+                                : 'Error loading form. Please try again.';
+                            showOffcanvasError(errorMessage, target);
                         });
                     }
                 }
@@ -1037,6 +1051,13 @@
                     const createUrl = button.getAttribute('href') || button.dataset.createUrl;
 
                     if (createUrl) {
+                        // Show loading state
+                        showOffcanvasLoading('editPanel');
+
+                        // Show the panel first
+                        const offcanvas = new bootstrap.Offcanvas(document.getElementById('editPanel'));
+                        offcanvas.show();
+
                         // Load create form content
                         fetch(createUrl, {
                             headers: {
@@ -1044,15 +1065,22 @@
                                 'X-CSRFToken': getCookie('csrftoken')
                             }
                         })
-                        .then(response => response.text())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            return response.text();
+                        })
                         .then(html => {
-                            document.getElementById('offcanvasBody').innerHTML = html;
-                            const offcanvas = new bootstrap.Offcanvas(document.getElementById('editPanel'));
-                            offcanvas.show();
+                            document.getElementById('offcanvasContent').innerHTML = html;
+                            hideOffcanvasLoading('editPanel');
                         })
                         .catch(error => {
                             console.error('Error loading create form:', error);
-                            showNotification('Error loading form', 'error');
+                            const errorMessage = error.message.includes('403')
+                                ? 'You do not have permission to perform this action.'
+                                : 'Error loading form. Please try again.';
+                            showOffcanvasError(errorMessage, 'editPanel');
                         });
                     }
                 }
@@ -1066,6 +1094,13 @@
                     const detailUrl = button.getAttribute('href') || button.dataset.detailUrl;
 
                     if (detailUrl) {
+                        // Show loading state
+                        showOffcanvasLoading('detailPanel');
+
+                        // Show the panel first
+                        const offcanvas = new bootstrap.Offcanvas(document.getElementById('detailPanel'));
+                        offcanvas.show();
+
                         // Load detail content
                         fetch(detailUrl, {
                             headers: {
@@ -1073,15 +1108,22 @@
                                 'X-CSRFToken': getCookie('csrftoken')
                             }
                         })
-                        .then(response => response.text())
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}`);
+                            }
+                            return response.text();
+                        })
                         .then(html => {
-                            document.getElementById('detailPanelBody').innerHTML = html;
-                            const offcanvas = new bootstrap.Offcanvas(document.getElementById('detailPanel'));
-                            offcanvas.show();
+                            document.getElementById('detailContent').innerHTML = html;
+                            hideOffcanvasLoading('detailPanel');
                         })
                         .catch(error => {
                             console.error('Error loading details:', error);
-                            showNotification('Error loading details', 'error');
+                            const errorMessage = error.message.includes('403')
+                                ? 'You do not have permission to perform this action.'
+                                : 'Error loading details. Please try again.';
+                            showOffcanvasError(errorMessage, 'detailPanel');
                         });
                     }
                 }
