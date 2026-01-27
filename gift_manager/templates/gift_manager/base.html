@@ -535,21 +535,21 @@
                                 </div>
                             </a>
                             <div class="search-category">{% trans "Create New" %}</div>
-                            <a href="{% url 'gift_manager:gift_create' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:gift_create' %}" class="search-result-item" data-action="create">
                                 <div class="search-result-icon"><i class="fas fa-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Gift" %}</div>
                                     <div class="search-result-subtitle">{% trans "Add a new gift" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:person_create' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:person_create' %}" class="search-result-item" data-action="create">
                                 <div class="search-result-icon"><i class="fas fa-user-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Person" %}</div>
                                     <div class="search-result-subtitle">{% trans "Add a new person" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:event_create' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:event_create' %}" class="search-result-item" data-action="create">
                                 <div class="search-result-icon"><i class="fas fa-calendar-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Event" %}</div>

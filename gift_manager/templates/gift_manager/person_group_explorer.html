@@ -5,7 +5,7 @@
 {% block content %}
 <div class="container">
     <h1>{% trans "Explore Person Groups" %}</h1>
-    <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">{% trans "Create new group" %}</a>
+    <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary" data-action="create">{% trans "Create new group" %}</a>
 
     <!-- Breadcrumbs -->
     <nav aria-label="breadcrumb" class="mt-3">
