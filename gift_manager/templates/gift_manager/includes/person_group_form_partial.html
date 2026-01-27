@@ -149,8 +149,18 @@
       <div class="card-body">
         <div class="alert alert-info alert-sm mb-3">
           <small>
-            <i cl
-end.user.username }}</span>
+            <i class="fas fa-info-circle me-1"></i>
+            {% trans "Manage who can access this person group" %}
+          </small>
+        </div>
+
+        <!-- Simplified sharing controls for offcanvas -->
+        <div class="sharing-controls">
+          {% for friend in friends_list %}
+          <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+            <div class="d-flex align-items-center">
+              <i class="fas fa-user me-2 text-muted"></i>
+              <span>{{ friend.user.username }}</span>
             </div>
             <form method="post" class="permission-form d-inline" data-user-id="{{ friend.user.id }}">
               {% csrf_token %}
