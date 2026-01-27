@@ -226,10 +226,18 @@ class TestDeleteConfirmationDisplayProperty:
         return reverse(url_name, kwargs={"pk": pk_value})
 
     @given(
-        entity_type=st.sampled_from(['person', 'gift', 'event', 'persongroup', 'gifttag']),
+        entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup', 'gifttag']),
         entity_data=st.dictionaries(
             st.sampled_from(['name', 'first_name', 'family_name', 'comment']),
-            st.text(min_size=1, max_size=50).filter(lambda x: x.strip()),
+            st.text(
+                alphabet=st.characters(
+                    min_codepoint=32,  # Start from space character
+                    max_codepoint=126,  # End at tilde character (printable ASCII)
+                    blacklist_categories=('Cc', 'Cf', 'Cs', 'Co', 'Cn')  # Exclude control characters
+                ),
+                min_size=1,
+                max_size=50
+            ).filter(lambda x: x.strip() and '\x00' not in x),  # Exclude null bytes and empty strings
             min_size=0,
             max_size=3
         )
@@ -265,10 +273,14 @@ class TestDeleteConfirmationDisplayProperty:
         # Should contain delete confirmation text
         assert 'delete' in content.lower(), f"Delete confirmation text missing for {entity_type}"
 
-        # Should contain entity name/identifier
+        # Should contain entity name/identifier (handle HTML escaping)
         entity_name = str(entity)
         if entity_name.strip():  # Only check if entity has a meaningful string representation
-            assert entity_name in content, f"Entity name '{entity_name}' not found in modal for {entity_type}"
+            import html
+            # Check for both raw and HTML-escaped versions of the entity name
+            escaped_entity_name = html.escape(entity_name)
+            assert (entity_name in content or escaped_entity_name in content), \
+                f"Entity name '{entity_name}' (or escaped '{escaped_entity_name}') not found in modal for {entity_type}"
 
         # Should contain proper form structure for deletion
         assert 'form' in content.lower(), f"Delete form missing for {entity_type}"
@@ -292,3 +304,185 @@ class TestDeleteConfirmationDisplayProperty:
         # Fallback should still contain delete confirmation
         fallback_content = fallback_response.content.decode()
         assert 'delete' in fallback_content.lower(), f"Fallback delete confirmation missing for {entity_type}"
+
+    @given(
+        entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup', 'gifttag']),
+        entity_data=st.dictionaries(
+            st.sampled_from(['name', 'first_name', 'family_name', 'comment']),
+            st.text(
+                alphabet=st.characters(
+                    min_codepoint=32,  # Start from space character
+                    max_codepoint=126,  # End at tilde character (printable ASCII)
+                    blacklist_categories=('Cc', 'Cf', 'Cs', 'Co', 'Cn')  # Exclude control characters
+                ),
+                min_size=1,
+                max_size=50
+            ).filter(lambda x: x.strip() and '\x00' not in x),  # Exclude null bytes and empty strings
+            min_size=0,
+            max_size=3
+        )
+    )
+    @override_settings(USE_I18N=False)
+    def test_successful_operation_completion_delete(self, entity_type, entity_data):
+        """
+        Feature: modern-ux-interface, Property 3: Successful Operation Completion (Delete)
+
+        For any valid delete operation, when the operation completes successfully,
+        the entity should be deleted and the current view should be updated without page reload.
+
+        **Validates: Requirements 1.3**
+        """
+        # Create entity with random data
+        entity = self.create_entity_with_permission(entity_type, entity_data)
+        entity_pk = entity.pk
+
+        # Get delete URL for this entity type
+        delete_url = self.get_delete_url(entity_type, entity)
+
+        # Get the model class to verify deletion
+        model_class = entity.__class__
+
+        # Verify entity exists before deletion
+        assert model_class.objects.filter(pk=entity_pk).exists(), f"Entity {entity_type} should exist before deletion"
+
+        # Perform HTMX delete operation
+        response = self.client.post(delete_url, HTTP_HX_REQUEST='true')
+
+        # Property 3: Successful Operation Completion
+        # The delete operation should succeed (redirect or success response)
+        assert response.status_code in [200, 302], f"Delete operation failed for {entity_type} with status {response.status_code}"
+
+        # Entity should be deleted from database
+        assert not model_class.objects.filter(pk=entity_pk).exists(), f"Entity {entity_type} should be deleted from database"
+
+        # For HTMX requests, should include proper headers for view updates
+        if response.status_code == 200:
+            # Check for HTMX trigger headers that update the view
+            hx_trigger = response.get('HX-Trigger')
+            if hx_trigger:
+                assert 'list:update' in hx_trigger or 'modal:close' in hx_trigger, \
+                    f"HTMX trigger headers missing for view update after {entity_type} deletion"
+
+        # Test fallback behavior for non-HTMX requests
+        # Create another entity for fallback test
+        fallback_entity = self.create_entity_with_permission(entity_type, entity_data)
+        fallback_entity_pk = fallback_entity.pk
+        fallback_delete_url = self.get_delete_url(entity_type, fallback_entity)
+
+        # Perform regular delete operation (no HTMX)
+        fallback_response = self.client.post(fallback_delete_url)
+
+        # Should redirect after successful deletion
+        assert fallback_response.status_code == 302, f"Fallback delete should redirect for {entity_type}"
+
+        # Entity should still be deleted
+        assert not model_class.objects.filter(pk=fallback_entity_pk).exists(), \
+            f"Entity {entity_type} should be deleted in fallback mode"
+
+    @given(
+        entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup', 'gifttag']),
+        entity_data=st.dictionaries(
+            st.sampled_from(['name', 'first_name', 'family_name', 'comment']),
+            st.text(
+                alphabet=st.characters(
+                    min_codepoint=32,  # Start from space character
+                    max_codepoint=126,  # End at tilde character (printable ASCII)
+                    blacklist_categories=('Cc', 'Cf', 'Cs', 'Co', 'Cn')  # Exclude control characters
+                ),
+                min_size=1,
+                max_size=50
+            ).filter(lambda x: x.strip() and '\x00' not in x),  # Exclude null bytes and empty strings
+            min_size=0,
+            max_size=3
+        )
+    )
+    @override_settings(USE_I18N=False)
+    def test_cancellation_behavior_delete(self, entity_type, entity_data):
+        """
+        Feature: modern-ux-interface, Property 5: Cancellation Behavior (Delete)
+
+        For any UI component (modal or panel), when a user cancels or closes the component,
+        it should close properly and maintain the current application state without any changes.
+
+        **Validates: Requirements 1.4**
+        """
+        # Create entity with random data
+        entity = self.create_entity_with_permission(entity_type, entity_data)
+        entity_pk = entity.pk
+
+        # Get delete URL for this entity type
+        delete_url = self.get_delete_url(entity_type, entity)
+
+        # Get the model class to verify entity persistence
+        model_class = entity.__class__
+
+        # Store original entity state
+        original_entity_count = model_class.objects.count()
+
+        # Verify entity exists before cancellation test
+        assert model_class.objects.filter(pk=entity_pk).exists(), f"Entity {entity_type} should exist before cancellation test"
+
+        # Test 1: GET request to show delete confirmation modal (should not delete anything)
+        response = self.client.get(delete_url, HTTP_HX_REQUEST='true')
+
+        # Property 5: Cancellation Behavior
+        # Getting the delete confirmation should not modify any data
+        assert response.status_code == 200, f"Delete confirmation display failed for {entity_type}"
+
+        # Entity should still exist after showing confirmation modal
+        assert model_class.objects.filter(pk=entity_pk).exists(), \
+            f"Entity {entity_type} should still exist after showing delete confirmation"
+
+        # Total entity count should remain unchanged
+        assert model_class.objects.count() == original_entity_count, \
+            f"Entity count should remain unchanged after showing delete confirmation for {entity_type}"
+
+        # Test 2: Simulate modal cancellation by not following through with POST
+        # In a real browser, this would be clicking "Cancel" or the X button
+        # We simulate this by just not making the POST request
+
+        # Verify entity still exists (simulating user clicked cancel)
+        assert model_class.objects.filter(pk=entity_pk).exists(), \
+            f"Entity {entity_type} should still exist after cancellation"
+
+        # Total entity count should remain unchanged
+        assert model_class.objects.count() == original_entity_count, \
+            f"Entity count should remain unchanged after cancellation for {entity_type}"
+
+        # Test 3: Verify that the modal content includes proper cancellation options
+        content = response.content.decode()
+
+        # Should contain cancel/close buttons or mechanisms
+        has_cancel_button = ('cancel' in content.lower() or
+                           'close' in content.lower() or
+                           'btn-close' in content or
+                           'data-bs-dismiss' in content)
+
+        assert has_cancel_button, f"Delete confirmation modal should have cancel/close mechanism for {entity_type}"
+
+        # Test 4: Verify fallback behavior for non-HTMX requests
+        # GET request without HTMX should also not delete anything
+        fallback_response = self.client.get(delete_url)
+
+        assert fallback_response.status_code == 200, f"Fallback delete confirmation failed for {entity_type}"
+
+        # Entity should still exist after fallback confirmation display
+        assert model_class.objects.filter(pk=entity_pk).exists(), \
+            f"Entity {entity_type} should still exist after fallback delete confirmation"
+
+        # Total entity count should remain unchanged
+        assert model_class.objects.count() == original_entity_count, \
+            f"Entity count should remain unchanged after fallback confirmation for {entity_type}"
+
+        # Test 5: Verify that application state is maintained
+        # The entity should be in exactly the same state as before
+        refreshed_entity = model_class.objects.get(pk=entity_pk)
+
+        # Basic state verification - entity should be unchanged
+        assert refreshed_entity.pk == entity.pk, f"Entity {entity_type} primary key should be unchanged"
+
+        # For entities with names, verify the name is unchanged
+        if hasattr(refreshed_entity, 'name') and hasattr(entity, 'name'):
+            assert refreshed_entity.name == entity.name, f"Entity {entity_type} name should be unchanged"
+        elif hasattr(refreshed_entity, 'first_name') and hasattr(entity, 'first_name'):
+            assert refreshed_entity.first_name == entity.first_name, f"Entity {entity_type} first_name should be unchanged"

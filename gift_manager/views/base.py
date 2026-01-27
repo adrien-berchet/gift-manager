@@ -100,6 +100,40 @@ class HTMXResponseMixin:
 
         return response
 
+    def delete(self, request, *args, **kwargs):
+        """Handle DELETE requests with HTMX-specific responses."""
+        response = super().delete(request, *args, **kwargs)
+
+        if self.is_htmx:
+            # Build HX-Trigger events for delete operations
+            triggers = []
+
+            # Always trigger list update for delete operations
+            triggers.append('list:update')
+
+            # Add modal close trigger if specified
+            if getattr(self, 'close_modal', False):
+                triggers.append('modal:close')
+
+            # Add success notification
+            if hasattr(self, 'get_success_message'):
+                success_message = self.get_success_message()
+                if success_message:
+                    triggers.append(json.dumps({'showNotification': {
+                        'message': success_message,
+                        'type': 'success'
+                    }}))
+
+            # Set HX-Trigger header
+            if triggers:
+                response['HX-Trigger'] = ', '.join(triggers)
+
+            # For HTMX requests, don't redirect - return empty response
+            if hasattr(response, 'status_code') and response.status_code == 302:
+                return HttpResponse('')
+
+        return response
+
     def get_success_message(self):
         """Override in subclasses to provide success messages."""
         return None
@@ -577,14 +611,14 @@ class DeleteSharedMixin:
     def post(self, request, *args, **kwargs):
         """Overload the delete method to handle conditional deletion.
 
-        If the person is shared with other users, only the sharing with the current user is removed.
-        Otherwise, the person is completely deleted.
+        If the object is shared with other users, only the sharing with the current user is removed.
+        Otherwise, the object is completely deleted.
         """
         with transaction.atomic():
             self.object = self.get_object()
             success_url = self.get_success_url()
 
-            # Check if the person is shared with other users
+            # Check if the object is shared with other users
             other_users = self.object.shared_with.exclude(id=request.user.id)
 
             if other_users.exists():
@@ -596,19 +630,38 @@ class DeleteSharedMixin:
                     user=request.user, **{self.object_type: self.object}
                 ).delete()
 
-                messages.success(
-                    request,
-                    gettext(
-                        "You no longer have access to this person, but it remains shared with "
-                        "other users"
-                    ),
-                )
+                success_message = gettext(
+                    "You no longer have access to this {}, but it remains shared with "
+                    "other users"
+                ).format(gettext(self.object_type).lower())
             else:
                 # If not shared, completely delete the object
                 self.object.delete()
-                messages.success(request, gettext("Person successfully deleted"))
+                success_message = gettext("{} successfully deleted").format(gettext(self.object_type))
 
-            return redirect(success_url)
+            # Handle HTMX vs regular requests
+            if getattr(self, 'is_htmx', False):
+                # For HTMX requests, return appropriate response with triggers
+                response = HttpResponse('')
+
+                # Build HX-Trigger events
+                triggers = []
+                triggers.append('list:update')
+
+                if getattr(self, 'close_modal', False):
+                    triggers.append('modal:close')
+
+                triggers.append(json.dumps({'showNotification': {
+                    'message': success_message,
+                    'type': 'success'
+                }}))
+
+                response['HX-Trigger'] = ', '.join(triggers)
+                return response
+            else:
+                # For regular requests, add message and redirect
+                messages.success(request, success_message)
+                return redirect(success_url)
 
 
 class CancelToPreviousMixin:
