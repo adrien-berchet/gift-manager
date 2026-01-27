@@ -7,7 +7,13 @@
 -->
 
 <form method="post"
-      hx-post="{{ request.path }}"
+      {% if object %}
+      action="{% url 'gift_manager:person_edit' object.person_id %}"
+      hx-post="{% url 'gift_manager:person_edit' object.person_id %}"
+      {% else %}
+      action="{% url 'gift_manager:person_create' %}"
+      hx-post="{% url 'gift_manager:person_create' %}"
+      {% endif %}
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
       hx-indicator="#formLoading"
@@ -153,7 +159,11 @@
               <input type="hidden" name="user_id" value="{{ friend.user.id }}">
               <select name="permission"
                       class="form-select form-select-sm permission-select"
-                      hx-post="{{ request.path }}"
+                      {% if object %}
+                      hx-post="{% url 'gift_manager:person_edit' object.person_id %}"
+                      {% else %}
+                      hx-post="{% url 'gift_manager:person_create' %}"
+                      {% endif %}
                       hx-swap="none"
                       hx-trigger="change"
                       hx-include="closest form">

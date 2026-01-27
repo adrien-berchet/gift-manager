@@ -7,7 +7,13 @@
 -->
 
 <form method="post"
-      hx-post="{{ request.path }}"
+      {% if object %}
+      action="{% url 'gift_manager:event_edit' object.event_id %}"
+      hx-post="{% url 'gift_manager:event_edit' object.event_id %}"
+      {% else %}
+      action="{% url 'gift_manager:event_create' %}"
+      hx-post="{% url 'gift_manager:event_create' %}"
+      {% endif %}
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
       hx-indicator="#formLoading"

@@ -182,7 +182,7 @@ LANGUAGES = [
     ("fr", gettext_lazy("French")),
 ]
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 
 LOCALE_PATHS = [
     BASE_DIR / "locale",
