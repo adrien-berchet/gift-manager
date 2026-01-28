@@ -1072,6 +1072,26 @@
                 });
             }
 
+            // Restore page interactivity as soon as offcanvas starts closing (not after animation)
+            document.querySelectorAll('.offcanvas').forEach(function(offcanvasEl) {
+                offcanvasEl.addEventListener('hide.bs.offcanvas', function() {
+                    // Immediately restore body scroll and interaction
+                    document.body.classList.remove('offcanvas-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                    // Start fading out backdrop immediately
+                    document.querySelectorAll('.offcanvas-backdrop').forEach(function(backdrop) {
+                        backdrop.style.opacity = '0';
+                    });
+                });
+                offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
+                    // Remove backdrop elements after animation completes
+                    document.querySelectorAll('.offcanvas-backdrop').forEach(function(backdrop) {
+                        backdrop.remove();
+                    });
+                });
+            });
+
             // Handle edit/create buttons
             document.addEventListener('click', function(e) {
                 if (e.target.matches('[data-action="edit"]') || e.target.closest('[data-action="edit"]')) {

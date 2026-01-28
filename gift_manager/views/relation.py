@@ -51,6 +51,13 @@ class PersonRelationCreateView(BaseCreateView):
         kwargs["person_id"] = self.kwargs["pk"]  # Pass the person ID to the form
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_action_url"] = reverse(
+            "gift_manager:person_relation_create", kwargs={"pk": self.kwargs["pk"]}
+        )
+        return context
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
@@ -79,6 +86,13 @@ class PersonGroupRelationCreateView(BaseCreateView):
         kwargs["group_id"] = self.kwargs["pk"]  # Pass the group ID to the form
         return kwargs
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_action_url"] = reverse(
+            "gift_manager:person_group_relation_create", kwargs={"pk": self.kwargs["pk"]}
+        )
+        return context
+
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
@@ -104,6 +118,13 @@ class GiftRelationCreateView(BaseCreateView):
         kwargs = super().get_form_kwargs()
         kwargs["gift_id"] = self.kwargs["pk"]  # Pass the gift ID to the form
         return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_action_url"] = reverse(
+            "gift_manager:gift_relation_create", kwargs={"pk": self.kwargs["pk"]}
+        )
+        return context
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -281,6 +302,11 @@ class RelationCreateView(BaseCreateView):
             "name"
         )
         return form
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["form_action_url"] = reverse("gift_manager:relation_create")
+        return context
 
 
 class RelationUpdateView(BaseUpdateView):
