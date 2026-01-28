@@ -110,6 +110,22 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle HX-Trigger events from successful deletion
     document.body.addEventListener('list:update', function() {
         console.log('List update triggered - closing modal');
+
+        // Reset button state before closing modal
+        const confirmBtn = document.getElementById('confirmAction');
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '{% trans "Delete" %}';
+            confirmBtn.innerHTML = '{% trans "Delete" %}'; // Reset innerHTML too in case it has spinner
+        }
+
+        // Reset all delete button states in the grid
+        if (window.GridUtils && window.GridUtils.resetDeleteButtonStates) {
+            setTimeout(function() {
+                window.GridUtils.resetDeleteButtonStates();
+            }, 100);
+        }
+
         // Close modal on successful deletion
         const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
         if (modal) {
@@ -147,5 +163,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+
+    // Reset button state when modal is hidden (for next use)
+    const confirmModal = document.getElementById('confirmModal');
+    if (confirmModal) {
+        confirmModal.addEventListener('hidden.bs.modal', function() {
+            console.log('Modal hidden - resetting button state');
+            const confirmBtn = document.getElementById('confirmAction');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = '{% trans "Delete" %}';
+                confirmBtn.innerHTML = '{% trans "Delete" %}';
+                confirmBtn.className = 'btn btn-danger'; // Reset class too
+            }
+
+            // Also reset all delete button states in the grid
+            if (window.GridUtils && window.GridUtils.resetDeleteButtonStates) {
+                setTimeout(function() {
+                    window.GridUtils.resetDeleteButtonStates();
+                }, 50);
+            }
+        });
+    }
 });
 </script>

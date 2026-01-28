@@ -76,13 +76,13 @@ class HTMXResponseMixin:
                         'type': 'success'
                     }}))
 
-            # Set HX-Trigger header
+            # For HTMX requests, don't redirect - return empty response with triggers
+            if hasattr(response, 'status_code') and response.status_code == 302:
+                response = HttpResponse('')
+
+            # Set HX-Trigger header on the final response
             if triggers:
                 response['HX-Trigger'] = ', '.join(triggers)
-
-            # For HTMX requests, don't redirect - return empty response
-            if hasattr(response, 'status_code') and response.status_code == 302:
-                return HttpResponse('')
 
         return response
 

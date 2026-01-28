@@ -622,7 +622,7 @@
     }
 
     /**
-     * Add list update event listener for automatic grid updates after deletions
+     * Add list update event listener for automatic grid updates after CRUD operations
      * @param {Object} grid - The Grid.js instance
      * @param {string} entityType - The type of entity (e.g., 'person', 'gift')
      * @param {number} idColumnIndex - The index of the ID column in the data array
@@ -636,38 +636,266 @@
             const deletedItemId = getDeletedItemId();
 
             if (deletedItemId) {
-                // Remove the specific row from grid data
+                // Remove the specific row from grid data (delete operation)
                 removeItemFromGrid(grid, deletedItemId, entityType, idColumnIndex, postUpdateCallback);
             } else {
-                console.warn(`[${entityType}List] Could not determine deleted item, falling back to page reload`);
-                setTimeout(() => window.location.reload(), 500);
+                // This is likely a create or update operation
+                // Refresh grid data smoothly without full page reload
+                console.log(`[${entityType}List] Create/update operation detected, refreshing grid data...`);
+                refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback);
             }
         });
+    }
+
+    /**
+     * Refresh grid data by fetching fresh data from the current page
+     * @param {Object} grid - The Grid.js instance
+     * @param {string} entityType - The type of entity
+     * @param {number} idColumnIndex - The index of the ID column
+     * @param {Function} postUpdateCallback - Optional callback to run after update
+     */
+    function refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback = null) {
+        // Build URL with cache-busting parameter to ensure fresh data
+        const url = new URL(window.location.href);
+        url.searchParams.set('_t', Date.now());
+
+        // Log current data count and URL for debugging
+        const currentDataCount = (grid.config.data || []).length;
+        console.log(`[${entityType}List] Current data count before refresh: ${currentDataCount}`);
+        console.log(`[${entityType}List] Fetching fresh data from: ${url.toString()}`);
+
+        // Fetch the current page to get updated data
+        // Use cache: 'no-store' and headers to bypass all caching
+        // Include credentials to ensure session cookies are sent
+        fetch(url.toString(), {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Extract the data array using bracket counting (more robust than regex for nested arrays)
+            const dataArrayStr = extractDataArray(html);
+
+            if (dataArrayStr) {
+                try {
+                    // Use Function constructor to safely evaluate the array
+                    // This handles the complex object structures in the data
+                    const extractedData = new Function('return ' + dataArrayStr)();
+
+                    console.log(`[${entityType}List] Extracted ${extractedData.length} items from refreshed data`);
+
+                    // Update the grid using updateConfig (same method as delete operation)
+                    grid.updateConfig({
+                        data: extractedData
+                    }).forceRender();
+
+                    // Update global data variable if it exists
+                    if (window.data !== undefined) {
+                        window.data = extractedData;
+                    }
+
+                    // Show/hide pagination footer based on data length
+                    updatePaginationVisibility(grid, extractedData.length);
+
+                    // Run post-update callback if provided
+                    if (postUpdateCallback && typeof postUpdateCallback === 'function') {
+                        setTimeout(postUpdateCallback, 100);
+                    }
+
+                    console.log(`[${entityType}List] Grid data refreshed successfully`);
+                } catch (parseError) {
+                    console.error(`[${entityType}List] Error parsing refreshed data:`, parseError);
+                    // Fallback to page reload on parse error
+                    setTimeout(() => window.location.reload(), 300);
+                }
+            } else {
+                console.warn(`[${entityType}List] Could not extract data from page, falling back to reload`);
+                setTimeout(() => window.location.reload(), 300);
+            }
+        })
+        .catch(error => {
+            console.error(`[${entityType}List] Error fetching page data:`, error);
+            // Fallback to page reload on fetch error
+            setTimeout(() => window.location.reload(), 300);
+        });
+    }
+
+    /**
+     * Extract the data array from HTML using bracket counting
+     * This is more robust than regex for nested arrays
+     * @param {string} html - The HTML content
+     * @returns {string|null} - The data array string or null if not found
+     */
+    function extractDataArray(html) {
+        // Find the start of the data declaration
+        const startMarker = 'const data = [';
+        const startIndex = html.indexOf(startMarker);
+
+        if (startIndex === -1) {
+            console.warn('[extractDataArray] Could not find "const data = [" marker');
+            return null;
+        }
+
+        // Start counting brackets from the opening bracket
+        const arrayStartIndex = startIndex + startMarker.length - 1; // Position of '['
+        let bracketCount = 1;
+        let i = arrayStartIndex + 1;
+        let inString = false;
+        let stringChar = null;
+        let escapeNext = false;
+
+        while (i < html.length && bracketCount > 0) {
+            const char = html[i];
+
+            if (escapeNext) {
+                escapeNext = false;
+                i++;
+                continue;
+            }
+
+            if (char === '\\' && inString) {
+                escapeNext = true;
+                i++;
+                continue;
+            }
+
+            if ((char === '"' || char === "'") && !inString) {
+                inString = true;
+                stringChar = char;
+            } else if (char === stringChar && inString) {
+                inString = false;
+                stringChar = null;
+            } else if (!inString) {
+                if (char === '[') {
+                    bracketCount++;
+                } else if (char === ']') {
+                    bracketCount--;
+                }
+            }
+
+            i++;
+        }
+
+        if (bracketCount === 0) {
+            // Found the matching closing bracket
+            const arrayStr = html.substring(arrayStartIndex, i);
+            console.log('[extractDataArray] Successfully extracted data array');
+            return arrayStr;
+        }
+
+        console.warn('[extractDataArray] Could not find matching closing bracket');
+        return null;
+    }
+
+    /**
+     * Update pagination footer visibility based on data length
+     * @param {Object} grid - The Grid.js instance
+     * @param {number} dataLength - The number of rows in the data
+     */
+    function updatePaginationVisibility(grid, dataLength) {
+        const paginationConfig = grid.config.pagination;
+        if (paginationConfig && paginationConfig.enabled) {
+            const paginationLimit = paginationConfig.limit || 10;
+
+            setTimeout(function() {
+                const containers = document.querySelectorAll('.gridjs-wrapper');
+                for (const container of containers) {
+                    const footer = container.querySelector('.gridjs-footer');
+                    if (footer) {
+                        if (dataLength <= paginationLimit) {
+                            // Hide footer if only one page
+                            footer.classList.add('gridjs-footer-hidden');
+                            footer.style.cssText = 'display: none !important;';
+                        } else {
+                            // Show footer if multiple pages
+                            footer.classList.remove('gridjs-footer-hidden');
+                            footer.style.cssText = '';
+                        }
+                    }
+                }
+            }, 100);
+        }
     }
 
     /**
      * Get the ID of the deleted item from the delete modal or context
      */
     function getDeletedItemId() {
-        // Try to get from the delete form in the modal
+        // Primary method: Get from the delete form in the modal
         const deleteForm = document.getElementById('deleteForm');
         if (deleteForm && deleteForm.action) {
             // Extract UUID from delete URL (e.g., /persons/uuid/delete/)
             const uuidMatch = deleteForm.action.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
             if (uuidMatch) {
+                console.log('Found deleted item ID from modal form:', uuidMatch[1]);
                 return uuidMatch[1];
             }
         }
 
-        // Try to get from disabled delete buttons (during deletion)
-        const deleteButtons = document.querySelectorAll('[data-action="delete"]');
-        for (const button of deleteButtons) {
-            if (button.disabled && button.dataset.entityId) {
-                return button.dataset.entityId;
+        // Fallback method: Check if there's a modal with delete URL data
+        const confirmModal = document.getElementById('confirmModal');
+        if (confirmModal) {
+            const modalBody = confirmModal.querySelector('.modal-body');
+            if (modalBody) {
+                const form = modalBody.querySelector('form[action*="/delete/"]');
+                if (form && form.action) {
+                    const uuidMatch = form.action.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+                    if (uuidMatch) {
+                        console.log('Found deleted item ID from modal body form:', uuidMatch[1]);
+                        return uuidMatch[1];
+                    }
+                }
             }
         }
 
+        console.warn('Could not determine deleted item ID from modal');
         return null;
+    }
+
+    /**
+     * Reset all delete button states in the grid to their default enabled state
+     */
+    function resetDeleteButtonStates() {
+        console.log('[GridUtils] Resetting delete button states...');
+
+        // Find all delete buttons in grid containers
+        const deleteButtons = document.querySelectorAll('.gridjs-wrapper [data-action="delete"]');
+
+        deleteButtons.forEach(button => {
+            // Re-enable the button
+            button.disabled = false;
+
+            // Reset button text and remove any loading indicators
+            const btnText = button.querySelector('.btn-text');
+            if (btnText) {
+                btnText.textContent = 'Delete';
+            }
+
+            // Remove any spinner icons that might have been added
+            const spinner = button.querySelector('.fa-spinner');
+            if (spinner) {
+                spinner.remove();
+            }
+
+            // Ensure the trash icon is present
+            const icon = button.querySelector('i');
+            if (icon && !icon.classList.contains('fa-trash')) {
+                icon.className = 'fas fa-trash';
+            }
+
+            // Reset any inline styles that might have been applied
+            button.style.pointerEvents = '';
+            button.style.opacity = '';
+
+            // Remove any disabled-related classes
+            button.classList.remove('disabled');
+        });
+
+        console.log(`[GridUtils] Reset ${deleteButtons.length} delete button states`);
     }
 
     /**
@@ -727,6 +955,11 @@
                 }, 150); // Slightly longer delay to ensure footer hiding runs first
             }
 
+            // Reset all delete button states after grid update
+            setTimeout(function() {
+                resetDeleteButtonStates();
+            }, 120);
+
             console.log(`[${entityType}List] Item removed from grid successfully`);
         } else {
             console.warn(`[${entityType}List] Item not found in grid data:`, itemId);
@@ -750,7 +983,8 @@
         sortString: sortString,
         sortDateObject: sortDateObject,
         dateObjectFormatter: dateObjectFormatter,
-        addListUpdateListener: addListUpdateListener
+        addListUpdateListener: addListUpdateListener,
+        resetDeleteButtonStates: resetDeleteButtonStates
     };
 
 })(window);

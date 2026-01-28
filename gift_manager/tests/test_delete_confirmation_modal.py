@@ -78,7 +78,8 @@ class TestDeleteConfirmationModal:
 
         # Delete form with proper action
         assert f'action="{url}"' in content
-        assert 'hx-post' in content
+        # Note: HTMX handling is done via JavaScript, not form attributes
+        assert 'deleteForm' in content
 
     @override_settings(USE_I18N=False)
     def test_delete_confirmation_modal_with_related_objects(self):
@@ -133,17 +134,35 @@ class TestDeleteConfirmationModal:
 
     @override_settings(USE_I18N=False)
     def test_delete_confirmation_modal_htmx_attributes(self):
-        """Test that proper HTMX attributes are set on the form."""
+        """Test that proper form structure is set for JavaScript HTMX handling."""
         url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
 
         response = self.client.get(url, HTTP_HX_REQUEST='true')
         content = response.content.decode()
 
-        # Check HTMX attributes
-        assert 'hx-post' in content
-        assert 'hx-trigger="submit"' in content
-        assert 'hx-target="body"' in content
-        assert 'hx-confirm="false"' in content
+        # Check form structure for JavaScript HTMX handling
+        assert 'deleteForm' in content
+        assert 'method="post"' in content
+        assert f'action="{url}"' in content
+        # Note: HTMX handling is done via JavaScript in base template, not form attributes
+
+    @override_settings(USE_I18N=False)
+    def test_delete_confirmation_modal_button_reset_script(self):
+        """Test that delete confirmation modal includes button state reset functionality."""
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
+
+        response = self.client.get(url, HTTP_HX_REQUEST='true')
+        content = response.content.decode()
+
+        # Check that the modal includes JavaScript for button state reset
+        assert 'resetDeleteButtonStates' in content
+        assert 'GridUtils.resetDeleteButtonStates' in content
+        assert 'list:update' in content
+        assert 'hidden.bs.modal' in content
+
+        # Check that the script handles modal events properly
+        assert 'confirmBtn.disabled = false' in content
+        assert 'confirmBtn.textContent' in content
 
 
 @pytest.mark.django_db
@@ -285,8 +304,11 @@ class TestDeleteConfirmationDisplayProperty:
         # Should contain proper form structure for deletion
         assert 'form' in content.lower(), f"Delete form missing for {entity_type}"
 
-        # Should contain HTMX attributes for AJAX handling
-        assert 'hx-post' in content, f"HTMX post attribute missing for {entity_type}"
+        # Should contain form ID for JavaScript handling
+        assert 'deleteForm' in content, f"Delete form ID missing for {entity_type}"
+
+        # Should contain proper method and action
+        assert 'method="post"' in content, f"POST method missing for {entity_type}"
 
         # Should contain CSRF token for security
         assert 'csrfmiddlewaretoken' in content, f"CSRF token missing for {entity_type}"

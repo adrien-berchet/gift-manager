@@ -1059,6 +1059,19 @@
                 }
             });
 
+            // Reset confirm modal button state when modal is hidden
+            const confirmModal = document.getElementById('confirmModal');
+            if (confirmModal) {
+                confirmModal.addEventListener('hidden.bs.modal', function() {
+                    const confirmBtn = document.getElementById('confirmAction');
+                    if (confirmBtn) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.innerHTML = '{% trans "Confirm" %}';
+                        confirmBtn.className = 'btn btn-danger';
+                    }
+                });
+            }
+
             // Handle edit/create buttons
             document.addEventListener('click', function(e) {
                 if (e.target.matches('[data-action="edit"]') || e.target.closest('[data-action="edit"]')) {
@@ -1090,7 +1103,10 @@
                         })
                         .then(html => {
                             const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
-                            document.getElementById(targetBody).innerHTML = html;
+                            const container = document.getElementById(targetBody);
+                            container.innerHTML = html;
+                            // Process HTMX attributes on the new content
+                            htmx.process(container);
                             hideOffcanvasLoading(target);
                         })
                         .catch(error => {
@@ -1133,7 +1149,10 @@
                             return response.text();
                         })
                         .then(html => {
-                            document.getElementById('offcanvasContent').innerHTML = html;
+                            const container = document.getElementById('offcanvasContent');
+                            container.innerHTML = html;
+                            // Process HTMX attributes on the new content
+                            htmx.process(container);
                             hideOffcanvasLoading('editPanel');
                         })
                         .catch(error => {
