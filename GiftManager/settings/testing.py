@@ -21,7 +21,7 @@ print("#########################")
 SECRET_KEY = "testing-secret-key-not-for-production"
 
 # Enable debug for better error messages in tests
-DEBUG = False  # Keep False for realistic testing
+DEBUG = True  # Keep False for realistic testing
 
 ALLOWED_HOSTS = ["*"]
 
@@ -109,28 +109,41 @@ SECURE_SSL_REDIRECT = False
 #         return None
 # MIGRATION_MODULES = DisableMigrations()
 
-# Minimal logging during tests
+# Logging during tests - show errors for debugging
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": True,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
-        "null": {
-            "class": "logging.NullHandler",
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
     "root": {
-        "handlers": ["null"],
-        "level": "CRITICAL",
+        "handlers": ["console"],
+        "level": "WARNING",
     },
     "loggers": {
         "django": {
-            "handlers": ["null"],
-            "level": "CRITICAL",
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
             "propagate": False,
         },
         "gift_manager": {
-            "handlers": ["null"],
-            "level": "CRITICAL",
+            "handlers": ["console"],
+            "level": "DEBUG",
             "propagate": False,
         },
     },

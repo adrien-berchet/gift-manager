@@ -307,16 +307,22 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
         return getattr(self, "success_url", "/")
 
     def form_valid(self, form):
-        with transaction.atomic():
-            form.instance.user = self.request.user
-            response = super().form_valid(form)
-            PermissionService.create_or_update_permission(
-                self.request.user,
-                form.instance,
-                permission_level=PermissionLevel.EDITOR,
-                object_attr=self.context_object_name,
-            )
-            return response
+        try:
+            with transaction.atomic():
+                # Only set user_link if the model has that field
+                if hasattr(form.instance, 'user_link'):
+                    form.instance.user_link = self.request.user
+                response = super().form_valid(form)
+                PermissionService.create_or_update_permission(
+                    self.request.user,
+                    form.instance,
+                    permission_level=PermissionLevel.EDITOR,
+                    object_attr=self.context_object_name,
+                )
+                return response
+        except Exception as e:
+            logger.exception("Error in BaseCreateView.form_valid: %s", e)
+            raise
 
     def get_success_message(self):
         """Return success message for create operations."""
@@ -584,7 +590,9 @@ class BaseUpdateView(
 
     def form_valid(self, form):
         with transaction.atomic():
-            form.instance.user = self.request.user
+            # Only set user_link if the model has that field
+            if hasattr(form.instance, 'user_link'):
+                form.instance.user_link = self.request.user
             response = super().form_valid(form)
             PermissionService.create_or_update_permission(
                 self.request.user,

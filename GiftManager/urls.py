@@ -55,8 +55,8 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
 ]
 
-# Add debug toolbar URLs only in debug mode
-if settings.DEBUG:
+# Add debug toolbar URLs only in debug mode and if debug_toolbar is installed
+if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
     try:
         from debug_toolbar.toolbar import debug_toolbar_urls
 
