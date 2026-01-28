@@ -1,0 +1,205 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n %}
+
+{% block edit_url %}{% url 'gift_manager:person_group_edit' pk=object.group_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:person_group_delete' pk=object.group_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <!-- Basic Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-layer-group me-2"></i>{% trans "Basic Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Name" %}</label>
+                    <div class="detail-value">{{ object.name }}</div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Created" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar me-1 text-muted"></i>
+                        {{ object.creation_date|date:"M d, Y" }}
+                        <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hierarchy Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-sitemap me-2"></i>{% trans "Hierarchy" %}
+        </h6>
+
+        <!-- Parent Groups -->
+        {% if parent_groups %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Parent Groups" %}</label>
+            <div class="detail-value">
+                {% for parent in parent_groups %}
+                <span class="badge bg-primary me-1 mb-1">
+                    <i class="fas fa-layer-group me-1"></i>{{ parent.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Child Groups -->
+        {% if child_groups %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Child Groups" %}</label>
+            <div class="detail-value">
+                {% for child in child_groups %}
+                <span class="badge bg-secondary me-1 mb-1">
+                    <i class="fas fa-layer-group me-1"></i>{{ child.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Hierarchy Path -->
+        {% if ancestors_path %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Hierarchy Path" %}</label>
+            <div class="detail-value">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        {% for ancestor in ancestors_path %}
+                        <li class="breadcrumb-item">
+                            <i class="fas fa-layer-group me-1"></i>{{ ancestor.name }}
+                        </li>
+                        {% endfor %}
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <i class="fas fa-layer-group me-1"></i>{{ object.name }}
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Members -->
+    {% if members %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-users me-2"></i>{% trans "Members" %}
+            <span class="badge bg-secondary ms-2">{{ members|length }}</span>
+        </h6>
+
+        <div class="members-list">
+            {% for member in members %}
+            <div class="member-item d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ member }}</span>
+                    {% if member.email %}
+                    <small class="text-muted ms-2">{{ member.email }}</small>
+                    {% endif %}
+                </div>
+                <div class="member-actions">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            data-action="detail"
+                            data-detail-url="{% url 'gift_manager:person_detail' pk=member.person_id %}"
+                            title="{% trans 'View person details' %}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Relations -->
+    {% if relations %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Relations" %}
+            <span class="badge bg-secondary ms-2">{{ relations|length }}</span>
+        </h6>
+
+        <div class="relations-list">
+            {% for relation in relations %}
+            <div class="relation-item border rounded p-3 mb-2">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-gift me-2 text-primary"></i>
+                            <strong>{{ relation.gift.name }}</strong>
+                            {% if relation.status %}
+                            <span class="badge bg-info ms-2">{{ relation.status }}</span>
+                            {% endif %}
+                        </div>
+
+                        {% if relation.event %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {% trans "Event:" %} {{ relation.event.name }}
+                        </div>
+                        {% endif %}
+
+                        {% if relation.due_date %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-clock me-1"></i>
+                            {% trans "Due:" %} {{ relation.due_date|date:"M d, Y" }}
+                        </div>
+                        {% endif %}
+
+                        {% if relation.comment %}
+                        <div class="text-muted small">
+                            <i class="fas fa-comment me-1"></i>
+                            {{ relation.comment|truncatechars:100 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="relation-actions">
+                        <button type="button"
+                                class="btn btn-outline-primary btn-sm"
+                                data-action="edit"
+                                data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                                title="{% trans 'Edit relation' %}">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Shared With -->
+    {% if shared_users %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+            <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+        </h6>
+
+        <div class="shared-users-list">
+            {% for shared_user in shared_users %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ shared_user.user.username }}</span>
+                </div>
+                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

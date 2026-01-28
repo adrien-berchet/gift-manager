@@ -277,6 +277,7 @@ class PersonGroupDetailView(BaseDetailView):
     template_name = "gift_manager/person_group_detail.html"
     context_object_name = "group"
     pk_name = "group_id"
+    htmx_template_name = "gift_manager/includes/person_group_detail_partial.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -284,9 +285,10 @@ class PersonGroupDetailView(BaseDetailView):
         # Hierarchy information
         context["parent_groups"] = self.object.parent_groups.all()
         context["child_groups"] = self.object.get_children()
+        context["ancestors_path"] = self.object.get_primary_ancestors_path()
 
         # Direct members only
-        context["persons"] = (
+        context["members"] = (
             Person.objects.accessible_by(self.request.user)
             .filter(groups=self.object)
             .prefetch_related("groups")
@@ -302,7 +304,7 @@ class PersonGroupDetailView(BaseDetailView):
         )
 
         # Relations/gifts for this group
-        context["gifts"] = (
+        context["relations"] = (
             Relation.objects.accessible_by(self.request.user)
             .filter(group=self.object, gift__isnull=False)
             .select_related("gift", "event", "status")
@@ -328,9 +330,9 @@ class PersonGroupDetailView(BaseDetailView):
         context["relation_statuses"] = RelationStatus.objects.all()
 
         # Member counts
-        context["direct_member_count"] = context["persons"].count()
+        context["direct_member_count"] = context["members"].count()
         context["nested_member_count"] = context["nested_members"].count()
-        context["gift_count"] = context["gifts"].count()
+        context["gift_count"] = context["relations"].count()
         context["nested_gift_count"] = context["nested_gifts"].count()
 
         # Add action buttons

@@ -12,6 +12,10 @@ from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import get_env_variable
 
+print("#############################")
+print("USING DEVELOPMENT ENVIRONMENT")
+print("#############################")
+
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
 
@@ -20,7 +24,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = "dev-secret-key-do-not-use-in-production-change-me-immediately"  # noqa: S105
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 INTERNAL_IPS = ["127.0.0.1"]
@@ -48,6 +52,10 @@ DATABASES = {
         "PORT": get_env_variable("DB_PORT", "5432"),
     }
 }
+
+print("#########################")
+print("USING DB:", DATABASES.get("default", {}).get("NAME", "# UNKNOWN #"))
+print("#########################")
 
 # Email backend for development - prints to console
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

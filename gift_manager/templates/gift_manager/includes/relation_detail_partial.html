@@ -1,0 +1,181 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n %}
+
+{% block edit_url %}{% url 'gift_manager:relation_edit' pk=object.relation_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:relation_delete' pk=object.relation_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <!-- Basic Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Basic Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Gift" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-gift me-2 text-primary"></i>
+                        <strong>{{ object.gift.name }}</strong>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "For" %}</label>
+                    <div class="detail-value">
+                        {% if object.person %}
+                        <i class="fas fa-user me-2 text-primary"></i>
+                        <strong>{{ object.person }}</strong>
+                        {% elif object.group %}
+                        <i class="fas fa-layer-group me-2 text-primary"></i>
+                        <strong>{{ object.group.name }}</strong>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if object.status %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Status" %}</label>
+                    <div class="detail-value">
+                        <span class="badge bg-info">{{ object.status }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.due_date %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Due Date" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-clock me-1 text-muted"></i>
+                        {{ object.due_date|date:"M d, Y" }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.comment %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Comment" %}</label>
+                    <div class="detail-value">{{ object.comment }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Created" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar me-1 text-muted"></i>
+                        {{ object.creation_date|date:"M d, Y" }}
+                        <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Information -->
+    {% if object.event %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-calendar-alt me-2"></i>{% trans "Event Information" %}
+        </h6>
+
+        <div class="event-info border rounded p-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                <strong>{{ object.event.name }}</strong>
+            </div>
+
+            {% if object.event.comment %}
+            <div class="text-muted small mb-2">
+                <i class="fas fa-comment me-1"></i>
+                {{ object.event.comment }}
+            </div>
+            {% endif %}
+
+            {% if object.event.usual_date %}
+            <div class="text-muted small mb-1">
+                <i class="fas fa-calendar-day me-1"></i>
+                {% trans "Usual Date:" %} {{ object.event.usual_date|date:"M d" }}
+            </div>
+            {% endif %}
+
+            {% if object.event.absolute_date %}
+            <div class="text-muted small mb-1">
+                <i class="fas fa-calendar-check me-1"></i>
+                {% trans "Absolute Date:" %} {{ object.event.absolute_date|date:"M d, Y" }}
+            </div>
+            {% endif %}
+
+            {% if object.event.recurrence %}
+            <div class="text-muted small">
+                <i class="fas fa-redo me-1"></i>
+                {% trans "Recurrence:" %} {{ object.event.get_recurrence_display }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gift Details -->
+    {% if object.gift %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-gift me-2"></i>{% trans "Gift Details" %}
+        </h6>
+
+        <div class="gift-info border rounded p-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-gift me-2 text-primary"></i>
+                <strong>{{ object.gift.name }}</strong>
+            </div>
+
+            {% if object.gift.comment %}
+            <div class="text-muted small mb-2">
+                <i class="fas fa-comment me-1"></i>
+                {{ object.gift.comment }}
+            </div>
+            {% endif %}
+
+            {% if object.gift.tags.all %}
+            <div class="gift-tags">
+                <small class="text-muted">{% trans "Tags:" %}</small>
+                {% for tag in object.gift.tags.all %}
+                <span class="badge bg-info me-1">
+                    <i class="fas fa-tag me-1"></i>{{ tag.name }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Shared With -->
+    {% if shared_users %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+            <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+        </h6>
+
+        <div class="shared-users-list">
+            {% for shared_user in shared_users %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ shared_user.user.username }}</span>
+                </div>
+                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

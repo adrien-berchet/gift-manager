@@ -88,6 +88,9 @@
         }
     });
 
+    // Add list update event listener using GridUtils
+    GridUtils.addListUpdateListener(grid, 'Event', eventIdIdx);
+
     // Initialize filter panel
     FilterPanel.init('event-grid', grid, columns);
 

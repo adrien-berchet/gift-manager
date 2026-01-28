@@ -352,6 +352,8 @@
 
     <!-- Form partials CSS for offcanvas panels -->
     <link rel="stylesheet" href="{% static 'gift_manager/css/form-partials.css' %}">
+    <!-- Detail views CSS for slide panels -->
+    <link rel="stylesheet" href="{% static 'gift_manager/detail-views.css' %}">
 
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
@@ -607,6 +609,8 @@
     </script>
     <!-- UI Enhancements -->
     <script src="{% static 'gift_manager/ui-enhancements.js' %}"></script>
+    <!-- Detail Views -->
+    <script src="{% static 'gift_manager/detail-views.js' %}"></script>
 
     <!-- Configure HTMX to include CSRF token in headers -->
     <script>
@@ -999,11 +1003,50 @@
                             // Set up confirm button
                             const confirmBtn = document.getElementById('confirmAction');
                             if (confirmBtn) {
-                                confirmBtn.onclick = function() {
+                                confirmBtn.onclick = function(e) {
+                                    e.preventDefault();
+
+                                    // Disable button and show loading state
+                                    confirmBtn.disabled = true;
+                                    const originalText = confirmBtn.textContent;
+                                    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+
                                     const form = document.getElementById('deleteForm');
                                     if (form) {
+                                        console.log('Submitting delete form:', form.action);
+
+                                        // Check if HTMX is available
+                                        if (typeof htmx === 'undefined') {
+                                            console.error('HTMX is not loaded');
+                                            // Fallback to regular form submission
+                                            form.submit();
+                                            return;
+                                        }
+
                                         // Submit form via HTMX
-                                        htmx.trigger(form, 'submit');
+                                        console.log('Triggering HTMX request...');
+
+                                        // Get form data
+                                        const formData = new FormData(form);
+
+                                        htmx.ajax('POST', form.action, {
+                                            values: formData,
+                                            swap: 'none',
+                                            headers: {
+                                                'HX-Request': 'true'
+                                            }
+                                        }).then(function() {
+                                            console.log('HTMX request completed successfully');
+                                        }).catch(function(error) {
+                                            console.error('HTMX request failed:', error);
+                                            // Re-enable button on error
+                                            confirmBtn.disabled = false;
+                                            confirmBtn.innerHTML = originalText;
+                                        });
+                                    } else {
+                                        console.error('Delete form not found');
+                                        confirmBtn.disabled = false;
+                                        confirmBtn.innerHTML = originalText;
                                     }
                                 };
                             }

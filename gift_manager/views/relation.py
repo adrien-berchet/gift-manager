@@ -347,6 +347,7 @@ class RelationDetailView(BaseDetailView):
     template_name = "gift_manager/relation_detail.html"
     context_object_name = "relation"
     pk_name = "relation_id"
+    htmx_template_name = "gift_manager/includes/relation_detail_partial.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

@@ -122,6 +122,12 @@
         }
     });
 
+    // Add list update event listener using GridUtils
+    GridUtils.addListUpdateListener(grid, 'Gift', 3, function() {
+        // Post-update callback: re-add data attributes
+        addGiftIdDataAttributes();
+    });
+
     // Function to add gift ID data attributes to rows
     function addGiftIdDataAttributes() {
         const gridContainer = document.getElementById('gift-grid');

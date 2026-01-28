@@ -13,6 +13,10 @@ import tempfile
 
 from .base import *  # noqa: F403
 
+print("#########################")
+print("USING TESTING ENVIRONMENT")
+print("#########################")
+
 # Use a simple secret key for testing
 SECRET_KEY = "testing-secret-key-not-for-production"
 
@@ -69,6 +73,10 @@ def _get_test_database_config() -> dict:
 
 
 DATABASES = _get_test_database_config()
+
+print("#########################")
+print("USING DB:", DATABASES.get("default", {}).get("NAME", "# UNKNOWN #"))
+print("#########################")
 
 # Use in-memory email backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

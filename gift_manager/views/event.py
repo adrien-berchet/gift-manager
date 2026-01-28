@@ -76,6 +76,7 @@ class EventDetailView(BaseDetailView):
     template_name = "gift_manager/event_detail.html"
     context_object_name = "event"
     pk_name = "event_id"
+    htmx_template_name = "gift_manager/includes/event_detail_partial.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

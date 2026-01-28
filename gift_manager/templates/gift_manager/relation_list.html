@@ -177,6 +177,9 @@
             }
         });
 
+        // Add list update event listener using GridUtils
+        GridUtils.addListUpdateListener(grid, 'Relation', 5);
+
         // Initialize filter panel
         FilterPanel.init('relation-grid', grid, columns);
 

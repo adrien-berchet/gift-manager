@@ -1,6 +1,9 @@
 {% extends "gift_manager/base.html" %} {% load custom_filters %} {% load i18n %}
 {% block title %}Gift Manager - {% trans "Group details" %}{% endblock %}
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/person_group_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Group details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p>
@@ -192,6 +195,7 @@
     {% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %} {% load static %}

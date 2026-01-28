@@ -1,0 +1,194 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n %}
+
+{% block edit_url %}{% url 'gift_manager:gift_tag_edit' pk=object.tag_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:gift_tag_delete' pk=object.tag_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <!-- Basic Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-tag me-2"></i>{% trans "Basic Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Name" %}</label>
+                    <div class="detail-value">{{ object.name }}</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Visibility" %}</label>
+                    <div class="detail-value">
+                        {% if object.is_public %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-globe me-1"></i>{% trans "Public" %}
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="fas fa-lock me-1"></i>{% trans "Private" %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Created" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar me-1 text-muted"></i>
+                        {{ object.creation_date|date:"M d, Y" }}
+                        <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hierarchy Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-sitemap me-2"></i>{% trans "Hierarchy" %}
+        </h6>
+
+        <!-- Parent Tags -->
+        {% if parent_tags %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Parent Tags" %}</label>
+            <div class="detail-value">
+                {% for parent in parent_tags %}
+                <span class="badge bg-primary me-1 mb-1">
+                    <i class="fas fa-tag me-1"></i>{{ parent.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Child Tags -->
+        {% if child_tags %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Child Tags" %}</label>
+            <div class="detail-value">
+                {% for child in child_tags %}
+                <span class="badge bg-secondary me-1 mb-1">
+                    <i class="fas fa-tag me-1"></i>{{ child.name }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Hierarchy Path -->
+        {% if ancestors_path %}
+        <div class="mb-3">
+            <label class="detail-label">{% trans "Hierarchy Path" %}</label>
+            <div class="detail-value">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        {% for ancestor in ancestors_path %}
+                        <li class="breadcrumb-item">
+                            <i class="fas fa-tag me-1"></i>{{ ancestor.name }}
+                        </li>
+                        {% endfor %}
+                        <li class="breadcrumb-item active" aria-current="page">
+                            <i class="fas fa-tag me-1"></i>{{ object.name }}
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Associated Gifts -->
+    {% if gifts %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-gifts me-2"></i>{% trans "Associated Gifts" %}
+            <span class="badge bg-secondary ms-2">{{ gifts|length }}</span>
+        </h6>
+
+        <div class="gifts-list">
+            {% for gift in gifts %}
+            <div class="gift-item d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-gift me-2 text-muted"></i>
+                    <div>
+                        <span>{{ gift.name }}</span>
+                        {% if gift.comment %}
+                        <small class="text-muted d-block">{{ gift.comment|truncatechars:50 }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="gift-actions">
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm"
+                            data-action="detail"
+                            data-detail-url="{% url 'gift_manager:gift_detail' pk=gift.gift_id %}"
+                            title="{% trans 'View gift details' %}">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Usage Statistics -->
+    {% if usage_stats %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-chart-bar me-2"></i>{% trans "Usage Statistics" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-number h4 mb-1 text-primary">{{ usage_stats.direct_gifts }}</div>
+                    <div class="stat-label small text-muted">{% trans "Direct Gifts" %}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-number h4 mb-1 text-info">{{ usage_stats.total_gifts }}</div>
+                    <div class="stat-label small text-muted">{% trans "Total Gifts" %}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card text-center p-3 border rounded">
+                    <div class="stat-number h4 mb-1 text-success">{{ usage_stats.child_tags }}</div>
+                    <div class="stat-label small text-muted">{% trans "Child Tags" %}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Shared With -->
+    {% if shared_users %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+            <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+        </h6>
+
+        <div class="shared-users-list">
+            {% for shared_user in shared_users %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ shared_user.user.username }}</span>
+                </div>
+                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

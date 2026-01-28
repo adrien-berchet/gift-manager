@@ -82,12 +82,7 @@
 <!-- Hidden form for actual deletion -->
 <form id="deleteForm"
       method="post"
-      action="{{ delete_url }}"
-      hx-post="{{ delete_url }}"
-      hx-trigger="submit"
-      hx-target="body"
-      hx-swap="outerHTML"
-      hx-confirm="false">
+      action="{{ delete_url }}">
   {% csrf_token %}
   {% if additional_fields %}
     {% for field_name, field_value in additional_fields.items %}
@@ -105,51 +100,37 @@ document.addEventListener('DOMContentLoaded', function() {
         modalTitle.textContent = '{% trans "Confirm Deletion" %}';
     }
 
-    // Update confirm button
+    // Update confirm button appearance
     const confirmBtn = document.getElementById('confirmAction');
     if (confirmBtn) {
         confirmBtn.textContent = '{% trans "Delete" %}';
         confirmBtn.className = 'btn btn-danger';
-
-        // Set up click handler for deletion
-        confirmBtn.onclick = function(e) {
-            e.preventDefault();
-
-            // Disable button and show loading state
-            confirmBtn.disabled = true;
-            const originalText = confirmBtn.textContent;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>{% trans "Deleting..." %}';
-
-            // Submit the form via HTMX
-            const form = document.getElementById('deleteForm');
-            if (form) {
-                htmx.trigger(form, 'submit');
-            }
-        };
     }
 
-    // Handle successful deletion
-    document.body.addEventListener('htmx:afterRequest', function(e) {
-        if (e.detail.elt.id === 'deleteForm' && e.detail.xhr.status === 200) {
-            // Close modal on successful deletion
-            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-            if (modal) {
-                modal.hide();
-            }
-
-            // Show success notification
-            if (window.showNotification) {
-                window.showNotification('{% trans "Item deleted successfully" %}', 'success');
-            }
-
-            // Trigger list update event
-            document.dispatchEvent(new CustomEvent('list:update'));
+    // Handle HX-Trigger events from successful deletion
+    document.body.addEventListener('list:update', function() {
+        console.log('List update triggered - closing modal');
+        // Close modal on successful deletion
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        if (modal) {
+            modal.hide();
         }
     });
 
-    // Handle deletion errors
+    // Handle showNotification trigger
+    document.body.addEventListener('showNotification', function(e) {
+        console.log('Show notification triggered:', e.detail);
+        if (window.showNotification && e.detail) {
+            window.showNotification(e.detail.message, e.detail.type);
+        }
+    });
+
+    // Handle HTMX errors (for cases where HX-Trigger is not sent)
     document.body.addEventListener('htmx:responseError', function(e) {
-        if (e.detail.elt.id === 'deleteForm') {
+        console.log('HTMX responseError:', e.detail);
+        // Check if this is our delete request
+        if (e.detail.requestConfig && e.detail.requestConfig.url &&
+            e.detail.requestConfig.url.includes('/delete/')) {
             // Re-enable button
             const confirmBtn = document.getElementById('confirmAction');
             if (confirmBtn) {

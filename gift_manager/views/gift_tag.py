@@ -209,6 +209,7 @@ class GiftTagDetailView(BaseDetailView):
     template_name = "gift_manager/gift_tag_detail.html"
     context_object_name = "gift_tag"
     pk_name = "tag_id"
+    htmx_template_name = "gift_manager/includes/gift_tag_detail_partial.html"
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""
@@ -230,5 +231,18 @@ class GiftTagDetailView(BaseDetailView):
             .order_by("name")
         )
         # get_ancestors() is now cached and optimized
-        context["ancestors"] = self.object.get_ancestors()
+        context["ancestors_path"] = self.object.get_primary_ancestors_path()
+
+        # Usage statistics
+        direct_gifts_count = context["gifts"].count()
+        all_gifts = self.object.get_all_gifts()
+        total_gifts_count = all_gifts.count()
+        child_tags_count = context["child_tags"].count()
+
+        context["usage_stats"] = {
+            "direct_gifts": direct_gifts_count,
+            "total_gifts": total_gifts_count,
+            "child_tags": child_tags_count,
+        }
+
         return context

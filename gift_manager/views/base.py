@@ -640,7 +640,10 @@ class DeleteSharedMixin:
                 success_message = gettext("{} successfully deleted").format(gettext(self.object_type))
 
             # Handle HTMX vs regular requests
-            if getattr(self, 'is_htmx', False):
+            is_htmx = getattr(self, 'is_htmx', False)
+            logger.debug(f"Delete request - is_htmx: {is_htmx}, headers: {request.headers}")
+
+            if is_htmx:
                 # For HTMX requests, return appropriate response with triggers
                 response = HttpResponse('')
 
@@ -657,9 +660,11 @@ class DeleteSharedMixin:
                 }}))
 
                 response['HX-Trigger'] = ', '.join(triggers)
+                logger.debug(f"HTMX response - HX-Trigger: {response['HX-Trigger']}")
                 return response
             else:
                 # For regular requests, add message and redirect
+                logger.debug(f"Regular response - redirecting to: {success_url}")
                 messages.success(request, success_message)
                 return redirect(success_url)
 

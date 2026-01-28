@@ -70,6 +70,9 @@
             },
         });
 
+        // Add list update event listener using GridUtils
+        GridUtils.addListUpdateListener(grid, 'Status', statusPkIdx);
+
         // Initialize filter panel
         FilterPanel.init('status-grid', grid, columns);
     }) ();

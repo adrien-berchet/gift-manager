@@ -114,6 +114,7 @@ class PersonDetailView(BaseDetailView):
     template_name = "gift_manager/person_detail.html"
     context_object_name = "person"
     pk_name = "person_id"
+    htmx_template_name = "gift_manager/includes/person_detail_partial.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

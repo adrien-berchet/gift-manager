@@ -5,6 +5,9 @@
 {% block title %}Gift Manager - {% trans "Gift tag details" %}{% endblock %}
 
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/gift_tag_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Gift tag details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ gift_tag.name }}</p>
 <p><strong>{% trans "Parent tags:" %}</strong>
@@ -58,6 +61,7 @@
 <div id="gifts-grid" class="mt-3"></div>
 {% else %}
 <p class="text-center text-muted">{% trans "No gift with this tag" %}</p>
+{% endif %}
 {% endif %}
 {% endblock %}
 

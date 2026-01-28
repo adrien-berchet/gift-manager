@@ -71,6 +71,12 @@
                 icon: 'fa-share-alt',
                 title: 'Share',
                 action: 'share'
+            },
+            expand: {
+                class: 'btn-outline-secondary',
+                icon: 'fa-chevron-down',
+                title: 'Expand',
+                action: 'expand'
             }
         };
 
@@ -105,6 +111,10 @@
                               title="${config.title}"
                               data-action="${config.action}"
                               data-entity-id="${id}"
+                              ${config.action === 'detail' ? 'data-detail-url="' + url + '"' : ''}
+                              ${config.action === 'edit' ? 'data-edit-url="' + url + '"' : ''}
+                              ${config.action === 'delete' ? 'data-delete-url="' + url + '"' : ''}
+                              ${config.action === 'expand' ? 'data-detail-url="' + url + '"' : ''}
                               data-bs-toggle="tooltip"
                               data-bs-placement="top">
                         <i class="fas ${config.icon}"></i>
@@ -407,12 +417,322 @@
     }
 
     /**
+     * Enable expandable rows functionality for Grid.js
+     * @param {string} containerId - The ID of the grid container
+     * @param {Object} grid - The Grid.js instance
+     * @param {Object} options - Configuration options
+     *                 {detailUrlTemplate: '/entity/{id}/', expandButtonColumn: 'actions'}
+     */
+    function enableExpandableRows(containerId, grid, options = {}) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+            console.error(`[GridUtils.enableExpandableRows] Container element with ID '${containerId}' not found`);
+            return;
+        }
+
+        // Add CSS class to container to enable expandable row styling
+        container.classList.add('expandable-grid');
+
+        // Handle expand button clicks
+        container.addEventListener('click', function(e) {
+            const expandButton = e.target.closest('[data-action="expand"]');
+            if (!expandButton) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const row = expandButton.closest('tr');
+            if (!row) return;
+
+            const entityId = expandButton.dataset.entityId;
+            const detailUrl = expandButton.dataset.detailUrl;
+
+            if (!entityId || !detailUrl) {
+                console.error('[GridUtils.enableExpandableRows] Missing entity ID or detail URL');
+                return;
+            }
+
+            toggleExpandableRow(row, entityId, detailUrl, expandButton);
+        });
+
+        /**
+         * Toggle expandable row content
+         */
+        function toggleExpandableRow(row, entityId, detailUrl, button) {
+            const existingDetailRow = row.nextElementSibling;
+            const isExpanded = existingDetailRow && existingDetailRow.classList.contains('expandable-detail-row');
+
+            if (isExpanded) {
+                // Collapse
+                collapseRow(existingDetailRow, button);
+            } else {
+                // Expand
+                expandRow(row, entityId, detailUrl, button);
+            }
+        }
+
+        /**
+         * Expand a row to show details
+         */
+        function expandRow(row, entityId, detailUrl, button) {
+            // Update button icon
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-chevron-up';
+            }
+            button.setAttribute('aria-expanded', 'true');
+            button.title = 'Collapse';
+
+            // Create detail row
+            const colCount = row.cells.length;
+            const detailRow = document.createElement('tr');
+            detailRow.className = 'expandable-detail-row';
+            detailRow.innerHTML = `
+                <td colspan="${colCount}" class="expandable-detail-cell">
+                    <div class="expandable-detail-content">
+                        <div class="text-center p-3">
+                            <i class="fas fa-spinner fa-spin"></i> Loading details...
+                        </div>
+                    </div>
+                </td>
+            `;
+
+            // Insert after current row
+            row.parentNode.insertBefore(detailRow, row.nextSibling);
+
+            // Load content via HTMX
+            const detailContent = detailRow.querySelector('.expandable-detail-content');
+
+            // Use fetch to load content
+            fetch(detailUrl, {
+                headers: {
+                    'HX-Request': 'true',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                detailContent.innerHTML = html;
+                detailRow.setAttribute('data-loaded', 'true');
+
+                // Animate expansion
+                animateExpansion(detailRow);
+            })
+            .catch(error => {
+                console.error('Failed to load expandable content:', error);
+                detailContent.innerHTML = `
+                    <div class="text-center p-3 text-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Failed to load details.
+                        <button class="btn btn-sm btn-outline-primary ms-2" onclick="this.closest('tr').previousElementSibling.querySelector('[data-action=expand]').click()">
+                            Retry
+                        </button>
+                    </div>
+                `;
+            });
+        }
+
+        /**
+         * Collapse an expanded row
+         */
+        function collapseRow(detailRow, button) {
+            // Update button icon
+            const icon = button.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-chevron-down';
+            }
+            button.setAttribute('aria-expanded', 'false');
+            button.title = 'Expand';
+
+            // Animate collapse and remove
+            animateCollapse(detailRow, () => {
+                if (detailRow.parentNode) {
+                    detailRow.parentNode.removeChild(detailRow);
+                }
+            });
+        }
+
+        /**
+         * Animate row expansion
+         */
+        function animateExpansion(row) {
+            const content = row.querySelector('.expandable-detail-content');
+            if (!content) return;
+
+            // Set initial state
+            content.style.maxHeight = '0px';
+            content.style.overflow = 'hidden';
+            content.style.transition = 'max-height 0.3s ease-out';
+
+            // Force reflow
+            content.offsetHeight;
+
+            // Animate to full height
+            content.style.maxHeight = content.scrollHeight + 'px';
+
+            // Clean up after animation
+            content.addEventListener('transitionend', function handler() {
+                content.style.maxHeight = 'none';
+                content.style.overflow = 'visible';
+                content.removeEventListener('transitionend', handler);
+            });
+        }
+
+        /**
+         * Animate row collapse
+         */
+        function animateCollapse(row, callback) {
+            const content = row.querySelector('.expandable-detail-content');
+            if (!content) {
+                if (callback) callback();
+                return;
+            }
+
+            // Set current height
+            content.style.maxHeight = content.scrollHeight + 'px';
+            content.style.overflow = 'hidden';
+            content.style.transition = 'max-height 0.3s ease-out';
+
+            // Force reflow
+            content.offsetHeight;
+
+            // Animate to zero height
+            content.style.maxHeight = '0px';
+
+            // Remove after animation
+            content.addEventListener('transitionend', function handler() {
+                content.removeEventListener('transitionend', handler);
+                if (callback) callback();
+            });
+        }
+    }
+
+    /**
      * Formatter for date objects with iso/display properties
      * Displays the localized date string
      */
     function dateObjectFormatter(cell) {
         if (!cell) return '';
         return cell.display || cell;
+    }
+
+    /**
+     * Add list update event listener for automatic grid updates after deletions
+     * @param {Object} grid - The Grid.js instance
+     * @param {string} entityType - The type of entity (e.g., 'person', 'gift')
+     * @param {number} idColumnIndex - The index of the ID column in the data array
+     * @param {Function} postUpdateCallback - Optional callback to run after grid update
+     */
+    function addListUpdateListener(grid, entityType, idColumnIndex, postUpdateCallback = null) {
+        document.addEventListener('list:update', function(event) {
+            console.log(`[${entityType}List] Received list:update event, updating grid...`);
+
+            // Try to get the deleted item ID from the modal or delete context
+            const deletedItemId = getDeletedItemId();
+
+            if (deletedItemId) {
+                // Remove the specific row from grid data
+                removeItemFromGrid(grid, deletedItemId, entityType, idColumnIndex, postUpdateCallback);
+            } else {
+                console.warn(`[${entityType}List] Could not determine deleted item, falling back to page reload`);
+                setTimeout(() => window.location.reload(), 500);
+            }
+        });
+    }
+
+    /**
+     * Get the ID of the deleted item from the delete modal or context
+     */
+    function getDeletedItemId() {
+        // Try to get from the delete form in the modal
+        const deleteForm = document.getElementById('deleteForm');
+        if (deleteForm && deleteForm.action) {
+            // Extract UUID from delete URL (e.g., /persons/uuid/delete/)
+            const uuidMatch = deleteForm.action.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
+            if (uuidMatch) {
+                return uuidMatch[1];
+            }
+        }
+
+        // Try to get from disabled delete buttons (during deletion)
+        const deleteButtons = document.querySelectorAll('[data-action="delete"]');
+        for (const button of deleteButtons) {
+            if (button.disabled && button.dataset.entityId) {
+                return button.dataset.entityId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Remove a specific item from the grid by ID
+     */
+    function removeItemFromGrid(gridInstance, itemId, entityType, idColumnIndex, postUpdateCallback) {
+        console.log(`[${entityType}List] Removing item from grid:`, itemId);
+
+        // Get current data from grid
+        const currentData = gridInstance.config.data || window.data;
+
+        // Find the item in the data array
+        const itemIndex = currentData.findIndex(row => row[idColumnIndex] === itemId);
+
+        if (itemIndex !== -1) {
+            // Create new data array without the deleted item
+            const newData = [...currentData];
+            newData.splice(itemIndex, 1);
+
+            // Update the grid with new data
+            gridInstance.updateConfig({
+                data: newData
+            }).forceRender();
+
+            // Update global data variable
+            if (window.data) {
+                window.data = newData;
+            }
+
+            // Hide pagination footer if only one page after update
+            const paginationConfig = gridInstance.config.pagination;
+            if (paginationConfig && paginationConfig.enabled) {
+                const paginationLimit = paginationConfig.limit || 10;
+                const totalRows = newData.length;
+
+                if (totalRows <= paginationLimit) {
+                    setTimeout(function() {
+                        // Find the grid container by looking for the grid instance's container
+                        const containers = document.querySelectorAll('.gridjs-wrapper');
+                        for (const container of containers) {
+                            const footer = container.querySelector('.gridjs-footer');
+                            if (footer) {
+                                // Add a class to hide the footer permanently
+                                footer.classList.add('gridjs-footer-hidden');
+                                // Also set inline style with !important via cssText
+                                footer.style.cssText = 'display: none !important;';
+                            }
+                        }
+                    }, 100);
+                }
+            }
+
+            // Run post-update callback if provided
+            if (postUpdateCallback && typeof postUpdateCallback === 'function') {
+                setTimeout(() => {
+                    postUpdateCallback();
+                }, 150); // Slightly longer delay to ensure footer hiding runs first
+            }
+
+            console.log(`[${entityType}List] Item removed from grid successfully`);
+        } else {
+            console.warn(`[${entityType}List] Item not found in grid data:`, itemId);
+            // Fallback to page reload if item not found
+            setTimeout(() => window.location.reload(), 500);
+        }
     }
 
     // Expose utilities to global scope
@@ -424,11 +744,13 @@
         badgeFormatter: badgeFormatter,
         setupFilterDropdown: setupFilterDropdown,
         setupCustomColumnFilter: setupCustomColumnFilter,
+        enableExpandableRows: enableExpandableRows,
         getGridTranslations: getGridTranslations,
         sortByProperty: sortByProperty,
         sortString: sortString,
         sortDateObject: sortDateObject,
-        dateObjectFormatter: dateObjectFormatter
+        dateObjectFormatter: dateObjectFormatter,
+        addListUpdateListener: addListUpdateListener
     };
 
 })(window);

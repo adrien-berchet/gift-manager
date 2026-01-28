@@ -265,6 +265,9 @@
         }
     });
 
+    // Add list update event listener using GridUtils
+    GridUtils.addListUpdateListener(grid, 'PersonGroup', groupIdIdx);
+
     // Initialize filter panel
     FilterPanel.init('person-group-grid', grid, columns);
 

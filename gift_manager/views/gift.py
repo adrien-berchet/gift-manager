@@ -102,6 +102,7 @@ class GiftDetailView(BaseDetailView):
     template_name = "gift_manager/gift_detail.html"
     context_object_name = "gift"
     pk_name = "gift_id"
+    htmx_template_name = "gift_manager/includes/gift_detail_partial.html"
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)

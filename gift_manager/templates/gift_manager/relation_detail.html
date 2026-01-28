@@ -5,6 +5,9 @@
 {% block title %}Gift Manager - {% trans "Gifting details" %}{% endblock %}
 
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/relation_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Gifting details" %}</h1>
 <p><strong>{% trans "Beneficiary:" %}</strong>
     {% if relation.person %}
@@ -31,6 +34,7 @@
 </div>
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

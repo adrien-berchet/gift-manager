@@ -1,0 +1,406 @@
+/* Detail View Styles for Modern UX Interface */
+
+/* Detail Section Styling */
+.detail-section {
+    border-bottom: 1px solid var(--bs-border-color);
+    padding-bottom: 1rem;
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.detail-section-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+    color: var(--bs-secondary);
+    display: flex;
+    align-items: center;
+}
+
+.detail-section-title i {
+    font-size: 1rem;
+    margin-right: 0.5rem;
+}
+
+/* Detail Field Styling */
+.detail-field {
+    margin-bottom: 1rem;
+}
+
+.detail-field:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--bs-secondary);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.detail-value {
+    font-size: 0.875rem;
+    color: var(--bs-body-color);
+    line-height: 1.4;
+}
+
+.detail-value:empty::after {
+    content: "—";
+    color: var(--bs-secondary);
+}
+
+/* Badge Styling in Detail Views */
+.detail-value .badge {
+    font-size: 0.75rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+/* Relations List Styling */
+.relations-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.relation-item {
+    background-color: var(--bs-light);
+    border: 1px solid var(--bs-border-color);
+    transition: all 0.2s ease;
+}
+
+.relation-item:hover {
+    background-color: var(--bs-gray-100);
+    border-color: var(--bs-primary);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.relation-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Members List Styling */
+.members-list,
+.shared-users-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.member-item,
+.shared-users-list > div {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+.member-item:last-child,
+.shared-users-list > div:last-child {
+    border-bottom: none;
+}
+
+.member-actions .btn,
+.gift-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Gifts List Styling */
+.gifts-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.gift-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--bs-border-color-translucent);
+}
+
+.gift-item:last-child {
+    border-bottom: none;
+}
+
+/* Tags List Styling */
+.tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+/* Hierarchy Path Styling */
+.breadcrumb {
+    background-color: var(--bs-light);
+    border-radius: var(--bs-border-radius);
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0;
+    font-size: 0.875rem;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+
+.breadcrumb-item i {
+    margin-right: 0.25rem;
+}
+
+/* Statistics Cards */
+.stat-card {
+    background-color: var(--bs-light);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    background-color: var(--bs-gray-100);
+    border-color: var(--bs-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+}
+
+/* Event Info and Gift Info Cards */
+.event-info,
+.gift-info {
+    background-color: var(--bs-light);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+
+.event-info:hover,
+.gift-info:hover {
+    background-color: var(--bs-gray-100);
+    border-color: var(--bs-primary);
+}
+
+/* Gift Tags in Detail Views */
+.gift-tags {
+    margin-top: 0.5rem;
+}
+
+.gift-tags .badge {
+    font-size: 0.7rem;
+    margin-right: 0.25rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 767.98px) {
+    .detail-section-title {
+        font-size: 0.8rem;
+    }
+
+    .detail-label {
+        font-size: 0.7rem;
+    }
+
+    .detail-value {
+        font-size: 0.8rem;
+    }
+
+    .relations-list,
+    .members-list,
+    .shared-users-list,
+    .gifts-list {
+        max-height: 250px;
+    }
+
+    .stat-card {
+        padding: 0.75rem !important;
+    }
+
+    .stat-number {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .relation-item,
+    .event-info,
+    .gift-info,
+    .stat-card {
+        background-color: var(--bs-dark);
+        border-color: var(--bs-gray-700);
+    }
+
+    .relation-item:hover,
+    .event-info:hover,
+    .gift-info:hover,
+    .stat-card:hover {
+        background-color: var(--bs-gray-800);
+        border-color: var(--bs-primary);
+    }
+
+    .breadcrumb {
+        background-color: var(--bs-dark);
+        border: 1px solid var(--bs-gray-700);
+    }
+}
+
+/* Loading and Error States for Detail Views */
+.detail-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 200px;
+    color: var(--bs-secondary);
+}
+
+.detail-error {
+    text-align: center;
+    padding: 2rem;
+    color: var(--bs-danger);
+}
+
+/* Animation for Detail Content */
+.detail-content {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scrollbar Styling for Detail Lists */
+.relations-list::-webkit-scrollbar,
+.members-list::-webkit-scrollbar,
+.shared-users-list::-webkit-scrollbar,
+.gifts-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.relations-list::-webkit-scrollbar-track,
+.members-list::-webkit-scrollbar-track,
+.shared-users-list::-webkit-scrollbar-track,
+.gifts-list::-webkit-scrollbar-track {
+    background: var(--bs-light);
+    border-radius: 3px;
+}
+
+.relations-list::-webkit-scrollbar-thumb,
+.members-list::-webkit-scrollbar-thumb,
+.shared-users-list::-webkit-scrollbar-thumb,
+.gifts-list::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 3px;
+}
+
+.relations-list::-webkit-scrollbar-thumb:hover,
+.members-list::-webkit-scrollbar-thumb:hover,
+.shared-users-list::-webkit-scrollbar-thumb:hover,
+.gifts-list::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-primary);
+}
+
+/* Expandable Rows Styling */
+.expandable-grid tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.expandable-grid tbody tr:hover {
+    background-color: var(--bs-gray-50);
+}
+
+.expandable-detail-row {
+    background-color: var(--bs-light) !important;
+    border-top: none !important;
+}
+
+.expandable-detail-row:hover {
+    background-color: var(--bs-light) !important;
+}
+
+.expandable-detail-cell {
+    padding: 0 !important;
+    border-top: none !important;
+}
+
+.expandable-detail-content {
+    padding: 1rem;
+    border-top: 1px solid var(--bs-border-color);
+    background-color: var(--bs-light);
+    max-height: none;
+    overflow: visible;
+}
+
+/* Expand button styling */
+[data-action="expand"] {
+    transition: all 0.2s ease;
+}
+
+[data-action="expand"]:hover {
+    transform: scale(1.05);
+}
+
+[data-action="expand"][aria-expanded="true"] {
+    background-color: var(--bs-primary);
+    border-color: var(--bs-primary);
+    color: white;
+}
+
+/* Expandable row animations */
+.expandable-detail-content {
+    transition: max-height 0.3s ease-out;
+}
+
+/* Dark mode support for expandable rows */
+@media (prefers-color-scheme: dark) {
+    .expandable-grid tbody tr:hover {
+        background-color: var(--bs-gray-800);
+    }
+
+    .expandable-detail-row {
+        background-color: var(--bs-dark) !important;
+    }
+
+    .expandable-detail-row:hover {
+        background-color: var(--bs-dark) !important;
+    }
+
+    .expandable-detail-content {
+        background-color: var(--bs-dark);
+        border-top-color: var(--bs-gray-700);
+    }
+}
+
+/* Mobile responsive expandable rows */
+@media (max-width: 767.98px) {
+    .expandable-detail-content {
+        padding: 0.75rem;
+    }
+
+    .expandable-detail-content .detail-section {
+        margin-bottom: 0.75rem;
+    }
+
+    .expandable-detail-content .detail-section:last-child {
+        margin-bottom: 0;
+    }
+}

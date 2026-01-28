@@ -5,6 +5,9 @@
 {% block title %}Gift Manager - {% trans "Person details" %}{% endblock %}
 
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/person_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Person details" %}</h1>
 <p><strong>{% trans "First name:" %}</strong> {{ person.first_name }}</p>
 <p><strong>{% trans "Family name:" %}</strong> {{ person.family_name }}</p>
@@ -32,7 +35,7 @@
         <span class="text-muted">{% trans "No groups" %}</span>
     {% endif %}
 </p>
-<p><strong>{% trans "Creation date:" %}</strong> {{ person.creation_date|replace_none:"" }}</p>
+<p><strong>{% trans "Creation date:" %}</strong> {{ person.creation_date|date:"M d, Y" }}</p>
 
 <div class="mt-4">
     <h5>{% trans "Shared with:" %}</h5>
@@ -51,6 +54,7 @@
 <div id="gifts-grid" class="mt-3"></div>
 {% else %}
 <p class="text-center text-muted">{% trans "No gift for this person" %}</p>
+{% endif %}
 {% endif %}
 {% endblock %}
 

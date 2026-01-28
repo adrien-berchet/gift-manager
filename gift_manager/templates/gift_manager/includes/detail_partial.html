@@ -2,7 +2,15 @@
 <!-- Partial template for detail views in offcanvas panels -->
 <div class="detail-content">
     <div class="detail-header mb-4">
-        <h4 class="mb-1">{{ object }}</h4>
+        <h4 class="mb-1">
+            {% if person %}{{ person }}
+            {% elif gift %}{{ gift }}
+            {% elif event %}{{ event }}
+            {% elif relation %}{{ relation }}
+            {% elif group %}{{ group }}
+            {% elif gift_tag %}{{ gift_tag }}
+            {% else %}{{ object }}{% endif %}
+        </h4>
         {% if object_type %}
         <small class="text-muted">{{ object_type|title }}</small>
         {% endif %}
@@ -24,8 +32,8 @@
                     title="{% trans 'Delete' %}">
                 <i class="fas fa-trash me-1"></i>{% trans "Delete" %}
             </button>
-            {% if object.get_absolute_url %}
-            <a href="{{ object.get_absolute_url }}"
+            {% if person.get_absolute_url or gift.get_absolute_url or event.get_absolute_url or relation.get_absolute_url or group.get_absolute_url or gift_tag.get_absolute_url or object.get_absolute_url %}
+            <a href="{% if person %}{{ person.get_absolute_url }}{% elif gift %}{{ gift.get_absolute_url }}{% elif event %}{{ event.get_absolute_url }}{% elif relation %}{{ relation.get_absolute_url }}{% elif group %}{{ group.get_absolute_url }}{% elif gift_tag %}{{ gift_tag.get_absolute_url }}{% else %}{{ object.get_absolute_url }}{% endif %}"
                class="btn btn-outline-secondary btn-sm"
                title="{% trans 'View full page' %}">
                 <i class="fas fa-external-link-alt me-1"></i>{% trans "Full view" %}
