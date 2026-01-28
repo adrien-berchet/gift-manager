@@ -961,6 +961,20 @@
                 }
             });
 
+            // Initialize tooltips for quick action buttons
+            function initializeTooltips() {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+
+            // Initialize tooltips on page load
+            document.addEventListener('DOMContentLoaded', initializeTooltips);
+
+            // Re-initialize tooltips after HTMX updates
+            document.body.addEventListener('htmx:afterSwap', initializeTooltips);
+
             // Handle delete confirmation
             document.addEventListener('click', function(e) {
                 if (e.target.matches('[data-action="delete"]') || e.target.closest('[data-action="delete"]')) {
@@ -1147,6 +1161,39 @@
                     }
                 }
                 return cookieValue;
+            }
+
+            // Helper functions for offcanvas loading states
+            function showOffcanvasLoading(target) {
+                const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
+                const content = document.getElementById(targetBody);
+                if (content) {
+                    content.innerHTML = `
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p class="mt-3 text-muted">Loading...</p>
+                        </div>
+                    `;
+                }
+            }
+
+            function hideOffcanvasLoading(target) {
+                // Loading is hidden when content is replaced
+            }
+
+            function showOffcanvasError(message, target) {
+                const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
+                const content = document.getElementById(targetBody);
+                if (content) {
+                    content.innerHTML = `
+                        <div class="error-state">
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                ${message}
+                            </div>
+                        </div>
+                    `;
+                }
             }
 
         })();

@@ -32,7 +32,7 @@
     }
 
     /**
-     * Create action buttons formatter for CRUD operations
+     * Create action buttons formatter for CRUD operations with modern UX enhancements
      *
      * @param urls Object with URL templates (e.g., {details: '/persons/{id}/'})
      *             OR functions that take (row) and return the URL
@@ -42,10 +42,36 @@
      */
     function actionButtonsFormatter(urls, actions, options = {}) {
         const actionConfig = {
-            give: { class: 'btn-primary', icon: 'fa-hand-holding-heart', title: 'Give' },
-            details: { class: 'btn-info', icon: 'fa-eye', title: 'Details' },
-            edit: { class: 'btn-warning', icon: 'fa-edit', title: 'Edit' },
-            delete: { class: 'btn-danger', icon: 'fa-trash', title: 'Delete' }
+            give: {
+                class: 'btn-primary',
+                icon: 'fa-hand-holding-heart',
+                title: 'Give',
+                action: 'create' // Maps to data-action for modern UX handling
+            },
+            details: {
+                class: 'btn-info',
+                icon: 'fa-eye',
+                title: 'Details',
+                action: 'detail'
+            },
+            edit: {
+                class: 'btn-warning',
+                icon: 'fa-edit',
+                title: 'Edit',
+                action: 'edit'
+            },
+            delete: {
+                class: 'btn-danger',
+                icon: 'fa-trash',
+                title: 'Delete',
+                action: 'delete'
+            },
+            share: {
+                class: 'btn-success',
+                icon: 'fa-share-alt',
+                title: 'Share',
+                action: 'share'
+            }
         };
 
         return function (cell, row) {
@@ -73,13 +99,21 @@
                     const url = resolveUrl(urlTemplate, typeof action === 'object' ? action.id : null);
                     if (!url) return null;
 
-                    return `<a href="${url}" class="btn ${config.class} btn-sm" title="${config.title}">
+                    // Enhanced button with modern UX attributes and hover effects
+                    return `<a href="${url}"
+                              class="btn ${config.class} btn-sm quick-action-btn"
+                              title="${config.title}"
+                              data-action="${config.action}"
+                              data-entity-id="${id}"
+                              data-bs-toggle="tooltip"
+                              data-bs-placement="top">
                         <i class="fas ${config.icon}"></i>
+                        <span class="btn-text d-none d-lg-inline ms-1">${config.title}</span>
                     </a>`;
                 })
                 .filter(Boolean);
 
-            return gridjs.html(`<div class="action-buttons-cell">${buttons.join(' ')}</div>`);
+            return gridjs.html(`<div class="quick-actions-container">${buttons.join('')}</div>`);
         };
     }
 
@@ -159,14 +193,16 @@
     }
 
     /**
-     * Initialize a Grid.js table with common settings
+     * Initialize a Grid.js table with common settings and optional inline editing
      * @param {string} containerId - The ID of the container element
      * @param {Array} columns - Array of column definitions
      * @param {Array} data - Array of data rows
      * @param {Object} options - Optional configuration overrides
      * @param {Function} onReady - Optional callback when grid is ready
+     * @param {Object} inlineEditingConfig - Optional inline editing configuration
+     *                 {entityType: 'person', columnMapping: {0: 'first_name', 1: 'family_name'}}
      */
-    function initGrid(containerId, columns, data, options = {}, onReady = null) {
+    function initGrid(containerId, columns, data, options = {}, onReady = null, inlineEditingConfig = null) {
         const config = Object.assign({
             columns: columns,
             data: data,
@@ -182,6 +218,12 @@
         }, options);
 
         try {
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error(`[GridUtils.initGrid] Container element with ID '${containerId}' not found`);
+                throw new Error(`Container element with ID '${containerId}' not found`);
+            }
+
             const grid = new gridjs.Grid(config);
 
             // Call user-provided onReady callback if exists
@@ -189,7 +231,18 @@
                 grid.on('ready', onReady);
             }
 
-            grid.render(document.getElementById(containerId));
+            // Initialize inline editing if configured
+            if (inlineEditingConfig && window.InlineEditing) {
+                grid.on('ready', () => {
+                    window.InlineEditing.init(
+                        containerId,
+                        inlineEditingConfig.entityType,
+                        inlineEditingConfig.columnMapping
+                    );
+                });
+            }
+
+            grid.render(container);
 
             // Hide pagination footer if only one page
             // Use a longer timeout to ensure Grid.js has fully rendered

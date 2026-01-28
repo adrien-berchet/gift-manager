@@ -6,6 +6,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -31,10 +32,16 @@
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
+        // Check if required dependencies are loaded
+        console.log('[PersonList] GridUtils available:', typeof GridUtils !== 'undefined');
+        console.log('[PersonList] FilterPanel available:', typeof FilterPanel !== 'undefined');
+        console.log('[PersonList] InlineEditing available:', typeof window.InlineEditing !== 'undefined');
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -82,36 +89,107 @@
         {
             id: 'actions',
             name: '{% trans "Actions"|escapejs %}',
-            width: '180px',
+            width: '200px',
             sort: false,
             formatter: GridUtils.actionButtonsFormatter({
                 give: (row) => row.cells[5].data,
                 details: (row) => row.cells[6].data,
                 edit: (row) => row.cells[7].data,
-                delete: (row) => row.cells[8].data
-            }, ['give', 'details', 'edit', 'delete'])
+                delete: (row) => row.cells[8].data,
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['give', 'details', 'edit', 'delete', 'share'])
         }
     ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('person-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        },
-        sort: {
-            multiColumn: true
+    // Initialize Grid.js with inline editing
+    try {
+        const grid = GridUtils.initGrid('person-grid', columns, data, {
+            pagination: {
+                enabled: true,
+                limit: 10
+            },
+            sort: {
+                multiColumn: true
+            }
+        }, function() {
+            // Grid ready callback - ensure inline editing is initialized
+            addPersonIdDataAttributes();
+
+            if (window.InlineEditing) {
+                try {
+                    window.InlineEditing.init('person-grid', 'person', {
+                        0: 'first_name',
+                        1: 'family_name',
+                        2: 'email_address'
+                    });
+                } catch (error) {
+                    console.error('[PersonList] Error initializing inline editing:', error);
+                }
+            } else {
+                console.warn('[PersonList] InlineEditing not available');
+            }
+        }, {
+            entityType: 'person',
+            columnMapping: {
+                0: 'first_name',
+                1: 'family_name',
+                2: 'email_address'
+            }
+        });
+
+        console.log('[PersonList] Grid initialized successfully');
+
+        // Function to add person ID data attributes to rows
+        function addPersonIdDataAttributes() {
+            const gridContainer = document.getElementById('person-grid');
+            if (!gridContainer) return;
+
+            const rows = gridContainer.querySelectorAll('tbody tr');
+
+            rows.forEach((row, index) => {
+                if (data[index] && data[index][4]) { // person_id is at index 4
+                    const personId = data[index][4];
+                    row.setAttribute('data-entity-id', personId);
+                    row.setAttribute('data-person-id', personId);
+                }
+            });
         }
-    });
 
-    // Initialize filter panel
-    FilterPanel.init('person-grid', grid, columns);
+        // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
+        setTimeout(() => {
+            const gridContainer = document.getElementById('person-grid');
+            const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
 
-    // Setup filter dropdown UI
-    GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
+            if (editableCells.length === 0) {
+                // Add data attributes first
+                addPersonIdDataAttributes();
 
-    // Setup custom group filter
-    GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
+                if (window.InlineEditing) {
+                    try {
+                        window.InlineEditing.init('person-grid', 'person', {
+                            0: 'first_name',
+                            1: 'family_name',
+                            2: 'email_address'
+                        });
+                    } catch (error) {
+                        console.error('[PersonList] Error in manual inline editing initialization:', error);
+                    }
+                }
+            }
+        }, 1000);
+
+        // Initialize filter panel
+        FilterPanel.init('person-grid', grid, columns);
+
+        // Setup filter dropdown UI
+        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
+
+        // Setup custom group filter
+        GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
+
+    } catch (error) {
+        console.error('[PersonList] Error initializing grid:', error);
+    }
     }) ();
 
     // Trigger initial sort on status column to make Grid.js aware of the sort

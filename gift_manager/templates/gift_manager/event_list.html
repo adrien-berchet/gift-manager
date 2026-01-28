@@ -69,13 +69,14 @@
     { name: 'event_delete_url', hidden: true },
     {
         name: '{% trans "Actions"|escapejs %}',
-            width: '150px',
+            width: '200px',
                 sort: false,
                     formatter: GridUtils.actionButtonsFormatter({
                         details: (row) => row.cells[detailUrlIdx].data,
                         edit: (row) => row.cells[editUrlIdx].data,
-                        delete: (row) => row.cells[deleteUrlIdx].data
-                    }, ['details', 'edit', 'delete'])
+                        delete: (row) => row.cells[deleteUrlIdx].data,
+                        share: () => "{% url 'gift_manager:share_objects' %}"
+                    }, ['details', 'edit', 'delete', 'share'])
     }
     ];
 

@@ -107,6 +107,19 @@
             return;
         }
 
+        // Check if we have friends data
+        if (friendsData.length === 0) {
+            console.log('No friends data available, skipping grid initialization');
+            return;
+        }
+
+        // Check if the grid container exists before initializing
+        const gridContainer = document.getElementById('sharing-grid');
+        if (!gridContainer) {
+            console.log('Sharing grid container not found, skipping grid initialization');
+            return;
+        }
+
         try {
             // Initialize Grid.js with onReady callback
             const grid = GridUtils.initGrid('sharing-grid', [
@@ -180,7 +193,7 @@
 
         // Grid is already rendered when initGrid returns (render() is synchronous)
         // Initialize HTMX immediately without waiting for events
-        const gridContainer = document.getElementById('sharing-grid');
+        // gridContainer is already declared above
 
         // Check if HTMX is available
         if (typeof htmx === 'undefined') {

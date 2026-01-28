@@ -4,6 +4,14 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
+from .views.inline_editing import (
+    PersonInlineUpdateView,
+    GiftInlineUpdateView,
+    EventInlineUpdateView,
+    PersonGroupInlineUpdateView,
+    GiftTagInlineUpdateView,
+    RelationInlineUpdateView,
+)
 
 app_name = "gift_manager"
 
@@ -155,6 +163,13 @@ urlpatterns = [
     ),
     path("relation_status_update/", views.update_relation_status, name="relation_status_update"),
     path("share/", views.ShareObjectsView.as_view(), name="share_objects"),
+    # Inline editing endpoints
+    path("api/persons/<uuid:pk>/inline-update/", PersonInlineUpdateView.as_view(), name="person_inline_update"),
+    path("api/gifts/<uuid:pk>/inline-update/", GiftInlineUpdateView.as_view(), name="gift_inline_update"),
+    path("api/events/<uuid:pk>/inline-update/", EventInlineUpdateView.as_view(), name="event_inline_update"),
+    path("api/person-groups/<uuid:pk>/inline-update/", PersonGroupInlineUpdateView.as_view(), name="person_group_inline_update"),
+    path("api/gift-tags/<uuid:pk>/inline-update/", GiftTagInlineUpdateView.as_view(), name="gift_tag_inline_update"),
+    path("api/relations/<uuid:pk>/inline-update/", RelationInlineUpdateView.as_view(), name="relation_inline_update"),
 ]
 
 if settings.DEBUG:

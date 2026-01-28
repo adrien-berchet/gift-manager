@@ -153,23 +153,233 @@
     min-height: 100px;
 }
 
-/* Quick Action Buttons */
-.quick-actions {
+/* Quick Action Buttons - Enhanced for Task 6.1 */
+.quick-actions-container {
     display: flex;
-    gap: var(--space-2);
-    opacity: 0;
+    gap: var(--space-1);
+    justify-content: flex-end;
+    align-items: center;
+    opacity: 0.7;
     transition: opacity var(--transition-fast);
 }
 
-.list-item:hover .quick-actions,
-.list-item:focus-within .quick-actions {
+/* Show actions on row hover */
+.gridjs-tr:hover .quick-actions-container {
     opacity: 1;
 }
 
-.quick-actions .btn {
+.quick-action-btn {
+    position: relative;
     padding: var(--space-1) var(--space-2);
     font-size: var(--text-sm);
     border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    min-height: 32px;
+    border: 1px solid transparent;
+    overflow: hidden;
+}
+
+/* Hover effects for each button type */
+.quick-action-btn.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.quick-action-btn.btn-primary:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary-dark);
+}
+
+.quick-action-btn.btn-info {
+    background-color: var(--color-info);
+    color: white;
+}
+
+.quick-action-btn.btn-info:hover {
+    background-color: var(--color-info-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-info-dark);
+}
+
+.quick-action-btn.btn-warning {
+    background-color: var(--color-warning);
+    color: var(--color-gray-800);
+}
+
+.quick-action-btn.btn-warning:hover {
+    background-color: var(--color-warning-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-warning-dark);
+    color: white;
+}
+
+.quick-action-btn.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.quick-action-btn.btn-danger:hover {
+    background-color: var(--color-danger-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-danger-dark);
+}
+
+.quick-action-btn.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.quick-action-btn.btn-success:hover {
+    background-color: var(--color-success-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-success-dark);
+}
+
+/* Active/pressed state */
+.quick-action-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Focus state for accessibility */
+.quick-action-btn:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    z-index: 1;
+}
+
+/* Button text that appears on larger screens */
+.quick-action-btn .btn-text {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Loading state for buttons */
+.quick-action-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.quick-action-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+/* Disabled state */
+.quick-action-btn:disabled,
+.quick-action-btn.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .quick-actions-container {
+        opacity: 1; /* Always visible on mobile */
+        gap: var(--space-1);
+    }
+
+    .quick-action-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: var(--space-2);
+    }
+
+    .quick-action-btn .btn-text {
+        display: none !important; /* Hide text on mobile */
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .quick-action-btn {
+        min-width: 40px;
+        min-height: 40px;
+        font-size: var(--text-base);
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .quick-action-btn {
+        border-width: 2px;
+    }
+
+    .quick-action-btn:hover {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .quick-action-btn,
+    .quick-actions-container {
+        transition: none;
+    }
+
+    .quick-action-btn:hover {
+        transform: none;
+    }
+
+    .quick-action-btn.loading i {
+        animation: none;
+    }
+}
+
+/* Tooltip enhancements for action buttons */
+.tooltip {
+    font-size: var(--text-xs);
+}
+
+.tooltip-inner {
+    background-color: var(--color-gray-900);
+    color: white;
+    border-radius: var(--radius-md);
+    padding: var(--space-1) var(--space-2);
+}
+
+[data-theme="dark"] .tooltip-inner {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-900);
+}
+
+/* Grid row hover enhancements */
+.gridjs-tr {
+    transition: background-color var(--transition-fast);
+}
+
+.gridjs-tr:hover {
+    background-color: var(--color-gray-50);
+}
+
+[data-theme="dark"] .gridjs-tr:hover {
+    background-color: var(--surface-elevated);
+}
+
+/* Action column styling */
+.gridjs-th:last-child,
+.gridjs-td:last-child {
+    text-align: right;
+    padding-right: var(--space-3);
+}
+
+/* Ensure action buttons don't wrap */
+.gridjs-td:last-child {
+    white-space: nowrap;
+    width: 1%;
 }
 
 /* List Item Enhancements */
