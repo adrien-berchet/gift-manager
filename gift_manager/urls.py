@@ -12,6 +12,19 @@ from .views.inline_editing import (
     GiftTagInlineUpdateView,
     RelationInlineUpdateView,
 )
+from .views.bulk_operations import (
+    BulkOperationView,
+    BulkDeleteConfirmationView,
+    BulkOperationProgressView,
+)
+from .views.search import (
+    PersonSearchView,
+    GiftSearchView,
+    EventSearchView,
+    RelationSearchView,
+    PersonGroupSearchView,
+    GiftTagSearchView,
+)
 
 app_name = "gift_manager"
 
@@ -170,6 +183,17 @@ urlpatterns = [
     path("api/person-groups/<uuid:pk>/inline-update/", PersonGroupInlineUpdateView.as_view(), name="person_group_inline_update"),
     path("api/gift-tags/<uuid:pk>/inline-update/", GiftTagInlineUpdateView.as_view(), name="gift_tag_inline_update"),
     path("api/relations/<uuid:pk>/inline-update/", RelationInlineUpdateView.as_view(), name="relation_inline_update"),
+    # Bulk operations endpoints
+    path("api/bulk-operations/", BulkOperationView.as_view(), name="bulk_operations"),
+    path("api/bulk-delete-confirmation/", BulkDeleteConfirmationView.as_view(), name="bulk_delete_confirmation"),
+    path("api/bulk-operation-progress/", BulkOperationProgressView.as_view(), name="bulk_operation_progress"),
+    # HTMX search endpoints
+    path("api/search/persons/", PersonSearchView.as_view(), name="person_search"),
+    path("api/search/gifts/", GiftSearchView.as_view(), name="gift_search"),
+    path("api/search/events/", EventSearchView.as_view(), name="event_search"),
+    path("api/search/relations/", RelationSearchView.as_view(), name="relation_search"),
+    path("api/search/person-groups/", PersonGroupSearchView.as_view(), name="person_group_search"),
+    path("api/search/gift-tags/", GiftTagSearchView.as_view(), name="gift_tag_search"),
 ]
 
 if settings.DEBUG:

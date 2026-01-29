@@ -9,7 +9,8 @@
       "Bash(python manage.py makemessages:*)",
       "Bash(python manage.py:*)",
       "WebSearch",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(tox run:*)"
     ]
   }
 }

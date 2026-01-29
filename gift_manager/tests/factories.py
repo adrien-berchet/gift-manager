@@ -131,6 +131,19 @@ class GiftTagFactory(DjangoModelFactory):
             return
         self.parent_tags.add(*extracted)
 
+    @factory.post_generation
+    def shared_with(self, create, extracted, **kwargs):
+        """Handle ManyToMany relationship with shared_with users."""
+        if not create or not extracted:
+            return
+        for user in extracted:
+            from gift_manager.models import GiftTagPermission
+            from gift_manager.models import PermissionLevel
+
+            GiftTagPermission.objects.create(
+                user=user, gift_tag=self, permission_type=PermissionLevel.VIEWER
+            )
+
 
 class GiftFactory(DjangoModelFactory):
     """Factory for creating Gift instances."""

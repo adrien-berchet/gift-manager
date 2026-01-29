@@ -1,0 +1,225 @@
+/**
+ * Real-time search styles
+ */
+
+/* Search input container */
+.search-section {
+    position: relative;
+}
+
+.search-section .form-control {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Search focused state */
+.search-focused .form-control {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Search loading state */
+.form-control.searching {
+    background-image: none;
+    padding-right: 2.5rem;
+}
+
+.search-spinner {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.search-spinner i {
+    font-size: 0.875rem;
+}
+
+/* Search error state */
+.form-control.search-error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+}
+
+.search-error-message {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #dc3545;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 0 0 0.375rem 0.375rem;
+    z-index: 1000;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-0.5rem);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Search result count */
+.search-result-count {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+/* Enhanced empty state for search */
+.grid-empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state-content {
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state-message {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+}
+
+.clear-search-btn {
+    margin-top: 0.5rem;
+}
+
+/* Search input enhancements */
+.filter-search-input {
+    position: relative;
+}
+
+.filter-search-input:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Search input with icon */
+.search-input-wrapper {
+    position: relative;
+}
+
+.search-input-wrapper .form-control {
+    padding-left: 2.5rem;
+}
+
+.search-input-wrapper::before {
+    content: '\f002';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .search-section {
+        margin-bottom: 1rem;
+    }
+
+    .search-result-count {
+        text-align: center;
+        margin-top: 0.5rem;
+    }
+
+    .empty-state-content {
+        padding: 1rem;
+    }
+
+    .empty-state-icon {
+        font-size: 2rem;
+    }
+}
+
+/* Integration with existing filter panel */
+.grid-filter-panel .search-section {
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.grid-filter-panel .search-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .search-error-message {
+        background: #721c24;
+        color: #f8d7da;
+    }
+
+    .search-spinner {
+        color: #adb5bd;
+    }
+
+    .search-result-count {
+        color: #adb5bd;
+    }
+
+    .empty-state-icon,
+    .empty-state-message {
+        color: #adb5bd;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .form-control.search-error {
+        border-width: 2px;
+    }
+
+    .search-error-message {
+        font-weight: bold;
+    }
+
+    .empty-state-icon {
+        opacity: 1;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .form-control,
+    .search-error-message {
+        transition: none;
+    }
+
+    @keyframes slideDown {
+        from, to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .search-spinner i {
+        animation: none;
+    }
+}

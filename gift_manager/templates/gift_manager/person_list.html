@@ -7,6 +7,9 @@
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -33,6 +36,9 @@
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 <script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -187,6 +193,16 @@
         // Initialize filter panel
         FilterPanel.init('person-grid', grid, columns);
 
+        // Initialize real-time search
+        if (window.RealTimeSearch) {
+            RealTimeSearch.init('person-grid', grid, data);
+        }
+
+        // Initialize dynamic filters
+        if (window.DynamicFilters) {
+            DynamicFilters.init('person-grid', grid, data, columns);
+        }
+
         // Setup filter dropdown UI
         GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
 
@@ -198,6 +214,15 @@
             detailUrlTemplate: "/en/persons/{id}/",
             expandButtonColumn: 'actions'
         });
+
+        // Initialize bulk operations
+        if (window.BulkOperations) {
+            BulkOperations.init('person-grid', 'person', {
+                enableSelectAll: true,
+                enableBulkDelete: true,
+                enableBulkShare: true
+            });
+        }
 
     } catch (error) {
         console.error('[PersonList] Error initializing grid:', error);

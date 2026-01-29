@@ -5,6 +5,8 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -30,6 +32,8 @@
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -182,6 +186,16 @@
 
         // Initialize filter panel
         FilterPanel.init('relation-grid', grid, columns);
+
+        // Initialize real-time search
+        if (window.RealTimeSearch) {
+            RealTimeSearch.init('relation-grid', grid, data);
+        }
+
+        // Initialize dynamic filters
+        if (window.DynamicFilters) {
+            DynamicFilters.init('relation-grid', grid, data, columns);
+        }
 
         // Setup filter dropdown UI
         GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
