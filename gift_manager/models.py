@@ -87,19 +87,26 @@ class PersonQuerySet(UserPermissionQuerySet):
 
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""
-        return self.annotate(
-            groups_info=JSONBAgg(
-                Func(
-                    Value("id"),
-                    F("groups__group_id"),
-                    Value("name"),
-                    F("groups__name"),
-                    function="jsonb_build_object",
-                ),
-                filter=Q(groups__group_id__isnull=False),
-                distinct=True,
+        from django.db import connection
+
+        # Use database-specific aggregation
+        if connection.vendor == 'postgresql':
+            return self.annotate(
+                groups_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("groups__group_id"),
+                        Value("name"),
+                        F("groups__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(groups__group_id__isnull=False),
+                    distinct=True,
+                )
             )
-        )
+        else:
+            # For SQLite and other databases, use a simpler approach
+            return self.prefetch_related('groups')
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
@@ -140,19 +147,26 @@ class GiftQuerySet(UserPermissionQuerySet):
 
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
-        return self.annotate(
-            tags_info=JSONBAgg(
-                Func(
-                    Value("id"),
-                    F("tags__tag_id"),
-                    Value("name"),
-                    F("tags__name"),
-                    function="jsonb_build_object",
-                ),
-                filter=Q(tags__tag_id__isnull=False),
-                distinct=True,
+        from django.db import connection
+
+        # Use database-specific aggregation
+        if connection.vendor == 'postgresql':
+            return self.annotate(
+                tags_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("tags__tag_id"),
+                        Value("name"),
+                        F("tags__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(tags__tag_id__isnull=False),
+                    distinct=True,
+                )
             )
-        )
+        else:
+            # For SQLite and other databases, use a simpler approach
+            return self.prefetch_related('tags')
 
 
 class GiftManager(models.Manager):

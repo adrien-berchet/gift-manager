@@ -49,11 +49,17 @@ class PersonListView(BaseListView):
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""
-        return (
+        from django.db import connection
+
+        base_queryset = (
             Person.objects.accessible_by(self.request.user)
             .order_by("family_name", "first_name")
             .values("person_id", *list(set(self.column_names.keys()).difference(["groups"])))
-            .annotate(
+        )
+
+        # Use database-specific aggregation
+        if connection.vendor == 'postgresql':
+            return base_queryset.annotate(
                 groups_info=JSONBAgg(
                     Func(
                         Value("id"),
@@ -66,7 +72,9 @@ class PersonListView(BaseListView):
                     distinct=True,
                 ),
             )
-        )
+        else:
+            # For SQLite and other databases, use a simpler approach
+            return base_queryset.prefetch_related('groups')
 
 
 class PersonCreateView(BaseCreateView):

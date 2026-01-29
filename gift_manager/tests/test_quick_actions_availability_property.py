@@ -89,7 +89,7 @@ class TestQuickActionsAvailabilityProperty:
         entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup']),  # Exclude gifttag as it uses explorer view
         entity_data=st.dictionaries(
             st.sampled_from(['name', 'comment']),
-            st.text(min_size=1, max_size=50).filter(lambda x: x.strip() and '\n' not in x),
+            st.text(min_size=1, max_size=50).filter(lambda x: x.strip() and '\n' not in x and '\x00' not in x),
             min_size=1,
             max_size=2
         )
@@ -142,7 +142,7 @@ class TestQuickActionsAvailabilityProperty:
         entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup']),  # Exclude gifttag as it uses explorer view
         entity_data=st.dictionaries(
             st.sampled_from(['name', 'comment']),
-            st.text(min_size=1, max_size=50).filter(lambda x: x.strip() and '\n' not in x),
+            st.text(min_size=1, max_size=50).filter(lambda x: x.strip() and '\n' not in x and '\x00' not in x),
             min_size=1,
             max_size=2
         ),

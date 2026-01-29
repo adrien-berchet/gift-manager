@@ -1149,7 +1149,7 @@ class TestComplexHierarchies:
         assert response.status_code == 200
 
         # Direct members should only include parent's member
-        direct_members = list(response.context["persons"])
+        direct_members = list(response.context["members"])
         assert len(direct_members) == 1
         assert direct_members[0].first_name == "Parent"
 

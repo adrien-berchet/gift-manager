@@ -96,9 +96,8 @@
                 details: (row) => row.cells[6].data,
                 edit: (row) => row.cells[7].data,
                 delete: (row) => row.cells[8].data,
-                share: () => "{% url 'gift_manager:share_objects' %}",
-                expand: (row) => row.cells[6].data // Use detail URL for expand
-            }, ['expand', 'give', 'edit', 'delete', 'share'])
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['give', 'details', 'edit', 'delete', 'share'])
         }
     ];
 

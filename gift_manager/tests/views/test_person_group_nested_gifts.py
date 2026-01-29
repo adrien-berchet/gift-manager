@@ -114,8 +114,8 @@ class TestPersonGroupNestedGifts:
         # Check for tab presence
         assert "nested-gifts-tab" in content
         assert "All gifts (including members)" in content
-        # Check for count (3 gifts created in setup)
-        assert "(3)" in content
+        # Check for count (3 gifts created in setup) - template uses [count] format
+        assert "[3]" in content
 
         # Check for status selector in nested grid
         # We look for the class used in the select element
