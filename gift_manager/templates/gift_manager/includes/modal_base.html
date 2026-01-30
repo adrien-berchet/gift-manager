@@ -1,25 +1,25 @@
 {% load i18n %}
 <!-- Base Modal Template for Delete Confirmations and Other Actions -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true" role="dialog" aria-describedby="modalBody">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="confirmModalLabel">
           {% block modal_title %}{% trans "Confirm Action" %}{% endblock %}
         </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}" title="{% trans 'Close' %} (Esc)" data-keyboard-hint="Esc"></button>
       </div>
-      <div class="modal-body" id="modalBody">
+      <div class="modal-body" id="modalBody" role="main">
         {% block modal_body %}
         <!-- Dynamic content will be loaded here via HTMX -->
         {% endblock %}
       </div>
       <div class="modal-footer" id="modalFooter">
         {% block modal_footer %}
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="{% trans 'Cancel action' %}">
           {% trans "Cancel" %}
         </button>
-        <button type="button" class="btn btn-danger" id="confirmAction">
+        <button type="button" class="btn btn-danger" id="confirmAction" aria-label="{% trans 'Confirm and proceed with action' %}">
           {% trans "Confirm" %}
         </button>
         {% endblock %}

@@ -1,0 +1,386 @@
+/**
+ * Accessibility and Focus Management Styles
+ *
+ * Provides enhanced focus indicators, keyboard navigation styles,
+ * and accessibility improvements for the modern UX interface.
+ */
+
+/* Screen Reader Only Content */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Live Region for Screen Reader Announcements */
+#sr-live-region {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Enhanced Focus Indicators */
+:root {
+    --focus-color: #0d6efd;
+    --focus-color-rgb: 13, 110, 253;
+    --focus-outline-width: 2px;
+    --focus-outline-offset: 2px;
+    --focus-shadow-size: 0.25rem;
+}
+
+/* High Contrast Focus Indicators */
+@media (prefers-contrast: high) {
+    :root {
+        --focus-color: #000000;
+        --focus-outline-width: 3px;
+        --focus-outline-offset: 1px;
+    }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Enhanced Focus Styles for Interactive Elements */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus,
+[tabindex]:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+    position: relative;
+    z-index: 10;
+}
+
+/* Focus styles for buttons */
+.btn:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !import
+cus,
+.form-select:focus {
+    border-color: var(--focus-color) !important;
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
+/* Focus styles for checkboxes and radio buttons */
+.form-check-input:focus {
+    border-color: var(--focus-color) !important;
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
+/* Focus styles for links */
+a:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    text-decoration: underline !important;
+}
+
+/* Modal and Offcanvas Focus Management */
+.modal:focus,
+.offcanvas:focus {
+    outline: none !important;
+}
+
+.modal.show,
+.offcanvas.show {
+    /* Ensure modals and offcanvas are properly announced */
+}
+
+/* Focus trap container styling */
+.focus-trap-active {
+    position: relative;
+}
+
+/* Keyboard Navigation Indicators */
+.keyboard-navigation-active *:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Skip Links */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: var(--focus-color);
+    color: white;
+    padding: 8px;
+    text-decoration: none;
+    border-radius: 4px;
+    z-index: 9999;
+    transition: top 0.3s;
+}
+
+.skip-link:focus {
+    top: 6px;
+    outline: 2px solid white !important;
+    outline-offset: 2px !important;
+}
+
+/* List Navigation Styles */
+.list-group-item:focus,
+.table-row:focus,
+[role="listitem"]:focus {
+    background-color: rgba(var(--focus-color-rgb), 0.1) !important;
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: -1px !important;
+}
+
+/* Quick Action Button Focus */
+.quick-action-btn:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    z-index: 10;
+    position: relative;
+}
+
+/* Inline Edit Focus */
+.inline-edit-input:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Focus Management for Dynamic Content */
+.htmx-request .form-control:focus,
+.htmx-request .btn:focus {
+    /* Maintain focus styles during HTMX requests */
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Loading State Focus Management */
+.loading-state *:focus {
+    outline: none !important;
+}
+
+.loading-state .btn-close:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Error State Focus Management */
+.error-state .btn:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Mobile Focus Adjustments */
+@media (max-width: 767.98px) {
+    /* Larger focus indicators for touch devices */
+    button:focus,
+    input:focus,
+    select:focus,
+    textarea:focus,
+    a:focus,
+    [tabindex]:focus {
+        outline-width: 3px !important;
+        outline-offset: 3px !important;
+    }
+
+    /* Ensure touch targets are large enough */
+    .btn:focus {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+    button:focus,
+    input:focus,
+    select:focus,
+    textarea:focus,
+    a:focus,
+    [tabindex]:focus {
+        outline: 3px solid currentColor !important;
+        outline-offset: 2px !important;
+        background-color: HighlightText !important;
+        color: Highlight !important;
+    }
+
+    .btn:focus {
+        border: 3px solid currentColor !important;
+    }
+}
+
+/* Focus Visible Support (for browsers that support it) */
+@supports selector(:focus-visible) {
+    /* Remove focus styles for mouse users */
+    button:focus:not(:focus-visible),
+    input:focus:not(:focus-visible),
+    select:focus:not(:focus-visible),
+    textarea:focus:not(:focus-visible),
+    a:focus:not(:focus-visible),
+    [tabindex]:focus:not(:focus-visible) {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Enhanced focus-visible styles */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    a:focus-visible,
+    [tabindex]:focus-visible {
+        outline: var(--focus-outline-width) solid var(--focus-color) !important;
+        outline-offset: var(--focus-outline-offset) !important;
+        box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+    }
+}
+
+/* Keyboard Navigation Hints */
+.keyboard-hint {
+    font-size: 0.75rem;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.keyboard-hint::before {
+    content: "💡 ";
+}
+
+/* ARIA Live Region Styling */
+[aria-live] {
+    position: absolute;
+    left: -10000px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Focus Management for Modals */
+.modal.show .modal-dialog {
+    /* Ensure modal content is focusable */
+    outline: none;
+}
+
+.modal-backdrop {
+    /* Prevent backdrop from receiving focus */
+    pointer-events: auto;
+}
+
+/* Focus Management for Offcanvas */
+.offcanvas.show {
+    /* Ensure offcanvas content is focusable */
+    outline: none;
+}
+
+/* Expandable Content Focus */
+[aria-expanded="true"] + .collapse.show {
+    border-left: 3px solid var(--focus-color);
+    padding-left: 1rem;
+}
+
+/* Form Validation Focus */
+.form-control.is-invalid:focus {
+    border-color: #dc3545 !important;
+    outline: var(--focus-outline-width) solid #dc3545 !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(220, 53, 69, 0.25) !important;
+}
+
+.form-control.is-valid:focus {
+    border-color: #198754 !important;
+    outline: var(--focus-outline-width) solid #198754 !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(25, 135, 84, 0.25) !important;
+}
+
+/* Bulk Selection Focus */
+.bulk-select-checkbox:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
+/* Search and Filter Focus */
+.search-input:focus,
+.filter-control:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+    border-color: var(--focus-color) !important;
+}
+
+/* Toast Notification Focus */
+.toast:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Dropdown Focus */
+.dropdown-item:focus {
+    background-color: rgba(var(--focus-color-rgb), 0.1) !important;
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: -2px !important;
+}
+
+/* Tab Focus */
+.nav-link:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Pagination Focus */
+.page-link:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
+/* Card Focus (for clickable cards) */
+.card.card-clickable:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
+/* Focus Management Utilities */
+.focus-trap {
+    /* Container for focus trapping */
+    position: relative;
+}
+
+.focus-restore {
+    /* Element that should receive focus when modal/offcanvas closes */
+}
+
+/* Keyboard Navigation Active State */
+body.keyboard-navigation-active {
+    /* Enhanced focus indicators when keyboard navigation is detected */
+}
+
+body.keyboard-navigation-active *:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+}
+
+/* Print Styles - Remove focus indicators */
+@media print {
+    *:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+}

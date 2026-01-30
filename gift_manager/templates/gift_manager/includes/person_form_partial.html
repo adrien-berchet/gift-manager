@@ -22,7 +22,7 @@
   {% csrf_token %}
 
   <!-- Form Loading Indicator -->
-  <div id="formLoading" class="htmx-indicator">
+  <div id="formLoading" class="htmx-indicator" role="status" aria-live="polite" aria-label="Loading form">
     <div class="loading-overlay">
       <div class="loading-spinner"></div>
     </div>
@@ -197,7 +197,9 @@
     <button type="submit"
             class="btn btn-primary"
             data-loading-text="{% trans 'Saving...' %}"
-            aria-label="{% trans 'Save changes' %}">
+            aria-label="{% trans 'Save changes' %}"
+            title="{% trans 'Save' %} (Ctrl+S)"
+            data-keyboard-hint="Ctrl+S">
       <i class="fas fa-save me-1"></i>
       {% trans "Save" %}
     </button>

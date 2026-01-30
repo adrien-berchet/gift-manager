@@ -20,7 +20,7 @@
   {% csrf_token %}
 
   <!-- Form Loading Indicator -->
-  <div id="formLoading" class="htmx-indicator">
+  <div id="formLoading" class="htmx-indicator" role="status" aria-live="polite" aria-label="Loading form">
     <div class="loading-overlay">
       <div class="loading-spinner"></div>
     </div>

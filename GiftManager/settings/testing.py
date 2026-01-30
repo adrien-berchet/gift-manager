@@ -65,6 +65,11 @@ def _get_test_database_config() -> dict:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": temp_db.name,
+            "OPTIONS": {
+                # Enable shared cache for SQLite to allow multiple connections
+                # This is crucial for Playwright tests with live_server
+                "init_command": "PRAGMA cache=shared;",
+            },
             "TEST": {
                 "NAME": temp_db.name,
             },
@@ -100,6 +105,9 @@ STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
+
+# Disable allauth rate limits for testing
+ACCOUNT_RATE_LIMITS = {}
 
 # Disable migrations for faster test setup (optional)
 # class DisableMigrations:

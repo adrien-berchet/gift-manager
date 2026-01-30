@@ -16,8 +16,10 @@
      tabindex="-1"
      id="editPanel"
      aria-labelledby="editPanelLabel"
+     aria-describedby="offcanvasBody"
      data-bs-backdrop="true"
-     data-bs-keyboard="true">
+     data-bs-keyboard="true"
+     role="dialog">
 
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="editPanelLabel">
@@ -27,29 +29,30 @@
             class="btn-close"
             data-bs-dismiss="offcanvas"
             aria-label="{% trans 'Close' %}"
-            title="{% trans 'Close' %} (Esc)"></button>
+            title="{% trans 'Close' %} (Esc)"
+            data-keyboard-hint="Esc"></button>
   </div>
 
-  <div class="offcanvas-body" id="offcanvasBody" data-swipe-hint="Swipe left to close">
+  <div class="offcanvas-body" id="offcanvasBody" data-swipe-hint="Swipe left to close" role="main">
     {% block offcanvas_body %}
     <!-- Loading state template -->
-    <div class="loading-state d-none" id="offcanvasLoading">
+    <div class="loading-state d-none" id="offcanvasLoading" role="status" aria-live="polite" aria-label="{% trans 'Loading content' %}">
       <div class="d-flex justify-content-center align-items-center h-100">
         <div class="text-center">
-          <div class="loading-spinner mb-3"></div>
+          <div class="loading-spinner mb-3" aria-hidden="true"></div>
           <p class="text-muted">{% trans "Loading..." %}</p>
         </div>
       </div>
     </div>
 
     <!-- Error state template -->
-    <div class="error-state d-none" id="offcanvasError">
+    <div class="error-state d-none" id="offcanvasError" role="alert" aria-live="assertive">
       <div class="alert alert-danger" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
         <strong>{% trans "Error" %}</strong>
         <p class="mb-0 mt-2" id="offcanvasErrorMessage">{% trans "Failed to load content. Please try again." %}</p>
-        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryOffcanvasLoad()">
-          <i class="fas fa-redo me-1"></i>{% trans "Retry" %}
+        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryOffcanvasLoad()" aria-label="{% trans 'Retry loading content' %}">
+          <i class="fas fa-redo me-1" aria-hidden="true"></i>{% trans "Retry" %}
         </button>
       </div>
     </div>
@@ -67,8 +70,10 @@
      tabindex="-1"
      id="detailPanel"
      aria-labelledby="detailPanelLabel"
+     aria-describedby="detailPanelBody"
      data-bs-backdrop="true"
-     data-bs-keyboard="true">
+     data-bs-keyboard="true"
+     role="dialog">
 
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="detailPanelLabel">
@@ -78,29 +83,30 @@
             class="btn-close"
             data-bs-dismiss="offcanvas"
             aria-label="{% trans 'Close' %}"
-            title="{% trans 'Close' %} (Esc)"></button>
+            title="{% trans 'Close' %} (Esc)"
+            data-keyboard-hint="Esc"></button>
   </div>
 
-  <div class="offcanvas-body" id="detailPanelBody" data-swipe-hint="Swipe left to close">
+  <div class="offcanvas-body" id="detailPanelBody" data-swipe-hint="Swipe left to close" role="main">
     {% block detail_body %}
     <!-- Loading state template -->
-    <div class="loading-state d-none" id="detailLoading">
+    <div class="loading-state d-none" id="detailLoading" role="status" aria-live="polite" aria-label="{% trans 'Loading details' %}">
       <div class="d-flex justify-content-center align-items-center h-100">
         <div class="text-center">
-          <div class="loading-spinner mb-3"></div>
+          <div class="loading-spinner mb-3" aria-hidden="true"></div>
           <p class="text-muted">{% trans "Loading details..." %}</p>
         </div>
       </div>
     </div>
 
     <!-- Error state template -->
-    <div class="error-state d-none" id="detailError">
+    <div class="error-state d-none" id="detailError" role="alert" aria-live="assertive">
       <div class="alert alert-danger" role="alert">
-        <i class="fas fa-exclamation-triangle me-2"></i>
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
         <strong>{% trans "Error" %}</strong>
         <p class="mb-0 mt-2" id="detailErrorMessage">{% trans "Failed to load details. Please try again." %}</p>
-        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryDetailLoad()">
-          <i class="fas fa-redo me-1"></i>{% trans "Retry" %}
+        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryDetailLoad()" aria-label="{% trans 'Retry loading details' %}">
+          <i class="fas fa-redo me-1" aria-hidden="true"></i>{% trans "Retry" %}
         </button>
       </div>
     </div>

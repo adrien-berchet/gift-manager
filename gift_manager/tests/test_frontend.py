@@ -57,29 +57,35 @@ def setup_test_user(transactional_db):
     Uses transactional_db to ensure data is committed and visible to live_server.
     """
     from allauth.account.models import EmailAddress
-    from django.db import connection
+    from django.db import connection, transaction
 
-    user = UserFactory(username="testuser", email="testuser@example.com")
-    user.set_password("testpass123")
-    user.save()
+    # Use a transaction to ensure data is committed
+    with transaction.atomic():
+        user = UserFactory(username="testuser", email="testuser@example.com")
+        user.set_password("testpass123")
+        user.save()
 
-    # Create verified email address for allauth
-    # Without this, allauth will redirect to email verification page
-    EmailAddress.objects.create(
-        user=user,
-        email="testuser@example.com",
-        verified=True,
-        primary=True,
-    )
+        # Create verified email address for allauth
+        # Without this, allauth will redirect to email verification page
+        EmailAddress.objects.create(
+            user=user,
+            email="testuser@example.com",
+            verified=True,
+            primary=True,
+        )
 
     # Explicitly commit using database connection
     connection.commit()
 
-    # Debug: verify user exists
+    # Debug: verify user exists and can authenticate
+    from django.contrib.auth import authenticate
     user_check = User.objects.filter(username="testuser").exists()
     email_check = EmailAddress.objects.filter(user=user, verified=True).exists()
+    auth_check = authenticate(username="testuser", password="testpass123")
+
     print(f"DEBUG: User 'testuser' exists in database: {user_check}")
     print(f"DEBUG: User has verified email: {email_check}")
+    print(f"DEBUG: User can authenticate: {auth_check is not None}")
 
     return user
 
@@ -169,21 +175,39 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     # Wait for page to load by checking for the login form
     page.wait_for_selector("form", timeout=10000)
 
+    # Take screenshot of login page
+    page.screenshot(path=f"{tempfile.gettempdir()}/debug_login_page.png")
+
     # django-allauth uses 'login' for username field, not 'username'
     # Try allauth field first (#id_login), fallback to standard Django (#id_username)
+    login_field = None
     try:
         login_field = page.locator("#id_login")
         login_field.wait_for(state="visible", timeout=5000)
+        print(f"DEBUG login_user: Found allauth login field, filling with: {username}")
         login_field.fill(username)
-    except Exception:
-        # Fallback to standard Django auth field
-        username_field = page.locator("#id_username")
-        username_field.wait_for(state="visible", timeout=5000)
-        username_field.fill(username)
+    except Exception as e:
+        print(f"DEBUG login_user: Allauth field not found ({e}), trying standard Django field")
+        try:
+            # Fallback to standard Django auth field
+            username_field = page.locator("#id_username")
+            username_field.wait_for(state="visible", timeout=5000)
+            print(f"DEBUG login_user: Found Django username field, filling with: {username}")
+            username_field.fill(username)
+            login_field = username_field
+        except Exception as e2:
+            print(f"DEBUG login_user: Neither field found! {e2}")
+            # Try to find any input field that might be the login field
+            all_inputs = page.locator("input[type='text'], input[type='email']").all()
+            print(f"DEBUG login_user: Found {len(all_inputs)} text/email inputs")
+            if all_inputs:
+                login_field = all_inputs[0]
+                login_field.fill(username)
 
     # Fill in the password field (same for both allauth and standard Django)
     password_field = page.locator("#id_password")
     password_field.wait_for(state="visible", timeout=5000)
+    print(f"DEBUG login_user: Filling password field")
     password_field.fill(password)
 
     # Take screenshot before submitting
@@ -191,6 +215,7 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
 
     # Submit the form
     submit_button = page.locator('button[type="submit"]')
+    print(f"DEBUG login_user: Clicking submit button")
     submit_button.click()
 
     # Wait for page to load
@@ -209,15 +234,25 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
 
         # Check for error messages
         error_messages = page.locator(
-            ".alert-danger, .errorlist, .invalid-feedback"
+            ".alert-danger, .errorlist, .invalid-feedback, .alert"
         ).all_text_contents()
         if error_messages:
             print(f"DEBUG login_user: Error messages: {error_messages}")
 
-        # Check if user exists by trying to query the database through the page
+        # Get the full page content for debugging
+        page_content = page.content()
+        print(f"DEBUG login_user: Page title: {page.title()}")
+
+        # Check if there are any form errors
+        if "error" in page_content.lower() or "invalid" in page_content.lower():
+            print("DEBUG login_user: Found error/invalid text in page")
+
         print("DEBUG login_user: Taking screenshot of failed login page")
+        # Login failed, but don't raise exception - let the test handle it
+        return False
     else:
         print("DEBUG login_user: Login appeared to succeed - navigated away from login page")
+        return True
 
 
 @pytest.mark.slow

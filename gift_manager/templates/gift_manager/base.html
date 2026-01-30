@@ -42,6 +42,8 @@
     <link rel="stylesheet" href="{% static 'gift_manager/main.css' %}">
     <link rel="stylesheet" href="{% static 'css/forms.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/modern-ux.css' %}">
+    <!-- Accessibility Styles -->
+    <link rel="stylesheet" href="{% static 'gift_manager/css/accessibility.css' %}">
     <style>
         /* Body padding will be set dynamically by JavaScript based on navbar height */
         body {
@@ -368,7 +370,11 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg fixed-top">
+    <!-- Skip Links for Accessibility -->
+    <a href="#main-content" class="skip-link">{% trans "Skip to main content" %}</a>
+    <a href="#navigation" class="skip-link">{% trans "Skip to navigation" %}</a>
+
+    <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
                 <img src="{% static 'gift_manager/images/gift.png' %}" alt="Gift" height="28">
@@ -586,7 +592,7 @@
     {% include 'gift_manager/includes/modal_base.html' %}
     {% include 'gift_manager/includes/offcanvas_base.html' %}
 
-    <div class="container mt-4">
+    <div class="container mt-4" id="main-content">
         {% block content %}{% endblock %}
     </div>
     <!-- Bootstrap JS and dependencies -->
@@ -627,6 +633,8 @@
     <script src="{% static 'gift_manager/js/touch-gestures.js' %}"></script>
     <!-- Grid Touch Gestures -->
     <script src="{% static 'gift_manager/js/grid-touch-gestures.js' %}"></script>
+    <!-- Accessibility and Keyboard Navigation -->
+    <script src="{% static 'gift_manager/js/accessibility.js' %}"></script>
 
     <!-- Configure HTMX to include CSRF token in headers -->
     <script>
