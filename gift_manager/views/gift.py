@@ -20,9 +20,10 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.mixins.permissions import PermissionContextMixin, SingleObjectPermissionMixin
 
 
-class GiftListView(BaseListView):
+class GiftListView(PermissionContextMixin, BaseListView):
     model = Gift
     template_name = "gift_manager/gift_list.html"
     object_type = "Gifts"
@@ -100,7 +101,7 @@ class GiftDeleteView(BaseDeleteView):
     object_type = "gift"
 
 
-class GiftDetailView(BaseDetailView):
+class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
     model = Gift
     template_name = "gift_manager/gift_detail.html"
     context_object_name = "gift"

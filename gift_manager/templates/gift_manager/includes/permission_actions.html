@@ -1,0 +1,93 @@
+{% load i18n %}
+{% load permission_tags %}
+
+{# Template for rendering permission-based action buttons #}
+<div class="permission-actions" data-user-permission="{{ user_permission }}">
+    {% for action in actions %}
+        {% if action.name == 'edit' %}
+            {% if action.enabled %}
+                <a href="{% url 'gift_manager:'|add:obj|add:'_edit' obj.pk %}"
+                   class="btn btn-warning btn-sm quick-action-btn"
+                   title="{% trans 'Edit' %}"
+                   data-action="edit"
+                   data-entity-id="{{ obj.pk }}"
+                   data-bs-toggle="tooltip">
+                    <i class="fas fa-edit"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Edit" %}</span>
+                </a>
+            {% else %}
+                <button class="btn btn-warning btn-sm quick-action-btn"
+                        disabled
+                        title="{{ action.tooltip }}"
+                        data-bs-toggle="tooltip"
+                        style="opacity: 0.5;">
+                    <i class="fas fa-edit"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Edit" %}</span>
+                </button>
+            {% endif %}
+        {% elif action.name == 'delete' %}
+            {% if action.enabled %}
+                <a href="{% url 'gift_manager:'|add:obj|add:'_delete' obj.pk %}"
+                   class="btn btn-danger btn-sm quick-action-btn"
+                   title="{% trans 'Delete' %}"
+                   data-action="delete"
+                   data-entity-id="{{ obj.pk }}"
+                   data-bs-toggle="tooltip">
+                    <i class="fas fa-trash"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Delete" %}</span>
+                </a>
+            {% else %}
+                <button class="btn btn-danger btn-sm quick-action-btn"
+                        disabled
+                        title="{{ action.tooltip }}"
+                        data-bs-toggle="tooltip"
+                        style="opacity: 0.5;">
+                    <i class="fas fa-trash"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Delete" %}</span>
+                </button>
+            {% endif %}
+        {% elif action.name == 'share' %}
+            {% if action.enabled %}
+                <a href="{% url 'gift_manager:share_objects' %}"
+                   class="btn btn-success btn-sm quick-action-btn"
+                   title="{% trans 'Share' %}"
+                   data-action="share"
+                   data-entity-id="{{ obj.pk }}"
+                   data-bs-toggle="tooltip">
+                    <i class="fas fa-share-alt"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Share" %}</span>
+                </a>
+            {% else %}
+                <button class="btn btn-success btn-sm quick-action-btn"
+                        disabled
+                        title="{{ action.tooltip }}"
+                        data-bs-toggle="tooltip"
+                        style="opacity: 0.5;">
+                    <i class="fas fa-share-alt"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Share" %}</span>
+                </button>
+            {% endif %}
+        {% elif action.name == 'view' %}
+            {% if action.enabled %}
+                <a href="{% url 'gift_manager:'|add:obj|add:'_detail' obj.pk %}"
+                   class="btn btn-info btn-sm quick-action-btn"
+                   title="{% trans 'View Details' %}"
+                   data-action="detail"
+                   data-entity-id="{{ obj.pk }}"
+                   data-bs-toggle="tooltip">
+                    <i class="fas fa-eye"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Details" %}</span>
+                </a>
+            {% else %}
+                <button class="btn btn-info btn-sm quick-action-btn"
+                        disabled
+                        title="{{ action.tooltip }}"
+                        data-bs-toggle="tooltip"
+                        style="opacity: 0.5;">
+                    <i class="fas fa-eye"></i>
+                    <span class="btn-text d-none d-lg-inline ms-1">{% trans "Details" %}</span>
+                </button>
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+</div>

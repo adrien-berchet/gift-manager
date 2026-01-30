@@ -1,0 +1,217 @@
+/**
+ * Permission-based UI styles
+ * Styles for permission-aware action buttons and UI elements
+ */
+
+/* Permission-based action buttons */
+.quick-actions-container[data-permission-level="0"] .quick-action-btn {
+    /* No permission - hide most actions except view */
+    opacity: 0.3;
+}
+
+.quick-actions-container[data-permission-level="10"] .quick-action-btn[data-action="edit"],
+.quick-actions-container[data-permission-level="10"] .quick-action-btn[data-action="delete"],
+.quick-actions-container[data-permission-level="10"] .quick-action-btn[data-action="share"] {
+    /* Viewer - disable edit, delete, share */
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.quick-actions-container[data-permission-level="20"] .quick-action-btn[data-action="delete"] {
+    /* Editor - disable delete */
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Disabled action buttons */
+.quick-action-btn:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.quick-action-btn:disabled:hover {
+    opacity: 0.5 !important;
+}
+
+/* Permission indicators */
+.permission-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.permission-indicator.none {
+    background-color: #6c757d;
+    color: white;
+}
+
+.permission-indicator.viewer {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.permission-indicator.editor {
+    background-color: #28a745;
+    color: white;
+}
+
+.permission-indicator.owner {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+/* Permission-based form elements */
+.permission-form-group {
+    position: relative;
+}
+
+.permission-form-group.disabled {
+    opacity: 0.6;
+}
+
+.permission-form-group.disabled input,
+.permission-form-group.disabled select,
+.permission-form-group.disabled textarea {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+}
+
+.permission-form-group .permission-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(248, 249, 250, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 0.375rem;
+}
+
+.permission-form-group .permission-overlay .permission-message {
+    background-color: #fff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #dee2e6;
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+/* Permission-based navigation */
+.nav-item.permission-disabled {
+    opacity: 0.5;
+}
+
+.nav-item.permission-disabled .nav-link {
+    color: #6c757d !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Permission-based bulk operations */
+.bulk-actions-toolbar.permission-limited {
+    opacity: 0.7;
+}
+
+.bulk-actions-toolbar.permission-limited .btn:not(.btn-secondary) {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Permission tooltips */
+.permission-tooltip {
+    font-size: 0.875rem;
+    max-width: 250px;
+}
+
+/* Create button permissions */
+.page-header-actions .btn[data-action="create"] {
+    /* Create buttons are generally always enabled */
+    opacity: 1;
+}
+
+.page-header-actions .btn[data-action="create"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Inline editing permissions */
+.inline-editable.permission-denied {
+    cursor: not-allowed;
+    background-color: #f8f9fa;
+}
+
+.inline-editable.permission-denied:hover {
+    background-color: #f8f9fa;
+}
+
+/* Permission-based row highlighting */
+.gridjs-tr[data-permission-level="0"] {
+    background-color: rgba(108, 117, 125, 0.1);
+}
+
+.gridjs-tr[data-permission-level="10"] {
+    background-color: rgba(23, 162, 184, 0.1);
+}
+
+.gridjs-tr[data-permission-level="20"] {
+    background-color: rgba(40, 167, 69, 0.1);
+}
+
+.gridjs-tr[data-permission-level="30"] {
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .quick-actions-container .btn-text {
+        display: none !important;
+    }
+
+    .permission-indicator {
+        font-size: 0.65rem;
+        padding: 1px 4px;
+    }
+
+    .permission-form-group .permission-overlay .permission-message {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .quick-action-btn:disabled {
+        opacity: 0.3 !important;
+        border: 2px solid #6c757d;
+    }
+
+    .permission-indicator {
+        border: 1px solid currentColor;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .quick-action-btn,
+    .permission-indicator {
+        transition: none;
+    }
+}
+
+/* Focus management for accessibility */
+.quick-action-btn:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.quick-action-btn:disabled:focus {
+    outline: 2px solid #6c757d;
+    outline-offset: 2px;
+}

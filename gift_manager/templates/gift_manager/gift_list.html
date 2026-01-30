@@ -1,5 +1,6 @@
 {% extends "gift_manager/base.html" %}
 
+{% load permission_tags %}
 {% load i18n %}
 {% load static %}
 
@@ -7,6 +8,7 @@
 <link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">{# Permission-based UI styles #}>
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -31,6 +33,7 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>{# Permission-aware UI utilities #}
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 <script src="{% static 'gift_manager/inline-editing.js' %}"></script>
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
@@ -39,6 +42,10 @@
 <script>
     {% load custom_filters %}
     (function () {
+        // Get permission data from template
+        const userPermissions = {{ user_permissions_json|safe }};
+        console.log('[GiftList] User permissions:', userPermissions);
+
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
@@ -86,13 +93,13 @@
             name: '{% trans "Actions"|escapejs %}',
             width: '200px',
             sort: false,
-            formatter: GridUtils.actionButtonsFormatter({
+            formatter: PermissionUtils.permissionAwareActionFormatter({
                 give: (row) => row.cells[4].data,
                 details: (row) => row.cells[5].data,
                 edit: (row) => row.cells[6].data,
                 delete: (row) => row.cells[7].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
-            }, ['give', 'details', 'edit', 'delete', 'share'])
+            }, ['give', 'details', 'edit', 'delete', 'share'], {}, userPermissions)
         }
     ];
 

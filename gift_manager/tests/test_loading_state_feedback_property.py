@@ -18,6 +18,7 @@ from gift_manager.tests.factories import (
     GiftTagFactory,
 )
 from gift_manager.services import PermissionService
+from gift_manager.tests.utils import text_in_rendered
 
 
 @pytest.mark.django_db
@@ -91,18 +92,26 @@ class TestLoadingStateFeedbackProperty:
                 pytest.skip(f"Could not create entity for type: {entity_type}")
             entity = entities[0]
 
+        # Map entity types to their URL field names (as used in views)
+        pk_field_mapping = {
+            'person': 'person_id',
+            'gift': 'gift_id',
+            'event': 'event_id',
+        }
+
         # Property 11.1: AJAX operations should provide loading indicators
         try:
             if operation == 'create':
                 url = reverse(f'gift_manager:{entity_type}_create')
-            elif operation == 'edit':
-                url = reverse(f'gift_manager:{entity_type}_edit',
-                             kwargs={'pk': getattr(entity, entity._meta.pk.name)})
-            elif operation == 'detail':
-                url = reverse(f'gift_manager:{entity_type}_detail',
-                             kwargs={'pk': getattr(entity, entity._meta.pk.name)})
-        except:
-            pytest.skip(f"URL not available for {entity_type} {operation}")
+            elif operation in ['edit', 'detail']:
+                pk_field = pk_field_mapping.get(entity_type)
+                if not pk_field or not hasattr(entity, pk_field):
+                    pytest.skip(f"Primary key field {pk_field} not found for {entity_type}")
+
+                pk_value = getattr(entity, pk_field)
+                url = reverse(f'gift_manager:{entity_type}_{operation}', kwargs={'pk': pk_value})
+        except Exception as e:
+            pytest.skip(f"URL not available for {entity_type} {operation}: {str(e)}")
 
         # Test HTMX request for loading state support
         response = self.client.get(url, HTTP_HX_REQUEST='true')
@@ -116,11 +125,11 @@ class TestLoadingStateFeedbackProperty:
 
             # Property 11.2: Forms should have loading state support
             if operation in ['create', 'edit']:
-                assert '<form' in content, \
+                assert text_in_rendered('<form', content), \
                     f"{operation} operation should contain form"
 
                 # Check for form elements that support loading states
-                assert ('type="submit"' in content or 'button' in content), \
+                assert (text_in_rendered('type="submit"', content) or text_in_rendered('button', content)), \
                     f"{operation} form should have submit button for loading states"
 
             # Property 11.4: Detail views should support loading states
@@ -157,7 +166,7 @@ class TestLoadingStateFeedbackProperty:
 
         # Property 11.2: Form should have elements that can be disabled during submission
         form_elements = ['input', 'select', 'textarea', 'button']
-        has_form_elements = any(element in form_content for element in form_elements)
+        has_form_elements = any(text_in_rendered(element, form_content) for element in form_elements)
         assert has_form_elements, \
             f"Create form should have form elements that can be disabled during loading"
 
