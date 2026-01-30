@@ -30,7 +30,7 @@
             title="{% trans 'Close' %} (Esc)"></button>
   </div>
 
-  <div class="offcanvas-body" id="offcanvasBody">
+  <div class="offcanvas-body" id="offcanvasBody" data-swipe-hint="Swipe left to close">
     {% block offcanvas_body %}
     <!-- Loading state template -->
     <div class="loading-state d-none" id="offcanvasLoading">
@@ -81,7 +81,7 @@
             title="{% trans 'Close' %} (Esc)"></button>
   </div>
 
-  <div class="offcanvas-body" id="detailPanelBody">
+  <div class="offcanvas-body" id="detailPanelBody" data-swipe-hint="Swipe left to close">
     {% block detail_body %}
     <!-- Loading state template -->
     <div class="loading-state d-none" id="detailLoading">

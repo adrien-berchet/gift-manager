@@ -358,6 +358,10 @@
     <link rel="stylesheet" href="{% static 'gift_manager/css/loading-states.css' %}">
     <!-- Notifications CSS -->
     <link rel="stylesheet" href="{% static 'gift_manager/css/notifications.css' %}">
+    <!-- Mobile responsive CSS -->
+    <link rel="stylesheet" href="{% static 'gift_manager/css/mobile-responsive.css' %}">
+    <!-- Touch gestures CSS -->
+    <link rel="stylesheet" href="{% static 'gift_manager/css/touch-gestures.css' %}">
 
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
@@ -617,6 +621,12 @@
     <script src="{% static 'gift_manager/loading-states.js' %}"></script>
     <!-- Detail Views -->
     <script src="{% static 'gift_manager/detail-views.js' %}"></script>
+    <!-- Mobile Responsive -->
+    <script src="{% static 'gift_manager/js/mobile-responsive.js' %}"></script>
+    <!-- Touch Gestures -->
+    <script src="{% static 'gift_manager/js/touch-gestures.js' %}"></script>
+    <!-- Grid Touch Gestures -->
+    <script src="{% static 'gift_manager/js/grid-touch-gestures.js' %}"></script>
 
     <!-- Configure HTMX to include CSRF token in headers -->
     <script>
