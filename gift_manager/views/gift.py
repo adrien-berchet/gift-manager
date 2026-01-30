@@ -42,31 +42,22 @@ class GiftListView(BaseListView):
         base_queryset = Gift.objects.accessible_by(self.request.user).order_by("name")
 
         # Use database-specific aggregation
-        if connection.vendor == 'postgresql':
-            return (
-                base_queryset
-                .annotate(
-                    tags_info=JSONBAgg(
-                        Func(
-                            Value("id"),
-                            F("tags__tag_id"),
-                            Value("name"),
-                            F("tags__name"),
-                            function="jsonb_build_object",
-                        ),
-                        filter=Q(tags__tag_id__isnull=False),
-                        distinct=True,
+        if connection.vendor == "postgresql":
+            return base_queryset.annotate(
+                tags_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("tags__tag_id"),
+                        Value("name"),
+                        F("tags__name"),
+                        function="jsonb_build_object",
                     ),
-                )
-                .values("gift_id", "name", "comment", "tags_info")
-            )
-        else:
-            # For SQLite and other databases, use a simpler approach
-            return (
-                base_queryset
-                .prefetch_related('tags')
-                .values("gift_id", "name", "comment")
-            )
+                    filter=Q(tags__tag_id__isnull=False),
+                    distinct=True,
+                ),
+            ).values("gift_id", "name", "comment", "tags_info")
+        # For SQLite and other databases, use a simpler approach
+        return base_queryset.prefetch_related("tags").values("gift_id", "name", "comment")
 
 
 class GiftCreateView(BaseCreateView):

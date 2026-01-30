@@ -1,18 +1,15 @@
 """Tests for quick action buttons in list views."""
 
 import pytest
-from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
 
-from gift_manager.tests.factories import (
-    EventFactory,
-    GiftFactory,
-    PersonFactory,
-    PersonGroupFactory,
-    RelationFactory,
-    UserFactory,
-)
+from gift_manager.tests.factories import EventFactory
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import UserFactory
 
 
 @pytest.mark.django_db

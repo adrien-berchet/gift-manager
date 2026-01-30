@@ -41,12 +41,12 @@ class HTMXResponseMixin:
 
     def dispatch(self, request, *args, **kwargs):
         """Detect HTMX requests and store the flag."""
-        self.is_htmx = request.headers.get('HX-Request') == 'true'
+        self.is_htmx = request.headers.get("HX-Request") == "true"
         return super().dispatch(request, *args, **kwargs)
 
     def get_template_names(self):
         """Return HTMX-specific template if available and request is HTMX."""
-        if self.is_htmx and hasattr(self, 'htmx_template_name') and self.htmx_template_name:
+        if self.is_htmx and hasattr(self, "htmx_template_name") and self.htmx_template_name:
             return [self.htmx_template_name]
         return super().get_template_names()
 
@@ -59,30 +59,31 @@ class HTMXResponseMixin:
             triggers = []
 
             # Always trigger list update for CRUD operations
-            triggers.append('list:update')
+            triggers.append("list:update")
 
             # Add modal/offcanvas close triggers if specified
-            if getattr(self, 'close_modal', False):
-                triggers.append('modal:close')
-            if getattr(self, 'close_offcanvas', False):
-                triggers.append('offcanvas:close')
+            if getattr(self, "close_modal", False):
+                triggers.append("modal:close")
+            if getattr(self, "close_offcanvas", False):
+                triggers.append("offcanvas:close")
 
             # Add success notification
-            if hasattr(self, 'get_success_message'):
+            if hasattr(self, "get_success_message"):
                 success_message = self.get_success_message()
                 if success_message:
-                    triggers.append(json.dumps({'showNotification': {
-                        'message': success_message,
-                        'type': 'success'
-                    }}))
+                    triggers.append(
+                        json.dumps(
+                            {"showNotification": {"message": success_message, "type": "success"}}
+                        )
+                    )
 
             # For HTMX requests, don't redirect - return empty response with triggers
-            if hasattr(response, 'status_code') and response.status_code == 302:
-                response = HttpResponse('')
+            if hasattr(response, "status_code") and response.status_code == 302:
+                response = HttpResponse("")
 
             # Set HX-Trigger header on the final response
             if triggers:
-                response['HX-Trigger'] = ', '.join(triggers)
+                response["HX-Trigger"] = ", ".join(triggers)
 
         return response
 
@@ -93,10 +94,9 @@ class HTMXResponseMixin:
         if self.is_htmx:
             # Add error notification trigger
             error_message = "Please correct the errors below."
-            response['HX-Trigger'] = json.dumps({'showNotification': {
-                'message': error_message,
-                'type': 'error'
-            }})
+            response["HX-Trigger"] = json.dumps(
+                {"showNotification": {"message": error_message, "type": "error"}}
+            )
 
         return response
 
@@ -109,34 +109,35 @@ class HTMXResponseMixin:
             triggers = []
 
             # Always trigger list update for delete operations
-            triggers.append('list:update')
+            triggers.append("list:update")
 
             # Add modal close trigger if specified
-            if getattr(self, 'close_modal', False):
-                triggers.append('modal:close')
+            if getattr(self, "close_modal", False):
+                triggers.append("modal:close")
 
             # Add success notification
-            if hasattr(self, 'get_success_message'):
+            if hasattr(self, "get_success_message"):
                 success_message = self.get_success_message()
                 if success_message:
-                    triggers.append(json.dumps({'showNotification': {
-                        'message': success_message,
-                        'type': 'success'
-                    }}))
+                    triggers.append(
+                        json.dumps(
+                            {"showNotification": {"message": success_message, "type": "success"}}
+                        )
+                    )
 
             # Set HX-Trigger header
             if triggers:
-                response['HX-Trigger'] = ', '.join(triggers)
+                response["HX-Trigger"] = ", ".join(triggers)
 
             # For HTMX requests, don't redirect - return empty response
-            if hasattr(response, 'status_code') and response.status_code == 302:
-                return HttpResponse('')
+            if hasattr(response, "status_code") and response.status_code == 302:
+                return HttpResponse("")
 
         return response
 
     def get_success_message(self):
         """Override in subclasses to provide success messages."""
-        return None
+        return
 
 
 class FilterByUserMixin:
@@ -310,7 +311,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
         try:
             with transaction.atomic():
                 # Only set user_link if the model has that field
-                if hasattr(form.instance, 'user_link'):
+                if hasattr(form.instance, "user_link"):
                     form.instance.user_link = self.request.user
                 response = super().form_valid(form)
                 PermissionService.create_or_update_permission(
@@ -565,7 +566,12 @@ class EditPermissionMixin:
 
 
 class BaseUpdateView(
-    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin, EditPermissionMixin, HTMXResponseMixin, UpdateView
+    FilterByUserMixin,
+    GetObjectByTokenMixin,
+    LoginRequiredMixin,
+    EditPermissionMixin,
+    HTMXResponseMixin,
+    UpdateView,
 ):
     """Base class for update views."""
 
@@ -591,7 +597,7 @@ class BaseUpdateView(
     def form_valid(self, form):
         with transaction.atomic():
             # Only set user_link if the model has that field
-            if hasattr(form.instance, 'user_link'):
+            if hasattr(form.instance, "user_link"):
                 form.instance.user_link = self.request.user
             response = super().form_valid(form)
             PermissionService.create_or_update_permission(
@@ -639,42 +645,43 @@ class DeleteSharedMixin:
                 ).delete()
 
                 success_message = gettext(
-                    "You no longer have access to this {}, but it remains shared with "
-                    "other users"
+                    "You no longer have access to this {}, but it remains shared with other users"
                 ).format(gettext(self.object_type).lower())
             else:
                 # If not shared, completely delete the object
                 self.object.delete()
-                success_message = gettext("{} successfully deleted").format(gettext(self.object_type))
+                success_message = gettext("{} successfully deleted").format(
+                    gettext(self.object_type)
+                )
 
             # Handle HTMX vs regular requests
-            is_htmx = getattr(self, 'is_htmx', False)
+            is_htmx = getattr(self, "is_htmx", False)
             logger.debug(f"Delete request - is_htmx: {is_htmx}, headers: {request.headers}")
 
             if is_htmx:
                 # For HTMX requests, return appropriate response with triggers
-                response = HttpResponse('')
+                response = HttpResponse("")
 
                 # Build HX-Trigger events
                 triggers = []
-                triggers.append('list:update')
+                triggers.append("list:update")
 
-                if getattr(self, 'close_modal', False):
-                    triggers.append('modal:close')
+                if getattr(self, "close_modal", False):
+                    triggers.append("modal:close")
 
-                triggers.append(json.dumps({'showNotification': {
-                    'message': success_message,
-                    'type': 'success'
-                }}))
+                triggers.append(
+                    json.dumps(
+                        {"showNotification": {"message": success_message, "type": "success"}}
+                    )
+                )
 
-                response['HX-Trigger'] = ', '.join(triggers)
+                response["HX-Trigger"] = ", ".join(triggers)
                 logger.debug(f"HTMX response - HX-Trigger: {response['HX-Trigger']}")
                 return response
-            else:
-                # For regular requests, add message and redirect
-                logger.debug(f"Regular response - redirecting to: {success_url}")
-                messages.success(request, success_message)
-                return redirect(success_url)
+            # For regular requests, add message and redirect
+            logger.debug(f"Regular response - redirecting to: {success_url}")
+            messages.success(request, success_message)
+            return redirect(success_url)
 
 
 class CancelToPreviousMixin:
@@ -694,30 +701,30 @@ class DeleteConfirmationMixin:
     def get_entity_icon(self):
         """Return the FontAwesome icon class for the entity type."""
         icon_map = {
-            'person': 'user',
-            'gift': 'gift',
-            'event': 'calendar-alt',
-            'relation': 'hand-holding-heart',
-            'persongroup': 'layer-group',
-            'gifttag': 'tag',
+            "person": "user",
+            "gift": "gift",
+            "event": "calendar-alt",
+            "relation": "hand-holding-heart",
+            "persongroup": "layer-group",
+            "gifttag": "tag",
         }
-        return icon_map.get(self.object_type.lower(), 'cube')
+        return icon_map.get(self.object_type.lower(), "cube")
 
     def get_entity_details(self):
         """Return a list of additional details to display for the entity."""
         details = []
 
         # Add common details based on object attributes
-        if hasattr(self.object, 'email_address') and self.object.email_address:
+        if hasattr(self.object, "email_address") and self.object.email_address:
             details.append(f"Email: {self.object.email_address}")
 
-        if hasattr(self.object, 'created_at') and self.object.created_at:
+        if hasattr(self.object, "created_at") and self.object.created_at:
             details.append(f"Created: {self.object.created_at.strftime('%Y-%m-%d')}")
 
-        if hasattr(self.object, 'usual_date') and self.object.usual_date:
+        if hasattr(self.object, "usual_date") and self.object.usual_date:
             details.append(f"Date: {self.object.usual_date}")
 
-        if hasattr(self.object, 'price') and self.object.price:
+        if hasattr(self.object, "price") and self.object.price:
             details.append(f"Price: ${self.object.price}")
 
         return details
@@ -727,42 +734,43 @@ class DeleteConfirmationMixin:
         related = []
 
         # Check for common relationships
-        if hasattr(self.object, 'gifts') and hasattr(self.object.gifts, 'count'):
+        if hasattr(self.object, "gifts") and hasattr(self.object.gifts, "count"):
             count = self.object.gifts.count()
             if count > 0:
-                related.append({
-                    'name': 'gift',
-                    'name_plural': 'gifts',
-                    'count': count,
-                    'icon': 'gift'
-                })
+                related.append(
+                    {"name": "gift", "name_plural": "gifts", "count": count, "icon": "gift"}
+                )
 
-        if hasattr(self.object, 'events') and hasattr(self.object.events, 'count'):
+        if hasattr(self.object, "events") and hasattr(self.object.events, "count"):
             count = self.object.events.count()
             if count > 0:
-                related.append({
-                    'name': 'event',
-                    'name_plural': 'events',
-                    'count': count,
-                    'icon': 'calendar-alt'
-                })
+                related.append(
+                    {
+                        "name": "event",
+                        "name_plural": "events",
+                        "count": count,
+                        "icon": "calendar-alt",
+                    }
+                )
 
-        if hasattr(self.object, 'relations') and hasattr(self.object.relations, 'count'):
+        if hasattr(self.object, "relations") and hasattr(self.object.relations, "count"):
             count = self.object.relations.count()
             if count > 0:
-                related.append({
-                    'name': 'relation',
-                    'name_plural': 'relations',
-                    'count': count,
-                    'icon': 'hand-holding-heart'
-                })
+                related.append(
+                    {
+                        "name": "relation",
+                        "name_plural": "relations",
+                        "count": count,
+                        "icon": "hand-holding-heart",
+                    }
+                )
 
         return related
 
     def get_cascade_warning(self):
         """Return a warning message about cascade deletions if applicable."""
         # Override in subclasses for specific cascade warnings
-        return None
+        return
 
     def get_additional_fields(self):
         """Return additional form fields needed for deletion."""
@@ -787,17 +795,19 @@ class BaseDeleteView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'entity_type': gettext(self.object_type),
-            'entity_name': str(self.object),
-            'entity_description': getattr(self.object, 'description', None),
-            'entity_icon': self.get_entity_icon(),
-            'entity_details': self.get_entity_details(),
-            'delete_url': self.request.path,
-            'related_objects': self.get_related_objects(),
-            'cascade_warning': self.get_cascade_warning(),
-            'additional_fields': self.get_additional_fields(),
-        })
+        context.update(
+            {
+                "entity_type": gettext(self.object_type),
+                "entity_name": str(self.object),
+                "entity_description": getattr(self.object, "description", None),
+                "entity_icon": self.get_entity_icon(),
+                "entity_details": self.get_entity_details(),
+                "delete_url": self.request.path,
+                "related_objects": self.get_related_objects(),
+                "cascade_warning": self.get_cascade_warning(),
+                "additional_fields": self.get_additional_fields(),
+            }
+        )
         return context
 
     def get_success_message(self):

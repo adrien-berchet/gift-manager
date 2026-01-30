@@ -4,27 +4,21 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
-from .views.inline_editing import (
-    PersonInlineUpdateView,
-    GiftInlineUpdateView,
-    EventInlineUpdateView,
-    PersonGroupInlineUpdateView,
-    GiftTagInlineUpdateView,
-    RelationInlineUpdateView,
-)
-from .views.bulk_operations import (
-    BulkOperationView,
-    BulkDeleteConfirmationView,
-    BulkOperationProgressView,
-)
-from .views.search import (
-    PersonSearchView,
-    GiftSearchView,
-    EventSearchView,
-    RelationSearchView,
-    PersonGroupSearchView,
-    GiftTagSearchView,
-)
+from .views.bulk_operations import BulkDeleteConfirmationView
+from .views.bulk_operations import BulkOperationProgressView
+from .views.bulk_operations import BulkOperationView
+from .views.inline_editing import EventInlineUpdateView
+from .views.inline_editing import GiftInlineUpdateView
+from .views.inline_editing import GiftTagInlineUpdateView
+from .views.inline_editing import PersonGroupInlineUpdateView
+from .views.inline_editing import PersonInlineUpdateView
+from .views.inline_editing import RelationInlineUpdateView
+from .views.search import EventSearchView
+from .views.search import GiftSearchView
+from .views.search import GiftTagSearchView
+from .views.search import PersonGroupSearchView
+from .views.search import PersonSearchView
+from .views.search import RelationSearchView
 
 app_name = "gift_manager"
 
@@ -177,16 +171,48 @@ urlpatterns = [
     path("relation_status_update/", views.update_relation_status, name="relation_status_update"),
     path("share/", views.ShareObjectsView.as_view(), name="share_objects"),
     # Inline editing endpoints
-    path("api/persons/<uuid:pk>/inline-update/", PersonInlineUpdateView.as_view(), name="person_inline_update"),
-    path("api/gifts/<uuid:pk>/inline-update/", GiftInlineUpdateView.as_view(), name="gift_inline_update"),
-    path("api/events/<uuid:pk>/inline-update/", EventInlineUpdateView.as_view(), name="event_inline_update"),
-    path("api/person-groups/<uuid:pk>/inline-update/", PersonGroupInlineUpdateView.as_view(), name="person_group_inline_update"),
-    path("api/gift-tags/<uuid:pk>/inline-update/", GiftTagInlineUpdateView.as_view(), name="gift_tag_inline_update"),
-    path("api/relations/<uuid:pk>/inline-update/", RelationInlineUpdateView.as_view(), name="relation_inline_update"),
+    path(
+        "api/persons/<uuid:pk>/inline-update/",
+        PersonInlineUpdateView.as_view(),
+        name="person_inline_update",
+    ),
+    path(
+        "api/gifts/<uuid:pk>/inline-update/",
+        GiftInlineUpdateView.as_view(),
+        name="gift_inline_update",
+    ),
+    path(
+        "api/events/<uuid:pk>/inline-update/",
+        EventInlineUpdateView.as_view(),
+        name="event_inline_update",
+    ),
+    path(
+        "api/person-groups/<uuid:pk>/inline-update/",
+        PersonGroupInlineUpdateView.as_view(),
+        name="person_group_inline_update",
+    ),
+    path(
+        "api/gift-tags/<uuid:pk>/inline-update/",
+        GiftTagInlineUpdateView.as_view(),
+        name="gift_tag_inline_update",
+    ),
+    path(
+        "api/relations/<uuid:pk>/inline-update/",
+        RelationInlineUpdateView.as_view(),
+        name="relation_inline_update",
+    ),
     # Bulk operations endpoints
     path("api/bulk-operations/", BulkOperationView.as_view(), name="bulk_operations"),
-    path("api/bulk-delete-confirmation/", BulkDeleteConfirmationView.as_view(), name="bulk_delete_confirmation"),
-    path("api/bulk-operation-progress/", BulkOperationProgressView.as_view(), name="bulk_operation_progress"),
+    path(
+        "api/bulk-delete-confirmation/",
+        BulkDeleteConfirmationView.as_view(),
+        name="bulk_delete_confirmation",
+    ),
+    path(
+        "api/bulk-operation-progress/",
+        BulkOperationProgressView.as_view(),
+        name="bulk_operation_progress",
+    ),
     # HTMX search endpoints
     path("api/search/persons/", PersonSearchView.as_view(), name="person_search"),
     path("api/search/gifts/", GiftSearchView.as_view(), name="gift_search"),

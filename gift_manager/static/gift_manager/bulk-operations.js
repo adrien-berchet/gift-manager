@@ -102,7 +102,13 @@
                                 </button>
                             ` : ''}
                             ${this.options.enableBulkShare ? `
-   <i class="fas fa-times me-1"></i>Clear Selection
+                                <button type="button" class="btn btn-primary btn-sm bulk-action-btn"
+                                        data-action="bulk-share">
+                                    <i class="fas fa-share me-1"></i>Share Selected
+                                </button>
+                            ` : ''}
+                            <button type="button" class="btn btn-secondary btn-sm" id="clear-selection">
+                                <i class="fas fa-times me-1"></i>Clear Selection
                             </button>
                         </div>
                     </div>

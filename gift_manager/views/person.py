@@ -58,7 +58,7 @@ class PersonListView(BaseListView):
         )
 
         # Use database-specific aggregation
-        if connection.vendor == 'postgresql':
+        if connection.vendor == "postgresql":
             return base_queryset.annotate(
                 groups_info=JSONBAgg(
                     Func(
@@ -72,9 +72,8 @@ class PersonListView(BaseListView):
                     distinct=True,
                 ),
             )
-        else:
-            # For SQLite and other databases, use a simpler approach
-            return base_queryset.prefetch_related('groups')
+        # For SQLite and other databases, use a simpler approach
+        return base_queryset.prefetch_related("groups")
 
 
 class PersonCreateView(BaseCreateView):

@@ -154,7 +154,13 @@
     function extractFilterValue(value) {
         if (value === null || value === undefined) return '';
 
-        if (typeof value ===
+        if (typeof value === 'object' && value !== null) {
+            // Handle objects with toString method or extract meaningful value
+            if (value.toString && typeof value.toString === 'function') {
+                return value.toString();
+            }
+            return JSON.stringify(value);
+        }
 
         return String(value);
     }

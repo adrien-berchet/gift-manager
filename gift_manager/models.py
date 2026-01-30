@@ -90,7 +90,7 @@ class PersonQuerySet(UserPermissionQuerySet):
         from django.db import connection
 
         # Use database-specific aggregation
-        if connection.vendor == 'postgresql':
+        if connection.vendor == "postgresql":
             return self.annotate(
                 groups_info=JSONBAgg(
                     Func(
@@ -104,9 +104,8 @@ class PersonQuerySet(UserPermissionQuerySet):
                     distinct=True,
                 )
             )
-        else:
-            # For SQLite and other databases, use a simpler approach
-            return self.prefetch_related('groups')
+        # For SQLite and other databases, use a simpler approach
+        return self.prefetch_related("groups")
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
@@ -150,7 +149,7 @@ class GiftQuerySet(UserPermissionQuerySet):
         from django.db import connection
 
         # Use database-specific aggregation
-        if connection.vendor == 'postgresql':
+        if connection.vendor == "postgresql":
             return self.annotate(
                 tags_info=JSONBAgg(
                     Func(
@@ -164,9 +163,8 @@ class GiftQuerySet(UserPermissionQuerySet):
                     distinct=True,
                 )
             )
-        else:
-            # For SQLite and other databases, use a simpler approach
-            return self.prefetch_related('tags')
+        # For SQLite and other databases, use a simpler approach
+        return self.prefetch_related("tags")
 
 
 class GiftManager(models.Manager):
