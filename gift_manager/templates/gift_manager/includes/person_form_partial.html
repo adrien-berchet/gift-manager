@@ -281,23 +281,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Unsaved changes warning
-    let formChanged = false;
-    fields.forEach(field => {
-        field.addEventListener('input', function() {
-            formChanged = true;
-        });
-    });
+    // Initialize unsaved changes protection for this form
+    if (window.UnsavedChanges) {
+        UnsavedChanges.addForm(form);
+    }
 
-    // Warn before closing if there are unsaved changes
+    // Enhanced offcanvas close protection
     const offcanvas = form.closest('.offcanvas');
     if (offcanvas) {
         const closeButtons = offcanvas.querySelectorAll('[data-bs-dismiss="offcanvas"]');
         closeButtons.forEach(btn => {
             btn.addEventListener('click', function(e) {
-                if (formChanged && !confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
+                if (window.UnsavedChanges && UnsavedChanges.hasUnsaved()) {
                     e.preventDefault();
                     e.stopPropagation();
+
+                    // Show custom confirmation modal
+                    const modal = document.getElementById('unsaved-changes-modal');
+                    if (modal) {
+                        // Store the close action for later
+                        window.pendingOffcanvasClose = function() {
+                            const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
+                            if (offcanvasInstance) {
+                                offcanvasInstance.hide();
+                            }
+                        };
+
+                        // Show the modal
+                        const modalInstance = new bootstrap.Modal(modal);
+                        modalInstance.show();
+                    } else {
+                        // Fallback to browser confirm
+                        if (confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
+                            UnsavedChanges.clearUnsavedChanges();
+                        } else {
+                            return;
+                        }
+                    }
                 }
             });
         });

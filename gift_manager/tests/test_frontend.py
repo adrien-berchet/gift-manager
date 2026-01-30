@@ -168,6 +168,7 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     """Helper to log in a user.
 
     This app uses django-allauth which has different field names than standard Django auth.
+    Rate limiting is disabled in testing settings, so login should work reliably.
     """
     # Navigate to login page
     page.goto(f"{live_server.url}/accounts/login/", wait_until="networkidle")
@@ -175,84 +176,61 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     # Wait for page to load by checking for the login form
     page.wait_for_selector("form", timeout=10000)
 
-    # Take screenshot of login page
-    page.screenshot(path=f"{tempfile.gettempdir()}/debug_login_page.png")
+    # Check if we're already logged in (redirect to home page)
+    if "/accounts/login/" not in page.url:
+        print(f"DEBUG login_user: Already logged in, current URL: {page.url}")
+        return True
 
     # django-allauth uses 'login' for username field, not 'username'
     # Try allauth field first (#id_login), fallback to standard Django (#id_username)
-    login_field = None
     try:
         login_field = page.locator("#id_login")
         login_field.wait_for(state="visible", timeout=5000)
-        print(f"DEBUG login_user: Found allauth login field, filling with: {username}")
         login_field.fill(username)
-    except Exception as e:
-        print(f"DEBUG login_user: Allauth field not found ({e}), trying standard Django field")
+    except Exception:
         try:
             # Fallback to standard Django auth field
             username_field = page.locator("#id_username")
             username_field.wait_for(state="visible", timeout=5000)
-            print(f"DEBUG login_user: Found Django username field, filling with: {username}")
             username_field.fill(username)
-            login_field = username_field
-        except Exception as e2:
-            print(f"DEBUG login_user: Neither field found! {e2}")
+        except Exception:
             # Try to find any input field that might be the login field
             all_inputs = page.locator("input[type='text'], input[type='email']").all()
-            print(f"DEBUG login_user: Found {len(all_inputs)} text/email inputs")
             if all_inputs:
-                login_field = all_inputs[0]
-                login_field.fill(username)
+                all_inputs[0].fill(username)
 
     # Fill in the password field (same for both allauth and standard Django)
     password_field = page.locator("#id_password")
     password_field.wait_for(state="visible", timeout=5000)
-    print(f"DEBUG login_user: Filling password field")
     password_field.fill(password)
-
-    # Take screenshot before submitting
-    page.screenshot(path=f"{tempfile.gettempdir()}/debug_before_login.png")
 
     # Submit the form
     submit_button = page.locator('button[type="submit"]')
-    print(f"DEBUG login_user: Clicking submit button")
     submit_button.click()
 
     # Wait for page to load
     page.wait_for_load_state("networkidle", timeout=15000)
 
-    # Take screenshot after login attempt
-    page.screenshot(path=f"{tempfile.gettempdir()}/debug_after_login.png")
-
-    # Debug: Check if login succeeded or failed
+    # Check if login succeeded
     current_url = page.url
-    print(f"DEBUG login_user: Current URL after login: {current_url}")
-
-    if "/accounts/login/" in current_url:
-        # Still on login page - login failed
-        print("DEBUG login_user: Login FAILED - still on login page")
-
-        # Check for error messages
+    if "/accounts/login/" not in current_url:
+        print(f"DEBUG login_user: Login SUCCESS")
+        return True
+    else:
+        print(f"DEBUG login_user: Login FAILED - still on login page")
+        # Check for error messages for debugging
         error_messages = page.locator(
             ".alert-danger, .errorlist, .invalid-feedback, .alert"
         ).all_text_contents()
         if error_messages:
             print(f"DEBUG login_user: Error messages: {error_messages}")
 
-        # Get the full page content for debugging
+        # Check for rate limiting (should not happen with our settings)
         page_content = page.content()
-        print(f"DEBUG login_user: Page title: {page.title()}")
+        if "Too Many Requests" in page_content or "rate limit" in page_content.lower():
+            print("DEBUG login_user: Rate limiting detected - check test settings!")
 
-        # Check if there are any form errors
-        if "error" in page_content.lower() or "invalid" in page_content.lower():
-            print("DEBUG login_user: Found error/invalid text in page")
-
-        print("DEBUG login_user: Taking screenshot of failed login page")
-        # Login failed, but don't raise exception - let the test handle it
         return False
-    else:
-        print("DEBUG login_user: Login appeared to succeed - navigated away from login page")
-        return True
 
 
 @pytest.mark.slow

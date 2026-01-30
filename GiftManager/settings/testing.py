@@ -107,7 +107,26 @@ CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
 
 # Disable allauth rate limits for testing
-ACCOUNT_RATE_LIMITS = {}
+# Set very high limits that won't be reached during testing
+ACCOUNT_RATE_LIMITS = {
+    "login": "1000/m",  # 1000 login attempts per minute
+    "login_failed": "1000/m",  # 1000 failed login attempts per minute
+    "signup": "1000/m",
+    "add_email": "1000/m",
+    "confirm_email": "1000/m",
+    "reset_password": "1000/m",
+    "reset_password_from_key": "1000/m",
+    "change_password": "1000/m",
+    "manage_email": "1000/m",
+}
+
+# Additional rate limiting disables for testing
+# Ensure no rate limiting is applied during tests
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = None
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = None
+
+# Disable any other potential rate limiting
+RATELIMIT_ENABLE = False
 
 # Disable migrations for faster test setup (optional)
 # class DisableMigrations:
