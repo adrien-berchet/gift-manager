@@ -19,8 +19,7 @@ PBT_SETTINGS = settings(
         # HealthCheck.too_slow,  # Allow slower tests for comprehensive coverage
         # HealthCheck.data_too_large,  # Allow larger test data for realistic scenarios
     ],
-    # Enable database access for Django tests
-    database=True,
+    # Database setting removed - not needed for Django tests
 )
 
 # Fast settings for development/debugging
@@ -28,7 +27,6 @@ PBT_FAST_SETTINGS = settings(
     max_examples=10,   # Fewer examples for faster feedback during development
     deadline=10000,    # 10 seconds timeout
     verbosity=Verbosity.quiet,
-    database=True,
 )
 
 # Comprehensive settings for CI/production testing
@@ -36,7 +34,6 @@ PBT_COMPREHENSIVE_SETTINGS = settings(
     max_examples=200,  # More examples for thorough testing
     deadline=60000,    # 60 seconds timeout
     verbosity=Verbosity.verbose,
-    database=True,
 )
 
 # Entity type mappings for property tests

@@ -103,7 +103,16 @@ class TestKeyboardAccessibility(BaseE2ETest):
         actionable_elements = []
         for _ in range(20):  # Try up to 20 tabs
             focused = page.evaluate("""
-press("Tab")
+                () => {
+                    const activeElement = document.activeElement;
+                    return activeElement ? activeElement.tagName + ':' + (activeElement.className || '') : 'none';
+                }
+            """)
+
+            if focused not in actionable_elements:
+                actionable_elements.append(focused)
+
+            page.keyboard.press("Tab")
 
             # Break if we've cycled back to the first element
             if len(actionable_elements) > 1 and actionable_elements[0] == focused:
@@ -577,3 +586,4 @@ class TestColorContrastAndVisibility(BaseE2ETest):
             assert error_styles["visibility"] != "hidden", "Error messages should be visible"
 
         page.keyboard.press("Escape")
+        self.wait_for_panel_close(page)

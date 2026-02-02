@@ -182,8 +182,9 @@ class PropertyTestRunner:
 
         status_counts = {}
         for result in self.results:
-            status_counts[result.status] = status_c
-ailed", 0) > 0:
+            status_counts[result.status] = status_counts.get(result.status, 0) + 1
+
+        if status_counts.get("failed", 0) > 0:
             print("\nFAILED PROPERTIES:")
             for result in self.results:
                 if result.status == "failed":

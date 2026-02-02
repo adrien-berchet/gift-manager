@@ -17,6 +17,9 @@ print("#########################")
 print("USING TESTING ENVIRONMENT")
 print("#########################")
 
+# Flag to indicate we're in testing mode
+TESTING = True
+
 # Use a simple secret key for testing
 SECRET_KEY = "testing-secret-key-not-for-production"
 
@@ -128,8 +131,8 @@ ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = None
 # Disable any other potential rate limiting
 RATELIMIT_ENABLE = False
 
-# Disable email verification for testing
-ACCOUNT_EMAIL_VERIFICATION = "none"
+# Enable email verification for testing authentication flows
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 
 # Disable migrations for faster test setup (optional)
 # class DisableMigrations:

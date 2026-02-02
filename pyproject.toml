@@ -79,6 +79,9 @@ markers = [
     "playwright: marks tests as playwright-specific tests",
     "integration: marks tests as integration tests",
     "e2e: marks tests as end-to-end tests",
+    "mobile: marks tests as mobile device tests",
+    "performance: marks tests as performance benchmarks",
+    "accessibility: marks tests as accessibility compliance tests",
 ]
 addopts = "-v --strict-markers"
 

@@ -111,8 +111,10 @@ class TestPerformanceBenchmarks(BaseE2ETest):
             page.keyboard.press("Escape")
             modal = page.locator("#confirmModal")
             expect(modal).not_to_be_visible()
-            return not modal.is_visible
-"""Test slide panel performance."""
+            return not modal.is_visible()
+
+    def test_slide_panel_performance(self, page, live_server, test_user):
+        """Test slide panel performance."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 

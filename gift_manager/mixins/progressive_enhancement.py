@@ -83,8 +83,11 @@ class ProgressiveEnhancementMixin:
 
     def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
         """Add progressive enhancement context."""
-        con
-r(self, 'object') and self.object:
+        context = super().get_context_data(**kwargs)
+
+        fallback_urls = {}
+
+        if hasattr(self, 'object') and self.object:
             model_name = self.object._meta.model_name
             pk = getattr(self.object, self.object._meta.pk.name)
 
@@ -98,7 +101,8 @@ r(self, 'object') and self.object:
                 # Fallback URL generation failed, continue without them
                 pass
 
-        return fallback_urls
+        context['fallback_urls'] = fallback_urls
+        return context
 
     def form_valid(self, form) -> HttpResponse:
         """Handle form validation with progressive enhancement."""
