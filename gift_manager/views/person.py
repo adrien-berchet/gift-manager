@@ -11,6 +11,11 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import PersonForm
+from gift_manager.mixins.performance import OptimizedDetailMixin
+from gift_manager.mixins.performance import OptimizedFormMixin
+from gift_manager.mixins.performance import OptimizedListMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
@@ -23,9 +28,11 @@ from gift_manager.views.base import BaseUpdateView
 from gift_manager.mixins.permissions import PermissionContextMixin, SingleObjectPermissionMixin
 
 
-class PersonListView(PermissionContextMixin, BaseListView):
+class PersonListView(ProgressiveEnhancementListMixin, OptimizedListMixin, PermissionContextMixin, BaseListView):
     model = Person
     template_name = "gift_manager/person_list.html"
+    fallback_template_name = "gift_manager/fallback/list_fallback.html"
+    no_js_template_name = "gift_manager/fallback/list_fallback.html"
     object_type = "Persons"
 
     def __init__(self, *args, **kwargs):
@@ -76,8 +83,17 @@ class PersonListView(PermissionContextMixin, BaseListView):
         # For SQLite and other databases, use a simpler approach
         return base_queryset.prefetch_related("groups")
 
+    def get_fallback_columns(self):
+        """Get column definitions for fallback table."""
+        return [
+            {'field': 'first_name', 'label': _('First Name'), 'type': 'text'},
+            {'field': 'family_name', 'label': _('Family Name'), 'type': 'text'},
+            {'field': 'email_address', 'label': _('Email'), 'type': 'text'},
+            {'field': 'created_at', 'label': _('Created'), 'type': 'date'},
+        ]
 
-class PersonCreateView(BaseCreateView):
+
+class PersonCreateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseCreateView):
     model = Person
     form_class = PersonForm
     success_url = reverse_lazy("gift_manager:persons")
@@ -93,7 +109,7 @@ class PersonCreateView(BaseCreateView):
         return form
 
 
-class PersonUpdateView(BaseUpdateView):
+class PersonUpdateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseUpdateView):
     model = Person
     form_class = PersonForm
     pk_name = "person_id"
@@ -117,7 +133,7 @@ class PersonDeleteView(BaseDeleteView):
     object_type = "person"
 
 
-class PersonDetailView(SingleObjectPermissionMixin, BaseDetailView):
+class PersonDetailView(OptimizedDetailMixin, SingleObjectPermissionMixin, BaseDetailView):
     model = Person
     template_name = "gift_manager/person_detail.html"
     context_object_name = "person"

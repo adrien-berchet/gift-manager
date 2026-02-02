@@ -1,0 +1,427 @@
+/**
+ * Progressive Enhancement Fallback Styles
+ * Ensures proper styling when JavaScript or CSS features are unavailable
+ * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
+ */
+
+/* Base fallback styles - applied when JS is disabled */
+.js-disabled {
+    /* Ensure forms are always visible and functional */
+}
+
+.js-disabled .requires-js {
+    display: none;
+}
+
+.js-disabled .js-fallback {
+    display: block !important;
+}
+
+.js-disabled .js-only {
+    display: none !important;
+}
+
+/* Show noscript content when JS is disabled */
+noscript {
+    display: block;
+}
+
+.js-enabled noscript {
+    display: none;
+}
+
+/* AJAX fallback styles */
+.ajax-disabled .ajax-only {
+    display: none !important;
+}
+
+.ajax-disabled .ajax-fallback {
+    display: block !important;
+}
+
+/* Modal fallbacks - convert to regular page content when CSS3 not supported */
+.css3-disabled .modal {
+    position: static !important;
+    display: block !important;
+    background: none !important;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin: 1rem 0;
+    padding: 1rem;
+}
+
+.css3-disabled .modal-backdrop {
+    display: none !important;
+}
+
+.css3-disabled .modal-dialog {
+    margin: 0 !important;
+    max-width: none !important;
+}
+
+.css3-disabled .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* Offcanvas fallbacks */
+.css3-disabled .offcanvas {
+    position: static !important;
+    transform: none !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    margin: 1rem 0;
+}
+
+.css3-disabled .offcanvas-backdrop {
+    display: none !important;
+}
+
+/* Form fallbacks */
+.fallback-mode form {
+    /* Ensure forms work without AJAX */
+    display: block;
+}
+
+.fallback-mode .form-floating {
+    /* Simplify floating labels if CSS3 not supported */
+}
+
+.css3-disabled .form-floating > label {
+    position: static !important;
+    transform: none !important;
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.css3-disabled .form-floating > .form-control {
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+/* Button fallbacks */
+.css3-disabled .btn {
+    /* Remove advanced button styles */
+    border-radius: 4px !important;
+    transition: none !important;
+    transform: none !important;
+}
+
+.css3-disabled .btn:hover {
+    transform: none !important;
+}
+
+/* Loading state fallbacks */
+.css3-disabled .loading-spinner,
+.css3-disabled .skeleton-loader {
+    display: none !important;
+}
+
+.css3-disabled .loading-text {
+    display: inline !important;
+}
+
+/* Grid fallbacks - convert to simple table when Grid.js not available */
+.js-disabled .gridjs-wrapper {
+    display: none;
+}
+
+.js-disabled .fallback-table {
+    display: table !important;
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.js-disabled .fallback-table th,
+.js-disabled .fallback-table td {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.js-disabled .fallback-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+/* Search fallbacks */
+.ajax-disabled .real-time-search {
+    display: none;
+}
+
+.ajax-disabled .search-submit {
+    display: inline-block !important;
+}
+
+/* Navigation fallbacks */
+.js-disabled .dropdown-menu {
+    position: static !important;
+    display: block !important;
+    float: none !important;
+    width: auto !important;
+    margin: 0.5rem 0;
+    border: 1px solid #dee2e6;
+    box-shadow: none !important;
+}
+
+.js-disabled .dropdown-toggle::after {
+    display: none;
+}
+
+/* Quick action fallbacks */
+.fallback-mode .quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.fallback-mode .quick-actions .btn {
+    font-size: 0.875rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Filter fallbacks */
+.js-disabled .dynamic-filters {
+    display: none;
+}
+
+.js-disabled .static-filters {
+    display: block !important;
+}
+
+.static-filters {
+    display: none;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+}
+
+.static-filters .form-group {
+    margin-bottom: 1rem;
+}
+
+.static-filters .form-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Pagination fallbacks */
+.js-disabled .pagination {
+    display: flex !important;
+    justify-content: center;
+    margin-top: 1rem;
+}
+
+/* Accessibility improvements for fallback mode */
+.fallback-mode .sr-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+    border: 0 !important;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .fallback-mode .btn {
+        border-width: 2px !important;
+    }
+
+    .fallback-mode .form-control {
+        border-width: 2px !important;
+    }
+
+    .fallback-mode .alert {
+        border-width: 2px !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .fallback-mode * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Print styles for fallback mode */
+@media print {
+    .fallback-mode .btn,
+    .fallback-mode .alert,
+    .fallback-mode .modal,
+    .fallback-mode .offcanvas {
+        border: 1px solid #000 !important;
+        background: white !important;
+        color: black !important;
+    }
+
+    .fallback-mode .js-fallback {
+        display: none !important;
+    }
+}
+
+/* Mobile fallbacks */
+@media (max-width: 768px) {
+    .fallback-mode .offcanvas {
+        width: 100% !important;
+        height: auto !important;
+        position: static !important;
+    }
+
+    .fallback-mode .modal-dialog {
+        margin: 0.5rem !important;
+    }
+
+    .fallback-mode .quick-actions {
+        flex-direction: column;
+    }
+
+    .fallback-mode .quick-actions .btn {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+}
+
+/* Fallback message styles */
+.fallback-message {
+    position: relative;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid #b8daff;
+    border-radius: 0.375rem;
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.fallback-message .btn-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+
+/* No-script warning styles */
+.js-warning {
+    display: block;
+    margin-bottom: 1rem;
+}
+
+.js-warning .alert {
+    margin-bottom: 0;
+}
+
+/* Ensure critical functionality is always visible */
+.critical-function {
+    display: block !important;
+}
+
+.critical-function form {
+    display: block !important;
+}
+
+.critical-function .btn {
+    display: inline-block !important;
+}
+
+/* Fallback table styles for better readability */
+.fallback-table {
+    display: none;
+    font-size: 0.875rem;
+}
+
+.fallback-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 10;
+}
+
+.fallback-table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.fallback-table tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+/* Form validation fallbacks */
+.js-disabled .invalid-feedback {
+    display: block !important;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.js-disabled .is-invalid {
+    border-color: #dc3545 !important;
+}
+
+/* Loading fallbacks */
+.loading-states-disabled .loading-overlay,
+.loading-states-disabled .loading-spinner {
+    display: none !important;
+}
+
+.loading-states-disabled .loading-text {
+    display: inline !important;
+    font-style: italic;
+    color: #6c757d;
+}
+
+/* Ensure forms are always submittable */
+.fallback-mode form button[type="submit"],
+.fallback-mode form input[type="submit"] {
+    display: inline-block !important;
+    margin-top: 1rem;
+}
+
+/* Hide enhanced features in fallback mode */
+.fallback-mode .enhanced-only {
+    display: none !important;
+}
+
+.fallback-mode .basic-only {
+    display: block !important;
+}
+
+/* Ensure navigation works without JavaScript */
+.js-disabled .nav-link {
+    display: block !important;
+    color: #0d6efd !important;
+    text-decoration: underline;
+}
+
+.js-disabled .nav-link:hover {
+    color: #0a58ca !important;
+}
+
+/* Make sure all interactive elements are keyboard accessible */
+.fallback-mode a,
+.fallback-mode button,
+.fallback-mode input,
+.fallback-mode select,
+.fallback-mode textarea {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+.fallback-mode a:focus,
+.fallback-mode button:focus,
+.fallback-mode input:focus,
+.fallback-mode select:focus,
+.fallback-mode textarea:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}

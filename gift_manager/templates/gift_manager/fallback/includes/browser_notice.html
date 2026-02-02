@@ -1,0 +1,36 @@
+{% load i18n %}
+
+{% if show_notice %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading">
+            <i class="fas fa-exclamation-triangle me-2"></i>{% trans "Browser Compatibility Notice" %}
+        </h5>
+        <p>
+            {% blocktrans with browser=browser_name %}
+                You are using {{ browser }}, which has limited support for modern web features.
+                The application will work in compatibility mode with basic functionality.
+            {% endblocktrans %}
+        </p>
+        <hr>
+        <p class="mb-0">
+            <strong>{% trans "Recommendations:" %}</strong>
+        </p>
+        <ul class="mb-0">
+            <li>{% trans "Update to a modern browser like Chrome, Firefox, Safari, or Edge" %}</li>
+            <li>{% trans "Enable JavaScript for the best experience" %}</li>
+            <li>{% trans "All core functionality remains available in compatibility mode" %}</li>
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% trans 'Close' %}"></button>
+    </div>
+{% elif is_fallback %}
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading">
+            <i class="fas fa-info-circle me-2"></i>{% trans "Compatibility Mode Active" %}
+        </h5>
+        <p class="mb-0">
+            {% trans "The application is running in compatibility mode. All features are available but may require page refreshes." %}
+            {% trans "Enable JavaScript for enhanced functionality." %}
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% trans 'Close' %}"></button>
+    </div>
+{% endif %}

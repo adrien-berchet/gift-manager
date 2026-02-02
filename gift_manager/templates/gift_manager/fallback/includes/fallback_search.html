@@ -1,0 +1,40 @@
+{% load i18n %}
+
+<div class="fallback-form mb-3">
+    <h5><i class="fas fa-search me-2"></i>{% trans "Search" %}</h5>
+    <form method="get" class="row g-3">
+        <div class="col-md-8">
+            <label for="search-input" class="visually-hidden">{% trans "Search terms" %}</label>
+            <input type="text"
+                   id="search-input"
+                   name="search"
+                   value="{{ search_value }}"
+                   class="form-control"
+                   placeholder="{{ placeholder }}"
+                   aria-describedby="search-help">
+            <input type="hidden" name="no_js" value="1">
+            <div id="search-help" class="form-text">
+                {% trans "Enter keywords to search for items" %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-search me-2"></i>{% trans "Search" %}
+            </button>
+            {% if search_value %}
+                <a href="?no_js=1" class="btn btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-2"></i>{% trans "Clear" %}
+                </a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if search_value %}
+        <div class="mt-2">
+            <small class="text-muted">
+                <i class="fas fa-info-circle me-1"></i>
+                {% blocktrans with query=search_value %}Searching for: "{{ query }}"{% endblocktrans %}
+            </small>
+        </div>
+    {% endif %}
+</div>

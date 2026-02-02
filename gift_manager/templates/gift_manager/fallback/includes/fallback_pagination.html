@@ -1,0 +1,69 @@
+{% load i18n %}
+
+{% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="{% trans 'Page navigation' %}" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                        <i class="fas fa-angle-double-left me-1"></i>{% trans "First" %}
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                        <i class="fas fa-angle-left me-1"></i>{% trans "Previous" %}
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        <i class="fas fa-angle-double-left me-1"></i>{% trans "First" %}
+                    </span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        <i class="fas fa-angle-left me-1"></i>{% trans "Previous" %}
+                    </span>
+                </li>
+            {% endif %}
+
+            <li class="page-item active">
+                <span class="page-link">
+                    {% trans "Page" %} {{ page_obj.number }} {% trans "of" %} {{ page_obj.paginator.num_pages }}
+                    <span class="sr-only">({% trans "current" %})</span>
+                </span>
+            </li>
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                        {% trans "Next" %}<i class="fas fa-angle-right ms-1"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                        {% trans "Last" %}<i class="fas fa-angle-double-right ms-1"></i>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        {% trans "Next" %}<i class="fas fa-angle-right ms-1"></i>
+                    </span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link">
+                        {% trans "Last" %}<i class="fas fa-angle-double-right ms-1"></i>
+                    </span>
+                </li>
+            {% endif %}
+        </ul>
+
+        <div class="text-center text-muted">
+            <small>
+                {% trans "Showing" %} {{ page_obj.start_index }} - {{ page_obj.end_index }}
+                {% trans "of" %} {{ page_obj.paginator.count }} {% trans "items" %}
+            </small>
+        </div>
+    </nav>
+{% endif %}
