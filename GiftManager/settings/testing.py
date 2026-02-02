@@ -128,6 +128,9 @@ ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = None
 # Disable any other potential rate limiting
 RATELIMIT_ENABLE = False
 
+# Disable email verification for testing
+ACCOUNT_EMAIL_VERIFICATION = "none"
+
 # Disable migrations for faster test setup (optional)
 # class DisableMigrations:
 #     def __contains__(self, item):

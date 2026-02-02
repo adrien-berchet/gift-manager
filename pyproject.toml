@@ -76,8 +76,11 @@ filterwarnings = []
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "frontend: marks tests as frontend/browser tests",
+    "playwright: marks tests as playwright-specific tests",
+    "integration: marks tests as integration tests",
+    "e2e: marks tests as end-to-end tests",
 ]
-addopts = "-v"
+addopts = "-v --strict-markers"
 
 
 [tool.ruff]
