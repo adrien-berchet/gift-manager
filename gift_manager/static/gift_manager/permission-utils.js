@@ -73,6 +73,12 @@
             const id = options.idResolver ? options.idResolver(row) : cell;
             const userPermission = permissions[id] || PERMISSION_LEVELS.NONE;
 
+            // Debug logging - only log when permission is NONE (might indicate a problem)
+            if (userPermission === PERMISSION_LEVELS.NONE) {
+                console.warn(`[PermissionUtils.formatter] id=${id} has permission=NONE. Permissions object has ${Object.keys(permissions).length} keys. id in permissions: ${id in permissions}`);
+                console.log(`[PermissionUtils.formatter] Available permission keys (first 5):`, Object.keys(permissions).slice(0, 5));
+            }
+
             const resolveUrl = (urlTemplate, actionId) => {
                 if (typeof urlTemplate === 'function') return urlTemplate(row);
                 return urlTemplate ? urlTemplate.replace('{id}', actionId || id) : null;
@@ -165,7 +171,7 @@
 
     /**
      * Update UI elements based on permissions
-     * Hides or disables elements that user doesn't have permission for
+     * Enables or disables elements based on user's permission level
      *
      * @param {string} containerId - Container element ID
      * @param {Object} permissions - Permission data {entityId: permissionLevel}
@@ -174,18 +180,49 @@
         const container = document.getElementById(containerId);
         if (!container) return;
 
+        console.log(`[PermissionUtils.updateUIForPermissions] Updating UI for container ${containerId} with ${Object.keys(permissions).length} permission entries`);
+
+        // Permission requirements for each action
+        const actionRequirements = {
+            'detail': PERMISSION_LEVELS.VIEWER,
+            'view': PERMISSION_LEVELS.VIEWER,
+            'create': PERMISSION_LEVELS.EDITOR,
+            'edit': PERMISSION_LEVELS.EDITOR,
+            'share': PERMISSION_LEVELS.EDITOR,
+            'delete': PERMISSION_LEVELS.OWNER,
+            'expand': PERMISSION_LEVELS.VIEWER
+        };
+
         // Update action buttons
         const actionButtons = container.querySelectorAll('[data-action][data-entity-id]');
         actionButtons.forEach(button => {
             const entityId = button.dataset.entityId;
             const action = button.dataset.action;
             const userPermission = permissions[entityId] || PERMISSION_LEVELS.NONE;
+            const requiredPermission = actionRequirements[action] || PERMISSION_LEVELS.OWNER;
+            const hasRequiredPermission = userPermission >= requiredPermission;
 
-            if (!hasPermission(userPermission, action)) {
-                // Disable button and add tooltip
+            console.log(`[PermissionUtils.updateUIForPermissions] Button action=${action}, entityId=${entityId}, userPerm=${userPermission}, required=${requiredPermission}, hasPermission=${hasRequiredPermission}`);
+
+            if (hasRequiredPermission) {
+                // Enable button
+                button.disabled = false;
+                button.style.opacity = '1';
+                button.style.pointerEvents = '';
+                button.title = action.charAt(0).toUpperCase() + action.slice(1);
+                button.dataset.permissionLevel = userPermission;
+
+                // Restore href for anchor tags if it was removed
+                const url = button.dataset.detailUrl || button.dataset.editUrl || button.dataset.deleteUrl;
+                if (button.tagName === 'A' && !button.getAttribute('href') && url) {
+                    button.setAttribute('href', url);
+                }
+            } else {
+                // Disable button
                 button.disabled = true;
                 button.style.opacity = '0.5';
                 button.title = `You do not have permission to ${action} this object`;
+                button.dataset.permissionLevel = userPermission;
 
                 // Remove href for anchor tags
                 if (button.tagName === 'A') {
@@ -195,13 +232,14 @@
             }
         });
 
-        // Update create buttons (these don't require object permissions)
-        const createButtons = container.querySelectorAll('[data-action="create"]');
-        createButtons.forEach(button => {
-            // Create buttons are always enabled unless explicitly disabled
-            if (!button.hasAttribute('disabled')) {
-                button.disabled = false;
-                button.style.opacity = '1';
+        // Update permission level data attribute on containers
+        const actionContainers = container.querySelectorAll('.quick-actions-container[data-permission-level]');
+        actionContainers.forEach(cont => {
+            const buttons = cont.querySelectorAll('[data-entity-id]');
+            if (buttons.length > 0) {
+                const entityId = buttons[0].dataset.entityId;
+                const userPermission = permissions[entityId] || PERMISSION_LEVELS.NONE;
+                cont.dataset.permissionLevel = userPermission;
             }
         });
     }

@@ -162,8 +162,20 @@
 
             // Add feature-specific classes
             Object.keys(features).forEach(feature => {
-                const
-           this.setupFormFallbacks();
+                const className = `feature-${feature}`;
+                if (features[feature]) {
+                    body.classList.add(className);
+                } else {
+                    body.classList.remove(className);
+                }
+            });
+        }
+
+        /**
+         * Setup all fallbacks for non-JS environments
+         */
+        setupFallbacks() {
+            this.setupFormFallbacks();
             this.setupNavigationFallbacks();
             this.setupModalFallbacks();
             this.setupSearchFallbacks();

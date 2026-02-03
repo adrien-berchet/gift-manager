@@ -1,6 +1,6 @@
 # CLAUDE.md - AI Assistant Guide for Gift Manager
 
-This document provides comprehensive guidance for AI assistants working on the Gift Manager codebase. Last updated: 2025-12-30
+This document provides comprehensive guidance for AI assistants working on the Gift Manager codebase. Last updated: 2026-02-03
 
 ## Table of Contents
 
@@ -11,12 +11,13 @@ This document provides comprehensive guidance for AI assistants working on the G
 5. [Code Conventions](#code-conventions)
 6. [Testing Guidelines](#testing-guidelines)
 7. [Architecture Patterns](#architecture-patterns)
-8. [Database & Models](#database--models)
-9. [Permission System](#permission-system)
-10. [Frontend Guidelines](#frontend-guidelines)
-11. [Internationalization](#internationalization)
-12. [Common Tasks](#common-tasks)
-13. [Important Gotchas](#important-gotchas)
+8. [Mixins Reference](#mixins-reference)
+9. [Database & Models](#database--models)
+10. [Permission System](#permission-system)
+11. [Frontend Guidelines](#frontend-guidelines)
+12. [Internationalization](#internationalization)
+13. [Common Tasks](#common-tasks)
+14. [Important Gotchas](#important-gotchas)
 
 ## Project Overview
 
@@ -35,7 +36,7 @@ Gift Manager is a Django 5.1 web application for managing gifts, persons, events
 - django-allauth for authentication
 - WhiteNoise for static files
 - Bootstrap 5 + Grid.js + HTMX
-- pytest + Playwright for testing
+- tox + pytest + Playwright for testing
 - Docker + Gunicorn/Uvicorn for deployment
 
 ## Repository Structure
@@ -60,6 +61,11 @@ gift-manager/
 │   ├── adapters.py          # Custom allauth adapter
 │   ├── email_encoding.py    # Email encryption utilities
 │   ├── translation.py       # Model translation config
+│   ├── mixins/              # Reusable view mixins
+│   │   ├── permissions.py   # Permission context mixins
+│   │   ├── notifications.py # Server-side notification integration
+│   │   ├── performance.py   # Query optimization mixins
+│   │   └── progressive_enhancement.py  # Non-JS fallback support
 │   ├── views/               # Views organized by domain
 │   │   ├── base.py          # Base classes and mixins
 │   │   ├── person.py        # Person CRUD views
@@ -70,17 +76,43 @@ gift-manager/
 │   │   ├── relation.py      # Relation CRUD views
 │   │   ├── profile.py       # User profile and invitations
 │   │   ├── sharing.py       # Permission sharing views
-│   │   └── common.py        # Home, search views
+│   │   ├── common.py        # Home, search views
+│   │   ├── search.py        # Real-time search API endpoints
+│   │   ├── inline_editing.py # AJAX inline field updates
+│   │   └── bulk_operations.py # Batch operations on entities
 │   ├── templates/           # HTML templates
 │   │   ├── gift_manager/    # App-specific templates
+│   │   │   └── includes/    # Reusable template partials
+│   │   │       ├── *_form_partial.html    # Form partials for HTMX
+│   │   │       ├── *_detail_partial.html  # Detail view partials
+│   │   │       ├── modal_base.html        # Base modal template
+│   │   │       ├── offcanvas_base.html    # Base offcanvas template
+│   │   │       └── delete_confirmation_modal.html
 │   │   ├── allauth/         # Authentication templates
 │   │   └── account/         # Account management templates
 │   ├── static/              # Static assets (CSS, JS, images)
-│   ├── migrations/          # Database migrations (22 total)
+│   │   └── gift_manager/
+│   │       ├── *.js         # Feature-specific JavaScript
+│   │       └── js/          # Specialized JS modules
+│   │           ├── accessibility.js
+│   │           ├── mobile-responsive.js
+│   │           ├── touch-gestures.js
+│   │           ├── offline-forms.js
+│   │           └── offline-sync.js
+│   ├── migrations/          # Database migrations
 │   ├── tests/               # Test suite
 │   │   ├── conftest.py      # pytest fixtures
 │   │   ├── factories.py     # Factory Boy factories
-│   │   ├── test_*.py        # Test modules
+│   │   ├── test_*.py        # Unit and integration tests
+│   │   ├── test_pbt_*.py    # Property-based test config
+│   │   ├── test_*_property.py # Feature property tests
+│   │   ├── e2e/             # End-to-end Playwright tests
+│   │   │   ├── conftest.py
+│   │   │   ├── test_crud_workflows.py
+│   │   │   ├── test_complete_user_workflows.py
+│   │   │   ├── test_accessibility_features.py
+│   │   │   ├── test_mobile_device_interactions.py
+│   │   │   └── test_performance_benchmarks.py
 │   │   ├── views/           # View tests
 │   │   └── forms/           # Form tests
 │   ├── templatetags/        # Custom template tags
@@ -116,7 +148,9 @@ gift-manager/
 ### Testing
 - **pytest 8+** - Test framework
 - **pytest-django 4+** - Django integration
-- **pytest-playwright 0.7+** - Browser automation
+- **pytest-playwright 0.7+** - Browser automation for E2E tests
+- **playwright 1.39+** - Browser automation engine
+- **hypothesis 6.0+** - Property-based testing
 - **factory-boy 3.3+** - Test data generation
 - **faker 24+** - Fake data
 
@@ -311,7 +345,7 @@ from .permissions import PermissionLevel
 
 ### Test Organization
 
-**Location:** `/home/user/gift-manager/gift_manager/tests/`
+**Location:** `gift_manager/tests/`
 
 **Structure:**
 ```
@@ -323,6 +357,18 @@ tests/
 ├── test_email_encoding.py  # Email encryption tests
 ├── test_frontend.py        # Playwright e2e tests
 ├── test_nested_groups.py   # Group hierarchy tests
+├── test_pbt_config.py      # Property-based test configuration
+├── test_pbt_runner.py      # PBT runner with result tracking
+├── test_*_property.py      # Feature property tests (hypothesis)
+├── e2e/                    # End-to-end Playwright tests
+│   ├── conftest.py         # E2E fixtures
+│   ├── base_test.py        # Base E2E test class
+│   ├── test_crud_workflows.py
+│   ├── test_complete_user_workflows.py
+│   ├── test_accessibility_features.py
+│   ├── test_mobile_device_interactions.py
+│   ├── test_cross_browser_compatibility.py
+│   └── test_performance_benchmarks.py
 ├── views/                  # View-specific tests
 │   ├── test_base.py
 │   ├── test_person_group_detail.py
@@ -332,32 +378,100 @@ tests/
     └── test_person_group_form_child_groups.py
 ```
 
+### Test Types
+
+**Unit Tests:**
+- Model tests, form validation, service layer
+- Fast execution, no database or browser needed
+
+**Integration Tests:**
+- View tests, API endpoint tests
+- Require database, test request/response cycle
+
+**Property-Based Tests (PBT):**
+- Use `hypothesis` library for generative testing
+- Test UI properties and invariants
+- Files: `test_*_property.py`
+
+**End-to-End Tests (E2E):**
+- Full browser automation with Playwright
+- Test complete user workflows
+- Located in `tests/e2e/` directory
+
 ### Running Tests
 
-**Full test suite:**
+**Full test suite (unit tests, excluding frontend):**
 ```bash
-pytest
+tox run -e py311
 ```
 
-**With coverage:**
+**E2E tests (single browser - Chromium):**
 ```bash
-pytest --cov=gift_manager --cov-report=html
+tox run -e e2e
+```
+
+**E2E tests with debug mode (headed browser, verbose):**
+```bash
+tox run -e e2e-debug
+```
+
+**Mobile-specific E2E tests (WebKit):**
+```bash
+tox run -e e2e-mobile
+```
+
+**Multi-browser Playwright tests (Chromium, Firefox, WebKit):**
+```bash
+tox run -e py311-playwright
 ```
 
 **Specific test file:**
 ```bash
-pytest gift_manager/tests/test_permissions.py
+tox run -e py311 -- gift_manager/tests/test_permissions.py
 ```
 
-**Exclude slow/frontend tests:**
+**Exclude slow tests:**
 ```bash
-pytest -m "not slow and not frontend"
+tox run -e py311 -- -m "not slow"
 ```
 
-**Frontend tests only:**
+**With specific markers:**
 ```bash
-pytest -m frontend
+tox run -e py311 -- -m "accessibility"
+tox run -e py311 -- -m "performance"
 ```
+
+**Lint and code quality:**
+```bash
+tox run -e lint
+```
+
+### Tox Environments
+
+Defined in `tox.ini`:
+- `py{310,311,312}` - Unit tests with coverage (excludes frontend tests)
+- `py{310,311,312}-playwright` - Multi-browser Playwright tests (Chromium, Firefox, WebKit)
+- `e2e` - E2E tests with single browser (Chromium)
+- `e2e-debug` - Debug mode with headed browser, verbose output
+- `e2e-mobile` - Mobile-specific E2E tests with WebKit
+- `lint` - Pre-commit hooks and pylint
+- `format` - Code formatting with codespell and pre-commit
+
+**Coverage Requirements:**
+- Minimum coverage: 70% (enforced by tox)
+- Reports generated in `reports/` directory
+
+### Test Markers
+
+Defined in `pyproject.toml`:
+- `slow` - Long-running tests
+- `frontend` - Browser-based tests
+- `playwright` - Playwright-specific tests
+- `integration` - Integration tests
+- `e2e` - End-to-end tests
+- `mobile` - Mobile device tests
+- `performance` - Performance benchmarks
+- `accessibility` - Accessibility compliance tests
 
 ### Writing Tests
 
@@ -507,17 +621,33 @@ persons = Person.objects.for_list_display(request.user)
 
 **Structure:**
 ```python
-# Base view classes
-class BaseListView(LoginRequiredMixin, FilterByUserMixin, ListView)
-class BaseDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView)
-class BaseCreateView(LoginRequiredMixin, CreateView)
-class BaseUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
-class BaseDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView)
+# Base view classes (with mixin inheritance)
+class BaseListView(LoginRequiredMixin, ListView)
+class BaseDetailView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin,
+    ContextPermissionMixin, SharedUsersMixin, HTMXResponseMixin, DetailView
+)
+class BaseCreateView(
+    LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixin, CreateView
+)
+class BaseUpdateView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin,
+    EditPermissionMixin, HTMXResponseMixin, UpdateView
+)
+class BaseDeleteView(
+    FilterByUserMixin, GetObjectByTokenMixin, LoginRequiredMixin,
+    DeleteSharedMixin, CancelToPreviousMixin, DeleteConfirmationMixin,
+    HTMXResponseMixin, DeleteView
+)
 
-# Mixins
-class FilterByUserMixin:  # Filter queryset by user access
-class PermissionRequiredMixin:  # Check permission level
-class ContextPermissionMixin:  # Add permission to template context
+# Key Mixins
+class HTMXResponseMixin:      # HTMX-specific responses with HX-Trigger
+class FilterByUserMixin:      # Filter queryset by user access
+class GetObjectByTokenMixin:  # Get object by UUID token
+class ContextPermissionMixin: # Add permission context
+class SharedUsersMixin:       # Add shared users to context
+class DeleteSharedMixin:      # Handle shared object deletion
+class DeleteConfirmationMixin: # Delete confirmation modal data
 ```
 
 **Usage in domain views:**
@@ -568,6 +698,84 @@ all_members = group.get_all_members(include_nested=True)
 if group.has_cycle_with(potential_parent):
     raise ValidationError("Cycle detected")
 ```
+
+## Mixins Reference
+
+### Permission Mixins (`gift_manager/mixins/permissions.py`)
+
+**PermissionContextMixin:**
+Adds permission context data to list views for JavaScript permission checks.
+```python
+class GiftListView(PermissionContextMixin, BaseListView):
+    # Automatically adds user_permissions and user_permissions_json to context
+```
+
+**SingleObjectPermissionMixin:**
+Adds permission flags for detail views.
+```python
+class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
+    # Adds: user_permission, can_edit, can_delete, can_share, can_view
+```
+
+**BulkPermissionMixin:**
+Handles permission checking for bulk operations.
+```python
+allowed, denied = self.check_bulk_permissions(objects, PermissionLevel.EDITOR)
+```
+
+**PermissionRequiredMixin:**
+Requires specific permission level for view access.
+```python
+class GiftUpdateView(PermissionRequiredMixin, UpdateView):
+    required_permission = PermissionLevel.EDITOR
+```
+
+### HTMX Mixins (`gift_manager/views/base.py`)
+
+**HTMXResponseMixin:**
+Handles HTMX-specific responses with HX-Trigger headers.
+```python
+class BaseCreateView(HTMXResponseMixin, CreateView):
+    htmx_template_name = "gift_manager/includes/form_partial.html"
+    close_offcanvas = True  # Triggers offcanvas:close event
+```
+
+**HX-Trigger Events:**
+- `list:update` - Refresh list views
+- `modal:close` - Close modal dialogs
+- `offcanvas:close` - Close offcanvas panels
+- `showNotification` - Display user notifications
+
+### Delete Mixins (`gift_manager/views/base.py`)
+
+**DeleteSharedMixin:**
+Handles conditional deletion for shared objects.
+- If shared with others: removes current user's access only
+- If not shared: completely deletes the object
+
+**DeleteConfirmationMixin:**
+Provides data for delete confirmation modals.
+```python
+def get_context_data(self, **kwargs):
+    # Adds: entity_type, entity_name, entity_icon, related_objects, cascade_warning
+```
+
+### Other View Mixins (`gift_manager/views/base.py`)
+
+**FilterByUserMixin:**
+Filters queryset to objects accessible by current user.
+
+**GetObjectByTokenMixin:**
+Retrieves objects by UUID token instead of integer PK.
+
+**ContextPermissionMixin:**
+Adds `is_editor` flag to template context.
+
+**SharedUsersMixin:**
+Adds list of shared users with their permissions to context.
+
+**CreatePermissionMixin / EditPermissionMixin:**
+Handle permission management in create/edit forms.
 
 ## Database & Models
 
@@ -842,19 +1050,37 @@ if permission < PermissionLevel.EDITOR:
 
 ### Template Structure
 
-**Base Template:** `gift_manager/templates/base.html`
+**Base Template:** `gift_manager/templates/gift_manager/base.html`
 - Navigation bar with user menu
 - Sidebar with main navigation
 - Theme toggle (light/dark mode)
 - Message display area
 - Content block
 
-**Common Templates:**
+**Page Templates:**
 - `<model>_list.html` - List views with Grid.js tables
 - `<model>_detail.html` - Detail views with related objects
-- `edit_form.html` - Shared form template
+- `edit_form.html` / `create_form.html` - Full-page form templates
 - `<model>_explorer.html` - Hierarchical tree views
 - `share_objects.html` - Permission sharing interface
+
+**Partial Templates (`includes/` directory):**
+Form partials for HTMX responses:
+- `form_partial.html` - Generic form partial
+- `person_form_partial.html`, `gift_form_partial.html`, etc. - Entity-specific
+
+Detail view partials:
+- `detail_partial.html` - Generic detail partial
+- `person_detail_partial.html`, `gift_detail_partial.html`, etc.
+
+UI component partials:
+- `modal_base.html` - Base Bootstrap modal template
+- `offcanvas_base.html` - Base Bootstrap offcanvas template
+- `delete_confirmation_modal.html` - Delete confirmation dialog
+- `bulk_delete_confirmation_modal.html` - Bulk delete dialog
+- `permission_row_partial.html` - Permission sharing row
+- `filter_panel.html` - Advanced filter panel
+- `action_buttons.html` - CRUD action buttons
 
 **Template Inheritance:**
 ```django
@@ -940,7 +1166,7 @@ if permission < PermissionLevel.EDITOR:
 <div id="edit-form"></div>
 ```
 
-**Form submission:**
+**Form submission with offcanvas:**
 ```html
 <form hx-post="/gifts/create/"
       hx-target="#gift-list"
@@ -959,18 +1185,57 @@ if permission < PermissionLevel.EDITOR:
 </div>
 ```
 
+**HX-Trigger Events (Server-side):**
+Views use `HTMXResponseMixin` to set HX-Trigger headers:
+```python
+# In view response
+response["HX-Trigger"] = "list:update, modal:close"
+
+# With notification
+response["HX-Trigger"] = json.dumps({
+    "showNotification": {"message": "Success!", "type": "success"}
+})
+```
+
+**Common Trigger Events:**
+- `list:update` - Refresh Grid.js tables
+- `modal:close` - Close Bootstrap modal
+- `offcanvas:close` - Close Bootstrap offcanvas
+- `showNotification` - Display toast notification
+- `showSuccess` / `showError` - Legacy notification triggers
+
 ### Static Files
 
-**Location:** `gift_manager/static/`
+**Location:** `gift_manager/static/gift_manager/`
 
-**Key Files:**
-- `gift_manager/main.css` - Main stylesheet with Grid.js styling
-- `gift_manager/theme.css` - Theme and dark mode styles
-- `gift_manager/custom-dropdowns.css` - Custom dropdown styling
-- `gift_manager/grid-utils.js` - Grid.js initialization helpers
-- `gift_manager/ui-enhancements.js` - Interactive UI features
-- `gift_manager/filter-panel.js` - Advanced filtering
-- `gift_manager/notifications.js` - User notifications
+**Core JavaScript Modules:**
+- `grid-utils.js` - Grid.js initialization and configuration helpers
+- `ui-enhancements.js` - Interactive UI features and enhancements
+- `filter-panel.js` - Advanced filtering functionality
+- `notifications.js` - Client-side notification system
+- `real-time-search.js` - Debounced AJAX search with endpoint mapping
+- `inline-editing.js` - AJAX inline field editing
+- `bulk-operations.js` - Batch action handlers
+- `dynamic-filters.js` - Dynamic filter UI components
+- `loading-states.js` - Loading state feedback indicators
+- `permission-utils.js` - Permission-related JavaScript utilities
+- `unsaved-changes.js` - Form state tracking and warning
+- `progressive-enhancement.js` - Graceful degradation support
+- `performance-optimizations.js` - Client-side performance improvements
+- `detail-views.js` - Enhanced detail view interactions
+
+**Specialized Modules (in `js/` subdirectory):**
+- `js/accessibility.js` - Focus management, keyboard shortcuts, ARIA support
+- `js/mobile-responsive.js` - Mobile-specific UI enhancements
+- `js/touch-gestures.js` - Touch interaction handlers
+- `js/grid-touch-gestures.js` - Grid.js touch support
+- `js/offline-forms.js` - Offline form caching
+- `js/offline-sync.js` - Offline data synchronization
+
+**CSS Files:**
+- `main.css` - Main stylesheet with Grid.js styling
+- `theme.css` - Theme and dark mode styles
+- `custom-dropdowns.css` - Custom dropdown styling
 
 **Loading Static Files:**
 ```django
@@ -1247,37 +1512,37 @@ LANGUAGES = [
 
 **Single test file:**
 ```bash
-pytest gift_manager/tests/test_permissions.py
+tox run -e py311 -- gift_manager/tests/test_permissions.py
 ```
 
 **Single test class:**
 ```bash
-pytest gift_manager/tests/test_permissions.py::TestPermissionService
+tox run -e py311 -- gift_manager/tests/test_permissions.py::TestPermissionService
 ```
 
 **Single test method:**
 ```bash
-pytest gift_manager/tests/test_permissions.py::TestPermissionService::test_get_permission
+tox run -e py311 -- gift_manager/tests/test_permissions.py::TestPermissionService::test_get_permission
 ```
 
 **With keyword filter:**
 ```bash
-pytest -k "permission"
+tox run -e py311 -- -k "permission"
 ```
 
 **Verbose output:**
 ```bash
-pytest -v
+tox run -e py311 -- -v
 ```
 
 **Stop on first failure:**
 ```bash
-pytest -x
+tox run -e py311 -- -x
 ```
 
 **Debugging with pdb:**
 ```bash
-pytest --pdb
+tox run -e py311 -- --pdb
 ```
 
 ## Important Gotchas
@@ -1381,6 +1646,32 @@ python manage.py collectstatic --noinput
 - Direct field access: `obj.status_en`, `obj.status_fr`
 - In migrations: Use language-specific fields (`status_en`)
 
+### 11. HTMX Response Headers
+
+**Issue:** HTMX requests not triggering expected client-side events
+
+**Solution:**
+- Use `HTMXResponseMixin` in views for automatic HX-Trigger handling
+- For custom responses, set headers explicitly:
+```python
+response["HX-Trigger"] = "list:update, modal:close"
+```
+- Multiple triggers should be comma-separated
+- For complex data, use JSON format:
+```python
+response["HX-Trigger"] = json.dumps({"showNotification": {"message": "Success!", "type": "success"}})
+```
+
+### 12. Template Partial Naming
+
+**Issue:** HTMX responses returning full pages instead of partials
+
+**Solution:**
+- Set `htmx_template_name` in view for HTMX-specific templates
+- Partials should be in `templates/gift_manager/includes/`
+- Follow naming convention: `*_partial.html` or `*_form_partial.html`
+- Base views automatically select partial when `HX-Request` header is present
+
 ---
 
 ## Quick Reference
@@ -1409,10 +1700,13 @@ python manage.py migrate
 python manage.py createsuperuser
 python manage.py makemigrations
 
-# Testing
-pytest
-pytest --cov=gift_manager
-pytest -m "not slow and not frontend"
+# Testing (via tox)
+tox run -e py311                         # Unit tests (with coverage)
+tox run -e e2e                           # E2E tests (Chromium)
+tox run -e e2e-debug                     # E2E debug mode (headed)
+tox run -e e2e-mobile                    # Mobile E2E tests (WebKit)
+tox run -e py311-playwright              # Multi-browser tests
+tox run -e lint                          # Lint and code quality
 
 # Translations
 python manage.py makemessages -l fr
@@ -1435,18 +1729,22 @@ docker-compose exec web python manage.py migrate
 
 - **Models:** `gift_manager/models.py`
 - **Views:** `gift_manager/views/<domain>.py`
+- **Mixins:** `gift_manager/mixins/<purpose>.py`
 - **Forms:** `gift_manager/forms.py`
 - **URLs:** `gift_manager/urls.py`
 - **Templates:** `gift_manager/templates/gift_manager/`
-- **Static:** `gift_manager/static/gift_manager/`
+- **Template Partials:** `gift_manager/templates/gift_manager/includes/`
+- **Static JS:** `gift_manager/static/gift_manager/`
+- **Specialized JS:** `gift_manager/static/gift_manager/js/`
 - **Tests:** `gift_manager/tests/`
+- **E2E Tests:** `gift_manager/tests/e2e/`
 - **Migrations:** `gift_manager/migrations/`
 - **Settings:** `GiftManager/settings/<env>.py`
 
 ---
 
-**Document Version:** 1.0
-**Last Updated:** 2025-12-30
+**Document Version:** 2.0
+**Last Updated:** 2026-02-03
 **Maintainer:** AI Assistant (Claude Code)
 
 For questions or updates to this document, create an issue or pull request.

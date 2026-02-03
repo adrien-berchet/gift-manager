@@ -152,8 +152,20 @@
         const currentData = new FormData(form);
         const hasChanges = !compareFormData(originalData, currentData);
 
-        if (ha
-a1.entries()).sort();
+        if (hasChanges) {
+            hasUnsavedChanges = true;
+            updateFormState(form, true);
+        } else {
+            hasUnsavedChanges = false;
+            updateFormState(form, false);
+        }
+    }
+
+    /**
+     * Compare two FormData objects
+     */
+    function compareFormData(formData1, formData2) {
+        const entries1 = Array.from(formData1.entries()).sort();
         const entries2 = Array.from(formData2.entries()).sort();
 
         if (entries1.length !== entries2.length) {

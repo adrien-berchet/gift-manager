@@ -19,17 +19,9 @@
       {% endif %}
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
-      hx-indicator="#formLoading"
       class="offcanvas-form relation-form">
 
   {% csrf_token %}
-
-  <!-- Form Loading Indicator -->
-  <div id="formLoading" class="htmx-indicator" role="status" aria-live="polite" aria-label="Loading form">
-    <div class="loading-overlay">
-      <div class="loading-spinner"></div>
-    </div>
-  </div>
 
   <!-- Form Fields Container -->
   <div class="form-fields">

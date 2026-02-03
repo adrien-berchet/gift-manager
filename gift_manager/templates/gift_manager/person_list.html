@@ -52,8 +52,9 @@
         console.log('[PersonList] FilterPanel available:', typeof FilterPanel !== 'undefined');
         console.log('[PersonList] InlineEditing available:', typeof window.InlineEditing !== 'undefined');
 
-        // Get permission data from template
-        const userPermissions = {{ user_permissions_json|safe }};
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
         console.log('[PersonList] User permissions:', userPermissions);
 
         // Prepare data for Grid.js
@@ -111,7 +112,9 @@
                 edit: (row) => row.cells[7].data,
                 delete: (row) => row.cells[8].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
-            }, ['give', 'details', 'edit', 'delete', 'share'], {}, userPermissions)
+            }, ['give', 'details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[4].data  // person_id is at index 4
+            }, userPermissions)
         }
     ];
 

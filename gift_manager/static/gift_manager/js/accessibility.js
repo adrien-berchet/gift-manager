@@ -202,7 +202,15 @@ class AccessibilityManager {
      * Implements Requirements 10.3, 10.5
      */
     setupKeyboardShortcuts() {
-.handleEnterKey(e);
+        document.addEventListener('keydown', (e) => {
+            // Escape key to close modals/panels
+            if (e.key === 'Escape') {
+                this.handleEscapeKey(e);
+            }
+
+            // Enter key for form submission
+            if (e.key === 'Enter') {
+                this.handleEnterKey(e);
             }
 
             // Arrow keys for navigation in lists

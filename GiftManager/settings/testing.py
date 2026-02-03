@@ -123,11 +123,6 @@ ACCOUNT_RATE_LIMITS = {
     "manage_email": "1000/m",
 }
 
-# Additional rate limiting disables for testing
-# Ensure no rate limiting is applied during tests
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = None
-ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = None
-
 # Disable any other potential rate limiting
 RATELIMIT_ENABLE = False
 

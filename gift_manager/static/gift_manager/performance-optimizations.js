@@ -306,6 +306,8 @@
             }
 
             // Create request configuration
+            // Extract properties that shouldn't be passed to fetch
+            const { cache, params: _, debounceKey: __, debounceDelay: ___, onSuccess: ____, onError: _____, ...fetchOptions } = options;
             const requestConfig = {
                 url: this.buildUrl(url, params),
                 options: {
@@ -316,7 +318,7 @@
                         ...options.headers
                     },
                     credentials: 'same-origin',
-                    ...options
+                    ...fetchOptions
                 },
                 onSuccess: (response) => {
                     // Cache successful GET responses
@@ -468,18 +470,19 @@
 
     /**
      * Preload critical resources
+     * Note: Only preload resources that actually exist in the project
      */
     function preloadCriticalResources() {
         const criticalUrls = [
-            '/api/auth/status/',
-            '/static/gift_manager/css/modern-ux.css',
-            '/static/gift_manager/js/htmx.min.js'
+            // Add actual critical resources here if needed
+            // '/static/gift_manager/css/main.css',
         ];
 
         criticalUrls.forEach(url => {
             window.OptimizedAjax.request(url, {
                 cache: true,
-                onSuccess: () => console.log(`[Performance] Preloaded: ${url}`)
+                onSuccess: () => console.log(`[Performance] Preloaded: ${url}`),
+                onError: () => {} // Silently ignore preload failures
             });
         });
     }

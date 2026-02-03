@@ -62,7 +62,7 @@ class PersonListView(ProgressiveEnhancementListMixin, OptimizedListMixin, Permis
         base_queryset = (
             Person.objects.accessible_by(self.request.user)
             .order_by("family_name", "first_name")
-            .values("person_id", *list(set(self.column_names.keys()).difference(["groups"])))
+            .values("person_id", "user_link_id", *list(set(self.column_names.keys()).difference(["groups"])))
         )
 
         # Use database-specific aggregation

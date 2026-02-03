@@ -236,6 +236,9 @@
 
             const grid = new gridjs.Grid(config);
 
+            // Store the container ID on the grid instance for later use
+            grid._containerId = containerId;
+
             // Call user-provided onReady callback if exists
             if (onReady && typeof onReady === 'function') {
                 grid.on('ready', onReady);
@@ -687,11 +690,52 @@
                     const extractedData = new Function('return ' + dataArrayStr)();
 
                     console.log(`[${entityType}List] Extracted ${extractedData.length} items from refreshed data`);
+                    // Log first few items for debugging
+                    if (extractedData.length > 0) {
+                        console.log(`[${entityType}List] First item (sample):`, extractedData[0]);
+                        // Log all IDs (assuming ID is at a consistent index, typically 4 for persons)
+                        const ids = extractedData.map(item => item[4] || item.id || 'unknown');
+                        console.log(`[${entityType}List] Extracted IDs:`, ids);
+                    }
+
+                    // Also extract and update permissions if available
+                    const permissionsStr = extractPermissions(html);
+                    console.log(`[${entityType}List] Extracted permissions string: ${permissionsStr ? permissionsStr.substring(0, 200) + '...' : 'null'}`);
+                    if (permissionsStr) {
+                        try {
+                            const extractedPermissions = new Function('return ' + permissionsStr)();
+                            console.log(`[${entityType}List] Parsed permissions:`, extractedPermissions);
+                            console.log(`[${entityType}List] Permission IDs:`, Object.keys(extractedPermissions));
+
+                            // Update global permissions variable IN PLACE
+                            // We need to modify the existing object, not replace it,
+                            // because the formatter has a closure reference to it
+                            if (window.userPermissions !== undefined && typeof window.userPermissions === 'object') {
+                                console.log(`[${entityType}List] Before update, userPermissions:`, {...window.userPermissions});
+                                // Clear existing keys
+                                Object.keys(window.userPermissions).forEach(key => delete window.userPermissions[key]);
+                                // Add new keys
+                                Object.assign(window.userPermissions, extractedPermissions);
+                                console.log(`[${entityType}List] After update, userPermissions:`, {...window.userPermissions});
+                                console.log(`[${entityType}List] Updated userPermissions with ${Object.keys(extractedPermissions).length} entries`);
+                            }
+                            // Also update PermissionUtils if it has a setter
+                            if (window.PermissionUtils && window.PermissionUtils.updatePermissions) {
+                                window.PermissionUtils.updatePermissions(extractedPermissions);
+                            }
+                        } catch (permError) {
+                            console.warn(`[${entityType}List] Could not update permissions:`, permError);
+                        }
+                    } else {
+                        console.warn(`[${entityType}List] No permissions extracted from HTML`);
+                    }
 
                     // Update the grid using updateConfig (same method as delete operation)
+                    console.log(`[${entityType}List] About to call forceRender. userPermissions now has ${Object.keys(window.userPermissions || {}).length} entries:`, window.userPermissions);
                     grid.updateConfig({
                         data: extractedData
                     }).forceRender();
+                    console.log(`[${entityType}List] forceRender completed`);
 
                     // Update global data variable if it exists
                     if (window.data !== undefined) {
@@ -700,6 +744,19 @@
 
                     // Show/hide pagination footer based on data length
                     updatePaginationVisibility(grid, extractedData.length);
+
+                    // After grid renders, update UI based on permissions
+                    // This ensures buttons are enabled/disabled correctly after refresh
+                    setTimeout(() => {
+                        // Get the container ID from the grid instance (stored by initGrid)
+                        const containerId = grid._containerId;
+                        if (containerId && window.PermissionUtils && window.userPermissions) {
+                            console.log(`[${entityType}List] Calling updateUIForPermissions for container ${containerId} with ${Object.keys(window.userPermissions).length} permissions`);
+                            window.PermissionUtils.updateUIForPermissions(containerId, window.userPermissions);
+                        } else {
+                            console.warn(`[${entityType}List] Cannot call updateUIForPermissions: containerId=${containerId}, PermissionUtils=${!!window.PermissionUtils}, userPermissions=${!!window.userPermissions}`);
+                        }
+                    }, 50);
 
                     // Run post-update callback if provided
                     if (postUpdateCallback && typeof postUpdateCallback === 'function') {
@@ -788,6 +845,102 @@
         }
 
         console.warn('[extractDataArray] Could not find matching closing bracket');
+        return null;
+    }
+
+    /**
+     * Extract the userPermissions object from HTML
+     * @param {string} html - The HTML content
+     * @returns {string|null} - The permissions object string or null if not found
+     */
+    function extractPermissions(html) {
+        // Look for window.userPermissions = { FIRST (the actual JSON object)
+        // This is important because the template has:
+        //   window.userPermissions = {...};
+        //   const userPermissions = window.userPermissions;
+        // We need to match the first line, not the second
+        const primaryMarker = 'window.userPermissions = {';
+        const primaryIndex = html.indexOf(primaryMarker);
+
+        if (primaryIndex !== -1) {
+            // Found the actual JSON object assignment
+            // Position at the opening brace
+            const objStart = primaryIndex + 'window.userPermissions = '.length;
+            console.log('[extractPermissions] Found window.userPermissions = { at position', primaryIndex);
+            return extractObjectFromPosition(html, objStart);
+        }
+
+        // Fallback: try const userPermissions = { (might be used in some templates)
+        const altMarker = 'const userPermissions = {';
+        const altIndex = html.indexOf(altMarker);
+        if (altIndex !== -1) {
+            const objStart = altIndex + 'const userPermissions = '.length;
+            console.log('[extractPermissions] Found const userPermissions = { at position', altIndex);
+            return extractObjectFromPosition(html, objStart);
+        }
+
+        console.log('[extractPermissions] No userPermissions JSON object found in HTML');
+        return null;
+    }
+
+    /**
+     * Extract a JSON object starting from a position in HTML
+     * @param {string} html - The HTML content
+     * @param {number} startPos - Starting position of the object
+     * @returns {string|null} - The object string or null if not found
+     */
+    function extractObjectFromPosition(html, startPos) {
+        // Find the opening brace
+        if (html[startPos] !== '{') {
+            console.warn('[extractObjectFromPosition] Expected { at position', startPos);
+            return null;
+        }
+
+        let braceCount = 1;
+        let i = startPos + 1;
+        let inString = false;
+        let stringChar = null;
+        let escapeNext = false;
+
+        while (i < html.length && braceCount > 0) {
+            const char = html[i];
+
+            if (escapeNext) {
+                escapeNext = false;
+                i++;
+                continue;
+            }
+
+            if (char === '\\' && inString) {
+                escapeNext = true;
+                i++;
+                continue;
+            }
+
+            if ((char === '"' || char === "'") && !inString) {
+                inString = true;
+                stringChar = char;
+            } else if (char === stringChar && inString) {
+                inString = false;
+                stringChar = null;
+            } else if (!inString) {
+                if (char === '{') {
+                    braceCount++;
+                } else if (char === '}') {
+                    braceCount--;
+                }
+            }
+
+            i++;
+        }
+
+        if (braceCount === 0) {
+            const objStr = html.substring(startPos, i);
+            console.log('[extractPermissions] Successfully extracted permissions object');
+            return objStr;
+        }
+
+        console.warn('[extractPermissions] Could not find matching closing brace');
         return null;
     }
 

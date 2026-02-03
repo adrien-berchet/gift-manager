@@ -42,8 +42,9 @@
 <script>
     {% load custom_filters %}
     (function () {
-        // Get permission data from template
-        const userPermissions = {{ user_permissions_json|safe }};
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
         console.log('[GiftList] User permissions:', userPermissions);
 
         // Prepare data for Grid.js
@@ -99,7 +100,9 @@
                 edit: (row) => row.cells[6].data,
                 delete: (row) => row.cells[7].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
-            }, ['give', 'details', 'edit', 'delete', 'share'], {}, userPermissions)
+            }, ['give', 'details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[3].data  // gift_id is at index 3
+            }, userPermissions)
         }
     ];
 
