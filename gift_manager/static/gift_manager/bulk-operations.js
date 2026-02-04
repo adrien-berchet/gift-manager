@@ -27,7 +27,8 @@
         state: {
             selectedItems: new Set(),
             initialized: false,
-            currentEntityType: null
+            currentEntityType: null,
+            selectionModeActive: false
         },
 
         /**
@@ -50,6 +51,7 @@
             this.waitForGrid(gridId, () => {
                 this.setupBulkOperations();
                 this.bindEvents();
+                this.bindToggleButton();
                 this.state.initialized = true;
                 console.log(`[BulkOperations] Initialized for ${entityType} grid: ${gridId}`);
             });
@@ -76,8 +78,8 @@
          */
         setupBulkOperations() {
             this.addBulkToolbar();
-            this.addSelectAllCheckbox();
-            this.addItemCheckboxes();
+            // Checkboxes are now part of Grid.js columns, no need to add them manually
+            // They are hidden by CSS until selection mode is entered
         },
 
         /**
@@ -107,8 +109,8 @@
                                     <i class="fas fa-share me-1"></i>Share Selected
                                 </button>
                             ` : ''}
-                            <button type="button" class="btn btn-secondary btn-sm" id="clear-selection">
-                                <i class="fas fa-times me-1"></i>Clear Selection
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-selection-mode">
+                                <i class="fas fa-times me-1"></i>Cancel
                             </button>
                         </div>
                     </div>
@@ -119,63 +121,130 @@
             gridContainer.insertAdjacentHTML('beforebegin', toolbarHtml);
         },
 
+
         /**
-         * Add select all checkbox to grid header
+         * Enter selection mode - show checkboxes for multi-select
          */
-        addSelectAllCheckbox() {
-            if (!this.options.enableSelectAll) return;
+        enterSelectionMode() {
+            if (this.state.selectionModeActive) return; // Already active
 
+            this.state.selectionModeActive = true;
+            console.log('[BulkOperations] Entering selection mode');
+
+            // Add CSS class to show checkbox column (Grid.js manages the column, we just show/hide via CSS)
             const gridContainer = document.getElementById(this.gridId);
-            const headerRow = gridContainer?.querySelector('thead tr');
+            if (gridContainer) {
+                gridContainer.classList.add('selection-mode-active');
+            }
 
-            if (!headerRow) return;
+            // Bind event listeners to existing checkboxes
+            this.bindCheckboxEvents();
 
-            // Create select all header cell
-            const selectAllCell = document.createElement('th');
-            selectAllCell.className = 'bulk-select-header';
-            selectAllCell.innerHTML = `
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input bulk-select-all"
-                           id="bulk-select-all-${this.gridId}">
-                    <label class="form-check-label" for="bulk-select-all-${this.gridId}"></label>
-                </div>
-            `;
+            // Show toolbar (even with 0 selected)
+            const toolbar = document.querySelector(this.config.selectors.bulkToolbar);
+            if (toolbar) {
+                toolbar.style.display = 'block';
+            }
 
-            // Insert as first column
-            headerRow.insertBefore(selectAllCell, headerRow.firstChild);
+            // Update toggle button appearance
+            this.updateToggleButton(true);
+
+            console.log('[BulkOperations] Selection mode entered successfully');
         },
 
         /**
-         * Add checkboxes to each row
+         * Exit selection mode - hide checkboxes
          */
-        addItemCheckboxes() {
+        exitSelectionMode() {
+            if (!this.state.selectionModeActive) return; // Already inactive
+
+            this.state.selectionModeActive = false;
+            this.clearSelection();
+
+            // Remove CSS class to hide checkbox column
             const gridContainer = document.getElementById(this.gridId);
-            const rows = gridContainer?.querySelectorAll('tbody tr');
+            if (gridContainer) {
+                gridContainer.classList.remove('selection-mode-active');
+            }
 
-            if (!rows) return;
+            // Hide toolbar
+            const toolbar = document.querySelector(this.config.selectors.bulkToolbar);
+            if (toolbar) {
+                toolbar.style.display = 'none';
+            }
 
-            rows.forEach((row, index) => {
-                const entityId = row.getAttribute('data-entity-id') ||
-                               row.getAttribute('data-person-id') ||
-                               row.getAttribute('data-gift-id') ||
-                               row.getAttribute('data-event-id') ||
-                               index;
+            // Update toggle button appearance
+            this.updateToggleButton(false);
 
-                // Create checkbox cell
-                const checkboxCell = document.createElement('td');
-                checkboxCell.className = 'bulk-select-cell';
-                checkboxCell.innerHTML = `
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input bulk-select-item"
-                               value="${entityId}"
-                               id="bulk-select-${entityId}">
-                        <label class="form-check-label" for="bulk-select-${entityId}"></label>
-                    </div>
-                `;
+            console.log('[BulkOperations] Exited selection mode');
+        },
 
-                // Insert as first column
-                row.insertBefore(checkboxCell, row.firstChild);
+        /**
+         * Toggle selection mode on/off
+         */
+        toggleSelectionMode() {
+            if (this.state.selectionModeActive) {
+                this.exitSelectionMode();
+            } else {
+                this.enterSelectionMode();
+            }
+        },
+
+        /**
+         * Bind event listeners to checkboxes (called when entering selection mode)
+         * Checkboxes already exist in the DOM (managed by Grid.js), we just need to bind events
+         */
+        bindCheckboxEvents() {
+            const gridContainer = document.getElementById(this.gridId);
+            if (!gridContainer) return;
+
+            // Bind select-all checkbox
+            const selectAllCheckbox = gridContainer.querySelector('.bulk-select-all');
+            if (selectAllCheckbox) {
+                // Remove old event listener if any
+                selectAllCheckbox.replaceWith(selectAllCheckbox.cloneNode(true));
+                const newSelectAll = gridContainer.querySelector('.bulk-select-all');
+
+                newSelectAll.addEventListener('change', (e) => {
+                    this.handleSelectAll(e.target.checked);
+                });
+
+                console.log('[BulkOperations] Select-all checkbox bound');
+            }
+
+            // Bind individual item checkboxes
+            const itemCheckboxes = gridContainer.querySelectorAll('.bulk-select-item');
+            itemCheckboxes.forEach(checkbox => {
+                // Remove old event listener by cloning
+                const parent = checkbox.parentNode;
+                const newCheckbox = checkbox.cloneNode(true);
+                parent.replaceChild(newCheckbox, checkbox);
+
+                newCheckbox.addEventListener('change', (e) => {
+                    this.handleItemSelect(e.target);
+                });
             });
+
+            console.log(`[BulkOperations] Bound ${itemCheckboxes.length} item checkboxes`);
+        },
+
+        /**
+         * Update the toggle button appearance based on selection mode state
+         * @param {boolean} isActive - Whether selection mode is active
+         */
+        updateToggleButton(isActive) {
+            const toggleBtn = document.getElementById(`toggle-selection-${this.gridId}`);
+            if (!toggleBtn) return;
+
+            if (isActive) {
+                toggleBtn.innerHTML = '<i class="fas fa-times me-1"></i>Cancel';
+                toggleBtn.classList.remove('btn-outline-secondary');
+                toggleBtn.classList.add('btn-secondary');
+            } else {
+                toggleBtn.innerHTML = '<i class="fas fa-check-square me-1"></i>Select';
+                toggleBtn.classList.remove('btn-secondary');
+                toggleBtn.classList.add('btn-outline-secondary');
+            }
         },
 
         /**
@@ -185,20 +254,8 @@
             const gridContainer = document.getElementById(this.gridId);
             if (!gridContainer) return;
 
-            // Select all checkbox
-            const selectAllCheckbox = gridContainer.parentElement.querySelector(this.config.selectors.selectAll);
-            if (selectAllCheckbox) {
-                selectAllCheckbox.addEventListener('change', (e) => {
-                    this.handleSelectAll(e.target.checked);
-                });
-            }
-
-            // Individual item checkboxes
-            gridContainer.addEventListener('change', (e) => {
-                if (e.target.matches(this.config.selectors.selectItem)) {
-                    this.handleItemSelect(e.target);
-                }
-            });
+            // Checkbox event binding is now done in bindCheckboxEvents() when entering selection mode
+            // No need to bind here since checkboxes are hidden initially
 
             // Bulk action buttons
             const toolbar = gridContainer.parentElement.querySelector(this.config.selectors.bulkToolbar);
@@ -213,20 +270,27 @@
                 });
             }
 
-            // Clear selection button
+            // Cancel selection mode button (exits selection mode entirely)
             document.addEventListener('click', (e) => {
-                if (e.target.matches('[data-action="clear-selection"]')) {
-                    this.clearSelection();
+                if (e.target.matches('#cancel-selection-mode') || e.target.closest('#cancel-selection-mode')) {
+                    this.exitSelectionMode();
                 }
             });
 
-            // Listen for grid updates to re-initialize checkboxes
-            document.addEventListener('list:update', () => {
-                setTimeout(() => {
-                    this.clearSelection();
-                    this.addItemCheckboxes();
-                }, 100);
-            });
+            // No need for grid:refreshed listener anymore!
+            // Checkboxes are part of Grid.js columns and persist automatically
+        },
+
+        /**
+         * Bind the selection mode toggle button
+         */
+        bindToggleButton() {
+            const toggleBtn = document.getElementById(`toggle-selection-${this.gridId}`);
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    this.toggleSelectionMode();
+                });
+            }
         },
 
         /**
@@ -303,7 +367,9 @@
 
             // Show/hide toolbar
             if (toolbar) {
-                if (selectedCount > 0) {
+                // In selection mode, toolbar should always be visible (even with 0 items selected)
+                // Otherwise, only show if items are selected
+                if (this.state.selectionModeActive || selectedCount > 0) {
                     toolbar.style.display = 'block';
                     toolbar.classList.add(this.config.classes.toolbarVisible);
                 } else {

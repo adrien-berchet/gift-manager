@@ -651,6 +651,47 @@
     }
 
     /**
+     * Wait for Grid.js to finish rendering after forceRender()
+     * Uses MutationObserver to detect when DOM mutations have stopped
+     * @param {HTMLElement} gridContainer - The grid container element
+     * @param {Function} callback - Callback to execute when rendering is complete
+     * @param {number} debounceMs - Milliseconds of inactivity to wait (default: 50ms)
+     * @param {number} safetyTimeoutMs - Maximum time to wait before forcing callback (default: 2000ms)
+     */
+    function waitForGridRenderComplete(gridContainer, callback, debounceMs = 50, safetyTimeoutMs = 2000) {
+        let debounceTimer;
+        let safetyTimer;
+
+        const observer = new MutationObserver(() => {
+            // Clear previous debounce timer
+            clearTimeout(debounceTimer);
+
+            // Set new debounce timer
+            // Will only execute if no more mutations occur for debounceMs
+            debounceTimer = setTimeout(() => {
+                observer.disconnect();
+                clearTimeout(safetyTimer);
+                console.log('[GridUtils] Grid rendering complete (detected via MutationObserver)');
+                callback();
+            }, debounceMs);
+        });
+
+        // Start observing DOM changes in the grid container
+        observer.observe(gridContainer, {
+            childList: true,
+            subtree: true
+        });
+
+        // Safety timeout: force callback if mutations continue for too long
+        safetyTimer = setTimeout(() => {
+            clearTimeout(debounceTimer);
+            observer.disconnect();
+            console.warn('[GridUtils] MutationObserver safety timeout reached, forcing callback');
+            callback();
+        }, safetyTimeoutMs);
+    }
+
+    /**
      * Refresh grid data by fetching fresh data from the current page
      * @param {Object} grid - The Grid.js instance
      * @param {string} entityType - The type of entity
@@ -732,10 +773,28 @@
 
                     // Update the grid using updateConfig (same method as delete operation)
                     console.log(`[${entityType}List] About to call forceRender. userPermissions now has ${Object.keys(window.userPermissions || {}).length} entries:`, window.userPermissions);
+
+                    // Update the grid
                     grid.updateConfig({
                         data: extractedData
                     }).forceRender();
-                    console.log(`[${entityType}List] forceRender completed`);
+                    console.log(`[${entityType}List] forceRender called (rendering may still be in progress)`);
+
+                    // Wait for Grid.js to finish rendering using MutationObserver
+                    // This detects when DOM mutations have stopped, indicating rendering is complete
+                    const gridContainer = document.getElementById(grid._containerId);
+                    if (gridContainer) {
+                        waitForGridRenderComplete(gridContainer, () => {
+                            console.log(`[${entityType}List] Grid rendering complete, emitting grid:refreshed event`);
+                            console.log(`[${entityType}List] Emitting grid:refreshed event with containerId:`, grid._containerId);
+                            document.dispatchEvent(new CustomEvent('grid:refreshed', {
+                                detail: { containerId: grid._containerId, entityType: entityType }
+                            }));
+                            console.log(`[${entityType}List] grid:refreshed event emitted`);
+                        });
+                    } else {
+                        console.warn(`[${entityType}List] Grid container not found, cannot wait for render completion`);
+                    }
 
                     // Update global data variable if it exists
                     if (window.data !== undefined) {
@@ -1072,6 +1131,19 @@
             gridInstance.updateConfig({
                 data: newData
             }).forceRender();
+
+            // Wait for Grid.js to finish rendering using MutationObserver
+            const gridContainer = document.getElementById(gridInstance._containerId);
+            if (gridContainer) {
+                waitForGridRenderComplete(gridContainer, () => {
+                    console.log(`[${entityType}List] Grid rendering complete after delete, emitting grid:refreshed event`);
+                    document.dispatchEvent(new CustomEvent('grid:refreshed', {
+                        detail: { containerId: gridInstance._containerId, entityType: entityType }
+                    }));
+                });
+            } else {
+                console.warn(`[${entityType}List] Grid container not found after delete, cannot wait for render completion`);
+            }
 
             // Update global data variable
             if (window.data) {

@@ -14,8 +14,10 @@ from gift_manager.forms import PersonForm
 from gift_manager.mixins.performance import OptimizedDetailMixin
 from gift_manager.mixins.performance import OptimizedFormMixin
 from gift_manager.mixins.performance import OptimizedListMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
+from gift_manager.mixins.permissions import PermissionContextMixin
+from gift_manager.mixins.permissions import SingleObjectPermissionMixin
 from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
@@ -25,10 +27,11 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
-from gift_manager.mixins.permissions import PermissionContextMixin, SingleObjectPermissionMixin
 
 
-class PersonListView(ProgressiveEnhancementListMixin, OptimizedListMixin, PermissionContextMixin, BaseListView):
+class PersonListView(
+    ProgressiveEnhancementListMixin, OptimizedListMixin, PermissionContextMixin, BaseListView
+):
     model = Person
     template_name = "gift_manager/person_list.html"
     fallback_template_name = "gift_manager/fallback/list_fallback.html"
@@ -62,7 +65,11 @@ class PersonListView(ProgressiveEnhancementListMixin, OptimizedListMixin, Permis
         base_queryset = (
             Person.objects.accessible_by(self.request.user)
             .order_by("family_name", "first_name")
-            .values("person_id", "user_link_id", *list(set(self.column_names.keys()).difference(["groups"])))
+            .values(
+                "person_id",
+                "user_link_id",
+                *list(set(self.column_names.keys()).difference(["groups"])),
+            )
         )
 
         # Use database-specific aggregation
@@ -86,10 +93,10 @@ class PersonListView(ProgressiveEnhancementListMixin, OptimizedListMixin, Permis
     def get_fallback_columns(self):
         """Get column definitions for fallback table."""
         return [
-            {'field': 'first_name', 'label': _('First Name'), 'type': 'text'},
-            {'field': 'family_name', 'label': _('Family Name'), 'type': 'text'},
-            {'field': 'email_address', 'label': _('Email'), 'type': 'text'},
-            {'field': 'created_at', 'label': _('Created'), 'type': 'date'},
+            {"field": "first_name", "label": _("First Name"), "type": "text"},
+            {"field": "family_name", "label": _("Family Name"), "type": "text"},
+            {"field": "email_address", "label": _("Email"), "type": "text"},
+            {"field": "created_at", "label": _("Created"), "type": "date"},
         ]
 
 

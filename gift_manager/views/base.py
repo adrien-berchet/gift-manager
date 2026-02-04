@@ -54,7 +54,9 @@ class HTMXResponseMixin:
         """Handle successful form submission with HTMX-specific responses."""
         response = super().form_valid(form)
 
-        logger.debug(f"[HTMXResponseMixin.form_valid] is_htmx={self.is_htmx}, response status={getattr(response, 'status_code', 'N/A')}")
+        logger.debug(
+            f"[HTMXResponseMixin.form_valid] is_htmx={self.is_htmx}, response status={getattr(response, 'status_code', 'N/A')}"
+        )
 
         if self.is_htmx:
             # Build HX-Trigger events
@@ -89,7 +91,9 @@ class HTMXResponseMixin:
                 response["HX-Trigger"] = trigger_value
                 logger.debug(f"[HTMXResponseMixin.form_valid] Set HX-Trigger: {trigger_value}")
 
-        logger.debug(f"[HTMXResponseMixin.form_valid] Final response status={getattr(response, 'status_code', 'N/A')}, headers={dict(response.items()) if hasattr(response, 'items') else 'N/A'}")
+        logger.debug(
+            f"[HTMXResponseMixin.form_valid] Final response status={getattr(response, 'status_code', 'N/A')}, headers={dict(response.items()) if hasattr(response, 'items') else 'N/A'}"
+        )
         return response
 
     def form_invalid(self, form):
@@ -317,17 +321,25 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
             with transaction.atomic():
                 # Only set user_link if the model has that field
                 if hasattr(form.instance, "user_link"):
-                    logger.debug(f"[BaseCreateView.form_valid] Setting user_link to {self.request.user} (id={self.request.user.id})")
+                    logger.debug(
+                        f"[BaseCreateView.form_valid] Setting user_link to {self.request.user} (id={self.request.user.id})"
+                    )
                     form.instance.user_link = self.request.user
                 else:
-                    logger.debug(f"[BaseCreateView.form_valid] Model {form.instance.__class__.__name__} has no user_link field")
+                    logger.debug(
+                        f"[BaseCreateView.form_valid] Model {form.instance.__class__.__name__} has no user_link field"
+                    )
 
                 response = super().form_valid(form)
 
                 # Log the saved instance
-                pk_field = getattr(form.instance, 'pk', None) or getattr(form.instance, f'{form.instance.__class__.__name__.lower()}_id', None)
-                saved_user_link = getattr(form.instance, 'user_link', None)
-                logger.debug(f"[BaseCreateView.form_valid] After save: pk={pk_field}, user_link={saved_user_link}")
+                pk_field = getattr(form.instance, "pk", None) or getattr(
+                    form.instance, f"{form.instance.__class__.__name__.lower()}_id", None
+                )
+                saved_user_link = getattr(form.instance, "user_link", None)
+                logger.debug(
+                    f"[BaseCreateView.form_valid] After save: pk={pk_field}, user_link={saved_user_link}"
+                )
 
                 PermissionService.create_or_update_permission(
                     self.request.user,

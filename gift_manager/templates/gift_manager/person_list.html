@@ -21,6 +21,12 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
+        <button type="button"
+                class="btn btn-outline-secondary me-2"
+                id="toggle-selection-person-grid"
+                title="{% trans 'Select multiple items' %}">
+            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
+        </button>
         <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new person" %}
         </a>
@@ -58,9 +64,11 @@
         console.log('[PersonList] User permissions:', userPermissions);
 
         // Prepare data for Grid.js
+        // Include placeholder (empty string) for checkbox column as first element
         const data = [
             {% for item in data %}
     [
+        '', // Checkbox column placeholder
         "{{ item.first_name|escapejs }}",
         "{{ item.family_name|escapejs }}",
         "{{ item.email_address|decode_email|default:''|escapejs }}",
@@ -74,8 +82,25 @@
     {% endfor %}
             ];
 
-    // Define columns
+    // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
+        {
+            id: 'checkbox',
+            name: '', // Empty name for checkbox column
+            width: '50px',
+            sort: false,
+            formatter: (cell, row) => {
+                // Get person_id from row data (now at index 5 due to checkbox column)
+                const personId = row.cells[5].data;
+                return gridjs.html(`
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input bulk-select-item"
+                               value="${personId}"
+                               data-entity-id="${personId}">
+                    </div>
+                `);
+            }
+        },
         {
             id: 'first_name',
             name: '{{ column_names.first_name|escapejs }}',
@@ -107,16 +132,19 @@
             width: '200px',
             sort: false,
             formatter: PermissionUtils.permissionAwareActionFormatter({
-                give: (row) => row.cells[5].data,
-                details: (row) => row.cells[6].data,
-                edit: (row) => row.cells[7].data,
-                delete: (row) => row.cells[8].data,
+                give: (row) => row.cells[6].data,
+                details: (row) => row.cells[7].data,
+                edit: (row) => row.cells[8].data,
+                delete: (row) => row.cells[9].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
             }, ['give', 'details', 'edit', 'delete', 'share'], {
-                idResolver: (row) => row.cells[4].data  // person_id is at index 4
+                idResolver: (row) => row.cells[5].data  // person_id is now at index 5
             }, userPermissions)
         }
     ];
+
+    // Track if inline editing has been initialized to prevent re-initialization
+    let inlineEditingInitialized = false;
 
     // Initialize Grid.js with inline editing
     try {
@@ -132,34 +160,74 @@
             // Grid ready callback - ensure inline editing is initialized
             addPersonIdDataAttributes();
 
-            if (window.InlineEditing) {
+            // Add select-all checkbox to the first header cell
+            const gridContainer = document.getElementById('person-grid');
+            const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
+            if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+                firstHeaderCell.innerHTML = `
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input bulk-select-all"
+                               id="bulk-select-all-person-grid">
+                    </div>
+                `;
+                console.log('[PersonList] Select-all checkbox added to header');
+            }
+
+            // Only initialize inline editing once during initial page load
+            // Do NOT re-initialize on every grid refresh as it can interfere with checkboxes
+            if (!inlineEditingInitialized && window.InlineEditing) {
                 try {
                     window.InlineEditing.init('person-grid', 'person', {
-                        0: 'first_name',
-                        1: 'family_name',
-                        2: 'email_address'
+                        1: 'first_name',
+                        2: 'family_name',
+                        3: 'email_address'
                     });
+                    inlineEditingInitialized = true;
+                    console.log('[PersonList] Inline editing initialized');
                 } catch (error) {
                     console.error('[PersonList] Error initializing inline editing:', error);
                 }
-            } else {
+            } else if (!inlineEditingInitialized) {
                 console.warn('[PersonList] InlineEditing not available');
             }
         }, {
             entityType: 'person',
             columnMapping: {
-                0: 'first_name',
-                1: 'family_name',
-                2: 'email_address'
+                1: 'first_name',
+                2: 'family_name',
+                3: 'email_address'
             }
         });
 
         console.log('[PersonList] Grid initialized successfully');
 
         // Add list update event listener using GridUtils
-        GridUtils.addListUpdateListener(grid, 'Person', 4, function() {
+        GridUtils.addListUpdateListener(grid, 'Person', 5, function() {
             // Post-update callback: re-add data attributes
             addPersonIdDataAttributes();
+        });
+
+        // Listen for grid:refreshed event to re-add select-all checkbox
+        document.addEventListener('grid:refreshed', (event) => {
+            if (event.detail?.containerId !== 'person-grid') return;
+
+            // Re-add select-all checkbox to header after grid refresh
+            const gridContainer = document.getElementById('person-grid');
+            const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
+            if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+                firstHeaderCell.innerHTML = `
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input bulk-select-all"
+                               id="bulk-select-all-person-grid">
+                    </div>
+                `;
+                console.log('[PersonList] Select-all checkbox re-added to header after refresh');
+
+                // Re-bind events if in selection mode
+                if (window.BulkOperations && window.BulkOperations.state?.selectionModeActive) {
+                    window.BulkOperations.bindCheckboxEvents();
+                }
+            }
         });
 
         // Function to add person ID data attributes to rows
@@ -170,8 +238,8 @@
             const rows = gridContainer.querySelectorAll('tbody tr');
 
             rows.forEach((row, index) => {
-                if (data[index] && data[index][4]) { // person_id is at index 4
-                    const personId = data[index][4];
+                if (data[index] && data[index][5]) { // person_id is now at index 5 (after checkbox column)
+                    const personId = data[index][5];
                     row.setAttribute('data-entity-id', personId);
                     row.setAttribute('data-person-id', personId);
                 }
@@ -180,24 +248,31 @@
 
         // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
         setTimeout(() => {
-            const gridContainer = document.getElementById('person-grid');
-            const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
+            // Only run fallback if inline editing hasn't been initialized yet
+            if (!inlineEditingInitialized) {
+                const gridContainer = document.getElementById('person-grid');
+                const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
 
-            if (editableCells.length === 0) {
-                // Add data attributes first
-                addPersonIdDataAttributes();
+                if (editableCells.length === 0) {
+                    // Add data attributes first
+                    addPersonIdDataAttributes();
 
-                if (window.InlineEditing) {
-                    try {
-                        window.InlineEditing.init('person-grid', 'person', {
-                            0: 'first_name',
-                            1: 'family_name',
-                            2: 'email_address'
-                        });
-                    } catch (error) {
-                        console.error('[PersonList] Error in manual inline editing initialization:', error);
+                    if (window.InlineEditing) {
+                        try {
+                            window.InlineEditing.init('person-grid', 'person', {
+                                1: 'first_name',
+                                2: 'family_name',
+                                3: 'email_address'
+                            });
+                            inlineEditingInitialized = true;
+                            console.log('[PersonList] Inline editing initialized (fallback)');
+                        } catch (error) {
+                            console.error('[PersonList] Error in manual inline editing initialization:', error);
+                        }
                     }
                 }
+            } else {
+                console.log('[PersonList] Inline editing already initialized, skipping fallback');
             }
         }, 1000);
 
@@ -242,23 +317,33 @@
 
     // Trigger initial sort on status column to make Grid.js aware of the sort
     // Trigger initial sort: Family Name (2) then First Name (1)
-    setTimeout(() => {
-        const familyNameHeader = document.querySelector('#person-grid th:nth-child(2)');
-        const firstNameHeader = document.querySelector('#person-grid th:nth-child(1)');
+    // IMPORTANT: Only run once, even if script is re-executed
+    if (!window.personGridSortInitialized) {
+        window.personGridSortInitialized = true;
+        console.log('[PersonList] Setting up initial sort timeout');
+        setTimeout(() => {
+            console.log('[PersonList] Executing initial sort - clicking headers');
+            const familyNameHeader = document.querySelector('#person-grid th:nth-child(2)');
+            const firstNameHeader = document.querySelector('#person-grid th:nth-child(1)');
 
-        if (familyNameHeader && firstNameHeader) {
-            // Primary sort: Family Name
-            familyNameHeader.click();
+            if (familyNameHeader && firstNameHeader) {
+                // Primary sort: Family Name
+                familyNameHeader.click();
+                console.log('[PersonList] Clicked family name header for sort');
 
-            // Secondary sort: First Name (simulate Shift+Click)
-            const shiftClick = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                shiftKey: true
-            });
-            firstNameHeader.dispatchEvent(shiftClick);
-        }
-    }, 100);
+                // Secondary sort: First Name (simulate Shift+Click)
+                const shiftClick = new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                    shiftKey: true
+                });
+                firstNameHeader.dispatchEvent(shiftClick);
+                console.log('[PersonList] Clicked first name header for sort');
+            }
+        }, 100);
+    } else {
+        console.log('[PersonList] Initial sort already initialized, skipping');
+    }
 </script>
 {% endblock %}

@@ -6,6 +6,7 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">{# Permission-based UI styles #}>
@@ -18,6 +19,12 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
+        <button type="button"
+                class="btn btn-outline-secondary me-2"
+                id="toggle-selection-gift-grid"
+                title="{% trans 'Select multiple items' %}">
+            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
+        </button>
         <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift" %}
         </a>
@@ -36,6 +43,7 @@
 <script src="{% static 'gift_manager/permission-utils.js' %}"></script>{# Permission-aware UI utilities #}
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 <script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
@@ -106,6 +114,9 @@
         }
     ];
 
+    // Track if inline editing has been initialized to prevent re-initialization
+    let inlineEditingInitialized = false;
+
     // Initialize Grid.js with inline editing
     const grid = GridUtils.initGrid('gift-grid', columns, data, {
         pagination: {
@@ -116,16 +127,20 @@
         // Grid ready callback - ensure inline editing is initialized
         addGiftIdDataAttributes();
 
-        if (window.InlineEditing) {
+        // Only initialize inline editing once during initial page load
+        // Do NOT re-initialize on every grid refresh as it can interfere with checkboxes
+        if (!inlineEditingInitialized && window.InlineEditing) {
             try {
                 window.InlineEditing.init('gift-grid', 'gift', {
                     0: 'name',
                     1: 'comment'
                 });
+                inlineEditingInitialized = true;
+                console.log('[GiftList] Inline editing initialized');
             } catch (error) {
                 console.error('[GiftList] Error initializing inline editing:', error);
             }
-        } else {
+        } else if (!inlineEditingInitialized) {
             console.warn('[GiftList] InlineEditing not available');
         }
     }, {
@@ -160,23 +175,30 @@
 
     // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
     setTimeout(() => {
-        const gridContainer = document.getElementById('gift-grid');
-        const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
+        // Only run fallback if inline editing hasn't been initialized yet
+        if (!inlineEditingInitialized) {
+            const gridContainer = document.getElementById('gift-grid');
+            const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
 
-        if (editableCells.length === 0) {
-            // Add data attributes first
-            addGiftIdDataAttributes();
+            if (editableCells.length === 0) {
+                // Add data attributes first
+                addGiftIdDataAttributes();
 
-            if (window.InlineEditing) {
-                try {
-                    window.InlineEditing.init('gift-grid', 'gift', {
-                        0: 'name',
-                        1: 'comment'
-                    });
-                } catch (error) {
-                    console.error('[GiftList] Error in manual inline editing initialization:', error);
+                if (window.InlineEditing) {
+                    try {
+                        window.InlineEditing.init('gift-grid', 'gift', {
+                            0: 'name',
+                            1: 'comment'
+                        });
+                        inlineEditingInitialized = true;
+                        console.log('[GiftList] Inline editing initialized (fallback)');
+                    } catch (error) {
+                        console.error('[GiftList] Error in manual inline editing initialization:', error);
+                    }
                 }
             }
+        } else {
+            console.log('[GiftList] Inline editing already initialized, skipping fallback');
         }
     }, 1000);
 
@@ -191,6 +213,15 @@
     // Initialize dynamic filters
     if (window.DynamicFilters) {
         DynamicFilters.init('gift-grid', grid, data, columns);
+    }
+
+    // Initialize bulk operations
+    if (window.BulkOperations) {
+        BulkOperations.init('gift-grid', 'gift', {
+            enableSelectAll: true,
+            enableBulkDelete: true,
+            enableBulkShare: true
+        });
     }
 
     // Trigger initial sort on first column to make Grid.js aware of the sort

@@ -209,6 +209,19 @@
     margin-top: 0;
 }
 
+/* Hide checkbox column by default */
+.gridjs-table th:first-child,
+.gridjs-table td:first-child {
+    display: none;
+}
+
+/* Show checkbox column when in selection mode */
+.selection-mode-active .gridjs-table th:first-child,
+.selection-mode-active .gridjs-table td:first-child {
+    display: table-cell;
+    width: 50px;
+}
+
 /* Animation for checkbox state changes */
 .bulk-select-all:indeterminate {
     animation: pulse 1s infinite;
