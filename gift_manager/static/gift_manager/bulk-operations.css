@@ -215,11 +215,34 @@
     display: none;
 }
 
+/* Table layout remains auto to allow Grid.js to manage column widths naturally */
+/* JavaScript will enforce specific widths for checkbox and Actions columns only */
+
 /* Show checkbox column when in selection mode */
+/* Width is now controlled by JavaScript to preserve exact column widths */
 .selection-mode-active .gridjs-table th:first-child,
 .selection-mode-active .gridjs-table td:first-child {
-    display: table-cell;
-    width: 50px;
+    display: table-cell !important;
+    /* Width properties removed - controlled by JavaScript */
+}
+
+/* Actions column width - now controlled entirely by JavaScript */
+/* This preserves the natural column width when entering selection mode */
+
+/* Flexible columns - widths now controlled by JavaScript */
+/* JavaScript captures and preserves exact widths to maintain layout */
+.selection-mode-active .gridjs-table th:nth-child(2),
+.selection-mode-active .gridjs-table td:nth-child(2),
+.selection-mode-active .gridjs-table th:nth-child(3),
+.selection-mode-active .gridjs-table td:nth-child(3),
+.selection-mode-active .gridjs-table th:nth-child(4),
+.selection-mode-active .gridjs-table td:nth-child(4),
+.selection-mode-active .gridjs-table th:nth-child(5),
+.selection-mode-active .gridjs-table td:nth-child(5) {
+    /* width: auto !important; - removed, controlled by JavaScript */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Animation for checkbox state changes */

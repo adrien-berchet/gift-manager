@@ -28,7 +28,9 @@
             selectedItems: new Set(),
             initialized: false,
             currentEntityType: null,
-            selectionModeActive: false
+            selectionModeActive: false,
+            capturedColumnWidths: null,  // Widths captured when entering selection mode
+            baselineColumnWidths: null   // Original widths captured on page load (before any selection mode)
         },
 
         /**
@@ -78,8 +80,42 @@
          */
         setupBulkOperations() {
             this.addBulkToolbar();
+            // Capture baseline column widths (before ever entering selection mode)
+            this.captureBaselineWidths();
             // Checkboxes are now part of Grid.js columns, no need to add them manually
             // They are hidden by CSS until selection mode is entered
+        },
+
+        /**
+         * Capture baseline column widths on page load
+         * This creates a reference point to return to when exiting selection mode
+         */
+        captureBaselineWidths() {
+            const gridContainer = document.getElementById(this.gridId);
+            if (!gridContainer) return;
+
+            const table = gridContainer.querySelector('.gridjs-table');
+            if (!table) return;
+
+            // Get all header cells (checkbox should be hidden at this point)
+            const allHeaderCells = table.querySelectorAll('thead tr th');
+            const visibleHeaderCells = Array.from(allHeaderCells).filter(th => {
+                const style = window.getComputedStyle(th);
+                return style.display !== 'none';
+            });
+
+            // Store widths of all visible columns
+            this.state.baselineColumnWidths = visibleHeaderCells.map((th, index) => {
+                const computedStyle = window.getComputedStyle(th);
+                return {
+                    width: computedStyle.width,
+                    minWidth: computedStyle.minWidth,
+                    maxWidth: computedStyle.maxWidth,
+                    index: index + 1  // 1-indexed for nth-child
+                };
+            });
+
+            console.log('[BulkOperations] Captured baseline column widths:', this.state.baselineColumnWidths);
         },
 
         /**
@@ -131,14 +167,66 @@
             this.state.selectionModeActive = true;
             console.log('[BulkOperations] Entering selection mode');
 
-            // Add CSS class to show checkbox column (Grid.js manages the column, we just show/hide via CSS)
             const gridContainer = document.getElementById(this.gridId);
             if (gridContainer) {
-                gridContainer.classList.add('selection-mode-active');
-            }
+                const table = gridContainer.querySelector('.gridjs-table');
 
-            // Bind event listeners to existing checkboxes
-            this.bindCheckboxEvents();
+                // STEP 1: Get Actions column width from baseline (not current state)
+                // This ensures we always use the original width, not a modified one
+                if (this.state.baselineColumnWidths && this.state.baselineColumnWidths.length > 0) {
+                    // Last baseline column is Actions (before checkbox was ever shown)
+                    const actionsBaseline = this.state.baselineColumnWidths[this.state.baselineColumnWidths.length - 1];
+
+                    // Calculate what the Actions column index will be after checkbox is shown
+                    // (checkbox will be at index 1, pushing Actions to baselineColumnWidths.length + 1)
+                    const futureActionsIndex = this.state.baselineColumnWidths.length + 1;
+
+                    // Store Actions width from baseline (we'll capture checkbox width after it renders)
+                    this.state.capturedColumnWidths = {
+                        actions: {
+                            width: actionsBaseline.width,
+                            minWidth: actionsBaseline.minWidth,
+                            maxWidth: actionsBaseline.maxWidth,
+                            index: futureActionsIndex
+                        }
+                    };
+
+                    console.log('[BulkOperations] Using baseline Actions width:', {
+                        width: actionsBaseline.width,
+                        willBeAtIndex: futureActionsIndex
+                    });
+                } else {
+                    console.warn('[BulkOperations] No baseline widths available, cannot preserve Actions width');
+                }
+
+                // STEP 2: Show the checkbox column WITHOUT enforcing widths yet
+                // Let it render naturally so we can capture its actual width
+                gridContainer.classList.add('selection-mode-active');
+                console.log('[BulkOperations] Checkbox column shown, waiting for render');
+
+                // STEP 3: Wait for browser to render the checkbox, then capture and freeze widths
+                requestAnimationFrame(() => {
+                    // Now checkbox is visible, capture its rendered width
+                    const checkboxHeader = table.querySelector('thead tr th:first-child');
+                    if (checkboxHeader) {
+                        const checkboxStyle = window.getComputedStyle(checkboxHeader);
+                        this.state.capturedColumnWidths.checkbox = {
+                            width: checkboxStyle.width,
+                            minWidth: checkboxStyle.minWidth,
+                            maxWidth: checkboxStyle.maxWidth,
+                            index: 1
+                        };
+                        console.log('[BulkOperations] Captured checkbox width after render:', checkboxStyle.width);
+                    }
+
+                    // Now freeze both checkbox and Actions at their rendered widths
+                    this.enforceColumnWidths(gridContainer);
+                    console.log('[BulkOperations] Width constraints applied after checkbox rendered');
+
+                    // STEP 4: Bind checkbox events
+                    this.bindCheckboxEvents();
+                });
+            }
 
             // Show toolbar (even with 0 selected)
             const toolbar = document.querySelector(this.config.selectors.bulkToolbar);
@@ -165,6 +253,11 @@
             const gridContainer = document.getElementById(this.gridId);
             if (gridContainer) {
                 gridContainer.classList.remove('selection-mode-active');
+
+                // Restore baseline column widths to return to original state
+                requestAnimationFrame(() => {
+                    this.restoreBaselineWidths(gridContainer);
+                });
             }
 
             // Hide toolbar
@@ -172,6 +265,9 @@
             if (toolbar) {
                 toolbar.style.display = 'none';
             }
+
+            // Clear captured widths (but keep baseline)
+            this.state.capturedColumnWidths = null;
 
             // Update toggle button appearance
             this.updateToggleButton(false);
@@ -229,6 +325,111 @@
         },
 
         /**
+         * Enforce column widths with inline styles to prevent Grid.js from resizing
+         * This is called when entering selection mode to maintain the exact column widths
+         * Only freezes checkbox (at captured rendered width) and Actions column (captured pre-checkbox width)
+         * All other columns remain flexible
+         * @param {HTMLElement} gridContainer - The grid container element
+         */
+        enforceColumnWidths(gridContainer) {
+            const table = gridContainer.querySelector('.gridjs-table');
+            if (!table || !this.state.capturedColumnWidths) return;
+
+            const checkboxData = this.state.capturedColumnWidths.checkbox;
+            const actionsData = this.state.capturedColumnWidths.actions;
+
+            // If checkbox width not captured yet, don't enforce (will be called again after capture)
+            if (!checkboxData || !actionsData) {
+                console.log('[BulkOperations] Width data incomplete, skipping enforcement');
+                return;
+            }
+
+            const actionsColumnIndex = actionsData.index;
+
+            console.log('[BulkOperations] Enforcing widths: checkbox=' + checkboxData.width + ', Actions=' + actionsData.width + ' at index ' + actionsColumnIndex);
+
+            // Apply widths to header cells
+            const headerCells = table.querySelectorAll('thead tr th');
+            headerCells.forEach((th, index) => {
+                const columnIndex = index + 1; // nth-child is 1-indexed
+
+                if (columnIndex === 1) {
+                    // Checkbox column: use captured rendered width
+                    th.style.width = checkboxData.width;
+                    th.style.minWidth = checkboxData.minWidth;
+                    th.style.maxWidth = checkboxData.maxWidth;
+                } else if (columnIndex === actionsColumnIndex) {
+                    // Actions column: use captured pre-checkbox width
+                    th.style.width = actionsData.width;
+                    th.style.minWidth = actionsData.minWidth;
+                    th.style.maxWidth = actionsData.maxWidth;
+                }
+                // All other columns: no inline styles (remain flexible)
+            });
+
+            // Apply widths to body cells (all rows)
+            const bodyRows = table.querySelectorAll('tbody tr');
+            bodyRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach((td, index) => {
+                    const columnIndex = index + 1; // nth-child is 1-indexed
+
+                    if (columnIndex === 1) {
+                        // Checkbox column: use captured rendered width
+                        td.style.width = checkboxData.width;
+                        td.style.minWidth = checkboxData.minWidth;
+                        td.style.maxWidth = checkboxData.maxWidth;
+                    } else if (columnIndex === actionsColumnIndex) {
+                        // Actions column: use captured pre-checkbox width
+                        td.style.width = actionsData.width;
+                        td.style.minWidth = actionsData.minWidth;
+                        td.style.maxWidth = actionsData.maxWidth;
+                    }
+                    // All other columns: no inline styles (remain flexible)
+                });
+            });
+
+            console.log('[BulkOperations] Widths enforced successfully');
+        },
+
+        /**
+         * Restore baseline column widths (return to original state before selection mode)
+         * This is called when exiting selection mode
+         * Removes all inline width styles to let the table return to natural layout
+         * @param {HTMLElement} gridContainer - The grid container element
+         */
+        restoreBaselineWidths(gridContainer) {
+            const table = gridContainer.querySelector('.gridjs-table');
+            if (!table) {
+                console.warn('[BulkOperations] Cannot restore - table not found');
+                return;
+            }
+
+            console.log('[BulkOperations] Removing enforced widths to restore natural layout');
+
+            // Remove inline styles from ALL header cells
+            const headerCells = table.querySelectorAll('thead tr th');
+            headerCells.forEach(th => {
+                th.style.width = '';
+                th.style.minWidth = '';
+                th.style.maxWidth = '';
+            });
+
+            // Remove inline styles from ALL body cells
+            const bodyRows = table.querySelectorAll('tbody tr');
+            bodyRows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                cells.forEach(td => {
+                    td.style.width = '';
+                    td.style.minWidth = '';
+                    td.style.maxWidth = '';
+                });
+            });
+
+            console.log('[BulkOperations] Inline widths removed, table restored to natural layout');
+        },
+
+        /**
          * Update the toggle button appearance based on selection mode state
          * @param {boolean} isActive - Whether selection mode is active
          */
@@ -277,8 +478,23 @@
                 }
             });
 
-            // No need for grid:refreshed listener anymore!
-            // Checkboxes are part of Grid.js columns and persist automatically
+            // Listen for grid refresh events to re-enforce column widths if in selection mode
+            document.addEventListener('grid:refreshed', (event) => {
+                // Only handle events for our grid
+                if (event.detail?.containerId !== this.gridId) return;
+
+                // If in selection mode, re-enforce column widths after grid refresh
+                if (this.state.selectionModeActive) {
+                    const gridContainer = document.getElementById(this.gridId);
+                    if (gridContainer) {
+                        requestAnimationFrame(() => {
+                            this.enforceColumnWidths(gridContainer);
+                            // Also re-bind checkbox events for new rows
+                            this.bindCheckboxEvents();
+                        });
+                    }
+                }
+            });
         },
 
         /**
