@@ -56,40 +56,62 @@
         console.log('[GiftList] User permissions:', userPermissions);
 
         // Prepare data for Grid.js
+        // Include placeholder (empty string) for checkbox column as first element
         const data = [
             {% for item in data %}
     [
-        "{{ item.name|escapejs }}",
-        "{{ item.comment|default:''|escapejs }}",
+        '', // Checkbox column placeholder - Index 0
+        "{{ item.name|escapejs }}",                                    // Index 1
+        "{{ item.comment|default:''|escapejs }}",                      // Index 2
         {% if item.tags_info %}
-    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}], // Index 3
     {% else %}
-    [],
+    [],                                                                // Index 3
         {% endif %}
-    "{{ item.gift_id }}",
-        "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
-        "{% url 'gift_manager:gift_detail' item.gift_id %}",
-        "{% url 'gift_manager:gift_edit' item.gift_id %}",
-        "{% url 'gift_manager:gift_delete' item.gift_id %}"
+    "{{ item.gift_id }}",                                              // Index 4
+        "{% url 'gift_manager:gift_relation_create' item.gift_id %}", // Index 5
+        "{% url 'gift_manager:gift_detail' item.gift_id %}",          // Index 6
+        "{% url 'gift_manager:gift_edit' item.gift_id %}",            // Index 7
+        "{% url 'gift_manager:gift_delete' item.gift_id %}"           // Index 8
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
 
-    // Define columns
+    // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
         {
+            id: 'checkbox',
+            name: '', // Empty name for checkbox column
+            width: '50px',
+            sort: false,
+            formatter: (cell, row) => {
+                // Get gift_id from row data (now at index 4 due to checkbox column)
+                const giftId = row.cells[4].data;
+                return gridjs.html(`
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input bulk-select-item"
+                               value="${giftId}"
+                               data-entity-id="${giftId}">
+                    </div>
+                `);
+            }
+        },
+        {
+            id: 'name',
             name: '{{ column_names.name|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
             }
         },
         {
+            id: 'comment',
             name: '{{ column_names.comment|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
             }
         },
         {
+            id: 'tags',
             name: '{{ column_names.tags|escapejs }}',
             formatter: GridUtils.badgeFormatter()
         },
@@ -99,17 +121,18 @@
         { name: 'gift_edit_url', hidden: true },
         { name: 'gift_delete_url', hidden: true },
         {
+            id: 'actions',
             name: '{% trans "Actions"|escapejs %}',
             width: '200px',
             sort: false,
             formatter: PermissionUtils.permissionAwareActionFormatter({
-                give: (row) => row.cells[4].data,
-                details: (row) => row.cells[5].data,
-                edit: (row) => row.cells[6].data,
-                delete: (row) => row.cells[7].data,
+                give: (row) => row.cells[5].data,      // Updated from 4
+                details: (row) => row.cells[6].data,   // Updated from 5
+                edit: (row) => row.cells[7].data,      // Updated from 6
+                delete: (row) => row.cells[8].data,    // Updated from 7
                 share: () => "{% url 'gift_manager:share_objects' %}"
             }, ['give', 'details', 'edit', 'delete', 'share'], {
-                idResolver: (row) => row.cells[3].data  // gift_id is at index 3
+                idResolver: (row) => row.cells[4].data  // Updated from 3 - gift_id is now at index 4
             }, userPermissions)
         }
     ];
@@ -127,13 +150,26 @@
         // Grid ready callback - ensure inline editing is initialized
         addGiftIdDataAttributes();
 
+        // Add select-all checkbox to the first header cell
+        const gridContainer = document.getElementById('gift-grid');
+        const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
+        if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+            firstHeaderCell.innerHTML = `
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input bulk-select-all"
+                           id="bulk-select-all-gift-grid">
+                </div>
+            `;
+            console.log('[GiftList] Select-all checkbox added to header');
+        }
+
         // Only initialize inline editing once during initial page load
         // Do NOT re-initialize on every grid refresh as it can interfere with checkboxes
         if (!inlineEditingInitialized && window.InlineEditing) {
             try {
                 window.InlineEditing.init('gift-grid', 'gift', {
-                    0: 'name',
-                    1: 'comment'
+                    1: 'name',      // Updated from 0
+                    2: 'comment'    // Updated from 1
                 });
                 inlineEditingInitialized = true;
                 console.log('[GiftList] Inline editing initialized');
@@ -146,15 +182,38 @@
     }, {
         entityType: 'gift',
         columnMapping: {
-            0: 'name',
-            1: 'comment'
+            1: 'name',      // Updated from 0
+            2: 'comment'    // Updated from 1
         }
     });
 
     // Add list update event listener using GridUtils
-    GridUtils.addListUpdateListener(grid, 'Gift', 3, function() {
+    GridUtils.addListUpdateListener(grid, 'Gift', 4, function() {
         // Post-update callback: re-add data attributes
         addGiftIdDataAttributes();
+    });
+
+    // Listen for grid:refreshed event to re-add select-all checkbox
+    document.addEventListener('grid:refreshed', (event) => {
+        if (event.detail?.containerId !== 'gift-grid') return;
+
+        // Re-add select-all checkbox to header after grid refresh
+        const gridContainer = document.getElementById('gift-grid');
+        const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
+        if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+            firstHeaderCell.innerHTML = `
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input bulk-select-all"
+                           id="bulk-select-all-gift-grid">
+                </div>
+            `;
+            console.log('[GiftList] Select-all checkbox re-added to header after refresh');
+
+            // Re-bind events if in selection mode
+            if (window.BulkOperations && window.BulkOperations.state?.selectionModeActive) {
+                window.BulkOperations.bindCheckboxEvents();
+            }
+        }
     });
 
     // Function to add gift ID data attributes to rows
@@ -165,8 +224,8 @@
         const rows = gridContainer.querySelectorAll('tbody tr');
 
         rows.forEach((row, index) => {
-            if (data[index] && data[index][3]) { // gift_id is at index 3
-                const giftId = data[index][3];
+            if (data[index] && data[index][4]) { // Updated from [3] - gift_id is now at index 4
+                const giftId = data[index][4];   // Updated from [3]
                 row.setAttribute('data-entity-id', giftId);
                 row.setAttribute('data-gift-id', giftId);
             }
@@ -187,8 +246,8 @@
                 if (window.InlineEditing) {
                     try {
                         window.InlineEditing.init('gift-grid', 'gift', {
-                            0: 'name',
-                            1: 'comment'
+                            1: 'name',      // Updated from 0
+                            2: 'comment'    // Updated from 1
                         });
                         inlineEditingInitialized = true;
                         console.log('[GiftList] Inline editing initialized (fallback)');
