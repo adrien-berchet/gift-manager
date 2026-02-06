@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 from gift_manager.forms import PersonGroupAddMultipleChildGroupsForm
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
+from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
@@ -150,7 +151,7 @@ class PersonGroupCreateView(BaseCreateView):
         return kwargs
 
 
-class PersonGroupUpdateView(BaseUpdateView):
+class PersonGroupUpdateView(PermissionUpdateMixin, BaseUpdateView):
     model = PersonGroup
     form_class = PersonGroupForm
     pk_name = "group_id"

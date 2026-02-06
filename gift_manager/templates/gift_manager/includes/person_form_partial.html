@@ -7,6 +7,7 @@
 -->
 
 <form method="post"
+      id="person-form"
       {% if object %}
       action="{% url 'gift_manager:person_edit' object.person_id %}"
       hx-post="{% url 'gift_manager:person_edit' object.person_id %}"
@@ -14,9 +15,11 @@
       action="{% url 'gift_manager:person_create' %}"
       hx-post="{% url 'gift_manager:person_create' %}"
       {% endif %}
-      hx-target="#offcanvasContent"
-      hx-swap="innerHTML"
-      class="offcanvas-form person-form">
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      class="offcanvas-form person-form"
+      data-form-type="person-edit">
 
   {% csrf_token %}
 
@@ -107,8 +110,8 @@
       <div class="searchable-select-wrapper">
         <input type="text" class="searchable-select-search form-control mb-2" placeholder="🔍 {% trans 'Type to search groups...' %}">
         <div class="btn-group btn-group-sm mb-2" role="group">
-          <button type="button" class="btn btn-outline-primary select-all-btn">{% trans "Select All" %}</button>
-          <button type="button" class="btn btn-outline-secondary clear-all-btn">{% trans "Clear All" %}</button>
+          <button type="button" class="btn btn-outline-primary" data-action="select-all-groups">{% trans "Select All" %}</button>
+          <button type="button" class="btn btn-outline-secondary" data-action="clear-all-groups">{% trans "Clear All" %}</button>
         </div>
         {{ form.groups }}
       </div>
@@ -141,24 +144,16 @@
         <!-- Simplified sharing controls for offcanvas -->
         <div class="sharing-controls">
           {% for friend in friends_list %}
-          <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded">
+          <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded" id="permission-row-{{ friend.user.id }}">
             <div class="d-flex align-items-center">
               <i class="fas fa-user me-2 text-muted"></i>
               <span>{{ friend.user.username }}</span>
             </div>
-            <form method="post" class="permission-form d-inline" data-user-id="{{ friend.user.id }}">
-              {% csrf_token %}
-              <input type="hidden" name="user_id" value="{{ friend.user.id }}">
-              <select name="permission"
+            <div class="d-flex align-items-center gap-2">
+              <select name="permission_{{ friend.user.id }}"
                       class="form-select form-select-sm permission-select"
-                      {% if object %}
-                      hx-post="{% url 'gift_manager:person_edit' object.person_id %}"
-                      {% else %}
-                      hx-post="{% url 'gift_manager:person_create' %}"
-                      {% endif %}
-                      hx-swap="none"
-                      hx-trigger="change"
-                      hx-include="closest form">
+                      data-user-id="{{ friend.user.id }}"
+                      data-person-id="{% if object %}{{ object.person_id }}{% endif %}">
                 <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
                 {% for level in permission_levels %}
                 <option value="{{ level.value }}" {% if friend.is_shared and friend.permission == level.value %}selected{% endif %}>
@@ -167,7 +162,10 @@
                 </option>
                 {% endfor %}
               </select>
-            </form>
+              <span class="permission-status" style="display: none;">
+                <i class="fas fa-spinner fa-spin text-muted"></i>
+              </span>
+            </div>
           </div>
           {% endfor %}
         </div>
@@ -197,127 +195,3 @@
     </button>
   </div>
 </form>
-
-<!-- Form-specific JavaScript for enhanced functionality -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.person-form');
-    if (!form) return;
-
-    // Enhanced form submission handling
-    form.addEventListener('submit', function(e) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            const originalText = submitBtn.innerHTML;
-            const loadingText = submitBtn.dataset.loadingText || 'Saving...';
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + loadingText;
-
-            // Re-enable button after request completes
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }, 3000); // Fallback timeout
-        }
-    });
-
-    // Auto-focus first form field
-    const firstField = form.querySelector('input:not([type="hidden"]), select, textarea');
-    if (firstField) {
-        firstField.focus();
-    }
-
-    // Searchable multi-select enhancement for groups
-    const groupsSelect = form.querySelector('#id_groups');
-    if (groupsSelect) {
-        const wrapper = groupsSelect.closest('.searchable-select-wrapper');
-        const searchInput = wrapper.querySelector('.searchable-select-search');
-        const selectAllBtn = wrapper.querySelector('.select-all-btn');
-        const clearAllBtn = wrapper.querySelector('.clear-all-btn');
-
-        // Filter options on search
-        searchInput.addEventListener('input', function() {
-            const filter = this.value.toLowerCase();
-            Array.from(groupsSelect.options).forEach(function(option) {
-                const text = option.textContent.toLowerCase();
-                option.style.display = text.includes(filter) ? '' : 'none';
-            });
-        });
-
-        // Select all visible options
-        selectAllBtn.addEventListener('click', function() {
-            Array.from(groupsSelect.options).forEach(opt => {
-                if (opt.style.display !== 'none') opt.selected = true;
-            });
-        });
-
-        // Clear all selections
-        clearAllBtn.addEventListener('click', function() {
-            Array.from(groupsSelect.options).forEach(opt => opt.selected = false);
-        });
-    }
-
-    // Form validation feedback
-    const fields = form.querySelectorAll('input, select, textarea');
-    fields.forEach(field => {
-        field.addEventListener('blur', function() {
-            // Clear previous validation state
-            field.classList.remove('is-valid', 'is-invalid');
-
-            // Basic client-side validation
-            if (field.required && !field.value.trim()) {
-                field.classList.add('is-invalid');
-            } else if (field.value.trim()) {
-                field.classList.add('is-valid');
-            }
-        });
-    });
-
-    // Initialize unsaved changes protection for this form
-    if (window.UnsavedChanges) {
-        UnsavedChanges.addForm(form);
-    }
-
-    // Enhanced offcanvas close protection
-    const offcanvas = form.closest('.offcanvas');
-    if (offcanvas) {
-        const closeButtons = offcanvas.querySelectorAll('[data-bs-dismiss="offcanvas"]');
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                if (window.UnsavedChanges && UnsavedChanges.hasUnsaved()) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Show custom confirmation modal
-                    const modal = document.getElementById('unsaved-changes-modal');
-                    if (modal) {
-                        // Store the close action for later
-                        window.pendingOffcanvasClose = function() {
-                            const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
-                            if (offcanvasInstance) {
-                                offcanvasInstance.hide();
-                            }
-                        };
-
-                        // Show the modal
-                        const modalInstance = new bootstrap.Modal(modal);
-                        modalInstance.show();
-                    } else {
-                        // Fallback to browser confirm
-                        if (confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
-                            UnsavedChanges.clearUnsavedChanges();
-                        } else {
-                            return;
-                        }
-                    }
-                }
-            });
-        });
-    }
-
-    // Initialize HTMX for permission selects
-    if (typeof htmx !== 'undefined') {
-        htmx.process(form);
-    }
-});
-</script>

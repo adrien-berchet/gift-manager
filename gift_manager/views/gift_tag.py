@@ -11,6 +11,7 @@ from django.utils.translation import gettext
 from django.views.generic import View
 
 from gift_manager.forms import GiftTagForm
+from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.views.base import BaseCreateView
@@ -170,7 +171,7 @@ class GiftTagCreateView(BaseCreateView):
         return form
 
 
-class GiftTagUpdateView(BaseUpdateView):
+class GiftTagUpdateView(PermissionUpdateMixin, BaseUpdateView):
     model = GiftTag
     fields = ["name", "parent_tags"]
     pk_name = "tag_id"

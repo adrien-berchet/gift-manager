@@ -8,9 +8,7 @@ from .base import *  # noqa: F403
 from .base import get_bool_env
 from .base import get_env_variable
 
-print("############################")
 print("USING PRODUCTION ENVIRONMENT")
-print("############################")
 
 # SECURITY: Secret key must be set in production
 SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
@@ -42,9 +40,7 @@ DATABASES = {
     }
 }
 
-print("#########################")
 print("USING DB:", DATABASES.get("default", {}).get("NAME", "# UNKNOWN #"))
-print("#########################")
 
 # =============================================================================
 # SECURITY SETTINGS

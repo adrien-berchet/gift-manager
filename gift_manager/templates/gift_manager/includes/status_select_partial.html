@@ -1,11 +1,31 @@
 {% load i18n %}
 
-{# Status selector for a single relation - used for HTMX updates #}
-<form id="status-form-{{ relation_id }}" style="display: inline;" hx-post="{% url 'gift_manager:relation_status_update' %}" hx-trigger="change from:select"
-    hx-target="#status-form-{{ relation_id }}" hx-swap="outerHTML" hx-indicator="#spinner-{{ relation_id }}">
+{# Status selector for a single relation - used for HTMX updates
+
+   Optional context variables for Grid.js integration (Phase 1):
+   - grid_id: ID of the Grid.js container to update (e.g., "relations-grid")
+   - update_field: Column index to update in the grid (e.g., "4" for status column)
+
+   Example usage with grid integration:
+   {% include "gift_manager/includes/status_select_partial.html" with relation_id=rel.id grid_id="relations-grid" update_field="4" %}
+#}
+<form id="status-form-{{ relation_id }}" style="display: inline;"
+      hx-post="{% url 'gift_manager:relation_status_update' %}"
+      hx-trigger="change from:select"
+      hx-target="#status-form-{{ relation_id }}"
+      hx-swap="outerHTML"
+      hx-indicator="#spinner-{{ relation_id }}"
+      {% if grid_id %}data-grid-update="{{ grid_id }}"{% endif %}
+      {% if update_field %}data-update-field="{{ update_field }}"{% endif %}
+      data-update-strategy="updateRow">
     {% csrf_token %}
     <input type="hidden" name="relation_id" value="{{ relation_id }}">
-    <select class="relation_status form-select form-select-sm" name="new_status" id="status-select-{{ relation_id }}">
+    <select class="relation_status form-select form-select-sm"
+            name="new_status"
+            id="status-select-{{ relation_id }}"
+            {% if grid_id %}data-grid-update="{{ grid_id }}"{% endif %}
+            {% if relation_id %}data-row-id="{{ relation_id }}"{% endif %}
+            {% if update_field %}data-update-field="{{ update_field }}"{% endif %}>
         {% for stat in relation_statuses %}
         <option value="{{ stat.pk }}" {% if current_status == stat.pk %}selected{% endif %}>
             {{ stat.status }}

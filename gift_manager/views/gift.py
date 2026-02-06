@@ -11,6 +11,9 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import GiftForm
+from gift_manager.mixins.permissions import PermissionContextMixin
+from gift_manager.mixins.permissions import PermissionUpdateMixin
+from gift_manager.mixins.permissions import SingleObjectPermissionMixin
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Relation
@@ -20,7 +23,6 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
-from gift_manager.mixins.permissions import PermissionContextMixin, SingleObjectPermissionMixin
 
 
 class GiftListView(PermissionContextMixin, BaseListView):
@@ -77,7 +79,7 @@ class GiftCreateView(BaseCreateView):
         return form
 
 
-class GiftUpdateView(BaseUpdateView):
+class GiftUpdateView(PermissionUpdateMixin, BaseUpdateView):
     model = Gift
     form_class = GiftForm
     pk_name = "gift_id"

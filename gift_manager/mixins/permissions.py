@@ -7,6 +7,8 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+from django.http import HttpResponse
+
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
 
@@ -350,3 +352,102 @@ class PermissionRequiredMixin:
                 pass
 
         return super().dispatch(request, *args, **kwargs)
+
+
+class PermissionUpdateMixin:
+    """Mixin to handle HTMX permission updates in edit views (Phase 1)."""
+
+    def post(self, request, *args, **kwargs):
+        """Handle both form submission and HTMX permission updates."""
+        # Check if this is an HTMX permission update request
+        is_perm_update = self.is_permission_update_request(request)
+        logger.debug(
+            f"[PermissionUpdateMixin] POST request - "
+            f"is_htmx={bool(request.headers.get('HX-Request'))}, "
+            f"has_user_id={'user_id' in request.POST}, "
+            f"has_permission={'permission' in request.POST}, "
+            f"is_perm_update={is_perm_update}"
+        )
+
+        if is_perm_update:
+            logger.info("[PermissionUpdateMixin] Handling permission update request")
+            return self.handle_permission_update(request)
+
+        # Otherwise, handle as normal form submission
+        logger.debug("[PermissionUpdateMixin] Handling as normal form submission")
+        return super().post(request, *args, **kwargs)
+
+    def is_permission_update_request(self, request):
+        """Check if this is an HTMX or AJAX permission update request."""
+        # Check for HTMX permission update
+        is_htmx_perm_update = (
+            request.headers.get("HX-Request")
+            and "user_id" in request.POST
+            and "permission" in request.POST
+        )
+
+        # Check for AJAX permission update (from FormInitializer)
+        is_ajax_perm_update = (
+            request.headers.get("X-Permission-Update")
+            and "user_id" in request.POST
+            and "permission_level" in request.POST
+        )
+
+        return is_htmx_perm_update or is_ajax_perm_update
+
+    def handle_permission_update(self, request):
+        """Handle HTMX or AJAX permission update for a friend."""
+        from django.contrib.auth.models import User
+
+        try:
+            user_id = request.POST.get("user_id")
+            # Support both 'permission' (HTMX) and 'permission_level' (AJAX)
+            permission = request.POST.get("permission") or request.POST.get("permission_level")
+
+            # Get the object being shared
+            self.object = self.get_object()
+
+            # Get the friend user
+            friend = User.objects.get(id=user_id)
+
+            # Update or remove permission
+            if permission == "not_shared":
+                PermissionService.delete_permission(friend, self.object)
+                logger.info(f"Removed permission for user {friend.username} on {self.object}")
+            else:
+                PermissionService.create_or_update_permission(
+                    friend, self.object, permission_level=int(permission)
+                )
+                logger.info(
+                    f"Updated permission to {permission} for user {friend.username} on {self.object}"
+                )
+
+            # Return appropriate response based on request type
+            if request.headers.get("X-Permission-Update"):
+                # AJAX request - return JSON
+                from django.http import JsonResponse
+
+                return JsonResponse({"status": "success", "message": "Permission updated"})
+            # HTMX request - return empty response
+            response = HttpResponse(status=204)  # 204 No Content
+            response["HX-Trigger"] = "permissionUpdated"
+            return response
+
+        except User.DoesNotExist:
+            logger.error(f"User {user_id} not found")
+            if request.headers.get("X-Permission-Update"):
+                from django.http import JsonResponse
+
+                return JsonResponse({"status": "error", "message": "User not found"}, status=404)
+            response = HttpResponse("User not found", status=404)
+            response["HX-Trigger"] = "showNotification"
+            return response
+        except Exception as e:
+            logger.error(f"Error updating permission: {e}", exc_info=True)
+            if request.headers.get("X-Permission-Update"):
+                from django.http import JsonResponse
+
+                return JsonResponse({"status": "error", "message": str(e)}, status=500)
+            response = HttpResponse(f"Error: {e!s}", status=500)
+            response["HX-Trigger"] = "showNotification"
+            return response

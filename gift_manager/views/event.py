@@ -6,6 +6,7 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import EventForm
+from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
@@ -54,7 +55,7 @@ class EventCreateView(BaseCreateView):
     htmx_template_name = "gift_manager/includes/event_form_partial.html"
 
 
-class EventUpdateView(BaseUpdateView):
+class EventUpdateView(PermissionUpdateMixin, BaseUpdateView):
     model = Event
     form_class = EventForm
     pk_name = "event_id"

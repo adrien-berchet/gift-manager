@@ -23,6 +23,7 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import Person
@@ -309,7 +310,7 @@ class RelationCreateView(BaseCreateView):
         return context
 
 
-class RelationUpdateView(BaseUpdateView):
+class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
     model = Relation
     form_class = RelationForm
     pk_name = "relation_id"

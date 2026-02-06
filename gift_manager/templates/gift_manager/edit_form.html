@@ -68,6 +68,9 @@
 <!-- Notification System -->
 <script src="{% static 'gift_manager/notifications.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<!-- Grid State Management (Phase 1) -->
+<script src="{% static 'gift_manager/grid-state-manager.js' %}"></script>
+<script src="{% static 'gift_manager/htmx-grid-bridge.js' %}"></script>
 <!-- Unsaved Changes Protection -->
 <script src="{% static 'gift_manager/unsaved-changes.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
@@ -168,7 +171,11 @@
                                 hx-post="${updateUrl}"
                                 hx-swap="none"
                                 hx-trigger="change"
-                                hx-include="closest form">
+                                hx-include="closest form"
+                                data-grid-update="sharing-grid"
+                                data-row-id="${userId}"
+                                data-update-field="2"
+                                data-update-strategy="updateRow">
                         ${options}
                         </select>
                         </form>
@@ -193,9 +200,24 @@
             }
         );
 
-        // Grid is already rendered when initGrid returns (render() is synchronous)
-        // Initialize HTMX immediately without waiting for events
-        // gridContainer is already declared above
+        // ===== Phase 1: Grid State Management =====
+        // Register grid with GridStateManager for HTMX state sync
+        if (typeof GridStateManager !== 'undefined') {
+            GridStateManager.registerGrid('sharing-grid', grid, friendsData, {
+                rowIdField: 0  // User ID is in column 0
+            });
+            console.log('[EditForm] Registered sharing-grid with GridStateManager');
+        } else {
+            console.error('GridStateManager not loaded!');
+        }
+
+        // Initialize HTMXGridBridge for automatic state synchronization
+        if (typeof HTMXGridBridge !== 'undefined') {
+            HTMXGridBridge.init();
+            console.log('[EditForm] Initialized HTMXGridBridge');
+        } else {
+            console.error('HTMXGridBridge not loaded!');
+        }
 
         // Check if HTMX is available
         if (typeof htmx === 'undefined') {
@@ -203,40 +225,19 @@
             return;
         }
 
+        // Initial HTMX processing
         console.log('Processing HTMX on grid container');
         htmx.process(gridContainer);
 
-        // Check if select elements have HTMX attributes
-        const selects = gridContainer.querySelectorAll('.permission-select');
-        if (selects.length > 0) {
-            const firstSelect = selects[0];
-        }
-
+        // Apply initial row styling
         applyRowStyling();
 
-        // Set up MutationObserver to re-initialize HTMX when grid updates (pagination, sorting)
-        let processingTimeout;
-        const observer = new MutationObserver(function (mutations) {
-            // Debounce the processing to avoid excessive calls
-            clearTimeout(processingTimeout);
-            processingTimeout = setTimeout(function () {
-                // Check if the tbody was actually modified
-                const tbody = gridContainer.querySelector('.gridjs-tbody');
-                if (tbody) {
-                    htmx.process(gridContainer);
-                    applyRowStyling();
-                }
-            }, 50);
+        // Listen for grid updates to apply styling
+        document.addEventListener('grid:update', function(event) {
+            if (event.detail.gridId === 'sharing-grid') {
+                applyRowStyling();
+            }
         });
-
-        // Observe only the wrapper for changes (more efficient)
-        const wrapper = gridContainer.querySelector('.gridjs-wrapper');
-        if (wrapper) {
-            observer.observe(wrapper, {
-                childList: true,
-                subtree: true
-            });
-        }
 
     } catch (error) {
         console.error('Error initializing Grid.js:', error);
@@ -260,26 +261,40 @@
         showNotification(event.detail.value, 'success');
     });
 
-    // Update row styling after successful permission change
-    document.body.addEventListener('htmx:afterRequest', function (event) {
-        if (event.detail.elt && event.detail.elt.classList.contains('permission-select')) {
-
-            if (event.detail.successful) {
-                const select = event.detail.elt;
-                const row = select.closest('tr');
-                if (row) {
-                    const isShared = select.value !== 'not_shared';
-                    row.classList.remove('shared-user-row', 'unshared-user-row');
-                    row.classList.add(isShared ? 'shared-user-row' : 'unshared-user-row');
-                }
-            }
-        }
-    });
-
+    // Error handling for HTMX requests
     document.body.addEventListener('htmx:responseError', function (event) {
         console.error('HTMX error:', event.detail);
         showNotification("{% trans 'An error occurred while updating permissions'|escapejs %}", 'danger');
     });
+
+    // Debug HTMX events for permission updates
+    document.body.addEventListener('htmx:beforeRequest', function (event) {
+        if (event.detail.elt.name === 'permission') {
+            console.log('[DEBUG] Permission update - Before request', event.detail);
+        }
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function (event) {
+        if (event.detail.elt.name === 'permission') {
+            console.log('[DEBUG] Permission update - After request', {
+                status: event.detail.xhr.status,
+                response: event.detail.xhr.responseText,
+                successful: event.detail.successful
+            });
+        }
+    });
+
+    document.body.addEventListener('htmx:beforeSwap', function (event) {
+        if (event.detail.elt.name === 'permission') {
+            console.log('[DEBUG] Permission update - Before swap', {
+                shouldSwap: event.detail.shouldSwap,
+                target: event.detail.target
+            });
+        }
+    });
+
+    // Note: Row styling after permission changes is now handled by the grid:update event listener above
+    // HTMXGridBridge automatically updates Grid.js data when HTMX requests complete
 
     // Ensure the action bar is always visible
     document.addEventListener('DOMContentLoaded', function () {

@@ -12,9 +12,7 @@ from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import get_env_variable
 
-print("#############################")
 print("USING DEVELOPMENT ENVIRONMENT")
-print("#############################")
 
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / ".env")
@@ -53,9 +51,7 @@ DATABASES = {
     }
 }
 
-print("#########################")
 print("USING DB:", DATABASES.get("default", {}).get("NAME", "# UNKNOWN #"))
-print("#########################")
 
 # Email backend for development - prints to console
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

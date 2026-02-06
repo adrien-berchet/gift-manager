@@ -15,6 +15,7 @@ from gift_manager.mixins.performance import OptimizedDetailMixin
 from gift_manager.mixins.performance import OptimizedFormMixin
 from gift_manager.mixins.performance import OptimizedListMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
+from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
 from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
 from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
@@ -107,6 +108,7 @@ class PersonCreateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, Base
     context_object_name = "person"
     object_type = "Person"
     htmx_template_name = "gift_manager/includes/person_form_partial.html"
+    close_offcanvas = True
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -116,7 +118,9 @@ class PersonCreateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, Base
         return form
 
 
-class PersonUpdateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseUpdateView):
+class PersonUpdateView(
+    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseUpdateView
+):
     model = Person
     form_class = PersonForm
     pk_name = "person_id"
@@ -124,6 +128,7 @@ class PersonUpdateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, Base
     object_type = "Person"
     detail_url_name = "person_detail"
     htmx_template_name = "gift_manager/includes/person_form_partial.html"
+    close_offcanvas = True
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

@@ -643,6 +643,8 @@
     <script src="{% static 'gift_manager/js/grid-touch-gestures.js' %}"></script>
     <!-- Accessibility and Keyboard Navigation -->
     <script src="{% static 'gift_manager/js/accessibility.js' %}"></script>
+    <!-- Form Initializer -->
+    <script src="{% static 'gift_manager/form-initializer.js' %}"></script>
 
     <!-- Configure HTMX to include CSRF token in headers -->
     <script>
@@ -975,6 +977,115 @@
                 return container;
             }
 
+            /**
+             * Handle form submission responses
+             * This function is called via hx-on::after-request attribute on forms
+             */
+            window.handleFormResponse = function(event) {
+                const xhr = event.detail.xhr;
+                const target = event.detail.target;
+                const elt = event.detail.elt;
+
+                console.log('[FormResponse] Status:', xhr.status);
+
+                if (xhr.status === 200 || xhr.status === 201) {
+                    // Success - close offcanvas and refresh grid
+                    const offcanvas = target.closest('.offcanvas');
+                    if (offcanvas) {
+                        const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
+                        if (offcanvasInstance) {
+                            offcanvasInstance.hide();
+                        }
+                    }
+
+                    // Trigger grid refresh
+                    document.dispatchEvent(new CustomEvent('list:update'));
+
+                    // Show success notification
+                    showNotification('Changes saved successfully', 'success');
+
+                } else if (xhr.status === 400) {
+                    // Validation errors - form will be re-rendered with errors
+                    console.log('[FormResponse] Validation errors, form re-rendered');
+
+                } else if (xhr.status === 403) {
+                    // Permission denied
+                    showNotification('You do not have permission to perform this action', 'error');
+
+                } else if (xhr.status >= 500) {
+                    // Server error
+                    showNotification('A server error occurred. Please try again.', 'error');
+
+                } else {
+                    // Other error
+                    showNotification('An error occurred. Please try again.', 'error');
+                }
+            };
+
+            // Handle form submissions with HTMX
+            document.body.addEventListener('htmx:afterRequest', function(e) {
+                const xhr = e.detail.xhr;
+                const target = e.detail.target;
+                const elt = e.detail.elt;
+
+                // Check if this is a form submission (not a permission update)
+                const isFormSubmission = elt && elt.tagName === 'FORM' && elt.dataset.formType;
+                const isPermissionUpdate = elt && elt.classList && elt.classList.contains('permission-select');
+
+                if (isPermissionUpdate) {
+                    console.log('[PermissionUpdate] Permission selector updated, status:', xhr.status);
+                    // Don't process as form submission
+                    return;
+                }
+
+                if (isFormSubmission) {
+                    console.log('[FormSubmission] Form submitted:', elt.dataset.formType, 'Status:', xhr.status);
+
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        // Check for HX-Trigger header
+                        const triggerHeader = xhr.getResponseHeader('HX-Trigger');
+                        console.log('[FormSubmission] HX-Trigger header:', triggerHeader);
+
+                        // Close offcanvas if trigger includes offcanvas:close
+                        if (triggerHeader && triggerHeader.includes('offcanvas:close')) {
+                            const offcanvas = elt.closest('.offcanvas');
+                            if (offcanvas) {
+                                const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
+                                if (offcanvasInstance) {
+                                    console.log('[FormSubmission] Closing offcanvas');
+                                    offcanvasInstance.hide();
+                                }
+                            }
+                        }
+
+                        // Trigger list update if specified
+                        if (triggerHeader && triggerHeader.includes('list:update')) {
+                            console.log('[FormSubmission] Triggering list update');
+                            document.dispatchEvent(new CustomEvent('list:update'));
+                        }
+
+                        // Show success notification
+                        showNotification('Changes saved successfully', 'success');
+                    } else if (xhr.status === 400) {
+                        // Validation errors - form will be re-rendered with errors
+                        console.log('[FormSubmission] Validation errors');
+                        showNotification('Please correct the errors in the form', 'error');
+                    } else if (xhr.status >= 500) {
+                        // Server error
+                        console.log('[FormSubmission] Server error');
+                        showNotification('A server error occurred. Please try again.', 'error');
+                    }
+                }
+
+                // Remove loading states from buttons
+                const trigger = e.detail.elt;
+                if (trigger && trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
+                    trigger.disabled = false;
+                    trigger.innerHTML = trigger.dataset.originalText;
+                    delete trigger.dataset.originalText;
+                }
+            });
+
             // Enhanced HTMX configuration for modern UX
             document.body.addEventListener('htmx:beforeRequest', function(e) {
                 // Add loading states to buttons and forms
@@ -988,11 +1099,13 @@
             });
 
             // Debug: Log all HTMX events to understand the flow
-            ['htmx:configRequest', 'htmx:beforeRequest', 'htmx:afterRequest', 'htmx:beforeSwap', 'htmx:afterSwap'].forEach(eventName => {
+            ['htmx:configRequest', 'htmx:beforeRequest', 'htmx:afterRequest', 'htmx:beforeSwap', 'htmx:afterSwap', 'htmx:beforeSend'].forEach(eventName => {
                 document.body.addEventListener(eventName, function(e) {
                     console.log(`[HTMX Debug] ${eventName}:`, {
                         target: e.detail.target,
                         elt: e.detail.elt?.tagName,
+                        eltId: e.detail.elt?.id,
+                        eltClass: e.detail.elt?.className,
                         successful: e.detail.successful,
                         isError: e.detail.isError,
                         xhr: e.detail.xhr ? 'present' : 'missing'
@@ -1000,15 +1113,6 @@
                 });
             });
 
-            document.body.addEventListener('htmx:afterRequest', function(e) {
-                // Remove loading states
-                const trigger = e.detail.elt;
-                if (trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
-                    trigger.disabled = false;
-                    trigger.innerHTML = trigger.dataset.originalText;
-                    delete trigger.dataset.originalText;
-                }
-            });
 
             // Helper function to dispatch HX-Trigger events on document
             function dispatchTriggerEvents(triggerHeader) {
@@ -1236,8 +1340,27 @@
                             const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
                             const container = document.getElementById(targetBody);
                             container.innerHTML = html;
+
                             // Process HTMX attributes on the new content
+                            // First process the container
                             htmx.process(container);
+
+                            // Then explicitly process any forms inside
+                            const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
+                            htmxForms.forEach(form => {
+                                console.log('[EditHandler] Processing HTMX on form:', form.id || form.className);
+                                htmx.process(form);
+                            });
+
+                            // Initialize forms with FormInitializer
+                            if (window.FormInitializer) {
+                                const forms = container.querySelectorAll('form[data-form-type]');
+                                forms.forEach(form => {
+                                    console.log('[EditHandler] Initializing form:', form.dataset.formType);
+                                    window.FormInitializer.initForm(form);
+                                });
+                            }
+
                             hideOffcanvasLoading(target);
                         })
                         .catch(error => {
@@ -1282,8 +1405,27 @@
                         .then(html => {
                             const container = document.getElementById('offcanvasContent');
                             container.innerHTML = html;
+
                             // Process HTMX attributes on the new content
+                            // First process the container
                             htmx.process(container);
+
+                            // Then explicitly process any forms inside
+                            const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
+                            htmxForms.forEach(form => {
+                                console.log('[CreateHandler] Processing HTMX on form:', form.id || form.className);
+                                htmx.process(form);
+                            });
+
+                            // Initialize forms with FormInitializer
+                            if (window.FormInitializer) {
+                                const forms = container.querySelectorAll('form[data-form-type]');
+                                forms.forEach(form => {
+                                    console.log('[CreateHandler] Initializing form:', form.dataset.formType);
+                                    window.FormInitializer.initForm(form);
+                                });
+                            }
+
                             hideOffcanvasLoading('editPanel');
                         })
                         .catch(error => {
