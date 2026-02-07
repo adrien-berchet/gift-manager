@@ -1131,6 +1131,11 @@ body,
     border-bottom: none !important;
 }
 
+/* Zebra striping for better readability */
+.gridjs-wrapper .gridjs-tr:nth-child(even) .gridjs-td {
+    background-color: var(--color-gray-50) !important;
+}
+
 [data-theme="dark"] .gridjs-wrapper .gridjs-td {
     background-color: var(--surface-card);
     border-bottom: 1px solid var(--border-color-hover) !important;
@@ -1147,13 +1152,18 @@ body,
     border-bottom: none !important;
 }
 
+/* Dark mode zebra striping */
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:nth-child(even) .gridjs-td {
+    background-color: var(--surface-elevated) !important;
+}
+
 /* Hover states */
 .gridjs-wrapper .gridjs-tr:hover .gridjs-td {
-    background-color: var(--color-primary-light) !important;
+    background-color: #dbeafe !important;
 }
 
 [data-theme="dark"] .gridjs-wrapper .gridjs-tr:hover .gridjs-td {
-    background-color: var(--surface-elevated) !important;
+    background-color: rgba(99, 102, 241, 0.2) !important;
 }
 
 /* Grid.js search - Hidden because we use custom search in filter panel */
