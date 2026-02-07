@@ -2897,7 +2897,7 @@ h4, h5, h6 {
 /* Filter content container - hidden by default, shown when expanded */
 .filter-content {
     display: none;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-4);
     align-items: flex-start;
     padding: var(--space-4);
@@ -2913,7 +2913,7 @@ h4, h5, h6 {
 
 /* Filter section styling */
 .filter-section {
-    flex: 1;
+    width: 100%;
     min-width: 200px;
 }
 
@@ -2938,6 +2938,7 @@ h4, h5, h6 {
 
 .sort-section-header .filter-section-label {
     margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .multi-sort-toggle {
@@ -3139,7 +3140,7 @@ h4, h5, h6 {
     }
 }
 
-/* Desktop filter panel behavior - side by side layout */
+/* Desktop filter panel behavior - stacked layout */
 @media (min-width: 769px) {
     /* Show toggle button on desktop - panel is collapsible */
     .filter-toggle-btn {
@@ -3152,6 +3153,7 @@ h4, h5, h6 {
         flex-direction: row;
         flex-wrap: wrap;
         align-items: flex-end;
+        gap: var(--space-4);
         position: static;
         box-shadow: none;
         max-height: none;
@@ -3163,19 +3165,32 @@ h4, h5, h6 {
     }
 
     .filter-section {
-        flex: 0 0 auto;
+        flex: 0 1 auto;
         min-width: unset;
-        width: auto;
     }
 
     .filter-section.search-section {
         flex: 1 1 100%;
-        min-width: 200px;
+        width: 100%;
         max-width: 100%;
     }
 
+    /* Sort and view sections only take the space they need */
+    .filter-section.sort-section {
+        flex: 0 0 auto;
+        min-width: auto;
+        width: auto !important;
+        max-width: fit-content;
+    }
+
+    .filter-section.view-section {
+        flex: 0 0 auto;
+        min-width: auto;
+        width: auto !important;
+    }
+
     .sort-options {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         flex-direction: row;
     }
 

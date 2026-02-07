@@ -157,12 +157,6 @@
 }
 
 /* Integration with existing filter panel */
-.grid-filter-panel .search-section {
-    border-bottom: 1px solid #dee2e6;
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
-}
-
 .grid-filter-panel .search-section:last-child {
     border-bottom: none;
     margin-bottom: 0;

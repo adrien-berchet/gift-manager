@@ -3,12 +3,6 @@
  */
 
 /* Filters section */
-.filters-section {
-    border-top: 1px solid #dee2e6;
-    padding-top: 1rem;
-    margin-top: 1rem;
-}
-
 .filters-section .filter-section-label {
     display: flex;
     align-items: center;
