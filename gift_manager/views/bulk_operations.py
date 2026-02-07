@@ -39,6 +39,16 @@ class BulkOperationView(LoginRequiredMixin, View):
         "gifttag": GiftTag,
     }
 
+    # Map entity types to their UUID lookup field (not the auto-generated PK)
+    ENTITY_UUID_FIELDS = {
+        "person": "person_id",
+        "gift": "gift_id",
+        "event": "event_id",
+        "relation": "relation_id",
+        "persongroup": "group_id",
+        "gifttag": "tag_id",
+    }
+
     def post(self, request: HttpRequest) -> HttpResponse:
         """Handle bulk operation requests."""
         try:
@@ -102,15 +112,18 @@ class BulkOperationView(LoginRequiredMixin, View):
             with transaction.atomic():
                 for entity_id in entity_ids:
                     try:
-                        # Get the object with permission check
+                        # Get the object with permission check (use UUID field, not auto PK)
+                        uuid_field = self.ENTITY_UUID_FIELDS.get(entity_type, model._meta.pk.name)
                         obj = get_object_or_404(
-                            model.objects.filter(shared_with=request.user),
-                            **{model._meta.pk.name: entity_id},
+                            model.objects.accessible_by(request.user),
+                            **{uuid_field: entity_id},
                         )
 
                         # Check if user has at least EDITOR permission
+                        # Creator (user_link) is treated as OWNER
+                        is_creator = hasattr(obj, "user_link") and obj.user_link == request.user
                         permission_level = PermissionService.get_permission(obj, request.user)
-                        if permission_level < PermissionLevel.EDITOR:
+                        if not is_creator and permission_level < PermissionLevel.EDITOR:
                             results["permission_denied"].append(str(entity_id))
                             continue
 
@@ -205,9 +218,12 @@ class BulkDeleteConfirmationView(LoginRequiredMixin, TemplateView):
 
         if model and entity_ids:
             try:
-                # Filter by user permissions
-                queryset = model.objects.filter(shared_with=self.request.user)
-                entities = list(queryset.filter(**{f"{model._meta.pk.name}__in": entity_ids}))
+                # Filter by user permissions (use UUID field, not auto PK)
+                uuid_field = BulkOperationView.ENTITY_UUID_FIELDS.get(
+                    entity_type, model._meta.pk.name
+                )
+                queryset = model.objects.accessible_by(self.request.user)
+                entities = list(queryset.filter(**{f"{uuid_field}__in": entity_ids}))
             except Exception as e:
                 logger.warning("Error fetching entities for bulk delete confirmation: %s", e)
 

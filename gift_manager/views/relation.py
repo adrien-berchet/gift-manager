@@ -11,7 +11,6 @@ from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
 from django.http import HttpResponse
 from django.http import JsonResponse
-from django.template.loader import render_to_string
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
@@ -23,6 +22,7 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -140,6 +140,7 @@ class GiftRelationCreateView(BaseCreateView):
                 ),
             )
             .order_by("complete_name")
+            .distinct()
         )
         form.fields["group"].queryset = PersonGroup.objects.accessible_by(
             self.request.user
@@ -207,7 +208,7 @@ class RelationStatusDetailView(BaseDetailView):
         return context
 
 
-class RelationListView(BaseListView):
+class RelationListView(PermissionContextMixin, BaseListView):
     model = Relation
     template_name = "gift_manager/relation_list.html"
     object_type = "Relations"
@@ -292,6 +293,7 @@ class RelationCreateView(BaseCreateView):
                 ),
             )
             .order_by("complete_name")
+            .distinct()
         )
         form.fields["group"].queryset = PersonGroup.objects.accessible_by(
             self.request.user
@@ -340,6 +342,7 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
                 ),
             )
             .order_by("complete_name")
+            .distinct()
         )
         form.fields["group"].queryset = PersonGroup.objects.accessible_by(
             self.request.user
@@ -422,16 +425,22 @@ def update_relation_status(request):
         relation.status_id = new_status
         relation.save()
 
-        # Return HTML partial for HTMX
-        html = render_to_string(
-            "gift_manager/includes/status_select_partial.html",
-            {
-                "relation_id": relation.relation_id,
-                "current_status": new_status,
-                "relation_statuses": RelationStatus.objects.all(),
-            },
-            request=request,
-        )
+        # Build HTML manually to avoid template recursion issues
+        relation_statuses = RelationStatus.objects.all()
+        options_html = ""
+        for stat in relation_statuses:
+            selected = "selected" if new_status == stat.pk else ""
+            options_html += f'<option value="{stat.pk}" {selected}>{stat.status}</option>'
+
+        html = f"""<form id="status-form-{relation.relation_id}" style="display: inline;">
+            <select class="form-select form-select-sm status-selector"
+                    name="new_status"
+                    data-relation-id="{relation.relation_id}"
+                    data-update-url="{reverse("gift_manager:relation_status_update")}">
+                {options_html}
+            </select>
+        </form>"""
+
         return HttpResponse(html)
 
     except Relation.DoesNotExist:

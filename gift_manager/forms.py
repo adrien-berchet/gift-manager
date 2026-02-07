@@ -505,11 +505,18 @@ class GiftRelationForm(BaseFormMixin, forms.ModelForm):
         self.fields["event"].required = False
 
     def clean(self):
+        """Validate that exactly one of person or group is specified."""
         cleaned_data = super().clean()
-        # Ensure that the group is None
-        self.instance.group = None
+        person = cleaned_data.get("person")
+        group = cleaned_data.get("group")
 
-        # Define the person if the group_id is given
+        # Validate mutual exclusivity
+        if (person is None) == (group is None):
+            raise forms.ValidationError(
+                gettext_lazy("Either a person or a group must be specified but not both.")
+            )
+
+        # Set the gift from the gift_id parameter
         if self.gift_id:
             try:
                 self.instance.gift = Gift.objects.get(gift_id=self.gift_id)
@@ -592,3 +599,17 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
             self.fields.pop("person", None)
         if hide_group:
             self.fields.pop("group", None)
+
+    def clean(self):
+        """Validate that exactly one of person or group is specified."""
+        cleaned_data = super().clean()
+        person = cleaned_data.get("person")
+        group = cleaned_data.get("group")
+
+        # Check if both are None or both are set (XOR logic)
+        if (person is None) == (group is None):
+            raise forms.ValidationError(
+                gettext_lazy("Either a person or a group must be specified but not both.")
+            )
+
+        return cleaned_data

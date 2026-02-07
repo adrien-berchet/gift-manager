@@ -5,8 +5,11 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -16,6 +19,12 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
+        <button type="button"
+                class="btn btn-outline-secondary me-2"
+                id="toggle-selection-relation-grid"
+                title="{% trans 'Select multiple items' %}">
+            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
+        </button>
         <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gifting" %}
         </a>
@@ -31,7 +40,10 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
@@ -40,12 +52,15 @@
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
 
-
+        // Get permission data from template
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
 
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
             [
+                '', // Checkbox column placeholder
                 {% if item.gift__gift_id %}
                 { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
                 {% else %}
@@ -77,6 +92,7 @@
 
         // Define columns
         const columns = [
+            GridUtils.createCheckboxColumn(8),
             {
                 name: '{{ column_names.gift__name|escapejs }}',
                 sort: {
@@ -119,9 +135,9 @@
             {
                 name: '{{ column_names.status__status|escapejs }}',
                 formatter: function (cell, row) {
-                    const statusPk = row.cells[4].data;
-                    const statusLabel = row.cells[5].data;
-                    const relationId = row.cells[7].data;
+                    const statusPk = row.cells[5].data;
+                    const statusLabel = row.cells[6].data;
+                    const relationId = row.cells[8].data;
                     return gridjs.html(`
                         <form id="status-form-${relationId}" style="display: inline;">
                             <select class="form-select form-select-sm status-selector"
@@ -160,20 +176,29 @@
                 name: '{% trans "Actions"|escapejs %}',
                 width: '200px',
                 sort: false,
-                formatter: GridUtils.actionButtonsFormatter({
-                    details: (row) => row.cells[8].data,
-                    edit: (row) => row.cells[9].data,
-                    delete: (row) => row.cells[10].data,
+                formatter: PermissionUtils.permissionAwareActionFormatter({
+                    details: (row) => row.cells[9].data,
+                    edit: (row) => row.cells[10].data,
+                    delete: (row) => row.cells[11].data,
                     share: () => "{% url 'gift_manager:share_objects' %}"
-                }, ['details', 'edit', 'delete', 'share'])
+                }, ['details', 'edit', 'delete', 'share'], {
+                    idResolver: (row) => row.cells[8].data  // relation_id
+                }, userPermissions)
             }
         ];
+
+        // Track if inline editing has been initialized
+        const editState = { inlineEditingInitialized: false };
+        const inlineEditingMapping = {
+            4: 'comment',
+            7: 'due_date'
+        };
 
         // Initialize Grid.js
         const grid = GridUtils.initGrid('relation-grid', columns, data, {
             pagination: {
                 enabled: true,
-                limit: 10
+                limit: GridUtils.calculateOptimalPageSize('relation-grid')
             },
             sort: {
                 multiColumn: true,
@@ -182,7 +207,36 @@
         });
 
         // Add list update event listener using GridUtils
-        GridUtils.addListUpdateListener(grid, 'Relation', 5);
+        GridUtils.addListUpdateListener(grid, 'Relation', 6);
+
+        // Initialize inline editing after grid is ready
+        setTimeout(() => {
+            if (!editState.inlineEditingInitialized && window.InlineEditing) {
+                try {
+                    GridUtils.addEntityDataAttributes('relation-grid', 'relation', data, 8);
+                    GridUtils.injectSelectAllCheckbox('relation-grid');
+                    window.InlineEditing.init('relation-grid', 'relation', inlineEditingMapping);
+                    editState.inlineEditingInitialized = true;
+                } catch (error) {
+                    console.error('[RelationList] Error initializing inline editing:', error);
+                }
+            }
+        }, 500);
+
+        // Initialize bulk operations
+        GridUtils.initBulkOperations('relation-grid', 'relation');
+
+        // Recalculate page size on window resize
+        GridUtils.enableDynamicPageSize(grid);
+
+        // Setup grid refresh handler for select-all and data attributes
+        GridUtils.setupGridRefreshHandler('relation-grid', 'Relation', data, 8);
+
+        // Enable expandable rows
+        GridUtils.enableExpandableRows('relation-grid', grid, {
+            detailUrlTemplate: "/en/relations/{id}/",
+            expandButtonColumn: 'actions'
+        });
 
         // Initialize filter panel
         FilterPanel.init('relation-grid', grid, columns);
@@ -249,7 +303,6 @@
             }
         });
 
-        // Trigger initial sort on status column to make Grid.js aware of the sort
         // Trigger initial sort: Status (5) then Family Name (2) then Gift (1)
         setTimeout(() => {
             const statusHeader = document.querySelector('#relation-grid th:nth-child(5)');

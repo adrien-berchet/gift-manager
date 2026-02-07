@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">{# Permission-based UI styles #}>
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -40,7 +40,7 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-<script src="{% static 'gift_manager/permission-utils.js' %}"></script>{# Permission-aware UI utilities #}
+<script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
 <script src="{% static 'gift_manager/inline-editing.js' %}"></script>
 <script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
@@ -53,7 +53,6 @@
         // Get permission data from template (stored globally for refresh updates)
         window.userPermissions = {{ user_permissions_json|safe }};
         const userPermissions = window.userPermissions;
-        console.log('[GiftList] User permissions:', userPermissions);
 
         // Prepare data for Grid.js
         // Include placeholder (empty string) for checkbox column as first element
@@ -79,23 +78,7 @@
 
     // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
-        {
-            id: 'checkbox',
-            name: '', // Empty name for checkbox column
-            width: '50px',
-            sort: false,
-            formatter: (cell, row) => {
-                // Get gift_id from row data (now at index 4 due to checkbox column)
-                const giftId = row.cells[4].data;
-                return gridjs.html(`
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input bulk-select-item"
-                               value="${giftId}"
-                               data-entity-id="${giftId}">
-                    </div>
-                `);
-            }
-        },
+        GridUtils.createCheckboxColumn(4),
         {
             id: 'name',
             name: '{{ column_names.name|escapejs }}',
@@ -126,140 +109,58 @@
             width: '200px',
             sort: false,
             formatter: PermissionUtils.permissionAwareActionFormatter({
-                give: (row) => row.cells[5].data,      // Updated from 4
-                details: (row) => row.cells[6].data,   // Updated from 5
-                edit: (row) => row.cells[7].data,      // Updated from 6
-                delete: (row) => row.cells[8].data,    // Updated from 7
+                give: (row) => row.cells[5].data,
+                details: (row) => row.cells[6].data,
+                edit: (row) => row.cells[7].data,
+                delete: (row) => row.cells[8].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
             }, ['give', 'details', 'edit', 'delete', 'share'], {
-                idResolver: (row) => row.cells[4].data  // Updated from 3 - gift_id is now at index 4
+                idResolver: (row) => row.cells[4].data
             }, userPermissions)
         }
     ];
 
     // Track if inline editing has been initialized to prevent re-initialization
-    let inlineEditingInitialized = false;
+    const editState = { inlineEditingInitialized: false };
+    const inlineEditingMapping = { 1: 'name', 2: 'comment' };
 
     // Initialize Grid.js with inline editing
     const grid = GridUtils.initGrid('gift-grid', columns, data, {
         pagination: {
             enabled: true,
-            limit: 10
+            limit: GridUtils.calculateOptimalPageSize('gift-grid')
         }
     }, function() {
-        // Grid ready callback - ensure inline editing is initialized
-        addGiftIdDataAttributes();
-
-        // Add select-all checkbox to the first header cell
-        const gridContainer = document.getElementById('gift-grid');
-        const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
-        if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
-            firstHeaderCell.innerHTML = `
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input bulk-select-all"
-                           id="bulk-select-all-gift-grid">
-                </div>
-            `;
-            console.log('[GiftList] Select-all checkbox added to header');
-        }
+        // Grid ready callback
+        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
+        GridUtils.injectSelectAllCheckbox('gift-grid');
 
         // Only initialize inline editing once during initial page load
-        // Do NOT re-initialize on every grid refresh as it can interfere with checkboxes
-        if (!inlineEditingInitialized && window.InlineEditing) {
+        if (!editState.inlineEditingInitialized && window.InlineEditing) {
             try {
-                window.InlineEditing.init('gift-grid', 'gift', {
-                    1: 'name',      // Updated from 0
-                    2: 'comment'    // Updated from 1
-                });
-                inlineEditingInitialized = true;
-                console.log('[GiftList] Inline editing initialized');
+                window.InlineEditing.init('gift-grid', 'gift', inlineEditingMapping);
+                editState.inlineEditingInitialized = true;
             } catch (error) {
                 console.error('[GiftList] Error initializing inline editing:', error);
             }
-        } else if (!inlineEditingInitialized) {
-            console.warn('[GiftList] InlineEditing not available');
         }
     }, {
         entityType: 'gift',
-        columnMapping: {
-            1: 'name',      // Updated from 0
-            2: 'comment'    // Updated from 1
-        }
+        columnMapping: inlineEditingMapping
     });
 
     // Add list update event listener using GridUtils
     GridUtils.addListUpdateListener(grid, 'Gift', 4, function() {
-        // Post-update callback: re-add data attributes
-        addGiftIdDataAttributes();
+        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
     });
 
-    // Listen for grid:refreshed event to re-add select-all checkbox
-    document.addEventListener('grid:refreshed', (event) => {
-        if (event.detail?.containerId !== 'gift-grid') return;
-
-        // Re-add select-all checkbox to header after grid refresh
-        const gridContainer = document.getElementById('gift-grid');
-        const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
-        if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
-            firstHeaderCell.innerHTML = `
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input bulk-select-all"
-                           id="bulk-select-all-gift-grid">
-                </div>
-            `;
-            console.log('[GiftList] Select-all checkbox re-added to header after refresh');
-
-            // Re-bind events if in selection mode
-            if (window.BulkOperations && window.BulkOperations.state?.selectionModeActive) {
-                window.BulkOperations.bindCheckboxEvents();
-            }
-        }
-    });
-
-    // Function to add gift ID data attributes to rows
-    function addGiftIdDataAttributes() {
-        const gridContainer = document.getElementById('gift-grid');
-        if (!gridContainer) return;
-
-        const rows = gridContainer.querySelectorAll('tbody tr');
-
-        rows.forEach((row, index) => {
-            if (data[index] && data[index][4]) { // Updated from [3] - gift_id is now at index 4
-                const giftId = data[index][4];   // Updated from [3]
-                row.setAttribute('data-entity-id', giftId);
-                row.setAttribute('data-gift-id', giftId);
-            }
-        });
-    }
+    // Setup grid refresh handler for select-all and data attributes
+    GridUtils.setupGridRefreshHandler('gift-grid', 'Gift', data, 4);
 
     // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
-    setTimeout(() => {
-        // Only run fallback if inline editing hasn't been initialized yet
-        if (!inlineEditingInitialized) {
-            const gridContainer = document.getElementById('gift-grid');
-            const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
-
-            if (editableCells.length === 0) {
-                // Add data attributes first
-                addGiftIdDataAttributes();
-
-                if (window.InlineEditing) {
-                    try {
-                        window.InlineEditing.init('gift-grid', 'gift', {
-                            1: 'name',      // Updated from 0
-                            2: 'comment'    // Updated from 1
-                        });
-                        inlineEditingInitialized = true;
-                        console.log('[GiftList] Inline editing initialized (fallback)');
-                    } catch (error) {
-                        console.error('[GiftList] Error in manual inline editing initialization:', error);
-                    }
-                }
-            }
-        } else {
-            console.log('[GiftList] Inline editing already initialized, skipping fallback');
-        }
-    }, 1000);
+    GridUtils.setupInlineEditingFallback('gift-grid', 'gift', inlineEditingMapping, editState, function() {
+        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
+    });
 
     // Initialize filter panel
     FilterPanel.init('gift-grid', grid, columns);
@@ -275,13 +176,10 @@
     }
 
     // Initialize bulk operations
-    if (window.BulkOperations) {
-        BulkOperations.init('gift-grid', 'gift', {
-            enableSelectAll: true,
-            enableBulkDelete: true,
-            enableBulkShare: true
-        });
-    }
+    GridUtils.initBulkOperations('gift-grid', 'gift');
+
+    // Recalculate page size on window resize
+    GridUtils.enableDynamicPageSize(grid);
 
     // Trigger initial sort on first column to make Grid.js aware of the sort
     setTimeout(() => {

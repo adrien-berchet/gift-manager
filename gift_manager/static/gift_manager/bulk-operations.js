@@ -197,6 +197,7 @@
                     });
                 } else {
                     console.warn('[BulkOperations] No baseline widths available, cannot preserve Actions width');
+                    this.state.capturedColumnWidths = {};
                 }
 
                 // STEP 2: Show the checkbox column WITHOUT enforcing widths yet
@@ -631,7 +632,8 @@
          */
         handleBulkDelete(selectedIds) {
             // Load bulk delete confirmation modal via HTMX
-            const confirmationUrl = `/api/bulk-delete-confirmation/?entity_type=${this.state.currentEntityType}&entity_ids=${selectedIds.join(',')}`;
+            const langPrefix = this.getLanguagePrefix();
+            const confirmationUrl = `${langPrefix}/api/bulk-delete-confirmation/?entity_type=${this.state.currentEntityType}&entity_ids=${selectedIds.join(',')}`;
 
             fetch(confirmationUrl, {
                 headers: {
@@ -701,7 +703,8 @@
 
             try {
                 // Send bulk delete request
-                const response = await fetch('/api/bulk-operations/', {
+                const langPrefix = this.getLanguagePrefix();
+                const response = await fetch(`${langPrefix}/api/bulk-operations/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -835,7 +838,8 @@
          */
         handleBulkShare(selectedIds) {
             // For now, redirect to the share page with selected IDs
-            const shareUrl = `/share/?entity_type=${this.state.currentEntityType}&ids=${selectedIds.join(',')}`;
+            const langPrefix = this.getLanguagePrefix();
+            const shareUrl = `${langPrefix}/share/?entity_type=${this.state.currentEntityType}&ids=${selectedIds.join(',')}`;
             window.location.href = shareUrl;
         },
 
@@ -921,20 +925,29 @@
          * Utility functions
          */
         getEntityDeleteUrl(entityId) {
+            const langPrefix = this.getLanguagePrefix();
             const entityType = this.state.currentEntityType;
             const urlMap = {
-                'person': `/persons/${entityId}/delete/`,
-                'gift': `/gifts/${entityId}/delete/`,
-                'event': `/events/${entityId}/delete/`,
-                'relation': `/relations/${entityId}/delete/`,
-                'persongroup': `/person-groups/${entityId}/delete/`,
-                'gifttag': `/gift-tags/${entityId}/delete/`
+                'person': `${langPrefix}/persons/${entityId}/delete/`,
+                'gift': `${langPrefix}/gifts/${entityId}/delete/`,
+                'event': `${langPrefix}/events/${entityId}/delete/`,
+                'relation': `${langPrefix}/relations/${entityId}/delete/`,
+                'persongroup': `${langPrefix}/person-groups/${entityId}/delete/`,
+                'gifttag': `${langPrefix}/gift-tags/${entityId}/delete/`
             };
-            return urlMap[entityType] || `/${entityType}s/${entityId}/delete/`;
+            return urlMap[entityType] || `${langPrefix}/${entityType}s/${entityId}/delete/`;
+        },
+
+        getLanguagePrefix() {
+            const match = window.location.pathname.match(/^\/([a-z]{2})\//);
+            return match ? `/${match[1]}` : '';
         },
 
         getCSRFToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+            // Prefer cookie token (always in sync with session) over form tokens
+            // which may be from stale/mismatched form contexts
+            return document.cookie.split('; ').find(c => c.startsWith('csrftoken='))?.split('=')[1] ||
+                   document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
                    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         },
 

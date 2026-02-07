@@ -1097,15 +1097,22 @@ class Relation(models.Model):
         return f"{self.person} - {self.gift} ({self.status})"
 
     def save(self, *args, **kwargs):
-        """Override save to ensure validation."""
-        self.clean()
+        """Override save method.
+
+        Note: Validation is handled at the form level to avoid recursion issues
+        when updating existing instances.
+        """
         super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:person_edit", kwargs={"pk": self.pk})
 
     def clean(self):
-        """Ensure that at least person or group is set."""
+        """Ensure that exactly one of person or group is set.
+
+        This is primarily used for form validation. For model-level validation,
+        forms should call this explicitly.
+        """
         if (self.person is None) == (self.group is None):
             raise ValidationError(
                 gettext_lazy("Either a person or a group must be specified but not both.")

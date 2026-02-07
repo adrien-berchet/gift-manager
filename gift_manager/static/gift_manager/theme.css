@@ -181,23 +181,23 @@
     --navbar-border: #475569;
 }
 
-/* Dark mode link colors - high contrast */
-[data-theme="dark"] a {
+/* Dark mode link colors - high contrast (exclude buttons) */
+[data-theme="dark"] a:not(.btn) {
     color: #93c5fd;
 }
 
-[data-theme="dark"] a:hover {
+[data-theme="dark"] a:not(.btn):hover {
     color: #bfdbfe;
 }
 
-/* Dark mode links in cards and tables */
-[data-theme="dark"] .card a,
-[data-theme="dark"] .gridjs-td a {
+/* Dark mode links in cards and tables (exclude buttons) */
+[data-theme="dark"] .card a:not(.btn),
+[data-theme="dark"] .gridjs-td a:not(.btn) {
     color: #93c5fd;
 }
 
-[data-theme="dark"] .card a:hover,
-[data-theme="dark"] .gridjs-td a:hover {
+[data-theme="dark"] .card a:not(.btn):hover,
+[data-theme="dark"] .gridjs-td a:not(.btn):hover {
     color: #bfdbfe;
 }
 
@@ -259,6 +259,57 @@
 
 [data-theme="dark"] .btn-info:hover {
     background-color: #0ea5e9;
+    color: #ffffff;
+}
+
+/* Dark mode quick action buttons in grids - override variable-based styles from modern-ux.css */
+[data-theme="dark"] .quick-action-btn.btn-primary {
+    background-color: #6366f1;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-primary:hover {
+    background-color: #818cf8;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-info {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-info:hover {
+    background-color: #0ea5e9;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-warning {
+    background-color: #d97706;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-warning:hover {
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-danger {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-danger:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-success {
+    background-color: #059669;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-success:hover {
+    background-color: #10b981;
     color: #ffffff;
 }
 
@@ -993,11 +1044,11 @@ body,
 
 [data-theme="dark"] .gridjs-wrapper {
     background-color: var(--surface-card);
+    border-color: var(--border-color-hover);
 }
 
 .gridjs-table {
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     background-color: var(--surface-card);
 }
 
@@ -1030,14 +1081,30 @@ body,
     font-size: var(--text-xs);
     letter-spacing: 0.05em;
     padding: var(--space-4) !important;
-    border-bottom: 2px solid var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color) !important;
     border-right: 1px solid var(--border-color) !important;
+    border-left: none !important;
+    border-top: none !important;
+}
+
+.gridjs-wrapper .gridjs-th:first-child {
+    border-left: none !important;
+}
+
+.gridjs-wrapper .gridjs-th:last-child {
+    border-right: none !important;
 }
 
 [data-theme="dark"] .gridjs-wrapper .gridjs-th {
     background-color: var(--surface-elevated) !important;
-    border-bottom-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color-hover) !important;
+    border-right: 1px solid var(--border-color-hover) !important;
+    border-left: none !important;
+    border-top: none !important;
+}
+
+[data-theme="dark"] .gridjs-wrapper .gridjs-th:last-child {
+    border-right: none !important;
 }
 
 /* Grid.js table cells */
@@ -1045,14 +1112,39 @@ body,
     padding: var(--space-4) !important;
     border-bottom: 1px solid var(--border-color) !important;
     border-right: 1px solid var(--border-color) !important;
+    border-left: none !important;
+    border-top: none !important;
     color: var(--text-primary);
     background-color: var(--surface-card);
 }
 
+.gridjs-wrapper .gridjs-td:first-child {
+    border-left: none !important;
+}
+
+.gridjs-wrapper .gridjs-td:last-child {
+    border-right: none !important;
+}
+
+/* Remove bottom border on last row to avoid doubling with wrapper border */
+.gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+    border-bottom: none !important;
+}
+
 [data-theme="dark"] .gridjs-wrapper .gridjs-td {
     background-color: var(--surface-card);
-    border-bottom-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
+    border-bottom: 1px solid var(--border-color-hover) !important;
+    border-right: 1px solid var(--border-color-hover) !important;
+    border-left: none !important;
+    border-top: none !important;
+}
+
+[data-theme="dark"] .gridjs-wrapper .gridjs-td:last-child {
+    border-right: none !important;
+}
+
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+    border-bottom: none !important;
 }
 
 /* Hover states */

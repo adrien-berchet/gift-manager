@@ -374,10 +374,6 @@
 </head>
 
 <body>
-    <!-- Skip Links for Accessibility -->
-    <a href="#main-content" class="skip-link">{% trans "Skip to main content" %}</a>
-    <a href="#navigation" class="skip-link">{% trans "Skip to navigation" %}</a>
-
     <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
@@ -1114,71 +1110,8 @@
             });
 
 
-            // Helper function to dispatch HX-Trigger events on document
-            function dispatchTriggerEvents(triggerHeader) {
-                if (!triggerHeader) return;
-
-                console.log('[HTMX] Dispatching HX-Trigger events:', triggerHeader);
-
-                // Parse trigger header (can be comma-separated list or JSON)
-                try {
-                    // Try parsing as JSON first (for events with data)
-                    const triggerData = JSON.parse(triggerHeader);
-                    Object.keys(triggerData).forEach(eventName => {
-                        console.log('[HTMX] Dispatching event from JSON:', eventName);
-                        document.dispatchEvent(new CustomEvent(eventName, {
-                            bubbles: true,
-                            detail: triggerData[eventName]
-                        }));
-                    });
-                } catch (jsonError) {
-                    // Not JSON, parse as comma-separated list
-                    const events = triggerHeader.split(',').map(s => s.trim());
-                    events.forEach(eventName => {
-                        if (eventName) {
-                            console.log('[HTMX] Dispatching event from list:', eventName);
-                            document.dispatchEvent(new CustomEvent(eventName, {
-                                bubbles: true
-                            }));
-                        }
-                    });
-                }
-            }
-
-            // Listen to htmx:beforeSwap to capture HX-Trigger header before element is removed
-            document.body.addEventListener('htmx:beforeSwap', function(e) {
-                console.log('[HTMX] htmx:beforeSwap triggered');
-                const xhr = e.detail.xhr;
-
-                if (xhr) {
-                    // Try to get HX-Trigger header
-                    let triggerHeader = null;
-                    try {
-                        if (xhr.getResponseHeader) {
-                            triggerHeader = xhr.getResponseHeader('HX-Trigger');
-                        }
-                    } catch (err) {
-                        console.log('[HTMX] Could not get header:', err);
-                    }
-
-                    // Store in a global for afterSettle
-                    if (triggerHeader) {
-                        console.log('[HTMX] Found HX-Trigger header in beforeSwap:', triggerHeader);
-                        window._pendingHtmxTriggers = triggerHeader;
-                    }
-                }
-            });
-
-            // Dispatch events after settle to ensure DOM is stable
-            document.body.addEventListener('htmx:afterSettle', function(e) {
-                console.log('[HTMX] htmx:afterSettle triggered');
-                if (window._pendingHtmxTriggers) {
-                    const triggers = window._pendingHtmxTriggers;
-                    window._pendingHtmxTriggers = null;
-                    // Use setTimeout to ensure we're outside the HTMX event cycle
-                    setTimeout(() => dispatchTriggerEvents(triggers), 0);
-                }
-            });
+            // HTMX natively processes HX-Trigger headers and dispatches events.
+            // No custom beforeSwap/afterSettle dispatch needed.
 
             // Initialize tooltips for quick action buttons
             function initializeTooltips() {

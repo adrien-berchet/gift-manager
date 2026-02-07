@@ -7,6 +7,23 @@
 (function (window) {
     'use strict';
 
+    // Inject CSS for Grid.js overrides
+    (function () {
+        const style = document.createElement('style');
+        style.textContent =
+            // Hide sort controls on non-sortable columns (checkbox, actions)
+            // Grid.js doesn't properly respect per-column sort: false
+            '.gridjs-th-content:empty + .gridjs-sort,' +
+            '.gridjs-th:has(.bulk-select-all) .gridjs-sort { display: none !important; }' +
+            '.gridjs-th-content:empty { cursor: default; }' +
+            '.gridjs-th:has(.bulk-select-all) { cursor: default; }' +
+            // Hide pagination footer when container has gridjs-hide-footer class.
+            // Class is on the outer container (not the footer) so it persists
+            // across Grid.js re-renders that replace the footer DOM element.
+            '.gridjs-hide-footer .gridjs-footer { display: none !important; }';
+        document.head.appendChild(style);
+    })();
+
     /**
      * Get translations for Grid.js from Django's i18n
      */
@@ -255,24 +272,51 @@
                 });
             }
 
+            // Remove sort controls from columns with sort: false
+            // Grid.js doesn't properly respect per-column sort: false
+            grid.on('ready', () => {
+                const visibleColumns = columns.filter(col => !col.hidden);
+                const headerCells = container.querySelectorAll('thead tr th');
+                visibleColumns.forEach((col, index) => {
+                    if (col.sort === false && headerCells[index]) {
+                        const sortBtn = headerCells[index].querySelector('.gridjs-sort');
+                        if (sortBtn) sortBtn.remove();
+                        headerCells[index].classList.remove('gridjs-th-sort');
+                    }
+                });
+            });
+
             grid.render(container);
 
-            // Hide pagination footer if only one page
-            // Use a longer timeout to ensure Grid.js has fully rendered
-            const paginationLimit = config.pagination && config.pagination.limit ? config.pagination.limit : 10;
-            const totalRows = data.length;
-
-            if (config.pagination && config.pagination.enabled && totalRows <= paginationLimit) {
-                setTimeout(function() {
-                    const container = document.getElementById(containerId);
-                    const footer = container ? container.querySelector('.gridjs-footer') : null;
-                    if (footer) {
-                        // Add a class to hide the footer permanently
-                        footer.classList.add('gridjs-footer-hidden');
-                        // Also set inline style with !important via cssText
-                        footer.style.cssText = 'display: none !important;';
+            // If the grid has a checkbox column, set up persistent select-all injection
+            // Uses MutationObserver to survive Grid.js re-renders (sort, pagination)
+            var hasCheckboxColumn = columns.some(function(col) { return col.id === 'checkbox'; });
+            if (hasCheckboxColumn) {
+                var checkboxHtml =
+                    '<div class="form-check">' +
+                    '<input type="checkbox" class="form-check-input bulk-select-all"' +
+                    ' id="bulk-select-all-' + containerId + '">' +
+                    '</div>';
+                var injectCheckbox = function() {
+                    var th = container.querySelector('thead tr th:first-child');
+                    if (th && !th.querySelector('.bulk-select-all')) {
+                        th.innerHTML = checkboxHtml;
                     }
-                }, 100);
+                };
+                // Initial injection after Grid.js renders
+                setTimeout(injectCheckbox, 50);
+                // Re-inject on every Grid.js re-render via MutationObserver
+                new MutationObserver(injectCheckbox).observe(container, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+
+            // Hide pagination footer if only one page
+            // Apply class to the container (not the footer) so it persists across Grid.js re-renders
+            const paginationLimit = config.pagination && config.pagination.limit ? config.pagination.limit : 10;
+            if (config.pagination && config.pagination.enabled && data.length <= paginationLimit) {
+                document.getElementById(containerId).classList.add('gridjs-hide-footer');
             }
 
             return grid;
@@ -786,11 +830,11 @@
                     if (gridContainer) {
                         waitForGridRenderComplete(gridContainer, () => {
                             console.log(`[${entityType}List] Grid rendering complete, emitting grid:refreshed event`);
-                            console.log(`[${entityType}List] Emitting grid:refreshed event with containerId:`, grid._containerId);
                             document.dispatchEvent(new CustomEvent('grid:refreshed', {
                                 detail: { containerId: grid._containerId, entityType: entityType }
                             }));
-                            console.log(`[${entityType}List] grid:refreshed event emitted`);
+                            // Update pagination footer after DOM is fully rendered
+                            updatePaginationVisibility(grid, extractedData.length);
                         });
                     } else {
                         console.warn(`[${entityType}List] Grid container not found, cannot wait for render completion`);
@@ -800,9 +844,6 @@
                     if (window.data !== undefined) {
                         window.data = extractedData;
                     }
-
-                    // Show/hide pagination footer based on data length
-                    updatePaginationVisibility(grid, extractedData.length);
 
                     // After grid renders, update UI based on permissions
                     // This ensures buttons are enabled/disabled correctly after refresh
@@ -1012,24 +1053,15 @@
         const paginationConfig = grid.config.pagination;
         if (paginationConfig && paginationConfig.enabled) {
             const paginationLimit = paginationConfig.limit || 10;
-
-            setTimeout(function() {
-                const containers = document.querySelectorAll('.gridjs-wrapper');
-                for (const container of containers) {
-                    const footer = container.querySelector('.gridjs-footer');
-                    if (footer) {
-                        if (dataLength <= paginationLimit) {
-                            // Hide footer if only one page
-                            footer.classList.add('gridjs-footer-hidden');
-                            footer.style.cssText = 'display: none !important;';
-                        } else {
-                            // Show footer if multiple pages
-                            footer.classList.remove('gridjs-footer-hidden');
-                            footer.style.cssText = '';
-                        }
-                    }
+            const containerId = grid._containerId;
+            const container = containerId ? document.getElementById(containerId) : null;
+            if (container) {
+                if (dataLength <= paginationLimit) {
+                    container.classList.add('gridjs-hide-footer');
+                } else {
+                    container.classList.remove('gridjs-hide-footer');
                 }
-            }, 100);
+            }
         }
     }
 
@@ -1140,6 +1172,8 @@
                     document.dispatchEvent(new CustomEvent('grid:refreshed', {
                         detail: { containerId: gridInstance._containerId, entityType: entityType }
                     }));
+                    // Update pagination footer after DOM is fully rendered
+                    updatePaginationVisibility(gridInstance, newData.length);
                 });
             } else {
                 console.warn(`[${entityType}List] Grid container not found after delete, cannot wait for render completion`);
@@ -1150,34 +1184,11 @@
                 window.data = newData;
             }
 
-            // Hide pagination footer if only one page after update
-            const paginationConfig = gridInstance.config.pagination;
-            if (paginationConfig && paginationConfig.enabled) {
-                const paginationLimit = paginationConfig.limit || 10;
-                const totalRows = newData.length;
-
-                if (totalRows <= paginationLimit) {
-                    setTimeout(function() {
-                        // Find the grid container by looking for the grid instance's container
-                        const containers = document.querySelectorAll('.gridjs-wrapper');
-                        for (const container of containers) {
-                            const footer = container.querySelector('.gridjs-footer');
-                            if (footer) {
-                                // Add a class to hide the footer permanently
-                                footer.classList.add('gridjs-footer-hidden');
-                                // Also set inline style with !important via cssText
-                                footer.style.cssText = 'display: none !important;';
-                            }
-                        }
-                    }, 100);
-                }
-            }
-
             // Run post-update callback if provided
             if (postUpdateCallback && typeof postUpdateCallback === 'function') {
                 setTimeout(() => {
                     postUpdateCallback();
-                }, 150); // Slightly longer delay to ensure footer hiding runs first
+                }, 150);
             }
 
             // Reset all delete button states after grid update
@@ -1191,6 +1202,232 @@
             // Fallback to page reload if item not found
             setTimeout(() => window.location.reload(), 500);
         }
+    }
+
+    // =========================================================================
+    // Shared List Template Helpers
+    // Reusable functions to reduce code duplication across list templates
+    // =========================================================================
+
+    /**
+     * Create a checkbox column definition for bulk operations
+     * @param {number} entityIdIndex - The column index where the entity ID is stored
+     * @returns {Object} Column definition object for Grid.js
+     */
+    function createCheckboxColumn(entityIdIndex) {
+        return {
+            id: 'checkbox',
+            name: '',
+            width: '50px',
+            sort: false,
+            formatter: (cell, row) => {
+                const entityId = row.cells[entityIdIndex].data;
+                return gridjs.html(`
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input bulk-select-item"
+                               value="${entityId}"
+                               data-entity-id="${entityId}">
+                    </div>
+                `);
+            }
+        };
+    }
+
+    /**
+     * Inject a select-all checkbox into the first header cell of a grid.
+     * @param {string} gridId - The grid container ID
+     * @returns {boolean} True if checkbox was added
+     */
+    function injectSelectAllCheckbox(gridId) {
+        const gridContainer = document.getElementById(gridId);
+        const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
+        if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+            firstHeaderCell.innerHTML =
+                '<div class="form-check">' +
+                '<input type="checkbox" class="form-check-input bulk-select-all"' +
+                ' id="bulk-select-all-' + gridId + '">' +
+                '</div>';
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Add entity ID data attributes to grid rows
+     * @param {string} gridId - The grid container ID
+     * @param {string} entityType - The entity type name (e.g., 'person', 'gift')
+     * @param {Array} data - The grid data array
+     * @param {number} idColumnIndex - The column index where the entity ID is stored
+     */
+    function addEntityDataAttributes(gridId, entityType, data, idColumnIndex) {
+        const gridContainer = document.getElementById(gridId);
+        if (!gridContainer) return;
+
+        const rows = gridContainer.querySelectorAll('tbody tr');
+        rows.forEach((row, index) => {
+            if (data[index] && data[index][idColumnIndex]) {
+                const entityId = data[index][idColumnIndex];
+                row.setAttribute('data-entity-id', entityId);
+                row.setAttribute(`data-${entityType}-id`, entityId);
+            }
+        });
+    }
+
+    /**
+     * Setup a grid:refreshed event listener that re-injects select-all checkbox,
+     * re-adds entity data attributes, and re-binds bulk operations if active
+     * @param {string} gridId - The grid container ID
+     * @param {string} entityType - The entity type name (capitalized, e.g., 'Event')
+     * @param {Array} data - The grid data array
+     * @param {number} idColumnIndex - The column index where the entity ID is stored
+     */
+    function setupGridRefreshHandler(gridId, entityType, data, idColumnIndex) {
+        document.addEventListener('grid:refreshed', (event) => {
+            if (event.detail?.containerId !== gridId) return;
+
+            if (injectSelectAllCheckbox(gridId)) {
+                console.log(`[${entityType}List] Select-all checkbox re-added after refresh`);
+            }
+
+            addEntityDataAttributes(gridId, entityType.toLowerCase(), data, idColumnIndex);
+
+            if (window.BulkOperations && window.BulkOperations.state?.selectionModeActive) {
+                window.BulkOperations.bindCheckboxEvents();
+            }
+        });
+    }
+
+    /**
+     * Setup inline editing with a fallback timeout in case the grid ready event doesn't fire
+     * @param {string} gridId - The grid container ID
+     * @param {string} entityType - The entity type name (e.g., 'event')
+     * @param {Object} columnMapping - Mapping of column indices to field names
+     * @param {Object} state - State object with inlineEditingInitialized flag
+     * @param {Function} [addDataAttributesFn] - Optional function to add entity data attributes
+     */
+    function setupInlineEditingFallback(gridId, entityType, columnMapping, state, addDataAttributesFn) {
+        setTimeout(() => {
+            if (!state.inlineEditingInitialized) {
+                const gridContainer = document.getElementById(gridId);
+                const editableCells = gridContainer ? gridContainer.querySelectorAll('.inline-editable') : [];
+
+                if (editableCells.length === 0) {
+                    if (addDataAttributesFn) addDataAttributesFn();
+
+                    if (window.InlineEditing) {
+                        try {
+                            window.InlineEditing.init(gridId, entityType, columnMapping);
+                            state.inlineEditingInitialized = true;
+                            console.log(`[${entityType}List] Inline editing initialized (fallback)`);
+                        } catch (error) {
+                            console.error(`[${entityType}List] Error in fallback inline editing:`, error);
+                        }
+                    }
+                }
+            }
+        }, 1000);
+    }
+
+    /**
+     * Initialize bulk operations for a grid if available
+     * @param {string} gridId - The grid container ID
+     * @param {string} entityType - The entity type name (e.g., 'event')
+     * @param {Object} [options] - Bulk operations options overrides
+     */
+    function initBulkOperations(gridId, entityType, options) {
+        if (window.BulkOperations) {
+            BulkOperations.init(gridId, entityType, Object.assign({
+                enableSelectAll: true,
+                enableBulkDelete: true,
+                enableBulkShare: true
+            }, options || {}));
+        }
+    }
+
+    /**
+     * Calculate the optimal number of rows per page based on available viewport height.
+     * Measures the space between the grid container's top and the viewport bottom,
+     * then divides by estimated row height.
+     *
+     * @param {string} containerId - The grid container element ID
+     * @param {Object} [options] - Configuration options
+     * @param {number} [options.minRows=5] - Minimum rows per page
+     * @param {number} [options.maxRows=50] - Maximum rows per page
+     * @param {number} [options.rowHeight=65] - Estimated height per row in pixels
+     * @param {number} [options.headerHeight=57] - Grid header (thead) height
+     * @param {number} [options.footerHeight=125] - Grid footer (pagination) height
+     * @param {number} [options.buffer=20] - Extra buffer (scrollbar, borders)
+     * @returns {number} Optimal page size
+     */
+    function calculateOptimalPageSize(containerId, options) {
+        var opts = Object.assign({
+            minRows: 5,
+            maxRows: 50,
+            rowHeight: 65,
+            headerHeight: 57,
+            footerHeight: 125,
+            buffer: 20
+        }, options || {});
+
+        var container = document.getElementById(containerId);
+        if (!container) return 10;
+
+        var containerTop = container.getBoundingClientRect().top;
+
+        // Account for fixed-top navbar if body padding hasn't been applied yet
+        // (script may run before DOMContentLoaded when adjustBodyPadding fires)
+        var navbar = document.querySelector('.navbar.fixed-top');
+        if (navbar) {
+            var navbarHeight = navbar.offsetHeight;
+            var bodyPadding = parseFloat(window.getComputedStyle(document.body).paddingTop) || 0;
+            if (bodyPadding < navbarHeight) {
+                containerTop += (navbarHeight - bodyPadding);
+            }
+        }
+
+        var viewportHeight = window.innerHeight;
+        var availableHeight = viewportHeight - containerTop - opts.headerHeight - opts.footerHeight - opts.buffer;
+
+        var optimalRows = Math.floor(availableHeight / opts.rowHeight);
+        return Math.max(opts.minRows, Math.min(opts.maxRows, optimalRows));
+    }
+
+    /**
+     * Enable dynamic page size adjustment on window resize.
+     * Recalculates optimal page size and updates the grid with a debounced handler.
+     *
+     * @param {Object} grid - The Grid.js instance
+     * @param {Object} [options] - Options passed to calculateOptimalPageSize
+     */
+    function enableDynamicPageSize(grid, options) {
+        var resizeTimeout = null;
+        var containerId = grid._containerId;
+        if (!containerId) return;
+
+        window.addEventListener('resize', function () {
+            if (resizeTimeout) clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function () {
+                var newLimit = calculateOptimalPageSize(containerId, options);
+                var currentLimit = (grid.config.pagination && grid.config.pagination.limit) || 10;
+
+                if (newLimit !== currentLimit) {
+                    grid.updateConfig({
+                        pagination: { enabled: true, limit: newLimit }
+                    }).forceRender();
+
+                    var container = document.getElementById(containerId);
+                    if (container) {
+                        waitForGridRenderComplete(container, function () {
+                            var dataLength = Array.isArray(grid.config.data) ? grid.config.data.length : 0;
+                            updatePaginationVisibility(grid, dataLength);
+                            document.dispatchEvent(new CustomEvent('grid:refreshed', {
+                                detail: { containerId: containerId }
+                            }));
+                        });
+                    }
+                }
+            }, 250);
+        });
     }
 
     // Expose utilities to global scope
@@ -1209,7 +1446,15 @@
         sortDateObject: sortDateObject,
         dateObjectFormatter: dateObjectFormatter,
         addListUpdateListener: addListUpdateListener,
-        resetDeleteButtonStates: resetDeleteButtonStates
+        resetDeleteButtonStates: resetDeleteButtonStates,
+        createCheckboxColumn: createCheckboxColumn,
+        injectSelectAllCheckbox: injectSelectAllCheckbox,
+        addEntityDataAttributes: addEntityDataAttributes,
+        setupGridRefreshHandler: setupGridRefreshHandler,
+        setupInlineEditingFallback: setupInlineEditingFallback,
+        initBulkOperations: initBulkOperations,
+        calculateOptimalPageSize: calculateOptimalPageSize,
+        enableDynamicPageSize: enableDynamicPageSize
     };
 
 })(window);

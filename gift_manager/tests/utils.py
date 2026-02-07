@@ -1,4 +1,4 @@
-def text_in_rendered(text: str, rendered: str) -> bool:
+def assert_text_in_rendered(text: str, rendered: str, *, expect: bool = True) -> None:
     """Check if text presence in rendered matches expected.
 
     This helper function is used in tests to verify that specific strings
@@ -8,9 +8,9 @@ def text_in_rendered(text: str, rendered: str) -> bool:
     Args:
         text: The text to search for
         rendered: The rendered content to search in
-
+        expect: Whether the text is expected to be present or not
     Returns:
         bool: True if the text in is rendered
     """
     is_present = text in rendered
-    return is_present
+    assert is_present == expect

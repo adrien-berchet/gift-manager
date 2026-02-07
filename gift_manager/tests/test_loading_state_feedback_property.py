@@ -18,7 +18,7 @@ from gift_manager.tests.factories import (
     GiftTagFactory,
 )
 from gift_manager.services import PermissionService
-from gift_manager.tests.utils import text_in_rendered
+from gift_manager.tests.utils import assert_text_in_rendered
 
 
 @pytest.mark.django_db
@@ -125,12 +125,11 @@ class TestLoadingStateFeedbackProperty:
 
             # Property 11.2: Forms should have loading state support
             if operation in ['create', 'edit']:
-                assert text_in_rendered('<form', content), \
-                    f"{operation} operation should contain form"
+                assert_text_in_rendered('<form', content)
 
                 # Check for form elements that support loading states
-                assert (text_in_rendered('type="submit"', content) or text_in_rendered('button', content)), \
-                    f"{operation} form should have submit button for loading states"
+                tmp_check = 'type="submit"' in content or 'button' in content
+                assert tmp_check
 
             # Property 11.4: Detail views should support loading states
             elif operation == 'detail':
@@ -166,7 +165,7 @@ class TestLoadingStateFeedbackProperty:
 
         # Property 11.2: Form should have elements that can be disabled during submission
         form_elements = ['input', 'select', 'textarea', 'button']
-        has_form_elements = any(text_in_rendered(element, form_content) for element in form_elements)
+        has_form_elements = any(element in form_content for element in form_elements)
         assert has_form_elements, \
             f"Create form should have form elements that can be disabled during loading"
 

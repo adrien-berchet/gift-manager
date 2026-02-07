@@ -1,4 +1,7 @@
-{% extends "gift_manager/base.html" %} {% load custom_filters %} {% load i18n %}
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+{% load i18n %}
+
 {% block title %}Gift Manager - {% trans "Group details" %}{% endblock %}
 {% block content %}
 {% if request.META.HTTP_HX_REQUEST %}

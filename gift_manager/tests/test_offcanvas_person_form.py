@@ -14,6 +14,8 @@ from django.urls import reverse
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 
+from .utils import assert_text_in_rendered
+
 User = get_user_model()
 
 
@@ -68,8 +70,8 @@ class TestOffcanvasPersonForm:
 
         assert response.status_code == 200
         # Should return partial template for HTMX
-        assert b"person-form" in response.content
-        assert b"data-form-type" in response.content
+        assert_text_in_rendered("person-form", response.content.decode())
+        assert_text_in_rendered("data-form-type", response.content.decode())
 
     def test_person_edit_form_has_htmx_attributes(self, client_logged_in, person):
         """Test that form has correct HTMX attributes for submission."""
@@ -78,10 +80,10 @@ class TestOffcanvasPersonForm:
 
         content = response.content.decode()
         # Check for HTMX attributes
-        assert "hx-post=" in content
-        assert "hx-target=" in content
-        assert "hx-swap=" in content
-        assert 'hx-on::after-request="handleFormResponse(event)"' in content
+        assert_text_in_rendered("hx-post=", content)
+        assert_text_in_rendered("hx-target=", content)
+        assert_text_in_rendered("hx-swap=", content)
+        assert_text_in_rendered('hx-on::after-request="handleFormResponse(event)"', content)
 
     def test_person_edit_form_has_group_buttons(self, client_logged_in, person, groups):
         """Test that form has Select All/Clear All buttons with correct data attributes."""
@@ -93,8 +95,8 @@ class TestOffcanvasPersonForm:
 
         content = response.content.decode()
         # Check for group buttons with data-action attributes
-        assert 'data-action="select-all-groups"' in content
-        assert 'data-action="clear-all-groups"' in content
+        assert_text_in_rendered('data-action="select-all-groups"', content)
+        assert_text_in_rendered('data-action="clear-all-groups"', content)
 
     def test_person_form_submission_success(self, client_logged_in, person):
         """Test successful form submission returns correct HTMX response."""
@@ -143,8 +145,8 @@ class TestOffcanvasPersonForm:
         assert response.status_code == 200
         content = response.content.decode()
         # Check for HTMX attributes
-        assert "hx-post=" in content
-        assert 'data-form-type="person-edit"' in content
+        assert_text_in_rendered("hx-post=", content)
+        assert_text_in_rendered('data-form-type="person-edit"', content)
 
     def test_form_has_data_form_type_attribute(self, client_logged_in, person):
         """Test that form has data-form-type attribute for FormInitializer."""
@@ -152,7 +154,7 @@ class TestOffcanvasPersonForm:
         response = client_logged_in.get(url, HTTP_HX_REQUEST="true")
 
         content = response.content.decode()
-        assert 'data-form-type="person-edit"' in content
+        assert_text_in_rendered('data-form-type="person-edit"', content)
 
     def test_form_has_sticky_actions(self, client_logged_in, person):
         """Test that form has sticky action buttons at bottom."""
@@ -161,7 +163,7 @@ class TestOffcanvasPersonForm:
 
         content = response.content.decode()
         # Check for sticky actions container
-        assert "panel-form-actions" in content
+        assert_text_in_rendered("panel-form-actions", content)
         # Check for Cancel and Save buttons
-        assert 'data-bs-dismiss="offcanvas"' in content
-        assert 'type="submit"' in content
+        assert_text_in_rendered('data-bs-dismiss="offcanvas"', content)
+        assert_text_in_rendered('type="submit"', content)

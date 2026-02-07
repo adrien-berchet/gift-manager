@@ -26,7 +26,7 @@ from gift_manager.tests.factories import (
     PersonGroupFactory,
     GiftTagFactory,
 )
-from gift_manager.tests.utils import text_in_rendered
+from gift_manager.tests.utils import assert_text_in_rendered
 
 
 class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
@@ -119,11 +119,11 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             content = response.content.decode()
 
             # Check that permission data is included in the response
-            assert text_in_rendered('user_permissions_json', content)
+            assert_text_in_rendered('user_permissions_json', content)
 
             # Extract permission data from the response
             # Look for the JavaScript variable containing permissions
-            if text_in_rendered('userPermissions', content):
+            if 'userPermissions' in content:
                 # Find the permissions JSON in the JavaScript
                 start_marker = 'userPermissions = '
                 start_idx = content.find(start_marker)
@@ -166,13 +166,13 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             # Check for permission-aware JavaScript utilities
             if permission_level < PermissionLevel.EDITOR:
                 # For users with limited permissions, check that permission utilities are loaded
-                assert text_in_rendered('PermissionUtils', content)
-                assert text_in_rendered('permissionAwareActionFormatter', content)
+                assert_text_in_rendered('PermissionUtils', content)
+                assert_text_in_rendered('permissionAwareActionFormatter', content)
 
             # Verify that disabled actions have appropriate styling/attributes
             if permission_level < PermissionLevel.OWNER:
                 # Should include permission-based CSS
-                assert text_in_rendered('permission-ui.css', content)
+                assert_text_in_rendered('permission-ui.css', content)
 
         except Exception:
             # Skip test if there are issues with the view
@@ -204,13 +204,13 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                 content = response.content.decode()
 
                 # Create button should be available
-                assert text_in_rendered('data-action="create"', content)
-                assert text_in_rendered('Create new person', content)
+                assert_text_in_rendered('data-action="create"', content)
+                assert_text_in_rendered('Create new person', content)
 
                 # Create button should not be disabled by default
                 create_button_disabled = (
-                    text_in_rendered('data-action="create"', content) and
-                    text_in_rendered('disabled', content)
+                    'data-action="create"' in content and
+                    'disabled' in content
                 )
                 self.assertFalse(create_button_disabled)
 
@@ -262,7 +262,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                 # Check if action button exists and its state
                 action_pattern = f'data-action="{action}"'
 
-                if text_in_rendered(action_pattern, content):
+                if action_pattern in content:
                     # Button exists, check if it's properly enabled/disabled
                     if should_be_enabled:
                         # Should not be disabled
@@ -271,9 +271,9 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                     else:
                         # Should be disabled or have permission tooltip
                         has_permission_restriction = (
-                            text_in_rendered('disabled', content) or
-                            text_in_rendered('You do not have permission', content) or
-                            text_in_rendered('opacity: 0.5', content)
+                            'disabled' in content or
+                            'You do not have permission' in content or
+                            'opacity: 0.5' in content
                         )
                         # Note: We don't assert this strongly since implementation may vary
 
@@ -309,12 +309,12 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
 
                 # Should include bulk operations JavaScript
                 bulk_operations_included = (
-                    text_in_rendered('BulkOperations', content) or
-                    text_in_rendered('bulk-operations', content)
+                    'BulkOperations' in content or
+                    'bulk-operations' in content
                 )
 
                 # Should include permission data for bulk operations
-                assert text_in_rendered('user_permissions', content)
+                assert_text_in_rendered('user_permissions', content)
 
         except Exception:
             pass  # Skip if view has issues

@@ -153,7 +153,7 @@ class FilterByUserMixin:
     """Mixin to filter objects by the current user."""
 
     def get_queryset(self):
-        return self.model.objects.filter(Q(shared_with=self.request.user))
+        return self.model.objects.accessible_by(self.request.user)
 
 
 class GetObjectByTokenMixin:

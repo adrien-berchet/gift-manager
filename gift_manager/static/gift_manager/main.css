@@ -183,7 +183,7 @@ body.has-fixed-action-bar {
     margin: 0 2px;
 }
 
-/* Ensure Grid.js table looks consistent with Bootstrap */
+/* Grid.js table - base fallback styles (theme.css has more specific overrides) */
 .gridjs-table {
     border-collapse: collapse;
 }
@@ -191,7 +191,7 @@ body.has-fixed-action-bar {
 .gridjs-th {
     background-color: #f8f9fa;
     font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
     vertical-align: middle;
 }
 
