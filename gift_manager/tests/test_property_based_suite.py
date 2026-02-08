@@ -21,7 +21,6 @@ from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import UserFactory
 
-
 # Strategy definitions for test data generation
 entity_types = st.sampled_from(["person", "gift"])
 ui_actions = st.sampled_from(["edit", "delete", "create"])
@@ -101,8 +100,7 @@ class TestPropertyBasedSuite:
             if entity:
                 pk_value = getattr(entity, pk_field)
                 return reverse(url_name, kwargs={"pk": pk_value})
-            else:
-                pytest.skip(f"Entity required for {entity_type}.{action}")
+            pytest.skip(f"Entity required for {entity_type}.{action}")
         else:
             return reverse(pattern_info)
 
@@ -128,22 +126,30 @@ class TestPropertyBasedSuite:
         response = self.client.get(url, HTTP_HX_REQUEST="true")
 
         # Should be successful
-        assert response.status_code == 200, f"UI component failed to load for {entity_type}.{ui_action}"
+        assert response.status_code == 200, (
+            f"UI component failed to load for {entity_type}.{ui_action}"
+        )
 
         content = response.content.decode()
 
         # Verify appropriate UI component is displayed
         if ui_action == "delete":
             # Delete should display modal
-            assert "modal" in content.lower(), f"Delete action should display modal for {entity_type}"
+            assert "modal" in content.lower(), (
+                f"Delete action should display modal for {entity_type}"
+            )
         elif ui_action in ["edit", "create"]:
             # Edit/create should display slide panel or form
             ui_indicators = ["offcanvas", "form", "slide", "panel"]
             has_ui_component = any(indicator in content.lower() for indicator in ui_indicators)
-            assert has_ui_component, f"{ui_action} action should display slide panel for {entity_type}"
+            assert has_ui_component, (
+                f"{ui_action} action should display slide panel for {entity_type}"
+            )
 
         # Should contain proper structure
-        assert len(content.strip()) > 0, f"UI component should have content for {entity_type}.{ui_action}"
+        assert len(content.strip()) > 0, (
+            f"UI component should have content for {entity_type}.{ui_action}"
+        )
 
     @given(entity_type=entity_types, entity_data=entity_data)
     @override_settings(USE_I18N=False)
@@ -168,7 +174,9 @@ class TestPropertyBasedSuite:
         form = response.context["form"]
 
         # Verify form is bound to the entity instance
-        assert form.instance == entity, f"Form not bound to correct entity instance for {entity_type}"
+        assert form.instance == entity, (
+            f"Form not bound to correct entity instance for {entity_type}"
+        )
 
     @given(entity_type=entity_types)
     @override_settings(USE_I18N=False)
@@ -193,7 +201,9 @@ class TestPropertyBasedSuite:
         create_response = self.client.post(create_url, data=form_data, HTTP_HX_REQUEST="true")
 
         # Should succeed (200 or 302)
-        assert create_response.status_code in [200, 302], f"Create operation failed for {entity_type}"
+        assert create_response.status_code in [200, 302], (
+            f"Create operation failed for {entity_type}"
+        )
 
     @given(entity_type=entity_types)
     @override_settings(USE_I18N=False)
@@ -439,7 +449,9 @@ class TestPropertyBasedSuite:
             # Should contain accessibility attributes
             accessibility_attrs = ["tabindex", "aria-label", "role", "data-bs-dismiss"]
             has_accessibility = any(attr in content for attr in accessibility_attrs)
-            assert has_accessibility, f"Accessibility attributes should be present for {entity_type}"
+            assert has_accessibility, (
+                f"Accessibility attributes should be present for {entity_type}"
+            )
 
     @given(entity_type=entity_types, entity_data=entity_data)
     @override_settings(USE_I18N=False)
@@ -461,5 +473,7 @@ class TestPropertyBasedSuite:
 
             # Should contain change tracking or visual indicators
             change_indicators = ["change", "modified", "unsaved", "required", "asterisk"]
-            has_change_tracking = any(indicator in content.lower() for indicator in change_indicators)
+            has_change_tracking = any(
+                indicator in content.lower() for indicator in change_indicators
+            )
             assert has_change_tracking, f"Change tracking should be present for {entity_type}"

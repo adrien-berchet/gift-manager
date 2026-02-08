@@ -151,6 +151,7 @@ ignore-variadic-names = true
 ]
 "docs/*" = ["INP001"]
 "manage.py" = ["PLC0415"]
+"gift_manager/seed_data.py" = ["S106"]
 "gift_manager/models.py" = ["ANN206", "ARG001", "FBT002", "PLC0415", "PLW2901"]
 "GiftManager/settings/testing.py" = ["S105"]
 "gift_manager/services.py" = ["RUF059"]

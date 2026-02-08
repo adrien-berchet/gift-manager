@@ -4,8 +4,8 @@ These tests verify that modals and slide panels work correctly with proper
 animations, keyboard navigation, and accessibility features.
 """
 
-import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -13,7 +13,9 @@ from gift_manager.tests.e2e.base_test import BaseE2ETest
 class TestModalInteractions(BaseE2ETest):
     """Test modal dialog interactions and behaviors."""
 
-    def test_delete_confirmation_modal_display(self, page: Page, live_server, test_user, sample_persons):
+    def test_delete_confirmation_modal_display(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that delete confirmation modal displays correctly."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
@@ -324,7 +326,9 @@ class TestUnsavedChangesProtection(BaseE2ETest):
         # Verify warning message
         expect(warning_dialog).to_contain_text("unsaved changes")
 
-    def test_unsaved_changes_visual_indicators(self, page: Page, live_server, test_user, sample_persons):
+    def test_unsaved_changes_visual_indicators(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that modified fields show visual indicators."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")

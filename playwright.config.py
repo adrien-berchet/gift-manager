@@ -4,66 +4,52 @@ This configuration file sets up Playwright for testing the modern UX interface
 with proper browser settings, timeouts, and test organization.
 """
 
-from playwright.sync_api import Playwright
 import os
 
 
 def pytest_configure_node(node):
     """Configure pytest-playwright settings."""
     # Set default browser if not specified
-    if not hasattr(node.config.option, 'browser_name'):
-        node.config.option.browser_name = ['chromium']
+    if not hasattr(node.config.option, "browser_name"):
+        node.config.option.browser_name = ["chromium"]
 
 
 # Playwright configuration
 PLAYWRIGHT_CONFIG = {
     # Test directory
     "testDir": "gift_manager/tests/e2e",
-
     # Global test timeout (30 seconds)
     "timeout": 30000,
-
     # Expect timeout for assertions (5 seconds)
-    "expect": {
-        "timeout": 5000
-    },
-
+    "expect": {"timeout": 5000},
     # Fail the build on CI if you accidentally left test.only in the source code
     "forbidOnly": bool(os.environ.get("CI")),
-
     # Retry on CI only
     "retries": 2 if os.environ.get("CI") else 0,
-
     # Opt out of parallel tests on CI
     "workers": 1 if os.environ.get("CI") else None,
-
     # Reporter configuration
     "reporter": [
         ["html", {"outputFolder": "reports/playwright"}],
         ["junit", {"outputFile": "reports/playwright-results.xml"}],
         ["list"] if not os.environ.get("CI") else ["github"],
     ],
-
     # Shared settings for all projects
     "use": {
         # Base URL for tests
         "baseURL": "http://localhost:8000",
-
         # Browser context options
         "viewport": {"width": 1920, "height": 1080},
         "ignoreHTTPSErrors": True,
         "screenshot": "only-on-failure",
         "video": "retain-on-failure",
         "trace": "retain-on-failure",
-
         # Permissions
         "permissions": ["clipboard-read", "clipboard-write"],
-
         # Locale
         "locale": "en-US",
         "timezoneId": "America/New_York",
     },
-
     # Browser projects
     "projects": [
         {
@@ -77,7 +63,7 @@ PLAYWRIGHT_CONFIG = {
                         "--disable-web-security",
                         "--disable-features=VizDisplayCompositor",
                     ]
-                }
+                },
             },
         },
         {
@@ -89,7 +75,7 @@ PLAYWRIGHT_CONFIG = {
                         "dom.webnotifications.enabled": False,
                         "media.navigator.permission.disabled": True,
                     }
-                }
+                },
             },
         },
         {
@@ -122,10 +108,8 @@ PLAYWRIGHT_CONFIG = {
             },
         },
     ],
-
     # Output directories
     "outputDir": "test-results/",
-
     # Web server configuration for Django
     "webServer": {
         "command": "python manage.py runserver 8000",
@@ -135,8 +119,10 @@ PLAYWRIGHT_CONFIG = {
         "env": {
             "DJANGO_SETTINGS_MODULE": "GiftManager.settings.testing",
             "DJANGO_ENV": "testing",
-        }
-    } if not os.environ.get("PYTEST_CURRENT_TEST") else None,  # Only when not running via pytest
+        },
+    }
+    if not os.environ.get("PYTEST_CURRENT_TEST")
+    else None,  # Only when not running via pytest
 }
 
 
@@ -148,7 +134,6 @@ def configure_playwright_for_pytest():
             "headless": not os.environ.get("HEADED", False),
             "slow_mo": int(os.environ.get("SLOW_MO", 0)),
         },
-
         # Browser context options
         "browser_context_args": {
             "viewport": {"width": 1920, "height": 1080},
@@ -157,7 +142,6 @@ def configure_playwright_for_pytest():
             "locale": "en-US",
             "timezone_id": "America/New_York",
         },
-
         # Test configuration
         "device": None,  # Use custom viewport instead of device presets
     }

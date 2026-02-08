@@ -5,7 +5,8 @@ browsers (Chromium, Firefox, WebKit) and handle browser-specific behaviors.
 """
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -54,7 +55,9 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
             page.mouse.click(click_x, click_y)
             expect(modal).not_to_be_visible()
 
-    def test_slide_panel_behavior_cross_browser(self, page: Page, live_server, test_user, sample_persons):
+    def test_slide_panel_behavior_cross_browser(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that slide panels work consistently across browsers."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
@@ -74,7 +77,9 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
         # Panel should be positioned correctly
         assert panel_box["width"] > 0, "Panel should have width"
         assert panel_box["height"] > 0, "Panel should have height"
-        assert panel_box["x"] + panel_box["width"] <= viewport_size["width"], "Panel should fit in viewport"
+        assert panel_box["x"] + panel_box["width"] <= viewport_size["width"], (
+            "Panel should fit in viewport"
+        )
 
         # Test form interaction
         first_name_field = panel.locator("[name='first_name']")
@@ -146,7 +151,9 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
         page.wait_for_timeout(300)
         expect(modal).not_to_be_visible()
 
-    def test_javascript_events_cross_browser(self, page: Page, live_server, test_user, sample_persons):
+    def test_javascript_events_cross_browser(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that JavaScript events work consistently across browsers."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
@@ -179,7 +186,9 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
         self.wait_for_ajax_complete(page)
         expect(panel).not_to_be_visible()
 
-    def test_responsive_behavior_cross_browser(self, page: Page, live_server, test_user, sample_persons):
+    def test_responsive_behavior_cross_browser(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that responsive design works consistently across browsers."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
@@ -261,7 +270,9 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
         self.wait_for_ajax_complete(page)
         expect(panel).not_to_be_visible()
 
-    def test_accessibility_features_cross_browser(self, page: Page, live_server, test_user, sample_persons):
+    def test_accessibility_features_cross_browser(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that accessibility features work consistently across browsers."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")

@@ -308,6 +308,41 @@ def db_obj(request, person, gift, event, group, person_relation):
 # =============================================================================
 
 
+# =============================================================================
+# Seed Data Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def seed_data(db):
+    """Deterministic seed dataset for unit / integration tests (function-scoped).
+
+    Returns a :class:`~gift_manager.seed_data.SeedData` frozen dataclass with
+    every object accessible as an attribute (``seed_data.alice``,
+    ``seed_data.persons["mom"]``, etc.).
+    """
+    from gift_manager.seed_data import create_seed_data
+
+    return create_seed_data()
+
+
+@pytest.fixture
+def seed_data_transactional(transactional_db):
+    """Deterministic seed dataset that uses *transactional_db*.
+
+    Use this fixture for tests that need ``transactional_db`` (e.g. tests
+    that spawn threads or use ``on_commit`` hooks).
+    """
+    from gift_manager.seed_data import create_seed_data
+
+    return create_seed_data()
+
+
+# =============================================================================
+# Playwright Fixtures for Frontend Tests
+# =============================================================================
+
+
 @pytest.fixture(scope="session", autouse=True)
 def allow_django_async_unsafe():
     """Allow Django to run sync operations in async context for Playwright tests.

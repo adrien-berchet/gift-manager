@@ -4,15 +4,14 @@ This module provides configuration settings and utilities for property-based
 testing with Hypothesis in the Gift Manager application.
 """
 
-from hypothesis import settings
 from hypothesis import Verbosity
-
+from hypothesis import settings
 
 # Hypothesis configuration for property-based tests
 # Minimum 100 iterations per property test as specified in design document
 PBT_SETTINGS = settings(
     max_examples=100,  # Minimum iterations per property test
-    deadline=30000,    # 30 seconds timeout per test case
+    deadline=30000,  # 30 seconds timeout per test case
     verbosity=Verbosity.normal,
     suppress_health_check=[
         # Suppress health checks that might interfere with Django testing
@@ -24,15 +23,15 @@ PBT_SETTINGS = settings(
 
 # Fast settings for development/debugging
 PBT_FAST_SETTINGS = settings(
-    max_examples=10,   # Fewer examples for faster feedback during development
-    deadline=10000,    # 10 seconds timeout
+    max_examples=10,  # Fewer examples for faster feedback during development
+    deadline=10000,  # 10 seconds timeout
     verbosity=Verbosity.quiet,
 )
 
 # Comprehensive settings for CI/production testing
 PBT_COMPREHENSIVE_SETTINGS = settings(
     max_examples=200,  # More examples for thorough testing
-    deadline=60000,    # 60 seconds timeout
+    deadline=60000,  # 60 seconds timeout
     verbosity=Verbosity.verbose,
 )
 
@@ -232,8 +231,8 @@ PBT_FIXTURES_CONFIG = {
 # Performance thresholds for property tests
 PERFORMANCE_THRESHOLDS = {
     "max_response_time_ms": 5000,  # 5 seconds max response time
-    "max_database_queries": 50,    # Maximum database queries per request
-    "max_memory_usage_mb": 100,    # Maximum memory usage per test
+    "max_database_queries": 50,  # Maximum database queries per request
+    "max_memory_usage_mb": 100,  # Maximum memory usage per test
 }
 
 # Error patterns to ignore in property tests
@@ -243,22 +242,27 @@ IGNORED_ERROR_PATTERNS = [
     r".*Not found.*",  # 404 errors are expected for some test scenarios
 ]
 
+
 # Utility functions for property-based testing
 def get_entity_config(entity_type):
     """Get configuration for a specific entity type."""
     return ENTITY_TYPE_MAPPINGS.get(entity_type.lower())
 
+
 def get_property_metadata(property_number):
     """Get metadata for a specific property test."""
     return PROPERTY_METADATA.get(property_number)
+
 
 def is_valid_entity_type(entity_type):
     """Check if an entity type is valid for testing."""
     return entity_type.lower() in ENTITY_TYPE_MAPPINGS
 
+
 def get_all_entity_types():
     """Get all valid entity types for testing."""
     return list(ENTITY_TYPE_MAPPINGS.keys())
+
 
 def get_url_pattern(entity_type, action):
     """Get URL pattern for a specific entity type and action."""

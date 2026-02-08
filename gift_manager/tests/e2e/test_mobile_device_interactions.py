@@ -5,7 +5,8 @@ with touch interactions, responsive design, and mobile-specific behaviors.
 """
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -70,7 +71,9 @@ class TestMobileDeviceInteractions(BaseE2ETest):
 
         # On mobile, panel should take most or all of the screen width
         width_ratio = panel_box["width"] / viewport_size["width"]
-        assert width_ratio >= 0.8, f"Panel should take at least 80% of mobile width, got {width_ratio:.2f}"
+        assert width_ratio >= 0.8, (
+            f"Panel should take at least 80% of mobile width, got {width_ratio:.2f}"
+        )
 
         # Test form interaction on mobile
         first_name_field = panel.locator("[name='first_name']")
@@ -242,7 +245,9 @@ class TestMobileDeviceInteractions(BaseE2ETest):
             item_box = first_item.bounding_box()
 
             # List items should be tall enough for touch interaction (minimum 44px)
-            assert item_box["height"] >= 40, f"List item height {item_box['height']} should be at least 40px for touch"
+            assert item_box["height"] >= 40, (
+                f"List item height {item_box['height']} should be at least 40px for touch"
+            )
 
         # Test mobile search functionality
         search_input = page.locator("input[type='search'], .search-input")
@@ -293,7 +298,9 @@ class TestMobileDeviceInteractions(BaseE2ETest):
                 toolbar_box = bulk_toolbar.bounding_box()
                 viewport_size = page.viewport_size
 
-                assert toolbar_box["width"] <= viewport_size["width"], "Bulk toolbar should fit mobile width"
+                assert toolbar_box["width"] <= viewport_size["width"], (
+                    "Bulk toolbar should fit mobile width"
+                )
 
     def test_mobile_accessibility(self, page: Page, live_server, test_user, sample_persons):
         """Test mobile accessibility features."""
@@ -312,8 +319,12 @@ class TestMobileDeviceInteractions(BaseE2ETest):
                     button_box = button.bounding_box()
 
                     # Touch targets should be at least 44x44px
-                    assert button_box["width"] >= 40, f"Button width {button_box['width']} should be at least 40px"
-                    assert button_box["height"] >= 40, f"Button height {button_box['height']} should be at least 40px"
+                    assert button_box["width"] >= 40, (
+                        f"Button width {button_box['width']} should be at least 40px"
+                    )
+                    assert button_box["height"] >= 40, (
+                        f"Button height {button_box['height']} should be at least 40px"
+                    )
 
         # Test focus indicators on mobile
         first_button = page.locator("[data-action], .btn").first
@@ -345,7 +356,9 @@ class TestMobileDeviceInteractions(BaseE2ETest):
 
             load_time = end_time - start_time
             # Mobile should still load reasonably fast even with throttling
-            assert load_time < 10000, f"Mobile page load took {load_time}ms, should be under 10000ms"
+            assert load_time < 10000, (
+                f"Mobile page load took {load_time}ms, should be under 10000ms"
+            )
 
             # Measure modal interaction time
             start_time = page.evaluate("performance.now()")
@@ -354,7 +367,9 @@ class TestMobileDeviceInteractions(BaseE2ETest):
             end_time = page.evaluate("performance.now()")
 
             modal_time = end_time - start_time
-            assert modal_time < 2000, f"Mobile modal open took {modal_time}ms, should be under 2000ms"
+            assert modal_time < 2000, (
+                f"Mobile modal open took {modal_time}ms, should be under 2000ms"
+            )
 
         finally:
             # Reset CPU throttling
@@ -386,8 +401,10 @@ class TestMobileDeviceInteractions(BaseE2ETest):
         landscape_box = panel.bounding_box()
 
         # Panel dimensions should adapt to new orientation
-        assert landscape_box["width"] != portrait_box["width"] or landscape_box["height"] != portrait_box["height"], \
-            "Panel should adapt to orientation change"
+        assert (
+            landscape_box["width"] != portrait_box["width"]
+            or landscape_box["height"] != portrait_box["height"]
+        ), "Panel should adapt to orientation change"
 
         # Form should still be functional
         first_name_field = panel.locator("[name='first_name']")
@@ -401,12 +418,15 @@ class TestMobileDeviceInteractions(BaseE2ETest):
 
         # Simulate slow 3G network
         client = page.context.new_cdp_session(page)
-        client.send("Network.emulateNetworkConditions", {
-            "offline": False,
-            "downloadThroughput": 1.5 * 1024 * 1024 / 8,  # 1.5 Mbps
-            "uploadThroughput": 750 * 1024 / 8,  # 750 Kbps
-            "latency": 40  # 40ms latency
-        })
+        client.send(
+            "Network.emulateNetworkConditions",
+            {
+                "offline": False,
+                "downloadThroughput": 1.5 * 1024 * 1024 / 8,  # 1.5 Mbps
+                "uploadThroughput": 750 * 1024 / 8,  # 750 Kbps
+                "latency": 40,  # 40ms latency
+            },
+        )
 
         try:
             self.login_as_user(page, live_server, test_user)
@@ -429,12 +449,10 @@ class TestMobileDeviceInteractions(BaseE2ETest):
 
         finally:
             # Reset network conditions
-            client.send("Network.emulateNetworkConditions", {
-                "offline": False,
-                "downloadThroughput": -1,
-                "uploadThroughput": -1,
-                "latency": 0
-            })
+            client.send(
+                "Network.emulateNetworkConditions",
+                {"offline": False, "downloadThroughput": -1, "uploadThroughput": -1, "latency": 0},
+            )
 
 
 @pytest.mark.frontend
@@ -460,7 +478,9 @@ class TestTabletInteractions(BaseE2ETest):
 
         # Should use most of the tablet width
         width_ratio = container_box["width"] / viewport_size["width"]
-        assert width_ratio >= 0.8, f"List should use at least 80% of tablet width, got {width_ratio:.2f}"
+        assert width_ratio >= 0.8, (
+            f"List should use at least 80% of tablet width, got {width_ratio:.2f}"
+        )
 
         # Test slide panel behavior on tablet
         self.click_quick_action(page, 0, "edit")
@@ -473,7 +493,9 @@ class TestTabletInteractions(BaseE2ETest):
 
         # Panel should be appropriately sized for tablet (not full-screen like mobile)
         panel_width_ratio = panel_box["width"] / viewport_size["width"]
-        assert 0.3 <= panel_width_ratio <= 0.7, f"Panel width ratio {panel_width_ratio:.2f} should be between 0.3 and 0.7 on tablet"
+        assert 0.3 <= panel_width_ratio <= 0.7, (
+            f"Panel width ratio {panel_width_ratio:.2f} should be between 0.3 and 0.7 on tablet"
+        )
 
     def test_tablet_touch_interactions(self, page: Page, live_server, test_user, sample_persons):
         """Test touch interactions optimized for tablet use."""
@@ -539,6 +561,10 @@ class TestTabletInteractions(BaseE2ETest):
         viewport_size = page.viewport_size
 
         # Panel should fit within the constrained width
-        assert panel_box["width"] <= viewport_size["width"], "Panel should fit within split-screen width"
+        assert panel_box["width"] <= viewport_size["width"], (
+            "Panel should fit within split-screen width"
+        )
         assert panel_box["x"] >= 0, "Panel should not extend beyond left edge"
-        assert panel_box["x"] + panel_box["width"] <= viewport_size["width"], "Panel should not extend beyond right edge"
+        assert panel_box["x"] + panel_box["width"] <= viewport_size["width"], (
+            "Panel should not extend beyond right edge"
+        )

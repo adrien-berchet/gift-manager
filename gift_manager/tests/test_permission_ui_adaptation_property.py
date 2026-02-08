@@ -1,5 +1,4 @@
-"""
-Property-based tests for permission-based UI adaptation.
+"""Property-based tests for permission-based UI adaptation.
 
 Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
 For any user with specific permissions, the UI should only display action buttons
@@ -9,23 +8,22 @@ Validates: Requirements 4.5, 5.5, 6.5
 """
 
 import json
-from django.contrib.auth.models import User
-from django.test import TestCase, Client
+
+from django.test import Client
 from django.urls import reverse
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 from hypothesis.extra.django import TestCase as HypothesisTestCase
 
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
-from gift_manager.tests.factories import (
-    UserFactory,
-    PersonFactory,
-    GiftFactory,
-    EventFactory,
-    RelationFactory,
-    PersonGroupFactory,
-    GiftTagFactory,
-)
+from gift_manager.tests.factories import EventFactory
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import GiftTagFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import UserFactory
 from gift_manager.tests.utils import assert_text_in_rendered
 
 
@@ -41,12 +39,12 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
     def create_entity_with_permission(self, entity_type, permission_level):
         """Create an entity and set user permission."""
         factories = {
-            'person': PersonFactory,
-            'gift': GiftFactory,
-            'event': EventFactory,
-            'relation': RelationFactory,
-            'persongroup': PersonGroupFactory,
-            'gifttag': GiftTagFactory,
+            "person": PersonFactory,
+            "gift": GiftFactory,
+            "event": EventFactory,
+            "relation": RelationFactory,
+            "persongroup": PersonGroupFactory,
+            "gifttag": GiftTagFactory,
         }
 
         factory = factories.get(entity_type)
@@ -54,7 +52,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             return None
 
         # Create entity with required relationships for relation
-        if entity_type == 'relation':
+        if entity_type == "relation":
             person = PersonFactory()
             gift = GiftFactory()
             PermissionService.create_or_update_permission(
@@ -75,17 +73,20 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         return entity
 
     @given(
-        entity_type=st.sampled_from(['person', 'gift', 'event', 'relation', 'persongroup', 'gifttag']),
-        permission_level=st.sampled_from([
-            PermissionLevel.NONE,
-            PermissionLevel.VIEWER,
-            PermissionLevel.EDITOR,
-            PermissionLevel.OWNER
-        ])
+        entity_type=st.sampled_from(
+            ["person", "gift", "event", "relation", "persongroup", "gifttag"]
+        ),
+        permission_level=st.sampled_from(
+            [
+                PermissionLevel.NONE,
+                PermissionLevel.VIEWER,
+                PermissionLevel.EDITOR,
+                PermissionLevel.OWNER,
+            ]
+        ),
     )
     def test_permission_based_ui_adaptation_property(self, entity_type, permission_level):
-        """
-        Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
+        """Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
         For any user with specific permissions, the UI should only display action buttons
         and operations that the user is authorized to perform.
         """
@@ -96,12 +97,12 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
 
         # Get the list view URL
         list_urls = {
-            'person': 'gift_manager:persons',
-            'gift': 'gift_manager:gifts',
-            'event': 'gift_manager:events',
-            'relation': 'gift_manager:relations',
-            'persongroup': 'gift_manager:person_groups',
-            'gifttag': 'gift_manager:gift_tags',
+            "person": "gift_manager:persons",
+            "gift": "gift_manager:gifts",
+            "event": "gift_manager:events",
+            "relation": "gift_manager:relations",
+            "persongroup": "gift_manager:person_groups",
+            "gifttag": "gift_manager:gift_tags",
         }
 
         list_url = list_urls.get(entity_type)
@@ -119,22 +120,22 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             content = response.content.decode()
 
             # Check that permission data is included in the response
-            assert_text_in_rendered('user_permissions_json', content)
+            assert_text_in_rendered("user_permissions_json", content)
 
             # Extract permission data from the response
             # Look for the JavaScript variable containing permissions
-            if 'userPermissions' in content:
+            if "userPermissions" in content:
                 # Find the permissions JSON in the JavaScript
-                start_marker = 'userPermissions = '
+                start_marker = "userPermissions = "
                 start_idx = content.find(start_marker)
                 if start_idx != -1:
                     start_idx += len(start_marker)
-                    end_idx = content.find(';', start_idx)
+                    end_idx = content.find(";", start_idx)
                     if end_idx != -1:
                         permissions_json = content[start_idx:end_idx].strip()
                         try:
                             permissions = json.loads(permissions_json)
-                            entity_id = str(getattr(entity, 'pk', ''))
+                            entity_id = str(getattr(entity, "pk", ""))
 
                             # Verify permission level is correctly reflected
                             if entity_id in permissions:
@@ -143,22 +144,29 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                             pass  # Skip if JSON parsing fails
 
             # Check action button availability based on permission level
-            entity_id = getattr(entity, 'pk', '')
+            entity_id = getattr(entity, "pk", "")
 
             # Define expected action availability based on permission level
             expected_actions = {
                 PermissionLevel.NONE: {
-                    'view': False, 'edit': False, 'delete': False, 'share': False
+                    "view": False,
+                    "edit": False,
+                    "delete": False,
+                    "share": False,
                 },
                 PermissionLevel.VIEWER: {
-                    'view': True, 'edit': False, 'delete': False, 'share': False
+                    "view": True,
+                    "edit": False,
+                    "delete": False,
+                    "share": False,
                 },
                 PermissionLevel.EDITOR: {
-                    'view': True, 'edit': True, 'delete': False, 'share': True
+                    "view": True,
+                    "edit": True,
+                    "delete": False,
+                    "share": True,
                 },
-                PermissionLevel.OWNER: {
-                    'view': True, 'edit': True, 'delete': True, 'share': True
-                },
+                PermissionLevel.OWNER: {"view": True, "edit": True, "delete": True, "share": True},
             }
 
             expected = expected_actions.get(permission_level, {})
@@ -166,28 +174,25 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             # Check for permission-aware JavaScript utilities
             if permission_level < PermissionLevel.EDITOR:
                 # For users with limited permissions, check that permission utilities are loaded
-                assert_text_in_rendered('PermissionUtils', content)
-                assert_text_in_rendered('permissionAwareActionFormatter', content)
+                assert_text_in_rendered("PermissionUtils", content)
+                assert_text_in_rendered("permissionAwareActionFormatter", content)
 
             # Verify that disabled actions have appropriate styling/attributes
             if permission_level < PermissionLevel.OWNER:
                 # Should include permission-based CSS
-                assert_text_in_rendered('permission-ui.css', content)
+                assert_text_in_rendered("permission-ui.css", content)
 
         except Exception:
             # Skip test if there are issues with the view
             pass
 
     @given(
-        permission_level=st.sampled_from([
-            PermissionLevel.VIEWER,
-            PermissionLevel.EDITOR,
-            PermissionLevel.OWNER
-        ])
+        permission_level=st.sampled_from(
+            [PermissionLevel.VIEWER, PermissionLevel.EDITOR, PermissionLevel.OWNER]
+        )
     )
     def test_create_button_availability_property(self, permission_level):
-        """
-        Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
+        """Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
         Create buttons should generally be available regardless of object permissions
         since they don't operate on existing objects.
         """
@@ -199,32 +204,30 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
 
         # Test person list view
         try:
-            response = self.client.get(reverse('gift_manager:persons'))
+            response = self.client.get(reverse("gift_manager:persons"))
             if response.status_code == 200:
                 content = response.content.decode()
 
                 # Create button should be available
                 assert_text_in_rendered('data-action="create"', content)
-                assert_text_in_rendered('Create new person', content)
+                assert_text_in_rendered("Create new person", content)
 
                 # Create button should not be disabled by default
-                create_button_disabled = (
-                    'data-action="create"' in content and
-                    'disabled' in content
-                )
+                create_button_disabled = 'data-action="create"' in content and "disabled" in content
                 self.assertFalse(create_button_disabled)
 
         except Exception:
             pass  # Skip if view has issues
 
     @given(
-        entity_type=st.sampled_from(['person', 'gift', 'event']),
+        entity_type=st.sampled_from(["person", "gift", "event"]),
         user_permission=st.sampled_from([PermissionLevel.VIEWER, PermissionLevel.EDITOR]),
-        action=st.sampled_from(['edit', 'delete', 'share'])
+        action=st.sampled_from(["edit", "delete", "share"]),
     )
-    def test_action_button_permission_requirements_property(self, entity_type, user_permission, action):
-        """
-        Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
+    def test_action_button_permission_requirements_property(
+        self, entity_type, user_permission, action
+    ):
+        """Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
         Action buttons should be enabled/disabled based on specific permission requirements.
         """
         # Create entity with specified permission
@@ -234,9 +237,9 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
 
         # Define action requirements
         action_requirements = {
-            'edit': PermissionLevel.EDITOR,
-            'delete': PermissionLevel.OWNER,
-            'share': PermissionLevel.EDITOR,
+            "edit": PermissionLevel.EDITOR,
+            "delete": PermissionLevel.OWNER,
+            "share": PermissionLevel.EDITOR,
         }
 
         required_permission = action_requirements.get(action, PermissionLevel.OWNER)
@@ -244,9 +247,9 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
 
         # Get detail view to check action buttons
         detail_urls = {
-            'person': 'gift_manager:person_detail',
-            'gift': 'gift_manager:gift_detail',
-            'event': 'gift_manager:event_detail',
+            "person": "gift_manager:person_detail",
+            "gift": "gift_manager:gift_detail",
+            "event": "gift_manager:event_detail",
         }
 
         detail_url = detail_urls.get(entity_type)
@@ -254,7 +257,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             return
 
         try:
-            response = self.client.get(reverse(detail_url, kwargs={'pk': entity.pk}))
+            response = self.client.get(reverse(detail_url, kwargs={"pk": entity.pk}))
 
             if response.status_code == 200:
                 content = response.content.decode()
@@ -266,14 +269,14 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                     # Button exists, check if it's properly enabled/disabled
                     if should_be_enabled:
                         # Should not be disabled
-                        disabled_pattern = f'{action_pattern}.*disabled'
+                        disabled_pattern = f"{action_pattern}.*disabled"
                         self.assertNotRegex(content, disabled_pattern)
                     else:
                         # Should be disabled or have permission tooltip
                         has_permission_restriction = (
-                            'disabled' in content or
-                            'You do not have permission' in content or
-                            'opacity: 0.5' in content
+                            "disabled" in content
+                            or "You do not have permission" in content
+                            or "opacity: 0.5" in content
                         )
                         # Note: We don't assert this strongly since implementation may vary
 
@@ -281,8 +284,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             pass  # Skip if view has issues
 
     def test_bulk_operations_permission_property(self):
-        """
-        Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
+        """Feature: modern-ux-interface, Property 6: Permission-Based UI Adaptation
         Bulk operations should respect individual item permissions.
         """
         # Create entities with different permission levels
@@ -302,19 +304,18 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         )
 
         try:
-            response = self.client.get(reverse('gift_manager:persons'))
+            response = self.client.get(reverse("gift_manager:persons"))
 
             if response.status_code == 200:
                 content = response.content.decode()
 
                 # Should include bulk operations JavaScript
                 bulk_operations_included = (
-                    'BulkOperations' in content or
-                    'bulk-operations' in content
+                    "BulkOperations" in content or "bulk-operations" in content
                 )
 
                 # Should include permission data for bulk operations
-                assert_text_in_rendered('user_permissions', content)
+                assert_text_in_rendered("user_permissions", content)
 
         except Exception:
             pass  # Skip if view has issues

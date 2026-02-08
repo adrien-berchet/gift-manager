@@ -102,7 +102,7 @@ def permission_level_name(permission_level):
     return PermissionLevel.get_label(permission_level)
 
 
-@register.inclusion_tag('gift_manager/includes/permission_actions.html', takes_context=True)
+@register.inclusion_tag("gift_manager/includes/permission_actions.html", takes_context=True)
 def permission_actions(context, obj, actions=None):
     """Render action buttons based on user permissions.
 
@@ -115,21 +115,21 @@ def permission_actions(context, obj, actions=None):
         dict: Context for the template
     """
     if actions is None:
-        actions = ['edit', 'delete', 'share']
+        actions = ["edit", "delete", "share"]
 
-    user = context.get('user')
+    user = context.get("user")
     if not user or not user.is_authenticated:
-        return {'actions': []}
+        return {"actions": []}
 
     permission = user_permission(obj, user)
 
     # Define action requirements
     action_requirements = {
-        'view': PermissionLevel.VIEWER,
-        'edit': PermissionLevel.EDITOR,
-        'delete': PermissionLevel.OWNER,
-        'share': PermissionLevel.EDITOR,
-        'create': PermissionLevel.NONE,  # Create doesn't require object permissions
+        "view": PermissionLevel.VIEWER,
+        "edit": PermissionLevel.EDITOR,
+        "delete": PermissionLevel.OWNER,
+        "share": PermissionLevel.EDITOR,
+        "create": PermissionLevel.NONE,  # Create doesn't require object permissions
     }
 
     # Filter actions based on permissions
@@ -137,22 +137,20 @@ def permission_actions(context, obj, actions=None):
     for action in actions:
         required_level = action_requirements.get(action, PermissionLevel.OWNER)
         if permission >= required_level:
-            allowed_actions.append({
-                'name': action,
-                'enabled': True,
-                'tooltip': None
-            })
+            allowed_actions.append({"name": action, "enabled": True, "tooltip": None})
         else:
             # Add disabled action with tooltip
-            allowed_actions.append({
-                'name': action,
-                'enabled': False,
-                'tooltip': f'You do not have permission to {action} this object'
-            })
+            allowed_actions.append(
+                {
+                    "name": action,
+                    "enabled": False,
+                    "tooltip": f"You do not have permission to {action} this object",
+                }
+            )
 
     return {
-        'obj': obj,
-        'actions': allowed_actions,
-        'user_permission': permission,
-        'permission_level_name': PermissionLevel.get_label(permission)
+        "obj": obj,
+        "actions": allowed_actions,
+        "user_permission": permission,
+        "permission_level_name": PermissionLevel.get_label(permission),
     }

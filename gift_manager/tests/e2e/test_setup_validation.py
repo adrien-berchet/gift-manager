@@ -5,7 +5,8 @@ configured and can run basic browser automation tasks.
 """
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -130,8 +131,9 @@ class TestSetupValidation(BaseE2ETest):
 
         # Verify some element has focus
         focused_element = page.evaluate("document.activeElement.tagName")
-        assert focused_element in ["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"], \
+        assert focused_element in ["A", "BUTTON", "INPUT", "SELECT", "TEXTAREA"], (
             f"Expected focusable element, got {focused_element}"
+        )
 
     def test_error_handling(self, page: Page, live_server):
         """Test that error pages are handled gracefully."""
@@ -143,8 +145,9 @@ class TestSetupValidation(BaseE2ETest):
 
         # The page should indicate it's a 404 (either in title or content)
         page_content = page.content().lower()
-        assert "404" in page_content or "not found" in page_content, \
+        assert "404" in page_content or "not found" in page_content, (
             "Expected 404 error page content"
+        )
 
 
 @pytest.mark.playwright
@@ -171,8 +174,9 @@ class TestPlaywrightSpecificFeatures(BaseE2ETest):
 
         # Should have captured at least the main page request
         assert len(requests) > 0, "Should have captured network requests"
-        assert any(live_server.url in url for url in requests), \
+        assert any(live_server.url in url for url in requests), (
             "Should have captured request to live server"
+        )
 
     def test_javascript_evaluation(self, page: Page, live_server):
         """Test that JavaScript can be evaluated in the browser."""

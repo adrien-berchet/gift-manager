@@ -5,8 +5,9 @@ including setup, teardown, and utility methods for interacting with the modern U
 """
 
 import pytest
-from playwright.sync_api import Page, expect
 from django.contrib.auth.models import User
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 
 class BaseE2ETest:
@@ -110,7 +111,9 @@ class BaseE2ETest:
     def wait_for_ajax_complete(self, page: Page) -> None:
         """Wait for all AJAX requests to complete."""
         # Wait for HTMX requests to complete
-        page.wait_for_function("typeof htmx !== 'undefined' && !htmx.config.requestClass", timeout=self.ajax_timeout)
+        page.wait_for_function(
+            "typeof htmx !== 'undefined' && !htmx.config.requestClass", timeout=self.ajax_timeout
+        )
 
         # Wait for any loading indicators to disappear
         loading_indicators = page.locator(".loading, .spinner, [data-loading]")
@@ -130,19 +133,25 @@ class BaseE2ETest:
         items = page.locator(f"{list_selector} .list-item, {list_selector} tr[data-entity-id]")
         return items.count()
 
-    def click_quick_action(self, page: Page, item_index: int, action: str, list_selector: str = ".list-container") -> None:
+    def click_quick_action(
+        self, page: Page, item_index: int, action: str, list_selector: str = ".list-container"
+    ) -> None:
         """Click a quick action button for a specific list item."""
         item = page.locator(f"{list_selector} .list-item, {list_selector} tr").nth(item_index)
         action_btn = item.locator(f"[data-action='{action}'], .btn-{action}").first
         action_btn.click()
 
-    def select_bulk_items(self, page: Page, indices: list, list_selector: str = ".list-container") -> None:
+    def select_bulk_items(
+        self, page: Page, indices: list, list_selector: str = ".list-container"
+    ) -> None:
         """Select multiple items in a list for bulk operations."""
         for index in indices:
             checkbox = page.locator(f"{list_selector} input[type='checkbox']").nth(index)
             checkbox.check()
 
-    def verify_notification(self, page: Page, message: str, notification_type: str = "success") -> None:
+    def verify_notification(
+        self, page: Page, message: str, notification_type: str = "success"
+    ) -> None:
         """Verify that a notification message appears."""
         notification = page.locator(f".alert-{notification_type}, .toast-{notification_type}")
         expect(notification).to_be_visible(timeout=self.ajax_timeout)
@@ -151,7 +160,9 @@ class BaseE2ETest:
     def verify_form_validation_error(self, page: Page, field_name: str, error_message: str) -> None:
         """Verify that a form validation error is displayed."""
         field = page.locator(f"[name='{field_name}']")
-        error_element = field.locator("xpath=following-sibling::*[contains(@class, 'invalid-feedback') or contains(@class, 'error')]").first
+        error_element = field.locator(
+            "xpath=following-sibling::*[contains(@class, 'invalid-feedback') or contains(@class, 'error')]"
+        ).first
         expect(error_element).to_be_visible()
         expect(error_element).to_contain_text(error_message)
 
@@ -175,7 +186,9 @@ class BaseE2ETest:
 
         # Verify component adapts to mobile size
         bounding_box = component.bounding_box()
-        assert bounding_box["width"] <= 375, f"Component width {bounding_box['width']} exceeds mobile viewport"
+        assert bounding_box["width"] <= 375, (
+            f"Component width {bounding_box['width']} exceeds mobile viewport"
+        )
 
     def measure_performance(self, page: Page, operation_name: str, operation_func) -> dict:
         """Measure the performance of an operation."""
@@ -209,7 +222,9 @@ class BaseE2ETest:
 class BaseCRUDTest(BaseE2ETest):
     """Base class for testing CRUD operations with the modern UX interface."""
 
-    def test_create_workflow(self, page: Page, live_server, test_user, entity_type: str, form_data: dict):
+    def test_create_workflow(
+        self, page: Page, live_server, test_user, entity_type: str, form_data: dict
+    ):
         """Test the complete create workflow for an entity."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, entity_type)
@@ -243,7 +258,9 @@ class BaseCRUDTest(BaseE2ETest):
         self.wait_for_list_update(page)
         expect(page.locator(".list-container")).to_contain_text(str(list(form_data.values())[0]))
 
-    def test_edit_workflow(self, page: Page, live_server, test_user, entity_type: str, item_index: int, form_data: dict):
+    def test_edit_workflow(
+        self, page: Page, live_server, test_user, entity_type: str, item_index: int, form_data: dict
+    ):
         """Test the complete edit workflow for an entity."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, entity_type)
@@ -255,7 +272,7 @@ class BaseCRUDTest(BaseE2ETest):
         self.wait_for_panel(page)
 
         # Verify form is populated with existing data
-        for field_name in form_data.keys():
+        for field_name in form_data:
             field = page.locator(f"[name='{field_name}']")
             expect(field).not_to_have_value("")
 
@@ -275,7 +292,9 @@ class BaseCRUDTest(BaseE2ETest):
         self.wait_for_list_update(page)
         expect(page.locator(".list-container")).to_contain_text(str(list(form_data.values())[0]))
 
-    def test_delete_workflow(self, page: Page, live_server, test_user, entity_type: str, item_index: int):
+    def test_delete_workflow(
+        self, page: Page, live_server, test_user, entity_type: str, item_index: int
+    ):
         """Test the complete delete workflow for an entity."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, entity_type)
@@ -299,4 +318,6 @@ class BaseCRUDTest(BaseE2ETest):
         # Verify entity was deleted (item count decreased)
         self.wait_for_list_update(page)
         final_count = self.get_list_item_count(page)
-        assert final_count == initial_count - 1, f"Expected {initial_count - 1} items, got {final_count}"
+        assert final_count == initial_count - 1, (
+            f"Expected {initial_count - 1} items, got {final_count}"
+        )

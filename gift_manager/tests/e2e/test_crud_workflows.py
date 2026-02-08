@@ -4,8 +4,8 @@ These tests verify that the entire user experience works correctly for creating,
 reading, updating, and deleting entities using modals and slide panels.
 """
 
-import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseCRUDTest
 
@@ -160,7 +160,9 @@ class TestBulkOperationsWorkflow(BaseCRUDTest):
                 # Verify items were deleted
                 self.wait_for_list_update(page)
                 final_count = self.get_list_item_count(page)
-                assert final_count == initial_count - 3, f"Expected {initial_count - 3} items, got {final_count}"
+                assert final_count == initial_count - 3, (
+                    f"Expected {initial_count - 3} items, got {final_count}"
+                )
 
 
 class TestInlineEditingWorkflow(BaseCRUDTest):

@@ -57,7 +57,8 @@ def setup_test_user(transactional_db):
     Uses transactional_db to ensure data is committed and visible to live_server.
     """
     from allauth.account.models import EmailAddress
-    from django.db import connection, transaction
+    from django.db import connection
+    from django.db import transaction
 
     # Use a transaction to ensure data is committed
     with transaction.atomic():
@@ -79,6 +80,7 @@ def setup_test_user(transactional_db):
 
     # Debug: verify user exists and can authenticate
     from django.contrib.auth import authenticate
+
     user_check = User.objects.filter(username="testuser").exists()
     email_check = EmailAddress.objects.filter(user=user, verified=True).exists()
     auth_check = authenticate(username="testuser", password="testpass123")
@@ -214,23 +216,22 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     # Check if login succeeded
     current_url = page.url
     if "/accounts/login/" not in current_url:
-        print(f"DEBUG login_user: Login SUCCESS")
+        print("DEBUG login_user: Login SUCCESS")
         return True
-    else:
-        print(f"DEBUG login_user: Login FAILED - still on login page")
-        # Check for error messages for debugging
-        error_messages = page.locator(
-            ".alert-danger, .errorlist, .invalid-feedback, .alert"
-        ).all_text_contents()
-        if error_messages:
-            print(f"DEBUG login_user: Error messages: {error_messages}")
+    print("DEBUG login_user: Login FAILED - still on login page")
+    # Check for error messages for debugging
+    error_messages = page.locator(
+        ".alert-danger, .errorlist, .invalid-feedback, .alert"
+    ).all_text_contents()
+    if error_messages:
+        print(f"DEBUG login_user: Error messages: {error_messages}")
 
-        # Check for rate limiting (should not happen with our settings)
-        page_content = page.content()
-        if "Too Many Requests" in page_content or "rate limit" in page_content.lower():
-            print("DEBUG login_user: Rate limiting detected - check test settings!")
+    # Check for rate limiting (should not happen with our settings)
+    page_content = page.content()
+    if "Too Many Requests" in page_content or "rate limit" in page_content.lower():
+        print("DEBUG login_user: Rate limiting detected - check test settings!")
 
-        return False
+    return False
 
 
 @pytest.mark.slow

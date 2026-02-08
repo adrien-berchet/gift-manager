@@ -1,27 +1,31 @@
 """Performance optimization mixins for views."""
 
-import json
 import logging
 import time
 from functools import wraps
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from django.core.cache import cache
 from django.db import connection
-from django.db.models import Prefetch, QuerySet
-from django.http import HttpRequest, HttpResponse
-from django.utils.cache import get_cache_key
+from django.db.models import Prefetch
+from django.db.models import QuerySet
+from django.http import HttpRequest
+from django.http import HttpResponse
 from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
-from django.views.decorators.vary import vary_on_headers
 
-from gift_manager.models import Event, Gift, GiftTag, Person, PersonGroup, Relation
+from gift_manager.models import Event
+from gift_manager.models import Gift
+from gift_manager.models import GiftTag
+from gift_manager.models import Person
+from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
 
 logger = logging.getLogger(__name__)
 
 
 def log_queries(func):
     """Decorator to log database queries for performance monitoring."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         initial_queries = len(connection.queries)
@@ -40,6 +44,7 @@ def log_queries(func):
             )
 
         return result
+
     return wrapper
 
 
@@ -47,8 +52,8 @@ class QueryOptimizationMixin:
     """Mixin to optimize database queries for AJAX endpoints."""
 
     # Override in subclasses to specify which related fields to prefetch
-    prefetch_related_fields: List[str] = []
-    select_related_fields: List[str] = []
+    prefetch_related_fields: list[str] = []
+    select_related_fields: list[str] = []
 
     def get_queryset(self) -> QuerySet:
         """Optimize queryset with prefetch_related and select_related."""
@@ -73,15 +78,15 @@ class QueryOptimizationMixin:
 
         if model == Person:
             return self.optimize_person_queryset(queryset)
-        elif model == Gift:
+        if model == Gift:
             return self.optimize_gift_queryset(queryset)
-        elif model == Event:
+        if model == Event:
             return self.optimize_event_queryset(queryset)
-        elif model == Relation:
+        if model == Relation:
             return self.optimize_relation_queryset(queryset)
-        elif model == PersonGroup:
+        if model == PersonGroup:
             return self.optimize_person_group_queryset(queryset)
-        elif model == GiftTag:
+        if model == GiftTag:
             return self.optimize_gift_tag_queryset(queryset)
 
         return queryset
@@ -89,53 +94,43 @@ class QueryOptimizationMixin:
     def optimize_person_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Person queryset."""
         return queryset.prefetch_related(
-            'groups',
-            'shared_with',
-            Prefetch('persons', queryset=Relation.objects.select_related('gift', 'event')),
+            "groups",
+            "shared_with",
+            Prefetch("persons", queryset=Relation.objects.select_related("gift", "event")),
         )
 
     def optimize_gift_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Gift queryset."""
-        return queryset.select_related('event').prefetch_related(
-            'tags',
-            'shared_with',
-            'persons',
-            'groups'
+        return queryset.select_related("event").prefetch_related(
+            "tags", "shared_with", "persons", "groups"
         )
 
     def optimize_event_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Event queryset."""
         return queryset.prefetch_related(
-            'shared_with',
-            Prefetch('gifts', queryset=Gift.objects.prefetch_related('tags')),
-            'persons',
-            'groups'
+            "shared_with",
+            Prefetch("gifts", queryset=Gift.objects.prefetch_related("tags")),
+            "persons",
+            "groups",
         )
 
     def optimize_relation_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Relation queryset."""
-        return queryset.select_related('gift', 'event').prefetch_related(
-            'persons',
-            'groups',
-            'shared_with'
+        return queryset.select_related("gift", "event").prefetch_related(
+            "persons", "groups", "shared_with"
         )
 
     def optimize_person_group_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize PersonGroup queryset."""
-        return queryset.prefetch_related(
-            'persons',
-            'shared_with',
-            'parent_groups',
-            'child_groups'
-        )
+        return queryset.prefetch_related("persons", "shared_with", "parent_groups", "child_groups")
 
     def optimize_gift_tag_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize GiftTag queryset."""
         return queryset.prefetch_related(
-            'shared_with',
-            'parent_tags',
-            'child_tags',
-            Prefetch('gifts', queryset=Gift.objects.select_related('event'))
+            "shared_with",
+            "parent_tags",
+            "child_tags",
+            Prefetch("gifts", queryset=Gift.objects.select_related("event")),
         )
 
 
@@ -169,7 +164,7 @@ class CachingMixin:
 
         return ":".join(key_parts)
 
-    def get_cached_response(self, request: HttpRequest) -> Optional[HttpResponse]:
+    def get_cached_response(self, request: HttpRequest) -> HttpResponse | None:
         """Get cached response if available."""
         if not self.should_cache_response(request):
             return None
@@ -180,13 +175,13 @@ class CachingMixin:
         if cached_data:
             logger.debug(f"Cache hit for key: {cache_key}")
             response = HttpResponse(
-                cached_data['content'],
-                content_type=cached_data['content_type'],
-                status=cached_data['status']
+                cached_data["content"],
+                content_type=cached_data["content_type"],
+                status=cached_data["status"],
             )
 
             # Restore headers
-            for header, value in cached_data.get('headers', {}).items():
+            for header, value in cached_data.get("headers", {}).items():
                 response[header] = value
 
             return response
@@ -201,15 +196,15 @@ class CachingMixin:
         cache_key = self.get_cache_key(request)
 
         # Ensure response is rendered before caching
-        if hasattr(response, 'render') and not response.is_rendered:
+        if hasattr(response, "render") and not response.is_rendered:
             response.render()
 
         # Prepare data for caching
         cached_data = {
-            'content': response.content.decode('utf-8'),
-            'content_type': response.get('Content-Type', 'text/html'),
-            'status': response.status_code,
-            'headers': dict(response.items())
+            "content": response.content.decode("utf-8"),
+            "content_type": response.get("Content-Type", "text/html"),
+            "status": response.status_code,
+            "headers": dict(response.items()),
         }
 
         cache.set(cache_key, cached_data, self.cache_timeout)
@@ -219,7 +214,8 @@ class CachingMixin:
         """Determine if response should be cached."""
         # Disable caching during tests to avoid interference with property-based tests
         from django.conf import settings
-        if hasattr(settings, 'TESTING') and settings.TESTING:
+
+        if hasattr(settings, "TESTING") and settings.TESTING:
             return False
         return True
 
@@ -237,7 +233,7 @@ class AjaxOptimizationMixin(QueryOptimizationMixin, CachingMixin):
     def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         """Optimized dispatch with caching and query optimization."""
         # Check for cached response first
-        if request.method == 'GET':
+        if request.method == "GET":
             cached_response = self.get_cached_response(request)
             if cached_response:
                 return cached_response
@@ -246,18 +242,18 @@ class AjaxOptimizationMixin(QueryOptimizationMixin, CachingMixin):
         response = super().dispatch(request, *args, **kwargs)
 
         # Cache successful GET responses
-        if request.method == 'GET' and response.status_code == 200:
+        if request.method == "GET" and response.status_code == 200:
             self.cache_response(request, response)
 
         return response
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """Add performance metrics to context."""
         context = super().get_context_data(**kwargs)
 
         # Add query count for debugging
-        if hasattr(self.request, 'user') and self.request.user.is_staff:
-            context['_debug_query_count'] = len(connection.queries)
+        if hasattr(self.request, "user") and self.request.user.is_staff:
+            context["_debug_query_count"] = len(connection.queries)
 
         return context
 
@@ -265,55 +261,47 @@ class AjaxOptimizationMixin(QueryOptimizationMixin, CachingMixin):
 class BatchOperationMixin:
     """Mixin to optimize batch operations."""
 
-    def perform_batch_operation(self, operation: str, object_ids: List[str]) -> Dict[str, Any]:
+    def perform_batch_operation(self, operation: str, object_ids: list[str]) -> dict[str, Any]:
         """Perform batch operation with optimization."""
-        results = {
-            'success': [],
-            'errors': [],
-            'total': len(object_ids)
-        }
+        results = {"success": [], "errors": [], "total": len(object_ids)}
 
-        if operation == 'delete':
+        if operation == "delete":
             results.update(self.batch_delete(object_ids))
-        elif operation == 'update':
+        elif operation == "update":
             results.update(self.batch_update(object_ids))
         else:
-            results['errors'].append(f"Unknown operation: {operation}")
+            results["errors"].append(f"Unknown operation: {operation}")
 
         return results
 
-    def batch_delete(self, object_ids: List[str]) -> Dict[str, Any]:
+    def batch_delete(self, object_ids: list[str]) -> dict[str, Any]:
         """Optimized batch delete operation."""
         try:
             # Use bulk delete for efficiency
             queryset = self.get_queryset().filter(pk__in=object_ids)
             deleted_count, _ = queryset.delete()
 
-            return {
-                'success': object_ids[:deleted_count],
-                'deleted_count': deleted_count
-            }
+            return {"success": object_ids[:deleted_count], "deleted_count": deleted_count}
         except Exception as e:
             logger.error(f"Batch delete error: {e}")
-            return {'errors': [str(e)]}
+            return {"errors": [str(e)]}
 
-    def batch_update(self, object_ids: List[str], update_data: Dict[str, Any] = None) -> Dict[str, Any]:
+    def batch_update(
+        self, object_ids: list[str], update_data: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Optimized batch update operation."""
         if not update_data:
-            return {'errors': ['No update data provided']}
+            return {"errors": ["No update data provided"]}
 
         try:
             # Use bulk update for efficiency
             queryset = self.get_queryset().filter(pk__in=object_ids)
             updated_count = queryset.update(**update_data)
 
-            return {
-                'success': object_ids[:updated_count],
-                'updated_count': updated_count
-            }
+            return {"success": object_ids[:updated_count], "updated_count": updated_count}
         except Exception as e:
             logger.error(f"Batch update error: {e}")
-            return {'errors': [str(e)]}
+            return {"errors": [str(e)]}
 
 
 class ResponseCompressionMixin:
@@ -321,12 +309,12 @@ class ResponseCompressionMixin:
 
     def finalize_response(self, request: HttpRequest, response: HttpResponse) -> HttpResponse:
         """Add compression headers for AJAX responses."""
-        if hasattr(super(), 'finalize_response'):
+        if hasattr(super(), "finalize_response"):
             response = super().finalize_response(request, response)
 
         # Add compression hint for large responses
         if len(response.content) > 1024:  # > 1KB
-            response['Vary'] = 'Accept-Encoding'
+            response["Vary"] = "Accept-Encoding"
 
         return response
 
@@ -337,19 +325,19 @@ class PerformanceHeadersMixin:
     def add_performance_headers(self, response: HttpResponse) -> HttpResponse:
         """Add performance-related headers to response."""
         # Add cache control headers
-        if hasattr(self, 'cache_timeout'):
-            response['Cache-Control'] = f'max-age={self.cache_timeout}, private'
+        if hasattr(self, "cache_timeout"):
+            response["Cache-Control"] = f"max-age={self.cache_timeout}, private"
 
         # Add ETag for conditional requests
-        if hasattr(self, 'get_etag'):
+        if hasattr(self, "get_etag"):
             etag = self.get_etag()
             if etag:
-                response['ETag'] = etag
+                response["ETag"] = etag
 
         # Add timing information for debugging
-        if hasattr(self.request, 'user') and self.request.user.is_staff:
+        if hasattr(self.request, "user") and self.request.user.is_staff:
             query_count = len(connection.queries)
-            response['X-Debug-Query-Count'] = str(query_count)
+            response["X-Debug-Query-Count"] = str(query_count)
 
         return response
 
@@ -359,7 +347,9 @@ class PerformanceHeadersMixin:
         return self.add_performance_headers(response)
 
 
-class OptimizedListMixin(AjaxOptimizationMixin, BatchOperationMixin, ResponseCompressionMixin, PerformanceHeadersMixin):
+class OptimizedListMixin(
+    AjaxOptimizationMixin, BatchOperationMixin, ResponseCompressionMixin, PerformanceHeadersMixin
+):
     """Complete optimization mixin for list views."""
 
     # Pagination settings for performance
@@ -371,33 +361,37 @@ class OptimizedListMixin(AjaxOptimizationMixin, BatchOperationMixin, ResponseCom
 
         # Apply ordering for consistent pagination
         if not queryset.ordered:
-            queryset = queryset.order_by('-created_at' if hasattr(queryset.model, 'created_at') else 'pk')
+            queryset = queryset.order_by(
+                "-created_at" if hasattr(queryset.model, "created_at") else "pk"
+            )
 
         return queryset
 
-    def get_context_data(self, **kwargs: Any) -> Dict[str, Any]:
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """Add optimized context data."""
         context = super().get_context_data(**kwargs)
 
         # Add pagination info for AJAX requests
-        if hasattr(self, 'is_htmx') and self.is_htmx:
-            page_obj = context.get('page_obj')
+        if hasattr(self, "is_htmx") and self.is_htmx:
+            page_obj = context.get("page_obj")
             if page_obj:
-                context['pagination_info'] = {
-                    'current_page': page_obj.number,
-                    'total_pages': page_obj.paginator.num_pages,
-                    'has_next': page_obj.has_next(),
-                    'has_previous': page_obj.has_previous(),
-                    'total_count': page_obj.paginator.count
+                context["pagination_info"] = {
+                    "current_page": page_obj.number,
+                    "total_pages": page_obj.paginator.num_pages,
+                    "has_next": page_obj.has_next(),
+                    "has_previous": page_obj.has_previous(),
+                    "total_count": page_obj.paginator.count,
                 }
 
         return context
 
 
-class OptimizedDetailMixin(AjaxOptimizationMixin, ResponseCompressionMixin, PerformanceHeadersMixin):
+class OptimizedDetailMixin(
+    AjaxOptimizationMixin, ResponseCompressionMixin, PerformanceHeadersMixin
+):
     """Complete optimization mixin for detail views."""
 
-    def get_object(self, queryset: Optional[QuerySet] = None) -> Any:
+    def get_object(self, queryset: QuerySet | None = None) -> Any:
         """Get optimized object with related data."""
         if queryset is None:
             queryset = self.get_queryset()
@@ -416,7 +410,7 @@ class OptimizedFormMixin(AjaxOptimizationMixin, PerformanceHeadersMixin):
         response = super().form_valid(form)
 
         # Invalidate related cache entries
-        if hasattr(self, 'invalidate_cache_pattern'):
+        if hasattr(self, "invalidate_cache_pattern"):
             model_name = self.model._meta.model_name
             self.invalidate_cache_pattern(f"*{model_name}*")
 

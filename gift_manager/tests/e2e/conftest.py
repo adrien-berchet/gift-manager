@@ -6,19 +6,32 @@ interacting with the modern UX interface components.
 """
 
 import pytest
-from django.contrib.auth.models import User
-from django.test import override_settings
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
-from gift_manager.tests.factories import (
-    UserFactory,
-    PersonFactory,
-    PersonGroupFactory,
-    GiftFactory,
-    EventFactory,
-    RelationFactory,
-    RelationStatusFactory,
-)
+from gift_manager.tests.factories import EventFactory
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import RelationStatusFactory
+from gift_manager.tests.factories import UserFactory
+
+# =============================================================================
+# Seed Data Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def seed_data_e2e(transactional_db):
+    """Deterministic seed dataset for Playwright E2E tests.
+
+    Returns a :class:`~gift_manager.seed_data.SeedData` frozen dataclass.
+    Uses ``transactional_db`` which is required by the live-server fixture.
+    """
+    from gift_manager.seed_data import create_seed_data
+
+    return create_seed_data()
 
 
 # =============================================================================
@@ -141,7 +154,9 @@ def sample_events(transactional_db):
 
 
 @pytest.fixture
-def complete_test_data(transactional_db, sample_persons, sample_groups, sample_gifts, sample_events):
+def complete_test_data(
+    transactional_db, sample_persons, sample_groups, sample_gifts, sample_events
+):
     """Create a complete set of test data with relations."""
     status = RelationStatusFactory(status="Idea")
 
@@ -176,6 +191,7 @@ def complete_test_data(transactional_db, sample_persons, sample_groups, sample_g
 @pytest.fixture
 def login_user():
     """Utility function to log in a user via the web interface."""
+
     def _login(page: Page, live_server, user, password="testpass123"):
         """Log in the specified user."""
         page.goto(f"{live_server.url}/accounts/login/")
@@ -195,6 +211,7 @@ def login_user():
 @pytest.fixture
 def modal_helpers():
     """Utility functions for interacting with modal dialogs."""
+
     def _wait_for_modal(page: Page, modal_id="confirmModal", timeout=5000):
         """Wait for a modal to appear and be visible."""
         modal = page.locator(f"#{modal_id}")
@@ -224,6 +241,7 @@ def modal_helpers():
 @pytest.fixture
 def panel_helpers():
     """Utility functions for interacting with slide panels (offcanvas)."""
+
     def _wait_for_panel(page: Page, panel_id="editPanel", timeout=5000):
         """Wait for a slide panel to appear and be visible."""
         panel = page.locator(f"#{panel_id}")
@@ -254,6 +272,7 @@ def panel_helpers():
 @pytest.fixture
 def list_helpers():
     """Utility functions for interacting with enhanced list views."""
+
     def _wait_for_list_update(page: Page, list_selector=".list-container", timeout=5000):
         """Wait for a list to update after an operation."""
         # Wait for any loading indicators to disappear
@@ -286,6 +305,7 @@ def list_helpers():
 @pytest.fixture
 def accessibility_helpers():
     """Utility functions for testing accessibility features."""
+
     def _test_keyboard_navigation(page: Page, start_selector, expected_stops):
         """Test keyboard navigation through a sequence of elements."""
         page.locator(start_selector).focus()
@@ -309,7 +329,9 @@ def accessibility_helpers():
         element = page.locator(selector)
         for attr, expected_value in expected_attributes.items():
             actual_value = element.get_attribute(f"aria-{attr}")
-            assert actual_value == expected_value, f"Expected aria-{attr}='{expected_value}', got '{actual_value}'"
+            assert actual_value == expected_value, (
+                f"Expected aria-{attr}='{expected_value}', got '{actual_value}'"
+            )
 
     return {
         "test_keyboard_nav": _test_keyboard_navigation,
@@ -326,6 +348,7 @@ def accessibility_helpers():
 @pytest.fixture
 def performance_helpers():
     """Utility functions for performance testing."""
+
     def _measure_page_load_time(page: Page, url):
         """Measure page load time and return metrics."""
         start_time = page.evaluate("performance.now()")

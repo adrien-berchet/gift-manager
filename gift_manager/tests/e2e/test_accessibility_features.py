@@ -5,7 +5,8 @@ including keyboard navigation, screen reader support, and ARIA compliance.
 """
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -49,8 +50,10 @@ class TestKeyboardAccessibility(BaseE2ETest):
             # Test that we can reach both buttons
             for _ in range(5):  # Try up to 5 tabs
                 focused = page.evaluate("document.activeElement")
-                if focused and (cancel_btn.evaluate("el => el === document.activeElement") or
-                               confirm_btn.evaluate("el => el === document.activeElement")):
+                if focused and (
+                    cancel_btn.evaluate("el => el === document.activeElement")
+                    or confirm_btn.evaluate("el => el === document.activeElement")
+                ):
                     break
                 page.keyboard.press("Tab")
 
@@ -61,7 +64,9 @@ class TestKeyboardAccessibility(BaseE2ETest):
         # Test focus restoration after modal closes
         page.wait_for_timeout(100)  # Allow for focus restoration
         focused_after = page.evaluate("document.activeElement.tagName")
-        assert focused_after in ["BUTTON", "A", "INPUT", "BODY"], "Focus should be restored to actionable element"
+        assert focused_after in ["BUTTON", "A", "INPUT", "BODY"], (
+            "Focus should be restored to actionable element"
+        )
 
     def test_panel_keyboard_navigation(self, page: Page, live_server, test_user, sample_persons):
         """Test keyboard navigation within slide panels."""
@@ -273,7 +278,9 @@ class TestARIACompliance(BaseE2ETest):
                     # Check for aria-label or aria-labelledby
                     aria_label = field.get_attribute("aria-label")
                     aria_labelledby = field.get_attribute("aria-labelledby")
-                    assert aria_label or aria_labelledby, f"Field {field_name} should have label or aria-label"
+                    assert aria_label or aria_labelledby, (
+                        f"Field {field_name} should have label or aria-label"
+                    )
 
         # Test required field indicators
         required_fields = panel.locator("input[required], select[required], textarea[required]")
@@ -309,7 +316,9 @@ class TestARIACompliance(BaseE2ETest):
             button = toggle_buttons.nth(i)
             aria_pressed = button.get_attribute("aria-pressed")
             if aria_pressed:
-                assert aria_pressed in ["true", "false"], "Toggle buttons should have aria-pressed='true' or 'false'"
+                assert aria_pressed in ["true", "false"], (
+                    "Toggle buttons should have aria-pressed='true' or 'false'"
+                )
 
     def test_list_aria_attributes(self, page: Page, live_server, test_user, sample_persons):
         """Test ARIA attributes on list elements."""
@@ -321,7 +330,9 @@ class TestARIACompliance(BaseE2ETest):
         if list_container.count() > 0:
             role = list_container.get_attribute("role")
             if role:
-                assert role in ["list", "table", "grid"], f"List container should have appropriate role, got '{role}'"
+                assert role in ["list", "table", "grid"], (
+                    f"List container should have appropriate role, got '{role}'"
+                )
 
         # Test list items
         list_items = page.locator(".list-container .list-item, .list-container tr")
@@ -329,7 +340,9 @@ class TestARIACompliance(BaseE2ETest):
             first_item = list_items.first
             role = first_item.get_attribute("role")
             if role:
-                assert role in ["listitem", "row"], f"List items should have appropriate role, got '{role}'"
+                assert role in ["listitem", "row"], (
+                    f"List items should have appropriate role, got '{role}'"
+                )
 
         # Test checkboxes for bulk selection
         checkboxes = page.locator("input[type='checkbox']")
@@ -338,7 +351,9 @@ class TestARIACompliance(BaseE2ETest):
             aria_label = checkbox.get_attribute("aria-label")
             associated_label = page.locator(f"label[for='{checkbox.get_attribute('id')}']")
 
-            assert aria_label or associated_label.count() > 0, "Checkboxes should have accessible labels"
+            assert aria_label or associated_label.count() > 0, (
+                "Checkboxes should have accessible labels"
+            )
 
     def test_live_regions(self, page: Page, live_server, test_user, sample_persons):
         """Test ARIA live regions for dynamic content updates."""
@@ -356,9 +371,13 @@ class TestARIACompliance(BaseE2ETest):
             role = area.get_attribute("role")
 
             if aria_live:
-                assert aria_live in ["polite", "assertive"], f"Live regions should have appropriate aria-live value, got '{aria_live}'"
+                assert aria_live in ["polite", "assertive"], (
+                    f"Live regions should have appropriate aria-live value, got '{aria_live}'"
+                )
             elif role:
-                assert role in ["status", "alert"], f"Notification areas should have appropriate role, got '{role}'"
+                assert role in ["status", "alert"], (
+                    f"Notification areas should have appropriate role, got '{role}'"
+                )
 
         # Test loading indicators
         loading_indicators = page.locator(".loading, .spinner")
@@ -377,7 +396,9 @@ class TestARIACompliance(BaseE2ETest):
 class TestScreenReaderSupport(BaseE2ETest):
     """Test screen reader support and announcements."""
 
-    def test_dynamic_content_announcements(self, page: Page, live_server, test_user, sample_persons):
+    def test_dynamic_content_announcements(
+        self, page: Page, live_server, test_user, sample_persons
+    ):
         """Test that dynamic content changes are announced to screen readers."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
@@ -430,7 +451,9 @@ class TestScreenReaderSupport(BaseE2ETest):
             aria_live = first_error.get_attribute("aria-live")
 
             # At least one of these should be present for screen reader support
-            assert aria_describedby or role or aria_live, "Error messages should have screen reader support"
+            assert aria_describedby or role or aria_live, (
+                "Error messages should have screen reader support"
+            )
 
         page.keyboard.press("Escape")
 
@@ -453,7 +476,9 @@ class TestScreenReaderSupport(BaseE2ETest):
                     aria_live = indicator.get_attribute("aria-live")
 
                     # Loading indicators should be accessible to screen readers
-                    assert aria_label or role or aria_live, "Loading indicators should be accessible"
+                    assert aria_label or role or aria_live, (
+                        "Loading indicators should be accessible"
+                    )
 
         # Wait for panel to load
         self.wait_for_panel(page)
@@ -500,10 +525,10 @@ class TestColorContrastAndVisibility(BaseE2ETest):
 
             # Should have some form of focus indicator
             has_focus_indicator = (
-                focus_styles["outline"] != "none" or
-                focus_styles["outlineWidth"] != "0px" or
-                "focus" in focus_styles["boxShadow"] or
-                focus_styles["borderColor"] != "initial"
+                focus_styles["outline"] != "none"
+                or focus_styles["outlineWidth"] != "0px"
+                or "focus" in focus_styles["boxShadow"]
+                or focus_styles["borderColor"] != "initial"
             )
 
             assert has_focus_indicator, "Focused elements should have visible focus indicators"
@@ -532,7 +557,9 @@ class TestColorContrastAndVisibility(BaseE2ETest):
 
                 # Basic check - text should not be transparent or same as background
                 assert styles["color"] != "rgba(0, 0, 0, 0)", "Text should not be transparent"
-                assert styles["color"] != styles["backgroundColor"], "Text should contrast with background"
+                assert styles["color"] != styles["backgroundColor"], (
+                    "Text should contrast with background"
+                )
 
     def test_button_sizing(self, page: Page, live_server, test_user, sample_persons):
         """Test that interactive elements meet minimum size requirements."""
@@ -548,8 +575,12 @@ class TestColorContrastAndVisibility(BaseE2ETest):
                 button_box = button.bounding_box()
 
                 # Buttons should meet minimum touch target size
-                assert button_box["width"] >= 24, f"Button width {button_box['width']} should be at least 24px"
-                assert button_box["height"] >= 24, f"Button height {button_box['height']} should be at least 24px"
+                assert button_box["width"] >= 24, (
+                    f"Button width {button_box['width']} should be at least 24px"
+                )
+                assert button_box["height"] >= 24, (
+                    f"Button height {button_box['height']} should be at least 24px"
+                )
 
     def test_error_message_visibility(self, page: Page, live_server, test_user):
         """Test that error messages are clearly visible and accessible."""

@@ -10,19 +10,19 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from django.test import TestCase
-from hypothesis import settings
 
-from .test_pbt_config import PROPERTY_METADATA
 from .test_pbt_config import PBT_COMPREHENSIVE_SETTINGS
 from .test_pbt_config import PBT_FAST_SETTINGS
 from .test_pbt_config import PBT_SETTINGS
+from .test_pbt_config import PROPERTY_METADATA
 
 
 class PropertyTestResult:
     """Container for property test results."""
 
-    def __init__(self, property_number, property_name, status, duration=0, error=None, examples_run=0):
+    def __init__(
+        self, property_number, property_name, status, duration=0, error=None, examples_run=0
+    ):
         self.property_number = property_number
         self.property_name = property_name
         self.status = status  # 'passed', 'failed', 'skipped', 'error'
@@ -133,7 +133,7 @@ class PropertyTestRunner:
             status=status,
             duration=duration,
             error=error,
-            examples_run=examples_run
+            examples_run=examples_run,
         )
 
     def run_specific_properties(self, property_numbers):
@@ -167,8 +167,10 @@ class PropertyTestRunner:
             "error": "⚠",
         }.get(result.status, "?")
 
-        print(f"  {status_symbol} Property {result.property_number}: {result.status.upper()} "
-              f"({result.duration:.2f}s, {result.examples_run} examples)")
+        print(
+            f"  {status_symbol} Property {result.property_number}: {result.status.upper()} "
+            f"({result.duration:.2f}s, {result.examples_run} examples)"
+        )
 
         if result.error:
             print(f"    Error: {result.error}")
@@ -198,7 +200,9 @@ class PropertyTestRunner:
             "test_mode": self.test_mode,
             "start_time": self.start_time,
             "end_time": self.end_time,
-            "total_duration": self.end_time - self.start_time if self.end_time and self.start_time else 0,
+            "total_duration": self.end_time - self.start_time
+            if self.end_time and self.start_time
+            else 0,
             "hypothesis_settings": {
                 "max_examples": self.hypothesis_settings.max_examples,
                 "deadline": self.hypothesis_settings.deadline,

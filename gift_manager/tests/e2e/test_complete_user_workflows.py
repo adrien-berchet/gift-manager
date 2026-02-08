@@ -5,7 +5,8 @@ and demonstrate the full functionality of the modern UX interface.
 """
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Page
+from playwright.sync_api import expect
 
 from gift_manager.tests.e2e.base_test import BaseE2ETest
 
@@ -76,7 +77,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         expect(page.locator(".list-container")).to_contain_text("Jonathan Workflow")
 
         # Step 3: View person details
-        jonathan_row = page.locator(".list-container").locator("text=Jonathan Workflow").locator("..").first
+        jonathan_row = (
+            page.locator(".list-container").locator("text=Jonathan Workflow").locator("..").first
+        )
         person_name_link = jonathan_row.locator(".entity-name, a").first
         person_name_link.click()
 
@@ -104,7 +107,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         self.wait_for_list_update(page)
         expect(page.locator(".list-container")).not_to_contain_text("Jonathan Workflow")
 
-    def test_gift_planning_workflow(self, page: Page, live_server, test_user, sample_persons, sample_events):
+    def test_gift_planning_workflow(
+        self, page: Page, live_server, test_user, sample_persons, sample_events
+    ):
         """Test complete gift planning workflow: create gift, assign to person/event, manage relations."""
         self.login_as_user(page, live_server, test_user)
 
@@ -198,7 +203,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "gifts")
 
         # Find and delete our test gift
-        gift_row = page.locator(".list-container").locator("text=Workflow Test Gift").locator("..").first
+        gift_row = (
+            page.locator(".list-container").locator("text=Workflow Test Gift").locator("..").first
+        )
         delete_btn = gift_row.locator("[data-action='delete']")
         delete_btn.click()
         self.wait_for_modal(page)
@@ -258,7 +265,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
                     self.wait_for_modal(page, bulk_modal.get_attribute("id") or "confirmModal")
 
                     # Confirm bulk deletion
-                    self.confirm_modal_action(page, bulk_modal.get_attribute("id") or "confirmModal")
+                    self.confirm_modal_action(
+                        page, bulk_modal.get_attribute("id") or "confirmModal"
+                    )
                     self.wait_for_ajax_complete(page)
 
                     # Verify bulk deletion completed
@@ -438,7 +447,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         # This is difficult to test without mocking, but we can test timeout scenarios
 
         # Step 4: Clean up test data
-        error_test_row = page.locator(".list-container").locator("text=Error Test").locator("..").first
+        error_test_row = (
+            page.locator(".list-container").locator("text=Error Test").locator("..").first
+        )
         if error_test_row.count() > 0:
             delete_btn = error_test_row.locator("[data-action='delete']")
             delete_btn.click()
@@ -482,13 +493,21 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         total_workflow_duration = form_submit_time - workflow_start
 
         # Assert performance thresholds
-        assert list_load_duration < 3000, f"List load took {list_load_duration}ms, should be under 3000ms"
-        assert panel_open_duration < 1000, f"Panel open took {panel_open_duration}ms, should be under 1000ms"
-        assert form_submit_duration < 2000, f"Form submit took {form_submit_duration}ms, should be under 2000ms"
-        assert total_workflow_duration < 5000, f"Total workflow took {total_workflow_duration}ms, should be under 5000ms"
+        assert list_load_duration < 3000, (
+            f"List load took {list_load_duration}ms, should be under 3000ms"
+        )
+        assert panel_open_duration < 1000, (
+            f"Panel open took {panel_open_duration}ms, should be under 1000ms"
+        )
+        assert form_submit_duration < 2000, (
+            f"Form submit took {form_submit_duration}ms, should be under 2000ms"
+        )
+        assert total_workflow_duration < 5000, (
+            f"Total workflow took {total_workflow_duration}ms, should be under 5000ms"
+        )
 
         # Log performance metrics for analysis
-        print(f"Performance Metrics:")
+        print("Performance Metrics:")
         print(f"  List Load: {list_load_duration:.0f}ms")
         print(f"  Panel Open: {panel_open_duration:.0f}ms")
         print(f"  Form Submit: {form_submit_duration:.0f}ms")
@@ -555,4 +574,6 @@ class TestCompleteUserWorkflows(BaseE2ETest):
 
         # Verify focus management
         focused_after_modal = page.evaluate("document.activeElement.tagName")
-        assert focused_after_modal in ["BUTTON", "A", "INPUT"], "Focus should return to actionable element"
+        assert focused_after_modal in ["BUTTON", "A", "INPUT"], (
+            "Focus should return to actionable element"
+        )
