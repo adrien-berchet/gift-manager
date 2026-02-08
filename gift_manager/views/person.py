@@ -11,9 +11,8 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import PersonForm
-from gift_manager.mixins.performance import OptimizedDetailMixin
-from gift_manager.mixins.performance import OptimizedFormMixin
-from gift_manager.mixins.performance import OptimizedListMixin
+from gift_manager.mixins.performance import BatchOperationMixin
+from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
@@ -31,7 +30,11 @@ from gift_manager.views.base import BaseUpdateView
 
 
 class PersonListView(
-    ProgressiveEnhancementListMixin, OptimizedListMixin, PermissionContextMixin, BaseListView
+    ProgressiveEnhancementListMixin,
+    QueryOptimizationMixin,
+    BatchOperationMixin,
+    PermissionContextMixin,
+    BaseListView,
 ):
     model = Person
     template_name = "gift_manager/person_list.html"
@@ -101,7 +104,7 @@ class PersonListView(
         ]
 
 
-class PersonCreateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseCreateView):
+class PersonCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Person
     form_class = PersonForm
     success_url = reverse_lazy("gift_manager:persons")
@@ -119,7 +122,7 @@ class PersonCreateView(ProgressiveEnhancementFormMixin, OptimizedFormMixin, Base
 
 
 class PersonUpdateView(
-    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, OptimizedFormMixin, BaseUpdateView
+    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
 ):
     model = Person
     form_class = PersonForm
@@ -145,7 +148,7 @@ class PersonDeleteView(BaseDeleteView):
     object_type = "person"
 
 
-class PersonDetailView(OptimizedDetailMixin, SingleObjectPermissionMixin, BaseDetailView):
+class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, BaseDetailView):
     model = Person
     template_name = "gift_manager/person_detail.html"
     context_object_name = "person"

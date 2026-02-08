@@ -692,6 +692,15 @@
                 refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback);
             }
         });
+
+        // Handle browser back/forward cache (bfcache): when a page is restored
+        // from bfcache, the DOM is stale and may not reflect recent CRUD changes.
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                console.log(`[${entityType}List] Page restored from bfcache, refreshing grid data...`);
+                refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback);
+            }
+        });
     }
 
     /**
