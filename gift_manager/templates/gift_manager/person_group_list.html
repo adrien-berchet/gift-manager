@@ -2,11 +2,15 @@
 
 {% load i18n %}
 {% load static %}
+{% load permission_tags %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
 <style>
     /* Tree view styles */
     .tree-view-container {
@@ -108,6 +112,12 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
+        <button type="button"
+                class="btn btn-outline-secondary me-2"
+                id="toggle-selection-persongroup-grid"
+                title="{% trans 'Select multiple items' %}">
+            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
+        </button>
         <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
         </a>
@@ -185,15 +195,22 @@
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
         // Calculate column indices for clarity
-        const numDataColumns = {{ column_names.items| length }};
+        const numDataColumns = 1 + {{ column_names.items| length }};  // +1 for checkbox column
     const groupIdIdx = numDataColumns;           // Index of group_id
     const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
     const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
@@ -201,9 +218,11 @@
     const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
 
     // Prepare data for Grid.js
+    // Include placeholder (empty string) for checkbox column as first element
     const data = [
         {% for item in data %}
     [
+        '', // Checkbox column placeholder
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
     "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
@@ -226,7 +245,9 @@
         ];
 
     // Build columns dynamically
+    // Checkbox column first, managed by Grid.js
     const columns = [
+        GridUtils.createCheckboxColumn(numDataColumns - 1),
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
     {
@@ -248,48 +269,101 @@
     { name: 'group_edit_url', hidden: true },
     { name: 'group_delete_url', hidden: true },
     {
+        id: 'actions',
         name: '{% trans "Actions"|escapejs %}',
-            width: '200px',
-                sort: false,
-                    formatter: GridUtils.actionButtonsFormatter({
-                        give: (row) => row.cells[giveUrlIdx].data,
-                        details: (row) => row.cells[detailUrlIdx].data,
-                        edit: (row) => row.cells[editUrlIdx].data,
-                        delete: (row) => row.cells[deleteUrlIdx].data,
-                        share: () => "{% url 'gift_manager:share_objects' %}"
-                    }, ['give', 'details', 'edit', 'delete', 'share'])
+        width: '200px',
+        sort: false,
+        formatter: PermissionUtils.permissionAwareActionFormatter({
+            give: (row) => row.cells[giveUrlIdx].data,
+            details: (row) => row.cells[detailUrlIdx].data,
+            edit: (row) => row.cells[editUrlIdx].data,
+            delete: (row) => row.cells[deleteUrlIdx].data,
+            share: () => "{% url 'gift_manager:share_objects' %}"
+        }, ['give', 'details', 'edit', 'delete', 'share'], {
+            idResolver: (row) => row.cells[groupIdIdx].data  // group_id
+        }, userPermissions)
     }
     ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('person-group-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
+    // Track if inline editing has been initialized to prevent re-initialization
+    const editState = { inlineEditingInitialized: false };
+    const inlineEditingMapping = {
+        2: 'name'  // Column index 2 is group name (after checkbox and checkbox column)
+    };
+
+    // Initialize Grid.js with inline editing
+    try {
+        const grid = GridUtils.initGrid('person-group-grid', columns, data, {
+            pagination: {
+                enabled: true,
+                limit: GridUtils.calculateOptimalPageSize('person-group-grid')
+            }
+        }, function() {
+            // Grid ready callback
+            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
+            GridUtils.injectSelectAllCheckbox('person-group-grid');
+
+            // Only initialize inline editing once during initial page load
+            if (!editState.inlineEditingInitialized && window.InlineEditing) {
+                try {
+                    window.InlineEditing.init('person-group-grid', 'persongroup', inlineEditingMapping);
+                    editState.inlineEditingInitialized = true;
+                } catch (error) {
+                    console.error('[PersonGroupList] Error initializing inline editing:', error);
+                }
+            }
+        }, {
+            entityType: 'persongroup',
+            columnMapping: inlineEditingMapping
+        });
+
+        // Add list update event listener using GridUtils
+        GridUtils.addListUpdateListener(grid, 'PersonGroup', groupIdIdx, function() {
+            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
+        });
+
+        // Setup grid refresh handler for select-all and data attributes
+        GridUtils.setupGridRefreshHandler('person-group-grid', 'PersonGroup', data, groupIdIdx);
+
+        // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
+        GridUtils.setupInlineEditingFallback('person-group-grid', 'persongroup', inlineEditingMapping, editState, function() {
+            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
+        });
+
+        // Initialize filter panel
+        FilterPanel.init('person-group-grid', grid, columns);
+
+        // Initialize real-time search
+        if (window.RealTimeSearch) {
+            RealTimeSearch.init('person-group-grid', grid, data);
         }
-    });
 
-    // Add list update event listener using GridUtils
-    GridUtils.addListUpdateListener(grid, 'PersonGroup', groupIdIdx);
+        // Initialize dynamic filters
+        if (window.DynamicFilters) {
+            DynamicFilters.init('person-group-grid', grid, data, columns);
+        }
 
-    // Initialize filter panel
-    FilterPanel.init('person-group-grid', grid, columns);
+        // Initialize bulk operations
+        GridUtils.initBulkOperations('person-group-grid', 'persongroup');
 
-    // Initialize real-time search
-    if (window.RealTimeSearch) {
-        RealTimeSearch.init('person-group-grid', grid, data);
-    }
+        // Recalculate page size on window resize
+        GridUtils.enableDynamicPageSize(grid);
 
-    // Initialize dynamic filters
-    if (window.DynamicFilters) {
-        DynamicFilters.init('person-group-grid', grid, data, columns);
+        // Enable expandable rows
+        GridUtils.enableExpandableRows('person-group-grid', grid, {
+            detailUrlTemplate: "/en/person-groups/{id}/",
+            expandButtonColumn: 'actions'
+        });
+
+    } catch (error) {
+        console.error('[PersonGroupList] Error initializing grid:', error);
     }
 
     // Trigger initial sort on first column to make Grid.js aware of the sort
     setTimeout(() => {
-        const statusHeader = document.querySelector('#person-group-grid th:nth-child(1)');
-        if (statusHeader) {
-            statusHeader.click();
+        const nameHeader = document.querySelector('#person-group-grid th:nth-child(2)');
+        if (nameHeader) {
+            nameHeader.click();
         }
     }, 100);
     }) ();

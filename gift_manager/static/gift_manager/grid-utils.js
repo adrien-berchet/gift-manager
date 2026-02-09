@@ -1439,9 +1439,188 @@
         });
     }
 
+    /**
+     * Initialize a standard list grid with common features (bulk operations, inline editing, etc.)
+     * Reduces code duplication across list templates by centralizing grid configuration.
+     *
+     * @param {Object} config - Configuration object
+     * @param {string} config.gridId - HTML container ID for grid
+     * @param {string} config.entityType - Entity type (e.g., 'person', 'gift', 'event')
+     * @param {Array} config.columns - Grid.js columns array
+     * @param {Array} config.data - Grid.js data array
+     * @param {Object} [config.features] - Feature configuration
+     * @param {boolean} [config.features.bulkOperations] - Enable bulk select/delete
+     * @param {Object} [config.features.inlineEditing] - Inline editing config
+     * @param {Object} [config.features.inlineEditing.mapping] - Field index to field name mapping
+     * @param {Object} [config.features.expandableRows] - Expandable rows config
+     * @param {string} [config.features.expandableRows.urlTemplate] - Detail URL template with {id}
+     * @param {boolean} [config.features.realTimeSearch] - Enable real-time search
+     * @param {boolean} [config.features.dynamicFilters] - Enable dynamic filters
+     * @param {boolean} [config.features.dynamicPageSize] - Enable dynamic page sizing
+     * @param {Array} [config.features.initialSort] - Initial sort configuration
+     * @param {Object} [config.features.initialSort[].columnSelector] - CSS selector for column header
+     * @param {boolean} [config.features.initialSort[].shift] - Whether to apply shift+click (multi-column)
+     * @param {Object} [config.pagination] - Pagination config (default: { enabled: true })
+     * @param {Object} [config.sort] - Sort config (default: {})
+     * @param {Object} [config.userPermissions] - User permissions object to store in window.userPermissions
+     * @param {number} [config.idFieldIndex] - Index of entity ID field in data array (auto-detected if not provided)
+     * @returns {Object} Initialized Grid.js instance
+     */
+    function initStandardListGrid(config) {
+        var gridId = config.gridId;
+        var entityType = config.entityType;
+        var columns = config.columns;
+        var data = config.data;
+        var features = config.features || {};
+        var pagination = config.pagination || { enabled: true };
+        var sort = config.sort || {};
+        var userPermissions = config.userPermissions;
+        var idFieldIndex = config.idFieldIndex;
+
+        // Store permissions if provided
+        if (userPermissions) {
+            window.userPermissions = userPermissions;
+        }
+
+        // Calculate page size if dynamic sizing enabled
+        if (features.dynamicPageSize && !pagination.limit) {
+            pagination.limit = calculateOptimalPageSize(gridId);
+        }
+
+        // Track initialization state
+        var editState = { inlineEditingInitialized: false };
+
+        // Auto-detect ID field index if not provided
+        if (idFieldIndex === undefined) {
+            idFieldIndex = columns.findIndex(function (c) {
+                return c.name === (entityType + '_id');
+            });
+            if (idFieldIndex === -1) {
+                // Fallback: assume checkbox column at 0, so ID is first hidden column after data columns
+                idFieldIndex = 0;
+            }
+        }
+
+        // Initialize grid with ready callback
+        var grid = initGrid(
+            gridId,
+            columns,
+            data,
+            { pagination: pagination, sort: sort },
+            function () {
+                // Grid ready callback
+
+                // Add entity data attributes
+                if (features.bulkOperations || features.inlineEditing) {
+                    addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
+                }
+
+                // Inject select-all checkbox
+                if (features.bulkOperations) {
+                    injectSelectAllCheckbox(gridId);
+                }
+
+                // Initialize inline editing
+                if (features.inlineEditing && !editState.inlineEditingInitialized && window.InlineEditing) {
+                    try {
+                        window.InlineEditing.init(gridId, entityType, features.inlineEditing.mapping);
+                        editState.inlineEditingInitialized = true;
+                    } catch (error) {
+                        console.error('[' + entityType + 'List] Error initializing inline editing:', error);
+                    }
+                }
+            },
+            features.inlineEditing
+                ? {
+                    entityType: entityType,
+                    columnMapping: features.inlineEditing.mapping
+                }
+                : undefined
+        );
+
+        // Add list update listener
+        var capitalizedEntity = entityType.charAt(0).toUpperCase() + entityType.slice(1);
+        addListUpdateListener(
+            grid,
+            capitalizedEntity,
+            idFieldIndex,
+            function () {
+                if (features.bulkOperations || features.inlineEditing) {
+                    addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
+                }
+            }
+        );
+
+        // Setup grid refresh handler
+        setupGridRefreshHandler(gridId, capitalizedEntity, data, idFieldIndex);
+
+        // Setup inline editing fallback
+        if (features.inlineEditing) {
+            setupInlineEditingFallback(gridId, entityType, features.inlineEditing.mapping, editState, function () {
+                addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
+            });
+        }
+
+        // Initialize filter panel
+        if (features.filterPanel !== false && window.FilterPanel) {
+            // Enabled by default
+            FilterPanel.init(gridId, grid, columns);
+        }
+
+        // Initialize real-time search
+        if (features.realTimeSearch && window.RealTimeSearch) {
+            RealTimeSearch.init(gridId, grid, data);
+        }
+
+        // Initialize dynamic filters
+        if (features.dynamicFilters && window.DynamicFilters) {
+            DynamicFilters.init(gridId, grid, data, columns);
+        }
+
+        // Initialize bulk operations
+        if (features.bulkOperations) {
+            initBulkOperations(gridId, entityType);
+        }
+
+        // Enable dynamic page sizing
+        if (features.dynamicPageSize) {
+            enableDynamicPageSize(grid);
+        }
+
+        // Enable expandable rows
+        if (features.expandableRows) {
+            enableExpandableRows(gridId, grid, features.expandableRows);
+        }
+
+        // Apply initial sort
+        if (features.initialSort && features.initialSort.length > 0) {
+            setTimeout(function () {
+                features.initialSort.forEach(function (sortConfig, index) {
+                    var header = document.querySelector('#' + gridId + ' ' + sortConfig.columnSelector);
+                    if (header) {
+                        if (index === 0) {
+                            header.click();
+                        } else {
+                            var shiftClick = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window,
+                                shiftKey: true
+                            });
+                            header.dispatchEvent(shiftClick);
+                        }
+                    }
+                });
+            }, 100);
+        }
+
+        return grid;
+    }
+
     // Expose utilities to global scope
     window.GridUtils = {
         initGrid: initGrid,
+        initStandardListGrid: initStandardListGrid,
         actionButtonsFormatter: actionButtonsFormatter,
         linkFormatter: linkFormatter,
         multiLinkFormatter: multiLinkFormatter,

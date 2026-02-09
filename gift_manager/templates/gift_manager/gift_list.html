@@ -120,74 +120,28 @@
         }
     ];
 
-    // Track if inline editing has been initialized to prevent re-initialization
-    const editState = { inlineEditingInitialized: false };
-    const inlineEditingMapping = { 1: 'name', 2: 'comment' };
-
-    // Initialize Grid.js with inline editing
-    const grid = GridUtils.initGrid('gift-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: GridUtils.calculateOptimalPageSize('gift-grid')
-        }
-    }, function() {
-        // Grid ready callback
-        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
-        GridUtils.injectSelectAllCheckbox('gift-grid');
-
-        // Only initialize inline editing once during initial page load
-        if (!editState.inlineEditingInitialized && window.InlineEditing) {
-            try {
-                window.InlineEditing.init('gift-grid', 'gift', inlineEditingMapping);
-                editState.inlineEditingInitialized = true;
-            } catch (error) {
-                console.error('[GiftList] Error initializing inline editing:', error);
-            }
-        }
-    }, {
+    // Initialize Grid.js with all features using the standard helper
+    const grid = GridUtils.initStandardListGrid({
+        gridId: 'gift-grid',
         entityType: 'gift',
-        columnMapping: inlineEditingMapping
+        columns: columns,
+        data: data,
+        userPermissions: userPermissions,
+        pagination: {
+            enabled: true
+        },
+        features: {
+            bulkOperations: true,
+            inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+            realTimeSearch: true,
+            dynamicFilters: true,
+            dynamicPageSize: true,
+            initialSort: [
+                { columnSelector: 'th:nth-child(2)' }  // Name
+            ]
+        },
+        idFieldIndex: 4
     });
-
-    // Add list update event listener using GridUtils
-    GridUtils.addListUpdateListener(grid, 'Gift', 4, function() {
-        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
-    });
-
-    // Setup grid refresh handler for select-all and data attributes
-    GridUtils.setupGridRefreshHandler('gift-grid', 'Gift', data, 4);
-
-    // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
-    GridUtils.setupInlineEditingFallback('gift-grid', 'gift', inlineEditingMapping, editState, function() {
-        GridUtils.addEntityDataAttributes('gift-grid', 'gift', data, 4);
-    });
-
-    // Initialize filter panel
-    FilterPanel.init('gift-grid', grid, columns);
-
-    // Initialize real-time search
-    if (window.RealTimeSearch) {
-        RealTimeSearch.init('gift-grid', grid, data);
-    }
-
-    // Initialize dynamic filters
-    if (window.DynamicFilters) {
-        DynamicFilters.init('gift-grid', grid, data, columns);
-    }
-
-    // Initialize bulk operations
-    GridUtils.initBulkOperations('gift-grid', 'gift');
-
-    // Recalculate page size on window resize
-    GridUtils.enableDynamicPageSize(grid);
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const statusHeader = document.querySelector('#gift-grid th:nth-child(1)');
-        if (statusHeader) {
-            statusHeader.click();
-        }
-    }, 100);
     }) ();
 </script>
 {% endblock %}

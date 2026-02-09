@@ -116,83 +116,32 @@
         }
     ];
 
-    // Track if inline editing has been initialized to prevent re-initialization
-    const editState = { inlineEditingInitialized: false };
-    const inlineEditingMapping = { 1: 'name', 2: 'comment' };
-
-    // Initialize Grid.js with inline editing
-    const grid = GridUtils.initGrid('event-grid', columns, data, {
+    // Initialize Grid.js with all features using the standard helper
+    const grid = GridUtils.initStandardListGrid({
+        gridId: 'event-grid',
+        entityType: 'event',
+        columns: columns,
+        data: data,
+        userPermissions: userPermissions,
         pagination: {
-            enabled: true,
-            limit: GridUtils.calculateOptimalPageSize('event-grid')
+            enabled: true
         },
         sort: {
             multiColumn: true
-        }
-    }, function() {
-        // Grid ready callback
-        GridUtils.addEntityDataAttributes('event-grid', 'event', data, 4);
-        GridUtils.injectSelectAllCheckbox('event-grid');
-
-        // Only initialize inline editing once during initial page load
-        if (!editState.inlineEditingInitialized && window.InlineEditing) {
-            try {
-                window.InlineEditing.init('event-grid', 'event', inlineEditingMapping);
-                editState.inlineEditingInitialized = true;
-            } catch (error) {
-                console.error('[EventList] Error initializing inline editing:', error);
-            }
-        }
-    }, {
-        entityType: 'event',
-        columnMapping: inlineEditingMapping
+        },
+        features: {
+            bulkOperations: true,
+            inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+            expandableRows: { urlTemplate: '/en/events/{id}/', expandButtonColumn: 'actions' },
+            realTimeSearch: true,
+            dynamicFilters: true,
+            dynamicPageSize: true,
+            initialSort: [
+                { columnSelector: 'th:nth-child(2)' }  // Name
+            ]
+        },
+        idFieldIndex: 4
     });
-
-    // Add list update event listener using GridUtils
-    GridUtils.addListUpdateListener(grid, 'Event', 4, function() {
-        GridUtils.addEntityDataAttributes('event-grid', 'event', data, 4);
-    });
-
-    // Setup grid refresh handler for select-all and data attributes
-    GridUtils.setupGridRefreshHandler('event-grid', 'Event', data, 4);
-
-    // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
-    GridUtils.setupInlineEditingFallback('event-grid', 'event', inlineEditingMapping, editState, function() {
-        GridUtils.addEntityDataAttributes('event-grid', 'event', data, 4);
-    });
-
-    // Initialize filter panel
-    FilterPanel.init('event-grid', grid, columns);
-
-    // Initialize real-time search
-    if (window.RealTimeSearch) {
-        RealTimeSearch.init('event-grid', grid, data);
-    }
-
-    // Initialize dynamic filters
-    if (window.DynamicFilters) {
-        DynamicFilters.init('event-grid', grid, data, columns);
-    }
-
-    // Initialize bulk operations
-    GridUtils.initBulkOperations('event-grid', 'event');
-
-    // Recalculate page size on window resize
-    GridUtils.enableDynamicPageSize(grid);
-
-    // Enable expandable rows
-    GridUtils.enableExpandableRows('event-grid', grid, {
-        detailUrlTemplate: "/en/events/{id}/",
-        expandButtonColumn: 'actions'
-    });
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const nameHeader = document.querySelector('#event-grid th:nth-child(2)');
-        if (nameHeader) {
-            nameHeader.click();
-        }
-    }, 100);
     }) ();
 </script>
 {% endblock %}

@@ -22,6 +22,7 @@ from django.views.decorators.http import require_POST
 from gift_manager.forms import PersonGroupAddMultipleChildGroupsForm
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
+from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -36,7 +37,7 @@ from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 
 
-class PersonGroupListView(BaseListView):
+class PersonGroupListView(PermissionContextMixin, BaseListView):
     model = PersonGroup
     template_name = "gift_manager/person_group_list.html"
     object_type = "Groups"

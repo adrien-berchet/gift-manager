@@ -120,114 +120,44 @@
         }
     ];
 
-    // Track if inline editing has been initialized to prevent re-initialization
-    const editState = { inlineEditingInitialized: false };
-    const inlineEditingMapping = {
-        1: 'first_name',
-        2: 'family_name',
-        3: 'email_address'
-    };
-
-    // Initialize Grid.js with inline editing
+    // Initialize Grid.js with all features using the standard helper
     try {
-        const grid = GridUtils.initGrid('person-grid', columns, data, {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'person-grid',
+            entityType: 'person',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
             pagination: {
-                enabled: true,
-                limit: GridUtils.calculateOptimalPageSize('person-grid')
+                enabled: true
             },
             sort: {
                 multiColumn: true
-            }
-        }, function() {
-            // Grid ready callback
-            GridUtils.addEntityDataAttributes('person-grid', 'person', data, 5);
-            GridUtils.injectSelectAllCheckbox('person-grid');
-
-            // Only initialize inline editing once during initial page load
-            if (!editState.inlineEditingInitialized && window.InlineEditing) {
-                try {
-                    window.InlineEditing.init('person-grid', 'person', inlineEditingMapping);
-                    editState.inlineEditingInitialized = true;
-                } catch (error) {
-                    console.error('[PersonList] Error initializing inline editing:', error);
-                }
-            }
-        }, {
-            entityType: 'person',
-            columnMapping: inlineEditingMapping
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } },
+                expandableRows: { urlTemplate: '/en/persons/{id}/', expandButtonColumn: 'actions' },
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(3)' },  // Family Name (column 3)
+                    { columnSelector: 'th:nth-child(2)', shift: true }  // First Name (column 2)
+                ]
+            },
+            idFieldIndex: 5
         });
 
-        // Add list update event listener using GridUtils
-        GridUtils.addListUpdateListener(grid, 'Person', 5, function() {
-            GridUtils.addEntityDataAttributes('person-grid', 'person', data, 5);
-        });
-
-        // Setup grid refresh handler for select-all and data attributes
-        GridUtils.setupGridRefreshHandler('person-grid', 'Person', data, 5);
-
-        // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
-        GridUtils.setupInlineEditingFallback('person-grid', 'person', inlineEditingMapping, editState, function() {
-            GridUtils.addEntityDataAttributes('person-grid', 'person', data, 5);
-        });
-
-        // Initialize filter panel
-        FilterPanel.init('person-grid', grid, columns);
-
-        // Initialize real-time search
-        if (window.RealTimeSearch) {
-            RealTimeSearch.init('person-grid', grid, data);
-        }
-
-        // Initialize dynamic filters
-        if (window.DynamicFilters) {
-            DynamicFilters.init('person-grid', grid, data, columns);
-        }
-
-        // Setup filter dropdown UI
+        // Setup filter dropdown UI (person-specific)
         GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
 
-        // Setup custom group filter
-        GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
-
-        // Enable expandable rows
-        GridUtils.enableExpandableRows('person-grid', grid, {
-            detailUrlTemplate: "/en/persons/{id}/",
-            expandButtonColumn: 'actions'
-        });
-
-        // Initialize bulk operations
-        GridUtils.initBulkOperations('person-grid', 'person');
-
-        // Recalculate page size on window resize
-        GridUtils.enableDynamicPageSize(grid);
+        // Setup custom group filter (person-specific)
+        GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter');
 
     } catch (error) {
         console.error('[PersonList] Error initializing grid:', error);
     }
     }) ();
-
-    // Trigger initial sort: Family Name (2) then First Name (1)
-    // IMPORTANT: Only run once, even if script is re-executed
-    if (!window.personGridSortInitialized) {
-        window.personGridSortInitialized = true;
-        setTimeout(() => {
-            const familyNameHeader = document.querySelector('#person-grid th:nth-child(2)');
-            const firstNameHeader = document.querySelector('#person-grid th:nth-child(1)');
-
-            if (familyNameHeader && firstNameHeader) {
-                // Primary sort: Family Name
-                familyNameHeader.click();
-
-                // Secondary sort: First Name (simulate Shift+Click)
-                const shiftClick = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    shiftKey: true
-                });
-                firstNameHeader.dispatchEvent(shiftClick);
-            }
-        }, 100);
-    }
 </script>
 {% endblock %}

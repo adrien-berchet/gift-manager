@@ -194,67 +194,40 @@
             7: 'due_date'
         };
 
-        // Initialize Grid.js
-        const grid = GridUtils.initGrid('relation-grid', columns, data, {
+        // Initialize Grid.js with all features using the standard helper
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'relation-grid',
+            entityType: 'relation',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
             pagination: {
-                enabled: true,
-                limit: GridUtils.calculateOptimalPageSize('relation-grid')
+                enabled: true
             },
             sort: {
                 multiColumn: true,
                 enabled: true
-            }
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 4: 'comment', 7: 'due_date' } },
+                expandableRows: { urlTemplate: '/en/relations/{id}/', expandButtonColumn: 'actions' },
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(5)' },  // Status (column 5)
+                    { columnSelector: 'th:nth-child(3)', shift: true },  // Related object (column 3)
+                    { columnSelector: 'th:nth-child(2)', shift: true }  // Gift (column 2)
+                ]
+            },
+            idFieldIndex: 8
         });
 
-        // Add list update event listener using GridUtils
-        GridUtils.addListUpdateListener(grid, 'Relation', 6);
-
-        // Initialize inline editing after grid is ready
-        setTimeout(() => {
-            if (!editState.inlineEditingInitialized && window.InlineEditing) {
-                try {
-                    GridUtils.addEntityDataAttributes('relation-grid', 'relation', data, 8);
-                    GridUtils.injectSelectAllCheckbox('relation-grid');
-                    window.InlineEditing.init('relation-grid', 'relation', inlineEditingMapping);
-                    editState.inlineEditingInitialized = true;
-                } catch (error) {
-                    console.error('[RelationList] Error initializing inline editing:', error);
-                }
-            }
-        }, 500);
-
-        // Initialize bulk operations
-        GridUtils.initBulkOperations('relation-grid', 'relation');
-
-        // Recalculate page size on window resize
-        GridUtils.enableDynamicPageSize(grid);
-
-        // Setup grid refresh handler for select-all and data attributes
-        GridUtils.setupGridRefreshHandler('relation-grid', 'Relation', data, 8);
-
-        // Enable expandable rows
-        GridUtils.enableExpandableRows('relation-grid', grid, {
-            detailUrlTemplate: "/en/relations/{id}/",
-            expandButtonColumn: 'actions'
-        });
-
-        // Initialize filter panel
-        FilterPanel.init('relation-grid', grid, columns);
-
-        // Initialize real-time search
-        if (window.RealTimeSearch) {
-            RealTimeSearch.init('relation-grid', grid, data);
-        }
-
-        // Initialize dynamic filters
-        if (window.DynamicFilters) {
-            DynamicFilters.init('relation-grid', grid, data, columns);
-        }
-
-        // Setup filter dropdown UI
+        // Setup filter dropdown UI (relation-specific)
         GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
 
-        // Setup custom status filter
+        // Setup custom status filter (relation-specific)
         GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
 
         // Handle status selector changes with event delegation
