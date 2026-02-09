@@ -349,12 +349,6 @@
         // Recalculate page size on window resize
         GridUtils.enableDynamicPageSize(grid);
 
-        // Enable expandable rows
-        GridUtils.enableExpandableRows('person-group-grid', grid, {
-            detailUrlTemplate: "/en/person-groups/{id}/",
-            expandButtonColumn: 'actions'
-        });
-
     } catch (error) {
         console.error('[PersonGroupList] Error initializing grid:', error);
     }
