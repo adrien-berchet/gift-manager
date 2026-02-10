@@ -901,7 +901,7 @@
             // Offcanvas event handlers
             document.addEventListener('offcanvas:show', function(e) {
                 const target = e.detail?.target || 'editPanel';
-                const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
+                const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById(target));
                 offcanvas.show();
             });
 
@@ -1080,6 +1080,42 @@
                 }
             });
 
+            // Handle HX-Trigger headers in afterSwap (fallback for when afterRequest doesn't fire)
+            document.body.addEventListener('htmx:afterSwap', function(e) {
+                const xhr = e.detail.xhr;
+                if (xhr && xhr.getResponseHeader) {
+                    const triggerHeader = xhr.getResponseHeader('HX-Trigger');
+                    if (triggerHeader) {
+                        console.log('[HTMX AfterSwap] Processing HX-Trigger header:', triggerHeader);
+
+                        // Parse and process triggers
+                        const triggers = triggerHeader.split(',').map(t => t.trim());
+                        triggers.forEach(trigger => {
+                            // Skip JSON objects (notifications)
+                            if (trigger.startsWith('{')) return;
+
+                            // Dispatch as custom event
+                            console.log('[HTMX AfterSwap] Dispatching event:', trigger);
+                            document.dispatchEvent(new CustomEvent(trigger, { bubbles: true }));
+                        });
+
+                        // Handle offcanvas:close if in trigger header
+                        if (triggerHeader.includes('offcanvas:close')) {
+                            // Find the offcanvas from the target element or its ancestors
+                            const target = e.detail.target || e.detail.elt;
+                            const offcanvasEl = target.closest('.offcanvas') || document.querySelector('.offcanvas.show');
+                            if (offcanvasEl) {
+                                const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
+                                if (offcanvasInstance) {
+                                    console.log('[HTMX AfterSwap] Closing offcanvas');
+                                    offcanvasInstance.hide();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
             // Enhanced HTMX configuration for modern UX
             document.body.addEventListener('htmx:beforeRequest', function(e) {
                 // Add loading states to buttons and forms
@@ -1218,23 +1254,29 @@
                 });
             }
 
-            // Restore page interactivity as soon as offcanvas starts closing (not after animation)
+            // Clean up stale offcanvas state after fully hidden (only if Bootstrap missed cleanup)
             document.querySelectorAll('.offcanvas').forEach(function(offcanvasEl) {
-                offcanvasEl.addEventListener('hide.bs.offcanvas', function() {
-                    // Immediately restore body scroll and interaction
-                    document.body.classList.remove('offcanvas-open');
-                    document.body.style.overflow = '';
-                    document.body.style.paddingRight = '';
-                    // Start fading out backdrop immediately
-                    document.querySelectorAll('.offcanvas-backdrop').forEach(function(backdrop) {
-                        backdrop.style.opacity = '0';
-                    });
-                });
                 offcanvasEl.addEventListener('hidden.bs.offcanvas', function() {
-                    // Remove backdrop elements after animation completes
-                    document.querySelectorAll('.offcanvas-backdrop').forEach(function(backdrop) {
-                        backdrop.remove();
+                    // Clean up is-loading class from content containers
+                    // (loading-states.js HTMX integration adds it but may not remove it
+                    // when form submission returns empty response and offcanvas closes)
+                    var contentContainers = offcanvasEl.querySelectorAll('.is-loading');
+                    contentContainers.forEach(function(el) {
+                        el.classList.remove('is-loading');
+                        delete el.dataset.loadingActive;
                     });
+
+                    // Wait for Bootstrap to finish its own cleanup, then fix any leftovers
+                    setTimeout(function() {
+                        if (!document.querySelector('.offcanvas.show')) {
+                            document.querySelectorAll('.offcanvas-backdrop').forEach(function(backdrop) {
+                                backdrop.remove();
+                            });
+                            document.body.classList.remove('offcanvas-open');
+                            document.body.style.overflow = '';
+                            document.body.style.paddingRight = '';
+                        }
+                    }, 50);
                 });
             });
 
@@ -1250,8 +1292,8 @@
                         // Show loading state
                         showOffcanvasLoading(target);
 
-                        // Show the panel first
-                        const offcanvas = new bootstrap.Offcanvas(document.getElementById(target));
+                        // Show the panel first (reuse existing instance to avoid state corruption)
+                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById(target));
                         offcanvas.show();
 
                         // Load edit form content
@@ -1316,8 +1358,8 @@
                         // Show loading state
                         showOffcanvasLoading('editPanel');
 
-                        // Show the panel first
-                        const offcanvas = new bootstrap.Offcanvas(document.getElementById('editPanel'));
+                        // Show the panel first (reuse existing instance to avoid state corruption)
+                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('editPanel'));
                         offcanvas.show();
 
                         // Load create form content
@@ -1381,8 +1423,8 @@
                         // Show loading state
                         showOffcanvasLoading('detailPanel');
 
-                        // Show the panel first
-                        const offcanvas = new bootstrap.Offcanvas(document.getElementById('detailPanel'));
+                        // Show the panel first (reuse existing instance to avoid state corruption)
+                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('detailPanel'));
                         offcanvas.show();
 
                         // Load detail content

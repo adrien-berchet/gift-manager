@@ -839,6 +839,10 @@
                     if (gridContainer) {
                         waitForGridRenderComplete(gridContainer, () => {
                             console.log(`[${entityType}List] Grid rendering complete, emitting grid:refreshed event`);
+                            // Fix Grid.js bug: forceRender with empty data doesn't show noRecordsFound
+                            if (extractedData.length === 0) {
+                                injectEmptyStateIfNeeded(grid._containerId);
+                            }
                             document.dispatchEvent(new CustomEvent('grid:refreshed', {
                                 detail: { containerId: grid._containerId, entityType: entityType }
                             }));
@@ -1054,6 +1058,29 @@
     }
 
     /**
+     * Inject "No records found" message into an empty grid tbody.
+     * Grid.js has a bug where forceRender() with data: [] leaves the tbody empty
+     * instead of showing the noRecordsFound message. This function fixes that.
+     * @param {string} containerId - The grid container element ID
+     * @param {string} message - Optional custom message (defaults to grid translation)
+     */
+    function injectEmptyStateIfNeeded(containerId, message) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const tbody = container.querySelector('tbody');
+        if (!tbody) return;
+
+        // Only inject if tbody is truly empty (no rows at all)
+        if (tbody.children.length > 0) return;
+
+        const colCount = container.querySelectorAll('thead th').length || 1;
+        const text = message || (window.gridTranslations && window.gridTranslations.noRecordsFound) || 'No matching records found';
+        tbody.innerHTML = '<tr class="gridjs-tr"><td role="alert" colspan="' + colCount + '" class="gridjs-td gridjs-message gridjs-notfound">' + text + '</td></tr>';
+        console.log('[GridUtils] Injected empty state message into grid: ' + containerId);
+    }
+
+    /**
      * Update pagination footer visibility based on data length
      * @param {Object} grid - The Grid.js instance
      * @param {number} dataLength - The number of rows in the data
@@ -1178,6 +1205,10 @@
             if (gridContainer) {
                 waitForGridRenderComplete(gridContainer, () => {
                     console.log(`[${entityType}List] Grid rendering complete after delete, emitting grid:refreshed event`);
+                    // Fix Grid.js bug: forceRender with empty data doesn't show noRecordsFound
+                    if (newData.length === 0) {
+                        injectEmptyStateIfNeeded(gridInstance._containerId);
+                    }
                     document.dispatchEvent(new CustomEvent('grid:refreshed', {
                         detail: { containerId: gridInstance._containerId, entityType: entityType }
                     }));

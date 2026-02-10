@@ -693,7 +693,7 @@ class PersonGroupPermission(models.Model):
 class GiftTagManager(models.Manager):
     def accessible_by(self, user):
         """Return all tags accessible by a user."""
-        return self.filter(Q(is_public=True) | Q(shared_with=user))
+        return self.filter(Q(is_public=True) | Q(shared_with=user)).distinct()
 
     def root_tags_for_user(self, user):
         """Return all root tags accessible by a user."""

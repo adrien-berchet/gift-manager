@@ -343,7 +343,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
                 PermissionService.create_or_update_permission(
                     self.request.user,
                     form.instance,
-                    permission_level=PermissionLevel.EDITOR,
+                    permission_level=PermissionLevel.OWNER,
                     object_attr=self.context_object_name,
                 )
                 return response
