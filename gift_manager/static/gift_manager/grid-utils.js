@@ -677,8 +677,6 @@
      */
     function addListUpdateListener(grid, entityType, idColumnIndex, postUpdateCallback = null) {
         document.addEventListener('list:update', function(event) {
-            console.log(`[${entityType}List] Received list:update event, updating grid...`);
-
             // Try to get the deleted item ID from the modal or delete context
             const deletedItemId = getDeletedItemId();
 
@@ -686,9 +684,7 @@
                 // Remove the specific row from grid data (delete operation)
                 removeItemFromGrid(grid, deletedItemId, entityType, idColumnIndex, postUpdateCallback);
             } else {
-                // This is likely a create or update operation
-                // Refresh grid data smoothly without full page reload
-                console.log(`[${entityType}List] Create/update operation detected, refreshing grid data...`);
+                // Create or update operation - refresh grid data without full page reload
                 refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback);
             }
         });
@@ -697,7 +693,6 @@
         // from bfcache, the DOM is stale and may not reflect recent CRUD changes.
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
-                console.log(`[${entityType}List] Page restored from bfcache, refreshing grid data...`);
                 refreshGridData(grid, entityType, idColumnIndex, postUpdateCallback);
             }
         });
@@ -724,7 +719,6 @@
             debounceTimer = setTimeout(() => {
                 observer.disconnect();
                 clearTimeout(safetyTimer);
-                console.log('[GridUtils] Grid rendering complete (detected via MutationObserver)');
                 callback();
             }, debounceMs);
         });
@@ -756,11 +750,6 @@
         const url = new URL(window.location.href);
         url.searchParams.set('_t', Date.now());
 
-        // Log current data count and URL for debugging
-        const currentDataCount = (grid.config.data || []).length;
-        console.log(`[${entityType}List] Current data count before refresh: ${currentDataCount}`);
-        console.log(`[${entityType}List] Fetching fresh data from: ${url.toString()}`);
-
         // Fetch the current page to get updated data
         // Use cache: 'no-store' and headers to bypass all caching
         // Include credentials to ensure session cookies are sent
@@ -783,35 +772,18 @@
                     // This handles the complex object structures in the data
                     const extractedData = new Function('return ' + dataArrayStr)();
 
-                    console.log(`[${entityType}List] Extracted ${extractedData.length} items from refreshed data`);
-                    // Log first few items for debugging
-                    if (extractedData.length > 0) {
-                        console.log(`[${entityType}List] First item (sample):`, extractedData[0]);
-                        // Log all IDs (assuming ID is at a consistent index, typically 4 for persons)
-                        const ids = extractedData.map(item => item[4] || item.id || 'unknown');
-                        console.log(`[${entityType}List] Extracted IDs:`, ids);
-                    }
-
                     // Also extract and update permissions if available
                     const permissionsStr = extractPermissions(html);
-                    console.log(`[${entityType}List] Extracted permissions string: ${permissionsStr ? permissionsStr.substring(0, 200) + '...' : 'null'}`);
                     if (permissionsStr) {
                         try {
                             const extractedPermissions = new Function('return ' + permissionsStr)();
-                            console.log(`[${entityType}List] Parsed permissions:`, extractedPermissions);
-                            console.log(`[${entityType}List] Permission IDs:`, Object.keys(extractedPermissions));
 
                             // Update global permissions variable IN PLACE
                             // We need to modify the existing object, not replace it,
                             // because the formatter has a closure reference to it
                             if (window.userPermissions !== undefined && typeof window.userPermissions === 'object') {
-                                console.log(`[${entityType}List] Before update, userPermissions:`, {...window.userPermissions});
-                                // Clear existing keys
                                 Object.keys(window.userPermissions).forEach(key => delete window.userPermissions[key]);
-                                // Add new keys
                                 Object.assign(window.userPermissions, extractedPermissions);
-                                console.log(`[${entityType}List] After update, userPermissions:`, {...window.userPermissions});
-                                console.log(`[${entityType}List] Updated userPermissions with ${Object.keys(extractedPermissions).length} entries`);
                             }
                             // Also update PermissionUtils if it has a setter
                             if (window.PermissionUtils && window.PermissionUtils.updatePermissions) {
@@ -820,28 +792,27 @@
                         } catch (permError) {
                             console.warn(`[${entityType}List] Could not update permissions:`, permError);
                         }
-                    } else {
-                        console.warn(`[${entityType}List] No permissions extracted from HTML`);
                     }
 
-                    // Update the grid using updateConfig (same method as delete operation)
-                    console.log(`[${entityType}List] About to call forceRender. userPermissions now has ${Object.keys(window.userPermissions || {}).length} entries:`, window.userPermissions);
+                    // Remove empty state before rendering new data (restores table visibility)
+                    if (extractedData.length > 0) {
+                        removeEmptyStateIfPresent(grid._containerId);
+                    }
 
                     // Update the grid
                     grid.updateConfig({
                         data: extractedData
                     }).forceRender();
-                    console.log(`[${entityType}List] forceRender called (rendering may still be in progress)`);
 
                     // Wait for Grid.js to finish rendering using MutationObserver
                     // This detects when DOM mutations have stopped, indicating rendering is complete
                     const gridContainer = document.getElementById(grid._containerId);
                     if (gridContainer) {
                         waitForGridRenderComplete(gridContainer, () => {
-                            console.log(`[${entityType}List] Grid rendering complete, emitting grid:refreshed event`);
                             // Fix Grid.js bug: forceRender with empty data doesn't show noRecordsFound
+                            // Use force=true because Grid.js leaves stale rows in DOM after forceRender
                             if (extractedData.length === 0) {
-                                injectEmptyStateIfNeeded(grid._containerId);
+                                injectEmptyStateIfNeeded(grid._containerId, null, true);
                             }
                             document.dispatchEvent(new CustomEvent('grid:refreshed', {
                                 detail: { containerId: grid._containerId, entityType: entityType }
@@ -849,8 +820,6 @@
                             // Update pagination footer after DOM is fully rendered
                             updatePaginationVisibility(grid, extractedData.length);
                         });
-                    } else {
-                        console.warn(`[${entityType}List] Grid container not found, cannot wait for render completion`);
                     }
 
                     // Update global data variable if it exists
@@ -861,13 +830,9 @@
                     // After grid renders, update UI based on permissions
                     // This ensures buttons are enabled/disabled correctly after refresh
                     setTimeout(() => {
-                        // Get the container ID from the grid instance (stored by initGrid)
                         const containerId = grid._containerId;
                         if (containerId && window.PermissionUtils && window.userPermissions) {
-                            console.log(`[${entityType}List] Calling updateUIForPermissions for container ${containerId} with ${Object.keys(window.userPermissions).length} permissions`);
                             window.PermissionUtils.updateUIForPermissions(containerId, window.userPermissions);
-                        } else {
-                            console.warn(`[${entityType}List] Cannot call updateUIForPermissions: containerId=${containerId}, PermissionUtils=${!!window.PermissionUtils}, userPermissions=${!!window.userPermissions}`);
                         }
                     }, 50);
 
@@ -876,7 +841,6 @@
                         setTimeout(postUpdateCallback, 100);
                     }
 
-                    console.log(`[${entityType}List] Grid data refreshed successfully`);
                 } catch (parseError) {
                     console.error(`[${entityType}List] Error parsing refreshed data:`, parseError);
                     // Fallback to page reload on parse error
@@ -953,7 +917,6 @@
         if (bracketCount === 0) {
             // Found the matching closing bracket
             const arrayStr = html.substring(arrayStartIndex, i);
-            console.log('[extractDataArray] Successfully extracted data array');
             return arrayStr;
         }
 
@@ -979,7 +942,6 @@
             // Found the actual JSON object assignment
             // Position at the opening brace
             const objStart = primaryIndex + 'window.userPermissions = '.length;
-            console.log('[extractPermissions] Found window.userPermissions = { at position', primaryIndex);
             return extractObjectFromPosition(html, objStart);
         }
 
@@ -988,11 +950,9 @@
         const altIndex = html.indexOf(altMarker);
         if (altIndex !== -1) {
             const objStart = altIndex + 'const userPermissions = '.length;
-            console.log('[extractPermissions] Found const userPermissions = { at position', altIndex);
             return extractObjectFromPosition(html, objStart);
         }
 
-        console.log('[extractPermissions] No userPermissions JSON object found in HTML');
         return null;
     }
 
@@ -1049,7 +1009,6 @@
 
         if (braceCount === 0) {
             const objStr = html.substring(startPos, i);
-            console.log('[extractPermissions] Successfully extracted permissions object');
             return objStr;
         }
 
@@ -1058,26 +1017,92 @@
     }
 
     /**
-     * Inject "No records found" message into an empty grid tbody.
+     * Inject "No data available" empty state into a grid container.
      * Grid.js has a bug where forceRender() with data: [] leaves the tbody empty
-     * instead of showing the noRecordsFound message. This function fixes that.
+     * instead of showing the noRecordsFound message. This function creates a visible
+     * div-based empty state (same approach as RealTimeSearch) that works even when
+     * Grid.js hides the table element.
      * @param {string} containerId - The grid container element ID
      * @param {string} message - Optional custom message (defaults to grid translation)
+     * @param {boolean} force - Skip DOM row check (use when data is known to be empty but Grid.js leaves stale rows)
      */
-    function injectEmptyStateIfNeeded(containerId, message) {
+    function injectEmptyStateIfNeeded(containerId, message, force) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        const tbody = container.querySelector('tbody');
-        if (!tbody) return;
+        // Check if grid actually has data rows - if so, don't inject
+        // Skip this check when force=true (Grid.js forceRender with empty data leaves stale rows)
+        if (!force) {
+            const tbody = container.querySelector('tbody');
+            if (tbody && tbody.querySelectorAll('tr.gridjs-tr').length > 0) {
+                // Check if any row has actual data cells (not just the empty message)
+                const dataCells = tbody.querySelectorAll('td:not(.gridjs-message)');
+                if (dataCells.length > 0) return;
+            }
+        }
 
-        // Only inject if tbody is truly empty (no rows at all)
-        if (tbody.children.length > 0) return;
+        // Remove any existing empty state div
+        const existingEmptyState = container.querySelector('.grid-empty-state');
+        if (existingEmptyState) {
+            existingEmptyState.remove();
+        }
 
-        const colCount = container.querySelectorAll('thead th').length || 1;
-        const text = message || (window.gridTranslations && window.gridTranslations.noRecordsFound) || 'No matching records found';
-        tbody.innerHTML = '<tr class="gridjs-tr"><td role="alert" colspan="' + colCount + '" class="gridjs-td gridjs-message gridjs-notfound">' + text + '</td></tr>';
-        console.log('[GridUtils] Injected empty state message into grid: ' + containerId);
+        // Hide the grid table (Grid.js may leave it visible but empty)
+        const gridWrapper = container.querySelector('.gridjs-wrapper');
+        if (gridWrapper) {
+            gridWrapper.style.display = 'none';
+        }
+
+        // Hide the footer (pagination) since there's no data
+        const gridFooter = container.querySelector('.gridjs-footer');
+        if (gridFooter) {
+            gridFooter.style.display = 'none';
+        }
+
+        // Create visible div-based empty state (same structure as RealTimeSearch)
+        const text = message || (window.gridTranslations && window.gridTranslations.noData) || 'No data available';
+        const emptyState = document.createElement('div');
+        emptyState.className = 'grid-empty-state';
+        emptyState.innerHTML =
+            '<div class="empty-state-content">' +
+                '<i class="fas fa-inbox empty-state-icon"></i>' +
+                '<p class="empty-state-message">' + text + '</p>' +
+            '</div>';
+
+        // Insert before footer if it exists, otherwise append to container
+        if (gridFooter) {
+            gridFooter.parentNode.insertBefore(emptyState, gridFooter);
+        } else {
+            container.appendChild(emptyState);
+        }
+
+    }
+
+    /**
+     * Remove empty state and restore grid visibility.
+     * Called when grid gets data again (e.g., after create operation).
+     * @param {string} containerId - The grid container element ID
+     */
+    function removeEmptyStateIfPresent(containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const emptyState = container.querySelector('.grid-empty-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        // Restore grid table visibility
+        const gridWrapper = container.querySelector('.gridjs-wrapper');
+        if (gridWrapper) {
+            gridWrapper.style.display = '';
+        }
+
+        // Restore footer visibility
+        const gridFooter = container.querySelector('.gridjs-footer');
+        if (gridFooter) {
+            gridFooter.style.display = '';
+        }
     }
 
     /**
@@ -1111,7 +1136,6 @@
             // Extract UUID from delete URL (e.g., /persons/uuid/delete/)
             const uuidMatch = deleteForm.action.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
             if (uuidMatch) {
-                console.log('Found deleted item ID from modal form:', uuidMatch[1]);
                 return uuidMatch[1];
             }
         }
@@ -1125,14 +1149,12 @@
                 if (form && form.action) {
                     const uuidMatch = form.action.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
                     if (uuidMatch) {
-                        console.log('Found deleted item ID from modal body form:', uuidMatch[1]);
                         return uuidMatch[1];
                     }
                 }
             }
         }
 
-        console.warn('Could not determine deleted item ID from modal');
         return null;
     }
 
@@ -1140,8 +1162,6 @@
      * Reset all delete button states in the grid to their default enabled state
      */
     function resetDeleteButtonStates() {
-        console.log('[GridUtils] Resetting delete button states...');
-
         // Find all delete buttons in grid containers
         const deleteButtons = document.querySelectorAll('.gridjs-wrapper [data-action="delete"]');
 
@@ -1175,15 +1195,12 @@
             button.classList.remove('disabled');
         });
 
-        console.log(`[GridUtils] Reset ${deleteButtons.length} delete button states`);
     }
 
     /**
      * Remove a specific item from the grid by ID
      */
     function removeItemFromGrid(gridInstance, itemId, entityType, idColumnIndex, postUpdateCallback) {
-        console.log(`[${entityType}List] Removing item from grid:`, itemId);
-
         // Get current data from grid
         const currentData = gridInstance.config.data || window.data;
 
@@ -1204,10 +1221,10 @@
             const gridContainer = document.getElementById(gridInstance._containerId);
             if (gridContainer) {
                 waitForGridRenderComplete(gridContainer, () => {
-                    console.log(`[${entityType}List] Grid rendering complete after delete, emitting grid:refreshed event`);
                     // Fix Grid.js bug: forceRender with empty data doesn't show noRecordsFound
+                    // Use force=true because Grid.js leaves stale rows in DOM after forceRender
                     if (newData.length === 0) {
-                        injectEmptyStateIfNeeded(gridInstance._containerId);
+                        injectEmptyStateIfNeeded(gridInstance._containerId, null, true);
                     }
                     document.dispatchEvent(new CustomEvent('grid:refreshed', {
                         detail: { containerId: gridInstance._containerId, entityType: entityType }
@@ -1215,8 +1232,6 @@
                     // Update pagination footer after DOM is fully rendered
                     updatePaginationVisibility(gridInstance, newData.length);
                 });
-            } else {
-                console.warn(`[${entityType}List] Grid container not found after delete, cannot wait for render completion`);
             }
 
             // Update global data variable
@@ -1236,11 +1251,25 @@
                 resetDeleteButtonStates();
             }, 120);
 
-            console.log(`[${entityType}List] Item removed from grid successfully`);
+            // Schedule a deferred empty state check after all event handlers complete.
+            // This handles the case where forceRender() + MutationObserver timing
+            // prevents the empty state from being injected in the callback.
+            if (newData.length === 0) {
+                setTimeout(() => {
+                    const container = document.getElementById(gridInstance._containerId);
+                    if (container && !container.querySelector('.grid-empty-state')) {
+                        injectEmptyStateIfNeeded(gridInstance._containerId, null, true);
+                    }
+                }, 300);
+            }
         } else {
-            console.warn(`[${entityType}List] Item not found in grid data:`, itemId);
-            // Fallback to page reload if item not found
-            setTimeout(() => window.location.reload(), 500);
+            console.warn(`[${entityType}List] Item not found in grid data (likely already removed by a previous list:update event):`, itemId);
+            // Don't reload - the item was likely already removed by a previous event.
+            // If the grid is now empty, ensure the empty state is shown.
+            const currentLen = (gridInstance.config.data || []).length;
+            if (currentLen === 0) {
+                injectEmptyStateIfNeeded(gridInstance._containerId, null, true);
+            }
         }
     }
 
@@ -1325,9 +1354,7 @@
         document.addEventListener('grid:refreshed', (event) => {
             if (event.detail?.containerId !== gridId) return;
 
-            if (injectSelectAllCheckbox(gridId)) {
-                console.log(`[${entityType}List] Select-all checkbox re-added after refresh`);
-            }
+            injectSelectAllCheckbox(gridId);
 
             addEntityDataAttributes(gridId, entityType.toLowerCase(), data, idColumnIndex);
 
@@ -1358,7 +1385,6 @@
                         try {
                             window.InlineEditing.init(gridId, entityType, columnMapping);
                             state.inlineEditingInitialized = true;
-                            console.log(`[${entityType}List] Inline editing initialized (fallback)`);
                         } catch (error) {
                             console.error(`[${entityType}List] Error in fallback inline editing:`, error);
                         }
@@ -1623,8 +1649,8 @@
             enableExpandableRows(gridId, grid, features.expandableRows);
         }
 
-        // Apply initial sort
-        if (features.initialSort && features.initialSort.length > 0) {
+        // Apply initial sort (only when there is data - sorting empty grid triggers forceRender bug)
+        if (features.initialSort && features.initialSort.length > 0 && data.length > 0) {
             setTimeout(function () {
                 features.initialSort.forEach(function (sortConfig, index) {
                     var header = document.querySelector('#' + gridId + ' ' + sortConfig.columnSelector);
@@ -1643,6 +1669,23 @@
                     }
                 });
             }, 100);
+        }
+
+        // Deferred empty state check: after all initialization (sort clicks, observers, etc.)
+        // verify the grid is showing proper empty state if data is empty.
+        // This catches the Grid.js bug where forceRender() (triggered by sort clicks or
+        // MutationObserver cascades) leaves tbody empty instead of showing noRecordsFound.
+        if (data.length === 0) {
+            setTimeout(function () {
+                var container = document.getElementById(gridId);
+                if (container && !container.querySelector('.grid-empty-state')) {
+                    // Check if Grid.js native empty message is visible
+                    var nativeMsg = container.querySelector('.gridjs-notfound');
+                    if (!nativeMsg) {
+                        injectEmptyStateIfNeeded(gridId);
+                    }
+                }
+            }, 200);
         }
 
         return grid;
@@ -1673,7 +1716,9 @@
         setupInlineEditingFallback: setupInlineEditingFallback,
         initBulkOperations: initBulkOperations,
         calculateOptimalPageSize: calculateOptimalPageSize,
-        enableDynamicPageSize: enableDynamicPageSize
+        enableDynamicPageSize: enableDynamicPageSize,
+        injectEmptyStateIfNeeded: injectEmptyStateIfNeeded,
+        removeEmptyStateIfPresent: removeEmptyStateIfPresent
     };
 
 })(window);

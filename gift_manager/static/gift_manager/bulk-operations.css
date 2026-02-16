@@ -62,15 +62,23 @@
     padding: var(--space-2, 8px) var(--space-3, 12px);
 }
 
-.bulk-action-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md, 0 4px 6px rgba(0, 0, 0, 0.1));
-}
-
 .bulk-action-btn:disabled {
-    opacity: 0.6;
+    opacity: 1;
     cursor: not-allowed;
     transform: none;
+    box-shadow: none;
+}
+
+.btn-danger.bulk-action-btn:disabled {
+    background-color: #fecaca;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.btn-success.bulk-action-btn:disabled {
+    background-color: #bbf7d0;
+    border-color: #86efac;
+    color: #166534;
 }
 
 /* Bulk Selection Checkboxes */
@@ -129,6 +137,18 @@
 
 [data-theme="dark"] .bulk-selected:hover {
     background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+[data-theme="dark"] .btn-danger.bulk-action-btn:disabled {
+    background-color: #450a0a;
+    border-color: #7f1d1d;
+    color: #6b7280;
+}
+
+[data-theme="dark"] .btn-success.bulk-action-btn:disabled {
+    background-color: #052e16;
+    border-color: #14532d;
+    color: #6b7280;
 }
 
 /* Bulk Delete Modal Progress */

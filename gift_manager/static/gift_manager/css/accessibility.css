@@ -68,10 +68,22 @@ a:focus,
     z-index: 10;
 }
 
-/* Focus styles for buttons */
-.btn:focus {
-    outline: var(--focus-outline-width) solid var(--focus-color) !import
-cus,
+/* Don't override position/z-index on fixed containers (offcanvas z-index:1045, modals z-index:1055) */
+.offcanvas:focus,
+.modal:focus {
+    position: fixed !important;
+    z-index: 1045 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.modal:focus {
+    z-index: 1055 !important;
+}
+
+/* Focus styles for buttons and form controls */
+.btn:focus,
+.form-control:focus,
 .form-select:focus {
     border-color: var(--focus-color) !important;
     outline: var(--focus-outline-width) solid var(--focus-color) !important;

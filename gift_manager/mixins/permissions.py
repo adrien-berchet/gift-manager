@@ -4,13 +4,12 @@ import json
 import logging
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
-
 from django.http import HttpResponse
 
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
+
+logger = logging.getLogger(__name__)
 
 
 class PermissionContextMixin:
@@ -190,24 +189,30 @@ class PermissionContextMixin:
             id_fields: List of possible ID field names to check
 
         Returns:
-            Dict mapping object IDs (as strings) to permission levels
+            Dict mapping object IDs (as strings) to permission levels.
+            Keys are UUID fields (e.g. group_id, person_id) when available,
+            since Grid.js templates use UUIDs for entity identification.
         """
         permissions = {}
 
         for obj in objects:
             try:
-                # Get the primary key for the object
-                pk = getattr(obj, "pk", None)
-                if pk is None:
-                    # Try common ID field names
-                    for id_field in id_fields:
-                        if hasattr(obj, id_field):
-                            pk = getattr(obj, id_field)
+                # Prefer UUID id fields (e.g. group_id, person_id) over auto-generated pk,
+                # because Grid.js templates use UUIDs as entity identifiers for permission lookups.
+                obj_id = None
+                for id_field in id_fields:
+                    if id_field != "id" and hasattr(obj, id_field):
+                        obj_id = getattr(obj, id_field)
+                        if obj_id is not None:
                             break
 
-                if pk:
+                # Fall back to pk if no UUID field found
+                if obj_id is None:
+                    obj_id = getattr(obj, "pk", None)
+
+                if obj_id:
                     permission = PermissionService.get_permission(obj, self.request.user)
-                    permissions[str(pk)] = permission
+                    permissions[str(obj_id)] = permission
             except (AttributeError, TypeError):
                 # Skip objects that don't support permissions
                 continue

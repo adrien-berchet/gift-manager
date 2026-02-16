@@ -11,9 +11,13 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import GiftForm
+from gift_manager.mixins.performance import BatchOperationMixin
+from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Relation
@@ -25,9 +29,17 @@ from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 
 
-class GiftListView(PermissionContextMixin, BaseListView):
+class GiftListView(
+    ProgressiveEnhancementListMixin,
+    QueryOptimizationMixin,
+    BatchOperationMixin,
+    PermissionContextMixin,
+    BaseListView,
+):
     model = Gift
     template_name = "gift_manager/gift_list.html"
+    fallback_template_name = "gift_manager/fallback/list_fallback.html"
+    no_js_template_name = "gift_manager/fallback/list_fallback.html"
     object_type = "Gifts"
 
     def __init__(self, *args, **kwargs):
@@ -37,6 +49,16 @@ class GiftListView(PermissionContextMixin, BaseListView):
             "comment": gettext("Comment"),
             "tags": gettext("Tags"),
         }
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["unique_tags"] = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .values("name")
+            .distinct()
+            .order_by("name")
+        )
+        return context
 
     def get_queryset(self):
         """Return Gifts for the current user or shared with the user."""
@@ -62,14 +84,22 @@ class GiftListView(PermissionContextMixin, BaseListView):
         # For SQLite and other databases, use a simpler approach
         return base_queryset.prefetch_related("tags").values("gift_id", "name", "comment")
 
+    def get_fallback_columns(self):
+        """Get column definitions for fallback table."""
+        return [
+            {"field": "name", "label": _("Gift name"), "type": "text"},
+            {"field": "comment", "label": _("Comment"), "type": "text"},
+        ]
 
-class GiftCreateView(BaseCreateView):
+
+class GiftCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Gift
     form_class = GiftForm
     success_url = reverse_lazy("gift_manager:gifts")
     context_object_name = "gift"
     object_type = "Gift"
     htmx_template_name = "gift_manager/includes/gift_form_partial.html"
+    close_offcanvas = True
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -79,7 +109,9 @@ class GiftCreateView(BaseCreateView):
         return form
 
 
-class GiftUpdateView(PermissionUpdateMixin, BaseUpdateView):
+class GiftUpdateView(
+    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
+):
     model = Gift
     form_class = GiftForm
     pk_name = "gift_id"
@@ -87,6 +119,7 @@ class GiftUpdateView(PermissionUpdateMixin, BaseUpdateView):
     object_type = "Gift"
     detail_url_name = "gift_detail"
     htmx_template_name = "gift_manager/includes/gift_form_partial.html"
+    close_offcanvas = True
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

@@ -23,7 +23,18 @@
       "mcp__plugin_playwright_playwright__browser_close",
       "Bash(ls:*)",
       "Bash(wc:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Read(//tmp/**)",
+      "Read(//home/adrien/Work/Perso/GiftManager/**)",
+      "Read(//mnt/Stockage/Work/Perso/GiftManager/gift_manager/**)"
+    ],
+    "additionalDirectories": [
+      "/home/adrien/Work/Perso/GiftManager/gift_manager/views",
+      "/mnt/Stockage/Work/Perso/GiftManager/gift_manager/views",
+      "/home/adrien/Work/Perso/GiftManager/gift_manager/static/gift_manager/css",
+      "/mnt/Stockage/Work/Perso/GiftManager/gift_manager/static/gift_manager/css",
+      "/home/adrien/Work/Perso/GiftManager/**",
+      "/mnt/Stockage/Work/Perso/GiftManager/**"
     ]
   }
 }

@@ -134,15 +134,15 @@
                         </div>
                         <div class="bulk-actions">
                             ${this.options.enableBulkDelete ? `
-                                <button type="button" class="btn btn-danger btn-sm bulk-action-btn"
-                                        data-action="bulk-delete">
+                                <button type="button" class="btn btn-danger btn-sm quick-action-btn bulk-action-btn"
+                                        data-action="bulk-delete" disabled>
                                     <i class="fas fa-trash me-1"></i>Delete Selected
                                 </button>
                             ` : ''}
                             ${this.options.enableBulkShare ? `
-                                <button type="button" class="btn btn-primary btn-sm bulk-action-btn"
-                                        data-action="bulk-share">
-                                    <i class="fas fa-share me-1"></i>Share Selected
+                                <button type="button" class="btn btn-success btn-sm quick-action-btn bulk-action-btn"
+                                        data-action="bulk-share" disabled>
+                                    <i class="fas fa-share-alt me-1"></i>Share Selected
                                 </button>
                             ` : ''}
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="cancel-selection-mode">
@@ -237,6 +237,9 @@
 
             // Update toggle button appearance
             this.updateToggleButton(true);
+
+            // Ensure button states reflect current selection (0 items on first enter)
+            this.updateUI();
 
             console.log('[BulkOperations] Selection mode entered successfully');
         },
