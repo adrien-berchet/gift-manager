@@ -55,12 +55,13 @@
 }
 
 /* Enhanced Focus Styles for Interactive Elements */
+/* Exclude .offcanvas and .modal so Bootstrap's position/z-index are never overridden */
 button:focus,
 input:focus,
 select:focus,
 textarea:focus,
 a:focus,
-[tabindex]:focus {
+[tabindex]:focus:not(.offcanvas):not(.modal) {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
     box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
@@ -68,17 +69,11 @@ a:focus,
     z-index: 10;
 }
 
-/* Don't override position/z-index on fixed containers (offcanvas z-index:1045, modals z-index:1055) */
+/* Offcanvas and modals should not show focus indicators when clicked */
 .offcanvas:focus,
 .modal:focus {
-    position: fixed !important;
-    z-index: 1045 !important;
     outline: none !important;
     box-shadow: none !important;
-}
-
-.modal:focus {
-    z-index: 1055 !important;
 }
 
 /* Focus styles for buttons and form controls */
@@ -104,12 +99,6 @@ a:focus {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
     text-decoration: underline !important;
-}
-
-/* Modal and Offcanvas Focus Management */
-.modal:focus,
-.offcanvas:focus {
-    outline: none !important;
 }
 
 .modal.show,

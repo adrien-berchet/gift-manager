@@ -37,7 +37,7 @@
 {% include "gift_manager/includes/filter_panel.html" with grid_id="event-grid" %}
 
 <!-- Grid.js container -->
-<div id="event-grid" class="mt-3"></div>
+<div id="event-grid"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -117,30 +117,35 @@
     ];
 
     // Initialize Grid.js with all features using the standard helper
-    const grid = GridUtils.initStandardListGrid({
-        gridId: 'event-grid',
-        entityType: 'event',
-        columns: columns,
-        data: data,
-        userPermissions: userPermissions,
-        pagination: {
-            enabled: true
-        },
-        sort: {
-            multiColumn: true
-        },
-        features: {
-            bulkOperations: true,
-            inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
-            realTimeSearch: true,
-            dynamicFilters: true,
-            dynamicPageSize: true,
-            initialSort: [
-                { columnSelector: 'th:nth-child(2)' }  // Name
-            ]
-        },
-        idFieldIndex: 4
-    });
+    try {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'event-grid',
+            entityType: 'event',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            sort: {
+                multiColumn: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }  // Name
+                ]
+            },
+            idFieldIndex: 4
+        });
+
+} catch (error) {
+        console.error('[EventList] Error initializing grid:', error);
+    }
     }) ();
 </script>
 {% endblock %}

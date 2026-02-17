@@ -11,8 +11,13 @@
         {# Search section #}
         <div class="filter-section search-section">
             <label class="filter-section-label">{% trans "Search" %}</label>
-            <input type="text" class="form-control filter-search-input" id="{{ grid_id }}-search"
-                   placeholder="{% trans 'Search...' %}">
+            <div class="input-clearable">
+                <input type="text" class="form-control filter-search-input" id="{{ grid_id }}-search"
+                       placeholder="{% trans 'Search...' %}">
+                <button type="button" class="input-clear-btn" aria-label="{% trans 'Clear' %}">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
         {# Sort section #}
         <div class="filter-section sort-section">

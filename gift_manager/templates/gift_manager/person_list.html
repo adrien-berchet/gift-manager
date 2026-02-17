@@ -148,13 +148,7 @@
             idFieldIndex: 5
         });
 
-        // Setup filter dropdown UI (person-specific)
-        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
-
-        // Setup custom group filter (person-specific)
-        GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter');
-
-    } catch (error) {
+} catch (error) {
         console.error('[PersonList] Error initializing grid:', error);
     }
     }) ();

@@ -15,6 +15,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
+    padding: 2px;
 }
 
 /* Column filter wrapper */
@@ -56,15 +57,24 @@
     flex: 1;
 }
 
-/* Clear filters button */
-.clear-filters-btn {
-    align-self: flex-start;
-    font-size: 0.75rem;
-    padding: 0.25rem 0.5rem;
+/* Filters section header with clear button */
+.filters-section .filter-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2, 0.5rem);
+    margin-bottom: var(--space-2, 0.5rem);
 }
 
-.clear-all-filters-btn {
-    margin-top: 0.5rem;
+.filters-section .filter-section-header .filter-section-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+/* Clear filters button */
+.clear-filters-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
 }
 
 /* Filter states */
@@ -161,16 +171,6 @@
     max-width: 400px;
 }
 
-.grid-empty-state .clear-all-filters-btn {
-    background: #f8f9fa;
-    border-color: #dee2e6;
-    color: #495057;
-}
-
-.grid-empty-state .clear-all-filters-btn:hover {
-    background: #e9ecef;
-    border-color: #adb5bd;
-}
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
@@ -229,8 +229,7 @@
 /* Print styles */
 @media print {
     .filters-section,
-    .clear-filters-btn,
-    .clear-all-filters-btn {
+    .clear-filters-btn {
         display: none;
     }
 }

@@ -6,8 +6,12 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import EventForm
+from gift_manager.mixins.performance import BatchOperationMixin
+from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
+from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
@@ -18,9 +22,17 @@ from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 
 
-class EventListView(PermissionContextMixin, BaseListView):
+class EventListView(
+    ProgressiveEnhancementListMixin,
+    QueryOptimizationMixin,
+    BatchOperationMixin,
+    PermissionContextMixin,
+    BaseListView,
+):
     model = Event
     template_name = "gift_manager/event_list.html"
+    fallback_template_name = "gift_manager/fallback/list_fallback.html"
+    no_js_template_name = "gift_manager/fallback/list_fallback.html"
     object_type = "Events"
 
     def __init__(self, *args, **kwargs):
@@ -31,13 +43,6 @@ class EventListView(PermissionContextMixin, BaseListView):
             "usual_date": gettext("Usual date"),
         }
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["type"] = "Events"
-        context["translated_type"] = gettext("Events")
-        context["column_names"] = self.column_names
-        return context
-
     def get_queryset(self):
         """Return Events for the current user or shared with the user."""
         return (
@@ -47,16 +52,19 @@ class EventListView(PermissionContextMixin, BaseListView):
         )
 
 
-class EventCreateView(BaseCreateView):
+class EventCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Event
     form_class = EventForm
     success_url = reverse_lazy("gift_manager:events")
     context_object_name = "event"
     object_type = "Event"
     htmx_template_name = "gift_manager/includes/event_form_partial.html"
+    close_offcanvas = True
 
 
-class EventUpdateView(PermissionUpdateMixin, BaseUpdateView):
+class EventUpdateView(
+    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
+):
     model = Event
     form_class = EventForm
     pk_name = "event_id"
@@ -64,6 +72,7 @@ class EventUpdateView(PermissionUpdateMixin, BaseUpdateView):
     object_type = "Event"
     detail_url_name = "event_detail"
     htmx_template_name = "gift_manager/includes/event_form_partial.html"
+    close_offcanvas = True
 
 
 class EventDeleteView(BaseDeleteView):

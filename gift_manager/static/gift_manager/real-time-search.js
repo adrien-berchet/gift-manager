@@ -1,24 +1,13 @@
 /**
- * Real-time search functionality with HTMX integration
- * Provides debounced search with loading states and error handling
+ * Real-time search functionality for Grid.js tables
+ * Provides debounced client-side search with loading states
  */
 
 (function() {
     'use strict';
 
     // Configuration
-    const DEBOUNCE_DELAY = 300; // milliseconds
-    const MIN_SEARCH_LENGTH = 0; // minimum characters to trigger search
-
-    // Search endpoints mapping
-    const SEARCH_ENDPOINTS = {
-        'person-grid': '/api/search/persons/',
-        'gift-grid': '/api/search/gifts/',
-        'event-grid': '/api/search/events/',
-        'relation-grid': '/api/search/relations/',
-        'person_group-grid': '/api/search/person-groups/',
-        'gift_tag-grid': '/api/search/gift-tags/'
-    };
+    const DEBOUNCE_DELAY = 200; // milliseconds
 
     /**
      * Initialize real-time search for a grid
@@ -28,156 +17,82 @@
      */
     function initRealTimeSearch(gridId, grid, originalData) {
         const searchInput = document.getElementById(gridId + '-search');
-        const endpoint = SEARCH_ENDPOINTS[gridId];
 
-        if (!searchInput || !endpoint) {
-            console.warn('Real-time search: Missing search input or endpoint for grid:', gridId);
+        if (!searchInput) {
+            console.warn('[RealTimeSearch] Missing search input for grid:', gridId);
             return;
         }
 
         let searchTimeout;
-        let currentRequest;
 
-        // Add loading state management
-        const addLoadingState = () => {
-            searchInput.classList.add('searching');
-            searchInput.setAttribute('data-loading', 'true');
+        // Determine which column indices contain searchable text
+        // (visible columns that are not checkbox/hidden/actions)
+        const searchableIndices = [];
+        const columns = grid.config.columns;
+        if (columns) {
+            columns.forEach((col, index) => {
+                // Skip hidden columns, checkbox column (index 0), and actions column
+                if (col.hidden || index === 0 || col.sort === false) return;
+                searchableIndices.push(index);
+            });
+        }
 
-            // Add spinner if not present
-            if (!searchInput.parentNode.querySelector('.search-spinner')) {
-                const spinner = document.createElement('div');
-                spinner.className = 'search-spinner';
-                spinner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                searchInput.parentNode.appendChild(spinner);
-            }
-        };
+        /**
+         * Filter originalData rows matching the search term
+         * Searches across all visible text columns (case-insensitive)
+         */
+        const filterData = (searchTerm) => {
+            if (!searchTerm.trim()) return originalData;
 
-        const removeLoadingState = () => {
-            searchInput.classList.remove('searching');
-            searchInput.removeAttribute('data-loading');
+            const term = searchTerm.trim().toLowerCase();
 
-            // Remove spinner
-            const spinner = searchInput.parentNode.querySelector('.search-spinner');
-            if (spinner) {
-                spinner.remove();
-            }
-        };
+            return originalData.filter(row => {
+                return searchableIndices.some(colIndex => {
+                    const cellValue = row[colIndex];
+                    if (cellValue == null) return false;
 
-        // Add error state management
-        const showError = (message) => {
-            searchInput.classList.add('search-error');
+                    // Handle arrays of objects (e.g. groups_info, tags_info)
+                    if (Array.isArray(cellValue)) {
+                        return cellValue.some(item => {
+                            if (typeof item === 'object' && item.name) {
+                                return item.name.toLowerCase().includes(term);
+                            }
+                            return String(item).toLowerCase().includes(term);
+                        });
+                    }
 
-            // Show error message
-            let errorMsg = searchInput.parentNode.querySelector('.search-error-message');
-            if (!errorMsg) {
-                errorMsg = document.createElement('div');
-                errorMsg.className = 'search-error-message';
-                searchInput.parentNode.appendChild(errorMsg);
-            }
-            errorMsg.textContent = message || 'Search failed. Please try again.';
-
-            // Auto-hide error after 3 seconds
-            setTimeout(() => {
-                clearError();
-            }, 3000);
-        };
-
-        const clearError = () => {
-            searchInput.classList.remove('search-error');
-            const errorMsg = searchInput.parentNode.querySelector('.search-error-message');
-            if (errorMsg) {
-                errorMsg.remove();
-            }
-        };
-
-        // Perform search request
-        const performSearch = async (searchTerm) => {
-            // Cancel previous request
-            if (currentRequest) {
-                currentRequest.abort();
-            }
-
-            // Clear previous errors
-            clearError();
-
-            try {
-                addLoadingState();
-
-                // Create new request
-                const controller = new AbortController();
-                currentRequest = controller;
-
-                const url = new URL(endpoint, window.location.origin);
-                if (searchTerm.trim()) {
-                    url.searchParams.set('search', searchTerm.trim());
-                }
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Content-Type': 'application/json',
-                    },
-                    signal: controller.signal
+                    return String(cellValue).toLowerCase().includes(term);
                 });
-
-                if (!response.ok) {
-                    throw new Error(`Search failed: ${response.status} ${response.statusText}`);
-                }
-
-                const result = await response.json();
-
-                // Update grid with search results
-                updateGridWithResults(grid, result.data, searchTerm);
-
-                // Update result count if element exists
-                updateResultCount(gridId, result.count, searchTerm);
-
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    // Request was cancelled, ignore
-                    return;
-                }
-
-                console.error('Search error:', error);
-                showError(error.message);
-
-                // Fall back to original data on error
-                if (searchTerm.trim() === '') {
-                    updateGridWithResults(grid, originalData, '');
-                }
-
-            } finally {
-                removeLoadingState();
-                currentRequest = null;
-            }
+            });
         };
 
-        // Update grid with search results
-        const updateGridWithResults = (grid, data, searchTerm) => {
+        /**
+         * Perform client-side search and update the grid
+         */
+        const performSearch = (searchTerm) => {
+            const filtered = filterData(searchTerm);
+
             try {
-                // Update grid data
-                grid.updateConfig({
-                    data: data
-                }).forceRender();
+                grid.updateConfig({ data: filtered }).forceRender();
 
-                // Show/hide empty state
-                updateEmptyState(gridId, data.length > 0, searchTerm);
+                // Handle empty state
+                updateEmptyState(gridId, filtered.length > 0, searchTerm);
 
-                // Trigger custom event for other components
-                const event = new CustomEvent('search:complete', {
+                // Update result count
+                updateResultCount(gridId, filtered.length, searchTerm);
+
+                // Dispatch event for other components
+                document.dispatchEvent(new CustomEvent('search:complete', {
                     detail: {
                         gridId: gridId,
                         searchTerm: searchTerm,
-                        resultCount: data.length,
-                        data: data
+                        resultCount: filtered.length,
+                        data: filtered
                     }
-                });
-                document.dispatchEvent(event);
+                }));
 
             } catch (error) {
-                console.error('Error updating grid with search results:', error);
-                showError('Failed to update search results');
+                console.error('[RealTimeSearch] Error updating grid:', error);
             }
         };
 
@@ -194,38 +109,38 @@
             }
         };
 
-        // Update empty state
+        // Update empty state display
         const updateEmptyState = (gridId, hasData, searchTerm) => {
             const gridContainer = document.getElementById(gridId);
             if (!gridContainer) return;
 
             // Remove existing empty state
-            let emptyState = gridContainer.querySelector('.grid-empty-state');
-            if (emptyState) {
-                emptyState.remove();
+            const existing = gridContainer.querySelector('.grid-empty-state');
+            if (existing) existing.remove();
+
+            // Hide/show the entire grid wrapper (prevents Grid.js built-in
+            // "No matching records found" from flashing before our custom message)
+            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+            if (gridWrapper) {
+                gridWrapper.style.display = hasData ? '' : 'none';
             }
 
-            // Find Grid.js elements
-            const gridTable = gridContainer.querySelector('.gridjs-table');
-
-            // Show/hide grid table based on data
-            if (gridTable) {
-                gridTable.style.display = hasData ? '' : 'none';
+            // Hide/show footer (pagination)
+            const gridFooter = gridContainer.querySelector('.gridjs-footer');
+            if (gridFooter) {
+                gridFooter.style.display = hasData ? '' : 'none';
             }
 
-            // Show empty state if no data
             if (!hasData) {
-                emptyState = document.createElement('div');
+                const emptyState = document.createElement('div');
                 emptyState.className = 'grid-empty-state';
 
                 let message, icon;
                 if (searchTerm && searchTerm.trim() !== '') {
-                    // No search results
                     icon = 'fa-search';
                     message = window.gridTranslations?.noSearchResults ||
-                             `No results found for "${searchTerm.trim()}"`;
+                             'No results match your current search';
                 } else {
-                    // No data at all
                     icon = 'fa-inbox';
                     message = window.gridTranslations?.noData || 'No data available';
                 }
@@ -234,21 +149,9 @@
                     <div class="empty-state-content">
                         <i class="fas ${icon} empty-state-icon"></i>
                         <p class="empty-state-message">${message}</p>
-                        ${searchTerm.trim() ? '<button class="btn btn-sm btn-outline-secondary clear-search-btn">Clear search</button>' : ''}
                     </div>
                 `;
 
-                // Add clear search functionality
-                const clearBtn = emptyState.querySelector('.clear-search-btn');
-                if (clearBtn) {
-                    clearBtn.addEventListener('click', () => {
-                        searchInput.value = '';
-                        performSearch('');
-                    });
-                }
-
-                // Insert before footer if it exists, otherwise just append
-                const gridFooter = gridContainer.querySelector('.gridjs-footer');
                 if (gridFooter) {
                     gridFooter.parentNode.insertBefore(emptyState, gridFooter);
                 } else {
@@ -260,28 +163,11 @@
         // Set up debounced search
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value;
-
-            // Clear previous timeout
             clearTimeout(searchTimeout);
 
-            // Set new timeout for debounced search
             searchTimeout = setTimeout(() => {
-                if (searchTerm.length >= MIN_SEARCH_LENGTH) {
-                    performSearch(searchTerm);
-                } else if (searchTerm.length === 0) {
-                    // Clear search - show original data
-                    performSearch('');
-                }
+                performSearch(searchTerm);
             }, DEBOUNCE_DELAY);
-        });
-
-        // Handle search input focus/blur for better UX
-        searchInput.addEventListener('focus', () => {
-            searchInput.parentNode.classList.add('search-focused');
-        });
-
-        searchInput.addEventListener('blur', () => {
-            searchInput.parentNode.classList.remove('search-focused');
         });
 
         // Handle Escape key to clear search
@@ -300,7 +186,6 @@
             countElement.className = 'search-result-count';
             countElement.style.display = 'none';
 
-            // Insert after search input
             const searchSection = searchInput.closest('.search-section');
             if (searchSection) {
                 searchSection.appendChild(countElement);

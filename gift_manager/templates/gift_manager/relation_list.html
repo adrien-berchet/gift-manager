@@ -223,13 +223,7 @@
             idFieldIndex: 8
         });
 
-        // Setup filter dropdown UI (relation-specific)
-        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
-
-        // Setup custom status filter (relation-specific)
-        GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
-
-        // Handle status selector changes with event delegation
+// Handle status selector changes with event delegation
         document.getElementById('relation-grid').addEventListener('change', function (e) {
             if (e.target.classList.contains('status-selector')) {
                 const select = e.target;

@@ -149,13 +149,7 @@
             idFieldIndex: 4
         });
 
-        // Setup filter dropdown UI (gift-specific)
-        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
-
-        // Setup custom tag filter (gift-specific)
-        GridUtils.setupCustomColumnFilter(grid, 2, '.tag-filter');
-
-    } catch (error) {
+} catch (error) {
         console.error('[GiftList] Error initializing grid:', error);
     }
     }) ();

@@ -58,9 +58,11 @@
             filtersSection = document.createElement('div');
             filtersSection.className = 'filter-section filters-section';
             filtersSection.innerHTML = `
-                <label class="filter-section-label">
-                    <i class="fas fa-filter me-1"></i>Filters
-                </label>
+                <div class="filter-section-header">
+                    <label class="filter-section-label">
+                        <i class="fas fa-filter me-1"></i>Filters
+                    </label>
+                </div>
                 <div class="filters-container"></div>
             `;
 
@@ -247,11 +249,16 @@
             default: // text
                 filterHTML = `
                     <label class="column-filter-label">${escapeHtml(columnName)}</label>
-                    <input type="text" class="form-control form-control-sm column-filter"
-                           id="${filterId}"
-                           data-column-index="${columnIndex}"
-                           data-filter-type="text"
-                           placeholder="Filter ${escapeHtml(columnName)}...">
+                    <div class="input-clearable">
+                        <input type="text" class="form-control form-control-sm column-filter"
+                               id="${filterId}"
+                               data-column-index="${columnIndex}"
+                               data-filter-type="text"
+                               placeholder="Filter ${escapeHtml(columnName)}...">
+                        <button type="button" class="input-clear-btn" aria-label="Clear">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 `;
                 break;
         }
@@ -445,11 +452,13 @@
         const filtersSection = filterContent.querySelector('.filters-section');
         if (!filtersSection) return;
 
+        const headerDiv = filtersSection.querySelector('.filter-section-header');
+        if (!headerDiv) return;
+
         const clearButton = document.createElement('button');
         clearButton.type = 'button';
         clearButton.className = 'btn btn-sm btn-outline-secondary clear-filters-btn';
-        clearButton.innerHTML = '<i class="fas fa-times me-1"></i>Clear Filters';
-        clearButton.style.marginTop = '0.5rem';
+        clearButton.innerHTML = '<i class="fas fa-times me-1"></i>Clear';
 
         clearButton.addEventListener('click', () => {
             // Clear all filter inputs
@@ -465,7 +474,7 @@
             saveFilterState(gridId, filterState);
         });
 
-        filtersSection.appendChild(clearButton);
+        headerDiv.appendChild(clearButton);
     }
 
     /**
@@ -480,10 +489,16 @@
             emptyState.remove();
         }
 
-        // Show/hide grid table
-        const gridTable = gridContainer.querySelector('.gridjs-table');
-        if (gridTable) {
-            gridTable.style.display = hasData ? '' : 'none';
+        // Hide/show the entire grid wrapper (prevents Grid.js built-in message from flashing)
+        const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+        if (gridWrapper) {
+            gridWrapper.style.display = hasData ? '' : 'none';
+        }
+
+        // Hide/show footer (pagination)
+        const filterFooter = gridContainer.querySelector('.gridjs-footer');
+        if (filterFooter) {
+            filterFooter.style.display = hasData ? '' : 'none';
         }
 
         // Show empty state if no data
@@ -501,35 +516,8 @@
                 <div class="empty-state-content">
                     <i class="fas ${icon} empty-state-icon"></i>
                     <p class="empty-state-message">${message}</p>
-                    ${hasActiveFilters ? '<button class="btn btn-sm btn-outline-secondary clear-all-filters-btn">Clear all filters</button>' : ''}
                 </div>
             `;
-
-            // Add clear all filters functionality
-            const clearBtn = emptyState.querySelector('.clear-all-filters-btn');
-            if (clearBtn) {
-                clearBtn.addEventListener('click', () => {
-                    // Clear search
-                    const searchInput = document.getElementById(gridContainer.id + '-search');
-                    if (searchInput) searchInput.value = '';
-
-                    // Clear all filter inputs
-                    const filterContent = document.getElementById(gridContainer.id + '-filter-content');
-                    if (filterContent) {
-                        filterContent.querySelectorAll('.column-filter').forEach(input => {
-                            input.value = '';
-                        });
-                    }
-
-                    // Clear filter state
-                    filterState.search = '';
-                    filterState.columnFilters.clear();
-
-                    // Apply filters
-                    applyFilters(grid, grid.config.data, filterState);
-                    saveFilterState(gridContainer.id, filterState);
-                });
-            }
 
             // Insert empty state
             const gridFooter = gridContainer.querySelector('.gridjs-footer');
