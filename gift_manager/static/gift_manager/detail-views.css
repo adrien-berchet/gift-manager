@@ -224,11 +224,11 @@
     }
 
     .stat-card {
-        padding: 0.75rem !important;
+        padding: 0.75rem;
     }
 
     .stat-number {
-        font-size: 1.25rem !important;
+        font-size: 1.25rem;
     }
 }
 
@@ -329,17 +329,17 @@
 }
 
 .expandable-detail-row {
-    background-color: var(--bs-light) !important;
-    border-top: none !important;
+    background-color: var(--bs-light);
+    border-top: none;
 }
 
 .expandable-detail-row:hover {
-    background-color: var(--bs-light) !important;
+    background-color: var(--bs-light);
 }
 
 .expandable-detail-cell {
-    padding: 0 !important;
-    border-top: none !important;
+    padding: 0;
+    border-top: none;
 }
 
 .expandable-detail-content {
@@ -377,11 +377,11 @@
     }
 
     .expandable-detail-row {
-        background-color: var(--bs-dark) !important;
+        background-color: var(--bs-dark);
     }
 
     .expandable-detail-row:hover {
-        background-color: var(--bs-dark) !important;
+        background-color: var(--bs-dark);
     }
 
     .expandable-detail-content {

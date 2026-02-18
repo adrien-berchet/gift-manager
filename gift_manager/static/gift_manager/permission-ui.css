@@ -25,13 +25,13 @@
 
 /* Disabled action buttons */
 .quick-action-btn:disabled {
-    opacity: 0.5 !important;
+    opacity: 0.5;
     cursor: not-allowed;
     pointer-events: none;
 }
 
 .quick-action-btn:disabled:hover {
-    opacity: 0.5 !important;
+    opacity: 0.5;
 }
 
 /* Permission indicators */
@@ -108,8 +108,8 @@
     opacity: 0.5;
 }
 
-.nav-item.permission-disabled .nav-link {
-    color: #6c757d !important;
+.navbar-nav .nav-item.permission-disabled .nav-link {
+    color: #6c757d;
     cursor: not-allowed;
     pointer-events: none;
 }
@@ -171,7 +171,7 @@
 /* Mobile responsive adjustments */
 @media (max-width: 768px) {
     .quick-actions-container .btn-text {
-        display: none !important;
+        display: none;
     }
 
     .permission-indicator {

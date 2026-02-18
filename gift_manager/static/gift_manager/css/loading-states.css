@@ -64,7 +64,7 @@
 .btn.loading {
     pointer-events: none;
     position: relative;
-    color: transparent !important;
+    color: transparent;
 }
 
 .btn.loading::after {

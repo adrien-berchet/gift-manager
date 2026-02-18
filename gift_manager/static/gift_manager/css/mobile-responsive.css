@@ -98,8 +98,8 @@
     }
 
     .offcanvas {
-        border-radius: 0 !important;
-        border: none !important;
+        border-radius: 0;
+        border: none;
     }
 
     .offcanvas-header {

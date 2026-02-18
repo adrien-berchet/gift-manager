@@ -7,22 +7,8 @@
 (function (window) {
     'use strict';
 
-    // Inject CSS for Grid.js overrides
-    (function () {
-        const style = document.createElement('style');
-        style.textContent =
-            // Hide sort controls on non-sortable columns (checkbox, actions)
-            // Grid.js doesn't properly respect per-column sort: false
-            '.gridjs-th-content:empty + .gridjs-sort,' +
-            '.gridjs-th:has(.bulk-select-all) .gridjs-sort { display: none !important; }' +
-            '.gridjs-th-content:empty { cursor: default; }' +
-            '.gridjs-th:has(.bulk-select-all) { cursor: default; }' +
-            // Hide pagination footer when container has gridjs-hide-footer class.
-            // Class is on the outer container (not the footer) so it persists
-            // across Grid.js re-renders that replace the footer DOM element.
-            '.gridjs-hide-footer .gridjs-footer { display: none !important; }';
-        document.head.appendChild(style);
-    })();
+    // Grid.js override rules moved to vendor/gridjs-mermaid.css (self-hosted).
+    // No runtime CSS injection needed.
 
     /**
      * Get translations for Grid.js from Django's i18n
@@ -238,7 +224,6 @@
             sort: true,
             language: getGridTranslations(),
             className: {
-                table: 'table table-striped',
                 th: 'gridjs-th',
                 td: 'gridjs-td'
             }

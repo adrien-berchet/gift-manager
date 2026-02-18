@@ -60,10 +60,10 @@
     }
 
     .offcanvas-mobile-fullscreen {
-        width: 100vw !important;
-        height: 100vh !important;
-        max-width: none !important;
-        border-radius: 0 !important;
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        border-radius: 0;
     }
 
     .offcanvas-mobile-fullscreen .offcanvas-header {
@@ -299,7 +299,7 @@
     }
 
     .quick-action-btn .btn-text {
-        display: none !important; /* Hide text on mobile */
+        display: none; /* Hide text on mobile */
     }
 }
 

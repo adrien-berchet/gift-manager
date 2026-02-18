@@ -82,16 +82,16 @@
 }
 
 /* Bulk Selection Checkboxes */
-.bulk-select-header {
+th.gridjs-th.bulk-select-header {
     width: 50px;
     text-align: center;
-    padding: var(--space-2, 8px) !important;
+    padding: var(--space-2, 8px);
 }
 
-.bulk-select-cell {
+td.gridjs-td.bulk-select-cell {
     width: 50px;
     text-align: center;
-    padding: var(--space-2, 8px) !important;
+    padding: var(--space-2, 8px);
     vertical-align: middle;
 }
 
@@ -119,24 +119,30 @@
     box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
 }
 
-/* Selected Row Styling */
-.bulk-selected {
-    background-color: var(--primary-50, #eff6ff) !important;
+/* Selected Row Styling - compound selector beats vendor td.gridjs-td */
+.gridjs-tr.bulk-selected td.gridjs-td {
+    background-color: var(--primary-50, #eff6ff);
+}
+
+.gridjs-tr.bulk-selected {
     border-left: 3px solid var(--primary-500, #3b82f6);
 }
 
-.bulk-selected:hover {
-    background-color: var(--primary-100, #dbeafe) !important;
+.gridjs-tr.bulk-selected:hover td.gridjs-td {
+    background-color: var(--primary-100, #dbeafe);
 }
 
 /* Dark theme support */
-[data-theme="dark"] .bulk-selected {
-    background-color: rgba(59, 130, 246, 0.1) !important;
+[data-theme="dark"] .gridjs-tr.bulk-selected td.gridjs-td {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .gridjs-tr.bulk-selected {
     border-left-color: var(--primary-400, #60a5fa);
 }
 
-[data-theme="dark"] .bulk-selected:hover {
-    background-color: rgba(59, 130, 246, 0.15) !important;
+[data-theme="dark"] .gridjs-tr.bulk-selected:hover td.gridjs-td {
+    background-color: rgba(59, 130, 246, 0.15);
 }
 
 [data-theme="dark"] .btn-danger.bulk-action-btn:disabled {
@@ -212,10 +218,10 @@
         min-width: 100px;
     }
 
-    .bulk-select-header,
-    .bulk-select-cell {
+    th.gridjs-th.bulk-select-header,
+    td.gridjs-td.bulk-select-cell {
         width: 40px;
-        padding: var(--space-1, 4px) !important;
+        padding: var(--space-1, 4px);
     }
 }
 
@@ -242,7 +248,7 @@
 /* Width is now controlled by JavaScript to preserve exact column widths */
 .selection-mode-active .gridjs-table th:first-child,
 .selection-mode-active .gridjs-table td:first-child {
-    display: table-cell !important;
+    display: table-cell;
     /* Width properties removed - controlled by JavaScript */
 }
 

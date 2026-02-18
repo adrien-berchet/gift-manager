@@ -22,9 +22,11 @@
 }
 
 /* Modified field indicators */
-.field-unsaved {
-    border-color: #ffc107 !important;
-    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25) !important;
+.form-control.field-unsaved,
+.form-select.field-unsaved,
+.form-check-input.field-unsaved {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
     position: relative;
 }
 
@@ -155,7 +157,7 @@ textarea.field-unsaved::after {
 .field-unsaved + label,
 label:has(+ .field-unsaved),
 .form-group:has(.field-unsaved) > label {
-    color: #856404 !important;
+    color: #856404;
     font-weight: 600;
 }
 
@@ -278,9 +280,10 @@ label:has(+ .field-unsaved)::after,
 }
 
 /* Focus styles for accessibility */
-.field-unsaved:focus {
-    border-color: #0d6efd !important;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+.form-control.field-unsaved:focus,
+.form-select.field-unsaved:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 /* Tooltip styles for field indicators */
@@ -288,18 +291,14 @@ label:has(+ .field-unsaved)::after,
     cursor: help;
 }
 
-/* Custom checkbox and radio styling */
-.form-check-input.field-unsaved {
-    border-color: #ffc107 !important;
-    box-shadow: 0 0 0 0.125rem rgba(255, 193, 7, 0.25) !important;
-}
+/* Custom checkbox and radio styling - already covered by compound selector above */
 
 .form-check-input.field-unsaved::after {
     display: none; /* Don't show dot for checkboxes/radios */
 }
 
 .form-check:has(.field-unsaved) .form-check-label {
-    color: #856404 !important;
+    color: #856404;
     font-weight: 600;
 }
 
