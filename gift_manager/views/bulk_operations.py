@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext as _
+from django.utils.translation import ngettext
 from django.views import View
 from django.views.generic import TemplateView
 
@@ -227,14 +228,61 @@ class BulkDeleteConfirmationView(LoginRequiredMixin, TemplateView):
             except Exception as e:
                 logger.warning("Error fetching entities for bulk delete confirmation: %s", e)
 
+        count = len(entities)
+        warning_message = ""
+
+        if entity_type == "gift":
+            warning_message = ngettext(
+                "You are about to delete one gift.",
+                "You are about to delete %(count)s gifts.",
+                count,
+            ) % {"count": count}
+        elif entity_type == "person":
+            warning_message = ngettext(
+                "You are about to delete one person.",
+                "You are about to delete %(count)s people.",
+                count,
+            ) % {"count": count}
+        elif entity_type == "event":
+            warning_message = ngettext(
+                "You are about to delete one event.",
+                "You are about to delete %(count)s events.",
+                count,
+            ) % {"count": count}
+        elif entity_type == "relation":
+            warning_message = ngettext(
+                "You are about to delete one gifting.",
+                "You are about to delete %(count)s giftings.",
+                count,
+            ) % {"count": count}
+        elif entity_type == "persongroup":
+            warning_message = ngettext(
+                "You are about to delete one person group.",
+                "You are about to delete %(count)s person groups.",
+                count,
+            ) % {"count": count}
+        elif entity_type == "gifttag":
+            warning_message = ngettext(
+                "You are about to delete one gift tag.",
+                "You are about to delete %(count)s gift tags.",
+                count,
+            ) % {"count": count}
+        else:
+            # Fallback for any other type - although all should be covered
+            warning_message = ngettext(
+                "You are about to delete %(count)s item.",
+                "You are about to delete %(count)s items.",
+                count,
+            ) % {"count": count}
+
         context.update(
             {
                 "entity_type": entity_type,
-                "entity_type_display": _(entity_type.replace("_", " ").title()),
                 "entity_ids": entity_ids,
                 "entities": entities,
-                "entity_count": len(entities),
+                "entity_count": count,
                 "selected_count": len(entity_ids),
+                "warning_message": warning_message,
             }
         )
 

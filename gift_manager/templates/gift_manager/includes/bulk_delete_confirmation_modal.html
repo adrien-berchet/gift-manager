@@ -14,11 +14,7 @@
             <i class="fas fa-exclamation-triangle me-2"></i>
             <div>
                 <strong>{% trans "Warning:" %}</strong>
-                {% blocktrans count counter=entity_count %}
-                    You are about to delete {{ entity_count }} {{ entity_type_display|lower }}.
-                {% plural %}
-                    You are about to delete {{ entity_count }} {{ entity_type_display|lower }}s.
-                {% endblocktrans %}
+                {{ warning_message }}
             </div>
         </div>
 
