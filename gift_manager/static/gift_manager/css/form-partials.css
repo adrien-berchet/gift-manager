@@ -194,8 +194,15 @@ select[multiple] option:checked {
 
 /* Card styling for sharing section */
 .card .card-header {
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #dee2e6;
+    background-color: var(--color-gray-50, #f8f9fa);
+    border-bottom: 1px solid var(--border-color, #dee2e6);
+    color: var(--text-primary, inherit);
+}
+
+[data-theme="dark"] .card .card-header {
+    background-color: var(--surface-elevated, #334155);
+    border-bottom-color: var(--border-color, #475569);
+    color: var(--text-primary, #f8fafc);
 }
 
 .card-body {

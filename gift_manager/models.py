@@ -1094,7 +1094,7 @@ class Relation(models.Model):
         verbose_name_plural = gettext_lazy("Relations")
 
     def __str__(self) -> str:
-        return f"{self.person} - {self.gift} ({self.status})"
+        return f"{self.recipient_name} - {self.gift} ({self.status})"
 
     def save(self, *args, **kwargs):
         """Override save method.
@@ -1105,7 +1105,7 @@ class Relation(models.Model):
         super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
-        return reverse("gift_manager:person_edit", kwargs={"pk": self.pk})
+        return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
 
     def clean(self):
         """Ensure that exactly one of person or group is set.
@@ -1115,8 +1115,60 @@ class Relation(models.Model):
         """
         if (self.person is None) == (self.group is None):
             raise ValidationError(
-                gettext_lazy("Either a person or a group must be specified but not both.")
+                gettext_lazy("Choose exactly one recipient: a person or a group.")
             )
+
+    @property
+    def recipient(self) -> Person | PersonGroup | None:
+        """Return the person or group targeted by this gift plan."""
+        return self.person or self.group
+
+    @property
+    def recipient_name(self) -> str:
+        """Return the display name for the gift plan recipient."""
+        recipient = self.recipient
+        return str(recipient) if recipient else ""
+
+    @property
+    def recipient_type(self) -> str:
+        """Return the stable recipient type identifier."""
+        if self.person_id is not None:
+            return "person"
+        if self.group_id is not None:
+            return "group"
+        return ""
+
+    @property
+    def recipient_type_label(self) -> str:
+        """Return the user-facing recipient type."""
+        if self.person_id is not None:
+            return gettext_lazy("Person")
+        if self.group_id is not None:
+            return gettext_lazy("Group")
+        return ""
+
+    @property
+    def recipient_key(self) -> str:
+        """Return a typed recipient key for forms and UI state."""
+        if self.person_id is not None:
+            return f"person:{self.person.person_id}"
+        if self.group_id is not None:
+            return f"group:{self.group.group_id}"
+        return ""
+
+    @property
+    def recipient_url(self) -> str:
+        """Return the recipient detail URL."""
+        if self.person_id is not None:
+            return reverse("gift_manager:person_detail", kwargs={"pk": self.person.person_id})
+        if self.group_id is not None:
+            return reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        return ""
+
+    @property
+    def is_group_targeted(self) -> bool:
+        """Return whether this gift plan targets a group directly."""
+        return self.group_id is not None
 
 
 class RelationPermission(models.Model):

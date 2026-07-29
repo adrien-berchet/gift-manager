@@ -24,14 +24,23 @@
             </div>
             <div class="col-12">
                 <div class="detail-field">
-                    <label class="detail-label">{% trans "For" %}</label>
+                    <label class="detail-label">{% trans "Recipient" %}</label>
                     <div class="detail-value">
-                        {% if object.person %}
-                        <i class="fas fa-user me-2 text-primary"></i>
-                        <strong>{{ object.person }}</strong>
-                        {% elif object.group %}
+                        {% if object.is_group_targeted %}
                         <i class="fas fa-layer-group me-2 text-primary"></i>
-                        <strong>{{ object.group.name }}</strong>
+                        {% else %}
+                        <i class="fas fa-user me-2 text-primary"></i>
+                        {% endif %}
+                        {% if object.recipient_url %}
+                        <a href="{{ object.recipient_url }}"><strong>{{ object.recipient_name }}</strong></a>
+                        {% else %}
+                        <strong>{{ object.recipient_name }}</strong>
+                        {% endif %}
+                        <span class="badge recipient-type-badge recipient-type-badge--{{ object.recipient_type }} ms-2">
+                            {{ object.recipient_type_label }}
+                        </span>
+                        {% if object.is_group_targeted %}
+                        <div class="text-muted small mt-1">{% trans "Gift plan for this group directly." %}</div>
                         {% endif %}
                     </div>
                 </div>

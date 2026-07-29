@@ -72,17 +72,25 @@
                 <div class="d-flex align-items-start justify-content-between">
                     <div class="flex-grow-1">
                         <div class="d-flex align-items-center mb-2">
-                            {% if relation.person %}
-                            <i class="fas fa-user me-2 text-primary"></i>
-                            <strong>{{ relation.person }}</strong>
-                            {% elif relation.group %}
+                            {% if relation.is_group_targeted %}
                             <i class="fas fa-layer-group me-2 text-primary"></i>
-                            <strong>{{ relation.group.name }}</strong>
+                            {% else %}
+                            <i class="fas fa-user me-2 text-primary"></i>
                             {% endif %}
+                            <strong>{{ relation.recipient_name }}</strong>
+                            <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-2">
+                                {{ relation.recipient_type_label }}
+                            </span>
                             {% if relation.status %}
                             <span class="badge bg-info ms-2">{{ relation.status }}</span>
                             {% endif %}
                         </div>
+                        {% if relation.is_group_targeted %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-layer-group me-1"></i>
+                            {% trans "Gift plan for this group directly." %}
+                        </div>
+                        {% endif %}
 
                         {% if relation.event %}
                         <div class="text-muted small mb-1">

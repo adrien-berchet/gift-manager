@@ -10,6 +10,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
+from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
 from gift_manager.models import Event
@@ -50,9 +51,12 @@ def home(request):
         user = request.user
 
         # Statistics
+        person_count = Person.objects.accessible_by(user).count()
+        group_count = PersonGroup.objects.accessible_by(user).count()
         context["stats"] = {
-            "persons": Person.objects.accessible_by(user).count(),
-            "groups": PersonGroup.objects.accessible_by(user).count(),
+            "recipients": person_count + group_count,
+            "persons": person_count,
+            "groups": group_count,
             "gifts": Gift.objects.accessible_by(user).count(),
             "events": Event.objects.accessible_by(user).count(),
             "relations": Relation.objects.accessible_by(user).count(),
@@ -127,10 +131,10 @@ def global_search(request):
     )
     results.extend(
         {
-            "type": "person",
+            "type": "recipient",
             "icon": "fa-user",
             "title": str(person),
-            "subtitle": "",
+            "subtitle": gettext("Person"),
             "url": f"/persons/{person.person_id}/",
         }
         for person in persons
@@ -144,10 +148,10 @@ def global_search(request):
     )
     results.extend(
         {
-            "type": "group",
+            "type": "recipient",
             "icon": "fa-layer-group",
             "title": group.name,
-            "subtitle": "",
+            "subtitle": gettext("Group"),
             "url": f"/person_groups/{group.group_id}/",
         }
         for group in groups

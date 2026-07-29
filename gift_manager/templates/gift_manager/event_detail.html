@@ -47,6 +47,14 @@
 <script>
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
 
         {% if relations %}
         // Relations Grid
@@ -56,9 +64,9 @@
                 "{{ relation.gift.gift_id }}",
                 "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
                 "{{ relation.gift.name|escapejs }}",
-                {% if relation.person %}"{{ relation.person.person_id }}"{% else %} "" {% endif %},
-                {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}" {% else %} "" {% endif %},
-                {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" {% else %} "" {% endif %},
+                "{{ relation.recipient_type|escapejs }}",
+                "{{ relation.recipient_url|escapejs }}",
+                "{{ relation.recipient_name|escapejs }}",
                 "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
@@ -85,20 +93,26 @@
                     return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
                 }
             },
-            { name: 'person_id', hidden: true },
-            { name: 'person_url', hidden: true },
+            { name: 'recipient_type', hidden: true },
+            { name: 'recipient_url', hidden: true },
             {
-                name: "{% trans 'Offered to' %}",
+                name: "{% trans 'Recipient' %}",
                 sort: {
                     compare: GridUtils.sortString()
                 },
                 formatter: (cell, row) => {
-                    const personName = row.cells[5].data;
-                    const personUrl = row.cells[4].data;
-                    if (personUrl) {
-                        return gridjs.html(`<a href="${personUrl}">${personName}</a>`);
+                    const recipientType = row.cells[3].data;
+                    const recipientUrl = row.cells[4].data;
+                    const recipientName = row.cells[5].data;
+                    const typeLabel = recipientTypeLabels[recipientType] || '';
+                    const badgeClass = recipientTypeBadgeClasses[recipientType] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        : '';
+                    if (recipientUrl) {
+                        return gridjs.html(`<a href="${recipientUrl}">${recipientName}</a>${badge}`);
                     }
-                    return personName;
+                    return gridjs.html(`${recipientName}${badge}`);
                 }
             },
             {

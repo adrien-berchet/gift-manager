@@ -40,7 +40,30 @@
     </div>
     {% endif %}
 
-    <!-- Relation-specific form fields -->
+    <!-- Gift plan recipient -->
+    {% if form.recipient %}
+    <div class="form-group mb-3">
+      <label for="{{ form.recipient.id_for_label }}" class="form-label">
+        {{ form.recipient.label }}
+        {% if form.recipient.field.required %}
+        <span class="text-danger">*</span>
+        {% endif %}
+      </label>
+      {{ form.recipient }}
+      {% if form.recipient.help_text %}
+      <div class="form-text">{{ form.recipient.help_text }}</div>
+      {% endif %}
+      {% if form.recipient.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in form.recipient.errors %}
+          {{ error }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Fixed-target form fields -->
     {% if form.person %}
     <div class="form-group mb-3">
       <label for="{{ form.person.id_for_label }}" class="form-label">

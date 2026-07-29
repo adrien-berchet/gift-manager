@@ -389,8 +389,8 @@
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' %}active{% endif %}" href="{% url 'gift_manager:persons' %}">
-                            <i class="fas fa-users me-1"></i>{% trans "Persons" %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
+                            <i class="fas fa-users me-1"></i>{% trans "Recipients" %}
                         </a>
                     </li>
                     <li class="nav-item">
@@ -506,7 +506,7 @@
                 <div class="modal-body">
                     <div class="search-input-wrapper">
                         <i class="fas fa-search"></i>
-                        <input type="text" class="search-modal-input" id="globalSearchInput" placeholder="{% trans 'Search gifts, persons, groups, events...' %}" autocomplete="off">
+                        <input type="text" class="search-modal-input" id="globalSearchInput" placeholder="{% trans 'Search gifts, recipients, events...' %}" autocomplete="off">
                         <div class="search-shortcuts">
                             <kbd>Esc</kbd>
                         </div>
@@ -522,18 +522,18 @@
                                     <div class="search-result-subtitle">{% trans "View all your gifts" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:persons' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:recipients' %}" class="search-result-item">
                                 <div class="search-result-icon"><i class="fas fa-users"></i></div>
                                 <div class="search-result-content">
-                                    <div class="search-result-title">{% trans "All Persons" %}</div>
-                                    <div class="search-result-subtitle">{% trans "View all persons" %}</div>
+                                    <div class="search-result-title">{% trans "All Recipients" %}</div>
+                                    <div class="search-result-subtitle">{% trans "View people and groups" %}</div>
                                 </div>
                             </a>
                             <a href="{% url 'gift_manager:person_groups' %}" class="search-result-item">
                                 <div class="search-result-icon"><i class="fas fa-layer-group"></i></div>
                                 <div class="search-result-content">
-                                    <div class="search-result-title">{% trans "All Groups" %}</div>
-                                    <div class="search-result-subtitle">{% trans "View all groups" %}</div>
+                                    <div class="search-result-title">{% trans "Manage Groups" %}</div>
+                                    <div class="search-result-subtitle">{% trans "View group hierarchy" %}</div>
                                 </div>
                             </a>
                             <a href="{% url 'gift_manager:events' %}" class="search-result-item">
@@ -777,8 +777,7 @@
                     const grouped = {};
                     const typeLabels = {
                         gift: '{% trans "Gifts" %}',
-                        person: '{% trans "Persons" %}',
-                        group: '{% trans "Groups" %}',
+                        recipient: '{% trans "Recipients" %}',
                         event: '{% trans "Events" %}',
                         tag: '{% trans "Tags" %}'
                     };

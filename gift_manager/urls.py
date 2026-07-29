@@ -48,6 +48,7 @@ urlpatterns = [
         views.UpdateViewPreferencesView.as_view(),
         name="update_view_preferences",
     ),
+    path("recipients/", views.RecipientListView.as_view(), name="recipients"),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),
     path("persons/<uuid:pk>/", views.PersonDetailView.as_view(), name="person_detail"),

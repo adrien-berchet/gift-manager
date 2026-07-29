@@ -51,6 +51,14 @@
     {% load custom_filters %}
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
 
         // Get permission data from template
         window.userPermissions = {{ user_permissions_json|safe }};
@@ -68,6 +76,7 @@
                 {% endif %}
                 {
                     text: "{{ item.related_object|escapejs }}",
+                    recipientType: "{{ item.recipient_type|escapejs }}",
                     personId: {% if item.person__person_id %} "{{item.person__person_id}}" {% else %} null {% endif %},
                     groupId: {% if item.group__group_id %} "{{item.group__group_id}}" {% else %} null {% endif %},
                     url: {% if item.person__person_id %} "{% url 'gift_manager:person_detail' item.person__person_id %}" {% elif item.group__group_id %} "{% url 'gift_manager:person_group_detail' item.group__group_id %}" {% else %} null {% endif %}
@@ -110,10 +119,15 @@
                 },
                 formatter: function (cell) {
                     if (!cell || !cell.text) return '';
+                    const typeLabel = recipientTypeLabels[cell.recipientType] || '';
+                    const badgeClass = recipientTypeBadgeClasses[cell.recipientType] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        : '';
                     if (cell.url) {
-                        return gridjs.html(`<a href="${cell.url}">${cell.text}</a>`);
+                        return gridjs.html(`<a href="${cell.url}">${cell.text}</a>${badge}`);
                     }
-                    return cell.text;
+                    return gridjs.html(`${cell.text}${badge}`);
                 }
             },
             {

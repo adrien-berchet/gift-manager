@@ -1,4 +1,5 @@
 from django import forms
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Q
 from django.utils.translation import gettext_lazy
 
@@ -25,6 +26,64 @@ class BaseFormMixin:
                 field.widget.attrs.update({"class": "form-textarea"})
             elif isinstance(field.widget, forms.DateInput):
                 field.widget.attrs.update({"class": "form-date-input", "type": "date"})
+
+
+def build_recipient_choices(
+    user,
+    *,
+    include_persons: bool = True,
+    include_groups: bool = True,
+) -> list:
+    """Build typed recipient choices for person/group backed gift plans."""
+    choices = [("", gettext_lazy("Select a recipient"))]
+
+    if not user or not user.is_authenticated:
+        return choices
+
+    if include_persons:
+        person_choices = [
+            (f"person:{person.person_id}", str(person))
+            for person in Person.objects.accessible_by(user).order_by("family_name", "first_name")
+        ]
+        if person_choices:
+            choices.append((gettext_lazy("People"), person_choices))
+
+    if include_groups:
+        group_choices = [
+            (f"group:{group.group_id}", group.name)
+            for group in PersonGroup.objects.accessible_by(user).order_by("name")
+        ]
+        if group_choices:
+            choices.append((gettext_lazy("Groups"), group_choices))
+
+    return choices
+
+
+def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> None:
+    """Map a typed recipient value back to the current Relation fields."""
+    if not recipient_value:
+        raise forms.ValidationError(gettext_lazy("Select a recipient."))
+
+    recipient_type, separator, object_id = recipient_value.partition(":")
+    if separator != ":" or not object_id:
+        raise forms.ValidationError(gettext_lazy("Choose a valid recipient."))
+
+    if not user or not user.is_authenticated:
+        raise forms.ValidationError(gettext_lazy("Choose a valid recipient."))
+
+    try:
+        if recipient_type == "person":
+            instance.person = Person.objects.accessible_by(user).get(person_id=object_id)
+            instance.group = None
+            return
+        if recipient_type == "group":
+            instance.group = PersonGroup.objects.accessible_by(user).get(group_id=object_id)
+            instance.person = None
+            return
+    except (DjangoValidationError, Person.DoesNotExist, PersonGroup.DoesNotExist, ValueError):
+        raise forms.ValidationError(gettext_lazy("Choose a valid recipient.")) from None
+
+    raise forms.ValidationError(gettext_lazy("Choose a valid recipient."))
 
 
 class PersonForm(BaseFormMixin, forms.ModelForm):
@@ -375,6 +434,7 @@ class PersonRelationForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.person_id = kwargs.pop("person_id", None)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["event"].queryset = Event.objects.all()
         self.fields["event"].required = False
@@ -387,8 +447,13 @@ class PersonRelationForm(BaseFormMixin, forms.ModelForm):
         # Define the person if the person_id is given
         if self.person_id:
             try:
-                self.instance.person = Person.objects.get(person_id=self.person_id)
-            except Person.DoesNotExist:
+                queryset = (
+                    Person.objects.accessible_by(self.user)
+                    if self.user and self.user.is_authenticated
+                    else Person.objects.none()
+                )
+                self.instance.person = queryset.get(person_id=self.person_id)
+            except (DjangoValidationError, Person.DoesNotExist):
                 raise forms.ValidationError(
                     gettext_lazy("The specified person does not exist.")
                 ) from None
@@ -414,6 +479,7 @@ class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.group_id = kwargs.pop("group_id", None)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["event"].queryset = Event.objects.all()
         self.fields["event"].required = False
@@ -426,8 +492,13 @@ class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
         # Set the group from the group_id parameter
         if self.group_id:
             try:
-                self.instance.group = PersonGroup.objects.get(group_id=self.group_id)
-            except PersonGroup.DoesNotExist:
+                queryset = (
+                    PersonGroup.objects.accessible_by(self.user)
+                    if self.user and self.user.is_authenticated
+                    else PersonGroup.objects.none()
+                )
+                self.instance.group = queryset.get(group_id=self.group_id)
+            except (DjangoValidationError, PersonGroup.DoesNotExist):
                 raise forms.ValidationError(
                     gettext_lazy("The specified person group does not exist.")
                 ) from None
@@ -482,16 +553,21 @@ class GiftTagForm(BaseFormMixin, forms.ModelForm):
 
 
 class GiftRelationForm(BaseFormMixin, forms.ModelForm):
+    recipient = forms.ChoiceField(
+        label=gettext_lazy("Recipient"),
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text=gettext_lazy("Choose the person or group this gift plan is for."),
+    )
+
     class Meta:
         model = Relation
-        fields = ["person", "group", "comment", "event", "status", "due_date"]
+        fields = ["recipient", "comment", "event", "status", "due_date"]
         widgets = {
             "due_date": forms.DateInput(attrs={"type": "date"}),
             "comment": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
-            "person": gettext_lazy("Person"),
-            "group": gettext_lazy("Group"),
             "comment": gettext_lazy("Comment"),
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
@@ -500,27 +576,32 @@ class GiftRelationForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.gift_id = kwargs.pop("gift_id", None)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
+        self.fields["recipient"].choices = build_recipient_choices(self.user)
+        if self.instance and self.instance.pk:
+            self.initial["recipient"] = self.instance.recipient_key
         self.fields["event"].queryset = Event.objects.all()
         self.fields["event"].required = False
 
     def clean(self):
-        """Validate that exactly one of person or group is specified."""
+        """Validate and map the typed recipient choice to person/group fields."""
         cleaned_data = super().clean()
-        person = cleaned_data.get("person")
-        group = cleaned_data.get("group")
-
-        # Validate mutual exclusivity
-        if (person is None) == (group is None):
-            raise forms.ValidationError(
-                gettext_lazy("Either a person or a group must be specified but not both.")
-            )
+        try:
+            apply_recipient_choice(self.instance, cleaned_data.get("recipient"), self.user)
+        except forms.ValidationError as exc:
+            self.add_error("recipient", exc)
 
         # Set the gift from the gift_id parameter
         if self.gift_id:
             try:
-                self.instance.gift = Gift.objects.get(gift_id=self.gift_id)
-            except Gift.DoesNotExist:
+                queryset = (
+                    Gift.objects.accessible_by(self.user)
+                    if self.user and self.user.is_authenticated
+                    else Gift.objects.none()
+                )
+                self.instance.gift = queryset.get(gift_id=self.gift_id)
+            except (DjangoValidationError, Gift.DoesNotExist):
                 raise forms.ValidationError(
                     gettext_lazy("The specified gift does not exist.")
                 ) from None
@@ -566,11 +647,17 @@ class EventForm(BaseFormMixin, forms.ModelForm):
 
 
 class RelationForm(BaseFormMixin, forms.ModelForm):
+    recipient = forms.ChoiceField(
+        label=gettext_lazy("Recipient"),
+        required=True,
+        widget=forms.Select(attrs={"class": "form-select"}),
+        help_text=gettext_lazy("Choose the person or group this gift plan is for."),
+    )
+
     class Meta:
         model = Relation
         fields = [
-            "person",
-            "group",
+            "recipient",
             "gift",
             "comment",
             "event",
@@ -582,8 +669,6 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
             "due_date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {
-            "person": gettext_lazy("Person"),
-            "group": gettext_lazy("Group"),
             "gift": gettext_lazy("Gift"),
             "comment": gettext_lazy("Comment"),
             "event": gettext_lazy("Event"),
@@ -594,22 +679,22 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         hide_person = kwargs.pop("hide_person", False)
         hide_group = kwargs.pop("hide_group", False)
+        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        if hide_person:
-            self.fields.pop("person", None)
-        if hide_group:
-            self.fields.pop("group", None)
+        self.fields["recipient"].choices = build_recipient_choices(
+            self.user,
+            include_persons=not hide_person,
+            include_groups=not hide_group,
+        )
+        if self.instance and self.instance.pk:
+            self.initial["recipient"] = self.instance.recipient_key
 
     def clean(self):
-        """Validate that exactly one of person or group is specified."""
+        """Validate and map the typed recipient choice to person/group fields."""
         cleaned_data = super().clean()
-        person = cleaned_data.get("person")
-        group = cleaned_data.get("group")
-
-        # Check if both are None or both are set (XOR logic)
-        if (person is None) == (group is None):
-            raise forms.ValidationError(
-                gettext_lazy("Either a person or a group must be specified but not both.")
-            )
+        try:
+            apply_recipient_choice(self.instance, cleaned_data.get("recipient"), self.user)
+        except forms.ValidationError as exc:
+            self.add_error("recipient", exc)
 
         return cleaned_data

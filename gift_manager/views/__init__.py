@@ -68,6 +68,9 @@ from .profile import RemoveFriendView
 from .profile import SendInvitationView
 from .profile import UpdateViewPreferencesView
 
+# Recipient views
+from .recipient import RecipientListView
+
 # Relation views
 from .relation import GiftRelationCreateView
 from .relation import GiftRelationDeleteView
@@ -132,6 +135,7 @@ __all__ = [
     "PersonRelationCreateView",
     "PersonUpdateView",
     "ProfileDetailView",
+    "RecipientListView",
     "RelationCreateView",
     "RelationDeleteView",
     "RelationDetailView",

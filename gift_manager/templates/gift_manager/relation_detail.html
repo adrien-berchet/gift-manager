@@ -9,11 +9,17 @@
     {% include "gift_manager/includes/relation_detail_partial.html" %}
 {% else %}
 <h1 class="my-4">{% trans "Gift Plan details" %}</h1>
-<p><strong>{% trans "Beneficiary:" %}</strong>
-    {% if relation.person %}
-    <a href="{% url 'gift_manager:person_detail' relation.person.person_id %}">{{ relation.person.first_name }} {{ relation.person.family_name }}</a>
+<p><strong>{% trans "Recipient:" %}</strong>
+    {% if relation.recipient_url %}
+    <a href="{{ relation.recipient_url }}">{{ relation.recipient_name }}</a>
     {% else %}
-    <a href="{% url 'gift_manager:person_group_detail' relation.group.group_id %}">{{ relation.group.name }}</a>
+    {{ relation.recipient_name }}
+    {% endif %}
+    <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-2">
+        {{ relation.recipient_type_label }}
+    </span>
+    {% if relation.is_group_targeted %}
+    <span class="text-muted small ms-2">{% trans "Gift plan for this group directly." %}</span>
     {% endif %}
 </p>
 <p><strong>{% trans "Gift:" %}</strong> <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></p>

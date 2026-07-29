@@ -54,8 +54,10 @@
                         <span class="badge {{ relation.status|status_badge_class }}">{{ relation.status }}</span>
                         {% endif %}
                         {% if relation.group %}
-                        <span class="badge bg-light text-dark border" style="font-size:0.7rem;">
-                            <i class="fas fa-layer-group me-1 text-muted" aria-hidden="true"></i>{{ relation.group.name }}
+                        <span class="badge recipient-type-badge recipient-type-badge--group"
+                              style="font-size:0.7rem;"
+                              title="{% trans 'Gift plan for this group directly' %}">
+                            <i class="fas fa-layer-group me-1" aria-hidden="true"></i>{{ relation.group.name }}
                         </span>
                         {% endif %}
                     </div>

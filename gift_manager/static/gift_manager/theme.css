@@ -431,6 +431,12 @@
     color: #f8fafc;
 }
 
+[data-theme="dark"] .card-header.bg-light {
+    background-color: #334155 !important;
+    border-bottom-color: #475569;
+    color: #f8fafc;
+}
+
 [data-theme="dark"] .card-footer {
     background-color: #334155;
     border-top-color: #475569;

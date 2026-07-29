@@ -247,7 +247,11 @@
                                     <div class="custom-control custom-checkbox">
                                         <input type="checkbox" class="custom-control-input relation-checkbox" name="relations" value="{{ relation.relation_id }}" id="relation-{{ relation.relation_id }}">
                                         <label class="custom-control-label" for="relation-{{ relation.relation_id }}">
-                                            {% if relation.person %}{{ relation.person }}{% elif relation.group %}{{ relation.group }}{% endif %} - {{ relation.gift }}{% if relation.comment %} ({{ relation.comment }}){% endif %}
+                                            {{ relation.recipient_name }} - {{ relation.gift }}
+                                            <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-1">
+                                                {{ relation.recipient_type_label }}
+                                            </span>
+                                            {% if relation.comment %} ({{ relation.comment }}){% endif %}
                                             {% if relation.event %} [{{ relation.event }}]{% endif %}
                                         </label>
                                     </div>

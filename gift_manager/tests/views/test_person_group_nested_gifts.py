@@ -113,7 +113,7 @@ class TestPersonGroupNestedGifts:
 
         # Check for tab presence
         assert "nested-gifts-tab" in content
-        assert "All gifts (including members)" in content
+        assert "All gift plans (including members)" in content
         # Check for count (3 gifts created in setup) - template uses [count] format
         assert "[3]" in content
 

@@ -242,6 +242,47 @@ body.has-fixed-action-bar {
     border-radius: 20px;
 }
 
+/* Recipient badges */
+.recipient-type-badge {
+    border: 1px solid transparent;
+}
+
+.recipient-type-badge--person {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.recipient-type-badge--group {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.recipient-membership-badge {
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+[data-theme="dark"] .recipient-type-badge--person {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: rgba(147, 197, 253, 0.35);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .recipient-type-badge--group {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(110, 231, 183, 0.35);
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .recipient-membership-badge {
+    background-color: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
 /* ==========================================================================
    Utility Classes
    ========================================================================== */

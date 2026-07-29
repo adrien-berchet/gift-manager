@@ -614,12 +614,12 @@
 
     <!-- Stats Grid -->
     <div class="stats-grid">
-        <a href="{% url 'gift_manager:persons' %}" class="stat-card">
+        <a href="{% url 'gift_manager:recipients' %}" class="stat-card">
             <div class="stat-icon persons">
                 <i class="fas fa-users"></i>
             </div>
-            <div class="stat-value">{{ stats.persons|default:0 }}</div>
-            <div class="stat-label">{% trans "Persons" %}</div>
+            <div class="stat-value">{{ stats.recipients|default:0 }}</div>
+            <div class="stat-label">{% trans "Recipients" %}</div>
         </a>
         <a href="{% url 'gift_manager:person_groups' %}" class="stat-card">
             <div class="stat-icon groups">
@@ -703,11 +703,8 @@
                                 {{ relation.gift.name }}
                             </a>
                             <span class="item-subtitle">
-                                {% if relation.person %}
-                                    {% trans "For" %} {{ relation.person }}
-                                {% elif relation.group %}
-                                    {% trans "For" %} {{ relation.group.name }}
-                                {% endif %}
+                                {% trans "Recipient" %}: {{ relation.recipient_name }}
+                                {% if relation.is_group_targeted %}({% trans "group" %}){% endif %}
                                 {% if relation.event %} - {{ relation.event.name }}{% endif %}
                             </span>
                         </div>

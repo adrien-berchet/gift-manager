@@ -3,9 +3,12 @@
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Case
+from django.db.models import CharField
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
+from django.db.models import When
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
@@ -27,8 +30,6 @@ from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
-from gift_manager.models import Person
-from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.views.base import BaseCreateView
@@ -51,6 +52,7 @@ class PersonRelationCreateView(BaseCreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["person_id"] = self.kwargs["pk"]  # Pass the person ID to the form
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -86,6 +88,7 @@ class PersonGroupRelationCreateView(BaseCreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["group_id"] = self.kwargs["pk"]  # Pass the group ID to the form
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -119,6 +122,7 @@ class GiftRelationCreateView(BaseCreateView):
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["gift_id"] = self.kwargs["pk"]  # Pass the gift ID to the form
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_context_data(self, **kwargs):
@@ -130,22 +134,6 @@ class GiftRelationCreateView(BaseCreateView):
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = (
-            Person.objects.accessible_by(self.request.user)
-            .annotate(
-                complete_name=Concat(
-                    "family_name",
-                    Value(" "),
-                    "first_name",
-                    output_field=TextField(),
-                ),
-            )
-            .order_by("complete_name")
-            .distinct()
-        )
-        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
-            self.request.user
-        ).order_by("name")
         form.fields["event"].queryset = Event.objects.accessible_by(self.request.user).order_by(
             "name"
         )
@@ -220,7 +208,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
         self.column_names = {
             "gift__name": gettext("Gift"),
             "comment": gettext("Comment"),
-            "related_object": gettext("Offered to"),
+            "related_object": gettext("Recipient"),
             "event": gettext("Event"),
             "status__status": gettext("Status"),
             "due_date": gettext("Due date"),
@@ -242,7 +230,12 @@ class RelationListView(PermissionContextMixin, BaseListView):
                     ),
                     "group__name",
                     output_field=TextField(),
-                )
+                ),
+                recipient_type=Case(
+                    When(person__isnull=False, then=Value("person")),
+                    default=Value("group"),
+                    output_field=CharField(),
+                ),
             )
             .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
             .values(
@@ -251,6 +244,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
                 "gift__gift_id",
                 "comment",
                 "related_object",
+                "recipient_type",
                 "person__person_id",
                 "group__group_id",
                 "event__name",
@@ -280,26 +274,11 @@ class RelationCreateView(BaseCreateView):
         kwargs["hide_person"] = hide_person
         hide_group = self.request.GET.get("hide_group", "false") == "true"
         kwargs["hide_group"] = hide_group
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = (
-            Person.objects.accessible_by(self.request.user)
-            .annotate(
-                complete_name=Concat(
-                    "family_name",
-                    Value(" "),
-                    "first_name",
-                    output_field=TextField(),
-                ),
-            )
-            .order_by("complete_name")
-            .distinct()
-        )
-        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
-            self.request.user
-        ).order_by("name")
         form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )
@@ -329,26 +308,11 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
         kwargs["hide_person"] = hide_person
         hide_group = self.request.GET.get("hide_group", "false") == "true"
         kwargs["hide_group"] = hide_group
+        kwargs["user"] = self.request.user
         return kwargs
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["person"].queryset = (
-            Person.objects.accessible_by(self.request.user)
-            .annotate(
-                complete_name=Concat(
-                    "family_name",
-                    Value(" "),
-                    "first_name",
-                    output_field=TextField(),
-                ),
-            )
-            .order_by("complete_name")
-            .distinct()
-        )
-        form.fields["group"].queryset = PersonGroup.objects.accessible_by(
-            self.request.user
-        ).order_by("name")
         form.fields["gift"].queryset = Gift.objects.accessible_by(self.request.user).order_by(
             "name"
         )

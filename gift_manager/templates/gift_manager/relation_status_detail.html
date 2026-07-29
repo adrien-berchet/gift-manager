@@ -23,49 +23,64 @@
 
 <script>
     (function () {
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
+
         {% if relations %}
         // Relations Grid
         const relationsData = [
             {% for relation in relations %}
-    [
-        {% if relation.person %}"person"{% else %} "group"{% endif %},
-    {% if relation.person %} "{{ relation.person.person_id }}"{% else %} "{{ relation.group.group_id }}"{% endif %},
-    {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %} "{{ relation.group.name|escapejs }}"{% endif %},
-    {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}"{% else %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% endif %},
-    "{{ relation.gift.gift_id }}",
-        "{{ relation.gift.name|escapejs }}",
-        "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-        "{{ relation.comment|escapejs }}",
-        "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
-        "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
-        {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
-    "{{ relation.relation_id }}",
-        "{% url 'gift_manager:relation_detail' relation.relation_id %}",
-        "{% url 'gift_manager:relation_edit' relation.relation_id %}",
-        "{% url 'gift_manager:relation_delete' relation.relation_id %}",
-        {% if relation.group %}false{% else %} true{% endif %}
+            [
+                "{{ relation.recipient_type|escapejs }}",
+                "{{ relation.recipient_key|escapejs }}",
+                "{{ relation.recipient_name|escapejs }}",
+                "{{ relation.recipient_url|escapejs }}",
+                "{{ relation.gift.gift_id }}",
+                "{{ relation.gift.name|escapejs }}",
+                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
+                "{{ relation.comment|escapejs }}",
+                "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+                "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+                {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
+                "{{ relation.relation_id }}",
+                "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+                "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+                "{% url 'gift_manager:relation_delete' relation.relation_id %}",
+                {% if relation.is_group_targeted %}false{% else %} true{% endif %}
             ],
-    {% endfor %}
+            {% endfor %}
         ];
 
-    const relationsColumns = [
-        { name: 'type', hidden: true },
-        { name: 'id', hidden: true },
-        {
-            name: "{% trans 'Person' %} / {% trans 'Group' %}",
-            sort: {
-                compare: GridUtils.sortString()
-            },
-            formatter: (cell, row) => {
-                const name = row.cells[2].data;
-                const url = row.cells[3].data;
-                if (url) {
-                    return gridjs.html(`<a href="${url}">${name}</a>`);
+        const relationsColumns = [
+            { name: 'type', hidden: true },
+            { name: 'id', hidden: true },
+            {
+                name: "{% trans 'Recipient' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
+                formatter: (cell, row) => {
+                    const type = row.cells[0].data;
+                    const name = row.cells[2].data;
+                    const url = row.cells[3].data;
+                    const typeLabel = recipientTypeLabels[type] || '';
+                    const badgeClass = recipientTypeBadgeClasses[type] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        : '';
+                    if (url) {
+                        return gridjs.html(`<a href="${url}">${name}</a>${badge}`);
+                    }
+                    return gridjs.html(`${name}${badge}`);
                 }
-                return name;
-            }
-        },
-        { name: 'person_group_url', hidden: true },
+            },
+        { name: 'recipient_url', hidden: true },
         { name: 'gift_id', hidden: true },
         {
             name: "{% trans 'Gift' %}",

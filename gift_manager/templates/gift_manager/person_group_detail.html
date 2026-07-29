@@ -104,7 +104,7 @@
       aria-controls="gifts-list"
       aria-selected="false"
     >
-      {% trans "Gifts for this group" %} [{{ gift_count }}]
+      {% trans "Gift Plans for this group" %} [{{ gift_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -118,7 +118,7 @@
       aria-controls="nested-gifts-list"
       aria-selected="false"
     >
-      {% trans "All gifts (including members)" %} [{{ nested_gift_count }}]
+      {% trans "All gift plans (including members)" %} [{{ nested_gift_count }}]
     </button>
   </li>
 </ul>
@@ -169,13 +169,13 @@
   >
     <p class="text-muted">
       <i class="fas fa-info-circle me-1"></i>
-      {% trans "This view shows all gifts for this group and for all members of this group (including nested groups)." %}
+      {% trans "This view shows gift plans for this group and for all members of this group (including nested groups)." %}
     </p>
     {% if nested_gifts %}
     <div id="nested-gifts-grid" class="mt-3"></div>
     {% else %}
     <p class="text-center text-muted">
-      {% trans "No gifts found for this group or its members" %}
+      {% trans "No gift plans found for this group or its members" %}
     </p>
     {% endif %}
   </div>
@@ -189,12 +189,16 @@
       href="{% url 'gift_manager:person_group_relation_create' group.group_id %}"
       class="btn btn-primary mb-3"
     >
-      {% trans "Offer a gift to this group" %}
+      {% trans "New Gift Plan for this group" %}
     </a>
+    <p class="text-muted small mb-3">
+      <i class="fas fa-info-circle me-1"></i>
+      {% trans "Gift plans in this tab target the group directly, not each member individually." %}
+    </p>
     {% if gifts %}
     <div id="gifts-grid" class="mt-3"></div>
     {% else %}
-    <p class="text-center text-muted">{% trans "No gift for this group" %}</p>
+    <p class="text-center text-muted">{% trans "No gift plans for this group" %}</p>
     {% endif %}
   </div>
 </div>
@@ -567,17 +571,8 @@
       "{{ relation.gift.gift_id }}",
       "{{ relation.gift.name|escapejs }}",
       "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-      // Recipient info
-      "{% if relation.person %}" +
-          "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" +
-      "{% else %}" +
-          "{{ relation.group.name|escapejs }}" +
-      "{% endif %}",
-      "{% if relation.person %}" +
-          "{% url 'gift_manager:person_detail' relation.person.person_id %}" +
-      "{% else %}" +
-          "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" +
-      "{% endif %}",
+      "{{ relation.recipient_name|escapejs }}",
+      "{{ relation.recipient_url|escapejs }}",
       "{{ relation.comment|escapejs }}",
       "{{ relation.status.pk }}",
       "{{ relation.status.status|escapejs }}",
@@ -607,7 +602,7 @@
       },
       { name: 'gift_url', hidden: true },
       {
-          name: "{% trans 'For' %}",
+          name: "{% trans 'Recipient' %}",
           sort: {
               compare: GridUtils.sortString()
           },

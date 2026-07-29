@@ -126,7 +126,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        person_results = [r for r in data["results"] if r["type"] == "person"]
+        person_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Person"
+        ]
         assert len(person_results) == 1
         assert person_results[0]["icon"] == "fa-user"
         assert f"/persons/{person.person_id}/" in person_results[0]["url"]
@@ -144,7 +146,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        person_results = [r for r in data["results"] if r["type"] == "person"]
+        person_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Person"
+        ]
         assert len(person_results) == 1
 
     def test_search_finds_person_groups(self):
@@ -160,7 +164,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        group_results = [r for r in data["results"] if r["type"] == "group"]
+        group_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Group"
+        ]
         assert len(group_results) == 1
         assert group_results[0]["title"] == "Family Friends"
         assert group_results[0]["icon"] == "fa-layer-group"
@@ -311,4 +317,4 @@ class TestGlobalSearchView:
         types_found = {r["type"] for r in data["results"]}
         assert "gift" in types_found
         assert "event" in types_found
-        assert "person" in types_found
+        assert "recipient" in types_found

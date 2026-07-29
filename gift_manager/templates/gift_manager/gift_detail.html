@@ -25,12 +25,12 @@
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
-<h2 class="my-4">{% trans "Persons related to this gift" %}</h2>
+<h2 class="my-4">{% trans "Gift Plans for this gift" %}</h2>
 <a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}" class="btn btn-primary mb-3">{% trans "Add Gift Plan" %}</a>
 {% if relations %}
 <div id="relations-grid" class="mt-3"></div>
 {% else %}
-<p class="text-center text-muted">{% trans "No persons related to this gift" %}</p>
+<p class="text-center text-muted">{% trans "No gift plans for this gift" %}</p>
 {% endif %}
 {% endif %}
 {% endblock %}
@@ -43,16 +43,24 @@
 <script>
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
 
         {% if relations %}
         // Relations Grid
         const relationsData = [
             {% for relation in relations %}
             [
-                {% if relation.person %} "person" {% elif relation.group %} "group" {% else %} "bad" {% endif %},
-                {% if relation.person %} "{{ relation.person.person_id }}" {% elif relation.group %} "{{ relation.group.group_id }}" {% else %} "" {% endif %},
-                {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" {% elif relation.group %} "{{ relation.group.name|escapejs }}" {% else %} "Bad relation" {% endif %},
-                {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}" {% elif relation.group %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" {% else %} "" {% endif %},
+                "{{ relation.recipient_type|escapejs }}",
+                "{{ relation.recipient_key|escapejs }}",
+                "{{ relation.recipient_name|escapejs }}",
+                "{{ relation.recipient_url|escapejs }}",
                 "{{ relation.comment|escapejs }}",
                 "{{ relation.status.pk }}",
                 "{{ relation.status.status|escapejs }}",
@@ -71,17 +79,23 @@
             { name: 'type', hidden: true },
             { name: 'id', hidden: true },
             {
-                name: "{% trans 'Person' %} / {% trans 'Group' %}",
+                name: "{% trans 'Recipient' %}",
                 sort: {
                     compare: GridUtils.sortString()
                 },
                 formatter: (cell, row) => {
+                    const type = row.cells[0].data;
                     const name = row.cells[2].data;
                     const url = row.cells[3].data;
+                    const typeLabel = recipientTypeLabels[type] || '';
+                    const badgeClass = recipientTypeBadgeClasses[type] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        : '';
                     if (url) {
-                        return gridjs.html(`<a href="${url}">${name}</a>`);
+                        return gridjs.html(`<a href="${url}">${name}</a>${badge}`);
                     }
-                    return name;
+                    return gridjs.html(`${name}${badge}`);
                 }
             },
             { name: 'url', hidden: true },

@@ -170,7 +170,13 @@ class RelationSearchView(HTMXListSearchView):
     """HTMX search view for relations."""
 
     model = Relation
-    search_fields = ["person__first_name", "person__family_name", "gift__name", "event__name"]
+    search_fields = [
+        "person__first_name",
+        "person__family_name",
+        "group__name",
+        "gift__name",
+        "event__name",
+    ]
 
     def get_search_data(self, queryset):
         """Convert relation queryset to data format."""
@@ -179,7 +185,9 @@ class RelationSearchView(HTMXListSearchView):
             data.append(
                 {
                     "relation_id": str(relation.relation_id),
-                    "person_name": f"{relation.person.first_name} {relation.person.family_name}",
+                    "person_name": relation.recipient_name,
+                    "recipient_name": relation.recipient_name,
+                    "recipient_type": relation.recipient_type,
                     "gift_name": relation.gift.name if relation.gift else "",
                     "event_name": relation.event.name if relation.event else "",
                     "status": relation.status.status if relation.status else "",
