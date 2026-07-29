@@ -1,0 +1,25 @@
+{% load i18n %}
+{# Advanced list controls wrapper. Pass grid_id and optional show_bulk_select. #}
+
+<details class="advanced-list-tools" id="{{ grid_id }}-advanced-tools" data-grid-id="{{ grid_id }}">
+    <summary class="advanced-list-tools-summary">
+        <span class="advanced-list-tools-title">
+            <i class="fas fa-sliders-h" aria-hidden="true"></i>
+            {% trans "Advanced tools" %}
+        </span>
+        <i class="fas fa-chevron-down advanced-list-tools-chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="advanced-list-tools-body">
+        {% if show_bulk_select %}
+        <div class="advanced-list-actions">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="toggle-selection-{{ grid_id }}"
+                    title="{% trans 'Select multiple items' %}">
+                <i class="fas fa-check-square me-1" aria-hidden="true"></i>{% trans "Select" %}
+            </button>
+        </div>
+        {% endif %}
+        {% include "gift_manager/includes/filter_panel.html" with grid_id=grid_id %}
+    </div>
+</details>

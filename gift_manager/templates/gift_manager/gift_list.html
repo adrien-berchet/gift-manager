@@ -21,20 +21,13 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <button type="button"
-                class="btn btn-outline-secondary me-2"
-                id="toggle-selection-gift-grid"
-                title="{% trans 'Select multiple items' %}">
-            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
-        </button>
         <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift" %}
         </a>
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="gift-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="gift-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
 <div id="gift-grid"></div>
@@ -139,6 +132,7 @@
             features: {
                 bulkOperations: true,
                 inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+                advancedControls: true,
                 realTimeSearch: true,
                 dynamicFilters: true,
                 dynamicPageSize: true,

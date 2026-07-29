@@ -112,12 +112,6 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <button type="button"
-                class="btn btn-outline-secondary me-2"
-                id="toggle-selection-persongroup-grid"
-                title="{% trans 'Select multiple items' %}">
-            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
-        </button>
         <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
         </a>
@@ -127,8 +121,7 @@
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="person-group-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-group-grid" show_bulk_select=True %}
 
 <!-- View Toggle Buttons (only show if hierarchy exists) -->
 {% if has_hierarchy %}
@@ -285,81 +278,38 @@
     }
     ];
 
-    // Track if inline editing has been initialized to prevent re-initialization
-    const editState = { inlineEditingInitialized: false };
     const inlineEditingMapping = {
         1: 'name'
     };
 
-    // Initialize Grid.js with inline editing
+    // Initialize Grid.js
     try {
-        const grid = GridUtils.initGrid('person-group-grid', columns, data, {
-            pagination: {
-                enabled: true,
-                limit: GridUtils.calculateOptimalPageSize('person-group-grid')
-            }
-        }, function() {
-            // Grid ready callback
-            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
-            GridUtils.injectSelectAllCheckbox('person-group-grid');
-
-            // Only initialize inline editing once during initial page load
-            if (!editState.inlineEditingInitialized && window.InlineEditing) {
-                try {
-                    window.InlineEditing.init('person-group-grid', 'persongroup', inlineEditingMapping);
-                    editState.inlineEditingInitialized = true;
-                } catch (error) {
-                    console.error('[PersonGroupList] Error initializing inline editing:', error);
-                }
-            }
-        }, {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'person-group-grid',
             entityType: 'persongroup',
-            columnMapping: inlineEditingMapping
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }
+                ]
+            },
+            idFieldIndex: groupIdIdx
         });
-
-        // Add list update event listener using GridUtils
-        GridUtils.addListUpdateListener(grid, 'PersonGroup', groupIdIdx, function() {
-            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
-        });
-
-        // Setup grid refresh handler for select-all and data attributes
-        GridUtils.setupGridRefreshHandler('person-group-grid', 'PersonGroup', data, groupIdIdx);
-
-        // Fallback: Initialize inline editing after a delay if grid ready event doesn't fire
-        GridUtils.setupInlineEditingFallback('person-group-grid', 'persongroup', inlineEditingMapping, editState, function() {
-            GridUtils.addEntityDataAttributes('person-group-grid', 'persongroup', data, groupIdIdx);
-        });
-
-        // Initialize filter panel
-        FilterPanel.init('person-group-grid', grid, columns);
-
-        // Initialize real-time search
-        if (window.RealTimeSearch) {
-            RealTimeSearch.init('person-group-grid', grid, data);
-        }
-
-        // Initialize dynamic filters
-        if (window.DynamicFilters) {
-            DynamicFilters.init('person-group-grid', grid, data, columns);
-        }
-
-        // Initialize bulk operations
-        GridUtils.initBulkOperations('person-group-grid', 'persongroup');
-
-        // Recalculate page size on window resize
-        GridUtils.enableDynamicPageSize(grid);
 
     } catch (error) {
         console.error('[PersonGroupList] Error initializing grid:', error);
     }
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const nameHeader = document.querySelector('#person-group-grid th:nth-child(2)');
-        if (nameHeader) {
-            nameHeader.click();
-        }
-    }, 100);
     }) ();
 
     // Tree View functionality

@@ -180,16 +180,9 @@
         <div>
             <h2 id="gift-plan-advanced-heading">{% trans "Advanced list" %}</h2>
         </div>
-        <button type="button"
-                class="btn btn-outline-secondary"
-                id="toggle-selection-relation-grid"
-                title="{% trans 'Select multiple items' %}">
-            <i class="fas fa-check-square me-1"></i>{% trans "Select" %}
-        </button>
     </div>
 
-    {# Filter panel #}
-    {% include "gift_manager/includes/filter_panel.html" with grid_id="relation-grid" %}
+    {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="relation-grid" show_bulk_select=True %}
 
     <!-- Grid.js container -->
     <div id="relation-grid"></div>
@@ -403,6 +396,7 @@
             features: {
                 bulkOperations: true,
                 inlineEditing: { mapping: { 4: 'comment', 7: 'due_date' } },
+                advancedControls: true,
                 realTimeSearch: true,
                 dynamicFilters: true,
                 dynamicPageSize: true,

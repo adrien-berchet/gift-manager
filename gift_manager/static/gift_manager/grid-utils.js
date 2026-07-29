@@ -1396,6 +1396,62 @@
     }
 
     /**
+     * Run a callback once the advanced list controls are explicitly opened.
+     * @param {string} gridId - The grid container ID
+     * @param {boolean|Object} advancedControls - Advanced controls config
+     * @param {Function} callback - Work to run after the controls are opened
+     * @returns {Function} Function that can be called to activate immediately
+     */
+    function setupAdvancedControls(gridId, advancedControls, callback) {
+        if (!advancedControls) {
+            callback();
+            return callback;
+        }
+
+        var options = typeof advancedControls === 'object' ? advancedControls : {};
+        var controlsId = options.controlsId || (gridId + '-advanced-tools');
+        var controls = document.getElementById(controlsId);
+        var initialized = false;
+
+        function activate() {
+            if (initialized) return;
+            initialized = true;
+
+            if (controls) {
+                controls.classList.add('advanced-list-tools--active');
+            }
+
+            callback();
+
+            document.dispatchEvent(new CustomEvent('advanced:list-controls-ready', {
+                detail: { containerId: gridId }
+            }));
+        }
+
+        if (!controls) {
+            console.warn('[GridUtils] Advanced controls not found for grid:', gridId);
+            activate();
+            return activate;
+        }
+
+        if (controls.tagName && controls.tagName.toLowerCase() === 'details') {
+            if (controls.open) {
+                activate();
+            } else {
+                controls.addEventListener('toggle', function () {
+                    if (controls.open) {
+                        activate();
+                    }
+                });
+            }
+        } else {
+            controls.addEventListener('click', activate);
+        }
+
+        return activate;
+    }
+
+    /**
      * Calculate the optimal number of rows per page based on available viewport height.
      * Measures the space between the grid container's top and the viewport bottom,
      * then divides by estimated row height.
@@ -1518,6 +1574,15 @@
         var sort = config.sort || {};
         var userPermissions = config.userPermissions;
         var idFieldIndex = config.idFieldIndex;
+        var advancedControls = features.advancedControls;
+        var useAdvancedControls = Boolean(advancedControls);
+        var inlineEditing = features.inlineEditing;
+        var inlineEntityType = inlineEditing && inlineEditing.entityType
+            ? inlineEditing.entityType
+            : entityType;
+        var bulkOperations = features.bulkOperations;
+        var bulkOptions = typeof bulkOperations === 'object' ? bulkOperations : {};
+        var bulkEntityType = bulkOptions.entityType || entityType;
 
         // Store permissions if provided
         if (userPermissions) {
@@ -1531,6 +1596,7 @@
 
         // Track initialization state
         var editState = { inlineEditingInitialized: false };
+        var advancedFeaturesInitialized = false;
 
         // Auto-detect ID field index if not provided
         if (idFieldIndex === undefined) {
@@ -1543,6 +1609,59 @@
             }
         }
 
+        function getCurrentGridData() {
+            if (grid && grid.config && Array.isArray(grid.config.data)) {
+                return grid.config.data;
+            }
+            return data;
+        }
+
+        function addAdvancedDataAttributes() {
+            if (bulkOperations || inlineEditing) {
+                addEntityDataAttributes(gridId, entityType, getCurrentGridData(), idFieldIndex);
+            }
+        }
+
+        function initializeInlineEditing() {
+            if (inlineEditing && !editState.inlineEditingInitialized && window.InlineEditing) {
+                try {
+                    window.InlineEditing.init(gridId, inlineEntityType, inlineEditing.mapping);
+                    editState.inlineEditingInitialized = true;
+                } catch (error) {
+                    console.error('[' + entityType + 'List] Error initializing inline editing:', error);
+                }
+            }
+        }
+
+        function initializeAdvancedFeatures() {
+            if (advancedFeaturesInitialized) return;
+            advancedFeaturesInitialized = true;
+
+            addAdvancedDataAttributes();
+
+            if (bulkOperations) {
+                injectSelectAllCheckbox(gridId);
+            }
+
+            initializeInlineEditing();
+
+            if (features.filterPanel !== false && window.FilterPanel) {
+                FilterPanel.init(gridId, grid, columns);
+            }
+
+            if (features.realTimeSearch && window.RealTimeSearch) {
+                RealTimeSearch.init(gridId, grid, getCurrentGridData());
+            }
+
+            if (features.dynamicFilters && window.DynamicFilters) {
+                DynamicFilters.init(gridId, grid, getCurrentGridData(), columns);
+            }
+
+            if (bulkOperations) {
+                initBulkOperations(gridId, bulkEntityType, bulkOptions);
+            }
+        }
+
         // Initialize grid with ready callback
         var grid = initGrid(
             gridId,
@@ -1552,30 +1671,20 @@
             function () {
                 // Grid ready callback
 
-                // Add entity data attributes
-                if (features.bulkOperations || features.inlineEditing) {
-                    addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
-                }
+                if (!useAdvancedControls) {
+                    addAdvancedDataAttributes();
 
-                // Inject select-all checkbox
-                if (features.bulkOperations) {
-                    injectSelectAllCheckbox(gridId);
-                }
-
-                // Initialize inline editing
-                if (features.inlineEditing && !editState.inlineEditingInitialized && window.InlineEditing) {
-                    try {
-                        window.InlineEditing.init(gridId, entityType, features.inlineEditing.mapping);
-                        editState.inlineEditingInitialized = true;
-                    } catch (error) {
-                        console.error('[' + entityType + 'List] Error initializing inline editing:', error);
+                    if (bulkOperations) {
+                        injectSelectAllCheckbox(gridId);
                     }
+
+                    initializeInlineEditing();
                 }
             },
-            features.inlineEditing
+            inlineEditing && !useAdvancedControls
                 ? {
-                    entityType: entityType,
-                    columnMapping: features.inlineEditing.mapping
+                    entityType: inlineEntityType,
+                    columnMapping: inlineEditing.mapping
                 }
                 : undefined
         );
@@ -1587,8 +1696,8 @@
             capitalizedEntity,
             idFieldIndex,
             function () {
-                if (features.bulkOperations || features.inlineEditing) {
-                    addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
+                if (!useAdvancedControls || advancedFeaturesInitialized) {
+                    addAdvancedDataAttributes();
                 }
             }
         );
@@ -1597,31 +1706,16 @@
         setupGridRefreshHandler(gridId, capitalizedEntity, data, idFieldIndex);
 
         // Setup inline editing fallback
-        if (features.inlineEditing) {
-            setupInlineEditingFallback(gridId, entityType, features.inlineEditing.mapping, editState, function () {
-                addEntityDataAttributes(gridId, entityType, data, idFieldIndex);
+        if (inlineEditing && !useAdvancedControls) {
+            setupInlineEditingFallback(gridId, inlineEntityType, inlineEditing.mapping, editState, function () {
+                addAdvancedDataAttributes();
             });
         }
 
-        // Initialize filter panel
-        if (features.filterPanel !== false && window.FilterPanel) {
-            // Enabled by default
-            FilterPanel.init(gridId, grid, columns);
-        }
-
-        // Initialize real-time search
-        if (features.realTimeSearch && window.RealTimeSearch) {
-            RealTimeSearch.init(gridId, grid, data);
-        }
-
-        // Initialize dynamic filters
-        if (features.dynamicFilters && window.DynamicFilters) {
-            DynamicFilters.init(gridId, grid, data, columns);
-        }
-
-        // Initialize bulk operations
-        if (features.bulkOperations) {
-            initBulkOperations(gridId, entityType);
+        if (useAdvancedControls) {
+            setupAdvancedControls(gridId, advancedControls, initializeAdvancedFeatures);
+        } else {
+            initializeAdvancedFeatures();
         }
 
         // Enable dynamic page sizing
@@ -1700,6 +1794,7 @@
         setupGridRefreshHandler: setupGridRefreshHandler,
         setupInlineEditingFallback: setupInlineEditingFallback,
         initBulkOperations: initBulkOperations,
+        setupAdvancedControls: setupAdvancedControls,
         calculateOptimalPageSize: calculateOptimalPageSize,
         enableDynamicPageSize: enableDynamicPageSize,
         injectEmptyStateIfNeeded: injectEmptyStateIfNeeded,

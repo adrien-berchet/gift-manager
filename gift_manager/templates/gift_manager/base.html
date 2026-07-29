@@ -389,13 +389,8 @@
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
                             <i class="fas fa-users me-1"></i>{% trans "Recipients" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'person_group' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:person_groups' %}">
-                            <i class="fas fa-layer-group me-1"></i>{% trans "Groups" %}
                         </a>
                     </li>
                     <li class="nav-item">

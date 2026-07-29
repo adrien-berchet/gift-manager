@@ -398,6 +398,91 @@ body.has-fixed-action-bar {
 }
 
 /* ==========================================================================
+   Advanced List Tools
+   ========================================================================== */
+
+.advanced-list-tools {
+    margin: var(--space-4) 0;
+    overflow: hidden;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.advanced-list-tools-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 3rem;
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    cursor: pointer;
+    list-style: none;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.advanced-list-tools-summary::-webkit-details-marker {
+    display: none;
+}
+
+.advanced-list-tools-summary:hover,
+.advanced-list-tools-summary:focus-visible {
+    background: var(--surface-elevated);
+}
+
+.advanced-list-tools-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+}
+
+.advanced-list-tools-chevron {
+    color: var(--text-muted);
+    transition: transform var(--transition-fast);
+}
+
+.advanced-list-tools[open] .advanced-list-tools-chevron {
+    transform: rotate(180deg);
+}
+
+.advanced-list-tools-body {
+    padding: var(--space-4);
+    background: var(--surface-background);
+    border-top: 1px solid var(--border-color);
+}
+
+.advanced-list-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.advanced-list-tools .grid-filter-panel {
+    position: static;
+    z-index: auto;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+.advanced-list-tools .filter-toggle-btn {
+    margin-bottom: 0;
+}
+
+.advanced-list-tools .filter-content {
+    margin-top: var(--space-3);
+    margin-bottom: 0;
+}
+
+[data-theme="dark"] .advanced-list-tools {
+    box-shadow: none;
+}
+
+/* ==========================================================================
    Utility Classes
    ========================================================================== */
 
@@ -441,6 +526,18 @@ body.has-fixed-action-bar {
 }
 
 @media (max-width: 576px) {
+    .advanced-list-tools-summary {
+        padding: var(--space-3);
+    }
+
+    .advanced-list-tools-body {
+        padding: var(--space-3);
+    }
+
+    .advanced-list-actions .btn {
+        width: 100%;
+    }
+
     .dropdown-filter {
         max-width: 100%;
     }

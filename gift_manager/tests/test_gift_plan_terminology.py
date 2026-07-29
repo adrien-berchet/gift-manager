@@ -103,3 +103,13 @@ def test_gift_plan_language_is_present_on_primary_surfaces():
 
     for term in EXPECTED_GIFT_PLAN_TERMS:
         assert term in combined_source
+
+
+def test_french_gift_plan_translation_uses_project_language():
+    catalog = (SOURCE_ROOT / "locale" / "fr" / "LC_MESSAGES" / "django.po").read_text(
+        encoding="utf-8"
+    )
+
+    assert "Projet de cadeau" in catalog  # codespell:ignore
+    assert "Projets de cadeaux" in catalog  # codespell:ignore
+    assert "plan cadeau" not in catalog.lower()

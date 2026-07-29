@@ -289,7 +289,7 @@ msgstr "Destinataire"
 
 #: gift_manager/forms.py:560 gift_manager/forms.py:649
 msgid "Choose the person or group this gift plan is for."
-msgstr "Choisissez la personne ou le groupe concerné par ce plan cadeau."
+msgstr "Choisissez la personne ou le groupe concerné par ce projet de cadeau."
 
 #: gift_manager/forms.py:601
 msgid "The specified gift does not exist."
@@ -630,7 +630,7 @@ msgstr "Destinataires"
 #: gift_manager/templates/gift_manager/share_objects.html:231
 #: gift_manager/views/relation.py:204
 msgid "Gift Plans"
-msgstr "Plans cadeaux"
+msgstr "Projets de cadeaux"
 
 #: gift_manager/templates/gift_manager/base.html:423
 msgid "Statuses"
@@ -706,11 +706,11 @@ msgstr "Voir tous les événements"
 
 #: gift_manager/templates/gift_manager/base.html:549
 msgid "All Gift Plans"
-msgstr "Tous les plans cadeaux"
+msgstr "Tous les projets de cadeaux"
 
 #: gift_manager/templates/gift_manager/base.html:550
 msgid "View all gift plans"
-msgstr "Voir tous les plans cadeaux"
+msgstr "Voir tous les projets de cadeaux"
 
 #: gift_manager/templates/gift_manager/base.html:553
 msgid "Create New"
@@ -914,13 +914,13 @@ msgstr "Tous les amis seront ajoutés en tant que Lecteurs"
 #: gift_manager/templates/gift_manager/create_person_relation_form.html:4
 #: gift_manager/templates/gift_manager/gift_detail.html:29
 msgid "Add Gift Plan"
-msgstr "Ajouter un plan cadeau"
+msgstr "Ajouter un projet de cadeau"
 
 #: gift_manager/templates/gift_manager/create_gift_relation_form.html:7
 #: gift_manager/templates/gift_manager/create_group_relation_form.html:7
 #: gift_manager/templates/gift_manager/create_person_relation_form.html:7
 msgid "Add Gift Plan for"
-msgstr "Ajouter un plan cadeau pour"
+msgstr "Ajouter un projet de cadeau pour"
 
 #: gift_manager/templates/gift_manager/edit_form.html:152
 #: gift_manager/templates/gift_manager/includes/event_form_partial.html:171
@@ -994,11 +994,11 @@ msgstr "Cet événement n'est partagé avec aucun ami"
 
 #: gift_manager/templates/gift_manager/event_detail.html:33
 msgid "Gift Plans for this Event"
-msgstr "Plans cadeaux pour cet événement"
+msgstr "Projets de cadeaux pour cet événement"
 
 #: gift_manager/templates/gift_manager/event_detail.html:37
 msgid "No gift plans for this event"
-msgstr "Aucun plan cadeau pour cet événement"
+msgstr "Aucun projet de cadeau pour cet événement"
 
 #: gift_manager/templates/gift_manager/event_detail.html:154
 #: gift_manager/templates/gift_manager/event_list.html:105
@@ -1338,11 +1338,11 @@ msgstr "Ce cadeau n'est partagé avec aucun ami."
 
 #: gift_manager/templates/gift_manager/gift_detail.html:28
 msgid "Gift Plans for this gift"
-msgstr "Plans cadeaux pour ce cadeau"
+msgstr "Projets de cadeaux pour ce cadeau"
 
 #: gift_manager/templates/gift_manager/gift_detail.html:33
 msgid "No gift plans for this gift"
-msgstr "Aucun plan cadeau pour ce cadeau"
+msgstr "Aucun projet de cadeau pour ce cadeau"
 
 #: gift_manager/templates/gift_manager/gift_list.html:31
 msgid "Create new gift"
@@ -1489,11 +1489,11 @@ msgstr "Nouveau Groupe"
 #: gift_manager/templates/gift_manager/home.html:679
 #: gift_manager/templates/gift_manager/recipient_list.html:142
 msgid "New Gift Plan"
-msgstr "Nouveau plan cadeau"
+msgstr "Nouveau projet de cadeau"
 
 #: gift_manager/templates/gift_manager/home.html:690
 msgid "Upcoming Gift Plans"
-msgstr "Plans cadeaux à venir"
+msgstr "Projets de cadeaux à venir"
 
 #: gift_manager/templates/gift_manager/home.html:691
 #: gift_manager/templates/gift_manager/home.html:756
@@ -1507,15 +1507,15 @@ msgstr "groupe"
 
 #: gift_manager/templates/gift_manager/home.html:722
 msgid "No upcoming gift plans in the next 30 days"
-msgstr "Aucun plan cadeau prévu dans les 30 prochains jours"
+msgstr "Aucun projet de cadeau prévu dans les 30 prochains jours"
 
 #: gift_manager/templates/gift_manager/home.html:731
 msgid "Gift Plans by Status"
-msgstr "Plans cadeaux par statut"
+msgstr "Projets de cadeaux par statut"
 
 #: gift_manager/templates/gift_manager/home.html:746
 msgid "No gift plans yet"
-msgstr "Aucun plan cadeau pour l'instant"
+msgstr "Aucun projet de cadeau pour l'instant"
 
 #: gift_manager/templates/gift_manager/home.html:755
 msgid "Recent Gifts"
@@ -1784,7 +1784,7 @@ msgstr "Destinataire :"
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:41
 #: gift_manager/templates/gift_manager/relation_detail.html:20
 msgid "Gift plan for this group directly."
-msgstr "Plan cadeau directement destiné à ce groupe."
+msgstr "Projet de cadeau directement destiné à ce groupe."
 
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:126
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:103
@@ -1799,7 +1799,7 @@ msgstr "Échéance :"
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:135
 #: gift_manager/views/relation.py:360
 msgid "Edit gift plan"
-msgstr "Modifier le plan cadeau"
+msgstr "Modifier le projet de cadeau"
 
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:158
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:135
@@ -2109,6 +2109,8 @@ msgstr "Voir les détails de la personne"
 msgid ""
 "These gift plans target the group directly, not each member individually."
 msgstr ""
+"Ces projets de cadeaux ciblent directement le groupe, pas chaque membre "
+"individuellement."
 
 #: gift_manager/templates/gift_manager/includes/person_group_form_partial.html:69
 msgid "Type to search parent groups..."
@@ -2132,11 +2134,11 @@ msgstr "Rechercher un cadeau, un événement…"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:18
 msgid "Filter gift plans"
-msgstr "Filtrer les plans cadeaux"
+msgstr "Filtrer les projets de cadeaux"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:21
 msgid "Sort gift plans"
-msgstr "Trier les plans cadeaux"
+msgstr "Trier les projets de cadeaux"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:22
 msgid "Sort: Status"
@@ -2152,11 +2154,11 @@ msgstr "Tri : échéance"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:31
 msgid "Add a new gift plan for this person"
-msgstr "Ajouter un nouveau plan cadeau pour cette personne"
+msgstr "Ajouter un nouveau projet de cadeau pour cette personne"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:59
 msgid "Gift plan for this group directly"
-msgstr "Plan cadeau directement destiné à ce groupe"
+msgstr "Projet de cadeau directement destiné à ce groupe"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:118
 msgid "View gift"
@@ -2164,11 +2166,11 @@ msgstr "Voir le cadeau"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:126
 msgid "View gift plan details"
-msgstr "Voir les détails du plan cadeau"
+msgstr "Voir les détails du projet de cadeau"
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:149
 msgid "No gift plans found for this person."
-msgstr "Aucun plan cadeau trouvé pour cette personne."
+msgstr "Aucun projet de cadeau trouvé pour cette personne."
 
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:154
 msgid "Add one?"
@@ -2188,7 +2190,7 @@ msgstr "Détails du cadeau"
 
 #: gift_manager/templates/gift_manager/includes/relation_form_partial.html:223
 msgid "Manage who can access this gift plan"
-msgstr "Gérer qui peut accéder à ce plan cadeau"
+msgstr "Gérer qui peut accéder à ce projet de cadeau"
 
 #: gift_manager/templates/gift_manager/invitation_expired.html:4
 #: gift_manager/templates/gift_manager/invitation_expired.html:13
@@ -2266,7 +2268,7 @@ msgstr "Cadeaux pour cette personne"
 
 #: gift_manager/templates/gift_manager/person_detail.html:52
 msgid "New gift plan"
-msgstr "Nouveau plan cadeau"
+msgstr "Nouveau projet de cadeau"
 
 #: gift_manager/templates/gift_manager/person_detail.html:56
 msgid "No gift for this person"
@@ -2323,11 +2325,11 @@ msgstr "Tous les membres (groupes enfants inclus)"
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:107
 msgid "Gift Plans for this group"
-msgstr "Plans cadeaux pour ce groupe"
+msgstr "Projets de cadeaux pour ce groupe"
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:121
 msgid "All gift plans (including members)"
-msgstr "Tous les plans cadeaux (membres inclus)"
+msgstr "Tous les projets de cadeaux (membres inclus)"
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:138
 msgid "Add persons"
@@ -2352,28 +2354,28 @@ msgid ""
 "This view shows gift plans for this group and for all members of this group "
 "(including nested groups)."
 msgstr ""
-"Cette vue affiche les plans cadeaux pour ce groupe et pour tous les membres "
+"Cette vue affiche les projets de cadeaux pour ce groupe et pour tous les membres "
 "de ce groupe (y compris les groupes imbriqués)."
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:178
 msgid "No gift plans found for this group or its members"
-msgstr "Aucun plan cadeau trouvé pour ce groupe ou ses membres"
+msgstr "Aucun projet de cadeau trouvé pour ce groupe ou ses membres"
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:192
 msgid "New Gift Plan for this group"
-msgstr "Nouveau plan cadeau pour ce groupe"
+msgstr "Nouveau projet de cadeau pour ce groupe"
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:196
 msgid ""
 "Gift plans in this tab target the group directly, not each member "
 "individually."
 msgstr ""
-"Les plans cadeaux de cet onglet ciblent directement le groupe, pas chaque "
+"Les projets de cadeaux de cet onglet ciblent directement le groupe, pas chaque "
 "membre individuellement."
 
 #: gift_manager/templates/gift_manager/person_group_detail.html:201
 msgid "No gift plans for this group"
-msgstr "Aucun plan cadeau pour ce groupe"
+msgstr "Aucun projet de cadeau pour ce groupe"
 
 #: gift_manager/templates/gift_manager/person_group_explorer.html:7
 msgid "Explore Person Groups"
@@ -2566,7 +2568,7 @@ msgstr[1] "%(count)s groupes enfants"
 
 #: gift_manager/templates/gift_manager/recipient_list.html:127
 msgid "Gift plans target this group directly."
-msgstr "Les plans cadeaux ciblent directement ce groupe."
+msgstr "Les projets de cadeaux ciblent directement ce groupe."
 
 #: gift_manager/templates/gift_manager/recipient_list.html:145
 msgid "Open"
@@ -2583,7 +2585,7 @@ msgstr "Aucun destinataire pour l'instant."
 #: gift_manager/templates/gift_manager/relation_detail.html:5
 #: gift_manager/templates/gift_manager/relation_detail.html:11
 msgid "Gift Plan details"
-msgstr "Détails du plan cadeau"
+msgstr "Détails du projet de cadeau"
 
 #: gift_manager/templates/gift_manager/relation_detail.html:23
 msgid "Gift:"
@@ -2599,24 +2601,24 @@ msgstr "Échéance :"
 
 #: gift_manager/templates/gift_manager/relation_detail.html:36
 msgid "This gift plan is not shared with any friend."
-msgstr "Ce plan cadeau n'est partagé avec aucun ami."
+msgstr "Ce projet de cadeau n'est partagé avec aucun ami."
 
 #: gift_manager/templates/gift_manager/relation_list.html:29
 msgid "Create new gift plan"
-msgstr "Créer un nouveau plan cadeau"
+msgstr "Créer un nouveau projet de cadeau"
 
 #: gift_manager/templates/gift_manager/relation_status_detail.html:5
 #: gift_manager/templates/gift_manager/relation_status_detail.html:8
 msgid "Gift Plan status details"
-msgstr "Détails du statut du plan cadeau"
+msgstr "Détails du statut du projet de cadeau"
 
 #: gift_manager/templates/gift_manager/relation_status_detail.html:11
 msgid "Gift Plans with this status"
-msgstr "Plans cadeaux avec ce statut"
+msgstr "Projets de cadeaux avec ce statut"
 
 #: gift_manager/templates/gift_manager/relation_status_detail.html:15
 msgid "No gift plans with this status"
-msgstr "Aucun plan cadeau avec ce statut"
+msgstr "Aucun projet de cadeau avec ce statut"
 
 #: gift_manager/templates/gift_manager/send_invitation.html:4
 #: gift_manager/templates/gift_manager/send_invitation.html:8
@@ -2699,7 +2701,7 @@ msgstr "Vous n'avez aucun événement à partager"
 
 #: gift_manager/templates/gift_manager/share_objects.html:259
 msgid "You don't have any gift plans to share."
-msgstr "Vous n'avez aucun plan cadeau à partager."
+msgstr "Vous n'avez aucun projet de cadeau à partager."
 
 #: gift_manager/templates/gift_manager/share_objects.html:268
 msgid "Share Selected Items"
@@ -2848,8 +2850,8 @@ msgstr[1] "Vous êtes sur le point de supprimer %(count)s événements."
 #, python-format
 msgid "You are about to delete one gift plan."
 msgid_plural "You are about to delete %(count)s gift plans."
-msgstr[0] "Vous êtes sur le point de supprimer un plan cadeau."
-msgstr[1] "Vous êtes sur le point de supprimer %(count)s plans cadeaux."
+msgstr[0] "Vous êtes sur le point de supprimer un projet de cadeau."
+msgstr[1] "Vous êtes sur le point de supprimer %(count)s projets de cadeaux."
 
 #: gift_manager/views/bulk_operations.py:260
 #, python-format
@@ -3030,19 +3032,19 @@ msgstr "Préférences d'affichage enregistrées avec succès"
 #: gift_manager/views/relation.py:116 gift_manager/views/relation.py:268
 #: gift_manager/views/relation.py:301
 msgid "Gift Plan"
-msgstr "Plan cadeau"
+msgstr "Projet de cadeau"
 
 #: gift_manager/views/relation.py:147 gift_manager/views/relation.py:339
 msgid "gift plan"
-msgstr "plan cadeau"
+msgstr "projet de cadeau"
 
 #: gift_manager/views/relation.py:371
 msgid "Delete gift plan"
-msgstr "Supprimer le plan cadeau"
+msgstr "Supprimer le projet de cadeau"
 
 #: gift_manager/views/relation.py:414
 msgid "Gift Plan not found"
-msgstr "Plan cadeau introuvable"
+msgstr "Projet de cadeau introuvable"
 
 #: gift_manager/views/sharing.py:99
 msgid "Please select at least one friend."
