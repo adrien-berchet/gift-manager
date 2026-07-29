@@ -42,8 +42,10 @@ class TestObjectCounts:
         assert User.objects.filter(username__in=["alice", "bob"]).count() == 2
 
     def test_status_count(self, data):
-        assert len(data.statuses) == 4
-        assert RelationStatus.objects.count() >= 4
+        assert len(data.statuses) == 5
+        assert RelationStatus.objects.count() >= 5
+        assert data.statuses["abandoned"].status_en == "Abandoned"
+        assert data.statuses["abandoned"].status_fr == "Abandonné"
 
     def test_group_count(self, data):
         assert len(data.groups) == 3
@@ -156,9 +158,7 @@ class TestAliceOwnerPermissions:
     def test_alice_owner_on_dict_collections(self, data, collection):
         for obj in getattr(data, collection).values():
             perm = PermissionService.get_permission(obj, data.alice)
-            assert perm == PermissionLevel.OWNER, (
-                f"alice should be OWNER on {obj!r}, got {perm}"
-            )
+            assert perm == PermissionLevel.OWNER, f"alice should be OWNER on {obj!r}, got {perm}"
 
     def test_alice_owner_on_relations(self, data):
         for rel in data.relations:
@@ -233,14 +233,12 @@ class TestBobPermissions:
 
     def test_bob_none_gadgets(self, data):
         assert (
-            PermissionService.get_permission(data.tags["gadgets"], data.bob)
-            == PermissionLevel.NONE
+            PermissionService.get_permission(data.tags["gadgets"], data.bob) == PermissionLevel.NONE
         )
 
     def test_bob_editor_books(self, data):
         assert (
-            PermissionService.get_permission(data.tags["books"], data.bob)
-            == PermissionLevel.EDITOR
+            PermissionService.get_permission(data.tags["books"], data.bob) == PermissionLevel.EDITOR
         )
 
     # Gifts
@@ -264,8 +262,7 @@ class TestBobPermissions:
 
     def test_bob_none_scarf(self, data):
         assert (
-            PermissionService.get_permission(data.gifts["scarf"], data.bob)
-            == PermissionLevel.NONE
+            PermissionService.get_permission(data.gifts["scarf"], data.bob) == PermissionLevel.NONE
         )
 
     # Events
@@ -290,27 +287,19 @@ class TestBobPermissions:
     # Relations
     def test_bob_viewer_relation_0(self, data):
         assert (
-            PermissionService.get_permission(data.relations[0], data.bob)
-            == PermissionLevel.VIEWER
+            PermissionService.get_permission(data.relations[0], data.bob) == PermissionLevel.VIEWER
         )
 
     def test_bob_none_relation_1(self, data):
-        assert (
-            PermissionService.get_permission(data.relations[1], data.bob)
-            == PermissionLevel.NONE
-        )
+        assert PermissionService.get_permission(data.relations[1], data.bob) == PermissionLevel.NONE
 
     def test_bob_editor_relation_2(self, data):
         assert (
-            PermissionService.get_permission(data.relations[2], data.bob)
-            == PermissionLevel.EDITOR
+            PermissionService.get_permission(data.relations[2], data.bob) == PermissionLevel.EDITOR
         )
 
     def test_bob_none_relation_3(self, data):
-        assert (
-            PermissionService.get_permission(data.relations[3], data.bob)
-            == PermissionLevel.NONE
-        )
+        assert PermissionService.get_permission(data.relations[3], data.bob) == PermissionLevel.NONE
 
 
 # =====================================================================
@@ -325,7 +314,8 @@ class TestCascadeInheritance:
         """Alice has no direct permission on close_family but inherits OWNER from Family."""
         # Alice has OWNER + inherit=True on Family → should cascade to Close Family.
         perm = PermissionService.get_effective_permission_for_group(
-            data.groups["close_family"], data.alice,
+            data.groups["close_family"],
+            data.alice,
         )
         assert perm == PermissionLevel.OWNER
 

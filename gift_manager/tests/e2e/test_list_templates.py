@@ -19,6 +19,11 @@ import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import Gift
+from gift_manager.models import PermissionLevel
+from gift_manager.models import Relation
+from gift_manager.permissions import create_or_update_permission
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -839,6 +844,122 @@ class TestRelationListGridLoading:
 
         assert _grid_row_count(page, "relation-grid") == 4
 
+    def test_workspace_refreshes_after_list_update_for_new_no_date_plan(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """A newly created no-date gift plan should appear in the workspace."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/")
+        _wait_for_grid(page, "relation-grid")
+
+        workspace = page.locator(".gift-plan-workspace")
+        expect(workspace).to_be_visible()
+        expect(workspace).not_to_contain_text("Workspace Refresh Kite")
+
+        gift = Gift.objects.create(name="Workspace Refresh Kite")
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            gift,
+            permission_level=PermissionLevel.OWNER,
+        )
+        relation = Relation.objects.create(
+            person=seed_data_e2e.persons["dad"],
+            gift=gift,
+            status=seed_data_e2e.statuses["planned"],
+            due_date=None,
+            comment="Created after the page loaded",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        refreshed = page.evaluate(
+            """() => new Promise((resolve) => {
+                const timeout = setTimeout(() => resolve(false), 5000);
+                document.addEventListener('gift-plan-workspace:refreshed', () => {
+                    clearTimeout(timeout);
+                    resolve(true);
+                }, { once: true });
+                document.dispatchEvent(new CustomEvent('list:update'));
+            })"""
+        )
+
+        assert refreshed is True
+        expect(page.locator(".gift-plan-urgency-section--no_date")).to_contain_text(
+            "Workspace Refresh Kite"
+        )
+
+    def test_workspace_cards_use_compact_layout(self, page: Page, live_server, seed_data_e2e):
+        """Gift-plan workspace cards should stay compact and non-stretched."""
+        page.set_viewport_size({"width": 1280, "height": 800})
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/")
+        page.wait_for_selector(".gift-plan-card", timeout=10_000)
+
+        grid = page.locator(".gift-plan-card-grid").first
+        card = page.locator(".gift-plan-card").first
+        title = card.locator(".gift-plan-card-title").first
+        note = card.locator(".gift-plan-note").first
+        layout = grid.evaluate(
+            """grid => {
+                const gridStyles = getComputedStyle(grid);
+                const card = grid.querySelector('.gift-plan-card');
+                const title = card.querySelector('.gift-plan-card-title');
+                const note = card.querySelector('.gift-plan-note');
+                const cardStyles = getComputedStyle(card);
+                const titleStyles = getComputedStyle(title);
+                const noteStyles = getComputedStyle(note);
+                return {
+                    alignItems: gridStyles.alignItems,
+                    gridGap: parseFloat(gridStyles.gap),
+                    cardGap: parseFloat(cardStyles.gap),
+                    cardPadding: parseFloat(cardStyles.paddingTop),
+                    titleFontSize: parseFloat(titleStyles.fontSize),
+                    noteLineClamp: noteStyles.webkitLineClamp,
+                };
+            }"""
+        )
+
+        expect(grid).to_be_visible()
+        expect(card).to_be_visible()
+        expect(title).to_be_visible()
+        expect(note).to_be_visible()
+        assert layout["alignItems"] == "start"
+        assert layout["gridGap"] <= 12
+        assert layout["cardGap"] <= 9
+        assert layout["cardPadding"] <= 12
+        assert layout["titleFontSize"] <= 16
+        assert layout["noteLineClamp"] == "2"
+
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.wait_for_timeout(100)
+
+        mobile_layout = grid.evaluate(
+            """grid => {
+                const card = grid.querySelector('.gift-plan-card');
+                const actions = card.querySelector('.gift-plan-card-actions');
+                const cardBox = card.getBoundingClientRect();
+                const actionsBox = actions.getBoundingClientRect();
+                return {
+                    columns: getComputedStyle(grid).gridTemplateColumns
+                        .split(' ')
+                        .filter(Boolean)
+                        .length,
+                    cardLeft: cardBox.left,
+                    cardRight: cardBox.right,
+                    viewportWidth: window.innerWidth,
+                    actionsVisible: actionsBox.width > 0 && actionsBox.height > 0,
+                };
+            }"""
+        )
+
+        assert mobile_layout["columns"] == 1
+        assert mobile_layout["cardLeft"] >= 0
+        assert mobile_layout["cardRight"] <= mobile_layout["viewportWidth"]
+        assert mobile_layout["actionsVisible"] is True
+
 
 @pytest.mark.frontend
 @pytest.mark.e2e
@@ -856,7 +977,7 @@ class TestRelationListStatusSelector:
         assert selectors.count() > 0
 
     def test_status_selector_has_all_options(self, page: Page, live_server, seed_data_e2e):
-        """Each selector has 4 options: Idea, Planned, Purchased, Given."""
+        """Each selector includes all seeded statuses."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/relations/")
         _wait_for_grid(page, "relation-grid")
@@ -865,7 +986,8 @@ class TestRelationListStatusSelector:
         options = first_selector.locator("option")
         option_texts = [o.inner_text().strip() for o in options.all()]
 
-        assert len(option_texts) >= 4, f"Expected >= 4 options, got: {option_texts}"
+        assert "Abandoned" in option_texts
+        assert len(option_texts) >= 5, f"Expected >= 5 options, got: {option_texts}"
 
     def test_status_change_sends_request(self, page: Page, live_server, seed_data_e2e):
         """Changing the status selector fires an AJAX POST request."""
@@ -1311,22 +1433,23 @@ class TestStatusListGridLoading:
         assert _filter_js_errors(console_errors) == []
 
     def test_status_data_displayed(self, page: Page, live_server, seed_data_e2e):
-        """Seed statuses (Idea, Planned, Purchased, Given) appear."""
+        """Seed statuses appear."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/relation_statuses/")
         _wait_for_grid(page, "status-grid")
 
         body = _grid_body_text(page, "status-grid")
         assert "Idea" in body
+        assert "Abandoned" in body
         assert "Given" in body
 
-    def test_four_statuses_visible(self, page: Page, live_server, seed_data_e2e):
-        """All 4 seed statuses are visible."""
+    def test_seed_statuses_visible(self, page: Page, live_server, seed_data_e2e):
+        """All 5 seed statuses are visible."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/relation_statuses/")
         _wait_for_grid(page, "status-grid")
 
-        assert _grid_row_count(page, "status-grid") == 4
+        assert _grid_row_count(page, "status-grid") == 5
 
 
 @pytest.mark.frontend
@@ -1476,6 +1599,47 @@ class TestCrossTemplateGridLoading:
         expect(action).to_be_visible()
         html = action.inner_html()
         assert "btn" in html.lower() or "fa-" in html
+
+    @pytest.mark.parametrize(
+        "path,grid_id",
+        [
+            ("/persons/", "person-grid"),
+            ("/events/", "event-grid"),
+            ("/relations/", "relation-grid"),
+            ("/person_groups/", "person-group-grid"),
+            ("/gifts/", "gift-grid"),
+        ],
+    )
+    def test_action_buttons_are_not_clipped(
+        self, page: Page, live_server, seed_data_e2e, path, grid_id
+    ):
+        """Action cells are wide enough for desktop icon+label buttons."""
+        page.set_viewport_size({"width": 1280, "height": 800})
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}{path}")
+        _wait_for_grid(page, grid_id)
+
+        action_cell = page.locator(f"#{grid_id} .gridjs-tbody tr:first-child td:last-child")
+        cell_box = action_cell.evaluate(
+            """cell => ({
+                clientWidth: cell.clientWidth,
+                scrollWidth: cell.scrollWidth,
+            })"""
+        )
+        assert cell_box["scrollWidth"] <= cell_box["clientWidth"] + 1
+
+        buttons = page.locator(f"#{grid_id} .gridjs-tbody tr:first-child .quick-action-btn")
+        expect(buttons.first).to_be_visible()
+        measurements = buttons.evaluate_all(
+            """buttons => buttons.map((button) => ({
+                action: button.dataset.action,
+                clientWidth: button.clientWidth,
+                scrollWidth: button.scrollWidth,
+            }))"""
+        )
+
+        clipped = [item for item in measurements if item["scrollWidth"] > item["clientWidth"] + 1]
+        assert clipped == []
 
     @pytest.mark.parametrize(
         "path",

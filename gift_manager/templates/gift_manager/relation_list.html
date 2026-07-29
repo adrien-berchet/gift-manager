@@ -213,15 +213,64 @@
         const editorPermission = 20;
         const statusUpdateErrorMessage = "{% trans 'Unable to update this gift plan status.' %}";
         const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
+        let workspaceRefreshTimer = null;
+        let workspaceRefreshController = null;
 
         function giftPlanStatusClass(statusLabel) {
             const slug = String(statusLabel || '')
                 .trim()
                 .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
                 .replace(/[^a-z0-9]+/g, '-')
                 .replace(/^-+|-+$/g, '');
             return `gift-plan-status--${slug || 'unknown'}`;
         }
+
+        function refreshGiftPlanWorkspace() {
+            if (!document.querySelector('.gift-plan-workspace')) return;
+
+            clearTimeout(workspaceRefreshTimer);
+            workspaceRefreshTimer = setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_workspace_t', Date.now().toString());
+
+                if (workspaceRefreshController) {
+                    workspaceRefreshController.abort();
+                }
+                workspaceRefreshController = new AbortController();
+
+                fetch(url.toString(), {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    signal: workspaceRefreshController.signal,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.text();
+                    })
+                    .then((html) => {
+                        const parsed = new DOMParser().parseFromString(html, 'text/html');
+                        const nextWorkspace = parsed.querySelector('.gift-plan-workspace');
+                        const currentWorkspace = document.querySelector('.gift-plan-workspace');
+                        if (nextWorkspace && currentWorkspace) {
+                            currentWorkspace.replaceWith(nextWorkspace);
+                            document.dispatchEvent(new CustomEvent('gift-plan-workspace:refreshed'));
+                        }
+                    })
+                    .catch((error) => {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error refreshing gift plan workspace:', error);
+                        }
+                    });
+            }, 80);
+        }
+
+        document.addEventListener('list:update', refreshGiftPlanWorkspace);
 
         // Get permission data from template
         window.userPermissions = {{ user_permissions_json|safe }};
@@ -359,7 +408,7 @@
             { name: 'relation_delete_url', hidden: true },
             {
                 name: '{% trans "Actions"|escapejs %}',
-                width: '200px',
+                width: '340px',
                 sort: false,
                 formatter: PermissionUtils.permissionAwareActionFormatter({
                     details: (row) => row.cells[9].data,

@@ -119,6 +119,23 @@ class TestRelationList:
         assert "gift-plan-urgency-section--completed" in content
         assert "gift-plan-card--completed" in content
 
+    def test_abandoned_workspace_group_wins_over_missing_due_date(self):
+        """Abandoned ideas should stay visible without requiring attention."""
+        abandoned_status = self.relation.status.__class__.objects.get(status_en="Abandoned")
+        self.relation.status = abandoned_status
+        self.relation.due_date = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        workspace_groups = response.context["workspace_groups"]
+        assert [group["key"] for group in workspace_groups] == ["completed"]
+        content = response.content.decode()
+        assert "gift-plan-urgency-section--completed" in content
+        assert "gift-plan-card--completed" in content
+        assert "gift-plan-card--no_date" not in content
+
     def test_detail_panel_uses_shared_status_and_due_badges(self):
         """Quick details should match the workspace card visual language."""
         self.relation.due_date = timezone.localdate() + timedelta(days=2)

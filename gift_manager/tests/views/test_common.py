@@ -75,6 +75,8 @@ class TestHomeDashboard:
     def test_dashboard_prioritizes_action_groups_and_filters_private_plans(self):
         today = timezone.localdate()
         idea = RelationStatusFactory(status="Idea")
+        planned = RelationStatusFactory(status="Planned")
+        abandoned = RelationStatusFactory(status="Abandoned")
         completed = RelationStatusFactory(status="Given")
         stale_event = EventFactory(
             name="Winter party",
@@ -98,8 +100,21 @@ class TestHomeDashboard:
         RelationFactory(
             gift=GiftFactory(name="Missing date"),
             event=None,
+            status=planned,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Someday telescope"),
+            event=None,
             status=idea,
             due_date=None,
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Rejected gadget"),
+            status=abandoned,
+            due_date=today - timedelta(days=5),
             shared_with=[self.user],
         )
         stale_plan = RelationFactory(
@@ -143,9 +158,18 @@ class TestHomeDashboard:
         assert "Overdue scarf" in content
         assert "Soon puzzle" in content
         assert "Missing date" in content
+        assert "Someday telescope" not in content
+        assert "Rejected gadget" not in content
         assert "Old idea" in content
         assert "Already done" not in content
         assert "Private plan" not in content
+        assert (
+            "dashboard-action-item dashboard-action-item--incomplete dashboard-action-item--compact"
+        ) in content
+        assert "dashboard-action-list dashboard-action-list--responsive" in content
+        assert (
+            "dashboard-action-item dashboard-action-item--stale dashboard-action-item--compact"
+        ) not in content
         assert content.index("Next actions") < content.index('class="stats-grid"')
 
     def test_dashboard_surfaces_unassigned_gifts_and_upcoming_occasion_recipients(self):

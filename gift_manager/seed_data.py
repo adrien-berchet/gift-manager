@@ -76,7 +76,7 @@ def _grant_owner_all(user: User, objects: list) -> None:
 def create_seed_data() -> SeedData:  # noqa: PLR0915
     """Create a deterministic seed dataset and return a :class:`SeedData` instance.
 
-    The dataset contains **33 objects** exercising every model, relationship,
+    The dataset contains **34 objects** exercising every model, relationship,
     hierarchy, permission level and encrypted-email feature of the application.
     """
     # ------------------------------------------------------------------
@@ -130,12 +130,19 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         ("Idea", "Idée"),
         ("Planned", "Planifié"),
         ("Purchased", "Acheté"),
+        ("Abandoned", "Abandonné"),
         ("Given", "Offert"),
     ]:
-        obj = RelationStatus(status_en=status_en, status_fr=status_fr)
+        obj = (
+            RelationStatus.objects.filter(status_en=status_en).first()
+            or RelationStatus.objects.filter(status=status_en).first()
+            or RelationStatus()
+        )
         # Also set the base ``status`` field to the English value so that
         # look-ups via ``RelationStatus.objects.get(status=…)`` work
         # regardless of the active language.
+        obj.status_en = status_en
+        obj.status_fr = status_fr
         obj.status = status_en
         obj.save()
         statuses[status_en.lower()] = obj
@@ -266,17 +273,29 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     # 8. Relations
     # ------------------------------------------------------------------
     relation_0 = Relation.objects.create(
-        person=mom, gift=smartphone, event=christmas, status=statuses["idea"],
+        person=mom,
+        gift=smartphone,
+        event=christmas,
+        status=statuses["idea"],
     )
     relation_1 = Relation.objects.create(
-        person=dad, gift=novel, event=mom_birthday, status=statuses["planned"],
+        person=dad,
+        gift=novel,
+        event=mom_birthday,
+        status=statuses["planned"],
     )
     relation_2 = Relation.objects.create(
-        person=best_friend, gift=watch, event=graduation, status=statuses["purchased"],
+        person=best_friend,
+        gift=watch,
+        event=graduation,
+        status=statuses["purchased"],
     )
     # Group relation - person is None, group is set.
     relation_3 = Relation.objects.create(
-        group=family, gift=scarf, event=christmas, status=statuses["given"],
+        group=family,
+        gift=scarf,
+        event=christmas,
+        status=statuses["given"],
     )
 
     relations: list[Relation] = [relation_0, relation_1, relation_2, relation_3]

@@ -12,7 +12,6 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
-from django.utils.text import slugify
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
@@ -23,6 +22,9 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.statuses import is_idea_status
+from gift_manager.statuses import is_terminal_status
+from gift_manager.statuses import relation_status_slug
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]
@@ -30,18 +32,16 @@ SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 DASHBOARD_ACTION_WINDOW_DAYS = 30
 DASHBOARD_STALE_AFTER_DAYS = 30
-COMPLETED_STATUS_SLUGS = {"given", "received", "done", "completed"}
 
 
 def _gift_plan_status_class(status) -> str:
     """Return the shared gift-plan status CSS class."""
-    status_slug = slugify(str(status or "")) or "unknown"
-    return f"gift-plan-status--{status_slug}"
+    return f"gift-plan-status--{relation_status_slug(status)}"
 
 
 def _is_completed_status(status) -> bool:
     """Return whether a gift-plan status is considered completed."""
-    return slugify(str(status or "")) in COMPLETED_STATUS_SLUGS
+    return is_terminal_status(status)
 
 
 def _safe_date(year: int, month: int, day: int) -> date:
@@ -149,6 +149,8 @@ def _build_gift_plan_action_groups(
             group_key = "overdue"
         elif relation.due_date and relation.due_date <= window_end:
             group_key = "upcoming"
+        elif relation.due_date is None and is_idea_status(relation.status):
+            continue
         elif relation.due_date is None or relation.event_id is None:
             group_key = "incomplete"
         elif relation.creation_date and relation.creation_date <= stale_before:

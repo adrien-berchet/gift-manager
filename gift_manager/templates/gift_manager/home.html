@@ -541,6 +541,11 @@
         gap: var(--space-3);
     }
 
+    .dashboard-action-list--responsive {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        align-items: start;
+    }
+
     .dashboard-action-item {
         display: grid;
         gap: var(--space-3);
@@ -564,6 +569,65 @@
     .dashboard-action-item--incomplete,
     .dashboard-action-item--stale {
         border-left-color: var(--color-info);
+    }
+
+    @media (min-width: 768px) {
+        .dashboard-action-group--incomplete {
+            grid-column: span 2;
+        }
+    }
+
+    @media (min-width: 1200px) {
+        .dashboard-action-group--incomplete {
+            grid-column: 1 / -1;
+        }
+    }
+
+    .dashboard-action-item--compact {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "title footer"
+            "meta footer"
+            "badges footer";
+        align-items: center;
+        gap: var(--space-2) var(--space-3);
+        padding: var(--space-3);
+        box-shadow: none;
+    }
+
+    .dashboard-action-item--compact.dashboard-action-item--has-note {
+        grid-template-areas:
+            "title footer"
+            "meta footer"
+            "badges footer"
+            "note note";
+    }
+
+    .dashboard-action-item--compact .dashboard-action-badges {
+        grid-area: badges;
+        gap: var(--space-1);
+    }
+
+    .dashboard-action-item--compact .dashboard-action-title {
+        grid-area: title;
+        min-width: 0;
+        font-size: var(--text-sm);
+        overflow-wrap: anywhere;
+    }
+
+    .dashboard-action-item--compact .dashboard-action-meta {
+        grid-area: meta;
+        font-size: var(--text-xs);
+    }
+
+    .dashboard-action-item--compact .dashboard-action-note {
+        grid-area: note;
+    }
+
+    .dashboard-action-item--compact .dashboard-action-footer {
+        grid-area: footer;
+        align-self: center;
+        justify-content: flex-end;
     }
 
     .dashboard-action-badges,
@@ -712,6 +776,32 @@
         }
 
         .dashboard-action-footer {
+            justify-content: flex-start;
+        }
+
+        .dashboard-action-list--responsive {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-action-item--compact {
+            grid-template-columns: 1fr;
+            grid-template-areas:
+                "title"
+                "meta"
+                "badges"
+                "footer";
+        }
+
+        .dashboard-action-item--compact.dashboard-action-item--has-note {
+            grid-template-areas:
+                "title"
+                "meta"
+                "badges"
+                "note"
+                "footer";
+        }
+
+        .dashboard-action-item--compact .dashboard-action-footer {
             justify-content: flex-start;
         }
 
@@ -964,9 +1054,9 @@
                     </h3>
                     <span class="dashboard-action-count">{{ group.items|length }}</span>
                 </div>
-                <div class="dashboard-action-list">
+                <div class="dashboard-action-list{% if group.key == 'incomplete' %} dashboard-action-list--responsive{% endif %}">
                     {% for item in group.items|slice:":4" %}
-                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}">
+                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}{% if item.action_key == 'incomplete' %} dashboard-action-item--compact{% endif %}{% if item.relation.comment %} dashboard-action-item--has-note{% endif %}">
                         <div class="dashboard-action-badges">
                             <span class="gift-plan-status-badge {{ item.status_class }}">
                                 {{ item.relation.status }}

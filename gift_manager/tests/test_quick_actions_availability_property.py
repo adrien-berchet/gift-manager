@@ -84,6 +84,10 @@ class TestQuickActionsAvailabilityProperty:
 
         return action_map.get(entity_type.lower(), ["details", "edit", "delete", "share"])
 
+    def get_expected_action_column_width(self, entity_type):
+        """Get the action column width needed for visible icon+label buttons."""
+        return "360px" if len(self.get_expected_actions(entity_type)) == 5 else "340px"
+
     @given(
         entity_type=st.sampled_from(
             ["person", "gift", "event", "relation", "persongroup"]
@@ -104,7 +108,7 @@ class TestQuickActionsAvailabilityProperty:
         Validates: Requirements 4.1, 4.2
         """
         # Create entity with random data
-        entity = self.create_entity(entity_type, entity_data)
+        self.create_entity(entity_type, entity_data)
 
         # Get the list URL for this entity type
         list_url = self.get_list_url(entity_type)
@@ -132,8 +136,8 @@ class TestQuickActionsAvailabilityProperty:
             f"Actions array {actions_array} not found in {entity_type} list view"
         )
 
-        # Verify that action column width is appropriate (should be 200px for modern UI)
-        assert "width: '200px'" in content, (
+        expected_width = self.get_expected_action_column_width(entity_type)
+        assert f"width: '{expected_width}'" in content, (
             f"Action column width not set correctly for {entity_type} list view"
         )
 

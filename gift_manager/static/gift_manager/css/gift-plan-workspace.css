@@ -1,7 +1,7 @@
 /* Gift plan workspace layout */
 
 .gift-plan-workspace {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .gift-plan-workspace-header,
@@ -59,11 +59,11 @@
 
 .gift-plan-urgency-board {
     display: grid;
-    gap: 1.5rem;
+    gap: 1.125rem;
 }
 
 .gift-plan-urgency-section {
-    padding-top: 1rem;
+    padding-top: 0.875rem;
     border-top: 1px solid var(--border-color);
 }
 
@@ -72,7 +72,7 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.625rem;
 }
 
 .gift-plan-urgency-heading h3 {
@@ -88,7 +88,7 @@
 .gift-plan-urgency-heading p {
     margin: 0;
     color: var(--text-muted);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
 }
 
 .gift-plan-urgency-section--overdue .gift-plan-urgency-heading h3 i {
@@ -124,18 +124,19 @@
 
 .gift-plan-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    align-items: start;
+    gap: 0.75rem;
 }
 
 .gift-plan-card {
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0.55rem;
     min-width: 0;
-    padding: 1rem;
+    padding: 0.75rem;
     border: 1px solid var(--border-color);
-    border-left-width: 4px;
+    border-left-width: 3px;
     border-radius: var(--radius-md);
     background: var(--surface-card);
     color: var(--text-primary);
@@ -165,7 +166,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.375rem;
 }
 
 .gift-plan-card-topline {
@@ -174,9 +175,9 @@
 
 .gift-plan-card-title {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
-    line-height: 1.3;
+    line-height: 1.25;
 }
 
 .gift-plan-card-title a {
@@ -191,17 +192,17 @@
 
 .gift-plan-card-meta {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.3rem;
 }
 
 .gift-plan-card-meta-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.35rem;
     min-width: 0;
     color: var(--text-secondary);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
 }
 
 .gift-plan-card-meta-row i {
@@ -220,11 +221,14 @@
 }
 
 .gift-plan-note {
-    flex: 1;
     margin: 0;
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    line-height: 1.45;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
 
 .gift-plan-note--empty {
@@ -235,7 +239,27 @@
 .gift-plan-card-actions {
     justify-content: flex-end;
     margin-top: auto;
-    padding-top: 0.25rem;
+    padding-top: 0.125rem;
+}
+
+.gift-plan-workspace .gift-plan-status-badge,
+.gift-plan-workspace .gift-plan-due-badge,
+.gift-plan-workspace .gift-plan-tag-badge {
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    padding: 0.18rem 0.45rem;
+    font-size: 0.7rem;
+}
+
+.gift-plan-workspace .recipient-type-badge {
+    padding: 0.1rem 0.4rem;
+    font-size: 0.68rem;
+}
+
+.gift-plan-card-actions .btn {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
 }
 
 .gift-plan-empty-state {

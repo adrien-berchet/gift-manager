@@ -19,7 +19,6 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.html import conditional_escape
-from django.utils.text import slugify
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext_noop
@@ -38,25 +37,23 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_terminal_status
+from gift_manager.statuses import relation_status_slug
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 
-COMPLETED_STATUS_SLUGS = {"given", "done", "completed"}
-
 
 def gift_plan_status_class(status) -> str:
     """Return the shared CSS status class for a gift plan status."""
-    slug = slugify(str(status or "")) or "unknown"
-    return f"gift-plan-status--{slug}"
+    return f"gift-plan-status--{relation_status_slug(status)}"
 
 
 def is_completed_status(status) -> bool:
     """Return whether a status should be treated as completed in workspace grouping."""
-    slug = slugify(str(status or ""))
-    return slug in COMPLETED_STATUS_SLUGS
+    return is_terminal_status(status)
 
 
 def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:

@@ -156,9 +156,12 @@
 /* Quick Action Buttons - Enhanced for Task 6.1 */
 .quick-actions-container {
     display: flex;
+    flex-wrap: nowrap;
     gap: var(--space-1);
     justify-content: flex-end;
     align-items: center;
+    width: max-content;
+    max-width: none;
     opacity: 0.7;
     transition: opacity var(--transition-fast);
 }
@@ -178,10 +181,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
     min-width: 32px;
     min-height: 32px;
     border: 1px solid transparent;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Hover effects for each button type */
@@ -357,6 +361,12 @@
 }
 
 /* Grid row hover enhancements */
+.gridjs-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
 .gridjs-tr {
     transition: background-color var(--transition-fast);
 }
@@ -374,12 +384,31 @@
 .gridjs-td:last-child {
     text-align: right;
     padding-right: var(--space-3);
+    min-width: max-content;
 }
 
 /* Ensure action buttons don't wrap */
 .gridjs-td:last-child {
     white-space: nowrap;
-    width: 1%;
+    width: auto;
+}
+
+[data-view="card"] .gridjs-td:last-child {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
+    padding-right: 0;
+}
+
+[data-view="card"] .gridjs-td:last-child .quick-actions-container {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+}
+
+[data-view="card"] .gridjs-td:last-child .quick-action-btn {
+    flex: 1 1 auto;
 }
 
 /* List Item Enhancements */

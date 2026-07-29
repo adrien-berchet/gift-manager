@@ -326,6 +326,13 @@ body.has-fixed-action-bar {
     color: var(--color-warning-hover);
 }
 
+.gift-plan-status--abandoned,
+.gift-plan-status--abandonne {
+    background-color: var(--color-danger-light);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--color-danger-hover);
+}
+
 .gift-plan-status--given,
 .gift-plan-status--received,
 .gift-plan-status--done,
