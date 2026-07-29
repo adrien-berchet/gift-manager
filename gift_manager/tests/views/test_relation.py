@@ -45,6 +45,8 @@ class TestUpdateRelationStatus:
         # The response is HTML (HTMX partial), not JSON
         content = response.content.decode("utf-8")
         assert "status-form-" in content
+        assert "gift-plan-status-form" in content
+        assert "gift-plan-status-select gift-plan-status--testing" in content
         assert f'value="{self.new_status.pk}"' in content
         assert "selected" in content
 
@@ -71,3 +73,24 @@ class TestUpdateRelationStatus:
         assert response.status_code == 404
         response_data = json.loads(response.content)
         assert "error" in response_data
+
+    @override_settings(USE_I18N=False)
+    def test_update_relation_status_requires_edit_permission(self):
+        """Viewers can see a gift plan but cannot update its status."""
+        create_or_update_permission(
+            self.user,
+            self.relation,
+            permission_level=PermissionLevel.VIEWER,
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:relation_status_update"),
+            {
+                "relation_id": self.relation.relation_id,
+                "new_status": self.new_status.pk,
+            },
+        )
+
+        assert response.status_code == 403
+        self.relation.refresh_from_db()
+        assert self.relation.status != self.new_status

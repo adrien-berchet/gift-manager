@@ -283,6 +283,120 @@ body.has-fixed-action-bar {
     color: #cbd5e1;
 }
 
+/* Gift plan status, due date, and tag badges */
+.gift-plan-status-badge,
+.gift-plan-due-badge,
+.gift-plan-tag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.gift-plan-status--idea,
+.gift-plan-status--unknown {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+.gift-plan-status--planned,
+.gift-plan-status--ordered {
+    background-color: var(--color-primary-light);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--color-primary-hover);
+}
+
+.gift-plan-status--purchased {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.gift-plan-status--wrapped {
+    background-color: var(--color-warning-light);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--color-warning-hover);
+}
+
+.gift-plan-status--given,
+.gift-plan-status--received,
+.gift-plan-status--done,
+.gift-plan-status--completed {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.gift-plan-due-badge--overdue {
+    background-color: var(--color-danger-light);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--color-danger-hover);
+}
+
+.gift-plan-due-badge--due_soon {
+    background-color: var(--color-warning-light);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--color-warning-hover);
+}
+
+.gift-plan-due-badge--later {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.gift-plan-due-badge--no_date {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+.gift-plan-due-badge--completed {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.gift-plan-tag-badge {
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.gift-plan-tag-badge:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+.gift-plan-status-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.gift-plan-status-select {
+    border-radius: var(--radius-full);
+    border-width: 1px;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .gift-plan-status--idea,
+[data-theme="dark"] .gift-plan-status--unknown,
+[data-theme="dark"] .gift-plan-due-badge--no_date {
+    background-color: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
 /* ==========================================================================
    Utility Classes
    ========================================================================== */

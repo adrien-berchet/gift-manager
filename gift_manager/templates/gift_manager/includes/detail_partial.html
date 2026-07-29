@@ -29,6 +29,7 @@
 
     <div class="detail-actions mb-4">
         <div class="btn-group" role="group">
+            {% if is_editor %}
             <button type="button"
                     class="btn btn-outline-primary btn-sm"
                     data-action="edit"
@@ -36,6 +37,15 @@
                     title="{% trans 'Edit' %}">
                 <i class="fas fa-edit me-1"></i>{% trans "Edit" %}
             </button>
+            {% else %}
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    disabled
+                    title="{% trans 'You do not have permission to edit this object' %}">
+                <i class="fas fa-lock me-1"></i>{% trans "Edit" %}
+            </button>
+            {% endif %}
+            {% if is_editor %}
             <button type="button"
                     class="btn btn-outline-danger btn-sm"
                     data-action="delete"
@@ -43,6 +53,14 @@
                     title="{% trans 'Delete' %}">
                 <i class="fas fa-trash me-1"></i>{% trans "Delete" %}
             </button>
+            {% else %}
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    disabled
+                    title="{% trans 'You do not have permission to delete this object' %}">
+                <i class="fas fa-lock me-1"></i>{% trans "Delete" %}
+            </button>
+            {% endif %}
             {% if person.get_absolute_url or gift.get_absolute_url or event.get_absolute_url or relation.get_absolute_url or group.get_absolute_url or gift_tag.get_absolute_url or object.get_absolute_url %}
             <a href="{% if person %}{{ person.get_absolute_url }}{% elif gift %}{{ gift.get_absolute_url }}{% elif event %}{{ event.get_absolute_url }}{% elif relation %}{{ relation.get_absolute_url }}{% elif group %}{{ group.get_absolute_url }}{% elif gift_tag %}{{ gift_tag.get_absolute_url }}{% else %}{{ object.get_absolute_url }}{% endif %}"
                class="btn btn-outline-secondary btn-sm"

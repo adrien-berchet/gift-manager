@@ -1,5 +1,6 @@
 """Relation-related views."""
 
+from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
@@ -16,6 +17,9 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils import timezone
+from django.utils.html import conditional_escape
+from django.utils.text import slugify
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext_noop
@@ -30,13 +34,43 @@ from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionService
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+
+COMPLETED_STATUS_SLUGS = {"given", "done", "completed"}
+
+
+def gift_plan_status_class(status) -> str:
+    """Return the shared CSS status class for a gift plan status."""
+    slug = slugify(str(status or "")) or "unknown"
+    return f"gift-plan-status--{slug}"
+
+
+def is_completed_status(status) -> bool:
+    """Return whether a status should be treated as completed in workspace grouping."""
+    slug = slugify(str(status or ""))
+    return slug in COMPLETED_STATUS_SLUGS
+
+
+def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
+    """Return the urgency bucket for a gift plan."""
+    today = today or timezone.localdate()
+    if is_completed_status(relation.status):
+        return "completed"
+    if relation.due_date is None:
+        return "no_date"
+    if relation.due_date < today:
+        return "overdue"
+    if relation.due_date <= today + timedelta(days=window_days):
+        return "due_soon"
+    return "later"
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -211,6 +245,8 @@ class RelationListView(PermissionContextMixin, BaseListView):
     model = Relation
     template_name = "gift_manager/relation_list.html"
     object_type = gettext_noop("Gift Plans")
+    workspace_window_days = 7
+    workspace_group_order = ("overdue", "due_soon", "later", "no_date", "completed")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -263,9 +299,104 @@ class RelationListView(PermissionContextMixin, BaseListView):
             )
         )
 
+    def get_workspace_queryset(self):
+        """Return relation instances optimized for the card workspace."""
+        return (
+            Relation.objects.accessible_by(self.request.user)
+            .with_related_objects()
+            .prefetch_related("gift__tags")
+            .order_by("due_date", "status__pk", "gift__name")
+        )
+
+    def get_workspace_groups(self, relations):
+        """Group gift plans by urgency for the primary workspace."""
+        today = timezone.localdate()
+        groups = {
+            "overdue": {
+                "key": "overdue",
+                "label": gettext("Overdue"),
+                "description": gettext("Due before today"),
+                "icon": "fa-triangle-exclamation",
+                "cards": [],
+            },
+            "due_soon": {
+                "key": "due_soon",
+                "label": gettext("Due soon"),
+                "description": gettext("Due in the next 7 days"),
+                "icon": "fa-clock",
+                "cards": [],
+            },
+            "later": {
+                "key": "later",
+                "label": gettext("Later"),
+                "description": gettext("Due after the next 7 days"),
+                "icon": "fa-calendar",
+                "cards": [],
+            },
+            "no_date": {
+                "key": "no_date",
+                "label": gettext("No due date"),
+                "description": gettext("Needs a deadline"),
+                "icon": "fa-calendar-plus",
+                "cards": [],
+            },
+            "completed": {
+                "key": "completed",
+                "label": gettext("Completed"),
+                "description": gettext("Already given or finished"),
+                "icon": "fa-circle-check",
+                "cards": [],
+            },
+        }
+
+        for relation in relations:
+            card = self.get_workspace_card(relation, today)
+            groups[card["urgency_key"]]["cards"].append(card)
+
+        return [groups[key] for key in self.workspace_group_order if groups[key]["cards"]]
+
+    def get_workspace_card(self, relation, today):
+        """Return presentation data for a single gift-plan card."""
+        urgency_key = gift_plan_urgency_key(
+            relation,
+            today=today,
+            window_days=self.workspace_window_days,
+        )
+        permission = PermissionService.get_permission(relation, self.request.user)
+        return {
+            "relation": relation,
+            "urgency_key": urgency_key,
+            "status_class": gift_plan_status_class(relation.status),
+            "detail_url": reverse(
+                "gift_manager:relation_detail", kwargs={"pk": relation.relation_id}
+            ),
+            "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
+            "delete_url": reverse(
+                "gift_manager:relation_delete", kwargs={"pk": relation.relation_id}
+            ),
+            "can_edit": permission >= PermissionLevel.EDITOR,
+            "can_delete": permission >= PermissionLevel.OWNER,
+        }
+
+    def get_workspace_summary(self, workspace_groups):
+        """Return compact counts for the workspace summary strip."""
+        counts = {group["key"]: len(group["cards"]) for group in workspace_groups}
+        total = sum(counts.values())
+        attention = counts.get("overdue", 0) + counts.get("due_soon", 0)
+        return {
+            "total": total,
+            "attention": attention,
+            "overdue": counts.get("overdue", 0),
+            "due_soon": counts.get("due_soon", 0),
+            "no_date": counts.get("no_date", 0),
+        }
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["relation_statuses"] = RelationStatus.objects.all()
+        workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())
+        context["workspace_groups"] = workspace_groups
+        context["workspace_summary"] = self.get_workspace_summary(workspace_groups)
         return context
 
 
@@ -363,6 +494,8 @@ class RelationDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["gift_plan_status_class"] = gift_plan_status_class(self.object.status)
+        context["gift_plan_urgency_key"] = gift_plan_urgency_key(self.object)
 
         # Add action buttons
         is_editor = context["is_editor"]
@@ -400,11 +533,17 @@ class RelationDetailView(BaseDetailView):
 @require_POST
 def update_relation_status(request):
     relation_id = request.POST.get("relation_id")
-    new_status = int(request.POST.get("new_status"))
+    try:
+        new_status = int(request.POST.get("new_status"))
+    except (TypeError, ValueError):
+        return JsonResponse({"error": gettext("Choose a valid status.")}, status=400)
 
     try:
         relation = Relation.objects.get(Q(relation_id=relation_id) & Q(shared_with=request.user))
-        relation.status_id = new_status
+        if PermissionService.get_permission(relation, request.user) < PermissionLevel.EDITOR:
+            return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
+
+        relation.status = RelationStatus.objects.get(pk=new_status)
         relation.save()
 
         # Build HTML manually to avoid template recursion issues
@@ -412,10 +551,16 @@ def update_relation_status(request):
         options_html = ""
         for stat in relation_statuses:
             selected = "selected" if new_status == stat.pk else ""
-            options_html += f'<option value="{stat.pk}" {selected}>{stat.status}</option>'
+            options_html += (
+                f'<option value="{stat.pk}" {selected}>{conditional_escape(stat.status)}</option>'
+            )
 
-        html = f"""<form id="status-form-{relation.relation_id}" style="display: inline;">
-            <select class="form-select form-select-sm status-selector"
+        status_class = gift_plan_status_class(relation.status)
+        status_select_class = (
+            f"form-select form-select-sm status-selector gift-plan-status-select {status_class}"
+        )
+        html = f"""<form id="status-form-{relation.relation_id}" class="gift-plan-status-form">
+            <select class="{status_select_class}"
                     name="new_status"
                     data-relation-id="{relation.relation_id}"
                     data-update-url="{reverse("gift_manager:relation_status_update")}">
@@ -427,3 +572,5 @@ def update_relation_status(request):
 
     except Relation.DoesNotExist:
         return JsonResponse({"error": gettext("Gift Plan not found")}, status=404)
+    except RelationStatus.DoesNotExist:
+        return JsonResponse({"error": gettext("Choose a valid status.")}, status=400)

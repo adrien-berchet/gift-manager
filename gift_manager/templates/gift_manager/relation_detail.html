@@ -23,11 +23,35 @@
     {% endif %}
 </p>
 <p><strong>{% trans "Gift:" %}</strong> <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></p>
+{% if relation.gift.tags.all %}
+<p><strong>{% trans "Tags:" %}</strong>
+    {% for tag in relation.gift.tags.all %}
+    <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}" class="gift-plan-tag-badge">
+        <i class="fas fa-tag" aria-hidden="true"></i>{{ tag.name }}
+    </a>
+    {% endfor %}
+</p>
+{% endif %}
 <p><strong>{% trans "Event:" %}</strong> {% if relation.event %}<a href="{% url 'gift_manager:event_detail' relation.event.event_id %}">{{ relation.event.name }}</a>{% endif %}
 </p>
 <p><strong>{% trans "Comment:" %}</strong> {{ relation.comment }}</p>
-<p><strong>{% trans "Status:" %}</strong> <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}">{{ relation.status.status }}</a></p>
-<p><strong>{% trans "Due date:" %}</strong> {{ relation.due_date }}</p>
+<p><strong>{% trans "Status:" %}</strong>
+    <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}"
+       class="gift-plan-status-badge {{ gift_plan_status_class }}">
+        {{ relation.status.status }}
+    </a>
+</p>
+<p><strong>{% trans "Due date:" %}</strong>
+    {% if relation.due_date %}
+    <span class="gift-plan-due-badge gift-plan-due-badge--{{ gift_plan_urgency_key }}">
+        <i class="fas fa-calendar-day" aria-hidden="true"></i>{{ relation.due_date|date:"M d, Y" }}
+    </span>
+    {% else %}
+    <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+        <i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "No date" %}
+    </span>
+    {% endif %}
+</p>
 <p><strong>{% trans "Creation date:" %}</strong> {{ relation.creation_date|replace_none:"" }}</p>
 
 <div class="mt-4">

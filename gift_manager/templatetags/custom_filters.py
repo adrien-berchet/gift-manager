@@ -1,4 +1,5 @@
 from django import template
+from django.utils.text import slugify
 
 from gift_manager.email_encoding import decode_email as _decode_email
 
@@ -71,3 +72,10 @@ def status_border_class(status):
     if status is None:
         return "border-status-secondary"
     return _STATUS_BORDER_MAP.get(str(status).lower(), "border-status-secondary")
+
+
+@register.filter
+def gift_plan_status_class(status):
+    """Map a RelationStatus to the shared gift-plan status badge class."""
+    status_slug = slugify(str(status or "")) or "unknown"
+    return f"gift-plan-status--{status_slug}"

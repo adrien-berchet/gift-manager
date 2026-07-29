@@ -50,7 +50,9 @@
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Status" %}</label>
                     <div class="detail-value">
-                        <span class="badge bg-info">{{ object.status }}</span>
+                        <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
+                            {{ object.status }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -60,8 +62,22 @@
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Due Date" %}</label>
                     <div class="detail-value">
-                        <i class="fas fa-clock me-1 text-muted"></i>
-                        {{ object.due_date|date:"M d, Y" }}
+                        <span class="gift-plan-due-badge gift-plan-due-badge--{{ gift_plan_urgency_key }}">
+                            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                            {{ object.due_date|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Due Date" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+                            <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+                            {% trans "No date" %}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -155,7 +171,7 @@
             <div class="gift-tags">
                 <small class="text-muted">{% trans "Tags:" %}</small>
                 {% for tag in object.gift.tags.all %}
-                <span class="badge bg-info me-1">
+                <span class="gift-plan-tag-badge">
                     <i class="fas fa-tag me-1"></i>{{ tag.name }}
                 </span>
                 {% endfor %}
