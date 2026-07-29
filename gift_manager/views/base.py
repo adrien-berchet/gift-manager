@@ -54,7 +54,9 @@ class HTMXResponseMixin:
         response = super().form_valid(form)
 
         logger.debug(
-            f"[HTMXResponseMixin.form_valid] is_htmx={self.is_htmx}, response status={getattr(response, 'status_code', 'N/A')}"
+            "[HTMXResponseMixin.form_valid] is_htmx=%s, response status=%s",
+            self.is_htmx,
+            getattr(response, "status_code", "N/A"),
         )
 
         if self.is_htmx:
@@ -88,10 +90,12 @@ class HTMXResponseMixin:
             if triggers:
                 trigger_value = ", ".join(triggers)
                 response["HX-Trigger"] = trigger_value
-                logger.debug(f"[HTMXResponseMixin.form_valid] Set HX-Trigger: {trigger_value}")
+                logger.debug("[HTMXResponseMixin.form_valid] Set HX-Trigger: %s", trigger_value)
 
         logger.debug(
-            f"[HTMXResponseMixin.form_valid] Final response status={getattr(response, 'status_code', 'N/A')}, headers={dict(response.items()) if hasattr(response, 'items') else 'N/A'}"
+            "[HTMXResponseMixin.form_valid] Final response status=%s, headers=%s",
+            getattr(response, "status_code", "N/A"),
+            dict(response.items()) if hasattr(response, "items") else "N/A",
         )
         return response
 
@@ -321,12 +325,15 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
                 # Only set user_link if the model has that field
                 if hasattr(form.instance, "user_link"):
                     logger.debug(
-                        f"[BaseCreateView.form_valid] Setting user_link to {self.request.user} (id={self.request.user.id})"
+                        "[BaseCreateView.form_valid] Setting user_link to %s (id=%s)",
+                        self.request.user,
+                        self.request.user.id,
                     )
                     form.instance.user_link = self.request.user
                 else:
                     logger.debug(
-                        f"[BaseCreateView.form_valid] Model {form.instance.__class__.__name__} has no user_link field"
+                        "[BaseCreateView.form_valid] Model %s has no user_link field",
+                        form.instance.__class__.__name__,
                     )
 
                 response = super().form_valid(form)
@@ -337,7 +344,9 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
                 )
                 saved_user_link = getattr(form.instance, "user_link", None)
                 logger.debug(
-                    f"[BaseCreateView.form_valid] After save: pk={pk_field}, user_link={saved_user_link}"
+                    "[BaseCreateView.form_valid] After save: pk=%s, user_link=%s",
+                    pk_field,
+                    saved_user_link,
                 )
 
                 PermissionService.create_or_update_permission(
@@ -347,8 +356,8 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
                     object_attr=self.context_object_name,
                 )
                 return response
-        except Exception as e:
-            logger.exception("Error in BaseCreateView.form_valid: %s", e)
+        except Exception:
+            logger.exception("Error in BaseCreateView.form_valid")
             raise
 
     def get_success_message(self):
@@ -682,7 +691,7 @@ class DeleteSharedMixin:
 
             # Handle HTMX vs regular requests
             is_htmx = getattr(self, "is_htmx", False)
-            logger.debug(f"Delete request - is_htmx: {is_htmx}, headers: {request.headers}")
+            logger.debug("Delete request - is_htmx: %s, headers: %s", is_htmx, request.headers)
 
             if is_htmx:
                 # For HTMX requests, return appropriate response with triggers
@@ -702,10 +711,10 @@ class DeleteSharedMixin:
                 )
 
                 response["HX-Trigger"] = ", ".join(triggers)
-                logger.debug(f"HTMX response - HX-Trigger: {response['HX-Trigger']}")
+                logger.debug("HTMX response - HX-Trigger: %s", response["HX-Trigger"])
                 return response
             # For regular requests, add message and redirect
-            logger.debug(f"Regular response - redirecting to: {success_url}")
+            logger.debug("Regular response - redirecting to: %s", success_url)
             messages.success(request, success_message)
             return redirect(success_url)
 
@@ -855,3 +864,8 @@ class BaseDetailView(
     htmx_template_name = "gift_manager/includes/detail_partial.html"
     login_url = "/accounts/login/"
     redirect_field_name = "redirect_to"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["back_url"] = self.request.GET.get("back")
+        return context

@@ -1424,8 +1424,8 @@
                         showOffcanvasLoading('detailPanel');
 
                         // Show the panel first (reuse existing instance to avoid state corruption)
-                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('detailPanel'));
-                        offcanvas.show();
+                        const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('detailPanel'));
+                        modalInstance.show();
 
                         // Load detail content
                         fetch(detailUrl, {

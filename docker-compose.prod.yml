@@ -1,5 +1,5 @@
 # Docker Compose production overrides for Gift Manager
-# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
   # =============================================================================

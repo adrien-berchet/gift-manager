@@ -65,9 +65,9 @@
 }
 
 /* Relations List Styling */
+/* No max-height: the modal itself is scrollable via modal-dialog-scrollable */
 .relations-list {
-    max-height: 400px;
-    overflow-y: auto;
+    overflow-y: visible;
 }
 
 .relation-item {
@@ -87,11 +87,17 @@
     font-size: 0.75rem;
 }
 
+/* Status-based left border colors for relation cards */
+.relation-item.border-status-secondary { border-left-color: var(--bs-secondary) !important; }
+.relation-item.border-status-primary   { border-left-color: var(--bs-primary)   !important; }
+.relation-item.border-status-info      { border-left-color: var(--bs-info)      !important; }
+.relation-item.border-status-warning   { border-left-color: var(--bs-warning)   !important; }
+.relation-item.border-status-success   { border-left-color: var(--bs-success)   !important; }
+
 /* Members List Styling */
 .members-list,
 .shared-users-list {
-    max-height: 300px;
-    overflow-y: auto;
+    overflow-y: visible;
 }
 
 .member-item,
@@ -113,8 +119,7 @@
 
 /* Gifts List Styling */
 .gifts-list {
-    max-height: 400px;
-    overflow-y: auto;
+    overflow-y: visible;
 }
 
 .gift-item {
@@ -214,13 +219,6 @@
 
     .detail-value {
         font-size: 0.8rem;
-    }
-
-    .relations-list,
-    .members-list,
-    .shared-users-list,
-    .gifts-list {
-        max-height: 250px;
     }
 
     .stat-card {

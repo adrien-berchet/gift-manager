@@ -16,6 +16,17 @@
         {% endif %}
     </div>
 
+    {% if back_url %}
+    <div class="mb-3">
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                data-action="detail"
+                data-detail-url="{{ back_url }}">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
+        </button>
+    </div>
+    {% endif %}
+
     <div class="detail-actions mb-4">
         <div class="btn-group" role="group">
             <button type="button"

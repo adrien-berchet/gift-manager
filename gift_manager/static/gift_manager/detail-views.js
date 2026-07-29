@@ -27,11 +27,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show loading state
         showOffcanvasLoading('detailPanel');
 
-        // Show the detail panel
+        // Show the detail modal (reuse existing instance to avoid duplicate backdrops)
         const detailPanel = document.getElementById('detailPanel');
         if (detailPanel) {
-            const offcanvasInstance = new bootstrap.Offcanvas(detailPanel);
-            offcanvasInstance.show();
+            const modalInstance = bootstrap.Modal.getOrCreateInstance(detailPanel);
+            modalInstance.show();
         }
 
         // Load detail content via HTMX
@@ -82,12 +82,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Close detail panel
+        // Close detail modal
         const detailPanel = document.getElementById('detailPanel');
         if (detailPanel) {
-            const detailOffcanvas = bootstrap.Offcanvas.getInstance(detailPanel);
-            if (detailOffcanvas) {
-                detailOffcanvas.hide();
+            const detailModal = bootstrap.Modal.getInstance(detailPanel);
+            if (detailModal) {
+                detailModal.hide();
             }
         }
 
@@ -125,12 +125,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Close detail panel first
+        // Close detail modal first
         const detailPanel = document.getElementById('detailPanel');
         if (detailPanel) {
-            const detailOffcanvas = bootstrap.Offcanvas.getInstance(detailPanel);
-            if (detailOffcanvas) {
-                detailOffcanvas.hide();
+            const detailModal = bootstrap.Modal.getInstance(detailPanel);
+            if (detailModal) {
+                detailModal.hide();
             }
         }
 
@@ -221,8 +221,8 @@ document.addEventListener('DOMContentLoaded', function() {
      * Handle keyboard navigation in detail views
      */
     document.addEventListener('keydown', function(e) {
-        // Only handle if a detail panel is open
-        const openDetailPanel = document.querySelector('.offcanvas.show#detailPanel');
+        // Only handle if the detail modal is open
+        const openDetailPanel = document.querySelector('.modal.show#detailPanel');
         if (!openDetailPanel) return;
 
         switch (e.key) {
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * Auto-refresh detail views when list updates
      */
     document.addEventListener('list:update', function() {
-        const openDetailPanel = document.querySelector('.offcanvas.show#detailPanel');
+        const openDetailPanel = document.querySelector('.modal.show#detailPanel');
         if (openDetailPanel) {
             // Find the current detail URL and refresh
             const currentUrl = openDetailPanel.dataset.currentUrl;
@@ -321,6 +321,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Dispose all active tooltip instances and remove any orphaned tooltip DOM nodes.
+     */
+    function disposeAllTooltips() {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            const instance = bootstrap.Tooltip.getInstance(el);
+            if (instance) instance.dispose();
+        });
+        // Remove stray tooltip DOM elements left in <body>
+        document.querySelectorAll('.tooltip').forEach(function(el) { el.remove(); });
+    }
+
+    /**
      * Initialize detail view enhancements
      */
     function initializeDetailViews() {
@@ -334,9 +346,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Initialize tooltips for action buttons
+        // Initialize tooltips for action buttons — dispose first to avoid duplicate instances
         const tooltipElements = document.querySelectorAll('[data-bs-toggle="tooltip"]');
         tooltipElements.forEach(element => {
+            const existing = bootstrap.Tooltip.getInstance(element);
+            if (existing) existing.dispose();
             new bootstrap.Tooltip(element);
         });
     }
@@ -344,8 +358,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize on page load
     initializeDetailViews();
 
+    // Dispose tooltips before HTMX replaces #detailContent (old elements leave orphan nodes)
+    document.addEventListener('htmx:beforeSwap', function(e) {
+        if (e.detail.target && e.detail.target.id === 'detailContent') {
+            disposeAllTooltips();
+        }
+    });
+
     // Re-initialize after HTMX content swaps
     document.addEventListener('htmx:afterSwap', function() {
         initializeDetailViews();
     });
+
+    // Clean up any surviving tooltip DOM nodes when the detail modal finishes closing
+    const detailPanelForTooltips = document.getElementById('detailPanel');
+    if (detailPanelForTooltips) {
+        detailPanelForTooltips.addEventListener('hidden.bs.modal', function() {
+            disposeAllTooltips();
+        });
+    }
 });

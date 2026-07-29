@@ -65,60 +65,62 @@
   </div>
 </div>
 
-<!-- Detail Panel - For viewing entity details -->
-<div class="offcanvas offcanvas-end offcanvas-panel"
-     tabindex="-1"
+<!-- Detail Modal - For viewing entity details - centered large dialog -->
+<div class="modal fade"
      id="detailPanel"
+     tabindex="-1"
      aria-labelledby="detailPanelLabel"
-     aria-describedby="detailPanelBody"
-     data-bs-backdrop="true"
-     data-bs-keyboard="true"
+     aria-modal="true"
      role="dialog">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable modal-fullscreen-md-down">
+    <div class="modal-content">
 
-  <div class="offcanvas-header">
-    <h5 class="offcanvas-title" id="detailPanelLabel">
-      {% block detail_title %}{% trans "Details" %}{% endblock %}
-    </h5>
-    <button type="button"
-            class="btn-close"
-            data-bs-dismiss="offcanvas"
-            aria-label="{% trans 'Close' %}"
-            title="{% trans 'Close' %} (Esc)"
-            data-keyboard-hint="Esc"></button>
-  </div>
+      <div class="modal-header">
+        <h5 class="modal-title" id="detailPanelLabel">
+          {% block detail_title %}{% trans "Details" %}{% endblock %}
+        </h5>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="{% trans 'Close' %}"
+                title="{% trans 'Close' %} (Esc)"></button>
+      </div>
 
-  <div class="offcanvas-body" id="detailPanelBody" data-swipe-hint="Swipe left to close" role="main">
-    {% block detail_body %}
-    <!-- Loading state template -->
-    <div class="loading-state d-none" id="detailLoading" role="status" aria-live="polite" aria-label="{% trans 'Loading details' %}">
-      <div class="d-flex justify-content-center align-items-center h-100">
-        <div class="text-center">
-          <div class="loading-spinner mb-3" aria-hidden="true"></div>
-          <p class="text-muted">{% trans "Loading details..." %}</p>
+      <div class="modal-body" id="detailPanelBody">
+        {% block detail_body %}
+        <!-- Loading state -->
+        <div class="loading-state d-none" id="detailLoading" role="status" aria-live="polite" aria-label="{% trans 'Loading details' %}">
+          <div class="d-flex justify-content-center align-items-center" style="min-height: 200px;">
+            <div class="text-center">
+              <div class="loading-spinner mb-3" aria-hidden="true"></div>
+              <p class="text-muted">{% trans "Loading details..." %}</p>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <!-- Error state template -->
-    <div class="error-state d-none" id="detailError" role="alert" aria-live="assertive">
-      <div class="alert alert-danger" role="alert">
-        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
-        <strong>{% trans "Error" %}</strong>
-        <p class="mb-0 mt-2" id="detailErrorMessage">{% trans "Failed to load details. Please try again." %}</p>
-        <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryDetailLoad()" aria-label="{% trans 'Retry loading details' %}">
-          <i class="fas fa-redo me-1" aria-hidden="true"></i>{% trans "Retry" %}
-        </button>
-      </div>
-    </div>
+        <!-- Error state -->
+        <div class="error-state d-none" id="detailError" role="alert" aria-live="assertive">
+          <div class="alert alert-danger" role="alert">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+            <strong>{% trans "Error" %}</strong>
+            <p class="mb-0 mt-2" id="detailErrorMessage">{% trans "Failed to load details. Please try again." %}</p>
+            <button type="button" class="btn btn-outline-danger btn-sm mt-2" onclick="retryDetailLoad()" aria-label="{% trans 'Retry loading details' %}">
+              <i class="fas fa-redo me-1" aria-hidden="true"></i>{% trans "Retry" %}
+            </button>
+          </div>
+        </div>
 
-    <!-- Content container -->
-    <div class="content-container" id="detailContent">
-      <!-- Dynamic content will be loaded here via HTMX -->
+        <!-- Content container -->
+        <div class="content-container" id="detailContent">
+          <!-- Dynamic content will be loaded here via HTMX -->
+        </div>
+        {% endblock %}
+      </div>
+
     </div>
-    {% endblock %}
   </div>
-{% load static %}
 </div>
+{% load static %}
 
 <!-- Unsaved Changes Protection -->
 <script src="{% static 'gift_manager/unsaved-changes.js' %}"></script>
@@ -164,8 +166,36 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Focus management only for editPanel — Bootstrap Modal handles focus for detailPanel natively
     setupFocusManagement(editPanel);
-    setupFocusManagement(detailPanel);
+
+    // ---- Detail Panel: explicit close + backdrop cleanup ----
+    if (detailPanel) {
+        // Explicit close button handler — belt-and-suspenders alongside data-bs-dismiss="modal".
+        // Without this, if a stale Bootstrap instance exists (e.g. from a cached JS file that used
+        // `new bootstrap.Modal()` instead of `getOrCreateInstance`), the data-API fires on the
+        // wrong instance and the button appears to do nothing.
+        const detailCloseBtn = detailPanel.querySelector('.btn-close');
+        if (detailCloseBtn) {
+            detailCloseBtn.addEventListener('click', function() {
+                const instance = bootstrap.Modal.getInstance(detailPanel);
+                if (instance) {
+                    instance.hide();
+                }
+            });
+        }
+
+        // Force-clean orphaned backdrops when the modal finishes hiding.
+        // Multiple `new bootstrap.Modal()` calls each create their own backdrop; only one is
+        // removed on hide(), leaving the page in a dark-overlay state. Cleaning up here is safe
+        // because the detail modal is never open simultaneously with any other modal.
+        detailPanel.addEventListener('hidden.bs.modal', function() {
+            document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+            document.body.classList.remove('modal-open');
+            document.body.style.removeProperty('overflow');
+            document.body.style.removeProperty('padding-right');
+        });
+    }
 
     // Loading state management
     window.showOffcanvasLoading = function(panelId = 'editPanel') {
@@ -240,27 +270,28 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Mobile-specific enhancements
+    // Mobile-specific enhancements for the edit offcanvas panel only
+    // (detailPanel is now a Bootstrap modal which handles mobile via modal-fullscreen-md-down)
     function handleMobileResize() {
         const isMobile = window.innerWidth < 768;
-        const offcanvasPanels = document.querySelectorAll('.offcanvas-panel');
+        const editPanel = document.getElementById('editPanel');
+        if (!editPanel) return;
 
-        offcanvasPanels.forEach(panel => {
-            if (isMobile) {
-                panel.classList.add('offcanvas-mobile-fullscreen');
-            } else {
-                panel.classList.remove('offcanvas-mobile-fullscreen');
-            }
-        });
+        if (isMobile) {
+            editPanel.classList.add('offcanvas-mobile-fullscreen');
+        } else {
+            editPanel.classList.remove('offcanvas-mobile-fullscreen');
+        }
     }
 
     // Initial check and resize listener
     handleMobileResize();
     window.addEventListener('resize', handleMobileResize);
 
-    // HTMX integration for form submissions
+    // HTMX integration for form submissions in the edit offcanvas panel
     document.body.addEventListener('htmx:beforeRequest', function(e) {
         const trigger = e.detail.elt;
+        if (!trigger) return;
         const offcanvas = trigger.closest('.offcanvas');
 
         if (offcanvas) {
@@ -274,6 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.body.addEventListener('htmx:afterRequest', function(e) {
         const trigger = e.detail.elt;
+        if (!trigger) return;
         const offcanvas = trigger.closest('.offcanvas');
 
         if (offcanvas) {
