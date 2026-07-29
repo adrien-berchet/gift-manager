@@ -130,9 +130,18 @@ dmypy.json
 .vercel
 
 # AI agents
-.claude/
+.agents/
+.codex-log/
+.claude/settings.local.json
+.claude/logs/
+.claude/.cache/
 .kilocode/
 .kiro/
+.gemini/
+.playwright-mcp/
+CLAUDE.local.md
+*.pem
+certs/
 
 # Playwright
 playwright-report/

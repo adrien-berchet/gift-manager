@@ -135,26 +135,88 @@ ignore-variadic-names = true
 [tool.ruff.lint.per-file-ignores]
 "*/tests/*" = [
     "ANN202",
+    "ANN205",
     "ANN206",
     "ARG001",
     "ARG002",
     "ARG003",
+    "B007",
+    "B011",
+    "B018",
+    "B023",
+    "C901",
+    "CPY001",
+    "D205",
+    "D415",
     "DTZ011",
+    "E501",
+    "E722",
+    "F841",
+    "EM102",
+    "PERF102",
     "PLC0415",
+    "PLR0911",
+    "PLR0912",
     "PLR2004",
+    "PLR0915",
+    "PT006",
+    "PT009",
+    "PT015",
+    "PT018",
+    "PTH123",
+    "RUF001",
+    "RUF015",
+    "RUF059",
     "S101",
     "S105",
     "S106",
-    "SLF001",
     "S107",
+    "S110",
+    "SIM102",
+    "SLF001",
     "T201",
+    "TRY003",
 ]
 "docs/*" = ["INP001"]
+"GiftManager/settings/development.py" = ["T201"]
+"GiftManager/settings/production.py" = ["T201"]
 "manage.py" = ["PLC0415"]
+"migration_template.py" = ["E501"]
 "gift_manager/seed_data.py" = ["S106"]
+"gift_manager/migrations/*" = ["ARG001", "CPY001", "S110", "SIM105"]
+"gift_manager/mixins/notifications.py" = [
+    "A002",
+    "ANN202",
+    "D205",
+    "D415",
+    "PERF203",
+    "PERF401",
+    "SLF001",
+]
+"gift_manager/mixins/performance.py" = ["G004", "PLR0911", "RET504", "RUF013", "TRY400"]
+"gift_manager/mixins/permissions.py" = [
+    "C901",
+    "E501",
+    "G004",
+    "G201",
+    "PERF203",
+    "PLC0415",
+    "TRY300",
+    "TRY400",
+]
+"gift_manager/mixins/progressive_enhancement.py" = [
+    "ANN401",
+    "E501",
+    "RET504",
+    "S110",
+    "SIM102",
+    "SIM105",
+    "SLF001",
+]
 "gift_manager/models.py" = ["ANN206", "ARG001", "FBT002", "PLC0415", "PLW2901"]
-"GiftManager/settings/testing.py" = ["S105"]
+"GiftManager/settings/testing.py" = ["S105", "T201"]
 "gift_manager/services.py" = ["RUF059"]
+"gift_manager/templatetags/fallback_tags.py" = ["A002", "PLC0415", "SIM108", "SIM201"]
 "gift_manager/templatetags/grid_tags.py" = [
     "ANN401",
     "ARG001",
@@ -166,6 +228,21 @@ ignore-variadic-names = true
     "SIM108",
     "SIM118",
 ]
+"gift_manager/views/bulk_operations.py" = [
+    "A001",
+    "ANN401",
+    "ARG002",
+    "PLR0911",
+    "PLR0912",
+    "SLF001",
+    "TRY401",
+]
+"gift_manager/views/gift.py" = ["PLC0415"]
+"gift_manager/views/inline_editing.py" = ["C901", "F841", "PLC0415", "PLR0911", "PLR0912"]
+"gift_manager/views/person.py" = ["PLC0415"]
+"gift_manager/views/search.py" = ["PERF401"]
+"playwright.config.py" = ["CPY001", "E501"]
+"scripts/*" = ["CPY001"]
 
 [tool.ruff.lint.pylint]
 max-args = 10

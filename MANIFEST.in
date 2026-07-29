@@ -2,7 +2,8 @@ graft tests
 
 global-exclude *.py[co] .DS_Store
 
-include requirements.txt
+include README.md
+include uv.lock
 recursive-include local/ *
 recursive-include gift_manager/static/ *
 recursive-include gift_manager/templates/ *

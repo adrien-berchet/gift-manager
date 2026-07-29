@@ -61,8 +61,6 @@ class TestMobileResponsivenessProperty:
         # Property: Delete confirmation should be returned successfully
         if response.status_code != 200:
             return  # Skip if view doesn't work
-            create_or_update_permission(self.user, entity, permission_level=PermissionLevel.EDITOR)
-            delete_url = reverse("gift_manager:event_delete", kwargs={"pk": entity.event_id})
 
         # Test delete confirmation modal (HTMX request)
         response = self.client.get(delete_url, HTTP_HX_REQUEST="true")
@@ -139,13 +137,13 @@ class TestMobileResponsivenessProperty:
         """
         # Create test entity
         if entity_type == "person":
-            entity = PersonFactory()
+            PersonFactory()
             list_url = reverse("gift_manager:persons")
         elif entity_type == "gift":
-            entity = GiftFactory()
+            GiftFactory()
             list_url = reverse("gift_manager:gifts")
         else:  # event
-            entity = EventFactory()
+            EventFactory()
             list_url = reverse("gift_manager:events")
 
         # Get list page
@@ -250,7 +248,7 @@ class TestMobileResponsivenessPlaywright:
 
         # Create test data
         user = UserFactory()
-        person = PersonFactory()
+        PersonFactory()
 
         # Login
         page.goto(f"{live_server.url}/accounts/login/")
@@ -311,7 +309,7 @@ class TestMobileResponsivenessPlaywright:
 
         # Create test data
         user = UserFactory()
-        person = PersonFactory()
+        PersonFactory()
 
         # Login
         page.goto(f"{live_server.url}/accounts/login/")
@@ -369,7 +367,7 @@ class TestMobileResponsivenessPlaywright:
 
         # Create test data
         user = UserFactory()
-        person = PersonFactory()
+        PersonFactory()
 
         # Login
         page.goto(f"{live_server.url}/accounts/login/")

@@ -90,7 +90,11 @@ PLAYWRIGHT_CONFIG = {
             "use": {
                 "browserName": "chromium",
                 "viewport": {"width": 375, "height": 667},
-                "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+                "userAgent": (
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 "
+                    "Mobile/15E148 Safari/604.1"
+                ),
                 "deviceScaleFactor": 2,
                 "isMobile": True,
                 "hasTouch": True,
@@ -101,7 +105,11 @@ PLAYWRIGHT_CONFIG = {
             "use": {
                 "browserName": "webkit",
                 "viewport": {"width": 375, "height": 667},
-                "userAgent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+                "userAgent": (
+                    "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) "
+                    "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 "
+                    "Mobile/15E148 Safari/604.1"
+                ),
                 "deviceScaleFactor": 2,
                 "isMobile": True,
                 "hasTouch": True,
@@ -131,8 +139,8 @@ def configure_playwright_for_pytest():
     return {
         # Browser launch options
         "browser_type_launch_args": {
-            "headless": not os.environ.get("HEADED", False),
-            "slow_mo": int(os.environ.get("SLOW_MO", 0)),
+            "headless": not os.environ.get("HEADED", ""),
+            "slow_mo": int(os.environ.get("SLOW_MO", "0")),
         },
         # Browser context options
         "browser_context_args": {

@@ -7,6 +7,7 @@ for the modern UX interface feature.
 import json
 import time
 from datetime import datetime
+from datetime import timezone
 from pathlib import Path
 
 import pytest
@@ -29,7 +30,7 @@ class PropertyTestResult:
         self.duration = duration
         self.error = error
         self.examples_run = examples_run
-        self.timestamp = datetime.now()
+        self.timestamp = datetime.now(timezone.utc)
 
     def to_dict(self):
         """Convert result to dictionary for serialization."""
@@ -181,6 +182,7 @@ class PropertyTestRunner:
             return
 
         total_duration = self.end_time - self.start_time if self.end_time and self.start_time else 0
+        print(f"\nTotal duration: {total_duration:.2f}s")
 
         status_counts = {}
         for result in self.results:
@@ -323,4 +325,6 @@ if __name__ == "__main__":
     # Save results
     runner = PropertyTestRunner()
     runner.results = results
-    runner.save_results(f"pbt_results_{command}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json")
+    runner.save_results(
+        f"pbt_results_{command}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
+    )
