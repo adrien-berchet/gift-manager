@@ -70,24 +70,19 @@ When creating forms for offcanvas panels, use this structure:
       hx-post="{{ form_action_url }}"
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
+      hx-indicator="#offcanvasLoading"
+      hx-on::after-request="handleFormResponse(event)"
       class="offcanvas-form">
 
   {% csrf_token %}
 
-  <!-- Form fields -->
   <div class="form-fields">
-    {{ form.as_p }}
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include form_fields_template %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
   </div>
 
-  <!-- Sticky form actions -->
-  <div class="panel-form-actions">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas">
-      Cancel
-    </button>
-    <button type="submit" class="btn btn-primary">
-      Save
-    </button>
-  </div>
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
 </form>
 ```
 

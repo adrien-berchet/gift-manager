@@ -45,6 +45,9 @@ class PersonRelationCreateView(BaseCreateView):
     context_object_name = "relation"
     object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/relation_fields.html"
+    form_css_class = "relation-form"
+    form_type = "relation"
 
     def get_success_url(self):
         return reverse("gift_manager:person_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -79,6 +82,9 @@ class PersonGroupRelationCreateView(BaseCreateView):
     context_object_name = "relation"
     object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/relation_fields.html"
+    form_css_class = "relation-form"
+    form_type = "relation"
 
     def get_success_url(self):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -115,6 +121,9 @@ class GiftRelationCreateView(BaseCreateView):
     context_object_name = "relation"
     object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/relation_fields.html"
+    form_css_class = "relation-form"
+    form_type = "relation"
 
     def get_success_url(self):
         return reverse("gift_manager:gift_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -267,6 +276,9 @@ class RelationCreateView(BaseCreateView):
     context_object_name = "relation"
     object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/relation_fields.html"
+    form_css_class = "relation-form"
+    form_type = "relation"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -301,6 +313,9 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
     object_type = gettext_noop("Gift Plan")
     detail_url_name = "relation_detail"
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/relation_fields.html"
+    form_css_class = "relation-form"
+    form_type = "relation"
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

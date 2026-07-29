@@ -50,6 +50,14 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
     assert "Recipients" in content
     assert f'data-recipient-key="person:{person.person_id}"' in content
     assert f'data-recipient-key="group:{team.group_id}"' in content
+    assert (
+        f'href="{reverse("gift_manager:person_relation_create", kwargs={"pk": person.person_id})}" '
+        'class="btn btn-sm btn-primary" data-action="create"'
+    ) in content
+    assert (
+        f'href="{reverse("gift_manager:person_group_relation_create", kwargs={"pk": team.group_id})}" '
+        'class="btn btn-sm btn-primary" data-action="create"'
+    ) in content
     assert "recipient-type-badge--person" in content
     assert "recipient-type-badge--group" in content
     assert "recipient-membership-badge" in content

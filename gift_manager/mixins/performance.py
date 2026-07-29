@@ -69,28 +69,38 @@ class QueryOptimizationMixin:
 
     def optimize_gift_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Gift queryset."""
-        return queryset.select_related("event").prefetch_related(
-            "tags", "shared_with", "persons", "groups"
+        return queryset.prefetch_related(
+            "tags",
+            "shared_with",
+            Prefetch(
+                "gifts",
+                queryset=Relation.objects.select_related("person", "group", "event", "status"),
+            ),
         )
 
     def optimize_event_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Event queryset."""
         return queryset.prefetch_related(
             "shared_with",
-            Prefetch("gifts", queryset=Gift.objects.prefetch_related("tags")),
-            "persons",
-            "groups",
+            Prefetch(
+                "relations",
+                queryset=Relation.objects.select_related(
+                    "person", "group", "gift", "status"
+                ).prefetch_related("gift__tags"),
+            ),
         )
 
     def optimize_relation_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Relation queryset."""
-        return queryset.select_related("gift", "event").prefetch_related(
-            "persons", "groups", "shared_with"
-        )
+        return queryset.select_related(
+            "person", "group", "gift", "event", "status"
+        ).prefetch_related("shared_with")
 
     def optimize_person_group_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize PersonGroup queryset."""
-        return queryset.prefetch_related("persons", "shared_with", "parent_groups", "child_groups")
+        return queryset.prefetch_related(
+            "person_set", "shared_with", "parent_groups", "child_groups"
+        )
 
     def optimize_gift_tag_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize GiftTag queryset."""
@@ -98,7 +108,7 @@ class QueryOptimizationMixin:
             "shared_with",
             "parent_tags",
             "child_tags",
-            Prefetch("gifts", queryset=Gift.objects.select_related("event")),
+            Prefetch("gifts", queryset=Gift.objects.prefetch_related("tags")),
         )
 
 

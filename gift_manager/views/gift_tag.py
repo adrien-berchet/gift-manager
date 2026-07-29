@@ -162,6 +162,9 @@ class GiftTagCreateView(BaseCreateView):
     context_object_name = "gift_tag"
     object_type = "Gift Tag"
     htmx_template_name = "gift_manager/includes/gift_tag_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/gift_tag_fields.html"
+    form_css_class = "gift-tag-form"
+    form_type = "gift_tag"
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -179,6 +182,9 @@ class GiftTagUpdateView(PermissionUpdateMixin, BaseUpdateView):
     object_type = "Gift tag"
     detail_url_name = "gift_tag_detail"
     htmx_template_name = "gift_manager/includes/gift_tag_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/gift_tag_fields.html"
+    form_css_class = "gift-tag-form"
+    form_type = "gift_tag"
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""

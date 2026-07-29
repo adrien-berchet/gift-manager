@@ -157,6 +157,40 @@
     });
 
     /**
+     * Event date type initializer
+     * Shows the absolute date or recurrence field based on the selected date type.
+     */
+    FormInitializer.register("dateTypeToggle", function (form) {
+        const dateTypeRadios = form.querySelectorAll('input[name="date_type"]');
+        const absoluteDateField = form.querySelector("#absolute-date-field");
+        const recurrenceField = form.querySelector("#recurrence-field");
+
+        if (!dateTypeRadios.length || !absoluteDateField || !recurrenceField) {
+            return;
+        }
+
+        const toggleDateFields = function () {
+            const selectedType = form.querySelector('input[name="date_type"]:checked');
+            if (!selectedType) {
+                return;
+            }
+
+            if (selectedType.value === "absolute") {
+                absoluteDateField.style.display = "block";
+                recurrenceField.style.display = "none";
+            } else {
+                absoluteDateField.style.display = "none";
+                recurrenceField.style.display = "block";
+            }
+        };
+
+        toggleDateFields();
+        dateTypeRadios.forEach((radio) => {
+            radio.addEventListener("change", toggleDateFields);
+        });
+    });
+
+    /**
      * Form validation initializer
      * Adds Bootstrap validation classes and behavior
      */
@@ -258,6 +292,31 @@
                     option.style.display = text.includes(filter) ? "" : "none";
                 });
             });
+
+            const selectAllBtn = wrapper.querySelector(".select-all-btn");
+            const clearAllBtn = wrapper.querySelector(".clear-all-btn");
+
+            if (selectAllBtn) {
+                selectAllBtn.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    Array.from(select.options).forEach((option) => {
+                        if (option.style.display !== "none") {
+                            option.selected = true;
+                        }
+                    });
+                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                });
+            }
+
+            if (clearAllBtn) {
+                clearAllBtn.addEventListener("click", function (event) {
+                    event.preventDefault();
+                    Array.from(select.options).forEach((option) => {
+                        option.selected = false;
+                    });
+                    select.dispatchEvent(new Event("change", { bubbles: true }));
+                });
+            }
         });
     });
 

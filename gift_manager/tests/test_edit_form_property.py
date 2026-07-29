@@ -115,9 +115,9 @@ class TestEditFormDisplayProperty:
         field_mappings = {
             "person": ["first_name", "family_name", "email_address", "groups"],
             "gift": ["name", "comment", "tags"],
-            "event": ["name", "comment", "usual_date"],
-            "relation": ["person", "gift", "event", "status"],
-            "persongroup": ["name", "parent_groups"],
+            "event": ["name", "comment", "date_type", "absolute_date", "recurrence"],
+            "relation": ["recipient", "gift", "event", "status"],
+            "persongroup": ["name", "parent_groups", "child_groups", "persons"],
             "gifttag": ["name", "parent_tags"],
         }
         return field_mappings.get(entity_type.lower(), [])
@@ -195,6 +195,12 @@ class TestEditFormDisplayProperty:
                 if entity_value is None:
                     continue
 
+                if field_name == "recipient" and entity_type.lower() == "relation":
+                    assert form.initial.get(field_name) == entity.recipient_key, (
+                        f"Recipient field not populated correctly for {entity_type}"
+                    )
+                    continue
+
                 # Handle different field types
                 if hasattr(form.fields.get(field_name), "queryset"):
                     # Many-to-many or foreign key field
@@ -223,7 +229,8 @@ class TestEditFormDisplayProperty:
 
                         # For non-encrypted fields or when encryption handling isn't available
                         assert str(form_value) == str(entity_value), (
-                            f"Field {field_name} not populated correctly for {entity_type}: expected '{entity_value}', got '{form_value}'"
+                            f"Field {field_name} not populated correctly for {entity_type}: "
+                            f"expected '{entity_value}', got '{form_value}'"
                         )
 
         # Verify form fields are rendered in the HTML
@@ -308,7 +315,9 @@ class TestEditFormDisplayProperty:
                 if field_name in form.fields and hasattr(entity, field_name):
                     entity_value = getattr(entity, field_name)
                     if entity_value is not None:
-                        if hasattr(entity_value, "all"):  # Many-to-many
+                        if field_name == "recipient" and entity_type.lower() == "relation":
+                            form_data[field_name] = entity.recipient_key
+                        elif hasattr(entity_value, "all"):  # Many-to-many
                             form_data[field_name] = list(entity_value.values_list("pk", flat=True))
                         elif hasattr(entity_value, "pk"):  # Foreign key
                             form_data[field_name] = entity_value.pk
@@ -317,7 +326,10 @@ class TestEditFormDisplayProperty:
 
             # Create a new form instance with the entity data
             form_class = form.__class__
-            validation_form = form_class(data=form_data, instance=entity)
+            form_kwargs = {"data": form_data, "instance": entity}
+            if hasattr(form, "user"):
+                form_kwargs["user"] = self.user
+            validation_form = form_class(**form_kwargs)
 
             # The form should be valid with the entity's own data
             if not validation_form.is_valid():

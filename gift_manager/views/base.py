@@ -296,6 +296,10 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
 
     template_name = "gift_manager/create_form.html"
     htmx_template_name = "gift_manager/includes/form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/generic_fields.html"
+    form_css_class = "entity-form"
+    form_type = "entity"
+    show_sharing_section = True
     close_offcanvas = True
     login_url = "/accounts/login/"
 
@@ -305,6 +309,13 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
         context["translated_type"] = gettext(self.object_type)
         context["action"] = gettext("Create")
         context["cancel_url"] = self.get_cancel_url()
+        context.setdefault("form_action_url", self.request.path)
+        context["form_fields_template"] = self.form_fields_template
+        context["form_css_class"] = self.form_css_class
+        context["form_type"] = self.form_type
+        context["form_surface"] = "offcanvas" if self.is_htmx else "page"
+        context["sharing_mode"] = "create"
+        context["show_sharing_section"] = self.show_sharing_section
         return context
 
     def get_cancel_url(self) -> str:
@@ -424,6 +435,49 @@ class EditPermissionMixin:
         # Add the permission levels available for the dropdown menus
         context["permission_levels"] = deepcopy(PERMISSION_LEVELS)
         return context
+
+    def form_valid(self, form):
+        """Persist permission selectors submitted with the main edit form."""
+        response = super().form_valid(form)
+        self._process_main_form_permission_fields()
+        return response
+
+    def _process_main_form_permission_fields(self) -> None:
+        """Apply non-JavaScript edit-time sharing changes from permission_<id> fields."""
+        current_user_profile = Profile.objects.get(user=self.request.user)
+        friend_user_ids = set(
+            User.objects.filter(profile__in=current_user_profile.friends.all()).values_list(
+                "id", flat=True
+            )
+        )
+
+        for key, value in self.request.POST.items():
+            if not key.startswith("permission_"):
+                continue
+
+            try:
+                user_id = int(key.removeprefix("permission_"))
+            except ValueError:
+                logger.warning("Invalid permission field name: %s", key)
+                continue
+
+            if user_id not in friend_user_ids:
+                logger.warning("Ignoring permission update for non-friend user id: %s", user_id)
+                continue
+
+            try:
+                user = User.objects.get(id=user_id)
+                if value == "not_shared":
+                    PermissionService.delete_permission(user, self.object)
+                elif value:
+                    PermissionService.create_or_update_permission(
+                        user,
+                        self.object,
+                        permission_level=int(value),
+                    )
+            except (User.DoesNotExist, ValueError, TypeError) as e:
+                logger.warning("Invalid permission update from main form: %s", e)
+                messages.error(self.request, gettext("Invalid permission value."))
 
     def post(self, request, *args, **kwargs):  # noqa: PLR0911
         self.object = self.get_object()
@@ -612,6 +666,10 @@ class BaseUpdateView(
 
     template_name = "gift_manager/edit_form.html"
     htmx_template_name = "gift_manager/includes/form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/generic_fields.html"
+    form_css_class = "entity-form"
+    form_type = "entity"
+    show_sharing_section = True
     close_offcanvas = True
     login_url = "/accounts/login/"
 
@@ -621,6 +679,14 @@ class BaseUpdateView(
         context["translated_type"] = gettext(self.object_type)
         context["action"] = gettext("Edit")
         context["cancel_url"] = self.get_cancel_url()
+        context.setdefault("form_action_url", self.request.path)
+        context["form_fields_template"] = self.form_fields_template
+        context["form_css_class"] = self.form_css_class
+        context["form_type"] = self.form_type
+        context["form_surface"] = "offcanvas" if self.is_htmx else "page"
+        context["sharing_mode"] = "edit"
+        context["show_sharing_section"] = self.show_sharing_section
+        context["delete_url"] = self.get_delete_url()
         return context
 
     def get_cancel_url(self) -> str:
@@ -628,6 +694,17 @@ class BaseUpdateView(
         return reverse_lazy(
             f"gift_manager:{self.detail_url_name}", kwargs={"pk": self.kwargs["pk"]}
         )
+
+    def get_delete_url(self) -> str | None:
+        """URL for the delete confirmation page, when the conventional route exists."""
+        delete_url_name = getattr(self, "delete_url_name", None)
+        if delete_url_name is None and self.detail_url_name.endswith("_detail"):
+            delete_url_name = self.detail_url_name.removesuffix("_detail") + "_delete"
+
+        if delete_url_name is None:
+            return None
+
+        return reverse(f"gift_manager:{delete_url_name}", kwargs={"pk": self.kwargs["pk"]})
 
     def form_valid(self, form):
         with transaction.atomic():

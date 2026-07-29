@@ -1,151 +1,25 @@
 {% load i18n %}
-<!--
-  Example Form Partial Template for Offcanvas Panel
-
-  This template demonstrates how to structure forms for use within
-  the reusable offcanvas panel system. It includes:
-  - Proper form structure with HTMX integration
-  - Loading states and error handling
-  - Responsive form actions
-  - Accessibility features
--->
 
 <form method="post"
+      action="{{ form_action_url }}"
       hx-post="{{ form_action_url }}"
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
-      class="offcanvas-form">
-
+      hx-indicator="#offcanvasLoading"
+      hx-on::after-request="handleFormResponse(event)"
+      class="offcanvas-form {{ form_css_class }}"
+      data-form-type="{{ form_type|default:'entity' }}">
   {% csrf_token %}
 
-  <!-- Form Fields Container -->
   <div class="form-fields">
-    {% if form.errors %}
-    <div class="alert alert-danger" role="alert">
-      <i class="fas fa-exclamation-triangle me-2"></i>
-      <strong>{% trans "Please correct the following errors:" %}</strong>
-      <ul class="mb-0 mt-2">
-        {% for field, errors in form.errors.items %}
-          {% for error in errors %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        {% endfor %}
-      </ul>
-    </div>
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% if form_fields_template %}
+      {% include form_fields_template %}
+    {% else %}
+      {% include "gift_manager/includes/forms/generic_fields.html" %}
     {% endif %}
-
-    <!-- Example form fields - replace with actual form rendering -->
-    {% for field in form %}
-    <div class="form-group mb-3">
-      <label for="{{ field.id_for_label }}" class="form-label">
-        {{ field.label }}
-        {% if field.field.required %}
-        <span class="text-danger">*</span>
-        {% endif %}
-      </label>
-
-      {{ field }}
-
-      {% if field.help_text %}
-      <div class="form-text">{{ field.help_text }}</div>
-      {% endif %}
-
-      {% if field.errors %}
-      <div class="invalid-feedback d-block">
-        {% for error in field.errors %}
-          {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
   </div>
 
-  <!-- Form Actions - Sticky at bottom -->
-  <div class="panel-form-actions">
-    <button type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="offcanvas"
-            aria-label="{% trans 'Cancel' %}">
-      <i class="fas fa-times me-1"></i>
-      {% trans "Cancel" %}
-    </button>
-
-    <button type="submit"
-            class="btn btn-primary"
-            data-loading-text="{% trans 'Saving...' %}"
-            aria-label="{% trans 'Save changes' %}">
-      <i class="fas fa-save me-1"></i>
-      {% trans "Save" %}
-    </button>
-  </div>
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
 </form>
-
-<!-- Form-specific JavaScript for enhanced functionality -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('.offcanvas-form');
-    if (!form) return;
-
-    // Enhanced form submission handling
-    form.addEventListener('submit', function(e) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            const originalText = submitBtn.innerHTML;
-            const loadingText = submitBtn.dataset.loadingText || 'Saving...';
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + loadingText;
-
-            // Re-enable button after request completes
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }, 3000); // Fallback timeout
-        }
-    });
-
-    // Auto-focus first form field
-    const firstField = form.querySelector('input:not([type="hidden"]), select, textarea');
-    if (firstField) {
-        firstField.focus();
-    }
-
-    // Form validation feedback
-    const fields = form.querySelectorAll('input, select, textarea');
-    fields.forEach(field => {
-        field.addEventListener('blur', function() {
-            // Clear previous validation state
-            field.classList.remove('is-valid', 'is-invalid');
-
-            // Basic client-side validation
-            if (field.required && !field.value.trim()) {
-                field.classList.add('is-invalid');
-            } else if (field.value.trim()) {
-                field.classList.add('is-valid');
-            }
-        });
-    });
-
-    // Unsaved changes warning
-    let formChanged = false;
-    fields.forEach(field => {
-        field.addEventListener('input', function() {
-            formChanged = true;
-        });
-    });
-
-    // Warn before closing if there are unsaved changes
-    const offcanvas = form.closest('.offcanvas');
-    if (offcanvas) {
-        const closeButtons = offcanvas.querySelectorAll('[data-bs-dismiss="offcanvas"]');
-        closeButtons.forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                if (formChanged && !confirm('{% trans "You have unsaved changes. Are you sure you want to close?" %}')) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-            });
-        });
-    }
-});
-</script>

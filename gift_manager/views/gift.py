@@ -99,6 +99,9 @@ class GiftCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, Ba
     context_object_name = "gift"
     object_type = "Gift"
     htmx_template_name = "gift_manager/includes/gift_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/gift_fields.html"
+    form_css_class = "gift-form"
+    form_type = "gift"
     close_offcanvas = True
 
     def get_form(self, form_class=None):
@@ -119,6 +122,9 @@ class GiftUpdateView(
     object_type = "Gift"
     detail_url_name = "gift_detail"
     htmx_template_name = "gift_manager/includes/gift_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/gift_fields.html"
+    form_css_class = "gift-form"
+    form_type = "gift"
     close_offcanvas = True
 
     def get_form(self, form_class=None):

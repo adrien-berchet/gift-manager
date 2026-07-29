@@ -1,10 +1,4 @@
 {% load i18n %}
-<!--
-  Person Form Partial Template for Offcanvas Panel
-
-  This template renders the person edit/create form for use within
-  the reusable offcanvas panel system with HTMX integration.
--->
 
 <form method="post"
       id="person-form"
@@ -18,180 +12,17 @@
       hx-trigger="submit"
       hx-target="this"
       hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      hx-on::after-request="handleFormResponse(event)"
       class="offcanvas-form person-form"
-      data-form-type="person-edit">
-
+      data-form-type="{{ form_type|default:'person-edit' }}">
   {% csrf_token %}
 
-  <!-- Form Fields Container -->
   <div class="form-fields">
-    {% if form.errors %}
-    <div class="alert alert-danger" role="alert">
-      <i class="fas fa-exclamation-triangle me-2"></i>
-      <strong>{% trans "Please correct the following errors:" %}</strong>
-      <ul class="mb-0 mt-2">
-        {% for field, errors in form.errors.items %}
-          {% for error in errors %}
-            <li>{{ error }}</li>
-          {% endfor %}
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
-
-    <!-- Person-specific form fields -->
-    <div class="form-group mb-3">
-      <label for="{{ form.first_name.id_for_label }}" class="form-label">
-        {{ form.first_name.label }}
-        {% if form.first_name.field.required %}
-        <span class="text-danger">*</span>
-        {% endif %}
-      </label>
-      {{ form.first_name }}
-      {% if form.first_name.help_text %}
-      <div class="form-text">{{ form.first_name.help_text }}</div>
-      {% endif %}
-      {% if form.first_name.errors %}
-      <div class="invalid-feedback d-block">
-        {% for error in form.first_name.errors %}
-          {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="form-group mb-3">
-      <label for="{{ form.family_name.id_for_label }}" class="form-label">
-        {{ form.family_name.label }}
-        {% if form.family_name.field.required %}
-        <span class="text-danger">*</span>
-        {% endif %}
-      </label>
-      {{ form.family_name }}
-      {% if form.family_name.help_text %}
-      <div class="form-text">{{ form.family_name.help_text }}</div>
-      {% endif %}
-      {% if form.family_name.errors %}
-      <div class="invalid-feedback d-block">
-        {% for error in form.family_name.errors %}
-          {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="form-group mb-3">
-      <label for="{{ form.email_address.id_for_label }}" class="form-label">
-        {{ form.email_address.label }}
-        {% if form.email_address.field.required %}
-        <span class="text-danger">*</span>
-        {% endif %}
-      </label>
-      {{ form.email_address }}
-      {% if form.email_address.help_text %}
-      <div class="form-text">{{ form.email_address.help_text }}</div>
-      {% endif %}
-      {% if form.email_address.errors %}
-      <div class="invalid-feedback d-block">
-        {% for error in form.email_address.errors %}
-          {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="form-group mb-3">
-      <label for="{{ form.groups.id_for_label }}" class="form-label">
-        {{ form.groups.label }}
-        {% if form.groups.field.required %}
-        <span class="text-danger">*</span>
-        {% endif %}
-      </label>
-      <div class="searchable-select-wrapper">
-        <input type="text" class="searchable-select-search form-control mb-2" placeholder="🔍 {% trans 'Type to search groups...' %}">
-        <div class="btn-group btn-group-sm mb-2" role="group">
-          <button type="button" class="btn btn-outline-primary" data-action="select-all-groups">{% trans "Select All" %}</button>
-          <button type="button" class="btn btn-outline-secondary" data-action="clear-all-groups">{% trans "Clear All" %}</button>
-        </div>
-        {{ form.groups }}
-      </div>
-      {% if form.groups.help_text %}
-      <div class="form-text">{{ form.groups.help_text }}</div>
-      {% endif %}
-      {% if form.groups.errors %}
-      <div class="invalid-feedback d-block">
-        {% for error in form.groups.errors %}
-          {{ error }}
-        {% endfor %}
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Sharing Management Section (for edit forms) -->
-    {% if friends_list %}
-    <div class="card mt-4">
-      <div class="card-header bg-light">
-        <h6 class="mb-0"><i class="fas fa-users me-2"></i>{% trans "Sharing Management" %}</h6>
-      </div>
-      <div class="card-body">
-        <div class="alert alert-info alert-sm mb-3">
-          <small>
-            <i class="fas fa-info-circle me-1"></i>
-            {% trans "Manage who can access this person" %}
-          </small>
-        </div>
-
-        <!-- Simplified sharing controls for offcanvas -->
-        <div class="sharing-controls">
-          {% for friend in friends_list %}
-          <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded" id="permission-row-{{ friend.user.id }}">
-            <div class="d-flex align-items-center">
-              <i class="fas fa-user me-2 text-muted"></i>
-              <span>{{ friend.user.username }}</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <select name="permission_{{ friend.user.id }}"
-                      class="form-select form-select-sm permission-select"
-                      data-user-id="{{ friend.user.id }}"
-                      data-person-id="{% if object %}{{ object.person_id }}{% endif %}">
-                <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
-                {% for level in permission_levels %}
-                <option value="{{ level.value }}" {% if friend.is_shared and friend.permission == level.value %}selected{% endif %}>
-                  {% if level.value <= 10 %}👁️{% elif level.value <= 20 %}✏️{% else %}👑{% endif %}
-                  {{ level.label }}
-                </option>
-                {% endfor %}
-              </select>
-              <span class="permission-status" style="display: none;">
-                <i class="fas fa-spinner fa-spin text-muted"></i>
-              </span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/person_fields.html" %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
   </div>
 
-  <!-- Form Actions - Sticky at bottom -->
-  <div class="panel-form-actions">
-    <button type="button"
-            class="btn btn-secondary"
-            data-bs-dismiss="offcanvas"
-            aria-label="{% trans 'Cancel' %}">
-      <i class="fas fa-times me-1"></i>
-      {% trans "Cancel" %}
-    </button>
-
-    <button type="submit"
-            class="btn btn-primary"
-            data-loading-text="{% trans 'Saving...' %}"
-            aria-label="{% trans 'Save changes' %}"
-            title="{% trans 'Save' %} (Ctrl+S)"
-            data-keyboard-hint="Ctrl+S">
-      <i class="fas fa-save me-1"></i>
-      {% trans "Save" %}
-    </button>
-  </div>
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
 </form>

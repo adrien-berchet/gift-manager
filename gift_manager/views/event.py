@@ -59,6 +59,9 @@ class EventCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, B
     context_object_name = "event"
     object_type = "Event"
     htmx_template_name = "gift_manager/includes/event_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/event_fields.html"
+    form_css_class = "event-form"
+    form_type = "event-edit"
     close_offcanvas = True
 
 
@@ -72,6 +75,9 @@ class EventUpdateView(
     object_type = "Event"
     detail_url_name = "event_detail"
     htmx_template_name = "gift_manager/includes/event_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/event_fields.html"
+    form_css_class = "event-form"
+    form_type = "event-edit"
     close_offcanvas = True
 
 

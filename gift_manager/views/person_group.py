@@ -144,6 +144,9 @@ class PersonGroupCreateView(BaseCreateView):
     context_object_name = "group"
     object_type = "Person group"
     htmx_template_name = "gift_manager/includes/person_group_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/person_group_fields.html"
+    form_css_class = "person-group-form"
+    form_type = "person_group"
 
     def get_form_kwargs(self):
         """Pass the user to the form."""
@@ -160,6 +163,9 @@ class PersonGroupUpdateView(PermissionUpdateMixin, BaseUpdateView):
     object_type = "Person group"
     detail_url_name = "person_group_detail"
     htmx_template_name = "gift_manager/includes/person_group_form_partial.html"
+    form_fields_template = "gift_manager/includes/forms/person_group_fields.html"
+    form_css_class = "person-group-form"
+    form_type = "person_group"
 
     def get_form_kwargs(self):
         """Pass the user to the form."""

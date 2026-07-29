@@ -1,4 +1,110 @@
-/* Form Partial Styles for Offcanvas Panels */
+/* Form Partial Styles for Offcanvas Panels and Full-page Forms */
+
+.form-page-container {
+    max-width: 860px;
+    padding-bottom: 3rem;
+}
+
+.form-page-header {
+    margin: 0 0 1.5rem;
+}
+
+.form-page-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary, #1f2937);
+    margin-bottom: 0;
+}
+
+.page-form {
+    background-color: var(--surface-card, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--radius-md, 0.5rem);
+    box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+    padding: 1.25rem;
+}
+
+.page-form-actions {
+    border-top: 1px solid var(--border-color, #dee2e6);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+}
+
+.page-form-actions .btn,
+.panel-form-actions .btn {
+    min-height: 2.5rem;
+}
+
+.form-delete-action {
+    margin-right: auto;
+}
+
+.form-error-summary a {
+    color: inherit;
+    text-decoration: underline;
+}
+
+.form-section {
+    border-top: 1px solid var(--border-color, #dee2e6);
+    padding-top: 1rem;
+}
+
+.form-section-summary {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    font-weight: 600;
+    gap: 0.75rem;
+    justify-content: space-between;
+    list-style: none;
+}
+
+.form-section-summary::-webkit-details-marker {
+    display: none;
+}
+
+.form-section-summary::after {
+    color: var(--text-muted, #6b7280);
+    content: "\f078";
+    font-family: "Font Awesome 6 Free", "Font Awesome 5 Free";
+    font-size: 0.75rem;
+    font-weight: 900;
+    transition: transform 0.15s ease-in-out;
+}
+
+.form-section[open] .form-section-summary::after {
+    transform: rotate(180deg);
+}
+
+.form-section-body {
+    padding-top: 1rem;
+}
+
+.sharing-control-row {
+    align-items: center;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: var(--radius-sm, 0.375rem);
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 1fr) minmax(160px, 220px);
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+}
+
+.sharing-control-user {
+    align-items: center;
+    color: var(--text-primary, #1f2937);
+    display: flex;
+    margin-bottom: 0;
+    min-width: 0;
+}
+
+.sharing-permission-select {
+    min-width: 0;
+}
 
 /* Loading overlay for forms */
 .loading-overlay {
@@ -88,8 +194,9 @@
 .panel-form-actions {
     position: sticky;
     bottom: 0;
-    background: white;
-    border-top: 1px solid #dee2e6;
+    background: var(--surface-card, #ffffff);
+    border-top: 1px solid var(--border-color, #dee2e6);
+    color: var(--text-primary, #1f2937);
     padding: 1rem;
     margin: 0 -1rem -1rem -1rem;
     display: flex;
@@ -139,6 +246,26 @@
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
+    .page-form {
+        padding: 1rem;
+    }
+
+    .page-form-actions {
+        flex-direction: column-reverse;
+    }
+
+    .page-form-actions .btn {
+        width: 100%;
+    }
+
+    .form-delete-action {
+        margin-right: 0;
+    }
+
+    .sharing-control-row {
+        grid-template-columns: 1fr;
+    }
+
     .panel-form-actions {
         flex-direction: column;
     }

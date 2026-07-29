@@ -1,0 +1,7 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.first_name %}
+{% include "gift_manager/includes/forms/field.html" with field=form.family_name %}
+{% include "gift_manager/includes/forms/field.html" with field=form.email_address %}
+{% trans "Search groups..." as groups_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.groups searchable=True search_placeholder=groups_search_placeholder select_all_action="select-all-groups" clear_all_action="clear-all-groups" %}
