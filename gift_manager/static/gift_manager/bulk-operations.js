@@ -33,6 +33,13 @@
             baselineColumnWidths: null, // Original widths captured on page load (before any selection mode)
         },
 
+        displayLabels: {
+            relation: {
+                singular: "gift plan",
+                plural: "gift plans",
+            },
+        },
+
         /**
          * Initialize bulk operations for a grid
          * @param {string} gridId - The ID of the grid container
@@ -636,6 +643,7 @@
             const confirmationUrl = `${langPrefix}/api/bulk-delete-confirmation/?entity_type=${
                 this.state.currentEntityType
             }&entity_ids=${selectedIds.join(",")}`;
+            const entityLabel = this.getEntityDisplayLabel(selectedIds.length);
 
             fetch(confirmationUrl, {
                 headers: {
@@ -660,7 +668,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <p>Are you sure you want to delete <strong>${selectedIds.length}</strong> selected ${this.state.currentEntityType}(s)?</p>
+                        <p>Are you sure you want to delete <strong>${selectedIds.length}</strong> selected ${entityLabel}?</p>
                         <p class="text-muted">This action cannot be undone.</p>
                         <div class="bulk-delete-progress" style="display: none;">
                             <div class="progress mb-2">
@@ -680,6 +688,17 @@
                         this.executeBulkDelete(selectedIds);
                     });
                 });
+        },
+
+        getEntityDisplayLabel(count = 1) {
+            const entityType = this.state.currentEntityType;
+            const configuredLabel = this.displayLabels[entityType];
+
+            if (configuredLabel) {
+                return count === 1 ? configuredLabel.singular : configuredLabel.plural;
+            }
+
+            return count === 1 ? entityType : `${entityType}s`;
         },
 
         /**

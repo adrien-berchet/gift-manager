@@ -3,7 +3,7 @@
   Reusable relation cards partial.
   Required context:
     relations  – queryset/list of Relation objects
-    person     – Person instance (used for the "Add relation" URL)
+    person     – Person instance (used for the "Add gift plan" URL)
     is_editor  – boolean, show edit/add controls
 {% endcomment %}
 {% if relations %}
@@ -15,10 +15,10 @@
                class="form-control form-control-sm relation-filter-input"
                placeholder="{% trans 'Search gift, event…' %}"
                style="max-width:200px;"
-               aria-label="{% trans 'Filter relations' %}">
+               aria-label="{% trans 'Filter gift plans' %}">
         <select class="form-select form-select-sm relation-sort-select"
                 style="max-width:170px;"
-                aria-label="{% trans 'Sort relations' %}">
+                aria-label="{% trans 'Sort gift plans' %}">
             <option value="status">{% trans "Sort: Status" %}</option>
             <option value="gift">{% trans "Sort: Gift A–Z" %}</option>
             <option value="due_date">{% trans "Sort: Due date" %}</option>
@@ -28,7 +28,7 @@
            class="btn btn-sm btn-outline-primary ms-auto"
            data-action="edit"
            data-edit-url="{% url 'gift_manager:person_relation_create' pk=person.person_id %}"
-           title="{% trans 'Add a new relation for this person' %}">
+           title="{% trans 'Add a new gift plan for this person' %}">
             <i class="fas fa-plus me-1"></i>{% trans "Add" %}
         </a>
         {% endif %}
@@ -121,7 +121,7 @@
                        class="btn btn-outline-info btn-sm"
                        data-action="detail"
                        data-detail-url="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}?back={% url 'gift_manager:person_detail' pk=person.person_id %}"
-                       title="{% trans 'View relation details' %}"
+                       title="{% trans 'View gift plan details' %}"
                        data-bs-toggle="tooltip">
                         <i class="fas fa-link" aria-hidden="true"></i>
                     </a>
@@ -130,7 +130,7 @@
                             class="btn btn-outline-primary btn-sm"
                             data-action="edit"
                             data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
-                            title="{% trans 'Edit relation' %}"
+                            title="{% trans 'Edit gift plan' %}"
                             data-bs-toggle="tooltip">
                         <i class="fas fa-edit" aria-hidden="true"></i>
                     </button>
@@ -144,7 +144,7 @@
 
 {% else %}
 <p class="text-muted small">
-    {% trans "No relations found for this person." %}
+    {% trans "No gift plans found for this person." %}
     {% if is_editor %}
     <a href="{% url 'gift_manager:person_relation_create' pk=person.person_id %}"
        data-action="edit"

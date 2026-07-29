@@ -415,7 +415,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %}active{% endif %}" href="{% url 'gift_manager:relations' %}">
-                            <i class="fas fa-hand-holding-heart me-1"></i>{% trans "Giftings" %}
+                            <i class="fas fa-hand-holding-heart me-1"></i>{% trans "Gift Plans" %}
                         </a>
                     </li>
                     <li class="nav-item">
@@ -546,8 +546,8 @@
                             <a href="{% url 'gift_manager:relations' %}" class="search-result-item">
                                 <div class="search-result-icon"><i class="fas fa-hand-holding-heart"></i></div>
                                 <div class="search-result-content">
-                                    <div class="search-result-title">{% trans "All Giftings" %}</div>
-                                    <div class="search-result-subtitle">{% trans "View all giftings" %}</div>
+                                    <div class="search-result-title">{% trans "All Gift Plans" %}</div>
+                                    <div class="search-result-subtitle">{% trans "View all gift plans" %}</div>
                                 </div>
                             </a>
                             <div class="search-category">{% trans "Create New" %}</div>

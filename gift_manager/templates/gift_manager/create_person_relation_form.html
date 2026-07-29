@@ -1,10 +1,10 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
-{% block title %}Gift Manager - {% trans "Add Relation" %}{% endblock %}
+{% block title %}Gift Manager - {% trans "Add Gift Plan" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Add Relation for" %} {{ person.first_name }} {{ person.family_name }}</h1>
+<h1 class="my-4">{% trans "Add Gift Plan for" %} {{ person.first_name }} {{ person.family_name }}</h1>
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}

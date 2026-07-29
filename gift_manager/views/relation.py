@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_noop
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
@@ -41,7 +42,7 @@ class PersonRelationCreateView(BaseCreateView):
     model = Relation
     form_class = PersonRelationForm
     context_object_name = "relation"
-    object_type = "Relation"
+    object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
@@ -74,7 +75,7 @@ class PersonGroupRelationCreateView(BaseCreateView):
     model = Relation
     form_class = PersonGroupRelationForm
     context_object_name = "relation"
-    object_type = "Relation"
+    object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
@@ -109,7 +110,7 @@ class GiftRelationCreateView(BaseCreateView):
     model = Relation
     form_class = GiftRelationForm
     context_object_name = "relation"
-    object_type = "Relation"
+    object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_success_url(self):
@@ -155,6 +156,7 @@ class GiftRelationDeleteView(BaseDeleteView):
     model = Relation
     pk_name = "relation_id"
     object_type = "relation"
+    display_object_type = gettext_noop("gift plan")
 
     def get_success_url(self):
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.kwargs["pk"]})
@@ -211,7 +213,7 @@ class RelationStatusDetailView(BaseDetailView):
 class RelationListView(PermissionContextMixin, BaseListView):
     model = Relation
     template_name = "gift_manager/relation_list.html"
-    object_type = "Relations"
+    object_type = gettext_noop("Gift Plans")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -269,7 +271,7 @@ class RelationCreateView(BaseCreateView):
     form_class = RelationForm
     success_url = reverse_lazy("gift_manager:relations")
     context_object_name = "relation"
-    object_type = "Gifting"
+    object_type = gettext_noop("Gift Plan")
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
     def get_form_kwargs(self):
@@ -317,7 +319,7 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
     form_class = RelationForm
     pk_name = "relation_id"
     context_object_name = "relation"
-    object_type = "Relation"
+    object_type = gettext_noop("Gift Plan")
     detail_url_name = "relation_detail"
     htmx_template_name = "gift_manager/includes/relation_form_partial.html"
 
@@ -370,6 +372,7 @@ class RelationDeleteView(BaseDeleteView):
     success_url = reverse_lazy("gift_manager:relations")
     pk_name = "relation_id"
     object_type = "relation"
+    display_object_type = gettext_noop("gift plan")
 
 
 class RelationDetailView(BaseDetailView):
@@ -390,7 +393,7 @@ class RelationDetailView(BaseDetailView):
                 "url": reverse(
                     "gift_manager:relation_edit", kwargs={"pk": self.object.relation_id}
                 ),
-                "label": _("Edit relation"),
+                "label": _("Edit gift plan"),
                 "enabled": is_editor,
                 "tooltip": _("You do not have permission to edit this object")
                 if not is_editor
@@ -401,7 +404,7 @@ class RelationDetailView(BaseDetailView):
                 "url": reverse(
                     "gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}
                 ),
-                "label": _("Delete relation"),
+                "label": _("Delete gift plan"),
                 "enabled": True,
                 "tooltip": _(
                     "You do not have permission to delete this object so it will only be "
@@ -444,4 +447,4 @@ def update_relation_status(request):
         return HttpResponse(html)
 
     except Relation.DoesNotExist:
-        return JsonResponse({"error": gettext("Gifting not found")}, status=404)
+        return JsonResponse({"error": gettext("Gift Plan not found")}, status=404)

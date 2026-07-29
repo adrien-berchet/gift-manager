@@ -71,7 +71,7 @@ def home(request):
             .order_by("due_date")[:5]
         )
 
-        # Giftings by status
+        # Gift plans by status
         statuses = RelationStatus.objects.all()
         status_counts = []
         for status in statuses:

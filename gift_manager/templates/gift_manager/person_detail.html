@@ -49,7 +49,7 @@
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <h2 class="my-4">{% trans "Gifts for this person" %}</h2>
-<a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "New gifting" %}</a>
+<a href="{% url 'gift_manager:person_relation_create' person.person_id %}" class="btn btn-primary mb-3">{% trans "New gift plan" %}</a>
 {% if relations %}
 <div id="gifts-grid" class="mt-3"></div>
 {% else %}

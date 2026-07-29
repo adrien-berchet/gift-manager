@@ -121,11 +121,11 @@
     </div>
     {% endif %}
 
-    <!-- Relations -->
+    <!-- Gift Plans -->
     {% if relations %}
     <div class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">
-            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Relations" %}
+            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift Plans" %}
             <span class="badge bg-secondary ms-2">{{ relations|length }}</span>
         </h6>
 
@@ -169,7 +169,7 @@
                                 class="btn btn-outline-primary btn-sm"
                                 data-action="edit"
                                 data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
-                                title="{% trans 'Edit relation' %}">
+                                title="{% trans 'Edit gift plan' %}">
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>

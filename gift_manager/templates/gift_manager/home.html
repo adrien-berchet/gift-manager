@@ -647,7 +647,7 @@
                 <i class="fas fa-hand-holding-heart"></i>
             </div>
             <div class="stat-value">{{ stats.relations|default:0 }}</div>
-            <div class="stat-label">{% trans "Giftings" %}</div>
+            <div class="stat-label">{% trans "Gift Plans" %}</div>
         </a>
     </div>
 
@@ -676,7 +676,7 @@
                 </a>
                 <a href="{% url 'gift_manager:relation_create' %}" class="quick-action-btn">
                     <i class="fas fa-hand-holding-heart"></i>
-                    {% trans "New Gifting" %}
+                    {% trans "New Gift Plan" %}
                 </a>
             </div>
         </div>
@@ -684,10 +684,10 @@
 
     <!-- Dashboard Grid -->
     <div class="dashboard-grid">
-        <!-- Upcoming Giftings -->
+        <!-- Upcoming gift plans -->
         <div class="dashboard-card">
             <div class="dashboard-card-header">
-                <h3><i class="fas fa-clock"></i> {% trans "Upcoming Giftings" %}</h3>
+                <h3><i class="fas fa-clock"></i> {% trans "Upcoming Gift Plans" %}</h3>
                 <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
             </div>
             <div class="dashboard-card-body">
@@ -722,16 +722,16 @@
                 {% else %}
                 <div class="empty-state">
                     <i class="fas fa-calendar-check"></i>
-                    <p>{% trans "No upcoming giftings in the next 30 days" %}</p>
+                    <p>{% trans "No upcoming gift plans in the next 30 days" %}</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Giftings by Status -->
+        <!-- Gift plans by status -->
         <div class="dashboard-card">
             <div class="dashboard-card-header">
-                <h3><i class="fas fa-chart-pie"></i> {% trans "Giftings by Status" %}</h3>
+                <h3><i class="fas fa-chart-pie"></i> {% trans "Gift Plans by Status" %}</h3>
             </div>
             <div class="dashboard-card-body">
                 {% if status_counts %}
@@ -746,7 +746,7 @@
                 {% else %}
                 <div class="empty-state">
                     <i class="fas fa-inbox"></i>
-                    <p>{% trans "No giftings yet" %}</p>
+                    <p>{% trans "No gift plans yet" %}</p>
                 </div>
                 {% endif %}
             </div>

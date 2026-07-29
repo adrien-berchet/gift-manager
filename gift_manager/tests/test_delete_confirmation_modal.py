@@ -79,6 +79,23 @@ class TestDeleteConfirmationModal:
         assert "deleteForm" in content
 
     @override_settings(USE_I18N=False)
+    def test_relation_delete_confirmation_uses_gift_plan_label(self):
+        """Test that relation delete copy uses the user-facing Gift Plan name."""
+        relation = RelationFactory()
+        PermissionService.create_or_update_permission(
+            self.user, relation, permission_level=PermissionLevel.OWNER
+        )
+        url = reverse("gift_manager:relation_delete", kwargs={"pk": relation.relation_id})
+
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "Are you sure you want to delete this Gift Plan?" in content
+        assert "Are you sure you want to delete this Relation?" not in content
+        assert f'action="{url}"' in content
+
+    @override_settings(USE_I18N=False)
     def test_delete_confirmation_modal_with_related_objects(self):
         """Test modal shows related objects warning when applicable."""
         # This test would need to be expanded based on actual relationships

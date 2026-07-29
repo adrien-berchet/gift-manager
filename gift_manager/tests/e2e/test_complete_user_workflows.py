@@ -391,8 +391,8 @@ class TestCompleteUserWorkflows(BaseE2ETest):
             page.wait_for_load_state("networkidle")
             expect(page).to_have_url(f"{live_server.url}/events/")
 
-        # Step 4: Navigate to relations
-        relations_link = page.locator("a[href*='relations'], .nav-link:has-text('Relations')")
+        # Step 4: Navigate to Gift Plans
+        relations_link = page.locator("a[href*='relations'], .nav-link:has-text('Gift Plans')")
         if relations_link.count() > 0:
             relations_link.click()
             page.wait_for_load_state("networkidle")

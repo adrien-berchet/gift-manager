@@ -251,8 +251,8 @@ class BulkDeleteConfirmationView(LoginRequiredMixin, TemplateView):
             ) % {"count": count}
         elif entity_type == "relation":
             warning_message = ngettext(
-                "You are about to delete one gifting.",
-                "You are about to delete %(count)s giftings.",
+                "You are about to delete one gift plan.",
+                "You are about to delete %(count)s gift plans.",
                 count,
             ) % {"count": count}
         elif entity_type == "persongroup":

@@ -657,6 +657,10 @@ class BaseUpdateView(
 class DeleteSharedMixin:
     """Mixin to delete shared objects."""
 
+    def get_display_object_type(self) -> str:
+        """Return the user-facing object type used in delete messages."""
+        return getattr(self, "display_object_type", self.object_type)
+
     def post(self, request, *args, **kwargs):
         """Overload the delete method to handle conditional deletion.
 
@@ -681,12 +685,12 @@ class DeleteSharedMixin:
 
                 success_message = gettext(
                     "You no longer have access to this {}, but it remains shared with other users"
-                ).format(gettext(self.object_type).lower())
+                ).format(gettext(self.get_display_object_type()).lower())
             else:
                 # If not shared, completely delete the object
                 self.object.delete()
                 success_message = gettext("{} successfully deleted").format(
-                    gettext(self.object_type)
+                    gettext(self.get_display_object_type())
                 )
 
             # Handle HTMX vs regular requests
@@ -726,7 +730,7 @@ class CancelToPreviousMixin:
         context = super().get_context_data(**kwargs)
         # Retrieve the referer URL (previous page) or use the default URL
         referer = self.request.META.get("HTTP_REFERER")
-        context["cancel_url"] = referer if referer else self.success_url
+        context["cancel_url"] = referer or self.success_url
         return context
 
 
@@ -832,7 +836,7 @@ class BaseDeleteView(
         context = super().get_context_data(**kwargs)
         context.update(
             {
-                "entity_type": gettext(self.object_type),
+                "entity_type": gettext(self.get_display_object_type()),
                 "entity_name": str(self.object),
                 "entity_description": getattr(self.object, "description", None),
                 "entity_icon": self.get_entity_icon(),
@@ -847,7 +851,7 @@ class BaseDeleteView(
 
     def get_success_message(self):
         """Return success message for delete operations."""
-        return gettext("{} deleted successfully").format(gettext(self.object_type))
+        return gettext("{} deleted successfully").format(gettext(self.get_display_object_type()))
 
 
 class BaseDetailView(

@@ -30,11 +30,11 @@
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
-<h2 class="my-4">{% trans "Relations for this Event" %}</h2>
+<h2 class="my-4">{% trans "Gift Plans for this Event" %}</h2>
 {% if relations %}
 <div id="relations-grid" class="mt-3"></div>
 {% else %}
-<p class="text-center text-muted">{% trans "No relations for this event" %}</p>
+<p class="text-center text-muted">{% trans "No gift plans for this event" %}</p>
 {% endif %}
 {% endif %}
 {% endblock %}
