@@ -201,8 +201,10 @@
 
     .btn-sm {
         min-height: 36px;
-        pa
-;
+        padding: var(--space-1, 4px) var(--space-3, 12px);
+    }
+
+    .form-check-input {
         height: 20px;
         margin-top: 0.125em;
     }

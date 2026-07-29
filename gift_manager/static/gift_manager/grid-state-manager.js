@@ -16,8 +16,8 @@
  *   GridStateManager.refreshGridData('sharing-grid', newData);
  */
 
-(function(window) {
-    'use strict';
+(function (window) {
+    "use strict";
 
     // Registry of all Grid.js instances
     const gridRegistry = new Map();
@@ -34,16 +34,15 @@
     function registerGrid(gridId, gridInstance, originalData, options = {}) {
         const config = {
             rowIdField: options.rowIdField || 0,
-            ...options
+            ...options,
         };
 
         gridRegistry.set(gridId, {
             instance: gridInstance,
             data: JSON.parse(JSON.stringify(originalData)), // Deep copy
-            config: config
+            config: config,
         });
 
-        console.log(`[GridStateManager] Registered grid: ${gridId}`);
         return true;
     }
 
@@ -129,13 +128,12 @@
         // Handle array-based updates (for array row data)
         if (Array.isArray(updates)) {
             data[index] = updates;
-            console.log(`[GridStateManager] Updated row ${rowId} with array data`);
         }
         // Handle object-based updates (for object row data)
-        else if (typeof updates === 'object') {
+        else if (typeof updates === "object") {
             if (Array.isArray(row)) {
                 // For array rows, updates should be index-based
-                Object.keys(updates).forEach(key => {
+                Object.keys(updates).forEach((key) => {
                     const cellIndex = parseInt(key);
                     if (!isNaN(cellIndex) && cellIndex < row.length) {
                         data[index][cellIndex] = updates[key];
@@ -145,7 +143,6 @@
                 // For object rows, merge updates
                 data[index] = { ...row, ...updates };
             }
-            console.log(`[GridStateManager] Updated row ${rowId} with fields:`, Object.keys(updates));
         }
 
         // Re-render grid if requested
@@ -182,11 +179,12 @@
 
         try {
             // Update Grid.js configuration with new data
-            instance.updateConfig({
-                data: newData
-            }).forceRender();
+            instance
+                .updateConfig({
+                    data: newData,
+                })
+                .forceRender();
 
-            console.log(`[GridStateManager] Refreshed grid ${gridId} with ${newData.length} rows`);
             return true;
         } catch (error) {
             console.error(`[GridStateManager] Error refreshing grid ${gridId}:`, error);
@@ -203,7 +201,6 @@
     function unregisterGrid(gridId) {
         const removed = gridRegistry.delete(gridId);
         if (removed) {
-            console.log(`[GridStateManager] Unregistered grid: ${gridId}`);
         }
         return removed;
     }
@@ -222,7 +219,6 @@
      */
     function clearRegistry() {
         gridRegistry.clear();
-        console.log('[GridStateManager] Cleared all registered grids');
     }
 
     // Expose public API
@@ -235,7 +231,6 @@
         refreshGridData,
         unregisterGrid,
         getRegisteredGrids,
-        clearRegistry
+        clearRegistry,
     };
-
 })(window);

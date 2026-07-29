@@ -126,8 +126,17 @@
             <div class="d-flex align-items-center">
               <i class="fas fa-user me-2 text-muted"></i>
               <span>{{ friend.user.username }}</span>
-            </div
-         <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
+            </div>
+            <form method="post" class="permission-form d-inline" data-user-id="{{ friend.user.id }}">
+              {% csrf_token %}
+              <input type="hidden" name="user_id" value="{{ friend.user.id }}">
+              <select name="permission"
+                      class="form-select form-select-sm permission-select"
+                      hx-post="{{ request.path }}"
+                      hx-swap="none"
+                      hx-trigger="change"
+                      hx-include="closest form">
+                <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>🚫 {% trans "Not Shared" %}</option>
                 {% for level in permission_levels %}
                 <option value="{{ level.value }}" {% if friend.is_shared and friend.permission == level.value %}selected{% endif %}>
                   {% if level.value <= 10 %}👁️{% elif level.value <= 20 %}✏️{% else %}👑{% endif %}

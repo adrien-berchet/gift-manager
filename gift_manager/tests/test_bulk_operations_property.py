@@ -23,12 +23,25 @@ from gift_manager.tests.factories import UserFactory
 class TestBulkOperationsProperty:
     """Property-based tests for bulk operations support."""
 
+    ENTITY_UUID_FIELDS = {
+        "person": "person_id",
+        "gift": "gift_id",
+        "event": "event_id",
+        "relation": "relation_id",
+        "persongroup": "group_id",
+        "gifttag": "tag_id",
+    }
+
     @pytest.fixture(autouse=True)
     def setup_method(self):
         """Set up test client and user."""
         self.client = Client()
         self.user = UserFactory()
         self.client.force_login(self.user)
+
+    def get_entity_id(self, entity_type, entity):
+        """Return the public UUID field used by bulk-operation requests."""
+        return str(getattr(entity, self.ENTITY_UUID_FIELDS[entity_type.lower()]))
 
     def create_entities(self, entity_type, count):
         """Create test entities of the specified type."""
@@ -88,7 +101,7 @@ class TestBulkOperationsProperty:
         if not entities:
             pytest.skip(f"Could not create entities for type: {entity_type}")
 
-        entity_ids = [str(getattr(entity, entity._meta.pk.name)) for entity in entities]
+        entity_ids = [self.get_entity_id(entity_type, entity) for entity in entities]
 
         # Property 9.1: Bulk delete confirmation should be available
         confirmation_url = reverse("gift_manager:bulk_delete_confirmation")
@@ -172,7 +185,7 @@ class TestBulkOperationsProperty:
         if not entities:
             pytest.skip(f"Could not create entities for type: {entity_type}")
 
-        entity_ids = [str(getattr(entity, entity._meta.pk.name)) for entity in entities]
+        entity_ids = [self.get_entity_id(entity_type, entity) for entity in entities]
 
         # Property 9: Bulk share operation should be available
         bulk_operations_url = reverse("gift_manager:bulk_operations")
@@ -230,7 +243,7 @@ class TestBulkOperationsProperty:
                 self.user, entity, permission_level=permission_level
             )
 
-        entity_ids = [str(getattr(entity, entity._meta.pk.name)) for entity in entities]
+        entity_ids = [self.get_entity_id(entity_type, entity) for entity in entities]
 
         # Property 9: Bulk operations should respect permissions
         bulk_operations_url = reverse("gift_manager:bulk_operations")
@@ -275,7 +288,7 @@ class TestBulkOperationsProperty:
         """
         # Create a test entity
         entities = self.create_entities("person", 1)
-        entity_ids = [str(getattr(entities[0], entities[0]._meta.pk.name))]
+        entity_ids = [self.get_entity_id("person", entities[0])]
 
         # Property 9: Invalid actions should be handled gracefully
         bulk_operations_url = reverse("gift_manager:bulk_operations")

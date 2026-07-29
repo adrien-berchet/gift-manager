@@ -3,12 +3,12 @@
  * Provides real-time filtering with state persistence
  */
 
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
     // Configuration
     const FILTER_DEBOUNCE_DELAY = 200; // milliseconds
-    const STORAGE_PREFIX = 'filter-state-';
+    const STORAGE_PREFIX = "filter-state-";
 
     /**
      * Initialize dynamic filtering for a grid
@@ -18,19 +18,19 @@
      * @param {Array} columns - The columns configuration
      */
     function initDynamicFilters(gridId, grid, originalData, columns) {
-        const filterPanel = document.getElementById(gridId + '-filter-panel');
-        const filterContent = document.getElementById(gridId + '-filter-content');
+        const filterPanel = document.getElementById(gridId + "-filter-panel");
+        const filterContent = document.getElementById(gridId + "-filter-content");
 
         if (!filterPanel || !filterContent) {
-            console.warn('Dynamic filters: Filter panel not found for grid:', gridId);
+            console.warn("Dynamic filters: Filter panel not found for grid:", gridId);
             return;
         }
 
         // State management
         const filterState = {
-            search: '',
+            search: "",
             columnFilters: new Map(),
-            sortState: []
+            sortState: [],
         };
 
         // Load saved filter state
@@ -44,8 +44,6 @@
 
         // Apply initial filters
         applyFilters(grid, originalData, filterState);
-
-        console.log(`[DynamicFilters] Initialized for grid: ${gridId}`);
     }
 
     /**
@@ -53,10 +51,10 @@
      */
     function createDynamicFilterControls(gridId, filterContent, columns, originalData) {
         // Find or create filters section
-        let filtersSection = filterContent.querySelector('.filters-section');
+        let filtersSection = filterContent.querySelector(".filters-section");
         if (!filtersSection) {
-            filtersSection = document.createElement('div');
-            filtersSection.className = 'filter-section filters-section';
+            filtersSection = document.createElement("div");
+            filtersSection.className = "filter-section filters-section";
             filtersSection.innerHTML = `
                 <div class="filter-section-header">
                     <label class="filter-section-label">
@@ -67,7 +65,7 @@
             `;
 
             // Insert after search section
-            const searchSection = filterContent.querySelector('.search-section');
+            const searchSection = filterContent.querySelector(".search-section");
             if (searchSection) {
                 searchSection.parentNode.insertBefore(filtersSection, searchSection.nextSibling);
             } else {
@@ -75,20 +73,27 @@
             }
         }
 
-        const filtersContainer = filtersSection.querySelector('.filters-container');
+        const filtersContainer = filtersSection.querySelector(".filters-container");
 
         // Create filters for each filterable column
         columns.forEach((column, index) => {
             if (column.hidden || column.sort === false) return;
 
-            const columnName = typeof column === 'object' ? (column.name || column.id) : column;
-            if (!columnName || columnName.toLowerCase().includes('action')) return;
+            const columnName = typeof column === "object" ? column.name || column.id : column;
+            if (!columnName || columnName.toLowerCase().includes("action")) return;
 
             // Determine filter type based on data
             const filterType = determineFilterType(originalData, index, columnName);
 
             if (filterType) {
-                createColumnFilter(filtersContainer, gridId, columnName, index, filterType, originalData);
+                createColumnFilter(
+                    filtersContainer,
+                    gridId,
+                    columnName,
+                    index,
+                    filterType,
+                    originalData
+                );
             }
         });
     }
@@ -105,7 +110,7 @@
 
         for (let i = 0; i < sampleSize; i++) {
             const value = data[i][columnIndex];
-            if (value !== null && value !== undefined && value !== '') {
+            if (value !== null && value !== undefined && value !== "") {
                 samples.push(value);
             }
         }
@@ -113,52 +118,52 @@
         if (samples.length === 0) return null;
 
         // Check for date patterns
-        if (samples.some(val => isDateValue(val))) {
-            return 'date';
+        if (samples.some((val) => isDateValue(val))) {
+            return "date";
         }
 
         // Check for boolean patterns
-        if (samples.every(val => typeof val === 'boolean' || val === 'true' || val === 'false')) {
-            return 'boolean';
+        if (samples.every((val) => typeof val === "boolean" || val === "true" || val === "false")) {
+            return "boolean";
         }
 
         // Check for numeric patterns
-        if (samples.every(val => !isNaN(parseFloat(val)) && isFinite(val))) {
-            return 'number';
+        if (samples.every((val) => !isNaN(parseFloat(val)) && isFinite(val))) {
+            return "number";
         }
 
         // Check for limited unique values (good for select filters)
-        const uniqueValues = [...new Set(samples.map(val => extractFilterValue(val)))];
+        const uniqueValues = [...new Set(samples.map((val) => extractFilterValue(val)))];
         if (uniqueValues.length <= 10 && uniqueValues.length > 1) {
-            return 'select';
+            return "select";
         }
 
         // Default to text filter
-        return 'text';
+        return "text";
     }
 
     /**
      * Check if a value represents a date
      */
     function isDateValue(value) {
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
             return value.iso || value.display; // Date object format
         }
 
         // Check for date strings
         const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{1,2}\/\d{1,2}\/\d{4}$/;
-        return typeof value === 'string' && dateRegex.test(value);
+        return typeof value === "string" && dateRegex.test(value);
     }
 
     /**
      * Extract filterable value from complex data structures
      */
     function extractFilterValue(value) {
-        if (value === null || value === undefined) return '';
+        if (value === null || value === undefined) return "";
 
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
             // Handle objects with toString method or extract meaningful value
-            if (value.toString && typeof value.toString === 'function') {
+            if (value.toString && typeof value.toString === "function") {
                 return value.toString();
             }
             return JSON.stringify(value);
@@ -170,19 +175,29 @@
     /**
      * Create a filter control for a specific column
      */
-    function createColumnFilter(container, gridId, columnName, columnIndex, filterType, originalData) {
+    function createColumnFilter(
+        container,
+        gridId,
+        columnName,
+        columnIndex,
+        filterType,
+        originalData
+    ) {
         const filterId = `${gridId}-filter-${columnIndex}`;
-        const filterWrapper = document.createElement('div');
-        filterWrapper.className = 'column-filter-wrapper';
+        const filterWrapper = document.createElement("div");
+        filterWrapper.className = "column-filter-wrapper";
 
-        let filterHTML = '';
+        let filterHTML = "";
 
         switch (filterType) {
-            case 'select':
+            case "select":
                 const uniqueValues = getUniqueColumnValues(originalData, columnIndex);
-                const options = uniqueValues.map(value =>
-                    `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
-                ).join('');
+                const options = uniqueValues
+                    .map(
+                        (value) =>
+                            `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+                    )
+                    .join("");
 
                 filterHTML = `
                     <label class="column-filter-label">${escapeHtml(columnName)}</label>
@@ -196,7 +211,7 @@
                 `;
                 break;
 
-            case 'date':
+            case "date":
                 filterHTML = `
                     <label class="column-filter-label">${escapeHtml(columnName)}</label>
                     <div class="date-filter-group">
@@ -214,7 +229,7 @@
                 `;
                 break;
 
-            case 'number':
+            case "number":
                 filterHTML = `
                     <label class="column-filter-label">${escapeHtml(columnName)}</label>
                     <div class="number-filter-group">
@@ -232,7 +247,7 @@
                 `;
                 break;
 
-            case 'boolean':
+            case "boolean":
                 filterHTML = `
                     <label class="column-filter-label">${escapeHtml(columnName)}</label>
                     <select class="form-select form-select-sm column-filter"
@@ -273,7 +288,7 @@
     function getUniqueColumnValues(data, columnIndex) {
         const values = new Set();
 
-        data.forEach(row => {
+        data.forEach((row) => {
             const value = extractFilterValue(row[columnIndex]);
             if (value && value.trim()) {
                 values.add(value.trim());
@@ -287,12 +302,12 @@
      * Set up event handlers for filter controls
      */
     function setupFilterEventHandlers(gridId, grid, originalData, filterState) {
-        const filterContent = document.getElementById(gridId + '-filter-content');
+        const filterContent = document.getElementById(gridId + "-filter-content");
         let filterTimeout;
 
         // Handle filter input changes
-        filterContent.addEventListener('input', (e) => {
-            if (e.target.classList.contains('column-filter')) {
+        filterContent.addEventListener("input", (e) => {
+            if (e.target.classList.contains("column-filter")) {
                 clearTimeout(filterTimeout);
                 filterTimeout = setTimeout(() => {
                     updateFilterState(e.target, filterState);
@@ -303,8 +318,8 @@
         });
 
         // Handle filter select changes
-        filterContent.addEventListener('change', (e) => {
-            if (e.target.classList.contains('column-filter')) {
+        filterContent.addEventListener("change", (e) => {
+            if (e.target.classList.contains("column-filter")) {
                 updateFilterState(e.target, filterState);
                 applyFilters(grid, originalData, filterState);
                 saveFilterState(gridId, filterState);
@@ -312,9 +327,9 @@
         });
 
         // Handle search input separately (already handled by real-time search)
-        const searchInput = document.getElementById(gridId + '-search');
+        const searchInput = document.getElementById(gridId + "-search");
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
+            searchInput.addEventListener("input", (e) => {
                 filterState.search = e.target.value;
                 saveFilterState(gridId, filterState);
             });
@@ -339,16 +354,16 @@
         const columnFilter = filterState.columnFilters.get(columnIndex);
 
         switch (filterType) {
-            case 'date-from':
+            case "date-from":
                 columnFilter.dateFrom = value;
                 break;
-            case 'date-to':
+            case "date-to":
                 columnFilter.dateTo = value;
                 break;
-            case 'number-min':
+            case "number-min":
                 columnFilter.numberMin = value ? parseFloat(value) : null;
                 break;
-            case 'number-max':
+            case "number-max":
                 columnFilter.numberMax = value ? parseFloat(value) : null;
                 break;
             default:
@@ -357,7 +372,7 @@
         }
 
         // Clean up empty filters
-        if (Object.values(columnFilter).every(v => !v && v !== 0)) {
+        if (Object.values(columnFilter).every((v) => !v && v !== 0)) {
             filterState.columnFilters.delete(columnIndex);
         }
     }
@@ -370,7 +385,7 @@
 
         // Apply column filters
         filterState.columnFilters.forEach((filter, columnIndex) => {
-            filteredData = filteredData.filter(row => {
+            filteredData = filteredData.filter((row) => {
                 const cellValue = row[columnIndex];
                 return matchesColumnFilter(cellValue, filter);
             });
@@ -379,24 +394,23 @@
         // Update grid with filtered data
         try {
             grid.updateConfig({
-                data: filteredData
+                data: filteredData,
             }).forceRender();
 
             // Update empty state
             updateEmptyState(grid, filteredData.length > 0, filterState);
 
             // Trigger custom event
-            const event = new CustomEvent('filters:applied', {
+            const event = new CustomEvent("filters:applied", {
                 detail: {
                     gridId: grid.config.container.id,
                     resultCount: filteredData.length,
-                    filterState: filterState
-                }
+                    filterState: filterState,
+                },
             });
             document.dispatchEvent(event);
-
         } catch (error) {
-            console.error('Error applying filters:', error);
+            console.error("Error applying filters:", error);
         }
     }
 
@@ -439,7 +453,7 @@
      * Extract date value for comparison
      */
     function extractDateValue(value) {
-        if (typeof value === 'object' && value !== null) {
+        if (typeof value === "object" && value !== null) {
             return value.iso || value.display;
         }
         return value;
@@ -449,21 +463,21 @@
      * Add clear filters button
      */
     function addClearFiltersButton(gridId, filterContent, filterState, grid, originalData) {
-        const filtersSection = filterContent.querySelector('.filters-section');
+        const filtersSection = filterContent.querySelector(".filters-section");
         if (!filtersSection) return;
 
-        const headerDiv = filtersSection.querySelector('.filter-section-header');
+        const headerDiv = filtersSection.querySelector(".filter-section-header");
         if (!headerDiv) return;
 
-        const clearButton = document.createElement('button');
-        clearButton.type = 'button';
-        clearButton.className = 'btn btn-sm btn-outline-secondary clear-filters-btn';
+        const clearButton = document.createElement("button");
+        clearButton.type = "button";
+        clearButton.className = "btn btn-sm btn-outline-secondary clear-filters-btn";
         clearButton.innerHTML = '<i class="fas fa-times me-1"></i>Clear';
 
-        clearButton.addEventListener('click', () => {
+        clearButton.addEventListener("click", () => {
             // Clear all filter inputs
-            filterContent.querySelectorAll('.column-filter').forEach(input => {
-                input.value = '';
+            filterContent.querySelectorAll(".column-filter").forEach((input) => {
+                input.value = "";
             });
 
             // Clear filter state
@@ -484,33 +498,33 @@
         const gridContainer = grid.config.container;
 
         // Remove existing empty state
-        let emptyState = gridContainer.querySelector('.grid-empty-state');
+        let emptyState = gridContainer.querySelector(".grid-empty-state");
         if (emptyState) {
             emptyState.remove();
         }
 
         // Hide/show the entire grid wrapper (prevents Grid.js built-in message from flashing)
-        const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+        const gridWrapper = gridContainer.querySelector(".gridjs-wrapper");
         if (gridWrapper) {
-            gridWrapper.style.display = hasData ? '' : 'none';
+            gridWrapper.style.display = hasData ? "" : "none";
         }
 
         // Hide/show footer (pagination)
-        const filterFooter = gridContainer.querySelector('.gridjs-footer');
+        const filterFooter = gridContainer.querySelector(".gridjs-footer");
         if (filterFooter) {
-            filterFooter.style.display = hasData ? '' : 'none';
+            filterFooter.style.display = hasData ? "" : "none";
         }
 
         // Show empty state if no data
         if (!hasData) {
-            emptyState = document.createElement('div');
-            emptyState.className = 'grid-empty-state';
+            emptyState = document.createElement("div");
+            emptyState.className = "grid-empty-state";
 
             const hasActiveFilters = filterState.search || filterState.columnFilters.size > 0;
             const message = hasActiveFilters
-                ? 'No results match your current filters'
-                : 'No data available';
-            const icon = hasActiveFilters ? 'fa-filter' : 'fa-inbox';
+                ? "No results match your current filters"
+                : "No data available";
+            const icon = hasActiveFilters ? "fa-filter" : "fa-inbox";
 
             emptyState.innerHTML = `
                 <div class="empty-state-content">
@@ -520,7 +534,7 @@
             `;
 
             // Insert empty state
-            const gridFooter = gridContainer.querySelector('.gridjs-footer');
+            const gridFooter = gridContainer.querySelector(".gridjs-footer");
             if (gridFooter) {
                 gridFooter.parentNode.insertBefore(emptyState, gridFooter);
             } else {
@@ -537,11 +551,11 @@
             const stateToSave = {
                 search: filterState.search,
                 columnFilters: Array.from(filterState.columnFilters.entries()),
-                timestamp: Date.now()
+                timestamp: Date.now(),
             };
             localStorage.setItem(STORAGE_PREFIX + gridId, JSON.stringify(stateToSave));
         } catch (error) {
-            console.warn('Failed to save filter state:', error);
+            console.warn("Failed to save filter state:", error);
         }
     }
 
@@ -556,12 +570,12 @@
 
                 // Only load if not too old (24 hours)
                 if (Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
-                    filterState.search = parsed.search || '';
+                    filterState.search = parsed.search || "";
                     filterState.columnFilters = new Map(parsed.columnFilters || []);
 
                     // Apply saved search value
                     setTimeout(() => {
-                        const searchInput = document.getElementById(gridId + '-search');
+                        const searchInput = document.getElementById(gridId + "-search");
                         if (searchInput && filterState.search) {
                             searchInput.value = filterState.search;
                         }
@@ -569,7 +583,7 @@
                 }
             }
         } catch (error) {
-            console.warn('Failed to load filter state:', error);
+            console.warn("Failed to load filter state:", error);
         }
     }
 
@@ -577,14 +591,13 @@
      * Utility function to escape HTML
      */
     function escapeHtml(text) {
-        const div = document.createElement('div');
+        const div = document.createElement("div");
         div.textContent = text;
         return div.innerHTML;
     }
 
     // Expose to global scope
     window.DynamicFilters = {
-        init: initDynamicFilters
+        init: initDynamicFilters,
     };
-
 })();

@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle HX-Trigger events from successful deletion
     document.body.addEventListener('list:update', function() {
-        console.log('List update triggered - closing modal');
 
         // Reset button state before closing modal
         const confirmBtn = document.getElementById('confirmAction');
@@ -135,16 +134,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Handle showNotification trigger
     document.body.addEventListener('showNotification', function(e) {
-        console.log('Show notification triggered:', e.detail);
-        if (window.showNotification && e.detail) {
+                if (window.showNotification && e.detail) {
             window.showNotification(e.detail.message, e.detail.type);
         }
     });
 
     // Handle HTMX errors (for cases where HX-Trigger is not sent)
     document.body.addEventListener('htmx:responseError', function(e) {
-        console.log('HTMX responseError:', e.detail);
-        // Check if this is our delete request
+                // Check if this is our delete request
         if (e.detail.requestConfig && e.detail.requestConfig.url &&
             e.detail.requestConfig.url.includes('/delete/')) {
             // Re-enable button
@@ -168,8 +165,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmModal = document.getElementById('confirmModal');
     if (confirmModal) {
         confirmModal.addEventListener('hidden.bs.modal', function() {
-            console.log('Modal hidden - resetting button state');
-            const confirmBtn = document.getElementById('confirmAction');
+                        const confirmBtn = document.getElementById('confirmAction');
             if (confirmBtn) {
                 confirmBtn.disabled = false;
                 confirmBtn.textContent = '{% trans "Delete" %}';

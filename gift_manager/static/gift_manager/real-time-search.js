@@ -3,8 +3,8 @@
  * Provides debounced client-side search with loading states
  */
 
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
     // Configuration
     const DEBOUNCE_DELAY = 200; // milliseconds
@@ -16,10 +16,10 @@
      * @param {Array} originalData - The original data array
      */
     function initRealTimeSearch(gridId, grid, originalData) {
-        const searchInput = document.getElementById(gridId + '-search');
+        const searchInput = document.getElementById(gridId + "-search");
 
         if (!searchInput) {
-            console.warn('[RealTimeSearch] Missing search input for grid:', gridId);
+            console.warn("[RealTimeSearch] Missing search input for grid:", gridId);
             return;
         }
 
@@ -46,15 +46,15 @@
 
             const term = searchTerm.trim().toLowerCase();
 
-            return originalData.filter(row => {
-                return searchableIndices.some(colIndex => {
+            return originalData.filter((row) => {
+                return searchableIndices.some((colIndex) => {
                     const cellValue = row[colIndex];
                     if (cellValue == null) return false;
 
                     // Handle arrays of objects (e.g. groups_info, tags_info)
                     if (Array.isArray(cellValue)) {
-                        return cellValue.some(item => {
-                            if (typeof item === 'object' && item.name) {
+                        return cellValue.some((item) => {
+                            if (typeof item === "object" && item.name) {
                                 return item.name.toLowerCase().includes(term);
                             }
                             return String(item).toLowerCase().includes(term);
@@ -82,17 +82,18 @@
                 updateResultCount(gridId, filtered.length, searchTerm);
 
                 // Dispatch event for other components
-                document.dispatchEvent(new CustomEvent('search:complete', {
-                    detail: {
-                        gridId: gridId,
-                        searchTerm: searchTerm,
-                        resultCount: filtered.length,
-                        data: filtered
-                    }
-                }));
-
+                document.dispatchEvent(
+                    new CustomEvent("search:complete", {
+                        detail: {
+                            gridId: gridId,
+                            searchTerm: searchTerm,
+                            resultCount: filtered.length,
+                            data: filtered,
+                        },
+                    })
+                );
             } catch (error) {
-                console.error('[RealTimeSearch] Error updating grid:', error);
+                console.error("[RealTimeSearch] Error updating grid:", error);
             }
         };
 
@@ -101,10 +102,10 @@
             const countElement = document.querySelector(`#${gridId}-result-count`);
             if (countElement) {
                 if (searchTerm.trim()) {
-                    countElement.textContent = `${count} result${count !== 1 ? 's' : ''} found`;
-                    countElement.style.display = 'block';
+                    countElement.textContent = `${count} result${count !== 1 ? "s" : ""} found`;
+                    countElement.style.display = "block";
                 } else {
-                    countElement.style.display = 'none';
+                    countElement.style.display = "none";
                 }
             }
         };
@@ -115,34 +116,35 @@
             if (!gridContainer) return;
 
             // Remove existing empty state
-            const existing = gridContainer.querySelector('.grid-empty-state');
+            const existing = gridContainer.querySelector(".grid-empty-state");
             if (existing) existing.remove();
 
             // Hide/show the entire grid wrapper (prevents Grid.js built-in
             // "No matching records found" from flashing before our custom message)
-            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
+            const gridWrapper = gridContainer.querySelector(".gridjs-wrapper");
             if (gridWrapper) {
-                gridWrapper.style.display = hasData ? '' : 'none';
+                gridWrapper.style.display = hasData ? "" : "none";
             }
 
             // Hide/show footer (pagination)
-            const gridFooter = gridContainer.querySelector('.gridjs-footer');
+            const gridFooter = gridContainer.querySelector(".gridjs-footer");
             if (gridFooter) {
-                gridFooter.style.display = hasData ? '' : 'none';
+                gridFooter.style.display = hasData ? "" : "none";
             }
 
             if (!hasData) {
-                const emptyState = document.createElement('div');
-                emptyState.className = 'grid-empty-state';
+                const emptyState = document.createElement("div");
+                emptyState.className = "grid-empty-state";
 
                 let message, icon;
-                if (searchTerm && searchTerm.trim() !== '') {
-                    icon = 'fa-search';
-                    message = window.gridTranslations?.noSearchResults ||
-                             'No results match your current search';
+                if (searchTerm && searchTerm.trim() !== "") {
+                    icon = "fa-search";
+                    message =
+                        window.gridTranslations?.noSearchResults ||
+                        "No results match your current search";
                 } else {
-                    icon = 'fa-inbox';
-                    message = window.gridTranslations?.noData || 'No data available';
+                    icon = "fa-inbox";
+                    message = window.gridTranslations?.noData || "No data available";
                 }
 
                 emptyState.innerHTML = `
@@ -161,7 +163,7 @@
         };
 
         // Set up debounced search
-        searchInput.addEventListener('input', (e) => {
+        searchInput.addEventListener("input", (e) => {
             const searchTerm = e.target.value;
             clearTimeout(searchTimeout);
 
@@ -171,33 +173,30 @@
         });
 
         // Handle Escape key to clear search
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                searchInput.value = '';
-                performSearch('');
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                searchInput.value = "";
+                performSearch("");
                 searchInput.blur();
             }
         });
 
         // Add result count element if it doesn't exist
         if (!document.querySelector(`#${gridId}-result-count`)) {
-            const countElement = document.createElement('div');
+            const countElement = document.createElement("div");
             countElement.id = `${gridId}-result-count`;
-            countElement.className = 'search-result-count';
-            countElement.style.display = 'none';
+            countElement.className = "search-result-count";
+            countElement.style.display = "none";
 
-            const searchSection = searchInput.closest('.search-section');
+            const searchSection = searchInput.closest(".search-section");
             if (searchSection) {
                 searchSection.appendChild(countElement);
             }
         }
-
-        console.log(`[RealTimeSearch] Initialized for grid: ${gridId}`);
     }
 
     // Expose to global scope
     window.RealTimeSearch = {
-        init: initRealTimeSearch
+        init: initRealTimeSearch,
     };
-
 })();

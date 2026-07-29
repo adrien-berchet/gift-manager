@@ -24,7 +24,8 @@ repos:
       - id: commitlint
         stages:
           - commit-msg
-        additional_dependencies: ["conventional-changelog-conventionalcommits"]
+        language_version: 22.12.0
+        additional_dependencies: ["conventional-changelog-conventionalcommits@9.3.1"]
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0b1
     hooks:

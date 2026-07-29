@@ -5,7 +5,7 @@
  */
 
 (function (window) {
-    'use strict';
+    "use strict";
 
     /**
      * Configuration for unsaved changes protection
@@ -13,31 +13,33 @@
     const UNSAVED_CHANGES_CONFIG = {
         // CSS classes
         classes: {
-            modified: 'form-modified',
-            unsavedField: 'field-unsaved',
-            warningModal: 'unsaved-changes-modal',
-            saveIndicator: 'save-indicator'
+            modified: "form-modified",
+            unsavedField: "field-unsaved",
+            warningModal: "unsaved-changes-modal",
+            saveIndicator: "save-indicator",
         },
 
         // Selectors
         selectors: {
-            forms: 'form[data-track-changes], #main-form',
-            trackableFields: 'input, textarea, select',
-            excludeFields: '[type="hidden"], [type="submit"], [type="button"], .no-track'
+            forms: "form[data-track-changes], #main-form",
+            trackableFields: "input, textarea, select",
+            excludeFields: '[type="hidden"], [type="submit"], [type="button"], .no-track',
         },
 
         // Messages
         messages: {
-            navigationWarning: 'You have unsaved changes. Are you sure you want to leave this page?',
-            modalTitle: 'Unsaved Changes',
-            modalBody: 'You have unsaved changes that will be lost if you continue. What would you like to do?',
-            saveButton: 'Save Changes',
-            discardButton: 'Discard Changes',
-            cancelButton: 'Cancel'
+            navigationWarning:
+                "You have unsaved changes. Are you sure you want to leave this page?",
+            modalTitle: "Unsaved Changes",
+            modalBody:
+                "You have unsaved changes that will be lost if you continue. What would you like to do?",
+            saveButton: "Save Changes",
+            discardButton: "Discard Changes",
+            cancelButton: "Cancel",
         },
 
         // Timeouts
-        debounceDelay: 300
+        debounceDelay: 300,
     };
 
     /**
@@ -54,8 +56,8 @@
      */
     function init() {
         // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', setupUnsavedChangesProtection);
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", setupUnsavedChangesProtection);
         } else {
             setupUnsavedChangesProtection();
         }
@@ -67,7 +69,7 @@
     function setupUnsavedChangesProtection() {
         const forms = document.querySelectorAll(UNSAVED_CHANGES_CONFIG.selectors.forms);
 
-        forms.forEach(form => {
+        forms.forEach((form) => {
             if (!trackedForms.has(form)) {
                 trackForm(form);
             }
@@ -78,8 +80,6 @@
 
         // Setup modal for confirmation dialogs
         setupConfirmationModal();
-
-        console.log(`[UnsavedChanges] Initialized protection for ${forms.length} forms`);
     }
 
     /**
@@ -97,28 +97,26 @@
 
         // Add change listeners to all trackable fields
         const fields = form.querySelectorAll(UNSAVED_CHANGES_CONFIG.selectors.trackableFields);
-        fields.forEach(field => {
+        fields.forEach((field) => {
             if (!field.matches(UNSAVED_CHANGES_CONFIG.selectors.excludeFields)) {
                 setupFieldTracking(field, form);
             }
         });
 
         // Handle form submission
-        form.addEventListener('submit', function() {
+        form.addEventListener("submit", function () {
             clearUnsavedChanges();
         });
-
-        console.log(`[UnsavedChanges] Tracking form with ${fields.length} fields`);
     }
 
     /**
      * Setup tracking for individual field
      */
     function setupFieldTracking(field, form) {
-        const events = ['input', 'change', 'paste', 'keyup'];
+        const events = ["input", "change", "paste", "keyup"];
 
-        events.forEach(eventType => {
-            field.addEventListener(eventType, function() {
+        events.forEach((eventType) => {
+            field.addEventListener(eventType, function () {
                 // Debounce the change detection
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
@@ -133,7 +131,7 @@
      */
     function storeOriginalFormData(form) {
         const formData = new FormData(form);
-        const formId = form.id || form.getAttribute('data-form-id') || 'default';
+        const formId = form.id || form.getAttribute("data-form-id") || "default";
 
         originalFormData.set(formId, formData);
     }
@@ -142,7 +140,7 @@
      * Check if form has unsaved changes
      */
     function checkForChanges(form) {
-        const formId = form.id || form.getAttribute('data-form-id') || 'default';
+        const formId = form.id || form.getAttribute("data-form-id") || "default";
         const originalData = originalFormData.get(formId);
 
         if (!originalData) {
@@ -195,9 +193,9 @@
             addUnsavedActionsToForm(form);
 
             // Add class to parent offcanvas if exists
-            const offcanvas = form.closest('.offcanvas');
+            const offcanvas = form.closest(".offcanvas");
             if (offcanvas) {
-                offcanvas.classList.add('has-unsaved-changes');
+                offcanvas.classList.add("has-unsaved-changes");
             }
         } else {
             form.classList.remove(UNSAVED_CHANGES_CONFIG.classes.modified);
@@ -206,9 +204,9 @@
             removeUnsavedActionsFromForm(form);
 
             // Remove class from parent offcanvas if exists
-            const offcanvas = form.closest('.offcanvas');
+            const offcanvas = form.closest(".offcanvas");
             if (offcanvas) {
-                offcanvas.classList.remove('has-unsaved-changes');
+                offcanvas.classList.remove("has-unsaved-changes");
             }
         }
     }
@@ -217,7 +215,7 @@
      * Mark fields that have been modified
      */
     function markModifiedFields(form) {
-        const formId = form.id || form.getAttribute('data-form-id') || 'default';
+        const formId = form.id || form.getAttribute("data-form-id") || "default";
         const originalData = originalFormData.get(formId);
         const currentData = new FormData(form);
 
@@ -237,16 +235,16 @@
 
         // Mark modified fields
         const fields = form.querySelectorAll(UNSAVED_CHANGES_CONFIG.selectors.trackableFields);
-        fields.forEach(field => {
+        fields.forEach((field) => {
             const fieldName = field.name;
             if (fieldName && original[fieldName] !== current[fieldName]) {
                 field.classList.add(UNSAVED_CHANGES_CONFIG.classes.unsavedField);
-                field.setAttribute('title', 'This field has been modified');
-                field.setAttribute('data-original-value', original[fieldName] || '');
+                field.setAttribute("title", "This field has been modified");
+                field.setAttribute("data-original-value", original[fieldName] || "");
             } else {
                 field.classList.remove(UNSAVED_CHANGES_CONFIG.classes.unsavedField);
-                field.removeAttribute('title');
-                field.removeAttribute('data-original-value');
+                field.removeAttribute("title");
+                field.removeAttribute("data-original-value");
             }
         });
     }
@@ -255,11 +253,11 @@
      * Clear modified field indicators
      */
     function clearModifiedFields(form) {
-        const fields = form.querySelectorAll('.' + UNSAVED_CHANGES_CONFIG.classes.unsavedField);
-        fields.forEach(field => {
+        const fields = form.querySelectorAll("." + UNSAVED_CHANGES_CONFIG.classes.unsavedField);
+        fields.forEach((field) => {
             field.classList.remove(UNSAVED_CHANGES_CONFIG.classes.unsavedField);
-            field.removeAttribute('title');
-            field.removeAttribute('data-original-value');
+            field.removeAttribute("title");
+            field.removeAttribute("data-original-value");
         });
     }
 
@@ -267,7 +265,7 @@
      * Setup navigation protection (beforeunload)
      */
     function setupNavigationProtection() {
-        window.addEventListener('beforeunload', function(event) {
+        window.addEventListener("beforeunload", function (event) {
             if (hasUnsavedChanges) {
                 event.preventDefault();
                 event.returnValue = UNSAVED_CHANGES_CONFIG.messages.navigationWarning;
@@ -276,12 +274,16 @@
         });
 
         // Intercept navigation links
-        document.addEventListener('click', function(event) {
-            const link = event.target.closest('a[href]');
+        document.addEventListener("click", function (event) {
+            const link = event.target.closest("a[href]");
             if (link && hasUnsavedChanges) {
                 // Check if it's an external link or same-page anchor
-                const href = link.getAttribute('href');
-                if (href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank') {
+                const href = link.getAttribute("href");
+                if (
+                    href.startsWith("#") ||
+                    href.startsWith("javascript:") ||
+                    link.target === "_blank"
+                ) {
                     return;
                 }
 
@@ -299,7 +301,7 @@
      */
     function setupConfirmationModal() {
         // Create modal HTML if it doesn't exist
-        if (!document.getElementById('unsaved-changes-modal')) {
+        if (!document.getElementById("unsaved-changes-modal")) {
             const modalHTML = `
                 <div class="modal fade" id="unsaved-changes-modal" tabindex="-1" aria-labelledby="unsaved-changes-modal-label" aria-hidden="true">
                     <div class="modal-dialog">
@@ -332,7 +334,7 @@
                 </div>
             `;
 
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            document.body.insertAdjacentHTML("beforeend", modalHTML);
 
             // Setup modal event handlers
             setupModalEventHandlers();
@@ -343,14 +345,14 @@
      * Setup event handlers for the confirmation modal
      */
     function setupModalEventHandlers() {
-        const modal = document.getElementById('unsaved-changes-modal');
-        const saveBtn = document.getElementById('save-changes-btn');
-        const discardBtn = document.getElementById('discard-changes-btn');
+        const modal = document.getElementById("unsaved-changes-modal");
+        const saveBtn = document.getElementById("save-changes-btn");
+        const discardBtn = document.getElementById("discard-changes-btn");
 
-        saveBtn.addEventListener('click', function() {
+        saveBtn.addEventListener("click", function () {
             // Try to save the form
             const forms = document.querySelectorAll(UNSAVED_CHANGES_CONFIG.selectors.forms);
-            const modifiedForm = Array.from(forms).find(form =>
+            const modifiedForm = Array.from(forms).find((form) =>
                 form.classList.contains(UNSAVED_CHANGES_CONFIG.classes.modified)
             );
 
@@ -366,7 +368,7 @@
             }
         });
 
-        discardBtn.addEventListener('click', function() {
+        discardBtn.addEventListener("click", function () {
             // Clear unsaved changes and proceed with navigation
             clearUnsavedChanges();
 
@@ -393,7 +395,7 @@
     function showNavigationConfirmation(callback) {
         navigationCallback = callback;
 
-        const modal = document.getElementById('unsaved-changes-modal');
+        const modal = document.getElementById("unsaved-changes-modal");
         if (modal) {
             const modalInstance = new bootstrap.Modal(modal);
             modalInstance.show();
@@ -413,20 +415,20 @@
         hasUnsavedChanges = false;
 
         // Clear all form modifications
-        trackedForms.forEach(form => {
+        trackedForms.forEach((form) => {
             form.classList.remove(UNSAVED_CHANGES_CONFIG.classes.modified);
             clearModifiedFields(form);
             removeUnsavedActionsFromForm(form);
 
             // Remove class from parent offcanvas if exists
-            const offcanvas = form.closest('.offcanvas');
+            const offcanvas = form.closest(".offcanvas");
             if (offcanvas) {
-                offcanvas.classList.remove('has-unsaved-changes');
+                offcanvas.classList.remove("has-unsaved-changes");
             }
         });
 
         // Update original form data
-        trackedForms.forEach(form => {
+        trackedForms.forEach((form) => {
             storeOriginalFormData(form);
         });
 
@@ -434,7 +436,7 @@
         hideSaveIndicator();
 
         // Trigger custom event
-        const event = new CustomEvent('unsavedChangesCleared');
+        const event = new CustomEvent("unsavedChangesCleared");
         document.dispatchEvent(event);
     }
 
@@ -442,11 +444,11 @@
      * Show save indicator
      */
     function showSaveIndicator() {
-        let indicator = document.getElementById('save-indicator');
+        let indicator = document.getElementById("save-indicator");
 
         if (!indicator) {
-            indicator = document.createElement('div');
-            indicator.id = 'save-indicator';
+            indicator = document.createElement("div");
+            indicator.id = "save-indicator";
             indicator.className = UNSAVED_CHANGES_CONFIG.classes.saveIndicator;
             indicator.innerHTML = `
                 <i class="fas fa-exclamation-triangle"></i>
@@ -455,16 +457,16 @@
             document.body.appendChild(indicator);
         }
 
-        indicator.classList.remove('hidden');
+        indicator.classList.remove("hidden");
     }
 
     /**
      * Hide save indicator
      */
     function hideSaveIndicator() {
-        const indicator = document.getElementById('save-indicator');
+        const indicator = document.getElementById("save-indicator");
         if (indicator) {
-            indicator.classList.add('hidden');
+            indicator.classList.add("hidden");
             setTimeout(() => {
                 if (indicator.parentNode) {
                     indicator.parentNode.removeChild(indicator);
@@ -478,7 +480,7 @@
      */
     function addUnsavedActionsToForm(form) {
         // Don't add if already exists
-        if (form.querySelector('.unsaved-actions')) {
+        if (form.querySelector(".unsaved-actions")) {
             return;
         }
 
@@ -500,26 +502,26 @@
             </div>
         `;
 
-        form.insertAdjacentHTML('beforeend', actionsHTML);
+        form.insertAdjacentHTML("beforeend", actionsHTML);
 
         // Add event listeners
-        const saveBtn = form.querySelector('.save-changes-btn');
-        const discardBtn = form.querySelector('.discard-changes-btn');
+        const saveBtn = form.querySelector(".save-changes-btn");
+        const discardBtn = form.querySelector(".discard-changes-btn");
 
         if (saveBtn) {
-            saveBtn.addEventListener('click', function(e) {
+            saveBtn.addEventListener("click", function (e) {
                 e.preventDefault();
                 form.submit();
             });
         }
 
         if (discardBtn) {
-            discardBtn.addEventListener('click', function(e) {
+            discardBtn.addEventListener("click", function (e) {
                 e.preventDefault();
-                if (confirm('Are you sure you want to discard all changes?')) {
+                if (confirm("Are you sure you want to discard all changes?")) {
                     clearUnsavedChanges();
                     // Reload form data or reset form
-                    const formId = form.id || form.getAttribute('data-form-id') || 'default';
+                    const formId = form.id || form.getAttribute("data-form-id") || "default";
                     const originalData = originalFormData.get(formId);
                     if (originalData) {
                         // Reset form to original values
@@ -534,7 +536,7 @@
      * Remove unsaved actions from form
      */
     function removeUnsavedActionsFromForm(form) {
-        const actions = form.querySelector('.unsaved-actions');
+        const actions = form.querySelector(".unsaved-actions");
         if (actions) {
             actions.remove();
         }
@@ -546,7 +548,7 @@
     function resetFormToOriginal(form, originalData) {
         const fields = form.querySelectorAll(UNSAVED_CHANGES_CONFIG.selectors.trackableFields);
 
-        fields.forEach(field => {
+        fields.forEach((field) => {
             if (field.matches(UNSAVED_CHANGES_CONFIG.selectors.excludeFields)) {
                 return;
             }
@@ -555,14 +557,14 @@
             if (fieldName && originalData.has(fieldName)) {
                 const originalValue = originalData.get(fieldName);
 
-                if (field.type === 'checkbox' || field.type === 'radio') {
+                if (field.type === "checkbox" || field.type === "radio") {
                     field.checked = field.value === originalValue;
                 } else {
                     field.value = originalValue;
                 }
 
                 // Trigger change event to update any dependent UI
-                field.dispatchEvent(new Event('change', { bubbles: true }));
+                field.dispatchEvent(new Event("change", { bubbles: true }));
             }
         });
     }
@@ -578,7 +580,7 @@
      * Manually mark form as having changes (for programmatic updates)
      */
     function markAsChanged(form) {
-        if (typeof form === 'string') {
+        if (typeof form === "string") {
             form = document.getElementById(form);
         }
 
@@ -592,7 +594,7 @@
      * Add new form to tracking (for dynamically created forms)
      */
     function addForm(form) {
-        if (typeof form === 'string') {
+        if (typeof form === "string") {
             form = document.getElementById(form);
         }
 
@@ -608,10 +610,9 @@
         clearUnsavedChanges: clearUnsavedChanges,
         markAsChanged: markAsChanged,
         addForm: addForm,
-        config: UNSAVED_CHANGES_CONFIG
+        config: UNSAVED_CHANGES_CONFIG,
     };
 
     // Auto-initialize
     init();
-
 })(window);

@@ -980,8 +980,6 @@
                 const target = event.detail.target;
                 const elt = event.detail.elt;
 
-                console.log('[FormResponse] Status:', xhr.status);
-
                 if (xhr.status === 200 || xhr.status === 201) {
                     // Success - close offcanvas and refresh grid
                     const offcanvas = target.closest('.offcanvas');
@@ -1000,7 +998,6 @@
 
                 } else if (xhr.status === 400) {
                     // Validation errors - form will be re-rendered with errors
-                    console.log('[FormResponse] Validation errors, form re-rendered');
 
                 } else if (xhr.status === 403) {
                     // Permission denied
@@ -1027,18 +1024,14 @@
                 const isPermissionUpdate = elt && elt.classList && elt.classList.contains('permission-select');
 
                 if (isPermissionUpdate) {
-                    console.log('[PermissionUpdate] Permission selector updated, status:', xhr.status);
                     // Don't process as form submission
                     return;
                 }
 
                 if (isFormSubmission) {
-                    console.log('[FormSubmission] Form submitted:', elt.dataset.formType, 'Status:', xhr.status);
-
                     if (xhr.status === 200 || xhr.status === 201) {
                         // Check for HX-Trigger header
                         const triggerHeader = xhr.getResponseHeader('HX-Trigger');
-                        console.log('[FormSubmission] HX-Trigger header:', triggerHeader);
 
                         // Close offcanvas if trigger includes offcanvas:close
                         if (triggerHeader && triggerHeader.includes('offcanvas:close')) {
@@ -1046,7 +1039,6 @@
                             if (offcanvas) {
                                 const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
                                 if (offcanvasInstance) {
-                                    console.log('[FormSubmission] Closing offcanvas');
                                     offcanvasInstance.hide();
                                 }
                             }
@@ -1054,7 +1046,6 @@
 
                         // Trigger list update if specified
                         if (triggerHeader && triggerHeader.includes('list:update')) {
-                            console.log('[FormSubmission] Triggering list update');
                             document.dispatchEvent(new CustomEvent('list:update'));
                         }
 
@@ -1062,11 +1053,9 @@
                         showNotification('Changes saved successfully', 'success');
                     } else if (xhr.status === 400) {
                         // Validation errors - form will be re-rendered with errors
-                        console.log('[FormSubmission] Validation errors');
                         showNotification('Please correct the errors in the form', 'error');
                     } else if (xhr.status >= 500) {
                         // Server error
-                        console.log('[FormSubmission] Server error');
                         showNotification('A server error occurred. Please try again.', 'error');
                     }
                 }
@@ -1086,8 +1075,6 @@
                 if (xhr && xhr.getResponseHeader) {
                     const triggerHeader = xhr.getResponseHeader('HX-Trigger');
                     if (triggerHeader) {
-                        console.log('[HTMX AfterSwap] Processing HX-Trigger header:', triggerHeader);
-
                         // Parse and process triggers
                         const triggers = triggerHeader.split(',').map(t => t.trim());
                         triggers.forEach(trigger => {
@@ -1095,7 +1082,6 @@
                             if (trigger.startsWith('{')) return;
 
                             // Dispatch as custom event
-                            console.log('[HTMX AfterSwap] Dispatching event:', trigger);
                             document.dispatchEvent(new CustomEvent(trigger, { bubbles: true }));
                         });
 
@@ -1107,7 +1093,6 @@
                             if (offcanvasEl) {
                                 const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
                                 if (offcanvasInstance) {
-                                    console.log('[HTMX AfterSwap] Closing offcanvas');
                                     offcanvasInstance.hide();
                                 }
                             }
@@ -1127,22 +1112,6 @@
                     trigger.dataset.originalText = originalText;
                 }
             });
-
-            // Debug: Log all HTMX events to understand the flow
-            ['htmx:configRequest', 'htmx:beforeRequest', 'htmx:afterRequest', 'htmx:beforeSwap', 'htmx:afterSwap', 'htmx:beforeSend'].forEach(eventName => {
-                document.body.addEventListener(eventName, function(e) {
-                    console.log(`[HTMX Debug] ${eventName}:`, {
-                        target: e.detail.target,
-                        elt: e.detail.elt?.tagName,
-                        eltId: e.detail.elt?.id,
-                        eltClass: e.detail.elt?.className,
-                        successful: e.detail.successful,
-                        isError: e.detail.isError,
-                        xhr: e.detail.xhr ? 'present' : 'missing'
-                    });
-                });
-            });
-
 
             // HTMX natively processes HX-Trigger headers and dispatches events.
             // No custom beforeSwap/afterSettle dispatch needed.
@@ -1195,7 +1164,6 @@
 
                                     const form = document.getElementById('deleteForm');
                                     if (form) {
-                                        console.log('Submitting delete form:', form.action);
 
                                         // Check if HTMX is available
                                         if (typeof htmx === 'undefined') {
@@ -1206,7 +1174,6 @@
                                         }
 
                                         // Submit form via HTMX
-                                        console.log('Triggering HTMX request...');
 
                                         // Get form data
                                         const formData = new FormData(form);
@@ -1218,8 +1185,7 @@
                                                 'HX-Request': 'true'
                                             }
                                         }).then(function() {
-                                            console.log('HTMX request completed successfully');
-                                        }).catch(function(error) {
+                                                                                    }).catch(function(error) {
                                             console.error('HTMX request failed:', error);
                                             // Re-enable button on error
                                             confirmBtn.disabled = false;
@@ -1321,16 +1287,14 @@
                             // Then explicitly process any forms inside
                             const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
                             htmxForms.forEach(form => {
-                                console.log('[EditHandler] Processing HTMX on form:', form.id || form.className);
-                                htmx.process(form);
+                                                                htmx.process(form);
                             });
 
                             // Initialize forms with FormInitializer
                             if (window.FormInitializer) {
                                 const forms = container.querySelectorAll('form[data-form-type]');
                                 forms.forEach(form => {
-                                    console.log('[EditHandler] Initializing form:', form.dataset.formType);
-                                    window.FormInitializer.initForm(form);
+                                                                        window.FormInitializer.initForm(form);
                                 });
                             }
 
@@ -1386,16 +1350,14 @@
                             // Then explicitly process any forms inside
                             const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
                             htmxForms.forEach(form => {
-                                console.log('[CreateHandler] Processing HTMX on form:', form.id || form.className);
-                                htmx.process(form);
+                                                                htmx.process(form);
                             });
 
                             // Initialize forms with FormInitializer
                             if (window.FormInitializer) {
                                 const forms = container.querySelectorAll('form[data-form-type]');
                                 forms.forEach(form => {
-                                    console.log('[CreateHandler] Initializing form:', form.dataset.formType);
-                                    window.FormInitializer.initForm(form);
+                                                                        window.FormInitializer.initForm(form);
                                 });
                             }
 

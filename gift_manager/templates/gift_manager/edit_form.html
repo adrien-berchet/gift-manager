@@ -114,14 +114,12 @@
 
         // Check if we have friends data
         if (friendsData.length === 0) {
-            console.log('No friends data available, skipping grid initialization');
             return;
         }
 
         // Check if the grid container exists before initializing
         const gridContainer = document.getElementById('sharing-grid');
         if (!gridContainer) {
-            console.log('Sharing grid container not found, skipping grid initialization');
             return;
         }
 
@@ -206,7 +204,6 @@
             GridStateManager.registerGrid('sharing-grid', grid, friendsData, {
                 rowIdField: 0  // User ID is in column 0
             });
-            console.log('[EditForm] Registered sharing-grid with GridStateManager');
         } else {
             console.error('GridStateManager not loaded!');
         }
@@ -214,7 +211,6 @@
         // Initialize HTMXGridBridge for automatic state synchronization
         if (typeof HTMXGridBridge !== 'undefined') {
             HTMXGridBridge.init();
-            console.log('[EditForm] Initialized HTMXGridBridge');
         } else {
             console.error('HTMXGridBridge not loaded!');
         }
@@ -226,7 +222,6 @@
         }
 
         // Initial HTMX processing
-        console.log('Processing HTMX on grid container');
         htmx.process(gridContainer);
 
         // Apply initial row styling
@@ -265,32 +260,6 @@
     document.body.addEventListener('htmx:responseError', function (event) {
         console.error('HTMX error:', event.detail);
         showNotification("{% trans 'An error occurred while updating permissions'|escapejs %}", 'danger');
-    });
-
-    // Debug HTMX events for permission updates
-    document.body.addEventListener('htmx:beforeRequest', function (event) {
-        if (event.detail.elt.name === 'permission') {
-            console.log('[DEBUG] Permission update - Before request', event.detail);
-        }
-    });
-
-    document.body.addEventListener('htmx:afterRequest', function (event) {
-        if (event.detail.elt.name === 'permission') {
-            console.log('[DEBUG] Permission update - After request', {
-                status: event.detail.xhr.status,
-                response: event.detail.xhr.responseText,
-                successful: event.detail.successful
-            });
-        }
-    });
-
-    document.body.addEventListener('htmx:beforeSwap', function (event) {
-        if (event.detail.elt.name === 'permission') {
-            console.log('[DEBUG] Permission update - Before swap', {
-                shouldSwap: event.detail.shouldSwap,
-                target: event.detail.target
-            });
-        }
     });
 
     // Note: Row styling after permission changes is now handled by the grid:update event listener above

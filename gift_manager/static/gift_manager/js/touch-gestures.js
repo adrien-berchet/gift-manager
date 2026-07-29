@@ -3,17 +3,17 @@
  * Provides swipe gestures for delete, archive, and other actions
  */
 
-(function() {
-    'use strict';
+(function () {
+    "use strict";
 
     const TouchGestures = {
         // Configuration
         config: {
-            swipeThreshold: 80,        // Minimum distance for swipe
-            swipeTimeout: 300,         // Maximum time for swipe
-            longPressTimeout: 500,     // Time for long press
-            doubleTapTimeout: 300,     // Time between taps for double tap
-            velocityThreshold: 0.3,    // Minimum velocity for swipe
+            swipeThreshold: 80, // Minimum distance for swipe
+            swipeTimeout: 300, // Maximum time for swipe
+            longPressTimeout: 500, // Time for long press
+            doubleTapTimeout: 300, // Time between taps for double tap
+            velocityThreshold: 0.3, // Minimum velocity for swipe
         },
 
         // State tracking
@@ -28,7 +28,7 @@
             longPressTimer: null,
         },
 
-        init: function() {
+        init: function () {
             if (!this.isTouchDevice()) return;
 
             this.setupEventListeners();
@@ -36,76 +36,86 @@
             this.setupLongPressElements();
         },
 
-        isTouchDevice: function() {
-            return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        isTouchDevice: function () {
+            return "ontouchstart" in window || navigator.maxTouchPoints > 0;
         },
 
-        setupEventListeners: function() {
+        setupEventListeners: function () {
             // Use passive listeners for better performance
-            document.addEventListener('touchstart', this.handleTouchStart.bind(this), { passive: false });
-            document.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
-            document.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
-            document.addEventListener('touchcancel', this.handleTouchCancel.bind(this), { passive: true });
+            document.addEventListener("touchstart", this.handleTouchStart.bind(this), {
+                passive: false,
+            });
+            document.addEventListener("touchmove", this.handleTouchMove.bind(this), {
+                passive: false,
+            });
+            document.addEventListener("touchend", this.handleTouchEnd.bind(this), {
+                passive: false,
+            });
+            document.addEventListener("touchcancel", this.handleTouchCancel.bind(this), {
+                passive: true,
+            });
         },
 
-        setupSwipeableElements: function() {
+        setupSwipeableElements: function () {
             // Add swipe indicators to list items
-            const listItems = document.querySelectorAll('.list-group-item, .table-row, [data-swipeable]');
-            listItems.forEach(item => {
+            const listItems = document.querySelectorAll(
+                ".list-group-item, .table-row, [data-swipeable]"
+            );
+            listItems.forEach((item) => {
                 if (!item.dataset.swipeSetup) {
                     this.makeElementSwipeable(item);
-                    item.dataset.swipeSetup = 'true';
+                    item.dataset.swipeSetup = "true";
                 }
             });
 
             // Re-setup after HTMX updates
-            document.body.addEventListener('htmx:afterSwap', () => {
+            document.body.addEventListener("htmx:afterSwap", () => {
                 setTimeout(() => this.setupSwipeableElements(), 100);
             });
         },
 
-        setupLongPressElements: function() {
+        setupLongPressElements: function () {
             // Setup long press for context menus
-            const longPressElements = document.querySelectorAll('[data-long-press]');
-            longPressElements.forEach(element => {
+            const longPressElements = document.querySelectorAll("[data-long-press]");
+            longPressElements.forEach((element) => {
                 if (!element.dataset.longPressSetup) {
-                    element.dataset.longPressSetup = 'true';
+                    element.dataset.longPressSetup = "true";
                 }
             });
         },
 
-        makeElementSwipeable: function(element) {
+        makeElementSwipeable: function (element) {
             // Add swipe action buttons if they don't exist
-            if (!element.querySelector('.swipe-actions')) {
+            if (!element.querySelector(".swipe-actions")) {
                 this.addSwipeActions(element);
             }
 
             // Add visual indicators
-            element.classList.add('swipeable-item');
+            element.classList.add("swipeable-item");
         },
 
-        addSwipeActions: function(element) {
+        addSwipeActions: function (element) {
             const actions = this.getSwipeActionsForElement(element);
             if (actions.length === 0) return;
 
-            const swipeContainer = document.createElement('div');
-            swipeContainer.className = 'swipe-actions';
+            const swipeContainer = document.createElement("div");
+            swipeContainer.className = "swipe-actions";
 
-            const leftActions = document.createElement('div');
-            leftActions.className = 'swipe-actions-left';
+            const leftActions = document.createElement("div");
+            leftActions.className = "swipe-actions-left";
 
-            const rightActions = document.createElement('div');
-            rightActions.className = 'swipe-actions-right';
+            const rightActions = document.createElement("div");
+            rightActions.className = "swipe-actions-right";
 
-            actions.forEach(action => {
-                const button = document.createElement('button');
+            actions.forEach((action) => {
+                const button = document.createElement("button");
                 button.className = `swipe-action-btn swipe-action-${action.type}`;
                 button.innerHTML = `<i class="${action.icon}"></i>`;
                 button.title = action.title;
                 button.dataset.action = action.action;
-                button.dataset.url = action.url || '';
+                button.dataset.url = action.url || "";
 
-                if (action.side === 'left') {
+                if (action.side === "left") {
                     leftActions.appendChild(button);
                 } else {
                     rightActions.appendChild(button);
@@ -116,62 +126,62 @@
             swipeContainer.appendChild(rightActions);
 
             // Insert swipe actions
-            element.style.position = 'relative';
+            element.style.position = "relative";
             element.appendChild(swipeContainer);
         },
 
-        getSwipeActionsForElement: function(element) {
+        getSwipeActionsForElement: function (element) {
             const actions = [];
 
             // Check for data attributes that define available actions
             if (element.dataset.deleteUrl) {
                 actions.push({
-                    type: 'delete',
-                    action: 'delete',
-                    icon: 'fas fa-trash',
-                    title: 'Delete',
+                    type: "delete",
+                    action: "delete",
+                    icon: "fas fa-trash",
+                    title: "Delete",
                     url: element.dataset.deleteUrl,
-                    side: 'right'
+                    side: "right",
                 });
             }
 
             if (element.dataset.archiveUrl) {
                 actions.push({
-                    type: 'archive',
-                    action: 'archive',
-                    icon: 'fas fa-archive',
-                    title: 'Archive',
+                    type: "archive",
+                    action: "archive",
+                    icon: "fas fa-archive",
+                    title: "Archive",
                     url: element.dataset.archiveUrl,
-                    side: 'right'
+                    side: "right",
                 });
             }
 
             if (element.dataset.editUrl) {
                 actions.push({
-                    type: 'edit',
-                    action: 'edit',
-                    icon: 'fas fa-edit',
-                    title: 'Edit',
+                    type: "edit",
+                    action: "edit",
+                    icon: "fas fa-edit",
+                    title: "Edit",
                     url: element.dataset.editUrl,
-                    side: 'left'
+                    side: "left",
                 });
             }
 
             if (element.dataset.shareUrl) {
                 actions.push({
-                    type: 'share',
-                    action: 'share',
-                    icon: 'fas fa-share',
-                    title: 'Share',
+                    type: "share",
+                    action: "share",
+                    icon: "fas fa-share",
+                    title: "Share",
                     url: element.dataset.shareUrl,
-                    side: 'left'
+                    side: "left",
                 });
             }
 
             return actions;
         },
 
-        handleTouchStart: function(e) {
+        handleTouchStart: function (e) {
             const touch = e.touches[0];
             const element = this.findSwipeableElement(e.target);
 
@@ -197,10 +207,10 @@
             }
 
             // Add visual feedback
-            element.classList.add('touch-tracking');
+            element.classList.add("touch-tracking");
         },
 
-        handleTouchMove: function(e) {
+        handleTouchMove: function (e) {
             if (!this.state.isTracking) return;
 
             const touch = e.touches[0];
@@ -217,7 +227,7 @@
 
             // Determine swipe direction
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20) {
-                this.state.swipeDirection = deltaX > 0 ? 'right' : 'left';
+                this.state.swipeDirection = deltaX > 0 ? "right" : "left";
 
                 // Prevent vertical scrolling during horizontal swipe
                 e.preventDefault();
@@ -227,7 +237,7 @@
             }
         },
 
-        handleTouchEnd: function(e) {
+        handleTouchEnd: function (e) {
             if (!this.state.isTracking) return;
 
             const touch = e.changedTouches[0];
@@ -252,10 +262,11 @@
             }
 
             // Process swipe gesture
-            if (Math.abs(deltaX) > this.config.swipeThreshold &&
+            if (
+                Math.abs(deltaX) > this.config.swipeThreshold &&
                 deltaTime < this.config.swipeTimeout &&
-                velocity > this.config.velocityThreshold) {
-
+                velocity > this.config.velocityThreshold
+            ) {
                 this.handleSwipe(this.state.element, this.state.swipeDirection, Math.abs(deltaX));
             } else {
                 // Reset visual state if swipe wasn't completed
@@ -263,11 +274,11 @@
             }
 
             // Clean up state
-            this.state.element.classList.remove('touch-tracking');
+            this.state.element.classList.remove("touch-tracking");
             this.resetState();
         },
 
-        handleTouchCancel: function(e) {
+        handleTouchCancel: function (e) {
             if (!this.state.isTracking) return;
 
             // Clear long press timer
@@ -279,72 +290,75 @@
             // Reset visual state
             if (this.state.element) {
                 this.resetSwipeVisual(this.state.element);
-                this.state.element.classList.remove('touch-tracking');
+                this.state.element.classList.remove("touch-tracking");
             }
 
             this.resetState();
         },
 
-        findSwipeableElement: function(target) {
-            return target.closest('.swipeable-item, [data-swipeable], .list-group-item, .table-row');
+        findSwipeableElement: function (target) {
+            return target.closest(
+                ".swipeable-item, [data-swipeable], .list-group-item, .table-row"
+            );
         },
 
-        updateSwipeVisual: function(element, deltaX) {
+        updateSwipeVisual: function (element, deltaX) {
             const maxSwipe = 120;
             const clampedDelta = Math.max(-maxSwipe, Math.min(maxSwipe, deltaX));
             const opacity = Math.abs(clampedDelta) / maxSwipe;
 
             element.style.transform = `translateX(${clampedDelta}px)`;
 
-            const swipeActions = element.querySelector('.swipe-actions');
+            const swipeActions = element.querySelector(".swipe-actions");
             if (swipeActions) {
                 swipeActions.style.opacity = opacity;
 
                 // Show appropriate actions based on swipe direction
-                const leftActions = swipeActions.querySelector('.swipe-actions-left');
-                const rightActions = swipeActions.querySelector('.swipe-actions-right');
+                const leftActions = swipeActions.querySelector(".swipe-actions-left");
+                const rightActions = swipeActions.querySelector(".swipe-actions-right");
 
                 if (deltaX > 0 && leftActions) {
-                    leftActions.style.transform = 'translateX(0)';
-                    rightActions.style.transform = 'translateX(100%)';
+                    leftActions.style.transform = "translateX(0)";
+                    rightActions.style.transform = "translateX(100%)";
                 } else if (deltaX < 0 && rightActions) {
-                    rightActions.style.transform = 'translateX(0)';
-                    leftActions.style.transform = 'translateX(-100%)';
+                    rightActions.style.transform = "translateX(0)";
+                    leftActions.style.transform = "translateX(-100%)";
                 }
             }
         },
 
-        resetSwipeVisual: function(element) {
+        resetSwipeVisual: function (element) {
             if (!element) return;
 
-            element.style.transform = '';
+            element.style.transform = "";
 
-            const swipeActions = element.querySelector('.swipe-actions');
+            const swipeActions = element.querySelector(".swipe-actions");
             if (swipeActions) {
-                swipeActions.style.opacity = '';
+                swipeActions.style.opacity = "";
 
-                const leftActions = swipeActions.querySelector('.swipe-actions-left');
-                const rightActions = swipeActions.querySelector('.swipe-actions-right');
+                const leftActions = swipeActions.querySelector(".swipe-actions-left");
+                const rightActions = swipeActions.querySelector(".swipe-actions-right");
 
-                if (leftActions) leftActions.style.transform = '';
-                if (rightActions) rightActions.style.transform = '';
+                if (leftActions) leftActions.style.transform = "";
+                if (rightActions) rightActions.style.transform = "";
             }
         },
 
-        handleSwipe: function(element, direction, distance) {
-            const swipeActions = element.querySelector('.swipe-actions');
+        handleSwipe: function (element, direction, distance) {
+            const swipeActions = element.querySelector(".swipe-actions");
             if (!swipeActions) return;
 
-            const actionsContainer = direction === 'right' ?
-                swipeActions.querySelector('.swipe-actions-left') :
-                swipeActions.querySelector('.swipe-actions-right');
+            const actionsContainer =
+                direction === "right"
+                    ? swipeActions.querySelector(".swipe-actions-left")
+                    : swipeActions.querySelector(".swipe-actions-right");
 
             if (!actionsContainer) {
                 this.resetSwipeVisual(element);
                 return;
             }
 
-            const actions = actionsContainer.querySelectorAll('.swipe-action-btn');
+            const actions = actionsContainer.querySelectorAll(".swipe-action-btn");
             if (actions.length === 0) {
                 this.resetSwipeVisual(element);
                 return;
@@ -360,34 +374,34 @@
             }
         },
 
-        showSwipeActions: function(element, direction) {
-            element.classList.add('swipe-actions-visible');
+        showSwipeActions: function (element, direction) {
+            element.classList.add("swipe-actions-visible");
 
             // Auto-hide after a delay
             setTimeout(() => {
-                if (element.classList.contains('swipe-actions-visible')) {
+                if (element.classList.contains("swipe-actions-visible")) {
                     this.hideSwipeActions(element);
                 }
             }, 3000);
 
             // Setup action button handlers
-            const swipeActions = element.querySelector('.swipe-actions');
-            const actionButtons = swipeActions.querySelectorAll('.swipe-action-btn');
+            const swipeActions = element.querySelector(".swipe-actions");
+            const actionButtons = swipeActions.querySelectorAll(".swipe-action-btn");
 
-            actionButtons.forEach(button => {
-                button.addEventListener('click', (e) => {
+            actionButtons.forEach((button) => {
+                button.addEventListener("click", (e) => {
                     e.stopPropagation();
                     this.executeSwipeAction(button, element);
                 });
             });
         },
 
-        hideSwipeActions: function(element) {
-            element.classList.remove('swipe-actions-visible');
+        hideSwipeActions: function (element) {
+            element.classList.remove("swipe-actions-visible");
             this.resetSwipeVisual(element);
         },
 
-        executeSwipeAction: function(actionButton, element) {
+        executeSwipeAction: function (actionButton, element) {
             const action = actionButton.dataset.action;
             const url = actionButton.dataset.url;
 
@@ -397,78 +411,78 @@
 
             // Execute action based on type
             switch (action) {
-                case 'delete':
+                case "delete":
                     this.handleDeleteAction(url, element);
                     break;
-                case 'archive':
+                case "archive":
                     this.handleArchiveAction(url, element);
                     break;
-                case 'edit':
+                case "edit":
                     this.handleEditAction(url, element);
                     break;
-                case 'share':
+                case "share":
                     this.handleShareAction(url, element);
                     break;
                 default:
-                    console.warn('Unknown swipe action:', action);
+                    console.warn("Unknown swipe action:", action);
                     this.hideSwipeActions(element);
             }
         },
 
-        handleDeleteAction: function(url, element) {
+        handleDeleteAction: function (url, element) {
             // Show confirmation modal
             if (url) {
                 fetch(url, {
                     headers: {
-                        'HX-Request': 'true',
-                        'X-CSRFToken': this.getCsrfToken()
-                    }
+                        "HX-Request": "true",
+                        "X-CSRFToken": this.getCsrfToken(),
+                    },
                 })
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('modalBody').innerHTML = html;
-                    const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-                    modal.show();
-                    this.hideSwipeActions(element);
-                })
-                .catch(error => {
-                    console.error('Error loading delete confirmation:', error);
-                    this.showNotification('Error loading confirmation', 'error');
-                    this.hideSwipeActions(element);
-                });
+                    .then((response) => response.text())
+                    .then((html) => {
+                        document.getElementById("modalBody").innerHTML = html;
+                        const modal = new bootstrap.Modal(document.getElementById("confirmModal"));
+                        modal.show();
+                        this.hideSwipeActions(element);
+                    })
+                    .catch((error) => {
+                        console.error("Error loading delete confirmation:", error);
+                        this.showNotification("Error loading confirmation", "error");
+                        this.hideSwipeActions(element);
+                    });
             }
         },
 
-        handleArchiveAction: function(url, element) {
+        handleArchiveAction: function (url, element) {
             // Implement archive functionality
             if (url) {
                 fetch(url, {
-                    method: 'POST',
+                    method: "POST",
                     headers: {
-                        'HX-Request': 'true',
-                        'X-CSRFToken': this.getCsrfToken()
-                    }
+                        "HX-Request": "true",
+                        "X-CSRFToken": this.getCsrfToken(),
+                    },
                 })
-                .then(response => {
-                    if (response.ok) {
-                        element.style.opacity = '0.5';
-                        element.classList.add('archived');
-                        this.showNotification('Item archived', 'success');
-                    } else {
-                        throw new Error('Archive failed');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error archiving item:', error);
-                    this.showNotification('Error archiving item', 'error');
-                })
-                .finally(() => {
-                    this.hideSwipeActions(element);
-                });
+                    .then((response) => {
+                        if (response.ok) {
+                            element.style.opacity = "0.5";
+                            element.classList.add("archived");
+                            this.showNotification("Item archived", "success");
+                        } else {
+                            throw new Error("Archive failed");
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Error archiving item:", error);
+                        this.showNotification("Error archiving item", "error");
+                    })
+                    .finally(() => {
+                        this.hideSwipeActions(element);
+                    });
             }
         },
 
-        handleEditAction: function(url, element) {
+        handleEditAction: function (url, element) {
             // Open edit panel
             if (url) {
                 const editButton = element.querySelector('[data-action="edit"]');
@@ -482,17 +496,20 @@
             }
         },
 
-        handleShareAction: function(url, element) {
+        handleShareAction: function (url, element) {
             // Open share panel or use Web Share API
             if (navigator.share && url) {
-                navigator.share({
-                    title: 'Share Item',
-                    url: url
-                }).then(() => {
-                    this.showNotification('Shared successfully', 'success');
-                }).catch(error => {
-                    console.error('Error sharing:', error);
-                });
+                navigator
+                    .share({
+                        title: "Share Item",
+                        url: url,
+                    })
+                    .then(() => {
+                        this.showNotification("Shared successfully", "success");
+                    })
+                    .catch((error) => {
+                        console.error("Error sharing:", error);
+                    });
             } else if (url) {
                 // Fallback: open share panel
                 const shareButton = element.querySelector('[data-action="share"]');
@@ -503,7 +520,7 @@
             this.hideSwipeActions(element);
         },
 
-        handleLongPress: function(element, x, y) {
+        handleLongPress: function (element, x, y) {
             // Show context menu
             const contextMenu = this.createContextMenu(element);
             if (contextMenu) {
@@ -516,7 +533,7 @@
             }
         },
 
-        handleDoubleTap: function(element) {
+        handleDoubleTap: function (element) {
             // Default double tap action (usually edit or detail view)
             const editButton = element.querySelector('[data-action="edit"]');
             const detailButton = element.querySelector('[data-action="detail"]');
@@ -528,22 +545,22 @@
             }
         },
 
-        createContextMenu: function(element) {
+        createContextMenu: function (element) {
             // Create context menu based on available actions
             const actions = this.getSwipeActionsForElement(element);
             if (actions.length === 0) return null;
 
-            const menu = document.createElement('div');
-            menu.className = 'touch-context-menu';
+            const menu = document.createElement("div");
+            menu.className = "touch-context-menu";
 
-            actions.forEach(action => {
-                const item = document.createElement('button');
-                item.className = 'context-menu-item';
+            actions.forEach((action) => {
+                const item = document.createElement("button");
+                item.className = "context-menu-item";
                 item.innerHTML = `<i class="${action.icon}"></i> ${action.title}`;
                 item.dataset.action = action.action;
                 item.dataset.url = action.url;
 
-                item.addEventListener('click', () => {
+                item.addEventListener("click", () => {
                     this.executeSwipeAction(item, element);
                     this.hideContextMenu();
                 });
@@ -554,41 +571,41 @@
             return menu;
         },
 
-        showContextMenu: function(menu, x, y) {
+        showContextMenu: function (menu, x, y) {
             // Remove any existing context menu
             this.hideContextMenu();
 
             document.body.appendChild(menu);
 
             // Position menu
-            menu.style.left = x + 'px';
-            menu.style.top = y + 'px';
+            menu.style.left = x + "px";
+            menu.style.top = y + "px";
 
             // Adjust position if menu goes off screen
             const rect = menu.getBoundingClientRect();
             if (rect.right > window.innerWidth) {
-                menu.style.left = (x - rect.width) + 'px';
+                menu.style.left = x - rect.width + "px";
             }
             if (rect.bottom > window.innerHeight) {
-                menu.style.top = (y - rect.height) + 'px';
+                menu.style.top = y - rect.height + "px";
             }
 
-            menu.classList.add('show');
+            menu.classList.add("show");
 
             // Hide menu when clicking outside
             setTimeout(() => {
-                document.addEventListener('click', this.hideContextMenu.bind(this), { once: true });
+                document.addEventListener("click", this.hideContextMenu.bind(this), { once: true });
             }, 100);
         },
 
-        hideContextMenu: function() {
-            const existingMenu = document.querySelector('.touch-context-menu');
+        hideContextMenu: function () {
+            const existingMenu = document.querySelector(".touch-context-menu");
             if (existingMenu) {
                 existingMenu.remove();
             }
         },
 
-        resetState: function() {
+        resetState: function () {
             this.state.startX = 0;
             this.state.startY = 0;
             this.state.startTime = 0;
@@ -597,34 +614,32 @@
             this.state.swipeDirection = null;
         },
 
-        getCsrfToken: function() {
-            const cookies = document.cookie.split(';');
+        getCsrfToken: function () {
+            const cookies = document.cookie.split(";");
             for (let cookie of cookies) {
-                const [name, value] = cookie.trim().split('=');
-                if (name === 'csrftoken') {
+                const [name, value] = cookie.trim().split("=");
+                if (name === "csrftoken") {
                     return decodeURIComponent(value);
                 }
             }
-            return '';
+            return "";
         },
 
-        showNotification: function(message, type) {
+        showNotification: function (message, type) {
             if (window.showNotification) {
                 window.showNotification(message, type);
             } else {
-                console.log(`${type.toUpperCase()}: ${message}`);
             }
-        }
+        },
     };
 
     // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => TouchGestures.init());
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", () => TouchGestures.init());
     } else {
         TouchGestures.init();
     }
 
     // Expose to global scope
     window.TouchGestures = TouchGestures;
-
 })();
