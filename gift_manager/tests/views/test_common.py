@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -5,6 +6,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
@@ -13,6 +15,8 @@ from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.views import get_user
 from gift_manager.views import home
 
@@ -56,6 +60,145 @@ def test_home_view(mock_render, user):
     assert mock_render.call_args[0][0] == mock_request
     assert mock_render.call_args[0][1] == "gift_manager/home.html"
     assert result == mock_render.return_value
+
+
+@pytest.mark.django_db
+class TestHomeDashboard:
+    """Tests for the action-oriented authenticated dashboard."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, client, user):
+        self.client = client
+        self.user = user
+        self.client.force_login(user)
+
+    def test_dashboard_prioritizes_action_groups_and_filters_private_plans(self):
+        today = timezone.localdate()
+        idea = RelationStatusFactory(status="Idea")
+        completed = RelationStatusFactory(status="Given")
+        stale_event = EventFactory(
+            name="Winter party",
+            usual_date=today + timedelta(days=60),
+            recurrence="yearly",
+            shared_with=[self.user],
+        )
+
+        RelationFactory(
+            gift=GiftFactory(name="Overdue scarf"),
+            status=idea,
+            due_date=today - timedelta(days=1),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Soon puzzle"),
+            status=idea,
+            due_date=today + timedelta(days=3),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Missing date"),
+            event=None,
+            status=idea,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        stale_plan = RelationFactory(
+            gift=GiftFactory(name="Old idea"),
+            event=stale_event,
+            status=idea,
+            due_date=today + timedelta(days=70),
+            shared_with=[self.user],
+        )
+        stale_plan.__class__.objects.filter(pk=stale_plan.pk).update(
+            creation_date=timezone.now() - timedelta(days=45)
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Already done"),
+            status=completed,
+            due_date=today - timedelta(days=2),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Private plan"),
+            status=idea,
+            due_date=today - timedelta(days=2),
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        groups = response.context["dashboard_action_groups"]
+        assert [group["key"] for group in groups] == [
+            "overdue",
+            "upcoming",
+            "incomplete",
+            "stale",
+        ]
+        assert response.context["dashboard_summary"]["overdue"] == 1
+        assert response.context["dashboard_summary"]["upcoming"] == 1
+        assert response.context["dashboard_summary"]["incomplete"] == 1
+        assert response.context["dashboard_summary"]["stale"] == 1
+
+        content = response.content.decode()
+        assert "Overdue scarf" in content
+        assert "Soon puzzle" in content
+        assert "Missing date" in content
+        assert "Old idea" in content
+        assert "Already done" not in content
+        assert "Private plan" not in content
+        assert content.index("Next actions") < content.index('class="stats-grid"')
+
+    def test_dashboard_surfaces_unassigned_gifts_and_upcoming_occasion_recipients(self):
+        today = timezone.localdate()
+        idea = RelationStatusFactory(status="Idea")
+        unassigned_gift = GiftFactory(name="Loose puzzle", shared_with=[self.user])
+        assigned_gift = GiftFactory(name="Assigned candle", shared_with=[self.user])
+        event = EventFactory(
+            name="Birthday",
+            usual_date=today + timedelta(days=5),
+            recurrence="yearly",
+            shared_with=[self.user],
+        )
+        person = PersonFactory(
+            first_name="Ada",
+            family_name="Lovelace",
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            person=person,
+            gift=assigned_gift,
+            event=event,
+            status=idea,
+            due_date=today + timedelta(days=4),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        assert list(response.context["unassigned_gifts"]) == [unassigned_gift]
+        occasion_items = response.context["upcoming_occasion_recipients"]
+        assert len(occasion_items) == 1
+        assert occasion_items[0]["event"] == event
+        assert occasion_items[0]["relation"].recipient_name == "Ada Lovelace"
+
+        content = response.content.decode()
+        assert "Loose puzzle" in content
+        assert "Assigned candle" in content
+        assert "Ada Lovelace" in content
+        assert "Birthday" in content
+        assert "Plan" in content
+
+    def test_empty_dashboard_keeps_create_actions_before_secondary_counts(self):
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "No gift plans need attention." in content
+        assert "Create a gift plan" in content
+        assert "Add a gift" in content
+        assert content.index("Needs attention") < content.index("Library")
+        assert content.index("Library") < content.index('class="stats-grid"')
 
 
 @pytest.mark.django_db

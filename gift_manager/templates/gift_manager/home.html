@@ -380,8 +380,290 @@
         color: var(--color-danger);
     }
 
+    /* Action-oriented dashboard */
+    .dashboard-topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-4);
+        margin-bottom: var(--space-5);
+    }
+
+    .dashboard-kicker {
+        margin-bottom: var(--space-1);
+        color: var(--text-muted);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dashboard-topbar h1 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-3xl);
+        font-weight: 700;
+    }
+
+    .dashboard-top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: var(--space-2);
+    }
+
+    .dashboard-summary-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-3);
+        margin-bottom: var(--space-6);
+    }
+
+    .dashboard-summary-tile {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        min-width: 0;
+        padding: var(--space-4);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        color: var(--text-secondary);
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .dashboard-summary-tile i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--radius-md);
+        background: var(--surface-elevated);
+        color: var(--color-primary);
+        flex-shrink: 0;
+    }
+
+    .dashboard-summary-tile strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: var(--text-xl);
+        line-height: 1;
+    }
+
+    .dashboard-summary-tile span {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: var(--text-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dashboard-summary-tile--attention {
+        border-color: rgba(245, 158, 11, 0.45);
+        background: var(--color-warning-light);
+    }
+
+    .dashboard-summary-tile--attention i {
+        background: rgba(245, 158, 11, 0.16);
+        color: var(--color-warning-hover);
+    }
+
+    .next-action-board {
+        margin-bottom: var(--space-8);
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-xl);
+        font-weight: 700;
+    }
+
+    .action-group-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-4);
+    }
+
+    .dashboard-action-group {
+        min-width: 0;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .dashboard-action-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+
+    .dashboard-action-heading h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-base);
+        font-weight: 700;
+    }
+
+    .dashboard-action-heading i {
+        color: var(--color-primary);
+    }
+
+    .dashboard-action-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
+        padding: 0.2rem 0.45rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        color: var(--text-secondary);
+        font-weight: 700;
+    }
+
+    .dashboard-action-list {
+        display: grid;
+        gap: var(--space-3);
+    }
+
+    .dashboard-action-item {
+        display: grid;
+        gap: var(--space-3);
+        min-width: 0;
+        padding: var(--space-4);
+        border: 1px solid var(--border-color);
+        border-left-width: 4px;
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .dashboard-action-item--overdue {
+        border-left-color: var(--color-danger);
+    }
+
+    .dashboard-action-item--upcoming {
+        border-left-color: var(--color-warning);
+    }
+
+    .dashboard-action-item--incomplete,
+    .dashboard-action-item--stale {
+        border-left-color: var(--color-info);
+    }
+
+    .dashboard-action-badges,
+    .dashboard-action-meta,
+    .dashboard-action-footer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .dashboard-action-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        text-decoration: none;
+        line-height: 1.3;
+    }
+
+    .dashboard-action-title:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    .dashboard-action-meta {
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+    }
+
+    .dashboard-action-meta a {
+        color: var(--text-secondary);
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .dashboard-action-meta a:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    .dashboard-action-note {
+        margin: 0;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        line-height: 1.45;
+    }
+
+    .dashboard-action-footer {
+        justify-content: flex-end;
+    }
+
+    .dashboard-empty-action {
+        display: grid;
+        justify-items: center;
+        gap: var(--space-3);
+        padding: var(--space-8) var(--space-4);
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        text-align: center;
+    }
+
+    .dashboard-empty-action i {
+        color: var(--color-success);
+        font-size: 2rem;
+    }
+
+    .dashboard-support-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: var(--space-5);
+        margin-bottom: var(--space-8);
+    }
+
+    .dashboard-secondary-section {
+        padding-top: var(--space-5);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .secondary-stats-heading {
+        margin: 0 0 var(--space-3);
+        color: var(--text-primary);
+        font-size: var(--text-base);
+        font-weight: 700;
+    }
+
     /* Responsive - Tablet */
     @media (max-width: 768px) {
+        .dashboard-topbar,
+        .section-heading {
+            display: grid;
+        }
+
+        .dashboard-top-actions {
+            justify-content: flex-start;
+        }
+
+        .dashboard-summary-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .hero-section {
             padding: var(--space-6) var(--space-5);
         }
@@ -415,6 +697,24 @@
 
     /* Responsive - Mobile */
     @media (max-width: 576px) {
+        .dashboard-topbar h1 {
+            font-size: var(--text-2xl);
+        }
+
+        .dashboard-summary-strip,
+        .action-group-grid,
+        .dashboard-support-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-summary-tile {
+            padding: var(--space-3);
+        }
+
+        .dashboard-action-footer {
+            justify-content: flex-start;
+        }
+
         .hero-section {
             padding: var(--space-5) var(--space-4);
             text-align: center;
@@ -599,166 +899,152 @@
 {% block content %}
 
 {% if user.is_authenticated %}
-    <!-- Hero Section -->
-    <div class="hero-section animate-fade-in">
-        <div class="hero-content">
-            <div class="d-flex align-items-center gap-4 mb-3">
-                <img src="{% static 'gift_manager/images/gift.png' %}" alt="Gift" class="hero-icon">
-                <div>
-                    <h1>{% trans "Welcome back" %}{% if user.first_name %}, {{ user.first_name }}{% endif %}!</h1>
-                    <p class="mb-0">{% trans "Manage your gifts, track special occasions, and never forget a thoughtful present." %}</p>
+    <div class="dashboard-topbar animate-fade-in">
+        <div>
+            <div class="dashboard-kicker">{% trans "Dashboard" %}</div>
+            <h1>{% trans "Next actions" %}{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+        </div>
+        <div class="dashboard-top-actions">
+            <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+                <i class="fas fa-hand-holding-heart me-2"></i>{% trans "New Gift Plan" %}
+            </a>
+            <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>{% trans "Gift Plans" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-summary-strip" aria-label="{% trans 'Dashboard summary' %}">
+        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile dashboard-summary-tile--attention">
+            <i class="fas fa-bell" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.attention|default:0 }}</strong>
+                <span>{% trans "Needs attention" %}</span>
+            </div>
+        </a>
+        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.overdue|default:0 }}</strong>
+                <span>{% trans "Overdue" %}</span>
+            </div>
+        </a>
+        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile">
+            <i class="fas fa-clock" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.upcoming|default:0 }}</strong>
+                <span>{% trans "Due soon" %}</span>
+            </div>
+        </a>
+        <a href="{% url 'gift_manager:gifts' %}" class="dashboard-summary-tile">
+            <i class="fas fa-gift" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.unassigned_gifts|default:0 }}</strong>
+                <span>{% trans "Unassigned gifts" %}</span>
+            </div>
+        </a>
+    </div>
+
+    <section class="next-action-board" aria-labelledby="next-action-heading">
+        <div class="section-heading">
+            <h2 id="next-action-heading">{% trans "Needs attention" %}</h2>
+            <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-primary">
+                {% trans "Open workspace" %}
+            </a>
+        </div>
+
+        {% if dashboard_action_groups %}
+        <div class="action-group-grid">
+            {% for group in dashboard_action_groups %}
+            <section class="dashboard-action-group dashboard-action-group--{{ group.key }}"
+                     aria-labelledby="dashboard-action-group-{{ group.key }}">
+                <div class="dashboard-action-heading">
+                    <h3 id="dashboard-action-group-{{ group.key }}">
+                        <i class="fas {{ group.icon }}" aria-hidden="true"></i>{{ group.label }}
+                    </h3>
+                    <span class="dashboard-action-count">{{ group.items|length }}</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-        <a href="{% url 'gift_manager:recipients' %}" class="stat-card">
-            <div class="stat-icon persons">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-value">{{ stats.recipients|default:0 }}</div>
-            <div class="stat-label">{% trans "Recipients" %}</div>
-        </a>
-        <a href="{% url 'gift_manager:person_groups' %}" class="stat-card">
-            <div class="stat-icon groups">
-                <i class="fas fa-layer-group"></i>
-            </div>
-            <div class="stat-value">{{ stats.groups|default:0 }}</div>
-            <div class="stat-label">{% trans "Groups" %}</div>
-        </a>
-        <a href="{% url 'gift_manager:gifts' %}" class="stat-card">
-            <div class="stat-icon gifts">
-                <i class="fas fa-gift"></i>
-            </div>
-            <div class="stat-value">{{ stats.gifts|default:0 }}</div>
-            <div class="stat-label">{% trans "Gifts" %}</div>
-        </a>
-        <a href="{% url 'gift_manager:events' %}" class="stat-card">
-            <div class="stat-icon events">
-                <i class="fas fa-calendar-alt"></i>
-            </div>
-            <div class="stat-value">{{ stats.events|default:0 }}</div>
-            <div class="stat-label">{% trans "Events" %}</div>
-        </a>
-        <a href="{% url 'gift_manager:relations' %}" class="stat-card">
-            <div class="stat-icon relations">
-                <i class="fas fa-hand-holding-heart"></i>
-            </div>
-            <div class="stat-value">{{ stats.relations|default:0 }}</div>
-            <div class="stat-label">{% trans "Gift Plans" %}</div>
-        </a>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="dashboard-card mb-4">
-        <div class="dashboard-card-header">
-            <h3><i class="fas fa-bolt"></i> {% trans "Quick Actions" %}</h3>
-        </div>
-        <div class="dashboard-card-body">
-            <div class="quick-actions">
-                <a href="{% url 'gift_manager:gift_create' %}" class="quick-action-btn">
-                    <i class="fas fa-plus-circle"></i>
-                    {% trans "New Gift" %}
-                </a>
-                <a href="{% url 'gift_manager:person_create' %}" class="quick-action-btn">
-                    <i class="fas fa-user-plus"></i>
-                    {% trans "New Person" %}
-                </a>
-                <a href="{% url 'gift_manager:person_group_create' %}" class="quick-action-btn">
-                    <i class="fas fa-users"></i>
-                    {% trans "New Group" %}
-                </a>
-                <a href="{% url 'gift_manager:event_create' %}" class="quick-action-btn">
-                    <i class="fas fa-calendar-plus"></i>
-                    {% trans "New Event" %}
-                </a>
-                <a href="{% url 'gift_manager:relation_create' %}" class="quick-action-btn">
-                    <i class="fas fa-hand-holding-heart"></i>
-                    {% trans "New Gift Plan" %}
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Dashboard Grid -->
-    <div class="dashboard-grid">
-        <!-- Upcoming gift plans -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-clock"></i> {% trans "Upcoming Gift Plans" %}</h3>
-                <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if upcoming_giftings %}
-                <ul class="item-list">
-                    {% for relation in upcoming_giftings %}
-                    <li>
-                        <div class="item-icon gift">
-                            <i class="fas fa-gift"></i>
+                <div class="dashboard-action-list">
+                    {% for item in group.items|slice:":4" %}
+                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}">
+                        <div class="dashboard-action-badges">
+                            <span class="gift-plan-status-badge {{ item.status_class }}">
+                                {{ item.relation.status }}
+                            </span>
+                            {% if item.relation.due_date %}
+                            <span class="gift-plan-due-badge gift-plan-due-badge--{{ item.due_class }}">
+                                <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                                {{ item.relation.due_date|date:"M d, Y" }}
+                            </span>
+                            {% else %}
+                            <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+                                <i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "No date" %}
+                            </span>
+                            {% endif %}
                         </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:relation_detail' relation.relation_id %}" class="item-title">
-                                {{ relation.gift.name }}
+
+                        <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}"
+                           class="dashboard-action-title">
+                            {{ item.relation.gift.name }}
+                        </a>
+
+                        <div class="dashboard-action-meta">
+                            {% if item.relation.is_group_targeted %}
+                            <i class="fas fa-layer-group" aria-hidden="true"></i>
+                            {% else %}
+                            <i class="fas fa-user" aria-hidden="true"></i>
+                            {% endif %}
+                            {% if item.relation.recipient_url %}
+                            <a href="{{ item.relation.recipient_url }}">{{ item.relation.recipient_name }}</a>
+                            {% else %}
+                            <span>{{ item.relation.recipient_name }}</span>
+                            {% endif %}
+                            {% if item.relation.event %}
+                            <span>·</span>
+                            <a href="{% url 'gift_manager:event_detail' item.relation.event.event_id %}">
+                                {{ item.relation.event.name }}
                             </a>
-                            <span class="item-subtitle">
-                                {% trans "Recipient" %}: {{ relation.recipient_name }}
-                                {% if relation.is_group_targeted %}({% trans "group" %}){% endif %}
-                                {% if relation.event %} - {{ relation.event.name }}{% endif %}
-                            </span>
+                            {% endif %}
                         </div>
-                        <div class="item-badge">
-                            <span class="badge {% if relation.due_date|timesince|slice:':1' == '0' %}bg-danger{% else %}bg-warning{% endif %}">
-                                {{ relation.due_date|date:"M d" }}
-                            </span>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-calendar-check"></i>
-                    <p>{% trans "No upcoming gift plans in the next 30 days" %}</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
 
-        <!-- Gift plans by status -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-chart-pie"></i> {% trans "Gift Plans by Status" %}</h3>
-            </div>
-            <div class="dashboard-card-body">
-                {% if status_counts %}
-                <div class="status-list">
-                    {% for item in status_counts %}
-                    <div class="status-pill">
-                        {{ item.status }}
-                        <span class="count">{{ item.count }}</span>
-                    </div>
+                        {% if item.relation.comment %}
+                        <p class="dashboard-action-note">{{ item.relation.comment|truncatechars:120 }}</p>
+                        {% endif %}
+
+                        <div class="dashboard-action-footer">
+                            <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}"
+                               class="btn btn-sm btn-outline-secondary"
+                               data-action="detail">
+                                <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Details" %}
+                            </a>
+                        </div>
+                    </article>
                     {% endfor %}
                 </div>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <p>{% trans "No gift plans yet" %}</p>
-                </div>
-                {% endif %}
-            </div>
+            </section>
+            {% endfor %}
         </div>
+        {% else %}
+        <div class="dashboard-empty-action">
+            <i class="fas fa-circle-check" aria-hidden="true"></i>
+            <p>{% trans "No gift plans need attention." %}</p>
+            <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Create a gift plan" %}
+            </a>
+        </div>
+        {% endif %}
+    </section>
 
-        <!-- Recent Gifts -->
+    <div class="dashboard-support-grid">
         <div class="dashboard-card">
             <div class="dashboard-card-header">
-                <h3><i class="fas fa-gift"></i> {% trans "Recent Gifts" %}</h3>
+                <h3><i class="fas fa-gift"></i> {% trans "Gift ideas without a plan" %}</h3>
                 <a href="{% url 'gift_manager:gifts' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
             </div>
             <div class="dashboard-card-body">
-                {% if recent_gifts %}
+                {% if unassigned_gifts %}
                 <ul class="item-list">
-                    {% for gift in recent_gifts %}
+                    {% for gift in unassigned_gifts %}
                     <li>
                         <div class="item-icon gift">
                             <i class="fas fa-gift"></i>
@@ -771,6 +1057,11 @@
                             <span class="item-subtitle">{{ gift.comment|truncatewords:8 }}</span>
                             {% endif %}
                         </div>
+                        <a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}"
+                           class="btn btn-sm btn-outline-primary"
+                           data-action="create">
+                            {% trans "Plan" %}
+                        </a>
                     </li>
                     {% endfor %}
                 </ul>
@@ -779,47 +1070,118 @@
                     <i class="fas fa-gift"></i>
                     <p>{% trans "No gifts added yet" %}</p>
                     <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add your first gift" %}
+                        <i class="fas fa-plus me-1"></i>{% trans "Add a gift" %}
                     </a>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Recent Persons -->
         <div class="dashboard-card">
             <div class="dashboard-card-header">
-                <h3><i class="fas fa-users"></i> {% trans "Recent Persons" %}</h3>
-                <a href="{% url 'gift_manager:persons' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
+                <h3><i class="fas fa-calendar-alt"></i> {% trans "Upcoming occasions" %}</h3>
+                <a href="{% url 'gift_manager:events' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
             </div>
             <div class="dashboard-card-body">
-                {% if recent_persons %}
+                {% if upcoming_occasion_recipients %}
                 <ul class="item-list">
-                    {% for person in recent_persons %}
+                    {% for item in upcoming_occasion_recipients %}
                     <li>
-                        <div class="item-icon person">
-                            <i class="fas fa-user"></i>
+                        <div class="item-icon event">
+                            <i class="fas fa-calendar-alt"></i>
                         </div>
                         <div class="item-content">
-                            <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="item-title">
-                                {{ person.first_name }} {{ person.family_name|default:"" }}
+                            <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}" class="item-title">
+                                {{ item.relation.recipient_name }}
                             </a>
+                            <span class="item-subtitle">
+                                {{ item.event.name }} &middot; {{ item.relation.gift.name }}
+                            </span>
                         </div>
+                        <span class="gift-plan-due-badge gift-plan-due-badge--due_soon">
+                            {{ item.occurrence_date|date:"M d" }}
+                        </span>
                     </li>
                     {% endfor %}
                 </ul>
                 {% else %}
                 <div class="empty-state">
-                    <i class="fas fa-users"></i>
-                    <p>{% trans "No persons added yet" %}</p>
-                    <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add your first person" %}
+                    <i class="fas fa-calendar-check"></i>
+                    <p>{% trans "No upcoming occasions in the next 30 days." %}</p>
+                    <a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary btn-sm" data-action="create">
+                        <i class="fas fa-plus me-1"></i>{% trans "Add an event" %}
                     </a>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
+
+    <section class="dashboard-secondary-section" aria-labelledby="dashboard-library-heading">
+        <div class="section-heading">
+            <h2 id="dashboard-library-heading">{% trans "Library" %}</h2>
+            <div class="quick-actions">
+                <a href="{% url 'gift_manager:gift_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-plus-circle"></i>{% trans "New Gift" %}
+                </a>
+                <a href="{% url 'gift_manager:person_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-user-plus"></i>{% trans "New Person" %}
+                </a>
+                <a href="{% url 'gift_manager:event_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-calendar-plus"></i>{% trans "New Event" %}
+                </a>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <a href="{% url 'gift_manager:recipients' %}" class="stat-card">
+                <div class="stat-icon persons">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value">{{ stats.recipients|default:0 }}</div>
+                <div class="stat-label">{% trans "Recipients" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:person_groups' %}" class="stat-card">
+                <div class="stat-icon groups">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="stat-value">{{ stats.groups|default:0 }}</div>
+                <div class="stat-label">{% trans "Groups" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:gifts' %}" class="stat-card">
+                <div class="stat-icon gifts">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <div class="stat-value">{{ stats.gifts|default:0 }}</div>
+                <div class="stat-label">{% trans "Gifts" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:events' %}" class="stat-card">
+                <div class="stat-icon events">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-value">{{ stats.events|default:0 }}</div>
+                <div class="stat-label">{% trans "Events" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:relations' %}" class="stat-card">
+                <div class="stat-icon relations">
+                    <i class="fas fa-hand-holding-heart"></i>
+                </div>
+                <div class="stat-value">{{ stats.relations|default:0 }}</div>
+                <div class="stat-label">{% trans "Gift Plans" %}</div>
+            </a>
+        </div>
+
+        {% if status_counts %}
+        <div class="status-list">
+            {% for item in status_counts %}
+            <div class="status-pill">
+                {{ item.status }}
+                <span class="count">{{ item.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
 
 {% else %}
     <!-- Welcome Section for Non-Authenticated Users -->
