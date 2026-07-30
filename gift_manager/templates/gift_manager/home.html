@@ -538,12 +538,104 @@
 
     .dashboard-action-list {
         display: grid;
-        gap: var(--space-3);
+        gap: var(--space-3, 0.75rem);
     }
 
-    .dashboard-action-list--responsive {
+    .dashboard-action-list--responsive,
+    .dashboard-action-list--paginated {
         grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
         align-items: start;
+    }
+
+    .dashboard-action-list--paginated {
+        --dashboard-action-card-height: 8.5rem;
+
+        align-content: start;
+        overflow: visible;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-item--compact {
+        height: var(--dashboard-action-card-height);
+        align-content: center;
+        overflow: hidden;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-item--compact.dashboard-action-item--has-note {
+        align-content: start;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-badges,
+    .dashboard-action-list--paginated .dashboard-action-meta,
+    .dashboard-action-list--paginated .dashboard-action-footer {
+        min-width: 0;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-badges {
+        max-width: 100%;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-status-badge,
+    .dashboard-action-list--paginated .gift-plan-due-badge {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-title,
+    .dashboard-action-list--paginated .dashboard-action-note {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        overflow-wrap: normal;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-title {
+        -webkit-line-clamp: 1;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-meta,
+    .dashboard-action-list--paginated .dashboard-action-meta a,
+    .dashboard-action-list--paginated .dashboard-action-meta span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .dashboard-action-list--paginated .dashboard-action-note {
+        -webkit-line-clamp: 1;
+    }
+
+    .dashboard-action-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+    }
+
+    .dashboard-action-pagination[hidden] {
+        display: none !important;
+    }
+
+    .dashboard-action-page-status {
+        min-width: 3.5rem;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .dashboard-action-pagination .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
     }
 
     .dashboard-action-item {
@@ -572,13 +664,15 @@
     }
 
     @media (min-width: 768px) {
-        .dashboard-action-group--incomplete {
+        .dashboard-action-group--incomplete,
+        .dashboard-action-group--upcoming {
             grid-column: span 2;
         }
     }
 
     @media (min-width: 1200px) {
-        .dashboard-action-group--incomplete {
+        .dashboard-action-group--incomplete,
+        .dashboard-action-group--upcoming {
             grid-column: 1 / -1;
         }
     }
@@ -779,7 +873,8 @@
             justify-content: flex-start;
         }
 
-        .dashboard-action-list--responsive {
+        .dashboard-action-list--responsive,
+        .dashboard-action-list--paginated {
             grid-template-columns: 1fr;
         }
 
@@ -1004,6 +1099,13 @@
         </div>
     </div>
 
+    <div id="dashboard-live"
+         data-list-container
+         hx-get="{% url 'gift_manager:home' %}"
+         hx-trigger="refresh"
+         hx-select="#dashboard-live"
+         hx-target="this"
+         hx-swap="outerHTML">
     <div class="dashboard-summary-strip" aria-label="{% trans 'Dashboard summary' %}">
         <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile dashboard-summary-tile--attention">
             <i class="fas fa-bell" aria-hidden="true"></i>
@@ -1047,6 +1149,7 @@
         <div class="action-group-grid">
             {% for group in dashboard_action_groups %}
             <section class="dashboard-action-group dashboard-action-group--{{ group.key }}"
+                     {% if group.is_paginated %}data-dashboard-action-paginated{% endif %}
                      aria-labelledby="dashboard-action-group-{{ group.key }}">
                 <div class="dashboard-action-heading">
                     <h3 id="dashboard-action-group-{{ group.key }}">
@@ -1054,9 +1157,11 @@
                     </h3>
                     <span class="dashboard-action-count">{{ group.items|length }}</span>
                 </div>
-                <div class="dashboard-action-list{% if group.key == 'incomplete' %} dashboard-action-list--responsive{% endif %}">
-                    {% for item in group.items|slice:":4" %}
-                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}{% if item.action_key == 'incomplete' %} dashboard-action-item--compact{% endif %}{% if item.relation.comment %} dashboard-action-item--has-note{% endif %}">
+                <div class="dashboard-action-list{% if group.is_paginated %} dashboard-action-list--responsive dashboard-action-list--paginated{% endif %}"
+                     {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
+                    {% for item in group.display_items %}
+                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}{% if group.is_paginated %} dashboard-action-item--compact{% endif %}{% if item.relation.comment %} dashboard-action-item--has-note{% endif %}"
+                             {% if group.is_paginated %}data-dashboard-action-card{% endif %}>
                         <div class="dashboard-action-badges">
                             <span class="gift-plan-status-badge {{ item.status_class }}">
                                 {{ item.relation.status }}
@@ -1111,6 +1216,26 @@
                     </article>
                     {% endfor %}
                 </div>
+                {% if group.is_paginated %}
+                <div class="dashboard-action-pagination" data-dashboard-pagination hidden>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            data-dashboard-page="previous"
+                            aria-label="{% trans 'Previous page' %}">
+                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <span class="dashboard-action-page-status"
+                          data-dashboard-page-status
+                          aria-live="polite"
+                          aria-atomic="true">1 / 1</span>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            data-dashboard-page="next"
+                            aria-label="{% trans 'Next page' %}">
+                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+                {% endif %}
             </section>
             {% endfor %}
         </div>
@@ -1272,6 +1397,7 @@
         </div>
         {% endif %}
     </section>
+    </div>
 
 {% else %}
     <!-- Welcome Section for Non-Authenticated Users -->
@@ -1314,4 +1440,135 @@
     </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+    (function () {
+        const rowsPerPage = 2;
+        let resizeTimer = null;
+
+        function getCards(group) {
+            return Array.from(group.querySelectorAll('[data-dashboard-action-card]'));
+        }
+
+        function getColumnCount(list, cards) {
+            const previousHiddenStates = cards.map((card) => card.hidden);
+            cards.forEach((card) => {
+                card.hidden = false;
+            });
+
+            const styles = window.getComputedStyle(list);
+            const columns = styles.gridTemplateColumns
+                .split(' ')
+                .filter((column) => column && column !== 'none').length;
+
+            cards.forEach((card, index) => {
+                card.hidden = previousHiddenStates[index];
+            });
+
+            return Math.max(columns || 1, 1);
+        }
+
+        function updateGroup(group, options) {
+            const list = group.querySelector('[data-dashboard-action-list]');
+            const pagination = group.querySelector('[data-dashboard-pagination]');
+            const previousButton = group.querySelector('[data-dashboard-page="previous"]');
+            const nextButton = group.querySelector('[data-dashboard-page="next"]');
+            const status = group.querySelector('[data-dashboard-page-status]');
+            const cards = getCards(group);
+            const previousHeight = options?.previousHeight || 0;
+
+            if (!list || cards.length === 0) return;
+
+            const columns = getColumnCount(list, cards);
+            const pageSize = Math.max(columns * rowsPerPage, 1);
+            const pageCount = Math.max(Math.ceil(cards.length / pageSize), 1);
+            const requestedPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10);
+            const currentPage = Math.min(Math.max(requestedPage || 0, 0), pageCount - 1);
+            const firstVisibleIndex = currentPage * pageSize;
+            const firstHiddenIndex = firstVisibleIndex + pageSize;
+
+            group.dataset.dashboardCurrentPage = currentPage.toString();
+            group.dataset.dashboardPageSize = pageSize.toString();
+
+            list.style.minHeight = '';
+            cards.forEach((card, index) => {
+                card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
+            });
+
+            const visibleCount = Math.min(pageSize, Math.max(cards.length - firstVisibleIndex, 0));
+            if (previousHeight > 0 && currentPage > 0 && visibleCount <= columns) {
+                list.style.minHeight = `${Math.ceil(previousHeight)}px`;
+            }
+
+            if (!pagination) return;
+
+            pagination.hidden = pageCount <= 1;
+            if (previousButton) {
+                previousButton.disabled = currentPage <= 0;
+            }
+            if (nextButton) {
+                nextButton.disabled = currentPage >= pageCount - 1;
+            }
+            if (status) {
+                status.textContent = `${currentPage + 1} / ${pageCount}`;
+            }
+        }
+
+        function initDashboardPagination(root) {
+            const scope = root && root.querySelectorAll ? root : document;
+            const groups = scope.matches && scope.matches('[data-dashboard-action-paginated]')
+                ? [scope]
+                : Array.from(scope.querySelectorAll('[data-dashboard-action-paginated]'));
+
+            groups.forEach(updateGroup);
+        }
+
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-dashboard-page]');
+            if (!button) return;
+
+            const group = button.closest('[data-dashboard-action-paginated]');
+            if (!group) return;
+
+            const list = group.querySelector('[data-dashboard-action-list]');
+            const previousHeight = list ? list.getBoundingClientRect().height : 0;
+            const direction = button.dataset.dashboardPage === 'next' ? 1 : -1;
+            const currentPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10) || 0;
+            group.dataset.dashboardCurrentPage = (currentPage + direction).toString();
+            updateGroup(group, { previousHeight });
+        });
+
+        window.addEventListener('resize', function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(function () {
+                initDashboardPagination(document);
+            }, 120);
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function () {
+            window.setTimeout(function () {
+                initDashboardPagination(document.getElementById('dashboard-live') || document);
+            }, 0);
+        });
+
+        document.addEventListener('dashboard-live:refreshed', function () {
+            initDashboardPagination(document.getElementById('dashboard-live') || document);
+        });
+
+        window.GiftManagerDashboardPagination = {
+            init: initDashboardPagination,
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                initDashboardPagination(document);
+            });
+        } else {
+            initDashboardPagination(document);
+        }
+    })();
+</script>
 {% endblock %}

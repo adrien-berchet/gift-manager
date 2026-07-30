@@ -32,6 +32,7 @@ SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 DASHBOARD_ACTION_WINDOW_DAYS = 30
 DASHBOARD_STALE_AFTER_DAYS = 30
+DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
 
 
 def _gift_plan_status_class(status) -> str:
@@ -161,7 +162,12 @@ def _build_gift_plan_action_groups(
         groups[group_key]["items"].append(_build_dashboard_action_item(relation, group_key))
 
     group_order = ("overdue", "upcoming", "incomplete", "stale")
-    return [groups[key] for key in group_order if groups[key]["items"]]
+    action_groups = [groups[key] for key in group_order if groups[key]["items"]]
+    for group in action_groups:
+        is_paginated = group["key"] in DASHBOARD_PAGINATED_ACTION_GROUPS
+        group["is_paginated"] = is_paginated
+        group["display_items"] = group["items"] if is_paginated else group["items"][:4]
+    return action_groups
 
 
 def _build_upcoming_occasion_recipients(

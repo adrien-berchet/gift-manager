@@ -155,6 +155,11 @@ class TestHomeDashboard:
         assert response.context["dashboard_summary"]["stale"] == 1
 
         content = response.content.decode()
+        groups_by_key = {group["key"]: group for group in groups}
+        assert groups_by_key["upcoming"]["is_paginated"] is True
+        assert groups_by_key["upcoming"]["display_items"] == groups_by_key["upcoming"]["items"]
+        assert groups_by_key["incomplete"]["is_paginated"] is True
+        assert groups_by_key["incomplete"]["display_items"] == groups_by_key["incomplete"]["items"]
         assert "Overdue scarf" in content
         assert "Soon puzzle" in content
         assert "Missing date" in content
@@ -166,11 +171,56 @@ class TestHomeDashboard:
         assert (
             "dashboard-action-item dashboard-action-item--incomplete dashboard-action-item--compact"
         ) in content
-        assert "dashboard-action-list dashboard-action-list--responsive" in content
+        assert (
+            "dashboard-action-item dashboard-action-item--upcoming dashboard-action-item--compact"
+        ) in content
+        assert (
+            "dashboard-action-list dashboard-action-list--responsive "
+            "dashboard-action-list--paginated"
+        ) in content
+        assert "dashboard-action-list--scrollable" not in content
+        assert "data-dashboard-action-paginated" in content
+        assert "data-dashboard-pagination" in content
+        assert 'id="dashboard-live"' in content
+        assert "data-list-container" in content
+        assert 'hx-trigger="refresh"' in content
+        assert 'hx-select="#dashboard-live"' in content
         assert (
             "dashboard-action-item dashboard-action-item--stale dashboard-action-item--compact"
         ) not in content
         assert content.index("Next actions") < content.index('class="stats-grid"')
+
+    def test_dashboard_paginated_action_groups_render_all_items(self):
+        today = timezone.localdate()
+        planned = RelationStatusFactory(status="Planned")
+
+        for index in range(5):
+            RelationFactory(
+                gift=GiftFactory(name=f"Due soon paginated item {index}"),
+                status=planned,
+                due_date=today + timedelta(days=index + 1),
+                shared_with=[self.user],
+            )
+            RelationFactory(
+                gift=GiftFactory(name=f"Needs details paginated item {index}"),
+                event=None,
+                status=planned,
+                due_date=None,
+                shared_with=[self.user],
+            )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        groups_by_key = {
+            group["key"]: group for group in response.context["dashboard_action_groups"]
+        }
+        assert len(groups_by_key["upcoming"]["display_items"]) == 5
+        assert len(groups_by_key["incomplete"]["display_items"]) == 5
+
+        content = response.content.decode()
+        assert "Due soon paginated item 4" in content
+        assert "Needs details paginated item 4" in content
 
     def test_dashboard_surfaces_unassigned_gifts_and_upcoming_occasion_recipients(self):
         today = timezone.localdate()
