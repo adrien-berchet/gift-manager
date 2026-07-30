@@ -105,8 +105,8 @@ class TestRelationList:
         assert "/relations/" in content
         assert "Workspace" in content
         assert "const canEditStatus = permission >= editorPermission" in content
-        assert 'disabled title="${statusReadonlyMessage}"' in content
-        assert 'data-current-value="${statusPk}"' in content
+        assert "disabledTitle: statusReadonlyMessage" in content
+        assert "currentValue: statusPk" in content
         assert "inline-edit:success" in content
         assert "event.detail?.fieldName === 'due_date'" in content
         assert "{ columnSelector: 'th:nth-child(6)' },  // Status" in content

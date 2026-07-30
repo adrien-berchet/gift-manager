@@ -115,10 +115,10 @@
                     }
 
                     return gridjs.html(`
-                            <span class="badge ${badgeClass}" title="${title}">
-                                <i class="fas ${icon} me-1"></i> ${label}
-                            </span>
-                        `);
+                        <span class="badge ${GridUtils.escapeAttribute(badgeClass)}" title="${GridUtils.escapeAttribute(title)}">
+                            <i class="fas ${GridUtils.escapeAttribute(icon)} me-1"></i> ${GridUtils.escapeHtml(label)}
+                        </span>
+                    `);
                 }
             }
         ];

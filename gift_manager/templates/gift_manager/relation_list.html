@@ -288,6 +288,11 @@
         const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
         const missingDueDateLabel = "{% trans 'Missing due date' %}";
         const missingEventLabel = "{% trans 'Missing event' %}";
+        const relationStatusOptions = [
+            {% for status in relation_statuses %}
+            { value: "{{ status.pk }}", label: "{{ status.status|escapejs }}" }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
 
         function giftPlanStatusClass(statusLabel) {
             const slug = String(statusLabel || '')
@@ -301,14 +306,7 @@
         }
 
         function escapeHtml(value) {
-            const replacements = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            };
-            return String(value || '').replace(/[&<>"']/g, (character) => replacements[character]);
+            return GridUtils.escapeHtml(value);
         }
 
         // Get permission data from template
@@ -363,7 +361,7 @@
 
         // Define columns
         const columns = [
-            GridUtils.createCheckboxColumn(8),
+            GridUtils.createCheckboxColumn(9),
             {
                 name: '{{ column_names.gift__name|escapejs }}',
                 sort: {
@@ -371,7 +369,7 @@
                 },
                 formatter: function (cell) {
                     if (!cell || !cell.id) return '';
-                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(cell.url, cell.name));
                 }
             },
             {
@@ -384,12 +382,12 @@
                     const typeLabel = recipientTypeLabels[cell.recipientType] || '';
                     const badgeClass = recipientTypeBadgeClasses[cell.recipientType] || 'recipient-type-badge';
                     const badge = typeLabel
-                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        ? GridUtils.badgeHtml(typeLabel, null, `badge ${badgeClass} ms-2`)
                         : '';
                     if (cell.url) {
-                        return gridjs.html(`<a href="${cell.url}">${cell.text}</a>${badge}`);
+                        return gridjs.html(`${GridUtils.linkHtml(cell.url, cell.text)}${badge}`);
                     }
-                    return gridjs.html(`${cell.text}${badge}`);
+                    return gridjs.html(`${GridUtils.escapeHtml(cell.text)}${badge}`);
                 }
             },
             {
@@ -400,17 +398,18 @@
                 formatter: function (cell, row) {
                     const rowState = row.cells[8].data || {};
                     if (!cell && rowState.missingEvent) {
-                        const label = escapeHtml(rowState.missingEventLabel || missingEventLabel);
+                        const rawLabel = rowState.missingEventLabel || missingEventLabel;
+                        const label = escapeHtml(rawLabel);
                         return gridjs.html(`
                             <span class="gift-plan-missing-data-badge"
-                                  title="${label}"
-                                  aria-label="${label}">
+                                  title="${GridUtils.escapeAttribute(rawLabel)}"
+                                  aria-label="${GridUtils.escapeAttribute(rawLabel)}">
                                 <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
                             </span>
                         `);
                     }
                     if (!cell || !cell.id) return '';
-                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(cell.url, cell.name));
                 }
             },
             {
@@ -429,9 +428,6 @@
                     const statusClass = giftPlanStatusClass(statusLabel);
                     const permission = Number(userPermissions[relationId] || 0);
                     const canEditStatus = permission >= editorPermission;
-                    const disabledAttr = canEditStatus
-                        ? ''
-                        : `disabled title="${statusReadonlyMessage}"`;
                     const urgencyKey = escapeHtml(rowState.urgencyKey || 'unknown');
                     const needsAttention = rowState.needsAttention ? 'true' : 'false';
                     const attentionLabel = escapeHtml(rowState.label || '');
@@ -441,7 +437,7 @@
                     const missingDueDateLabel = escapeHtml(rowState.missingDueDateLabel || '');
                     const hasMissingEvent = rowState.missingEvent ? 'true' : 'false';
                     const missingEventLabel = escapeHtml(rowState.missingEventLabel || '');
-                    return gridjs.html(`
+                    const rowStateHtml = `
                         <span class="gift-plan-grid-row-state visually-hidden"
                               data-grid-row-state
                               data-urgency-key="${urgencyKey}"
@@ -453,21 +449,18 @@
                               data-missing-due-date-label="${missingDueDateLabel}"
                               data-has-missing-event="${hasMissingEvent}"
                               data-missing-event-label="${missingEventLabel}">${attentionLabel || missingDataLabel}</span>
-                        <form id="status-form-${relationId}" class="gift-plan-status-form">
-                            <select class="form-select form-select-sm status-selector gift-plan-status-select ${statusClass}"
-                                    name="new_status"
-                                    data-relation-id="${relationId}"
-                                    data-update-url="${updateStatusUrl}"
-                                    data-current-value="${statusPk}"
-                                    ${disabledAttr}>
-                                {% for status in relation_statuses %}
-                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                    {{ status.status }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    `);
+                    `;
+                    return gridjs.html(rowStateHtml + GridUtils.statusSelectFormHtml({
+                        relationId,
+                        updateUrl: updateStatusUrl,
+                        currentValue: statusPk,
+                        options: relationStatusOptions,
+                        formClass: 'gift-plan-status-form',
+                        formStyle: '',
+                        selectClass: `gift-plan-status-select ${statusClass}`,
+                        disabled: !canEditStatus,
+                        disabledTitle: statusReadonlyMessage
+                    }));
                 }
             },
             {
@@ -482,11 +475,12 @@
                 formatter: function (cell, row) {
                     const rowState = row.cells[8].data || {};
                     if (!cell && rowState.missingDueDate) {
-                        const label = escapeHtml(rowState.missingDueDateLabel || missingDueDateLabel);
+                        const rawLabel = rowState.missingDueDateLabel || missingDueDateLabel;
+                        const label = escapeHtml(rawLabel);
                         return gridjs.html(`
                             <span class="gift-plan-missing-data-badge"
-                                  title="${label}"
-                                  aria-label="${label}">
+                                  title="${GridUtils.escapeAttribute(rawLabel)}"
+                                  aria-label="${GridUtils.escapeAttribute(rawLabel)}">
                                 <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
                             </span>
                         `);

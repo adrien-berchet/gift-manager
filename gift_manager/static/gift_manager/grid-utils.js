@@ -34,6 +34,89 @@
         };
     }
 
+    function escapeHtml(value) {
+        const replacements = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        };
+        return String(value ?? '').replace(/[&<>"']/g, character => replacements[character]);
+    }
+
+    function escapeAttribute(value) {
+        return escapeHtml(value);
+    }
+
+    function sanitizeUrl(value) {
+        const url = String(value ?? '').trim();
+        if (!url) return '';
+        if (/^(https?:|mailto:|#)/i.test(url)) return url;
+        if (url.startsWith('/') && !url.startsWith('//')) return url;
+        return '#';
+    }
+
+    function safeUrl(value) {
+        return escapeAttribute(sanitizeUrl(value));
+    }
+
+    function linkHtml(url, text, attrs = '') {
+        const extraAttrs = attrs ? ` ${attrs}` : '';
+        return `<a href="${safeUrl(url)}"${extraAttrs}>${escapeHtml(text)}</a>`;
+    }
+
+    function badgeHtml(text, url = null, badgeClass = 'badge bg-primary', attrs = '') {
+        const classAttr = escapeAttribute(badgeClass);
+        const extraAttrs = attrs ? ` ${attrs}` : '';
+        const label = escapeHtml(text);
+        if (url) {
+            return `<a href="${safeUrl(url)}" class="${classAttr}"${extraAttrs}>${label}</a>`;
+        }
+        return `<span class="${classAttr}"${extraAttrs}>${label}</span>`;
+    }
+
+    function optionsHtml(options, selectedValue) {
+        return (options || []).map(option => {
+            const value = String(option?.value ?? '');
+            const selected = String(selectedValue ?? '') === value ? ' selected' : '';
+            return `<option value="${escapeAttribute(value)}"${selected}>${escapeHtml(option?.label ?? '')}</option>`;
+        }).join('');
+    }
+
+    function statusSelectFormHtml({
+        relationId,
+        updateUrl,
+        currentValue,
+        options = [],
+        formClass = '',
+        formStyle = 'display: inline;',
+        selectClass = '',
+        disabled = false,
+        disabledTitle = ''
+    }) {
+        const safeRelationId = escapeAttribute(relationId);
+        const formClassAttr = formClass ? ` class="${escapeAttribute(formClass)}"` : '';
+        const formStyleAttr = formStyle ? ` style="${escapeAttribute(formStyle)}"` : '';
+        const selectClasses = `form-select form-select-sm status-selector ${selectClass}`.trim();
+        const disabledAttr = disabled
+            ? ` disabled title="${escapeAttribute(disabledTitle)}"`
+            : '';
+
+        return `
+            <form id="status-form-${safeRelationId}"${formClassAttr}${formStyleAttr}>
+                <select class="${escapeAttribute(selectClasses)}"
+                        name="new_status"
+                        data-relation-id="${safeRelationId}"
+                        data-update-url="${safeUrl(updateUrl)}"
+                        data-current-value="${escapeAttribute(currentValue)}"
+                        ${disabledAttr}>
+                    ${optionsHtml(options, currentValue)}
+                </select>
+            </form>
+        `;
+    }
+
     /**
      * Create action buttons formatter for CRUD operations with modern UX enhancements
      *
@@ -85,6 +168,7 @@
 
         return function (cell, row) {
             const id = options.idResolver ? options.idResolver(row) : cell;
+            const safeId = escapeAttribute(id);
 
             const resolveUrl = (urlTemplate, actionId) => {
                 if (typeof urlTemplate === 'function') return urlTemplate(row);
@@ -107,21 +191,24 @@
 
                     const url = resolveUrl(urlTemplate, typeof action === 'object' ? action.id : null);
                     if (!url) return null;
+                    const safeResolvedUrl = safeUrl(url);
+                    const title = escapeAttribute(config.title);
+                    const actionName = escapeAttribute(config.action);
 
                     // Enhanced button with modern UX attributes and hover effects
-                    return `<a href="${url}"
+                    return `<a href="${safeResolvedUrl}"
                               class="btn ${config.class} btn-sm quick-action-btn"
-                              title="${config.title}"
-                              data-action="${config.action}"
-                              data-entity-id="${id}"
-                              ${config.action === 'detail' ? 'data-detail-url="' + url + '"' : ''}
-                              ${config.action === 'edit' ? 'data-edit-url="' + url + '"' : ''}
-                              ${config.action === 'delete' ? 'data-delete-url="' + url + '"' : ''}
-                              ${config.action === 'expand' ? 'data-detail-url="' + url + '"' : ''}
+                              title="${title}"
+                              data-action="${actionName}"
+                              data-entity-id="${safeId}"
+                              ${config.action === 'detail' ? 'data-detail-url="' + safeResolvedUrl + '"' : ''}
+                              ${config.action === 'edit' ? 'data-edit-url="' + safeResolvedUrl + '"' : ''}
+                              ${config.action === 'delete' ? 'data-delete-url="' + safeResolvedUrl + '"' : ''}
+                              ${config.action === 'expand' ? 'data-detail-url="' + safeResolvedUrl + '"' : ''}
                               data-bs-toggle="tooltip"
                               data-bs-placement="top">
                         <i class="fas ${config.icon}"></i>
-                        <span class="btn-text d-none d-lg-inline ms-1">${config.title}</span>
+                        <span class="btn-text d-none d-lg-inline ms-1">${escapeHtml(config.title)}</span>
                     </a>`;
                 })
                 .filter(Boolean);
@@ -146,7 +233,7 @@
                 return text;
             }
 
-            return gridjs.html(`<a href="${urlTemplate.replace('{id}', id)}">${text}</a>`);
+            return gridjs.html(linkHtml(urlTemplate.replace('{id}', id), text));
         };
     }
 
@@ -174,7 +261,7 @@
                     if (!item) return '';
                     const text = item.name || item;
                     const url = resolveItemUrl(item, urlTemplate);
-                    return url ? `<a href="${url}">${text}</a>` : text;
+                    return url ? linkHtml(url, text) : escapeHtml(text);
                 })
                 .filter(Boolean);
 
@@ -196,8 +283,7 @@
                     const text = tag.name || tag;
                     const url = resolveItemUrl(tag, urlTemplate);
                     const badgeClass = 'badge bg-primary';
-                    return url ? `<a href="${url}" class="${badgeClass}">${text}</a>`
-                        : `<span class="${badgeClass}">${text}</span>`;
+                    return badgeHtml(text, url, badgeClass);
                 })
                 .filter(Boolean);
 
@@ -1276,11 +1362,12 @@
             sort: false,
             formatter: (cell, row) => {
                 const entityId = row.cells[entityIdIndex].data;
+                const safeEntityId = escapeAttribute(entityId);
                 return gridjs.html(`
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input bulk-select-item"
-                               value="${entityId}"
-                               data-entity-id="${entityId}">
+                               value="${safeEntityId}"
+                               data-entity-id="${safeEntityId}">
                     </div>
                 `);
             }
@@ -1880,6 +1967,14 @@
         linkFormatter: linkFormatter,
         multiLinkFormatter: multiLinkFormatter,
         badgeFormatter: badgeFormatter,
+        escapeHtml: escapeHtml,
+        escapeAttribute: escapeAttribute,
+        sanitizeUrl: sanitizeUrl,
+        safeUrl: safeUrl,
+        linkHtml: linkHtml,
+        badgeHtml: badgeHtml,
+        optionsHtml: optionsHtml,
+        statusSelectFormHtml: statusSelectFormHtml,
         setupFilterDropdown: setupFilterDropdown,
         setupCustomColumnFilter: setupCustomColumnFilter,
         enableExpandableRows: enableExpandableRows,

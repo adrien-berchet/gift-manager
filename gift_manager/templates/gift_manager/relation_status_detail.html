@@ -72,12 +72,12 @@
                     const typeLabel = recipientTypeLabels[type] || '';
                     const badgeClass = recipientTypeBadgeClasses[type] || 'recipient-type-badge';
                     const badge = typeLabel
-                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        ? GridUtils.badgeHtml(typeLabel, null, `badge ${badgeClass} ms-2`)
                         : '';
                     if (url) {
-                        return gridjs.html(`<a href="${url}">${name}</a>${badge}`);
+                        return gridjs.html(`${GridUtils.linkHtml(url, name)}${badge}`);
                     }
-                    return gridjs.html(`${name}${badge}`);
+                    return gridjs.html(`${GridUtils.escapeHtml(name)}${badge}`);
                 }
             },
         { name: 'recipient_url', hidden: true },
@@ -90,7 +90,7 @@
             formatter: (cell, row) => {
                 const giftName = row.cells[5].data;
                 const giftUrl = row.cells[6].data;
-                return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+                return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
             }
         },
         { name: 'gift_url', hidden: true },
@@ -109,7 +109,7 @@
                 const eventName = row.cells[8].data;
                 const eventUrl = row.cells[9].data;
                 if (eventName && eventUrl) {
-                    return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(eventUrl, eventName));
                 }
                 return eventName;
             }

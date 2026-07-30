@@ -26,7 +26,7 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.permissions import create_or_update_permission
-from gift_manager.permissions import get_permission
+from gift_manager.services import PermissionService
 
 logger = logging.getLogger(__name__)
 
@@ -564,13 +564,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
     def _get_actor_permission(self, actor: User, obj) -> int:
         """Return actor permission, treating legacy linked Person owners as owners."""
-        if actor.is_superuser:
-            return PermissionLevel.OWNER
-
-        permission = get_permission(obj, actor)
-        if permission == PermissionLevel.NONE and getattr(obj, "user_link_id", None) == actor.id:
-            return PermissionLevel.OWNER
-        return permission
+        return PermissionService.get_effective_permission(obj, actor)
 
     def _share_object_with_friend(self, friend: User, obj, permission_level: int) -> None:
         """Create or update one object permission for a friend."""

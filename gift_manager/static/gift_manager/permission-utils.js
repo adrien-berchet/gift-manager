@@ -14,6 +14,31 @@
         OWNER: 30,
     };
 
+    function escapeHtml(value) {
+        if (window.GridUtils?.escapeHtml) return window.GridUtils.escapeHtml(value);
+        const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+        };
+        return String(value ?? "").replace(/[&<>"']/g, (character) => replacements[character]);
+    }
+
+    function escapeAttribute(value) {
+        if (window.GridUtils?.escapeAttribute) return window.GridUtils.escapeAttribute(value);
+        return escapeHtml(value);
+    }
+
+    function safeUrl(value) {
+        if (window.GridUtils?.safeUrl) return window.GridUtils.safeUrl(value);
+        const url = String(value ?? "").trim();
+        if (/^(https?:|mailto:|#)/i.test(url)) return escapeAttribute(url);
+        if (url.startsWith("/") && !url.startsWith("//")) return escapeAttribute(url);
+        return "#";
+    }
+
     /**
      * Create permission-aware action buttons formatter for Grid.js
      *
@@ -72,6 +97,7 @@
         return function (cell, row) {
             const id = options.idResolver ? options.idResolver(row) : cell;
             const userPermission = permissions[id] || PERMISSION_LEVELS.NONE;
+            const safeId = escapeAttribute(id);
 
             // Debug logging - only log when permission is NONE (might indicate a problem)
             if (userPermission === PERMISSION_LEVELS.NONE) {
@@ -106,6 +132,9 @@
                         typeof action === "object" ? action.id : null
                     );
                     if (!url) return null;
+                    const safeResolvedUrl = safeUrl(url);
+                    const actionName = escapeAttribute(config.action);
+                    const title = escapeAttribute(config.title);
 
                     // Check if user has required permission
                     const hasPermission = userPermission >= config.requiredPermission;
@@ -116,55 +145,56 @@
                     if (!hasPermission) {
                         tooltip = `You do not have permission to ${config.title.toLowerCase()} this object`;
                     }
+                    const safeTooltip = escapeAttribute(tooltip);
 
                     // Create button HTML
                     if (isEnabled) {
-                        return `<a href="${url}"
+                        return `<a href="${safeResolvedUrl}"
                                   class="btn ${config.class} btn-sm quick-action-btn"
-                                  title="${tooltip}"
-                                  data-action="${config.action}"
-                                  data-entity-id="${id}"
+                                  title="${safeTooltip}"
+                                  data-action="${actionName}"
+                                  data-entity-id="${safeId}"
                                   data-permission-level="${userPermission}"
                                   ${
                                       config.action === "detail"
-                                          ? 'data-detail-url="' + url + '"'
+                                          ? 'data-detail-url="' + safeResolvedUrl + '"'
                                           : ""
                                   }
-                                  ${config.action === "edit" ? 'data-edit-url="' + url + '"' : ""}
+                                  ${config.action === "edit" ? 'data-edit-url="' + safeResolvedUrl + '"' : ""}
                                   ${
                                       config.action === "delete"
-                                          ? 'data-delete-url="' + url + '"'
+                                          ? 'data-delete-url="' + safeResolvedUrl + '"'
                                           : ""
                                   }
                                   ${
                                       config.action === "expand"
-                                          ? 'data-detail-url="' + url + '"'
+                                          ? 'data-detail-url="' + safeResolvedUrl + '"'
                                           : ""
                                   }
                                   data-bs-toggle="tooltip"
                                   data-bs-placement="top">
                             <i class="fas ${config.icon}"></i>
-                            <span class="btn-text d-none d-lg-inline ms-1">${config.title}</span>
+                            <span class="btn-text d-none d-lg-inline ms-1">${escapeHtml(config.title)}</span>
                         </a>`;
                     } else {
                         return `<button class="btn ${config.class} btn-sm quick-action-btn"
                                        disabled
-                                       title="${tooltip}"
-                                       data-action="${config.action}"
-                                       data-entity-id="${id}"
+                                       title="${safeTooltip}"
+                                       data-action="${actionName}"
+                                       data-entity-id="${safeId}"
                                        data-permission-level="${userPermission}"
                                        data-bs-toggle="tooltip"
                                        data-bs-placement="top"
                                        style="opacity: 0.5;">
                             <i class="fas ${config.icon}"></i>
-                            <span class="btn-text d-none d-lg-inline ms-1">${config.title}</span>
+                            <span class="btn-text d-none d-lg-inline ms-1">${escapeHtml(config.title)}</span>
                         </button>`;
                     }
                 })
                 .filter(Boolean);
 
             return gridjs.html(
-                `<div class="quick-actions-container" data-permission-level="${userPermission}">${buttons.join(
+                `<div class="quick-actions-container" data-permission-level="${escapeAttribute(userPermission)}">${buttons.join(
                     ""
                 )}</div>`
             );

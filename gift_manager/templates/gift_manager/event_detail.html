@@ -55,6 +55,11 @@
             person: "recipient-type-badge recipient-type-badge--person",
             group: "recipient-type-badge recipient-type-badge--group"
         };
+        const relationStatusOptions = [
+            {% for status in relation_statuses %}
+            { value: "{{ status.pk }}", label: "{{ status.status|escapejs }}" }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
 
         {% if relations %}
         // Relations Grid
@@ -90,7 +95,7 @@
                 formatter: (cell, row) => {
                     const giftName = row.cells[2].data;
                     const giftUrl = row.cells[1].data;
-                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
                 }
             },
             { name: 'recipient_type', hidden: true },
@@ -107,12 +112,12 @@
                     const typeLabel = recipientTypeLabels[recipientType] || '';
                     const badgeClass = recipientTypeBadgeClasses[recipientType] || 'recipient-type-badge';
                     const badge = typeLabel
-                        ? `<span class="badge ${badgeClass} ms-2">${typeLabel}</span>`
+                        ? GridUtils.badgeHtml(typeLabel, null, `badge ${badgeClass} ms-2`)
                         : '';
                     if (recipientUrl) {
-                        return gridjs.html(`<a href="${recipientUrl}">${recipientName}</a>${badge}`);
+                        return gridjs.html(`${GridUtils.linkHtml(recipientUrl, recipientName)}${badge}`);
                     }
-                    return gridjs.html(`${recipientName}${badge}`);
+                    return gridjs.html(`${GridUtils.escapeHtml(recipientName)}${badge}`);
                 }
             },
             {
@@ -125,22 +130,13 @@
                 name: "{% trans 'Status' %}",
                 formatter: (cell, row) => {
                     const statusPk = row.cells[7].data;
-                    const statusLabel = row.cells[8].data;
                     const relationId = row.cells[10].data;
-                    return gridjs.html(`
-                        <form id="status-form-${relationId}" style="display: inline;">
-                            <select class="form-select form-select-sm status-selector"
-                                    name="new_status"
-                                    data-relation-id="${relationId}"
-                                    data-update-url="${updateStatusUrl}">
-                                {% for status in relation_statuses %}
-                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                    {{ status.status }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    `);
+                    return gridjs.html(GridUtils.statusSelectFormHtml({
+                        relationId,
+                        updateUrl: updateStatusUrl,
+                        currentValue: statusPk,
+                        options: relationStatusOptions
+                    }));
                 }
             },
             { name: 'status_label', hidden: true },
@@ -275,8 +271,8 @@
                     }
 
                     return gridjs.html(`
-                        <span class="badge ${badgeClass}" title="${title}">
-                            <i class="fas ${icon} me-1"></i> ${label}
+                        <span class="badge ${GridUtils.escapeAttribute(badgeClass)}" title="${GridUtils.escapeAttribute(title)}">
+                            <i class="fas ${GridUtils.escapeAttribute(icon)} me-1"></i> ${GridUtils.escapeHtml(label)}
                         </span>
                     `);
                 }

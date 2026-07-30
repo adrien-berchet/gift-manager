@@ -120,25 +120,12 @@ class TestShareObjectsView:
         assert response.status_code == 302
         assert reverse("gift_manager:share_objects") in response.url
 
-        # Check permissions were created
-        # Verify permissions for relation and associated objects
-        for obj in [
-            self.relation_person,
-            self.relation_group,
-            self.gift,
-            self.person,
-            self.group,
-            self.event,
-        ]:
-            obj_type = obj.__class__.__name__.lower()
-            perm = obj_type + "_permissions"
-
-            # Get permissions objects - implementation depends on your permissions model
-            # This is a simplified check - you'll need to adapt to your actual permissions model
-            if hasattr(obj, perm):
-                permissions = getattr(obj, perm).filter(user=self.friend)
-                assert permissions.exists()
-                assert permissions.first().permission_level == PermissionLevel.VIEWER
+        assert get_permission(self.relation_person, self.friend) == PermissionLevel.VIEWER
+        assert get_permission(self.relation_group, self.friend) == PermissionLevel.VIEWER
+        assert get_permission(self.gift, self.friend) == PermissionLevel.VIEWER
+        assert get_permission(self.person, self.friend) == PermissionLevel.VIEWER
+        assert get_permission(self.group, self.friend, "group") == PermissionLevel.VIEWER
+        assert get_permission(self.event, self.friend) == PermissionLevel.VIEWER
 
     @override_settings(USE_I18N=False)
     def test_post_share_objects_with_invalid_data(self):
@@ -287,6 +274,32 @@ class TestShareObjectsView:
         # Assert
         assert response.status_code == 200
         assert get_permission(self.gift, recipient) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_user_link_owner_can_share_despite_lower_explicit_permission(self):
+        """Test effective owner permission wins over stale lower explicit rows."""
+        # Arrange
+        self.person.user_link = self.owner
+        self.person.save(update_fields=["user_link"])
+        create_or_update_permission(
+            self.owner,
+            self.person,
+            permission_level=PermissionLevel.VIEWER,
+        )
+
+        url = reverse("gift_manager:share_objects")
+        data = {
+            "persons": [self.person.person_id],
+            "friends": [self.friend.id],
+            "permission_level": PermissionLevel.EDITOR,
+        }
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 302
+        assert get_permission(self.person, self.friend) == PermissionLevel.EDITOR
 
     @override_settings(USE_I18N=False)
     def test_post_share_objects_rejects_relation_with_unshareable_related_object(self):
