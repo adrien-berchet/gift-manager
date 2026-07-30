@@ -1,3 +1,4 @@
+from django.core.exceptions import PermissionDenied
 from django.db.models import Model
 from django.utils.translation import gettext
 
@@ -7,6 +8,12 @@ from gift_manager.models import PersonGroupPermission
 
 class PermissionService:
     """Service for managing permissions."""
+
+    VALID_PERMISSION_LEVELS = {
+        PermissionLevel.VIEWER,
+        PermissionLevel.EDITOR,
+        PermissionLevel.OWNER,
+    }
 
     @staticmethod
     def get_permission_model(obj) -> type[Model] | None:
@@ -34,6 +41,78 @@ class PermissionService:
                 ) from None
         permission = model.objects.filter(**{"user": user, filter_name: obj}).first()
         return permission.permission_type if permission else PermissionLevel.NONE
+
+    @classmethod
+    def get_effective_permission(cls, obj, user) -> int:
+        """Get permission including ownership implied by user_link."""
+        if user.is_superuser:
+            return PermissionLevel.OWNER
+
+        permission = cls.get_permission(obj, user)
+        if getattr(obj, "user_link_id", None) == user.id:
+            return max(permission, PermissionLevel.OWNER)
+        return permission
+
+    @classmethod
+    def validate_permission_level(cls, permission_level: int) -> int:
+        """Validate a shareable permission level."""
+        if permission_level not in cls.VALID_PERMISSION_LEVELS:
+            raise ValueError(gettext("Invalid permission value."))
+        return permission_level
+
+    @classmethod
+    def assert_can_manage_permission(
+        cls,
+        actor,
+        obj,
+        target_user,
+        permission_level: int | None,
+    ) -> None:
+        """Validate that actor can change target_user's permission on obj."""
+        actor_permission = cls.get_effective_permission(obj, actor)
+        if actor_permission < PermissionLevel.OWNER:
+            raise PermissionDenied(
+                gettext("You do not have permission to manage sharing for this object.")
+            )
+
+        if permission_level is not None:
+            cls.validate_permission_level(permission_level)
+
+        target_permission = cls.get_effective_permission(obj, target_user)
+        is_demoting_or_removing_owner = (
+            target_permission == PermissionLevel.OWNER and permission_level != PermissionLevel.OWNER
+        )
+        if is_demoting_or_removing_owner and len(cls._owner_user_ids(obj)) <= 1:
+            raise PermissionDenied(gettext("At least one owner is required."))
+
+    @classmethod
+    def _owner_user_ids(cls, obj) -> set[int]:
+        """Return users who currently have effective owner permission on obj."""
+        model = cls.get_permission_model(obj)
+        object_attr = cls._get_permission_object_attr(obj, model)
+        owner_ids = set(
+            model.objects.filter(
+                **{object_attr: obj},
+                permission_type=PermissionLevel.OWNER,
+            ).values_list("user_id", flat=True)
+        )
+
+        linked_user_id = getattr(obj, "user_link_id", None)
+        if linked_user_id is not None:
+            owner_ids.add(linked_user_id)
+
+        return owner_ids
+
+    @classmethod
+    def _get_permission_object_attr(cls, obj, model, object_attr=None) -> str:
+        """Resolve the permission model field that points at obj."""
+        if object_attr is not None:
+            return object_attr
+
+        try:
+            return model.filter_name
+        except AttributeError:
+            return obj.__class__.__name__.lower()
 
     @classmethod
     def get_effective_permission_for_group(cls, group, user) -> int:
@@ -84,12 +163,7 @@ class PermissionService:
         if not model:
             raise ValueError(gettext("Could not determine permission model for this object type"))
 
-        if object_attr is None:
-            # Use the filter_name from the permission model if available
-            try:
-                object_attr = model.filter_name
-            except AttributeError:
-                object_attr = obj.__class__.__name__.lower()
+        object_attr = cls._get_permission_object_attr(obj, model, object_attr)
         filter_kwargs = {"user": user, object_attr: obj}
 
         permission_obj, _ = model.objects.get_or_create(
@@ -113,11 +187,7 @@ class PermissionService:
         if not model:
             raise ValueError(gettext("Could not determine permission model for this object type"))
 
-        # Use the filter_name from the permission model if available
-        try:
-            object_attr = model.filter_name
-        except AttributeError:
-            object_attr = obj.__class__.__name__.lower()
+        object_attr = cls._get_permission_object_attr(obj, model)
         filter_kwargs = {"user": user, object_attr: obj}
 
         try:

@@ -209,14 +209,13 @@ class TestPersonGroupUpdateView:
 
         url = reverse("gift_manager:person_group_edit", kwargs={"pk": other_group.group_id})
 
-        # Viewer can access the form (GET returns 200)
+        # Viewer cannot access the edit form
         response = self.client.get(url)
-        assert response.status_code == 200
+        assert response.status_code == 403
 
-        # But submitting changes should fail or redirect
+        # Submitting changes should fail
         response = self.client.post(url, {"name": "Hacked Name"})
-        # Either redirects without saving, or returns 403
-        assert response.status_code in [302, 403]
+        assert response.status_code == 403
         other_group.refresh_from_db()
         assert other_group.name == "Other Group"  # Name unchanged
 

@@ -4,7 +4,9 @@ import json
 import logging
 from typing import Any
 
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
+from django.http import JsonResponse
 
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
@@ -417,42 +419,57 @@ class PermissionUpdateMixin:
 
             # Update or remove permission
             if permission == "not_shared":
+                PermissionService.assert_can_manage_permission(
+                    request.user,
+                    self.object,
+                    friend,
+                    None,
+                )
                 PermissionService.delete_permission(friend, self.object)
                 logger.info(f"Removed permission for user {friend.username} on {self.object}")
             else:
+                permission_level = int(permission)
+                PermissionService.assert_can_manage_permission(
+                    request.user,
+                    self.object,
+                    friend,
+                    permission_level,
+                )
                 PermissionService.create_or_update_permission(
-                    friend, self.object, permission_level=int(permission)
+                    friend, self.object, permission_level=permission_level
                 )
                 logger.info(
                     f"Updated permission to {permission} for user {friend.username} on {self.object}"
                 )
 
-            # Return appropriate response based on request type
-            if request.headers.get("X-Permission-Update"):
-                # AJAX request - return JSON
-                from django.http import JsonResponse
-
-                return JsonResponse({"status": "success", "message": "Permission updated"})
-            # HTMX request - return empty response
-            response = HttpResponse(status=204)  # 204 No Content
-            response["HX-Trigger"] = "permissionUpdated"
-            return response
+            return self._permission_update_success_response(request)
 
         except User.DoesNotExist:
             logger.error(f"User {user_id} not found")
-            if request.headers.get("X-Permission-Update"):
-                from django.http import JsonResponse
-
-                return JsonResponse({"status": "error", "message": "User not found"}, status=404)
-            response = HttpResponse("User not found", status=404)
-            response["HX-Trigger"] = "showNotification"
-            return response
+            return self._permission_update_error_response(request, "User not found", 404)
+        except PermissionDenied:
+            raise
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Invalid permission update request: {e}")
+            return self._permission_update_error_response(request, "Invalid permission value", 400)
         except Exception as e:
             logger.error(f"Error updating permission: {e}", exc_info=True)
-            if request.headers.get("X-Permission-Update"):
-                from django.http import JsonResponse
+            return self._permission_update_error_response(request, str(e), 500)
 
-                return JsonResponse({"status": "error", "message": str(e)}, status=500)
-            response = HttpResponse(f"Error: {e!s}", status=500)
-            response["HX-Trigger"] = "showNotification"
-            return response
+    def _permission_update_success_response(self, request) -> HttpResponse:
+        """Return the successful response for a permission update request."""
+        if request.headers.get("X-Permission-Update"):
+            return JsonResponse({"status": "success", "message": "Permission updated"})
+
+        response = HttpResponse(status=204)
+        response["HX-Trigger"] = "permissionUpdated"
+        return response
+
+    def _permission_update_error_response(self, request, message: str, status: int) -> HttpResponse:
+        """Return an error response matching the request style."""
+        if request.headers.get("X-Permission-Update"):
+            return JsonResponse({"status": "error", "message": message}, status=status)
+
+        response = HttpResponse(message, status=status)
+        response["HX-Trigger"] = "showNotification"
+        return response

@@ -7,6 +7,7 @@ from copy import deepcopy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404
 from django.http import HttpResponse
@@ -467,13 +468,32 @@ class EditPermissionMixin:
 
             try:
                 user = User.objects.get(id=user_id)
+                current_permission = PermissionService.get_permission(self.object, user)
                 if value == "not_shared":
+                    if current_permission == PermissionLevel.NONE:
+                        continue
+                    PermissionService.assert_can_manage_permission(
+                        self.request.user,
+                        self.object,
+                        user,
+                        None,
+                    )
                     PermissionService.delete_permission(user, self.object)
                 elif value:
+                    permission_level = int(value)
+                    PermissionService.validate_permission_level(permission_level)
+                    if current_permission == permission_level:
+                        continue
+                    PermissionService.assert_can_manage_permission(
+                        self.request.user,
+                        self.object,
+                        user,
+                        permission_level,
+                    )
                     PermissionService.create_or_update_permission(
                         user,
                         self.object,
-                        permission_level=int(value),
+                        permission_level=permission_level,
                     )
             except (User.DoesNotExist, ValueError, TypeError) as e:
                 logger.warning("Invalid permission update from main form: %s", e)
@@ -526,6 +546,12 @@ class EditPermissionMixin:
 
             # Update the permission
             new_permission = int(permission_value)
+            PermissionService.assert_can_manage_permission(
+                request.user,
+                self.object,
+                user,
+                new_permission,
+            )
             PermissionService.create_or_update_permission(
                 user, self.object, permission_level=new_permission
             )
@@ -569,6 +595,12 @@ class EditPermissionMixin:
             user, username = get_user(request.POST.get("user_id"))
 
             # Remove the permission
+            PermissionService.assert_can_manage_permission(
+                request.user,
+                self.object,
+                user,
+                None,
+            )
             PermissionService.delete_permission(user, self.object)
 
             message = gettext("Sharing with '{username}' removed successfully").format(
@@ -607,6 +639,12 @@ class EditPermissionMixin:
             user, username = get_user(request.POST.get("user_id"))
 
             # Create or update the permission
+            PermissionService.assert_can_manage_permission(
+                request.user,
+                self.object,
+                user,
+                permission,
+            )
             PermissionService.create_or_update_permission(
                 user, self.object, permission_level=permission
             )
@@ -672,6 +710,27 @@ class BaseUpdateView(
     show_sharing_section = True
     close_offcanvas = True
     login_url = "/accounts/login/"
+    required_permission = PermissionLevel.EDITOR
+
+    def get_object(self, queryset=None):
+        """Return the object only when the current user can edit it."""
+        obj = super().get_object(queryset)
+        self._ensure_user_can_edit(obj)
+        return obj
+
+    def _ensure_user_can_edit(self, obj) -> None:
+        """Deny edit-form access unless the current user has editor permission."""
+        permission = PermissionService.get_effective_permission(obj, self.request.user)
+
+        if permission < self.required_permission:
+            logger.warning(
+                "User %s with permission %s tried to edit %s object %s",
+                self.request.user,
+                permission,
+                self.object_type,
+                obj,
+            )
+            raise PermissionDenied(gettext("You do not have permission to edit this object."))
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
@@ -708,17 +767,7 @@ class BaseUpdateView(
 
     def form_valid(self, form):
         with transaction.atomic():
-            # Only set user_link if the model has that field
-            if hasattr(form.instance, "user_link"):
-                form.instance.user_link = self.request.user
-            response = super().form_valid(form)
-            PermissionService.create_or_update_permission(
-                self.request.user,
-                form.instance,
-                permission_level=PermissionLevel.EDITOR,
-                object_attr=self.context_object_name,
-            )
-            return response
+            return super().form_valid(form)
 
     def get_success_url(self) -> str:
         return reverse(

@@ -188,7 +188,9 @@ class GiftTagUpdateView(PermissionUpdateMixin, BaseUpdateView):
 
     def get_queryset(self):
         """Optimize queryset with prefetched relations."""
-        return GiftTag.objects.prefetch_related("parent_tags", "child_tags")
+        return GiftTag.objects.accessible_by(self.request.user).prefetch_related(
+            "parent_tags", "child_tags"
+        )
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

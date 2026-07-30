@@ -8,6 +8,7 @@ from django.test import override_settings
 from django.urls import reverse
 
 from gift_manager.models import Gift
+from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
@@ -30,13 +31,13 @@ class TestFilterByUserMixin:
         mixin.request.user = Mock(spec=User)
 
         mock_queryset = Mock()
-        mixin.model.objects.filter.return_value = mock_queryset
+        mixin.model.objects.accessible_by.return_value = mock_queryset
 
         # Act
         result = mixin.get_queryset()
 
         # Assert
-        mixin.model.objects.filter.assert_called_once()
+        mixin.model.objects.accessible_by.assert_called_once_with(mixin.request.user)
         assert result == mock_queryset
 
 
@@ -131,6 +132,272 @@ class TestEditPermissionMixin:
 
         self.client = Client()
         self.client.force_login(user)
+
+    @override_settings(USE_I18N=False)
+    def test_viewer_cannot_get_update_form(self):
+        """Test view-only users cannot access edit forms."""
+        viewer = UserFactory(username="viewer", email="viewer@example.com")
+        create_or_update_permission(viewer, self.person, permission_level=PermissionLevel.VIEWER)
+        self.client.force_login(viewer)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.get(url)
+
+        assert response.status_code == 403
+
+    @override_settings(USE_I18N=False)
+    def test_viewer_cannot_post_update_or_self_elevate(self):
+        """Test view-only users cannot update objects or gain editor permission."""
+        viewer = UserFactory(username="viewer", email="viewer@example.com")
+        create_or_update_permission(viewer, self.person, permission_level=PermissionLevel.VIEWER)
+        self.person.user_link = self.user
+        self.person.save(update_fields=["user_link"])
+        self.client.force_login(viewer)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Hacked",
+                "family_name": "Person",
+                "email_address": "hacked@example.com",
+            },
+        )
+
+        assert response.status_code == 403
+        self.person.refresh_from_db()
+        assert self.person.first_name != "Hacked"
+        assert self.person.user_link == self.user
+        assert get_permission(self.person, viewer) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_can_update_without_permission_escalation(self):
+        """Test editors can update objects without being promoted to owner."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        editor.profile.friends.add(self.friend.profile)
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        self.person.user_link = self.user
+        self.person.save(update_fields=["user_link"])
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Edited",
+                "family_name": "Person",
+                "email_address": "edited@example.com",
+                f"permission_{self.friend.id}": "not_shared",
+            },
+        )
+
+        assert response.status_code == 302
+        self.person.refresh_from_db()
+        assert self.person.first_name == "Edited"
+        assert self.person.user_link == self.user
+        assert get_permission(self.person, self.friend) == PermissionLevel.NONE
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_can_update_with_unchanged_existing_permission_field(self):
+        """Test editors can save when submitted sharing fields are unchanged."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        editor.profile.friends.add(self.friend.profile)
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        create_or_update_permission(
+            self.friend, self.person, permission_level=PermissionLevel.VIEWER
+        )
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Edited Again",
+                "family_name": "Person",
+                "email_address": "edited-again@example.com",
+                f"permission_{self.friend.id}": str(PermissionLevel.VIEWER),
+            },
+        )
+
+        assert response.status_code == 302
+        self.person.refresh_from_db()
+        assert self.person.first_name == "Edited Again"
+        assert get_permission(self.person, self.friend) == PermissionLevel.VIEWER
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+
+    @override_settings(USE_I18N=False)
+    def test_owner_can_update_without_permission_change(self):
+        """Test owners can update objects without changing ownership metadata."""
+        self.person.user_link = self.user
+        self.person.save(update_fields=["user_link"])
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Owned",
+                "family_name": "Person",
+                "email_address": "owned@example.com",
+            },
+        )
+
+        assert response.status_code == 302
+        self.person.refresh_from_db()
+        assert self.person.first_name == "Owned"
+        assert self.person.user_link == self.user
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_viewer_cannot_update_permissions_or_self_elevate(self):
+        """Test permission update requests require edit access to the object."""
+        viewer = UserFactory(username="viewer", email="viewer@example.com")
+        create_or_update_permission(viewer, self.person, permission_level=PermissionLevel.VIEWER)
+        self.client.force_login(viewer)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(viewer.id),
+                "permission": str(PermissionLevel.EDITOR),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, viewer) == PermissionLevel.VIEWER
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_cannot_promote_self_to_owner_via_permission_update(self):
+        """Test editors cannot elevate themselves through permission update requests."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(editor.id),
+                "permission": str(PermissionLevel.OWNER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_cannot_downgrade_owner_via_permission_update(self):
+        """Test editors cannot reduce an owner's permissions."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(self.user.id),
+                "permission": str(PermissionLevel.VIEWER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_cannot_remove_owner_via_permission_action(self):
+        """Test explicit permission actions cannot let editors remove owners."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "remove_share": "1",
+                "user_id": str(self.user.id),
+            },
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_editor_main_form_permission_fields_do_not_mutate_permissions(self):
+        """Test editors cannot smuggle permission changes through normal edit forms."""
+        editor = UserFactory(username="editor", email="editor@example.com")
+        editor.profile.friends.add(self.friend.profile)
+        create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Should Roll Back",
+                "family_name": "Person",
+                "email_address": "rollback@example.com",
+                f"permission_{self.friend.id}": str(PermissionLevel.VIEWER),
+            },
+        )
+
+        assert response.status_code == 403
+        self.person.refresh_from_db()
+        assert self.person.first_name != "Should Roll Back"
+        assert get_permission(self.person, self.friend) == PermissionLevel.NONE
+        assert get_permission(self.person, editor) == PermissionLevel.EDITOR
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_remove_last_owner_via_permission_update(self):
+        """Test the final owner cannot be removed from an object."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(self.user.id),
+                "permission": "not_shared",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_owner_can_update_friend_permission(self):
+        """Test owners can still manage sharing for editable objects."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(self.friend.id),
+                "permission": str(PermissionLevel.VIEWER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 204
+        assert get_permission(self.person, self.friend) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_gift_tag_update_does_not_reveal_inaccessible_tag(self):
+        """Test inaccessible gift tag edit URLs use the filtered queryset."""
+        tag = GiftTag.objects.create(name="Private")
+
+        url = reverse("gift_manager:gift_tag_edit", kwargs={"pk": tag.tag_id})
+        response = self.client.get(url)
+
+        assert response.status_code == 404
 
 
 @pytest.mark.django_db
