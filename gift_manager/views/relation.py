@@ -37,6 +37,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
 from gift_manager.views.base import BaseCreateView
@@ -68,6 +69,21 @@ def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
     if relation.due_date <= today + timedelta(days=window_days):
         return "due_soon"
     return "later"
+
+
+def gift_plan_has_missing_due_date(relation) -> bool:
+    """Return whether an active gift plan is missing a due date."""
+    return gift_plan_requires_planning_fields(relation) and relation.due_date is None
+
+
+def gift_plan_has_missing_event(relation) -> bool:
+    """Return whether an active gift plan is missing an event."""
+    return gift_plan_requires_planning_fields(relation) and relation.event_id is None
+
+
+def gift_plan_requires_planning_fields(relation) -> bool:
+    """Return whether a gift plan status expects concrete planning details."""
+    return not is_idea_status(relation.status) and not is_completed_status(relation.status)
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -244,6 +260,9 @@ class RelationListView(PermissionContextMixin, BaseListView):
     object_type = gettext_noop("Gift Plans")
     workspace_window_days = 7
     workspace_group_order = ("overdue", "due_soon", "later", "no_date", "completed")
+    attention_urgency_keys = frozenset(("overdue", "due_soon"))
+    show_workspace = True
+    show_advanced_list = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -257,6 +276,9 @@ class RelationListView(PermissionContextMixin, BaseListView):
         }
 
     def get_queryset(self):
+        if not self.show_advanced_list:
+            return Relation.objects.none()
+
         return (
             Relation.objects.accessible_by(self.request.user)
             .annotate(
@@ -388,13 +410,94 @@ class RelationListView(PermissionContextMixin, BaseListView):
             "no_date": counts.get("no_date", 0),
         }
 
+    def get_advanced_list_row_state(self, relation, today):
+        """Return row metadata used to mark attention-worthy advanced list rows."""
+        urgency_key = gift_plan_urgency_key(
+            relation,
+            today=today,
+            window_days=self.workspace_window_days,
+        )
+        needs_attention = urgency_key in self.attention_urgency_keys
+        has_missing_due_date = gift_plan_has_missing_due_date(relation)
+        has_missing_event = gift_plan_has_missing_event(relation)
+        missing_data_labels = []
+        if has_missing_due_date:
+            missing_data_labels.append(gettext("Missing due date"))
+        if has_missing_event:
+            missing_data_labels.append(gettext("Missing event"))
+        attention_labels = {
+            "overdue": gettext("Overdue"),
+            "due_soon": gettext("Due soon"),
+        }
+        return {
+            "urgency_key": urgency_key,
+            "needs_attention": needs_attention,
+            "attention_label": attention_labels.get(urgency_key, "") if needs_attention else "",
+            "has_missing_data": has_missing_due_date or has_missing_event,
+            "missing_data_label": ", ".join(missing_data_labels),
+            "has_missing_due_date": has_missing_due_date,
+            "missing_due_date_label": gettext("Missing due date") if has_missing_due_date else "",
+            "has_missing_event": has_missing_event,
+            "missing_event_label": gettext("Missing event") if has_missing_event else "",
+        }
+
+    def add_advanced_list_row_state(self, rows):
+        """Enrich advanced list rows with server-side urgency metadata."""
+        relation_ids = [row["relation_id"] for row in rows if row.get("relation_id")]
+        if not relation_ids:
+            return rows
+
+        relations_by_id = {
+            str(relation.relation_id): relation
+            for relation in Relation.objects.accessible_by(self.request.user)
+            .with_related_objects()
+            .filter(relation_id__in=relation_ids)
+        }
+        today = timezone.localdate()
+
+        for row in rows:
+            relation = relations_by_id.get(str(row.get("relation_id")))
+            if relation is None:
+                row.update(
+                    {
+                        "urgency_key": "unknown",
+                        "needs_attention": False,
+                        "attention_label": "",
+                        "has_missing_data": False,
+                        "missing_data_label": "",
+                        "has_missing_due_date": False,
+                        "missing_due_date_label": "",
+                        "has_missing_event": False,
+                        "missing_event_label": "",
+                    }
+                )
+                continue
+
+            row.update(self.get_advanced_list_row_state(relation, today))
+        return rows
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context["show_workspace"] = self.show_workspace
+        context["show_advanced_list"] = self.show_advanced_list
         context["relation_statuses"] = RelationStatus.objects.all()
-        workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())
-        context["workspace_groups"] = workspace_groups
-        context["workspace_summary"] = self.get_workspace_summary(workspace_groups)
+
+        if self.show_advanced_list:
+            data_rows = self.add_advanced_list_row_state(list(context["data"]))
+            context["data"] = data_rows
+            context["object_list"] = data_rows
+
+        if self.show_workspace:
+            workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())
+            context["workspace_groups"] = workspace_groups
+            context["workspace_summary"] = self.get_workspace_summary(workspace_groups)
         return context
+
+
+class RelationAdvancedListView(RelationListView):
+    object_type = gettext_noop("Advanced Gift Plans List")
+    show_workspace = False
+    show_advanced_list = True
 
 
 class RelationCreateView(BaseCreateView):

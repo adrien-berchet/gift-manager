@@ -810,7 +810,7 @@ class TestRelationListGridLoading:
     ):
         """Relation list loads and grid renders correctly."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         assert _grid_row_count(page, "relation-grid") > 0
@@ -819,7 +819,7 @@ class TestRelationListGridLoading:
     def test_correct_columns_rendered(self, page: Page, live_server, seed_data_e2e):
         """Relation grid has gift, related object, event, comment, status, due date, actions."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         headers = _get_header_texts(page, "relation-grid")
@@ -830,7 +830,7 @@ class TestRelationListGridLoading:
     def test_relation_data_displayed(self, page: Page, live_server, seed_data_e2e):
         """Seed relation data (gifts, persons) appears."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         body = _grid_body_text(page, "relation-grid")
@@ -839,7 +839,7 @@ class TestRelationListGridLoading:
     def test_four_relations_visible(self, page: Page, live_server, seed_data_e2e):
         """Alice sees all 4 seed relations."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         assert _grid_row_count(page, "relation-grid") == 4
@@ -850,7 +850,6 @@ class TestRelationListGridLoading:
         """A newly created no-date gift plan should appear in the workspace."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/relations/")
-        _wait_for_grid(page, "relation-grid")
 
         workspace = page.locator(".gift-plan-workspace")
         expect(workspace).to_be_visible()
@@ -970,7 +969,7 @@ class TestRelationListStatusSelector:
     def test_status_selector_present(self, page: Page, live_server, seed_data_e2e):
         """Status selector dropdown is rendered in each row."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         selectors = page.locator("#relation-grid .status-selector")
@@ -979,7 +978,7 @@ class TestRelationListStatusSelector:
     def test_status_selector_has_all_options(self, page: Page, live_server, seed_data_e2e):
         """Each selector includes all seeded statuses."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         first_selector = page.locator("#relation-grid .status-selector").first
@@ -992,7 +991,7 @@ class TestRelationListStatusSelector:
     def test_status_change_sends_request(self, page: Page, live_server, seed_data_e2e):
         """Changing the status selector fires an AJAX POST request."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         selector = page.locator("#relation-grid .status-selector").first
@@ -1014,7 +1013,7 @@ class TestRelationListStatusSelector:
     def test_gift_links_navigate(self, page: Page, live_server, seed_data_e2e):
         """Gift name links point to gift detail pages."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         links = page.locator("#relation-grid .gridjs-tbody a[href*='gifts/']")
@@ -1032,7 +1031,7 @@ class TestRelationListSort:
     def test_three_column_initial_sort(self, page: Page, live_server, seed_data_e2e):
         """Three-column initial sort (Status, Related Object, Gift) applies."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
         page.wait_for_timeout(600)
 
@@ -1041,7 +1040,7 @@ class TestRelationListSort:
     def test_select_button_present(self, page: Page, live_server, seed_data_e2e):
         """Select button for bulk operations is present."""
         _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         expect(_get_select_button(page, "relation-grid")).to_be_visible()
@@ -1541,7 +1540,7 @@ class TestCrossTemplateGridLoading:
         [
             ("/persons/", "person-grid"),
             ("/events/", "event-grid"),
-            ("/relations/", "relation-grid"),
+            ("/relations/advanced/", "relation-grid"),
             ("/person_groups/", "person-group-grid"),
             ("/gifts/", "gift-grid"),
             ("/relation_statuses/", "status-grid"),
@@ -1563,7 +1562,7 @@ class TestCrossTemplateGridLoading:
         [
             ("/persons/", "person-grid"),
             ("/events/", "event-grid"),
-            ("/relations/", "relation-grid"),
+            ("/relations/advanced/", "relation-grid"),
             ("/person_groups/", "person-group-grid"),
             ("/gifts/", "gift-grid"),
             ("/relation_statuses/", "status-grid"),
@@ -1582,7 +1581,7 @@ class TestCrossTemplateGridLoading:
         [
             ("/persons/", "person-grid"),
             ("/events/", "event-grid"),
-            ("/relations/", "relation-grid"),
+            ("/relations/advanced/", "relation-grid"),
             ("/person_groups/", "person-group-grid"),
             ("/gifts/", "gift-grid"),
         ],
@@ -1605,7 +1604,7 @@ class TestCrossTemplateGridLoading:
         [
             ("/persons/", "person-grid"),
             ("/events/", "event-grid"),
-            ("/relations/", "relation-grid"),
+            ("/relations/advanced/", "relation-grid"),
             ("/person_groups/", "person-group-grid"),
             ("/gifts/", "gift-grid"),
         ],
@@ -1647,6 +1646,7 @@ class TestCrossTemplateGridLoading:
             "/persons/",
             "/events/",
             "/relations/",
+            "/relations/advanced/",
             "/person_groups/",
             "/gifts/",
             "/relation_statuses/",
@@ -1669,7 +1669,14 @@ class TestCrossTemplateCreateButtons:
 
     @pytest.mark.parametrize(
         "path",
-        ["/persons/", "/events/", "/gifts/", "/relations/", "/person_groups/"],
+        [
+            "/persons/",
+            "/events/",
+            "/gifts/",
+            "/relations/",
+            "/relations/advanced/",
+            "/person_groups/",
+        ],
     )
     def test_create_button_visible(self, page: Page, live_server, seed_data_e2e, path):
         """Create button is visible in page header for authenticated users."""
@@ -1742,7 +1749,7 @@ class TestPermissionAwareUI:
     def test_bob_sees_fewer_relations(self, page: Page, live_server, seed_data_e2e):
         """Bob sees only relations he has permissions on (relation_0, relation_2)."""
         _login(page, live_server.url, "bob", "bob_password")
-        page.goto(f"{live_server.url}/relations/")
+        page.goto(f"{live_server.url}/relations/advanced/")
         _wait_for_grid(page, "relation-grid")
 
         count = _grid_row_count(page, "relation-grid")
@@ -1781,7 +1788,7 @@ class TestFilterPanel:
         [
             ("/persons/", "person-grid"),
             ("/events/", "event-grid"),
-            ("/relations/", "relation-grid"),
+            ("/relations/advanced/", "relation-grid"),
             ("/gifts/", "gift-grid"),
             ("/relation_statuses/", "status-grid"),
         ],
@@ -2019,6 +2026,7 @@ class TestUnauthenticatedAccess:
             "/persons/",
             "/events/",
             "/relations/",
+            "/relations/advanced/",
             "/person_groups/",
             "/gifts/",
             "/relation_statuses/",

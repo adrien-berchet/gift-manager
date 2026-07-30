@@ -76,6 +76,7 @@ from .relation import GiftRelationCreateView
 from .relation import GiftRelationDeleteView
 from .relation import PersonGroupRelationCreateView
 from .relation import PersonRelationCreateView
+from .relation import RelationAdvancedListView
 from .relation import RelationCreateView
 from .relation import RelationDeleteView
 from .relation import RelationDetailView
@@ -136,6 +137,7 @@ __all__ = [
     "PersonUpdateView",
     "ProfileDetailView",
     "RecipientListView",
+    "RelationAdvancedListView",
     "RelationCreateView",
     "RelationDeleteView",
     "RelationDetailView",

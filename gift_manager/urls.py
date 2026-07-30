@@ -139,6 +139,11 @@ urlpatterns = [
         name="relations",
     ),
     path(
+        "relations/advanced/",
+        views.RelationAdvancedListView.as_view(),
+        name="relation_advanced_list",
+    ),
+    path(
         "relations/create/",
         views.RelationCreateView.as_view(),
         name="relation_create",

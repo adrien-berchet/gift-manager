@@ -8,7 +8,7 @@ BULK_LIST_PAGES = (
     ("persons", "person-grid"),
     ("events", "event-grid"),
     ("person_groups", "person-group-grid"),
-    ("relations", "relation-grid"),
+    ("relation_advanced_list", "relation-grid"),
 )
 
 
@@ -59,8 +59,11 @@ def test_standard_grid_features_are_gated_by_advanced_controls():
     grid_utils = Path("gift_manager/static/gift_manager/grid-utils.js").read_text()
 
     assert "function setupAdvancedControls" in grid_utils
+    assert "function setupRowStateMarkers" in grid_utils
     assert "var advancedControls = features.advancedControls;" in grid_utils
     assert (
         "setupAdvancedControls(gridId, advancedControls, initializeAdvancedFeatures)" in grid_utils
     )
+    assert "setupRowStateMarkers(gridId, features.rowStateMarkers)" in grid_utils
+    assert "missingDataClass" in grid_utils
     assert "inlineEditing && !useAdvancedControls" in grid_utils

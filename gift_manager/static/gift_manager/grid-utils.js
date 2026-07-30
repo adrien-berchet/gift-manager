@@ -1328,6 +1328,104 @@
     }
 
     /**
+     * Apply row classes and data attributes from marker elements rendered inside rows.
+     * This keeps metadata attached to the correct row after sorting, filtering, and pagination.
+     * @param {string} gridId - The grid container ID
+     * @param {Object} options - Marker and class configuration
+     */
+    function setupRowStateMarkers(gridId, options) {
+        const gridContainer = document.getElementById(gridId);
+        if (!gridContainer) return;
+
+        const markerSelector = options.markerSelector || '[data-grid-row-state]';
+        const rowClass = options.rowClass || 'grid-state-row';
+        const attentionClass = options.attentionClass || `${rowClass}--attention`;
+        const missingDataClass = options.missingDataClass || `${rowClass}--missing-data`;
+        const classPrefix = options.classPrefix || `${rowClass}--`;
+        const stateKeys = options.stateKeys || [];
+        let applyTimer = null;
+
+        function clearRowState(row) {
+            row.classList.remove(rowClass, attentionClass, missingDataClass);
+            stateKeys.forEach((stateKey) => {
+                row.classList.remove(`${classPrefix}${stateKey}`);
+            });
+            row.removeAttribute('data-urgency-key');
+            row.removeAttribute('data-needs-attention');
+            row.removeAttribute('data-attention-label');
+            row.removeAttribute('data-has-missing-data');
+            row.removeAttribute('data-missing-data-label');
+            row.removeAttribute('data-has-missing-due-date');
+            row.removeAttribute('data-missing-due-date-label');
+            row.removeAttribute('data-has-missing-event');
+            row.removeAttribute('data-missing-event-label');
+        }
+
+        function applyRowStateMarkers() {
+            const rows = gridContainer.querySelectorAll('tbody tr');
+            rows.forEach((row) => {
+                clearRowState(row);
+
+                const marker = row.querySelector(markerSelector);
+                if (!marker) return;
+
+                const urgencyKey = marker.dataset.urgencyKey || marker.dataset.stateKey || 'unknown';
+                const needsAttention = marker.dataset.needsAttention === 'true';
+                const attentionLabel = marker.dataset.attentionLabel || '';
+                const hasMissingData = marker.dataset.hasMissingData === 'true';
+                const missingDataLabel = marker.dataset.missingDataLabel || '';
+                const hasMissingDueDate = marker.dataset.hasMissingDueDate === 'true';
+                const missingDueDateLabel = marker.dataset.missingDueDateLabel || '';
+                const hasMissingEvent = marker.dataset.hasMissingEvent === 'true';
+                const missingEventLabel = marker.dataset.missingEventLabel || '';
+
+                row.classList.add(rowClass, `${classPrefix}${urgencyKey}`);
+                if (needsAttention) {
+                    row.classList.add(attentionClass);
+                }
+                if (hasMissingData) {
+                    row.classList.add(missingDataClass);
+                }
+                row.setAttribute('data-urgency-key', urgencyKey);
+                row.setAttribute('data-needs-attention', needsAttention ? 'true' : 'false');
+                if (attentionLabel) {
+                    row.setAttribute('data-attention-label', attentionLabel);
+                }
+                row.setAttribute('data-has-missing-data', hasMissingData ? 'true' : 'false');
+                if (missingDataLabel) {
+                    row.setAttribute('data-missing-data-label', missingDataLabel);
+                }
+                row.setAttribute('data-has-missing-due-date', hasMissingDueDate ? 'true' : 'false');
+                if (missingDueDateLabel) {
+                    row.setAttribute('data-missing-due-date-label', missingDueDateLabel);
+                }
+                row.setAttribute('data-has-missing-event', hasMissingEvent ? 'true' : 'false');
+                if (missingEventLabel) {
+                    row.setAttribute('data-missing-event-label', missingEventLabel);
+                }
+            });
+        }
+
+        function scheduleApply() {
+            if (applyTimer) clearTimeout(applyTimer);
+            applyTimer = setTimeout(applyRowStateMarkers, 0);
+        }
+
+        scheduleApply();
+
+        new MutationObserver(scheduleApply).observe(gridContainer, {
+            childList: true,
+            subtree: true
+        });
+
+        document.addEventListener('grid:refreshed', (event) => {
+            if (event.detail?.containerId === gridId) {
+                scheduleApply();
+            }
+        });
+    }
+
+    /**
      * Setup a grid:refreshed event listener that re-injects select-all checkbox,
      * re-adds entity data attributes, and re-binds bulk operations if active
      * @param {string} gridId - The grid container ID
@@ -1718,6 +1816,10 @@
             initializeAdvancedFeatures();
         }
 
+        if (features.rowStateMarkers) {
+            setupRowStateMarkers(gridId, features.rowStateMarkers);
+        }
+
         // Enable dynamic page sizing
         if (features.dynamicPageSize) {
             enableDynamicPageSize(grid);
@@ -1791,6 +1893,7 @@
         createCheckboxColumn: createCheckboxColumn,
         injectSelectAllCheckbox: injectSelectAllCheckbox,
         addEntityDataAttributes: addEntityDataAttributes,
+        setupRowStateMarkers: setupRowStateMarkers,
         setupGridRefreshHandler: setupGridRefreshHandler,
         setupInlineEditingFallback: setupInlineEditingFallback,
         initBulkOperations: initBulkOperations,

@@ -68,6 +68,8 @@ EXPECTED_GIFT_PLAN_TERMS = (
     "Recipients",
     "Select a recipient",
     "Gift plans target this group directly.",
+    "Advanced List",
+    "Advanced Gift Plans List",
 )
 
 

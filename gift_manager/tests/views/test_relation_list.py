@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
-from gift_manager.views import RelationListView
+from gift_manager.views import RelationAdvancedListView
 
 
 @pytest.mark.django_db
@@ -28,14 +28,14 @@ class TestRelationList:
         create_or_update_permission(user, self.relation, permission_level=PermissionLevel.VIEWER)
 
     def test_comment_column_presence(self):
-        """Test that the comment column data is present in the template."""
-        url = reverse("gift_manager:relations")
+        """Test that the comment column data is present in the advanced list template."""
+        url = reverse("gift_manager:relation_advanced_list")
 
         factory = RequestFactory()
         request = factory.get(url)
         request.user = self.user
 
-        view = RelationListView()
+        view = RelationAdvancedListView()
         view.request = request
         view.kwargs = {}
 
@@ -57,8 +57,8 @@ class TestRelationList:
         # Check for the relation comment itself
         assert "Unique Comment for Testing" in content
 
-    def test_workspace_cards_render_with_advanced_grid_kept(self, event_factory, gift_tag_factory):
-        """The gift-plan list opens on planning cards while preserving Grid.js mode."""
+    def test_workspace_cards_render_without_advanced_grid(self, event_factory, gift_tag_factory):
+        """The gift-plan list opens on planning cards without the advanced Grid.js mode."""
         create_or_update_permission(
             self.user,
             self.relation,
@@ -87,21 +87,215 @@ class TestRelationList:
         assert "Unique Comment for Testing" in content
         assert 'data-action="detail"' in content
         assert 'data-action="edit"' in content
-        assert 'id="gift-plan-advanced-list"' in content
-        assert 'id="relation-grid"' in content
+        assert "/relations/advanced/" in content
+        assert "Advanced List" in content
+        assert 'id="gift-plan-advanced-list"' not in content
+        assert 'id="relation-grid"' not in content
 
     def test_advanced_grid_status_controls_are_permission_aware(self):
         """The retained Grid.js status control should not invite viewer-only edits."""
-        response = self.client.get(reverse("gift_manager:relations"))
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
 
         assert response.status_code == 200
         content = response.content.decode()
+        assert 'class="gift-plan-workspace"' not in content
+        assert 'id="gift-plan-advanced-list"' in content
+        assert 'id="relation-grid"' in content
+        assert "Advanced Gift Plans List" in content
+        assert "/relations/" in content
+        assert "Workspace" in content
         assert "const canEditStatus = permission >= editorPermission" in content
         assert 'disabled title="${statusReadonlyMessage}"' in content
         assert 'data-current-value="${statusPk}"' in content
+        assert "inline-edit:success" in content
+        assert "event.detail?.fieldName === 'due_date'" in content
         assert "{ columnSelector: 'th:nth-child(6)' },  // Status" in content
         assert "{ columnSelector: 'th:nth-child(3)', shift: true },  // Recipient" in content
         assert "{ columnSelector: 'th:nth-child(2)', shift: true }  // Gift" in content
+
+    def test_advanced_grid_marks_overdue_rows_as_needing_attention(self):
+        """The advanced list exposes row metadata for overdue attention styling."""
+        self.relation.due_date = timezone.localdate() - timedelta(days=1)
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        content = response.content.decode()
+        assert row["urgency_key"] == "overdue"
+        assert row["needs_attention"] is True
+        assert row["attention_label"] == "Overdue"
+        assert 'urgencyKey: "overdue"' in content
+        assert "needsAttention: true" in content
+        assert "data-grid-row-state" in content
+        assert "rowStateMarkers" in content
+
+    def test_advanced_grid_does_not_mark_open_ideas_without_due_date(self):
+        """Open-ended ideas without due dates should stay unmarked in the advanced list."""
+        idea_status = self.relation.status.__class__.objects.get(status_en="Idea")
+        self.relation.status = idea_status
+        self.relation.due_date = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        content = response.content.decode()
+        assert row["urgency_key"] == "no_date"
+        assert row["needs_attention"] is False
+        assert row["attention_label"] == ""
+        assert row["has_missing_data"] is False
+        assert row["missing_data_label"] == ""
+        assert row["has_missing_due_date"] is False
+        assert row["missing_due_date_label"] == ""
+        assert row["has_missing_event"] is False
+        assert row["missing_event_label"] == ""
+        assert 'urgencyKey: "no_date"' in content
+        assert "needsAttention: false" in content
+        assert "missingData: false" in content
+
+    def test_advanced_grid_marks_planned_rows_without_due_date_as_missing_data(self, event_factory):
+        """Active gift plans without due dates should show missing-data metadata."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.due_date = None
+        self.relation.event = event_factory()
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        content = response.content.decode()
+        assert row["urgency_key"] == "no_date"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is True
+        assert row["missing_data_label"] == "Missing due date"
+        assert row["has_missing_due_date"] is True
+        assert row["missing_due_date_label"] == "Missing due date"
+        assert row["has_missing_event"] is False
+        assert row["missing_event_label"] == ""
+        assert "missingData: true" in content
+        assert 'missingDataLabel: "Missing due date"' in content
+        assert "missingDueDate: true" in content
+        assert "missingEvent: false" in content
+        assert "gift-plan-missing-data-badge" in content
+        assert "fa-triangle-exclamation" in content
+
+    def test_advanced_grid_marks_purchased_rows_without_due_date_as_missing_data(
+        self, event_factory
+    ):
+        """Purchased gift plans should still expose missing due-date data."""
+        purchased_status, _ = self.relation.status.__class__.objects.get_or_create(
+            status="Purchased"
+        )
+        self.relation.status = purchased_status
+        self.relation.due_date = None
+        self.relation.event = event_factory()
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        assert row["urgency_key"] == "no_date"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is True
+        assert row["has_missing_due_date"] is True
+        assert row["has_missing_event"] is False
+        assert row["missing_due_date_label"] == "Missing due date"
+        assert row["missing_event_label"] == ""
+
+    def test_advanced_grid_marks_active_rows_with_due_date_and_event_missing_data(self):
+        """Rows missing both due date and event should expose both column warnings."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.due_date = None
+        self.relation.event = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        content = response.content.decode()
+        assert row["urgency_key"] == "no_date"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is True
+        assert row["missing_data_label"] == "Missing due date, Missing event"
+        assert row["has_missing_due_date"] is True
+        assert row["missing_due_date_label"] == "Missing due date"
+        assert row["has_missing_event"] is True
+        assert row["missing_event_label"] == "Missing event"
+        assert "missingDueDate: true" in content
+        assert "missingEvent: true" in content
+        assert 'missingEventLabel: "Missing event"' in content
+
+    def test_advanced_grid_marks_planned_rows_without_event_as_missing_data(self):
+        """Active gift plans with due dates should still show missing event data."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.due_date = timezone.localdate() + timedelta(days=20)
+        self.relation.event = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        content = response.content.decode()
+        assert row["urgency_key"] == "later"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is True
+        assert row["missing_data_label"] == "Missing event"
+        assert row["has_missing_due_date"] is False
+        assert row["missing_due_date_label"] == ""
+        assert row["has_missing_event"] is True
+        assert row["missing_event_label"] == "Missing event"
+        assert "missingDueDate: false" in content
+        assert "missingEvent: true" in content
+        assert 'missingEventLabel: "Missing event"' in content
+
+    def test_advanced_grid_does_not_mark_terminal_rows_without_due_date(self):
+        """Terminal gift plans should not ask for a due date."""
+        given_status, _ = self.relation.status.__class__.objects.get_or_create(status="Given")
+        self.relation.status = given_status
+        self.relation.due_date = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        assert row["urgency_key"] == "completed"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is False
+        assert row["missing_data_label"] == ""
+        assert row["has_missing_due_date"] is False
+        assert row["has_missing_event"] is False
+
+    def test_advanced_grid_does_not_mark_active_rows_with_due_date_and_event_as_missing_data(
+        self, event_factory
+    ):
+        """Active gift plans with due date and event should not show a missing-data warning."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.due_date = timezone.localdate() + timedelta(days=20)
+        self.relation.event = event_factory()
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relation_advanced_list"))
+
+        assert response.status_code == 200
+        row = response.context["data"][0]
+        assert row["urgency_key"] == "later"
+        assert row["needs_attention"] is False
+        assert row["has_missing_data"] is False
+        assert row["missing_data_label"] == ""
+        assert row["has_missing_due_date"] is False
+        assert row["has_missing_event"] is False
 
     def test_completed_workspace_group_wins_over_overdue_due_date(self):
         """Completed statuses should not stay in the attention bucket."""

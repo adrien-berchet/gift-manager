@@ -293,6 +293,44 @@
     margin-bottom: 1rem;
 }
 
+#relation-grid .gridjs-tr.gift-plan-grid-row--overdue td.gridjs-td,
+#relation-grid .gridjs-tr.gift-plan-grid-row--overdue:hover td.gridjs-td {
+    background-color: var(--color-danger-light);
+}
+
+#relation-grid .gridjs-tr.gift-plan-grid-row--due_soon td.gridjs-td,
+#relation-grid .gridjs-tr.gift-plan-grid-row--due_soon:hover td.gridjs-td {
+    background-color: var(--color-warning-light);
+}
+
+#relation-grid .gridjs-tr.gift-plan-grid-row--overdue td.gridjs-td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-danger);
+}
+
+#relation-grid .gridjs-tr.gift-plan-grid-row--due_soon td.gridjs-td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+#relation-grid .gridjs-tr.gift-plan-grid-row--missing-data td.gridjs-td:first-child {
+    box-shadow: inset 3px 0 0 var(--color-warning);
+}
+
+#relation-grid .gift-plan-missing-data-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    padding: 0.18rem 0.45rem;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    border-radius: var(--radius-full);
+    background-color: var(--color-warning-light);
+    color: var(--color-warning-hover);
+    font-size: 0.66rem;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
 @media (max-width: 767.98px) {
     .gift-plan-workspace-header,
     .gift-plan-advanced-header {

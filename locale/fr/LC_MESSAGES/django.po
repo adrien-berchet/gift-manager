@@ -2607,6 +2607,29 @@ msgstr "Ce projet de cadeau n'est partagé avec aucun ami."
 msgid "Create new gift plan"
 msgstr "Créer un nouveau projet de cadeau"
 
+#: gift_manager/templates/gift_manager/relation_list.html:33
+msgid "Advanced List"
+msgstr "Liste avancée"
+
+#: gift_manager/templates/gift_manager/relation_list.html:37
+msgid "Workspace"
+msgstr "Espace de travail"
+
+#: gift_manager/templates/gift_manager/relation_list.html:201
+#: gift_manager/views/relation.py:393
+msgid "Advanced Gift Plans List"
+msgstr "Liste avancée des projets de cadeaux"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+#: gift_manager/views/relation.py
+msgid "Missing due date"
+msgstr "Échéance manquante"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+#: gift_manager/views/relation.py
+msgid "Missing event"
+msgstr "Événement manquant"
+
 #: gift_manager/templates/gift_manager/relation_status_detail.html:5
 #: gift_manager/templates/gift_manager/relation_status_detail.html:8
 msgid "Gift Plan status details"

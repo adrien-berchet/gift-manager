@@ -4,12 +4,14 @@
 {% load static %}
 
 {% block extra_head %}
+{% if show_advanced_list %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+{% endif %}
 <link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 {% endblock %}
 
@@ -23,9 +25,19 @@
         <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift plan" %}
         </a>
+        {% if show_workspace %}
+        <a href="{% url 'gift_manager:relation_advanced_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-table-list me-2" aria-hidden="true"></i>{% trans "Advanced List" %}
+        </a>
+        {% elif show_advanced_list %}
+        <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-table-cells-large me-2" aria-hidden="true"></i>{% trans "Workspace" %}
+        </a>
+        {% endif %}
     </div>
 </div>
 
+{% if show_workspace %}
 <section class="gift-plan-workspace" aria-labelledby="gift-plan-workspace-heading">
     <div class="gift-plan-workspace-header">
         <div>
@@ -174,11 +186,13 @@
     </div>
     {% endif %}
 </section>
+{% endif %}
 
+{% if show_advanced_list %}
 <section class="gift-plan-advanced-list" id="gift-plan-advanced-list" aria-labelledby="gift-plan-advanced-heading">
     <div class="gift-plan-advanced-header">
         <div>
-            <h2 id="gift-plan-advanced-heading">{% trans "Advanced list" %}</h2>
+            <h2 id="gift-plan-advanced-heading">{% trans "Advanced Gift Plans List" %}</h2>
         </div>
     </div>
 
@@ -187,45 +201,15 @@
     <!-- Grid.js container -->
     <div id="relation-grid"></div>
 </section>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
-<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
-<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
-<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
-<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
-<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
-{% include "gift_manager/includes/grid-translations.html" %}
+{% if show_workspace %}
 <script>
-    {% load custom_filters %}
     (function () {
-        const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
-        const recipientTypeLabels = {
-            person: "{% trans 'Person' %}",
-            group: "{% trans 'Group' %}"
-        };
-        const recipientTypeBadgeClasses = {
-            person: "recipient-type-badge recipient-type-badge--person",
-            group: "recipient-type-badge recipient-type-badge--group"
-        };
-        const editorPermission = 20;
-        const statusUpdateErrorMessage = "{% trans 'Unable to update this gift plan status.' %}";
-        const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
         let workspaceRefreshTimer = null;
         let workspaceRefreshController = null;
-
-        function giftPlanStatusClass(statusLabel) {
-            const slug = String(statusLabel || '')
-                .trim()
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '');
-            return `gift-plan-status--${slug || 'unknown'}`;
-        }
 
         function refreshGiftPlanWorkspace() {
             if (!document.querySelector('.gift-plan-workspace')) return;
@@ -271,6 +255,57 @@
         }
 
         document.addEventListener('list:update', refreshGiftPlanWorkspace);
+    })();
+</script>
+{% endif %}
+{% if show_advanced_list %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+<script>
+    {% load custom_filters %}
+    (function () {
+        const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
+        const editorPermission = 20;
+        const statusUpdateErrorMessage = "{% trans 'Unable to update this gift plan status.' %}";
+        const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
+        const missingDueDateLabel = "{% trans 'Missing due date' %}";
+        const missingEventLabel = "{% trans 'Missing event' %}";
+
+        function giftPlanStatusClass(statusLabel) {
+            const slug = String(statusLabel || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return `gift-plan-status--${slug || 'unknown'}`;
+        }
+
+        function escapeHtml(value) {
+            const replacements = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+            return String(value || '').replace(/[&<>"']/g, (character) => replacements[character]);
+        }
 
         // Get permission data from template
         window.userPermissions = {{ user_permissions_json|safe }};
@@ -302,6 +337,17 @@
                 "{{ item.status }}",
                 "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
                 {% if item.due_date %}{ iso: "{{ item.due_date|date:'Y-m-d' }}", display: "{{ item.due_date|date }}" }{% else %}null{% endif %},
+                {
+                    urgencyKey: "{{ item.urgency_key|default:'unknown'|escapejs }}",
+                    needsAttention: {% if item.needs_attention %}true{% else %}false{% endif %},
+                    label: "{{ item.attention_label|default:''|escapejs }}",
+                    missingData: {% if item.has_missing_data %}true{% else %}false{% endif %},
+                    missingDataLabel: "{{ item.missing_data_label|default:''|escapejs }}",
+                    missingDueDate: {% if item.has_missing_due_date %}true{% else %}false{% endif %},
+                    missingDueDateLabel: "{{ item.missing_due_date_label|default:''|escapejs }}",
+                    missingEvent: {% if item.has_missing_event %}true{% else %}false{% endif %},
+                    missingEventLabel: "{{ item.missing_event_label|default:''|escapejs }}"
+                },
                 "{{item.relation_id}}",
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
@@ -347,7 +393,18 @@
                 sort: {
                     compare: GridUtils.sortByProperty('name')
                 },
-                formatter: function (cell) {
+                formatter: function (cell, row) {
+                    const rowState = row.cells[8].data || {};
+                    if (!cell && rowState.missingEvent) {
+                        const label = escapeHtml(rowState.missingEventLabel || missingEventLabel);
+                        return gridjs.html(`
+                            <span class="gift-plan-missing-data-badge"
+                                  title="${label}"
+                                  aria-label="${label}">
+                                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
+                            </span>
+                        `);
+                    }
                     if (!cell || !cell.id) return '';
                     return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
                 }
@@ -363,14 +420,35 @@
                 formatter: function (cell, row) {
                     const statusPk = row.cells[5].data;
                     const statusLabel = row.cells[6].data;
-                    const relationId = row.cells[8].data;
+                    const rowState = row.cells[8].data || {};
+                    const relationId = row.cells[9].data;
                     const statusClass = giftPlanStatusClass(statusLabel);
                     const permission = Number(userPermissions[relationId] || 0);
                     const canEditStatus = permission >= editorPermission;
                     const disabledAttr = canEditStatus
                         ? ''
                         : `disabled title="${statusReadonlyMessage}"`;
+                    const urgencyKey = escapeHtml(rowState.urgencyKey || 'unknown');
+                    const needsAttention = rowState.needsAttention ? 'true' : 'false';
+                    const attentionLabel = escapeHtml(rowState.label || '');
+                    const hasMissingData = rowState.missingData ? 'true' : 'false';
+                    const missingDataLabel = escapeHtml(rowState.missingDataLabel || '');
+                    const hasMissingDueDate = rowState.missingDueDate ? 'true' : 'false';
+                    const missingDueDateLabel = escapeHtml(rowState.missingDueDateLabel || '');
+                    const hasMissingEvent = rowState.missingEvent ? 'true' : 'false';
+                    const missingEventLabel = escapeHtml(rowState.missingEventLabel || '');
                     return gridjs.html(`
+                        <span class="gift-plan-grid-row-state visually-hidden"
+                              data-grid-row-state
+                              data-urgency-key="${urgencyKey}"
+                              data-needs-attention="${needsAttention}"
+                              data-attention-label="${attentionLabel}"
+                              data-has-missing-data="${hasMissingData}"
+                              data-missing-data-label="${missingDataLabel}"
+                              data-has-missing-due-date="${hasMissingDueDate}"
+                              data-missing-due-date-label="${missingDueDateLabel}"
+                              data-has-missing-event="${hasMissingEvent}"
+                              data-missing-event-label="${missingEventLabel}">${attentionLabel || missingDataLabel}</span>
                         <form id="status-form-${relationId}" class="gift-plan-status-form">
                             <select class="form-select form-select-sm status-selector gift-plan-status-select ${statusClass}"
                                     name="new_status"
@@ -397,7 +475,24 @@
                 sort: {
                     compare: GridUtils.sortDateObject()
                 },
-                formatter: GridUtils.dateObjectFormatter
+                formatter: function (cell, row) {
+                    const rowState = row.cells[8].data || {};
+                    if (!cell && rowState.missingDueDate) {
+                        const label = escapeHtml(rowState.missingDueDateLabel || missingDueDateLabel);
+                        return gridjs.html(`
+                            <span class="gift-plan-missing-data-badge"
+                                  title="${label}"
+                                  aria-label="${label}">
+                                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
+                            </span>
+                        `);
+                    }
+                    return GridUtils.dateObjectFormatter(cell);
+                }
+            },
+            {
+                name: 'Row State',
+                hidden: true
             },
             {
                 name: 'Gift Plan ID',
@@ -411,12 +506,12 @@
                 width: '340px',
                 sort: false,
                 formatter: PermissionUtils.permissionAwareActionFormatter({
-                    details: (row) => row.cells[9].data,
-                    edit: (row) => row.cells[10].data,
-                    delete: (row) => row.cells[11].data,
+                    details: (row) => row.cells[10].data,
+                    edit: (row) => row.cells[11].data,
+                    delete: (row) => row.cells[12].data,
                     share: () => "{% url 'gift_manager:share_objects' %}"
                 }, ['details', 'edit', 'delete', 'share'], {
-                    idResolver: (row) => row.cells[8].data  // relation_id
+                    idResolver: (row) => row.cells[9].data  // relation_id
                 }, userPermissions)
             }
         ];
@@ -449,13 +544,30 @@
                 realTimeSearch: true,
                 dynamicFilters: true,
                 dynamicPageSize: true,
+                rowStateMarkers: {
+                    markerSelector: '[data-grid-row-state]',
+                    rowClass: 'gift-plan-grid-row',
+                    attentionClass: 'gift-plan-grid-row--attention',
+                    missingDataClass: 'gift-plan-grid-row--missing-data',
+                    classPrefix: 'gift-plan-grid-row--',
+                    stateKeys: ['overdue', 'due_soon', 'later', 'no_date', 'completed', 'unknown']
+                },
                 initialSort: [
                     { columnSelector: 'th:nth-child(6)' },  // Status
                     { columnSelector: 'th:nth-child(3)', shift: true },  // Recipient
                     { columnSelector: 'th:nth-child(2)', shift: true }  // Gift
                 ]
             },
-            idFieldIndex: 8
+            idFieldIndex: 9
+        });
+
+        document.addEventListener('inline-edit:success', function (event) {
+            if (
+                event.detail?.entityType === 'relation' &&
+                event.detail?.fieldName === 'due_date'
+            ) {
+                document.dispatchEvent(new CustomEvent('list:update'));
+            }
         });
 
 // Handle status selector changes with event delegation
@@ -502,6 +614,7 @@
                     .then(html => {
                         // Replace the form with the server response
                         form.outerHTML = html;
+                        document.dispatchEvent(new CustomEvent('list:update'));
                     })
                     .catch(error => {
                         console.error('Error updating status:', error);
@@ -514,4 +627,5 @@
         });
     }) ();
 </script>
+{% endif %}
 {% endblock %}

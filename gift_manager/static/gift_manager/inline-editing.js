@@ -345,6 +345,16 @@
                 // Show success notification
                 showNotification(data.message || 'Field updated successfully', 'success');
 
+                document.dispatchEvent(new CustomEvent('inline-edit:success', {
+                    detail: {
+                        entityType: entityType,
+                        entityId: entityId,
+                        fieldName: fieldName,
+                        oldValue: oldValue,
+                        newValue: newValue
+                    }
+                }));
+
                 // Remove success class after timeout
                 setTimeout(() => {
                     cell.classList.remove(INLINE_EDITING_CONFIG.classes.success);
