@@ -4,6 +4,8 @@ This module contains security-hardened settings for production deployment.
 All sensitive values MUST be set via environment variables.
 """
 
+from urllib.parse import urlparse
+
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F403
@@ -21,6 +23,38 @@ def get_required_csv_env(var_name: str) -> list[str]:
     return values
 
 
+def validate_allowed_hosts(hosts: list[str]) -> list[str]:
+    """Require exact hostnames for production host validation."""
+    for host in hosts:
+        if host == "*" or host.startswith(".") or "*" in host:
+            msg = "ALLOWED_HOSTS must contain exact hostnames; wildcards are not allowed."
+            raise ImproperlyConfigured(msg)
+        if "://" in host or "/" in host or ":" in host:
+            msg = "ALLOWED_HOSTS values must be hostnames only, without schemes, ports, or paths."
+            raise ImproperlyConfigured(msg)
+    return hosts
+
+
+def validate_csrf_origins(origins: list[str], allowed_hosts: list[str]) -> list[str]:
+    """Require exact HTTPS CSRF origins that match allowed production hosts."""
+    allowed_host_set = {host.lower() for host in allowed_hosts}
+    for origin in origins:
+        parsed = urlparse(origin)
+        if parsed.scheme != "https" or not parsed.hostname:
+            msg = "CSRF_TRUSTED_ORIGINS must contain exact https:// origins."
+            raise ImproperlyConfigured(msg)
+        if "*" in parsed.hostname:
+            msg = "CSRF_TRUSTED_ORIGINS must not contain wildcard hosts."
+            raise ImproperlyConfigured(msg)
+        if parsed.path not in ("", "/") or parsed.params or parsed.query or parsed.fragment:
+            msg = "CSRF_TRUSTED_ORIGINS must not include paths, queries, or fragments."
+            raise ImproperlyConfigured(msg)
+        if parsed.hostname.lower() not in allowed_host_set:
+            msg = "CSRF_TRUSTED_ORIGINS hosts must be present in ALLOWED_HOSTS."
+            raise ImproperlyConfigured(msg)
+    return origins
+
+
 # SECURITY: Secret key must be set in production
 SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
 
@@ -28,7 +62,7 @@ SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
 DEBUG = False
 
 # Allowed hosts - configure based on your domain
-ALLOWED_HOSTS = get_required_csv_env("ALLOWED_HOSTS")
+ALLOWED_HOSTS = validate_allowed_hosts(get_required_csv_env("ALLOWED_HOSTS"))
 
 EMAIL_ENCRYPTION_KEY = get_env_variable("EMAIL_ENCRYPTION_KEY", required=True)
 
@@ -79,12 +113,29 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_TRUSTED_ORIGINS = get_required_csv_env("CSRF_TRUSTED_ORIGINS")
+CSRF_TRUSTED_ORIGINS = validate_csrf_origins(
+    get_required_csv_env("CSRF_TRUSTED_ORIGINS"),
+    ALLOWED_HOSTS,
+)
 
 # Content security
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+    "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+    "https://fonts.googleapis.com 'unsafe-inline'; "
+    "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "upgrade-insecure-requests"
+)
 
 # Referrer policy
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"

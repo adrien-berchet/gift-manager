@@ -1,5 +1,8 @@
 # Docker Compose production overrides for Gift Manager
-# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Release usage:
+#   BACKUP_REASON=pre-migration scripts/pre_migration_snapshot.sh
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile release run --rm migrate
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d web nginx
 
 services:
   # =============================================================================
@@ -12,7 +15,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
     # Don't expose ports in production (access through internal network)
-    ports: []
+    ports: !override []
 
   # =============================================================================
   # Redis Cache (Production)
@@ -20,8 +23,87 @@ services:
   redis:
     restart: always
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     # Don't expose ports in production
-    ports: []
+    ports: !override []
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # Static Collection (Production)
+  # =============================================================================
+  collectstatic:
+    build:
+      context: .
+      target: production
+    restart: "no"
+    environment:
+      - DJANGO_ENV=production
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - EMAIL_ENCRYPTION_KEY=${EMAIL_ENCRYPTION_KEY:?EMAIL_ENCRYPTION_KEY is required}
+      - DB_NAME=${DB_NAME:?DB_NAME is required}
+      - DB_USER=${DB_USER:?DB_USER is required}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      - DEBUG=false
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-true}
+      - EMAIL_HOST=${EMAIL_HOST:?EMAIL_HOST is required}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:?DEFAULT_FROM_EMAIL is required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    volumes: !override
+      - static_volume:/app/staticfiles
+    command: python manage.py collectstatic --noinput --clear
+
+  # =============================================================================
+  # Database Migration (Controlled Release Step)
+  # =============================================================================
+  migrate:
+    profiles: ["release"]
+    build:
+      context: .
+      target: production
+    restart: "no"
+    environment:
+      - DJANGO_ENV=production
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - EMAIL_ENCRYPTION_KEY=${EMAIL_ENCRYPTION_KEY:?EMAIL_ENCRYPTION_KEY is required}
+      - DB_NAME=${DB_NAME:?DB_NAME is required}
+      - DB_USER=${DB_USER:?DB_USER is required}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
+      - DEBUG=false
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-true}
+      - EMAIL_HOST=${EMAIL_HOST:?EMAIL_HOST is required}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:?DEFAULT_FROM_EMAIL is required}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+    volumes: !override
+      - media_volume:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: python manage.py migrate --noinput
 
   # =============================================================================
   # Django Application (Production)
@@ -40,7 +122,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_HOST=db
       - DB_PORT=5432
-      - DB_SSLMODE=${DB_SSLMODE:-prefer}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       - DEBUG=false
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
@@ -52,16 +134,22 @@ services:
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
       - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:?DEFAULT_FROM_EMAIL is required}
       - SENTRY_DSN=${SENTRY_DSN:-}
-    volumes:
-      - static_volume:/app/staticfiles
+    volumes: !override
+      - static_volume:/app/staticfiles:ro
       - media_volume:/app/media
-    # Don't expose debug port in production
-    ports:
-      - "${WEB_PORT:-8000}:8000"
+    # Expose Django only on the Docker network; nginx publishes the public ports.
+    ports: !override []
+    expose:
+      - "8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      collectstatic:
+        condition: service_completed_successfully
     command: >
-      sh -c "python manage.py migrate --noinput &&
-             python manage.py collectstatic --noinput &&
-             gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2
+      sh -c "gunicorn --bind 0.0.0.0:8000 --workers 4 --threads 2
              --worker-class gthread --worker-tmp-dir /dev/shm
              --access-logfile - --error-logfile -
              GiftManager.wsgi:app"
@@ -73,12 +161,27 @@ services:
     image: nginx:alpine
     container_name: gift-manager-nginx
     restart: always
+    environment:
+      NGINX_SERVER_NAME: ${NGINX_SERVER_NAME:?NGINX_SERVER_NAME is required}
+      NGINX_CANONICAL_HOST: ${NGINX_CANONICAL_HOST:?NGINX_CANONICAL_HOST is required}
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf.template:ro
+      - ${NGINX_SSL_DIR:?NGINX_SSL_DIR is required}:/etc/nginx/ssl:ro
+      - certbot_www:/var/www/certbot:ro
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - web
+      web:
+        condition: service_started
+    command: >
+      sh -c "envsubst '$$NGINX_SERVER_NAME $$NGINX_CANONICAL_HOST'
+             < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf &&
+             nginx -t &&
+             nginx -g 'daemon off;'"
+
+volumes:
+  certbot_www:
+    driver: local

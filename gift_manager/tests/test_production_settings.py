@@ -135,6 +135,50 @@ def test_production_settings_reject_empty_required_csv_values(setting_name):
     assert f"{setting_name} environment variable must contain at least one value" in result.stderr
 
 
+@pytest.mark.parametrize(
+    "allowed_hosts",
+    [
+        "*",
+        ".vercel.app",
+        "*.vercel.app",
+        "https://example.com",
+        "example.com:443",
+        "example.com/path",
+    ],
+)
+def test_production_settings_reject_broad_allowed_hosts(allowed_hosts):
+    """Production host validation should only accept exact hostnames."""
+    env = _production_env()
+    env["ALLOWED_HOSTS"] = allowed_hosts
+
+    result = _run_settings_import(env)
+
+    assert result.returncode != 0
+    assert "ALLOWED_HOSTS" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "csrf_origin",
+    [
+        "http://example.com",
+        "https://*.vercel.app",
+        "https://other.example.com",
+        "https://example.com/path",
+        "https://example.com?next=/",
+    ],
+)
+def test_production_settings_reject_broad_csrf_origins(csrf_origin):
+    """Production CSRF origins should be exact HTTPS origins for allowed hosts."""
+    env = _production_env()
+    env["ALLOWED_HOSTS"] = "example.com"
+    env["CSRF_TRUSTED_ORIGINS"] = csrf_origin
+
+    result = _run_settings_import(env)
+
+    assert result.returncode != 0
+    assert "CSRF_TRUSTED_ORIGINS" in result.stderr
+
+
 def test_production_settings_reject_invalid_email_encryption_key():
     """Production should validate EMAIL_ENCRYPTION_KEY as a Fernet key."""
     env = _production_env()
@@ -152,6 +196,24 @@ def test_production_settings_valid_environment_imports():
 
     assert result.returncode == 0, result.stderr
     assert result.stdout == ""
+
+
+def test_production_settings_define_content_security_policy():
+    """Production should expose an enforced CSP for app responses."""
+    script = (
+        "import GiftManager.settings as settings; "
+        "policy = settings.CONTENT_SECURITY_POLICY; "
+        "assert \"default-src 'self'\" in policy; "
+        "assert 'https://cdn.jsdelivr.net' in policy; "
+        "assert 'code.jquery.com' not in policy; "
+        "assert 'unpkg.com' not in policy; "
+        "assert \"object-src 'none'\" in policy; "
+        "assert \"frame-ancestors 'none'\" in policy"
+    )
+
+    result = _run_python(script, _production_env())
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_explicit_testing_settings_module_imports_without_django_env():
@@ -200,8 +262,41 @@ def test_production_compose_requires_critical_environment_values():
         "DEFAULT_FROM_EMAIL",
     ):
         assert f"${{{setting_name}:?" in compose
-    assert "DB_SSLMODE=${DB_SSLMODE:-prefer}" in compose
+    assert "DB_SSLMODE=${DB_SSLMODE:-disable}" in compose
     assert "static_volume:/app/staticfiles\n" in compose
+
+
+def test_production_compose_keeps_web_internal_and_migrations_explicit():
+    """Production web startup should not publish dev ports or mutate the schema."""
+    compose = (PROJECT_ROOT / "docker-compose.prod.yml").read_text()
+    web_section = compose.split("  web:", maxsplit=1)[1].split("  nginx:", maxsplit=1)[0]
+
+    assert "ports: !override []" in web_section
+    assert 'expose:\n      - "8000"' in web_section
+    assert "static_volume:/app/staticfiles:ro" in web_section
+    assert "python manage.py migrate" not in web_section
+    assert "python manage.py collectstatic" not in web_section
+    assert "collectstatic:" in web_section
+    assert "  migrate:" in compose
+    assert 'profiles: ["release"]' in compose
+    assert "scripts/pre_migration_snapshot.sh" in compose
+    assert "--profile release run --rm migrate" in compose
+
+
+def test_production_nginx_rejects_unknown_hosts_and_uses_exact_names():
+    """Nginx should reject unknown hosts and only serve configured hostnames."""
+    nginx = (PROJECT_ROOT / "nginx.conf").read_text()
+    health_location = nginx.split("location /health/ {", maxsplit=1)[1].split("}", maxsplit=1)[0]
+
+    assert "listen 80 default_server;" in nginx
+    assert "listen 443 ssl http2 default_server;" in nginx
+    assert "return 444;" in nginx
+    assert "server_name ${NGINX_SERVER_NAME};" in nginx
+    assert "https://${NGINX_CANONICAL_HOST}$request_uri" in nginx
+    assert "https://$host$request_uri" not in nginx
+    assert "proxy_set_header Host $host;" in health_location
+    assert "proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;" in health_location
+    assert "proxy_set_header X-Forwarded-Proto $scheme;" in health_location
 
 
 def test_settings_modules_have_no_import_time_prints():

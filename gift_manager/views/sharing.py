@@ -40,7 +40,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
     """View for sharing objects with friends."""
 
     template_name = "gift_manager/share_objects.html"
-    minimum_share_permission = PermissionLevel.EDITOR
+    minimum_share_permission = PermissionLevel.OWNER
 
     def get(self, request):
         """Display the sharing form."""
@@ -539,7 +539,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
     def _validate_share_permission(
         self, actor: User, obj, permission_level: int, object_label: str
     ) -> None:
-        """Require editor-level share authority and block grants above actor permission."""
+        """Require owner-level share authority and block grants above actor permission."""
         actor_permission = self._get_actor_permission(actor, obj)
         if actor_permission < self.minimum_share_permission:
             logger.warning(

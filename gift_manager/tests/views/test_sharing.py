@@ -245,6 +245,37 @@ class TestShareObjectsView:
         assert get_permission(self.gift, recipient) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
+    def test_post_share_objects_rejects_editor_sharing_onward(self, userpassword):
+        """Test that editors cannot share objects onward."""
+        # Arrange
+        recipient = User.objects.create_user(
+            username="recipient-for-editor",
+            email="recipient-for-editor@example.com",
+            password=userpassword,
+        )
+        self.friend.profile.friends.add(recipient.profile)
+        create_or_update_permission(
+            self.friend,
+            self.gift,
+            permission_level=PermissionLevel.EDITOR,
+        )
+        self.client.force_login(self.friend)
+
+        url = reverse("gift_manager:share_objects")
+        data = {
+            "gifts": [self.gift.gift_id],
+            "friends": [recipient.id],
+            "permission_level": PermissionLevel.VIEWER,
+        }
+
+        # Act
+        response = self.client.post(url, data)
+
+        # Assert
+        assert response.status_code == 200
+        assert get_permission(self.gift, recipient) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
     def test_post_share_objects_rejects_grant_above_actor_permission(self, userpassword):
         """Test that users cannot grant a permission level higher than their own."""
         # Arrange

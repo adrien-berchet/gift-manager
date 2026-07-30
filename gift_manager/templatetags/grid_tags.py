@@ -6,16 +6,14 @@ from typing import Any
 from django import template
 from django.urls import reverse
 from django.utils.html import format_html
-from django.utils.safestring import SafeString
 
 register = template.Library()
 
 
-def _safe_json(value: Any) -> SafeString:
-    """Serialize JSON for direct use in script blocks without raw HTML tokens."""
+def _safe_json(value: Any) -> str:
+    """Serialize JSON without raw HTML tokens."""
     serialized = json.dumps(value)
-    serialized = serialized.replace("&", "\\u0026").replace("<", "\\u003C").replace(">", "\\u003E")
-    return SafeString(serialized)
+    return serialized.replace("&", "\\u0026").replace("<", "\\u003C").replace(">", "\\u003E")
 
 
 @register.simple_tag

@@ -5,6 +5,8 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import Error as PlaywrightError
+from playwright.sync_api import sync_playwright
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -120,6 +122,54 @@ assert(!fallbackActionsHtml.includes("//evil.example"), "fallback URL sanitizer 
         check=True,
         text=True,
     )
+
+
+@pytest.mark.frontend
+@pytest.mark.playwright
+def test_grid_html_helpers_render_hostile_values_safely_in_browser():
+    """Hostile formatter values should render as text in a real browser DOM."""
+    payload = '<img src=x onerror="window.__xssExecuted = true">'
+    grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/grid-utils.js").read_text()
+
+    with sync_playwright() as playwright:
+        if not Path(playwright.chromium.executable_path).exists():
+            pytest.skip("Playwright Chromium browser is not installed")
+
+        try:
+            browser = playwright.chromium.launch()
+        except PlaywrightError as exc:
+            pytest.skip(f"Playwright Chromium could not launch: {exc}")
+
+        try:
+            page = browser.new_page()
+            page.set_content(
+                """
+                <!doctype html>
+                <html>
+                  <body>
+                    <div id="root"></div>
+                    <script>
+                      window.__xssExecuted = false;
+                      window.gridjs = { html: (value) => value };
+                    </script>
+                  </body>
+                </html>
+                """,
+            )
+            page.add_script_tag(content=grid_utils)
+
+            safe_html = page.evaluate(
+                "payload => window.GridUtils.linkHtml('/safe/', payload)",
+                payload,
+            )
+            page.locator("#root").evaluate("(node, html) => { node.innerHTML = html; }", safe_html)
+            page.wait_for_timeout(100)
+
+            assert page.evaluate("window.__xssExecuted") is False
+            assert page.locator("#root img").count() == 0
+            assert payload in page.locator("#root").inner_text()
+        finally:
+            browser.close()
 
 
 def test_grid_templates_route_html_renderers_through_safe_helpers():

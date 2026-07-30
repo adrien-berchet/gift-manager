@@ -2,6 +2,19 @@
 .git
 .gitignore
 
+# Local secrets and certificates
+.env*
+**/.env*
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+certs
+certs/
+**/certs/
+
 # Python
 __pycache__
 *.py[cod]
@@ -13,21 +26,31 @@ __pycache__
 *.egg
 .mypy_cache
 .pytest_cache
+.ruff_cache
+.hypothesis
 .coverage
+.coverage.*
 htmlcov
 .tox
 .nox
 
 # Virtual environments
-.env
 .venv
 env
 venv
 ENV
 
-# IDE
+# IDE and assistant tooling
 .idea
 .vscode
+.agents
+.codex
+.codex-log
+.claude
+.gemini
+.kilocode
+.kiro
+.playwright-mcp
 *.swp
 *.swo
 *~
@@ -36,6 +59,7 @@ ENV
 Dockerfile*
 docker-compose*
 .docker
+deploy
 
 # Documentation
 docs
@@ -54,11 +78,30 @@ dist
 build
 *.egg-info
 reports
+bandit-report.json
+pip-audit-report.json
+playwright-report
+playwright-report/
+test-results
+test-results/
 
 # Local development
-.env.local
 *.log
 *.sqlite3
+.vercel
+.vercel/
+
+# Backup and database artifacts
+backups
+backups/
+*.bak
+*.backup
+*.dump
+*.sql
+*.gpg
+*.tar
+*.tar.gz
+*.tgz
 
 # Static files (will be collected during build)
 staticfiles

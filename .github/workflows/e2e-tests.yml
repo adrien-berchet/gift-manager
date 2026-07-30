@@ -68,12 +68,13 @@ jobs:
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e .[test]
+        pip install uv==0.10.7
+        uv sync --frozen --extra test
 
     - name: Install Playwright browsers
       run: |
-        python -m playwright install ${{ matrix.browser }}
-        python -m playwright install-deps ${{ matrix.browser }}
+        uv run --frozen python -m playwright install ${{ matrix.browser }}
+        uv run --frozen python -m playwright install-deps ${{ matrix.browser }}
 
     - name: Set up environment variables
       run: |
@@ -88,15 +89,15 @@ jobs:
 
     - name: Run database migrations
       run: |
-        python manage.py migrate --noinput
+        uv run --frozen python manage.py migrate --noinput
 
     - name: Collect static files
       run: |
-        python manage.py collectstatic --noinput
+        uv run --frozen python manage.py collectstatic --noinput
 
     - name: Run end-to-end tests
       run: |
-        pytest gift_manager/tests/e2e/ \
+        uv run --frozen pytest gift_manager/tests/e2e/ \
           --browser ${{ matrix.browser }} \
           --html=reports/e2e-${{ matrix.browser }}.html \
           --self-contained-html \
@@ -169,12 +170,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libpq-dev gettext
         python -m pip install --upgrade pip
-        pip install -e .[test]
+        pip install uv==0.10.7
+        uv sync --frozen --extra test
 
     - name: Install Playwright browsers
       run: |
-        python -m playwright install webkit
-        python -m playwright install-deps webkit
+        uv run --frozen python -m playwright install webkit
+        uv run --frozen python -m playwright install-deps webkit
 
     - name: Set up environment variables
       run: |
@@ -189,15 +191,15 @@ jobs:
 
     - name: Run database migrations
       run: |
-        python manage.py migrate --noinput
+        uv run --frozen python manage.py migrate --noinput
 
     - name: Collect static files
       run: |
-        python manage.py collectstatic --noinput
+        uv run --frozen python manage.py collectstatic --noinput
 
     - name: Run mobile end-to-end tests
       run: |
-        pytest gift_manager/tests/e2e/ \
+        uv run --frozen pytest gift_manager/tests/e2e/ \
           --browser webkit \
           -m "mobile" \
           --html=reports/e2e-mobile.html \
