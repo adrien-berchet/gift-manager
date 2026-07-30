@@ -52,6 +52,16 @@ def create_dashboard_action_plans(
         )
 
 
+def get_grid_column_count(grid) -> int:
+    """Return the rendered CSS grid column count for a locator."""
+    return grid.evaluate(
+        """grid => getComputedStyle(grid).gridTemplateColumns
+            .split(' ')
+            .filter((column) => column && column !== 'none')
+            .length"""
+    )
+
+
 def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
     """Return rendered pagination metrics for a dashboard action group."""
     group = page.locator(f".dashboard-action-group--{group_key}").first
@@ -270,6 +280,35 @@ class TestDashboardLayout:
         assert_paginated_action_layout(page, "upcoming")
         assert_paginated_action_layout(page, "incomplete")
 
+        dashboard_columns = get_paginated_layout_metrics(page, "incomplete")["columnCount"]
+
+        page.goto(f"{live_server.url}/relations/", wait_until="domcontentloaded")
+        workspace_grid = page.locator(
+            ".gift-plan-urgency-section--needs_details .gift-plan-card-grid"
+        ).first
+        expect(workspace_grid).to_be_visible()
+        assert get_grid_column_count(workspace_grid) == dashboard_columns
+
+        for viewport_width in (700, 390):
+            page.set_viewport_size({"width": viewport_width, "height": 900})
+
+            page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+            dashboard_grid = page.locator(
+                ".dashboard-action-group--incomplete .dashboard-action-list--paginated"
+            ).first
+            expect(dashboard_grid).to_be_visible()
+            dashboard_columns = get_grid_column_count(dashboard_grid)
+
+            page.goto(f"{live_server.url}/relations/", wait_until="domcontentloaded")
+            workspace_grid = page.locator(
+                ".gift-plan-urgency-section--needs_details .gift-plan-card-grid"
+            ).first
+            expect(workspace_grid).to_be_visible()
+            workspace_columns = get_grid_column_count(workspace_grid)
+
+            assert dashboard_columns == 1
+            assert workspace_columns == 1
+
     @pytest.mark.django_db(transaction=True)
     def test_dashboard_refreshes_after_list_update_for_new_gift_plan(
         self, page: Page, live_server, seed_data_e2e
@@ -370,9 +409,7 @@ class TestDashboardLayout:
         expect(detail_action).to_be_visible()
         assert cards.count() >= 2
 
-        desktop_columns = list_grid.evaluate(
-            "el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length"
-        )
+        desktop_columns = get_grid_column_count(list_grid)
         assert desktop_columns >= 2
 
         desktop_areas = card.evaluate("el => getComputedStyle(el).gridTemplateAreas")
@@ -391,12 +428,14 @@ class TestDashboardLayout:
         assert abs(second_card_box["y"] - first_card_box["y"]) <= 2
         assert title_box["x"] + title_box["width"] <= detail_box["x"] + 1
 
+        page.set_viewport_size({"width": 700, "height": 900})
+        page.wait_for_timeout(100)
+        assert get_grid_column_count(list_grid) == 1
+
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(100)
 
-        mobile_columns = list_grid.evaluate(
-            "el => getComputedStyle(el).gridTemplateColumns.split(' ').filter(Boolean).length"
-        )
+        mobile_columns = get_grid_column_count(list_grid)
         assert mobile_columns == 1
 
         mobile_areas = card.evaluate("el => getComputedStyle(el).gridTemplateAreas")

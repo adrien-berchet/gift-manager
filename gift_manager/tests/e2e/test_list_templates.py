@@ -1027,6 +1027,20 @@ class TestRelationListGridLoading:
             underfilled_section_layout["ideasGridWidth"] * 0.5
         )
 
+        page.set_viewport_size({"width": 700, "height": 900})
+        page.wait_for_timeout(100)
+
+        tablet_layout = grid.evaluate(
+            """grid => ({
+                columns: getComputedStyle(grid).gridTemplateColumns
+                    .split(' ')
+                    .filter(Boolean)
+                    .length,
+            })"""
+        )
+
+        assert tablet_layout["columns"] == 1
+
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(100)
 
