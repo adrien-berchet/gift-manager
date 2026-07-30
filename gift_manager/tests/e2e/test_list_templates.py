@@ -890,47 +890,142 @@ class TestRelationListGridLoading:
             "Workspace Refresh Kite"
         )
 
-    def test_workspace_cards_use_compact_layout(self, page: Page, live_server, seed_data_e2e):
-        """Gift-plan workspace cards should stay compact and non-stretched."""
+    def test_workspace_cards_use_equal_height_compact_layout(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Gift-plan workspace cards should stay compact and equal-height per section."""
+        long_gift = Gift.objects.create(
+            name=(
+                "Equal Height Long Workspace Gift With A Very Long Name That Should Clamp Cleanly"
+            )
+        )
+        short_gift = Gift.objects.create(name="Equal Height Short Gift")
+        for gift in (long_gift, short_gift):
+            create_or_update_permission(
+                seed_data_e2e.alice,
+                gift,
+                permission_level=PermissionLevel.OWNER,
+            )
+
+        for gift, comment in (
+            (
+                long_gift,
+                (
+                    "A deliberately long workspace note that should be clipped so the "
+                    "card can share a stable height with its siblings in the section."
+                ),
+            ),
+            (short_gift, ""),
+        ):
+            relation = Relation.objects.create(
+                person=seed_data_e2e.persons["dad"],
+                gift=gift,
+                event=seed_data_e2e.events["christmas"],
+                status=seed_data_e2e.statuses["planned"],
+                due_date=None,
+                comment=comment,
+            )
+            create_or_update_permission(
+                seed_data_e2e.alice,
+                relation,
+                permission_level=PermissionLevel.OWNER,
+            )
+
         page.set_viewport_size({"width": 1280, "height": 800})
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/relations/")
         page.wait_for_selector(".gift-plan-card", timeout=10_000)
 
-        grid = page.locator(".gift-plan-card-grid").first
-        card = page.locator(".gift-plan-card").first
+        section = page.locator(".gift-plan-urgency-section--needs_details").first
+        ideas_section = page.locator(".gift-plan-urgency-section--ideas").first
+        grid = section.locator(".gift-plan-card-grid").first
+        card = section.locator(".gift-plan-card").first
         title = card.locator(".gift-plan-card-title").first
         note = card.locator(".gift-plan-note").first
-        layout = grid.evaluate(
+
+        expect(section).to_be_visible()
+        expect(ideas_section).to_be_visible()
+        expect(grid).to_be_visible()
+        expect(card).to_be_visible()
+        expect(title).to_be_visible()
+        expect(note).to_be_visible()
+
+        layout = section.evaluate(
             """grid => {
-                const gridStyles = getComputedStyle(grid);
+                const cardGrid = grid.querySelector('.gift-plan-card-grid');
+                const gridStyles = getComputedStyle(cardGrid);
                 const card = grid.querySelector('.gift-plan-card');
                 const title = card.querySelector('.gift-plan-card-title');
                 const note = card.querySelector('.gift-plan-note');
+                const targetCards = Array.from(grid.querySelectorAll('.gift-plan-card'))
+                    .filter((candidate) => (
+                        candidate.textContent.includes('Equal Height Long Workspace Gift') ||
+                        candidate.textContent.includes('Equal Height Short Gift')
+                    ));
                 const cardStyles = getComputedStyle(card);
                 const titleStyles = getComputedStyle(title);
                 const noteStyles = getComputedStyle(note);
                 return {
                     alignItems: gridStyles.alignItems,
+                    gridAutoRows: gridStyles.gridAutoRows,
                     gridGap: parseFloat(gridStyles.gap),
                     cardGap: parseFloat(cardStyles.gap),
                     cardPadding: parseFloat(cardStyles.paddingTop),
                     titleFontSize: parseFloat(titleStyles.fontSize),
+                    titleLineClamp: getComputedStyle(title.querySelector('a')).webkitLineClamp,
                     noteLineClamp: noteStyles.webkitLineClamp,
+                    targetHeights: targetCards.map((targetCard) => (
+                        targetCard.getBoundingClientRect().height
+                    )),
+                    targetWidths: targetCards.map((targetCard) => (
+                        targetCard.getBoundingClientRect().width
+                    )),
+                };
+            }"""
+        )
+        underfilled_section_layout = page.evaluate(
+            """() => {
+                const needsGrid = document.querySelector(
+                    '.gift-plan-urgency-section--needs_details .gift-plan-card-grid'
+                );
+                const ideasGrid = document.querySelector(
+                    '.gift-plan-urgency-section--ideas .gift-plan-card-grid'
+                );
+                const needsCard = needsGrid.querySelector('.gift-plan-card');
+                const ideaCard = ideasGrid.querySelector('.gift-plan-card');
+                const ideasGridBox = ideasGrid.getBoundingClientRect();
+                const needsCardBox = needsCard.getBoundingClientRect();
+                const ideaCardBox = ideaCard.getBoundingClientRect();
+                return {
+                    ideasGridWidth: ideasGridBox.width,
+                    needsCardWidth: needsCardBox.width,
+                    ideaCardWidth: ideaCardBox.width,
                 };
             }"""
         )
 
-        expect(grid).to_be_visible()
-        expect(card).to_be_visible()
-        expect(title).to_be_visible()
-        expect(note).to_be_visible()
-        assert layout["alignItems"] == "start"
+        assert layout["alignItems"] == "stretch"
+        assert layout["gridAutoRows"] == "1fr"
         assert layout["gridGap"] <= 12
         assert layout["cardGap"] <= 9
         assert layout["cardPadding"] <= 12
         assert layout["titleFontSize"] <= 16
+        assert layout["titleLineClamp"] == "2"
         assert layout["noteLineClamp"] == "2"
+        assert len(layout["targetHeights"]) == 2
+        assert max(layout["targetHeights"]) - min(layout["targetHeights"]) <= 1
+        assert len(layout["targetWidths"]) == 2
+        assert max(layout["targetWidths"]) - min(layout["targetWidths"]) <= 1
+        assert (
+            abs(
+                underfilled_section_layout["ideaCardWidth"]
+                - underfilled_section_layout["needsCardWidth"]
+            )
+            <= 1
+        )
+        assert underfilled_section_layout["ideaCardWidth"] < (
+            underfilled_section_layout["ideasGridWidth"] * 0.5
+        )
 
         page.set_viewport_size({"width": 390, "height": 844})
         page.wait_for_timeout(100)

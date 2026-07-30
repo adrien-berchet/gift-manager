@@ -67,12 +67,16 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
             const visibleCards = cards.filter((card) => !card.hidden);
             const styles = getComputedStyle(list);
             const groupRect = group.getBoundingClientRect();
+            const listRect = list.getBoundingClientRect();
             const positions = visibleCards.map((card) => {
                 const rect = card.getBoundingClientRect();
                 return { x: rect.x, y: rect.y };
             });
             const visibleHeights = visibleCards.map((card) =>
                 card.getBoundingClientRect().height
+            );
+            const visibleWidths = visibleCards.map((card) =>
+                card.getBoundingClientRect().width
             );
             const noteMetrics = visibleCards.map((card) => {
                 const note = card.querySelector('.dashboard-action-note');
@@ -95,6 +99,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 overflowY: styles.overflowY,
                 scrollHeight: list.scrollHeight,
                 clientHeight: list.clientHeight,
+                listWidth: listRect.width,
                 minHeight: styles.minHeight,
                 groupHeight: groupRect.height,
                 pageSize: Number.parseInt(group.dataset.dashboardPageSize || '0', 10),
@@ -107,6 +112,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 ),
                 positions,
                 visibleHeights,
+                visibleWidths,
                 noteMetrics,
             };
         }"""
@@ -130,6 +136,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert metrics["pageStatus"].startswith("1 / ")
     assert metrics["minHeight"] == "0px"
     assert max(metrics["visibleHeights"]) - min(metrics["visibleHeights"]) <= 1
+    assert max(metrics["visibleWidths"]) - min(metrics["visibleWidths"]) <= 1
     assert any(note["scrollHeight"] > note["clientHeight"] for note in metrics["noteMetrics"])
     assert all(note["clientHeight"] <= note["lineHeight"] + 1 for note in metrics["noteMetrics"])
 
@@ -148,6 +155,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert next_metrics["scrollHeight"] <= next_metrics["clientHeight"] + 1
     assert next_metrics["minHeight"] == "0px"
     assert max(next_metrics["visibleHeights"]) - min(next_metrics["visibleHeights"]) <= 1
+    assert max(next_metrics["visibleWidths"]) - min(next_metrics["visibleWidths"]) <= 1
 
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     previous_metrics = get_paginated_layout_metrics(page, group_key)
@@ -169,6 +177,8 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert abs(last_metrics["clientHeight"] - before_last_metrics["clientHeight"]) <= 1
     assert abs(last_metrics["groupHeight"] - before_last_metrics["groupHeight"]) <= 1
     assert max(last_metrics["visibleHeights"]) < last_metrics["clientHeight"] - 1
+    assert abs(last_metrics["visibleWidths"][0] - before_last_metrics["visibleWidths"][0]) <= 1
+    assert last_metrics["visibleWidths"][0] < last_metrics["listWidth"] * 0.5
 
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     unlocked_metrics = get_paginated_layout_metrics(page, group_key)
