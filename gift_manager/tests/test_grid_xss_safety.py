@@ -124,6 +124,94 @@ assert(!fallbackActionsHtml.includes("//evil.example"), "fallback URL sanitizer 
     )
 
 
+@pytest.mark.skipif(NODE_BIN is None, reason="Node.js is required")
+def test_status_update_helper_reverts_failed_updates():
+    """Status update helper should not replace forms with error JSON."""
+    script = r"""
+const fs = require("fs");
+const vm = require("vm");
+
+const context = {
+  window: {},
+  document: { cookie: "csrftoken=test-token" },
+  URLSearchParams,
+  console,
+  alert: (message) => { context.alertMessage = message; },
+  fetch: async (url, options) => {
+    context.request = { url, options };
+    return {
+      ok: false,
+      status: 403,
+      headers: { get: () => "application/json" },
+      json: async () => ({ error: "Forbidden" }),
+      text: async () => "Forbidden",
+    };
+  },
+};
+vm.createContext(context);
+
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/grid-utils.js", "utf8"),
+  context
+);
+
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+
+(async () => {
+  const fakeForm = {
+    outerHTML: "<form>original</form>",
+    classList: {
+      classes: new Set(),
+      add(name) { this.classes.add(name); },
+      remove(name) { this.classes.delete(name); },
+    },
+  };
+  const fakeSelect = {
+    dataset: { relationId: "rel-1", updateUrl: "/status/", currentValue: "1" },
+    defaultValue: "1",
+    value: "2",
+    disabled: false,
+    isConnected: true,
+    attrs: {},
+    closest(selector) { return selector === "form" ? fakeForm : null; },
+    setAttribute(name, value) { this.attrs[name] = value; },
+    removeAttribute(name) { delete this.attrs[name]; },
+  };
+
+  context.window.showNotification = (message, type) => {
+    context.toast = { message, type };
+  };
+
+  const updated = await context.window.GridUtils.updateStatusSelect(fakeSelect);
+
+  assert(updated === false, "failed updates should return false");
+  assert(fakeSelect.value === "1", "failed updates should restore the previous value");
+  assert(fakeSelect.disabled === false, "failed updates should re-enable the select");
+  assert(!("aria-busy" in fakeSelect.attrs), "failed updates should clear aria-busy");
+  assert(fakeForm.outerHTML === "<form>original</form>", "failed updates should not replace form HTML");
+  assert(context.toast.type === "error", "failed updates should show an error toast");
+
+  const body = new URLSearchParams(context.request.options.body);
+  assert(body.get("relation_id") === "rel-1", "request should send the relation id");
+  assert(body.get("new_status") === "2", "request should send the selected status");
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+"""
+
+    subprocess.run(  # noqa: S603 - fixed Node.js test harness with no shell.
+        [NODE_BIN, "-e", script],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+    )
+
+
 @pytest.mark.frontend
 @pytest.mark.playwright
 def test_grid_html_helpers_render_hostile_values_safely_in_browser():

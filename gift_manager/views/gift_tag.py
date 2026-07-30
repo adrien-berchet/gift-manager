@@ -287,16 +287,7 @@ class GiftTagDetailView(BaseDetailView):
 
         # Usage statistics
         direct_gifts_count = context["gifts"].count()
-        accessible_descendants = [
-            tag for tag in self.object.get_descendants() if tag.pk in accessible_tag_ids
-        ]
-        total_tag_ids = [self.object.pk] + [tag.pk for tag in accessible_descendants]
-        total_gifts_count = (
-            Gift.objects.accessible_by(self.request.user)
-            .filter(tags__in=total_tag_ids)
-            .distinct()
-            .count()
-        )
+        total_gifts_count = self.object.get_all_gifts(self.request.user).count()
         child_tags_count = context["child_tags"].count()
 
         context["usage_stats"] = {

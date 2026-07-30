@@ -105,6 +105,7 @@ class HTMXResponseMixin:
         response = super().form_invalid(form)
 
         if self.is_htmx:
+            response.status_code = 422
             # Add error notification trigger
             error_message = "Please correct the errors below."
             response["HX-Trigger"] = json.dumps(
@@ -184,7 +185,7 @@ class ContextPermissionMixin:
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
         context["is_editor"] = (
-            PermissionService.get_permission(self.object, self.request.user)
+            PermissionService.get_effective_permission(self.object, self.request.user)
             >= PermissionLevel.EDITOR
         )
         return context
@@ -794,6 +795,15 @@ class DeleteSharedMixin:
         """Return the user-facing object type used in delete messages."""
         return getattr(self, "display_object_type", self.object_type)
 
+    def is_leave_access_request(self) -> bool:
+        """Return whether this request explicitly asks to remove only current access."""
+        if self.request.method == "POST":
+            return (
+                "leave_access" in self.request.POST
+                or self.request.POST.get("intent") == "leave_access"
+            )
+        return self.request.GET.get("intent") == "leave_access"
+
     def post(self, request, *args, **kwargs):
         """Overload the delete method to handle conditional deletion.
 
@@ -804,8 +814,21 @@ class DeleteSharedMixin:
             self.object = self.get_object()
             success_url = self.get_success_url()
 
-            if PermissionService.has_other_access_holder(self.object, request.user):
+            if self.is_leave_access_request():
                 # If shared, only remove the sharing with the current user
+                PermissionService.assert_can_leave_object(request.user, self.object)
+                PermissionService.delete_permission(request.user, self.object)
+
+                success_message = gettext(
+                    "You no longer have access to this {}, but it remains shared with other users"
+                ).format(gettext(self.get_display_object_type()).lower())
+            elif PermissionService.has_other_access_holder(self.object, request.user):
+                permission = PermissionService.get_effective_permission(self.object, request.user)
+                if permission < PermissionLevel.EDITOR:
+                    raise PermissionDenied(
+                        gettext("Use the leave access action to remove your own access.")
+                    )
+
                 PermissionService.assert_can_leave_object(request.user, self.object)
                 PermissionService.delete_permission(request.user, self.object)
 
@@ -977,6 +1000,13 @@ class BaseDeleteView(
 
         if permission < PermissionLevel.VIEWER:
             raise PermissionDenied(gettext("You do not have access to this object."))
+
+        if self.is_leave_access_request():
+            PermissionService.assert_can_leave_object(self.request.user, obj)
+            return
+
+        if permission < self.required_delete_permission:
+            raise PermissionDenied(gettext("You do not have permission to delete this object."))
 
         if (
             not PermissionService.has_other_access_holder(obj, self.request.user)

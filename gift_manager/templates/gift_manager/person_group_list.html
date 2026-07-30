@@ -58,7 +58,9 @@
     }
     .tree-node-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
+        justify-content: flex-end;
     }
     .tree-children {
         margin-left: 0;
@@ -101,6 +103,9 @@
     }
     .drag-handle:hover {
         color: #495057;
+    }
+    .tree-move-btn {
+        white-space: nowrap;
     }
 </style>
 {% endblock %}
@@ -173,6 +178,15 @@
                         <span class="badge bg-secondary badge-count ms-2">{{ node.member_count }} {% trans "members" %}</span>
                     </div>
                     <div class="tree-node-actions">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary tree-move-btn"
+                                data-bs-toggle="modal"
+                                data-bs-target="#groupMoveModal"
+                                data-group-id="{{ node.group_id }}"
+                                data-group-name="{{ node.name }}"
+                                title="{% trans 'Move group' %}">
+                            <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                        </button>
                         {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True %}
                     </div>
                 </div>
@@ -180,6 +194,30 @@
             {% else %}
                 <p class="text-muted">{% trans "No groups found." %}</p>
             {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="groupMoveModal" tabindex="-1" aria-labelledby="groupMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="group-move-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="groupMoveModalLabel">{% trans "Move group" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="group-move-source-id">
+                    <label for="group-move-parent" class="form-label">{% trans "Parent group" %}</label>
+                    <select id="group-move-parent" class="form-select"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" id="group-move-submit">
+                        <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -520,6 +558,116 @@
             return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
         }
 
+        function currentParentIds(node) {
+            return (node.dataset.parentIds || '').split(',').filter(Boolean);
+        }
+
+        function findTreeNode(groupId) {
+            return Array.from(treeNodes).find(node => node.dataset.groupId === groupId);
+        }
+
+        function validMoveTargets(sourceGroupId) {
+            const invalidIds = new Set([sourceGroupId]);
+            getAllDescendants(sourceGroupId).forEach(descendant => {
+                invalidIds.add(descendant.dataset.groupId);
+            });
+
+            return Array.from(treeNodes).filter(node => !invalidIds.has(node.dataset.groupId));
+        }
+
+        function showMoveError(message) {
+            const fallback = "{% trans 'An error occurred while moving the group' %}";
+            if (window.showNotification) {
+                window.showNotification(message || fallback, 'error');
+            } else {
+                alert(message || fallback);
+            }
+        }
+
+        async function reparentGroup(groupId, parentIds) {
+            const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    group_id: groupId,
+                    parent_ids: parentIds,
+                    action: 'set'
+                })
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = { message: "{% trans 'An error occurred while moving the group' %}" };
+            }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "{% trans 'An error occurred while moving the group' %}");
+            }
+
+            return data;
+        }
+
+        const groupMoveModal = document.getElementById('groupMoveModal');
+        const groupMoveForm = document.getElementById('group-move-form');
+        const groupMoveSourceInput = document.getElementById('group-move-source-id');
+        const groupMoveParentSelect = document.getElementById('group-move-parent');
+        const groupMoveSubmit = document.getElementById('group-move-submit');
+        const groupMoveTitle = document.getElementById('groupMoveModalLabel');
+
+        if (groupMoveModal && groupMoveForm && groupMoveSourceInput && groupMoveParentSelect) {
+            groupMoveModal.addEventListener('show.bs.modal', function(event) {
+                const trigger = event.relatedTarget;
+                const sourceGroupId = trigger?.dataset.groupId;
+                const sourceGroupName = trigger?.dataset.groupName || '';
+                const sourceNode = findTreeNode(sourceGroupId);
+
+                groupMoveSourceInput.value = sourceGroupId || '';
+                groupMoveTitle.textContent = sourceGroupName
+                    ? "{% trans 'Move' %} " + sourceGroupName
+                    : "{% trans 'Move group' %}";
+
+                groupMoveParentSelect.innerHTML = '';
+                groupMoveParentSelect.appendChild(new Option("{% trans 'Root group' %}", ''));
+
+                if (sourceNode) {
+                    validMoveTargets(sourceGroupId).forEach(targetNode => {
+                        const depth = parseInt(targetNode.dataset.depth, 10) || 0;
+                        const label = '-- '.repeat(depth) + targetNode.dataset.groupName;
+                        groupMoveParentSelect.appendChild(new Option(label, targetNode.dataset.groupId));
+                    });
+
+                    const parents = currentParentIds(sourceNode);
+                    groupMoveParentSelect.value = parents[0] || '';
+                }
+            });
+
+            groupMoveForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const sourceGroupId = groupMoveSourceInput.value;
+                const selectedParentId = groupMoveParentSelect.value;
+                const parentIds = selectedParentId ? [selectedParentId] : [];
+
+                if (!sourceGroupId) return;
+
+                groupMoveSubmit.disabled = true;
+
+                try {
+                    await reparentGroup(sourceGroupId, parentIds);
+                    window.location.reload();
+                } catch (error) {
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
+                } finally {
+                    groupMoveSubmit.disabled = false;
+                }
+            });
+        }
+
         treeNodes.forEach(node => {
             // Drag start
             node.addEventListener('dragstart', (e) => {
@@ -597,30 +745,11 @@
 
                 // Call API to reparent
                 try {
-                    const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCsrfToken()
-                        },
-                        body: JSON.stringify({
-                            group_id: draggedGroupId,
-                            parent_ids: [targetGroupId],
-                            action: 'set'
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        // Success - reload the page to show updated hierarchy
-                        window.location.reload();
-                    } else {
-                        alert("{% trans 'Error:' %} " + data.message);
-                    }
+                    await reparentGroup(draggedGroupId, [targetGroupId]);
+                    window.location.reload();
                 } catch (error) {
                     console.error('Reparenting error:', error);
-                    alert("{% trans 'An error occurred while moving the group' %}");
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
                 }
             });
         });

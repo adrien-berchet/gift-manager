@@ -4,6 +4,7 @@ from django.db.models import Model
 from django.utils.translation import gettext
 
 from gift_manager.models import PermissionLevel
+from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
 
 
@@ -49,6 +50,9 @@ class PermissionService:
         if user.is_superuser:
             return PermissionLevel.OWNER
 
+        if isinstance(obj, PersonGroup):
+            return cls.get_effective_permission_for_group(obj, user)
+
         permission = cls.get_permission(obj, user)
         if getattr(obj, "user_link_id", None) == user.id:
             return max(permission, PermissionLevel.OWNER)
@@ -80,12 +84,7 @@ class PermissionService:
             cls.validate_permission_level(permission_level)
 
         target_permission = cls.get_permission(obj, target_user)
-        target_effective_permission = max(
-            target_permission,
-            PermissionLevel.OWNER
-            if getattr(obj, "user_link_id", None) == target_user.id
-            else PermissionLevel.NONE,
-        )
+        target_effective_permission = cls.get_effective_permission(obj, target_user)
         target_is_friend = cls.users_are_friends(actor, target_user)
         expanding_non_friend_access = (
             permission_level is not None
@@ -112,6 +111,9 @@ class PermissionService:
         if user_permission < PermissionLevel.VIEWER:
             raise PermissionDenied(gettext("You do not have access to this object."))
 
+        if isinstance(obj, PersonGroup) and cls.get_permission(obj, user) == PermissionLevel.NONE:
+            raise PermissionDenied(gettext("This group access is inherited from a parent group."))
+
         if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
             raise PermissionDenied(gettext("At least one owner is required."))
 
@@ -122,7 +124,20 @@ class PermissionService:
             return True
 
         linked_user_id = getattr(obj, "user_link_id", None)
-        return linked_user_id is not None and linked_user_id != user.id
+        if linked_user_id is not None and linked_user_id != user.id:
+            return True
+
+        if isinstance(obj, PersonGroup):
+            return (
+                PersonGroupPermission.objects.filter(
+                    group__in=obj.get_ancestors(use_cache=False),
+                    inherit_permissions=True,
+                )
+                .exclude(user=user)
+                .exists()
+            )
+
+        return False
 
     @staticmethod
     def users_are_friends(actor, target_user) -> bool:
@@ -148,6 +163,15 @@ class PermissionService:
         if linked_user_id is not None:
             owner_ids.add(linked_user_id)
 
+        if isinstance(obj, PersonGroup):
+            owner_ids.update(
+                PersonGroupPermission.objects.filter(
+                    group__in=obj.get_ancestors(use_cache=False),
+                    inherit_permissions=True,
+                    permission_type=PermissionLevel.OWNER,
+                ).values_list("user_id", flat=True)
+            )
+
         return owner_ids
 
     @classmethod
@@ -165,10 +189,8 @@ class PermissionService:
     def get_effective_permission_for_group(cls, group, user) -> int:
         """Get the permission for a user on a PersonGroup, considering cascade inheritance.
 
-        This method checks:
-        1. Direct permission on the group
-        2. If no direct permission, check parent groups with inherit_permissions=True
-        3. Returns the highest permission level found
+        This method returns the highest level from direct permissions and parent
+        groups with inherit_permissions=True.
 
         Args:
             group: PersonGroup instance
@@ -177,23 +199,21 @@ class PermissionService:
         Returns:
             int: The effective permission level
         """
-        # Check direct permission on this group
         direct_permission = PersonGroupPermission.objects.filter(user=user, group=group).first()
+        direct_level = (
+            direct_permission.permission_type if direct_permission else PermissionLevel.NONE
+        )
 
-        if direct_permission:
-            return direct_permission.permission_type
-
-        # Check parent groups with cascade inheritance
         ancestors = group.get_ancestors()
         inherited_permissions = PersonGroupPermission.objects.filter(
             user=user, group__in=ancestors, inherit_permissions=True
         )
 
-        # Return the highest permission level found
+        inherited_level = PermissionLevel.NONE
         if inherited_permissions.exists():
-            return max(p.permission_type for p in inherited_permissions)
+            inherited_level = max(p.permission_type for p in inherited_permissions)
 
-        return PermissionLevel.NONE
+        return max(direct_level, inherited_level)
 
     @classmethod
     def get_permission_label(cls, obj, user, filter_name, case="lower") -> str:

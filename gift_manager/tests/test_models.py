@@ -10,6 +10,7 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db import connection
+from django.db import transaction
 from django.test import override_settings
 from django.utils import timezone
 
@@ -29,6 +30,7 @@ from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionService
 from gift_manager.tests.factories import InvitationFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
@@ -544,6 +546,29 @@ class TestGiftTag:
         assert gift in gifts
         assert gift2 in gifts
 
+    def test_tag_get_all_gifts_filters_by_user_access(self, user):
+        """User-aware gift counts exclude inaccessible gifts."""
+        tag = GiftTag.objects.create(name="Electronics")
+        visible_gift = Gift.objects.create(name="Visible gift")
+        private_gift = Gift.objects.create(name="Private gift")
+        visible_gift.tags.add(tag)
+        private_gift.tags.add(tag)
+
+        GiftTagPermission.objects.create(
+            user=user,
+            gift_tag=tag,
+            permission_type=PermissionLevel.VIEWER,
+        )
+        GiftPermission.objects.create(
+            user=user,
+            gift=visible_gift,
+            permission_type=PermissionLevel.VIEWER,
+        )
+
+        gifts = tag.get_all_gifts(user=user)
+
+        assert list(gifts) == [visible_gift]
+
     def test_tag_clean_with_cycle(self):
         """Test the clean method prevents cycles."""
         tag_a = GiftTag.objects.create(name="Tag A")
@@ -760,6 +785,24 @@ class TestRelation:
         relation = Relation(person=person, group=group, gift=gift, status=status)
         with pytest.raises(ValidationError):
             relation.clean()
+
+    def test_relation_database_rejects_missing_recipient(self, gift, status):
+        """The database enforces that a relation has exactly one recipient."""
+        with pytest.raises(IntegrityError), transaction.atomic():
+            Relation.objects.create(gift=gift, status=status)
+
+    def test_relation_database_rejects_two_recipients(self, person, group, gift, status):
+        """The database rejects rows with both person and group recipients."""
+        with pytest.raises(IntegrityError), transaction.atomic():
+            Relation.objects.create(person=person, group=group, gift=gift, status=status)
+
+    def test_relation_recipient_database_constraint(self, person, group, gift, status):
+        """The database rejects rows without exactly one recipient."""
+        with pytest.raises(IntegrityError), transaction.atomic():
+            Relation.objects.create(gift=gift, status=status)
+
+        with pytest.raises(IntegrityError), transaction.atomic():
+            Relation.objects.create(person=person, group=group, gift=gift, status=status)
 
     def test_relation_permission(self, user, username, person, gift, status):
         """Test adding a permission to a relation."""
@@ -1304,6 +1347,20 @@ class TestPersonGroupHierarchy:
         cache_key = f"persongroup_ancestors_{child.pk}"
         assert cache.get(cache_key) is not None
 
+    def test_parent_removal_clears_stale_hierarchy_caches(self):
+        """Removing a parent clears cache entries that reference the old relationship."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        assert child in parent.get_descendants(use_cache=True)
+        assert parent in child.get_ancestors(use_cache=True)
+
+        child.parent_groups.remove(parent)
+
+        assert child not in parent.get_descendants(use_cache=True)
+        assert parent not in child.get_ancestors(use_cache=True)
+
     def test_circular_reference_handling(self):
         """Test that circular references don't cause infinite loops."""
         # Create two groups that reference each other
@@ -1615,6 +1672,40 @@ class TestPersonGroupManagerMethods:
         assert child not in root_groups  # Has parent, not root
         assert unshared not in root_groups  # Not shared
 
+    def test_accessible_by_includes_inherited_descendant_permissions(self, user):
+        """Inherited parent permissions make descendant groups accessible."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.EDITOR,
+            inherit_permissions=True,
+        )
+
+        assert child in PersonGroup.objects.accessible_by(user)
+        assert PermissionService.get_effective_permission(child, user) == PermissionLevel.EDITOR
+
+    def test_direct_permission_does_not_mask_higher_inherited_permission(self, user):
+        """Effective permissions use the highest direct or inherited group permission."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.OWNER,
+            inherit_permissions=True,
+        )
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=child,
+            permission_type=PermissionLevel.VIEWER,
+        )
+
+        assert PermissionService.get_effective_permission(child, user) == PermissionLevel.OWNER
+
     def test_children_for_user(self, user):
         """Test children_for_user returns children accessible by user."""
         parent = PersonGroupFactory(name="Parent")
@@ -1632,6 +1723,48 @@ class TestPersonGroupManagerMethods:
         children = PersonGroup.objects.children_for_user(parent, user)
         assert child1 in children
         assert child2 not in children
+
+    def test_accessible_by_includes_inherited_descendants(self, user):
+        """Parent permissions cascade only when inherit_permissions is explicit."""
+        from gift_manager.services import PermissionService
+
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        grandchild = PersonGroupFactory(name="Grandchild")
+        unrelated = PersonGroupFactory(name="Unrelated")
+        child.parent_groups.add(parent)
+        grandchild.parent_groups.add(child)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.EDITOR,
+            inherit_permissions=True,
+        )
+
+        accessible_groups = PersonGroup.objects.accessible_by(user)
+
+        assert parent in accessible_groups
+        assert child in accessible_groups
+        assert grandchild in accessible_groups
+        assert unrelated not in accessible_groups
+        assert PermissionService.get_effective_permission(child, user) == PermissionLevel.EDITOR
+
+    def test_accessible_by_does_not_inherit_when_flag_is_false(self, user):
+        """A direct parent permission without inherit_permissions does not expose children."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.EDITOR,
+            inherit_permissions=False,
+        )
+
+        accessible_groups = PersonGroup.objects.accessible_by(user)
+
+        assert parent in accessible_groups
+        assert child not in accessible_groups
 
     def test_with_prefetched_relations(self):
         """Test with_prefetched_relations prefetches parent/child groups."""
@@ -1700,6 +1833,18 @@ class TestPersonGroupCacheHits:
         ancestors2 = child.get_ancestors(use_cache=True)
         assert len(ancestors2) == 1
         assert ancestors1 == ancestors2
+
+    def test_remove_parent_clears_stale_descendant_cache(self):
+        """Removing a parent relation invalidates the old parent's descendants cache."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+
+        assert child in parent.get_descendants(use_cache=True)
+
+        child.parent_groups.remove(parent)
+
+        assert child not in parent.get_descendants(use_cache=True)
 
 
 @pytest.mark.django_db
@@ -1795,6 +1940,18 @@ class TestGiftTagCacheAndBranches:
         ancestors2 = child.get_ancestors(use_cache=True)
         assert len(ancestors2) == 1
 
+    def test_remove_parent_clears_stale_descendant_cache(self):
+        """Removing a parent tag relation invalidates the old parent's descendants cache."""
+        parent = GiftTag.objects.create(name="Parent")
+        child = GiftTag.objects.create(name="Child")
+        child.parent_tags.add(parent)
+
+        assert child in parent.get_descendants(use_cache=True)
+
+        child.parent_tags.remove(parent)
+
+        assert child not in parent.get_descendants(use_cache=True)
+
     def test_get_primary_ancestors_path_no_prefetch(self):
         """Test get_primary_ancestors_path when _prefetched_objects_cache doesn't exist."""
         parent = GiftTag.objects.create(name="Parent")
@@ -1885,6 +2042,20 @@ class TestGiftTagClearHierarchyCache:
         # Verify caches are cleared for child
         assert cache.get(f"gifttag_descendants_{child.pk}") is None
         assert cache.get(f"gifttag_ancestors_{child.pk}") is None
+
+    def test_parent_removal_clears_stale_hierarchy_caches(self):
+        """Removing a parent clears cached tag descendants and ancestors."""
+        parent = GiftTag.objects.create(name="Parent")
+        child = GiftTag.objects.create(name="Child")
+        child.parent_tags.add(parent)
+
+        assert child in parent.get_descendants(use_cache=True)
+        assert parent in child.get_ancestors(use_cache=True)
+
+        child.parent_tags.remove(parent)
+
+        assert child not in parent.get_descendants(use_cache=True)
+        assert parent not in child.get_ancestors(use_cache=True)
 
 
 @pytest.mark.django_db

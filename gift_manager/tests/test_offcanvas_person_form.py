@@ -83,7 +83,7 @@ class TestOffcanvasPersonForm:
         assert_text_in_rendered("hx-post=", content)
         assert_text_in_rendered("hx-target=", content)
         assert_text_in_rendered("hx-swap=", content)
-        assert_text_in_rendered('hx-on::after-request="handleFormResponse(event)"', content)
+        assert 'hx-on::after-request="handleFormResponse(event)"' not in content
 
     def test_person_edit_form_has_group_buttons(self, client_logged_in, person, groups):
         """Test that form has Select All/Clear All buttons with correct data attributes."""
@@ -131,11 +131,14 @@ class TestOffcanvasPersonForm:
 
         response = client_logged_in.post(url, data, HTTP_HX_REQUEST="true")
 
-        # Should return 200 with form errors
-        assert response.status_code == 200
+        # Should return an HTMX validation error status with form errors
+        assert response.status_code == 422
+        assert "HX-Trigger" in response
+        assert "list:update" not in response["HX-Trigger"]
         content = response.content.decode()
         # Form should be re-rendered with errors
         assert "person-form" in content
+        assert "form-error-summary" in content
 
     def test_person_create_form_has_htmx_attributes(self, client_logged_in):
         """Test that create form has correct HTMX attributes."""

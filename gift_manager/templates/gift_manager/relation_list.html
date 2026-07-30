@@ -284,7 +284,6 @@
             group: "recipient-type-badge recipient-type-badge--group"
         };
         const editorPermission = 20;
-        const statusUpdateErrorMessage = "{% trans 'Unable to update this gift plan status.' %}";
         const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
         const missingDueDateLabel = "{% trans 'Missing due date' %}";
         const missingEventLabel = "{% trans 'Missing event' %}";
@@ -571,56 +570,7 @@
 // Handle status selector changes with event delegation
         document.getElementById('relation-grid').addEventListener('change', function (e) {
             if (e.target.classList.contains('status-selector')) {
-                const select = e.target;
-                const relationId = select.dataset.relationId;
-                const updateUrl = select.dataset.updateUrl;
-                const newStatus = select.value;
-                const previousStatus = select.dataset.currentValue;
-                const form = select.closest('form');
-
-                // Get CSRF token
-                function getCookie(name) {
-                    let cookieValue = null;
-                    if (document.cookie && document.cookie !== '') {
-                        const cookies = document.cookie.split(';');
-                        for (let i = 0; i < cookies.length; i++) {
-                            const cookie = cookies[i].trim();
-                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                                break;
-                            }
-                        }
-                    }
-                    return cookieValue;
-                }
-
-                // Make POST request
-                fetch(updateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: `relation_id=${relationId}&new_status=${newStatus}`
-                })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-                        return response.text();
-                    })
-                    .then(html => {
-                        // Replace the form with the server response
-                        form.outerHTML = html;
-                        document.dispatchEvent(new CustomEvent('list:update'));
-                    })
-                    .catch(error => {
-                        console.error('Error updating status:', error);
-                        if (previousStatus) {
-                            select.value = previousStatus;
-                        }
-                        alert(statusUpdateErrorMessage);
-                    });
+                GridUtils.updateStatusSelect(e.target);
             }
         });
     }) ();

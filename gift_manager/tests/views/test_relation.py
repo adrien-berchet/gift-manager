@@ -48,6 +48,7 @@ class TestUpdateRelationStatus:
         assert "gift-plan-status-form" in content
         assert "gift-plan-status-select gift-plan-status--testing" in content
         assert f'value="{self.new_status.pk}"' in content
+        assert f'data-current-value="{self.new_status.pk}"' in content
         assert "selected" in content
 
         # Check database

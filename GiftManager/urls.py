@@ -41,6 +41,7 @@ urlpatterns = [
     path("admin_redirect/", admin_redirect, name="admin_redirect"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("accounts/login/", views.CustomLoginView.as_view(), name="account_login"),
+    path("accounts/signup/", views.InvitationBoundSignupView.as_view(), name="account_signup"),
     path(
         "accounts/user_deactivate",
         views.UserAccountDeactivateView.as_view(),

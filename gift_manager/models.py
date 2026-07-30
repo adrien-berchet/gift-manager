@@ -353,10 +353,10 @@ class Invitation(models.Model):
 
     def is_expired(self):
         """Check if the invitation has expired."""
-        if not hasattr(settings, "INVITATION_EXPIRY_DAYS"):
+        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", None)
+        if expiry_days is None:
             return False  # If not configured, invitations don't expire
 
-        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", 7)
         expiry_date = self.created_at + timedelta(days=expiry_days)
         return timezone.now() > expiry_date
 
@@ -424,6 +424,25 @@ class PersonPermission(models.Model):
 
 class PersonGroupManager(UserPermissionManager):
     """Manager for PersonGroup model with hierarchy query methods."""
+
+    def accessible_by(self, user):
+        """Return groups accessible directly or through inherited parent permissions."""
+        queryset = self.get_queryset()
+        if not user or not user.is_authenticated:
+            return queryset.none()
+
+        inherited_group_ids = set()
+        inherited_permissions = (
+            PersonGroupPermission.objects.filter(user=user, inherit_permissions=True)
+            .select_related("group")
+            .order_by("group_id")
+        )
+        for permission in inherited_permissions:
+            inherited_group_ids.update(
+                descendant.pk for descendant in permission.group.get_descendants()
+            )
+
+        return queryset.filter(Q(shared_with=user) | Q(pk__in=inherited_group_ids)).distinct()
 
     def root_groups_for_user(self, user):
         """Return all root groups (without parents) accessible by a user."""
@@ -885,10 +904,21 @@ class GiftTag(models.Model):
         # Check if we are already an ancestor of the potential parent
         return self in potential_parent.get_ancestors()
 
-    def get_all_gifts(self):
-        """Returns all gifts associated with this tag and its descendants."""
-        tags = [self, *self.get_descendants()]
-        return Gift.objects.filter(tags__in=tags).distinct()
+    def get_all_gifts(self, user=None):
+        """Returns gifts associated with this tag and descendants, optionally user-filtered."""
+        if user is None:
+            tags = [self, *self.get_descendants()]
+            return Gift.objects.filter(tags__in=tags).distinct()
+
+        accessible_tag_ids = set(GiftTag.objects.accessible_by(user).values_list("pk", flat=True))
+        if self.pk not in accessible_tag_ids:
+            return Gift.objects.none()
+
+        tags = [
+            self,
+            *[tag for tag in self.get_descendants() if tag.pk in accessible_tag_ids],
+        ]
+        return Gift.objects.accessible_by(user).filter(tags__in=tags).distinct()
 
     def clear_hierarchy_cache(self):
         """Clear cached hierarchy data for this tag and related tags."""
@@ -1092,6 +1122,15 @@ class Relation(models.Model):
     class Meta:
         verbose_name = gettext_lazy("Relation")
         verbose_name_plural = gettext_lazy("Relations")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(person__isnull=False, group__isnull=True)
+                    | Q(person__isnull=True, group__isnull=False)
+                ),
+                name="relation_exactly_one_recipient",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.recipient_name} - {self.gift} ({self.status})"
@@ -1202,7 +1241,7 @@ def clear_gifttag_cache_on_save(sender, instance, **kwargs):
 def clear_gifttag_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_tags relationship changes."""
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.clear_hierarchy_cache()
+        _clear_hierarchy_cache_for_model(GiftTag, "gifttag")
 
 
 # Signal handlers for PersonGroup cache invalidation
@@ -1216,4 +1255,19 @@ def clear_persongroup_cache_on_save(sender, instance, **kwargs):
 def clear_persongroup_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_groups relationship changes."""
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.clear_hierarchy_cache()
+        _clear_hierarchy_cache_for_model(PersonGroup, "persongroup")
+
+
+def _clear_hierarchy_cache_for_model(model, cache_prefix: str) -> None:
+    """Clear all hierarchy cache entries for a tree/DAG model after relationship changes."""
+    object_ids = model.objects.values_list("pk", flat=True)
+    keys = [
+        key
+        for object_id in object_ids
+        for key in (
+            f"{cache_prefix}_descendants_{object_id}",
+            f"{cache_prefix}_ancestors_{object_id}",
+        )
+    ]
+    if keys:
+        cache.delete_many(keys)

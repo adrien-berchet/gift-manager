@@ -310,6 +310,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (offcanvas) {
             const panelId = offcanvas.id;
+            const isValidationResponse = trigger.tagName === 'FORM' &&
+                trigger.dataset.formType &&
+                (e.detail.xhr.status === 400 || e.detail.xhr.status === 422);
+
+            if (isValidationResponse) {
+                hideOffcanvasLoading(panelId);
+                return;
+            }
 
             if (e.detail.successful) {
                 hideOffcanvasLoading(panelId);

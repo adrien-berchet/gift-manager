@@ -1,5 +1,7 @@
 from allauth.account.forms import LoginForm as AllAuthLoginForm
 from allauth.account.views import LoginView
+from allauth.account.views import SignupView
+from django import forms
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -10,11 +12,15 @@ from django.shortcuts import render
 from django.utils.translation import gettext
 from django.views.generic import View
 
+from gift_manager.adapters import ensure_user_email_encoded
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.views.profile import get_request_pending_invitation
+from gift_manager.views.profile import invitation_matches_email
+from gift_manager.views.profile import store_pending_invitation_token
 
 
 class CustomAuthenticationForm(AllAuthLoginForm):
@@ -45,6 +51,41 @@ class CustomLoginView(LoginView):
         return super().form_valid(form)
 
 
+class InvitationBoundSignupView(SignupView):
+    """Signup view that keeps invitations bound to their intended recipient."""
+
+    def dispatch(self, request, *args, **kwargs):
+        self.invitation = get_request_pending_invitation(request)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_initial(self):
+        initial = super().get_initial()
+        invitation = getattr(self, "invitation", None)
+        if invitation is not None:
+            invited_email = invitation.email
+            initial["email"] = invited_email
+            initial["email2"] = invited_email
+        return initial
+
+    def form_valid(self, form):
+        invitation = getattr(self, "invitation", None)
+        if invitation is not None:
+            signup_email = form.cleaned_data.get("email")
+            if not invitation_matches_email(invitation, signup_email):
+                form.add_error(
+                    "email",
+                    forms.ValidationError(
+                        gettext("Use the email address this invitation was sent to.")
+                    ),
+                )
+                return self.form_invalid(form)
+            store_pending_invitation_token(self.request, invitation.token)
+        response = super().form_valid(form)
+        if user := getattr(self, "user", None):
+            ensure_user_email_encoded(user)
+        return response
+
+
 class UserAccountDeactivateView(LoginRequiredMixin, View):
     """View to deactivate the user account."""
 
@@ -73,7 +114,7 @@ class UserAccountDeleteView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Retrieve the referer URL (previous page) or use a default URL
         referer = request.META.get("HTTP_REFERER")
-        cancel_url = referer if referer else "gift_manager:user_account"
+        cancel_url = referer or "gift_manager:user_account"
 
         context = {"cancel_url": cancel_url}
         return render(request, self.template_name, context)

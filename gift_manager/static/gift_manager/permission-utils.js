@@ -213,7 +213,7 @@
             view: PERMISSION_LEVELS.VIEWER,
             edit: PERMISSION_LEVELS.EDITOR,
             delete: PERMISSION_LEVELS.OWNER,
-            share: PERMISSION_LEVELS.EDITOR,
+            share: PERMISSION_LEVELS.OWNER,
             create: PERMISSION_LEVELS.NONE, // Create doesn't require object permissions
         };
 
@@ -238,7 +238,7 @@
             view: PERMISSION_LEVELS.VIEWER,
             create: PERMISSION_LEVELS.EDITOR,
             edit: PERMISSION_LEVELS.EDITOR,
-            share: PERMISSION_LEVELS.EDITOR,
+            share: PERMISSION_LEVELS.OWNER,
             delete: PERMISSION_LEVELS.OWNER,
             expand: PERMISSION_LEVELS.VIEWER,
         };

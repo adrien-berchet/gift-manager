@@ -11,7 +11,6 @@
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
       hx-indicator="#offcanvasLoading"
-      hx-on::after-request="handleFormResponse(event)"
       class="offcanvas-form gift-tag-form"
       data-form-type="{{ form_type|default:'gift_tag' }}">
   {% csrf_token %}

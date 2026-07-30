@@ -24,7 +24,7 @@ def user_permission(obj, user):
         return PermissionLevel.NONE
 
     try:
-        return PermissionService.get_permission(obj, user)
+        return PermissionService.get_effective_permission(obj, user)
     except (AttributeError, TypeError):
         return PermissionLevel.NONE
 
@@ -38,10 +38,10 @@ def can_edit(obj, user):
         user: The user to check permissions for
 
     Returns:
-        bool: True if user has EDITOR or OWNER permission
+        bool: True if user has OWNER permission
     """
     permission = user_permission(obj, user)
-    return permission >= PermissionLevel.EDITOR
+    return permission >= PermissionLevel.OWNER
 
 
 @register.simple_tag
@@ -128,7 +128,7 @@ def permission_actions(context, obj, actions=None):
         "view": PermissionLevel.VIEWER,
         "edit": PermissionLevel.EDITOR,
         "delete": PermissionLevel.OWNER,
-        "share": PermissionLevel.EDITOR,
+        "share": PermissionLevel.OWNER,
         "create": PermissionLevel.NONE,  # Create doesn't require object permissions
     }
 

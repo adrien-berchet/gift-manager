@@ -1,0 +1,10 @@
+[Unit]
+Description=Gift Manager media backup
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gift-manager
+EnvironmentFile=/etc/gift-manager/backup.env
+ExecStart=/opt/gift-manager/scripts/media_backup.sh

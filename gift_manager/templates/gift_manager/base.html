@@ -501,44 +501,54 @@
                 <div class="modal-body">
                     <div class="search-input-wrapper">
                         <i class="fas fa-search"></i>
-                        <input type="text" class="search-modal-input" id="globalSearchInput" placeholder="{% trans 'Search gifts, recipients, events...' %}" autocomplete="off">
+                        <label for="globalSearchInput" class="visually-hidden">{% trans "Search gifts, recipients, events" %}</label>
+                        <input type="text"
+                               class="search-modal-input"
+                               id="globalSearchInput"
+                               placeholder="{% trans 'Search gifts, recipients, events...' %}"
+                               autocomplete="off"
+                               role="combobox"
+                               aria-autocomplete="list"
+                               aria-controls="searchResults"
+                               aria-expanded="false"
+                               aria-activedescendant="">
                         <div class="search-shortcuts">
                             <kbd>Esc</kbd>
                         </div>
                     </div>
-                    <div class="search-results" id="searchResults">
+                    <div class="search-results" id="searchResults" role="listbox" aria-label="{% trans 'Search results' %}">
                         <!-- Quick links when empty -->
                         <div class="search-quick-links">
                             <div class="search-category">{% trans "Quick Links" %}</div>
-                            <a href="{% url 'gift_manager:gifts' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:gifts' %}" class="search-result-item" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-gift"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "All Gifts" %}</div>
                                     <div class="search-result-subtitle">{% trans "View all your gifts" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:recipients' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:recipients' %}" class="search-result-item" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-users"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "All Recipients" %}</div>
                                     <div class="search-result-subtitle">{% trans "View people and groups" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:person_groups' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:person_groups' %}" class="search-result-item" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-layer-group"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "Manage Groups" %}</div>
                                     <div class="search-result-subtitle">{% trans "View group hierarchy" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:events' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:events' %}" class="search-result-item" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-calendar-alt"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "All Events" %}</div>
                                     <div class="search-result-subtitle">{% trans "View all events" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:relations' %}" class="search-result-item">
+                            <a href="{% url 'gift_manager:relations' %}" class="search-result-item" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-hand-holding-heart"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "All Gift Plans" %}</div>
@@ -546,21 +556,21 @@
                                 </div>
                             </a>
                             <div class="search-category">{% trans "Create New" %}</div>
-                            <a href="{% url 'gift_manager:gift_create' %}" class="search-result-item" data-action="create">
+                            <a href="{% url 'gift_manager:gift_create' %}" class="search-result-item" data-action="create" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Gift" %}</div>
                                     <div class="search-result-subtitle">{% trans "Add a new gift" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:person_create' %}" class="search-result-item" data-action="create">
+                            <a href="{% url 'gift_manager:person_create' %}" class="search-result-item" data-action="create" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-user-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Person" %}</div>
                                     <div class="search-result-subtitle">{% trans "Add a new person" %}</div>
                                 </div>
                             </a>
-                            <a href="{% url 'gift_manager:event_create' %}" class="search-result-item" data-action="create">
+                            <a href="{% url 'gift_manager:event_create' %}" class="search-result-item" data-action="create" role="option" aria-selected="false">
                                 <div class="search-result-icon"><i class="fas fa-calendar-plus"></i></div>
                                 <div class="search-result-content">
                                     <div class="search-result-title">{% trans "New Event" %}</div>
@@ -720,8 +730,11 @@
             if (!searchModal || !searchInput || !searchResults) return;
 
             let searchTimeout = null;
+            let searchController = null;
+            let searchRequestId = 0;
             let selectedIndex = -1;
             const quickLinksHTML = searchResults.innerHTML;
+            let resultIdCounter = 0;
 
             // Keyboard shortcut to open search (Ctrl+K or Cmd+K)
             document.addEventListener('keydown', (e) => {
@@ -734,35 +747,56 @@
 
             // Focus input when modal opens
             searchModal.addEventListener('shown.bs.modal', () => {
+                syncResultSemantics();
                 searchInput.focus();
                 searchInput.select();
             });
 
             // Clear input and reset results when modal closes
             searchModal.addEventListener('hidden.bs.modal', () => {
+                abortSearch();
                 searchInput.value = '';
-                searchResults.innerHTML = quickLinksHTML;
-                selectedIndex = -1;
+                setResultsHtml(quickLinksHTML);
             });
 
             // Perform search
             async function performSearch(query) {
+                const requestId = ++searchRequestId;
+
                 if (!query || query.length < 2) {
-                    searchResults.innerHTML = quickLinksHTML;
+                    abortSearch();
+                    setResultsHtml(quickLinksHTML);
                     return;
                 }
 
+                abortSearch();
+                searchController = new AbortController();
+
                 try {
-                    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`);
+                    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`, {
+                        signal: searchController.signal,
+                        headers: {
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+
                     const data = await response.json();
 
+                    if (requestId !== searchRequestId) {
+                        return;
+                    }
+
                     if (data.results.length === 0) {
-                        searchResults.innerHTML = `
+                        setResultsHtml(`
                             <div class="search-no-results">
                                 <i class="fas fa-search fa-2x mb-3" style="opacity: 0.3;"></i>
                                 <p>{% trans "No results found for" %} "<strong>${escapeHtml(query)}</strong>"</p>
                             </div>
-                        `;
+                        `);
                         return;
                     }
 
@@ -787,8 +821,8 @@
                         html += `<div class="search-category">${typeLabels[type] || type}</div>`;
                         results.forEach(result => {
                             html += `
-                                <a href="${result.url}" class="search-result-item">
-                                    <div class="search-result-icon"><i class="fas ${result.icon}"></i></div>
+                                <a href="${safeSearchUrl(result.url)}" class="search-result-item" role="option" aria-selected="false">
+                                    <div class="search-result-icon"><i class="fas ${safeIconClass(result.icon)}" aria-hidden="true"></i></div>
                                     <div class="search-result-content">
                                         <div class="search-result-title">${escapeHtml(result.title)}</div>
                                         ${result.subtitle ? `<div class="search-result-subtitle">${escapeHtml(result.subtitle)}</div>` : ''}
@@ -798,16 +832,41 @@
                         });
                     }
 
-                    searchResults.innerHTML = html;
-                    selectedIndex = -1;
+                    setResultsHtml(html);
                 } catch (error) {
+                    if (error.name === 'AbortError') {
+                        return;
+                    }
+
+                    if (requestId !== searchRequestId) {
+                        return;
+                    }
+
                     console.error('Search error:', error);
-                    searchResults.innerHTML = `
+                    setResultsHtml(`
                         <div class="search-no-results">
                             <p>{% trans "An error occurred while searching." %}</p>
                         </div>
-                    `;
+                    `);
+                } finally {
+                    if (requestId === searchRequestId) {
+                        searchController = null;
+                    }
                 }
+            }
+
+            function abortSearch() {
+                if (searchController) {
+                    searchController.abort();
+                    searchController = null;
+                }
+            }
+
+            function setResultsHtml(html) {
+                searchResults.innerHTML = html;
+                selectedIndex = -1;
+                searchInput.setAttribute('aria-activedescendant', '');
+                syncResultSemantics();
             }
 
             function escapeHtml(text) {
@@ -816,10 +875,30 @@
                 return div.innerHTML;
             }
 
+            function safeSearchUrl(url) {
+                try {
+                    const parsed = new URL(url, window.location.origin);
+                    if (parsed.origin !== window.location.origin) {
+                        return '#';
+                    }
+                    return escapeHtml(parsed.pathname + parsed.search + parsed.hash);
+                } catch (error) {
+                    return '#';
+                }
+            }
+
+            function safeIconClass(icon) {
+                return String(icon || '')
+                    .split(/\s+/)
+                    .filter((token) => /^fa[-a-z0-9]*$/.test(token))
+                    .join(' ');
+            }
+
             // Debounced search on input
             searchInput.addEventListener('input', (e) => {
                 const query = e.target.value.trim();
                 selectedIndex = -1;
+                searchInput.setAttribute('aria-activedescendant', '');
 
                 if (searchTimeout) {
                     clearTimeout(searchTimeout);
@@ -837,12 +916,14 @@
                 const items = getVisibleItems();
 
                 if (e.key === 'ArrowDown') {
+                    if (items.length === 0) return;
                     e.preventDefault();
                     selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
                     updateSelection(items);
                 } else if (e.key === 'ArrowUp') {
+                    if (items.length === 0) return;
                     e.preventDefault();
-                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                    selectedIndex = selectedIndex <= 0 ? items.length - 1 : selectedIndex - 1;
                     updateSelection(items);
                 } else if (e.key === 'Enter' && selectedIndex >= 0) {
                     e.preventDefault();
@@ -852,11 +933,35 @@
 
             function updateSelection(items) {
                 items.forEach((item, index) => {
-                    item.classList.toggle('selected', index === selectedIndex);
+                    const isSelected = index === selectedIndex;
+                    item.classList.toggle('selected', isSelected);
+                    item.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+
+                    if (!item.id) {
+                        item.id = 'global-search-result-' + (++resultIdCounter);
+                    }
+
                     if (index === selectedIndex) {
+                        searchInput.setAttribute('aria-activedescendant', item.id);
                         item.scrollIntoView({ block: 'nearest' });
                     }
                 });
+
+                if (selectedIndex < 0) {
+                    searchInput.setAttribute('aria-activedescendant', '');
+                }
+            }
+
+            function syncResultSemantics() {
+                const items = getVisibleItems();
+                items.forEach((item) => {
+                    if (!item.id) {
+                        item.id = 'global-search-result-' + (++resultIdCounter);
+                    }
+                    item.setAttribute('role', 'option');
+                    item.setAttribute('aria-selected', 'false');
+                });
+                searchInput.setAttribute('aria-expanded', items.length > 0 ? 'true' : 'false');
             }
         })();
 
@@ -918,6 +1023,12 @@
                 showNotification(data.message, data.type || 'info');
             });
 
+            function escapeNotificationHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = String(text || '');
+                return div.innerHTML;
+            }
+
             // Global notification function
             window.showNotification = function(message, type = 'info') {
                 // Create toast notification
@@ -936,7 +1047,7 @@
                         <div class="d-flex">
                             <div class="toast-body d-flex align-items-center">
                                 <i class="${iconClass} me-2"></i>
-                                ${message}
+                                ${escapeNotificationHtml(message)}
                             </div>
                             <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                         </div>
@@ -963,34 +1074,44 @@
                 return container;
             }
 
-            /**
-             * Handle form submission responses
-             * This function is called via hx-on::after-request attribute on forms
-             */
+            function isManagedForm(elt) {
+                return elt && elt.tagName === 'FORM' && elt.dataset.formType;
+            }
+
+            function focusFirstFormError(container) {
+                if (!container) return;
+                const focusTarget = container.querySelector(
+                    '.form-error-summary, .is-invalid, .invalid-feedback, .errorlist, [aria-invalid="true"]'
+                );
+
+                if (focusTarget) {
+                    if (!focusTarget.hasAttribute('tabindex')) {
+                        focusTarget.setAttribute('tabindex', '-1');
+                    }
+                    focusTarget.focus({ preventScroll: true });
+                    focusTarget.scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            function restoreLoadingState(trigger) {
+                if (trigger && trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
+                    trigger.disabled = false;
+                    trigger.innerHTML = trigger.dataset.originalText;
+                    delete trigger.dataset.originalText;
+                }
+            }
+
+            // Backwards-compatible entry point for older partials. Current form partials use HX-Trigger.
             window.handleFormResponse = function(event) {
                 const xhr = event.detail.xhr;
                 const target = event.detail.target;
-                const elt = event.detail.elt;
 
-                if (xhr.status === 200 || xhr.status === 201) {
-                    // Success - close offcanvas and refresh grid
-                    const offcanvas = target.closest('.offcanvas');
-                    if (offcanvas) {
-                        const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
-                        if (offcanvasInstance) {
-                            offcanvasInstance.hide();
-                        }
-                    }
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    return;
+                }
 
-                    // Trigger grid refresh
-                    document.dispatchEvent(new CustomEvent('list:update'));
-
-                    // Show success notification
-                    showNotification('Changes saved successfully', 'success');
-
-                } else if (xhr.status === 400) {
-                    // Validation errors - form will be re-rendered with errors
-
+                if (xhr.status === 400 || xhr.status === 422) {
+                    focusFirstFormError(target);
                 } else if (xhr.status === 403) {
                     // Permission denied
                     showNotification('You do not have permission to perform this action', 'error');
@@ -1005,14 +1126,23 @@
                 }
             };
 
+            document.body.addEventListener('htmx:beforeSwap', function(e) {
+                const xhr = e.detail.xhr;
+                const elt = e.detail.elt;
+
+                if (isManagedForm(elt) && (xhr.status === 400 || xhr.status === 422)) {
+                    e.detail.shouldSwap = true;
+                    e.detail.isError = false;
+                }
+            });
+
             // Handle form submissions with HTMX
             document.body.addEventListener('htmx:afterRequest', function(e) {
                 const xhr = e.detail.xhr;
-                const target = e.detail.target;
                 const elt = e.detail.elt;
 
                 // Check if this is a form submission (not a permission update)
-                const isFormSubmission = elt && elt.tagName === 'FORM' && elt.dataset.formType;
+                const isFormSubmission = isManagedForm(elt);
                 const isPermissionUpdate = elt && elt.classList && elt.classList.contains('permission-select');
 
                 if (isPermissionUpdate) {
@@ -1021,75 +1151,20 @@
                 }
 
                 if (isFormSubmission) {
-                    if (xhr.status === 200 || xhr.status === 201) {
-                        // Check for HX-Trigger header
-                        const triggerHeader = xhr.getResponseHeader('HX-Trigger');
-
-                        // Close offcanvas if trigger includes offcanvas:close
-                        if (triggerHeader && triggerHeader.includes('offcanvas:close')) {
-                            const offcanvas = elt.closest('.offcanvas');
-                            if (offcanvas) {
-                                const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvas);
-                                if (offcanvasInstance) {
-                                    offcanvasInstance.hide();
-                                }
-                            }
-                        }
-
-                        // Trigger list update if specified
-                        if (triggerHeader && triggerHeader.includes('list:update')) {
-                            document.dispatchEvent(new CustomEvent('list:update'));
-                        }
-
-                        // Show success notification
-                        showNotification('Changes saved successfully', 'success');
-                    } else if (xhr.status === 400) {
-                        // Validation errors - form will be re-rendered with errors
-                        showNotification('Please correct the errors in the form', 'error');
-                    } else if (xhr.status >= 500) {
+                    if (xhr.status >= 500) {
                         // Server error
                         showNotification('A server error occurred. Please try again.', 'error');
                     }
                 }
 
                 // Remove loading states from buttons
-                const trigger = e.detail.elt;
-                if (trigger && trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
-                    trigger.disabled = false;
-                    trigger.innerHTML = trigger.dataset.originalText;
-                    delete trigger.dataset.originalText;
-                }
+                restoreLoadingState(e.detail.elt);
             });
 
-            // Handle HX-Trigger headers in afterSwap (fallback for when afterRequest doesn't fire)
             document.body.addEventListener('htmx:afterSwap', function(e) {
                 const xhr = e.detail.xhr;
-                if (xhr && xhr.getResponseHeader) {
-                    const triggerHeader = xhr.getResponseHeader('HX-Trigger');
-                    if (triggerHeader) {
-                        // Parse and process triggers
-                        const triggers = triggerHeader.split(',').map(t => t.trim());
-                        triggers.forEach(trigger => {
-                            // Skip JSON objects (notifications)
-                            if (trigger.startsWith('{')) return;
-
-                            // Dispatch as custom event
-                            document.dispatchEvent(new CustomEvent(trigger, { bubbles: true }));
-                        });
-
-                        // Handle offcanvas:close if in trigger header
-                        if (triggerHeader.includes('offcanvas:close')) {
-                            // Find the offcanvas from the target element or its ancestors
-                            const target = e.detail.target || e.detail.elt;
-                            const offcanvasEl = target.closest('.offcanvas') || document.querySelector('.offcanvas.show');
-                            if (offcanvasEl) {
-                                const offcanvasInstance = bootstrap.Offcanvas.getInstance(offcanvasEl);
-                                if (offcanvasInstance) {
-                                    offcanvasInstance.hide();
-                                }
-                            }
-                        }
-                    }
+                if (xhr && (xhr.status === 400 || xhr.status === 422) && isManagedForm(e.detail.elt)) {
+                    focusFirstFormError(e.detail.target);
                 }
             });
 

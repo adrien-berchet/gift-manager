@@ -687,6 +687,32 @@ class TestDeleteSharedMixin:
         assert get_permission(self.person, self.other_user) == PermissionLevel.VIEWER
 
     @override_settings(USE_I18N=False)
+    def test_viewer_cannot_use_delete_post_to_leave_shared_object(self):
+        """Viewer delete posts must not delete or silently unshare the object."""
+        self.client.force_login(self.other_user)
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
+
+        response = self.client.post(url)
+
+        assert response.status_code == 403
+        self.person.refresh_from_db()
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+        assert get_permission(self.person, self.other_user) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_viewer_can_explicitly_leave_shared_object(self):
+        """The explicit leave-access action removes only the viewer's share."""
+        self.client.force_login(self.other_user)
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
+
+        response = self.client.post(url, {"leave_access": "1"})
+
+        assert response.status_code == 302
+        self.person.refresh_from_db()
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
+        assert get_permission(self.person, self.other_user) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
     def test_delete_preserves_person_with_implicit_user_link_owner(self):
         """Test editors cannot delete a person owned only through user_link."""
         linked_owner = UserFactory(username="linkedowner", email="linked@example.com")

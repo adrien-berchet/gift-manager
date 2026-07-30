@@ -117,6 +117,91 @@
         `;
     }
 
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function parseStatusError(response) {
+        const contentType = response.headers.get('content-type') || '';
+
+        if (contentType.includes('application/json')) {
+            const data = await response.json();
+            return data.error || data.message || `HTTP ${response.status}`;
+        }
+
+        const text = await response.text();
+        return text || `HTTP ${response.status}`;
+    }
+
+    async function updateStatusSelect(select) {
+        if (!select) return false;
+
+        const form = select.closest('form');
+        const relationId = select.dataset.relationId;
+        const updateUrl = select.dataset.updateUrl;
+        const previousValue = select.dataset.currentValue || select.defaultValue || '';
+        const newStatus = select.value;
+
+        if (!form || !relationId || !updateUrl) return false;
+
+        select.disabled = true;
+        select.setAttribute('aria-busy', 'true');
+        form.classList.add('is-loading');
+
+        try {
+            const body = new URLSearchParams({
+                relation_id: relationId,
+                new_status: newStatus
+            });
+
+            const response = await fetch(updateUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCookie('csrftoken') || ''
+                },
+                body: body.toString()
+            });
+
+            if (!response.ok) {
+                throw new Error(await parseStatusError(response));
+            }
+
+            const html = await response.text();
+            form.outerHTML = html;
+            document.dispatchEvent(new CustomEvent('list:update'));
+            return true;
+        } catch (error) {
+            select.value = previousValue;
+            select.dataset.currentValue = previousValue;
+
+            if (window.showNotification) {
+                window.showNotification(error.message || 'Failed to update status. Please try again.', 'error');
+            } else {
+                alert(error.message || 'Failed to update status. Please try again.');
+            }
+
+            return false;
+        } finally {
+            if (select.isConnected) {
+                select.disabled = false;
+                select.removeAttribute('aria-busy');
+                form.classList.remove('is-loading');
+            }
+        }
+    }
+
     /**
      * Create action buttons formatter for CRUD operations with modern UX enhancements
      *
@@ -1975,6 +2060,7 @@
         badgeHtml: badgeHtml,
         optionsHtml: optionsHtml,
         statusSelectFormHtml: statusSelectFormHtml,
+        updateStatusSelect: updateStatusSelect,
         setupFilterDropdown: setupFilterDropdown,
         setupCustomColumnFilter: setupCustomColumnFilter,
         enableExpandableRows: enableExpandableRows,

@@ -18,7 +18,6 @@
         const filterPanel = document.getElementById(gridId + '-filter-panel');
         const searchInput = document.getElementById(gridId + '-search');
         const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
-        const mobileBreakpoint = 768;
 
         if (!filterToggle || !filterContent) {
             console.warn('Filter panel elements not found for grid:', gridId);
@@ -30,22 +29,15 @@
             initStickyDetection(filterPanel);
         }
 
-        // Check if we're on mobile
-        function isMobile() {
-            return window.innerWidth <= mobileBreakpoint;
+        function syncFilterExpanded(isExpanded) {
+            filterContent.classList.toggle('expanded', isExpanded);
+            filterToggle.classList.toggle('active', isExpanded);
+            filterToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         }
 
         // On mobile: collapsed by default. On desktop: CSS handles visibility
         function setDefaultState() {
-            if (isMobile()) {
-                // Mobile: collapsed by default
-                filterContent.classList.remove('expanded');
-                filterToggle.classList.remove('active');
-            } else {
-                // Desktop: CSS shows content, no need for expanded class
-                filterContent.classList.remove('expanded');
-                filterToggle.classList.remove('active');
-            }
+            syncFilterExpanded(false);
         }
 
         // Set initial state
@@ -60,8 +52,7 @@
 
         // Toggle filter panel
         filterToggle.addEventListener('click', function() {
-            const isExpanded = filterContent.classList.toggle('expanded');
-            filterToggle.classList.toggle('active', isExpanded);
+            syncFilterExpanded(!filterContent.classList.contains('expanded'));
         });
 
         // Show or hide the clear button based on input value
@@ -136,7 +127,8 @@
             // Reset all button states first
             container.querySelectorAll('.sort-option').forEach(function(b) {
                 b.classList.remove('active');
-                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
+                b.setAttribute('aria-pressed', 'false');
+                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort" aria-hidden="true"></i>';
             });
 
             // Collect all sorted columns with their order
@@ -169,6 +161,7 @@
                 const matchingBtn = container.querySelector('.sort-option[data-column-index="' + col.idx + '"]');
                 if (matchingBtn) {
                     matchingBtn.classList.add('active');
+                    matchingBtn.setAttribute('aria-pressed', 'true');
 
                     // Show priority number only if multiple columns are sorted
                     const priorityIndicator = sortedColumns.length > 1
@@ -177,8 +170,8 @@
 
                     matchingBtn.querySelector('.sort-direction').innerHTML = priorityIndicator +
                         (col.isAsc
-                            ? '<i class="fas fa-sort-up"></i>'
-                            : '<i class="fas fa-sort-down"></i>');
+                            ? '<i class="fas fa-sort-up" aria-hidden="true"></i>'
+                            : '<i class="fas fa-sort-down" aria-hidden="true"></i>');
                 }
             });
         }
@@ -191,6 +184,7 @@
             multiSortToggle.addEventListener('click', function() {
                 multiSortMode = !multiSortMode;
                 multiSortToggle.classList.toggle('active', multiSortMode);
+                multiSortToggle.setAttribute('aria-pressed', multiSortMode ? 'true' : 'false');
             });
         }
 
@@ -241,8 +235,9 @@
                 btn.className = 'sort-option';
                 btn.dataset.columnIndex = visibleIndex;
                 btn.title = colName + ' (Shift+click or enable Multi mode to add as secondary sort)';
+                btn.setAttribute('aria-pressed', 'false');
                 btn.innerHTML = '<span>' + colName + '</span>' +
-                    '<span class="sort-direction"><i class="fas fa-sort"></i></span>';
+                    '<span class="sort-direction"><i class="fas fa-sort" aria-hidden="true"></i></span>';
 
                 btn.addEventListener('click', function(event) {
                     // Get all Grid.js headers
@@ -490,7 +485,9 @@
      */
     function updateViewButtons(container, activeView) {
         container.querySelectorAll('.view-option').forEach(function(btn) {
-            btn.classList.toggle('active', btn.dataset.view === activeView);
+            const isActive = btn.dataset.view === activeView;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 

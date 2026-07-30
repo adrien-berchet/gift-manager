@@ -103,6 +103,22 @@ class TestPersonGroupListView:
         assert tree_data[1]["name"] == "Child"
         assert tree_data[1]["depth"] == 1
 
+    def test_list_view_tree_data_excludes_inaccessible_children(self):
+        """Prefetched child groups are not rendered unless the user can access them."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Private child")
+        child.parent_groups.add(parent)
+
+        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        tree_data = response.context["tree_data"]
+        assert [node["name"] for node in tree_data] == ["Parent"]
+        assert tree_data[0]["has_children"] is False
+        assert response.context["has_hierarchy"] is False
+
     def test_list_view_member_count(self):
         """Test member count is correctly computed."""
         group = PersonGroupFactory(name="Group with members")
@@ -219,6 +235,28 @@ class TestPersonGroupUpdateView:
         assert response.status_code == 403
         other_group.refresh_from_db()
         assert other_group.name == "Other Group"  # Name unchanged
+
+    @override_settings(USE_I18N=False)
+    def test_update_view_honors_inherited_editor_permission(self):
+        """Parent group editor permission can explicitly cascade to child edits."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        permission = create_or_update_permission(
+            self.user, parent, permission_level=PermissionLevel.EDITOR
+        )
+        permission.inherit_permissions = True
+        permission.save()
+
+        url = reverse("gift_manager:person_group_edit", kwargs={"pk": child.group_id})
+
+        get_response = self.client.get(url)
+        post_response = self.client.post(url, {"name": "Updated Child"})
+
+        child.refresh_from_db()
+        assert get_response.status_code == 200
+        assert post_response.status_code == 302
+        assert child.name == "Updated Child"
 
 
 @pytest.mark.django_db

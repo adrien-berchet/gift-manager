@@ -25,6 +25,7 @@
             id="status-select-{{ relation_id }}"
             {% if grid_id %}data-grid-update="{{ grid_id }}"{% endif %}
             {% if relation_id %}data-row-id="{{ relation_id }}"{% endif %}
+            data-current-value="{{ current_status }}"
             {% if update_field %}data-update-field="{{ update_field }}"{% endif %}>
         {% for stat in relation_statuses %}
         <option value="{{ stat.pk }}" {% if current_status == stat.pk %}selected{% endif %}>

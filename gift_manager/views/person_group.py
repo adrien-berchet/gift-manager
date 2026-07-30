@@ -60,6 +60,7 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
 
         # Get all groups as model instances for tree view
         all_groups = list(self.get_queryset())
+        accessible_group_ids = {group.pk for group in all_groups}
 
         # Also provide data as dictionaries for Grid.js view compatibility
         # (Grid.js template expects dictionaries with .get() method)
@@ -85,7 +86,12 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
             # Use len() on prefetched data instead of .count()/.exists()
             # to avoid extra database queries
             prefetched_members = list(group.person_set.all())
-            prefetched_children = list(group.child_groups.all())
+            prefetched_parents = [
+                parent for parent in group.parent_groups.all() if parent.pk in accessible_group_ids
+            ]
+            prefetched_children = [
+                child for child in group.child_groups.all() if child.pk in accessible_group_ids
+            ]
 
             node = {
                 "group": group,
@@ -94,7 +100,7 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
                 "depth": depth,
                 "member_count": len(prefetched_members),
                 "has_children": len(prefetched_children) > 0,
-                "parent_ids": [str(p.group_id) for p in group.parent_groups.all()],
+                "parent_ids": [str(parent.group_id) for parent in prefetched_parents],
                 "children": [],
             }
 
@@ -106,9 +112,12 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
 
             return node
 
-        # Find root groups (those without parents)
-        # Use len() on prefetched parent_groups instead of .exists() to avoid N queries
-        root_groups = [g for g in all_groups if len(g.parent_groups.all()) == 0]
+        # Find roots within the user's accessible subset.
+        root_groups = [
+            group
+            for group in all_groups
+            if not any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
+        ]
 
         # Build tree from roots
         tree_data = []
@@ -131,7 +140,9 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
         context["tree_data"] = flatten_tree(tree_data)
         # Use len() on prefetched data instead of .exists() to avoid 2N queries
         context["has_hierarchy"] = any(
-            len(g.parent_groups.all()) > 0 or len(g.child_groups.all()) > 0 for g in all_groups
+            any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
+            or any(child.pk in accessible_group_ids for child in group.child_groups.all())
+            for group in all_groups
         )
 
         return context
@@ -176,7 +187,7 @@ class PersonGroupUpdateView(PermissionUpdateMixin, BaseUpdateView):
     def post(self, request, *args, **kwargs):
         """Check editor permission before processing the form."""
         self.object = self.get_object()
-        permission = PermissionService.get_permission(self.object, request.user, "group")
+        permission = PermissionService.get_effective_permission(self.object, request.user)
         if permission < PermissionLevel.EDITOR:
             messages.error(request, _("You do not have permission to edit this group"))
             return redirect("gift_manager:person_group_detail", pk=self.object.group_id)
@@ -196,7 +207,7 @@ def _check_editor_permission(
     Returns:
         bool: True if the user has permission to modify the group, False otherwise.
     """
-    permission = PermissionService.get_permission(group, request.user, "group")
+    permission = PermissionService.get_effective_permission(group, request.user)
     if permission < PermissionLevel.EDITOR:
         messages.error(request, _("You do not have permission to edit this group"))
         return False
@@ -290,25 +301,38 @@ class PersonGroupDetailView(BaseDetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        accessible_groups = PersonGroup.objects.accessible_by(self.request.user)
+        accessible_group_ids = set(accessible_groups.values_list("pk", flat=True))
+        accessible_descendants = [
+            group for group in self.object.get_descendants() if group.pk in accessible_group_ids
+        ]
+        accessible_nested_groups = [self.object, *accessible_descendants]
+        accessible_people = Person.objects.accessible_by(self.request.user)
+
         # Hierarchy information
-        context["parent_groups"] = self.object.parent_groups.all()
-        context["child_groups"] = self.object.get_children()
-        context["ancestors_path"] = self.object.get_primary_ancestors_path()
+        context["parent_groups"] = accessible_groups.filter(child_groups=self.object).order_by(
+            "name"
+        )
+        context["child_groups"] = accessible_groups.filter(parent_groups=self.object).order_by(
+            "name"
+        )
+        context["ancestors_path"] = [
+            group
+            for group in self.object.get_primary_ancestors_path()
+            if group.pk in accessible_group_ids
+        ]
 
         # Direct members only
         context["members"] = (
-            Person.objects.accessible_by(self.request.user)
-            .filter(groups=self.object)
+            accessible_people.filter(groups=self.object)
             .prefetch_related("groups")
             .order_by("family_name", "first_name")
         )
 
         # All members (including from nested groups)
-        nested_member_qs = self.object.get_all_members(include_nested=True)
-        context["nested_members"] = (
-            nested_member_qs.filter(pk__in=Person.objects.accessible_by(self.request.user))
-            .prefetch_related("groups")
-            .order_by("family_name", "first_name")
+        nested_member_qs = accessible_people.filter(groups__in=accessible_nested_groups).distinct()
+        context["nested_members"] = nested_member_qs.prefetch_related("groups").order_by(
+            "family_name", "first_name"
         )
 
         # Relations/gifts for this group
@@ -327,7 +351,7 @@ class PersonGroupDetailView(BaseDetailView):
         context["nested_gifts"] = (
             Relation.objects.accessible_by(self.request.user)
             .filter(
-                Q(group=self.object) | Q(person__in=nested_member_qs),
+                Q(group__in=accessible_nested_groups) | Q(person__in=nested_member_qs),
                 gift__isnull=False,
             )
             .select_related("person", "group", "gift", "event", "status")
@@ -383,6 +407,7 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Get the selected group (or None for the root level)
         selected_group_id = kwargs.get("pk")
+        accessible_groups = PersonGroup.objects.accessible_by(request.user)
 
         # Context to be sent to the template
         context = {
@@ -404,20 +429,9 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
         if selected_group_id:
             try:
                 # Prefetch related groups to optimize hierarchy traversal
-                selected_group = get_object_or_404(
-                    PersonGroup.objects.prefetch_related("parent_groups", "child_groups"),
-                    group_id=selected_group_id,
-                )
-
-                # Check if the user has access to this group
-                if not selected_group.shared_with.filter(id=request.user.id).exists():
-                    messages.error(
-                        request,
-                        gettext(
-                            "You do not have access to this group or this group does not exist."
-                        ),
-                    )
-                    return redirect("gift_manager:person_group_explorer")
+                selected_group = accessible_groups.prefetch_related(
+                    "parent_groups", "child_groups"
+                ).get(group_id=selected_group_id)
 
                 context["selected_group"] = selected_group
 
@@ -442,7 +456,7 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                 # Batch fetch all groups in ONE query instead of N queries
                 groups_by_id = {
                     str(g.group_id): g
-                    for g in PersonGroup.objects.filter(group_id__in=breadcrumb_ids)
+                    for g in accessible_groups.filter(group_id__in=breadcrumb_ids)
                 }
 
                 # Build breadcrumbs in correct order (reversed, since we collected child-first)
@@ -454,13 +468,13 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
 
                 # Get parent groups and child groups
                 context["parent_groups"] = (
-                    selected_group.parent_groups.filter(Q(shared_with=request.user))
+                    accessible_groups.filter(child_groups=selected_group)
                     .prefetch_related("person_set")
                     .order_by("name")
                 )
 
                 context["child_groups"] = (
-                    selected_group.child_groups.filter(Q(shared_with=request.user))
+                    accessible_groups.filter(parent_groups=selected_group)
                     .prefetch_related("person_set")
                     .order_by("name")
                 )
@@ -472,7 +486,7 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                     .order_by("family_name", "first_name")
                 )
 
-            except PersonGroup.DoesNotExist:
+            except (PersonGroup.DoesNotExist, ValidationError, ValueError):
                 messages.error(
                     request,
                     gettext("This group does not exist or you do not have access to it."),
@@ -480,12 +494,17 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                 return redirect("gift_manager:person_group_explorer")
         else:
             # No group selected: show root level groups
-            context["root_groups"] = (
-                PersonGroup.objects.accessible_by(request.user)
-                .filter(parent_groups__isnull=True)
-                .prefetch_related("person_set")
-                .order_by("name")
+            all_accessible_groups = list(
+                accessible_groups.prefetch_related("parent_groups", "person_set").order_by("name")
             )
+            accessible_group_ids = {group.pk for group in all_accessible_groups}
+            context["root_groups"] = [
+                group
+                for group in all_accessible_groups
+                if not any(
+                    parent.pk in accessible_group_ids for parent in group.parent_groups.all()
+                )
+            ]
 
         return render(request, self.template_name, context)
 
@@ -538,7 +557,7 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
         return JsonResponse({"success": False, "message": gettext("Group not found")}, status=404)
 
     # Check permissions - user must be an editor of the group
-    permission = PermissionService.get_permission(group, request.user, "group")
+    permission = PermissionService.get_effective_permission(group, request.user)
     if permission < PermissionLevel.EDITOR:
         return JsonResponse(
             {
@@ -559,9 +578,9 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
 
         # Fetch all accessible group IDs in one query
         accessible_group_ids = set(
-            PersonGroup.objects.filter(
-                group_id__in=parent_ids, shared_with=request.user
-            ).values_list("group_id", flat=True)
+            PersonGroup.objects.accessible_by(request.user)
+            .filter(group_id__in=parent_ids)
+            .values_list("group_id", flat=True)
         )
 
         for parent_id in parent_ids:

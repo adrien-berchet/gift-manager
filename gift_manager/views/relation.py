@@ -6,7 +6,6 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_required
 from django.db.models import Case
 from django.db.models import CharField
-from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
 from django.db.models import When
@@ -660,8 +659,11 @@ def update_relation_status(request):
         return JsonResponse({"error": gettext("Choose a valid status.")}, status=400)
 
     try:
-        relation = Relation.objects.get(Q(relation_id=relation_id) & Q(shared_with=request.user))
-        if PermissionService.get_permission(relation, request.user) < PermissionLevel.EDITOR:
+        relation = Relation.objects.accessible_by(request.user).get(relation_id=relation_id)
+        if (
+            PermissionService.get_effective_permission(relation, request.user)
+            < PermissionLevel.EDITOR
+        ):
             return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
 
         relation.status = RelationStatus.objects.get(pk=new_status)
@@ -684,7 +686,8 @@ def update_relation_status(request):
             <select class="{status_select_class}"
                     name="new_status"
                     data-relation-id="{relation.relation_id}"
-                    data-update-url="{reverse("gift_manager:relation_status_update")}">
+                    data-update-url="{reverse("gift_manager:relation_status_update")}"
+                    data-current-value="{relation.status_id}">
                 {options_html}
             </select>
         </form>"""

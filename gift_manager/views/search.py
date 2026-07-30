@@ -93,6 +93,10 @@ class PersonSearchView(HTMXListSearchView):
     model = Person
     search_fields = ["first_name", "family_name", "email_address"]
 
+    def get_queryset(self):
+        """Get persons with groups prefetched for result serialization."""
+        return super().get_queryset().prefetch_related("groups")
+
     def get_search_data(self, queryset):
         """Convert person queryset to data format."""
         data = []
@@ -100,7 +104,7 @@ class PersonSearchView(HTMXListSearchView):
             # Get groups info
             groups_info = []
             for group in person.groups.all():
-                groups_info.append({"id": str(group.person_group_id), "name": group.name})
+                groups_info.append({"id": str(group.group_id), "name": group.name})
 
             data.append(
                 {
@@ -121,6 +125,10 @@ class GiftSearchView(HTMXListSearchView):
     model = Gift
     search_fields = ["name", "comment"]
 
+    def get_queryset(self):
+        """Get gifts with tags prefetched for result serialization."""
+        return super().get_queryset().prefetch_related("tags")
+
     def get_search_data(self, queryset):
         """Convert gift queryset to data format."""
         data = []
@@ -128,7 +136,7 @@ class GiftSearchView(HTMXListSearchView):
             # Get tags info
             tags_info = []
             for tag in gift.tags.all():
-                tags_info.append({"id": str(tag.gift_tag_id), "name": tag.name})
+                tags_info.append({"id": str(tag.tag_id), "name": tag.name})
 
             data.append(
                 {
@@ -177,6 +185,10 @@ class RelationSearchView(HTMXListSearchView):
         "gift__name",
         "event__name",
     ]
+
+    def get_queryset(self):
+        """Get gift plans with related objects selected for result serialization."""
+        return super().get_queryset().select_related("person", "group", "gift", "event", "status")
 
     def get_search_data(self, queryset):
         """Convert relation queryset to data format."""

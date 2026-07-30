@@ -89,7 +89,9 @@ class PermissionContextMixin:
 
         return permissions
 
-    def _build_permissions_from_dicts(self, objects: list, id_fields: list) -> dict[str, int]:
+    def _build_permissions_from_dicts(  # noqa: PLR0911, PLR0912
+        self, objects: list, id_fields: list
+    ) -> dict[str, int]:
         """Build permissions mapping from dictionary objects.
 
         When queryset uses .values(), we get dictionaries instead of model instances.
@@ -140,6 +142,13 @@ class PermissionContextMixin:
         object_ids = [obj[id_field] for obj in objects if obj.get(id_field)]
 
         if not object_ids:
+            return permissions
+
+        if model.__name__ == "PersonGroup" and id_field == "group_id":
+            for group in model.objects.filter(group_id__in=object_ids):
+                permissions[str(group.group_id)] = PermissionService.get_effective_permission(
+                    group, self.request.user
+                )
             return permissions
 
         # Query all permissions at once for better performance
@@ -214,7 +223,7 @@ class PermissionContextMixin:
                     obj_id = getattr(obj, "pk", None)
 
                 if obj_id:
-                    permission = PermissionService.get_permission(obj, self.request.user)
+                    permission = PermissionService.get_effective_permission(obj, self.request.user)
                     permissions[str(obj_id)] = permission
             except (AttributeError, TypeError):
                 # Skip objects that don't support permissions
@@ -238,13 +247,15 @@ class SingleObjectPermissionMixin:
 
         if hasattr(self, "object") and self.object and self.request.user.is_authenticated:
             try:
-                permission = PermissionService.get_permission(self.object, self.request.user)
+                permission = PermissionService.get_effective_permission(
+                    self.object, self.request.user
+                )
                 context.update(
                     {
                         "user_permission": permission,
                         "can_edit": permission >= PermissionLevel.EDITOR,
                         "can_delete": permission >= PermissionLevel.OWNER,
-                        "can_share": permission >= PermissionLevel.EDITOR,
+                        "can_share": permission >= PermissionLevel.OWNER,
                         "can_view": permission > PermissionLevel.NONE,
                         "permission_level_name": PermissionLevel.get_label(permission),
                     }
@@ -286,7 +297,7 @@ class BulkPermissionMixin:
 
         for obj in objects:
             try:
-                permission = PermissionService.get_permission(obj, self.request.user)
+                permission = PermissionService.get_effective_permission(obj, self.request.user)
                 if permission >= required_permission:
                     allowed.append(obj)
                 else:
@@ -344,7 +355,7 @@ class PermissionRequiredMixin:
             try:
                 obj = self.get_object()
                 if request.user.is_authenticated:
-                    permission = PermissionService.get_permission(obj, request.user)
+                    permission = PermissionService.get_effective_permission(obj, request.user)
                     if permission < self.required_permission:
                         from django.contrib import messages
                         from django.shortcuts import redirect

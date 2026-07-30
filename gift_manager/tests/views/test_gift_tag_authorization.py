@@ -12,6 +12,7 @@ from gift_manager.models import GiftTag
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.permissions import get_permission
+from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import UserFactory
 
 
@@ -177,6 +178,29 @@ def test_gift_update_rejects_forged_private_tag_choice(authenticated_client, use
     assert response.status_code == 200
     assert "tags" in response.context["form"].errors
     assert gift.tags.count() == 0
+
+
+@pytest.mark.django_db
+@override_settings(USE_I18N=False)
+def test_gift_tag_detail_usage_stats_exclude_inaccessible_descendant_gifts(
+    authenticated_client,
+    user,
+):
+    """Tag hierarchy usage stats must not count inaccessible gifts under hidden child tags."""
+    parent_tag = GiftTag.objects.create(name="Public Tag", is_public=True)
+    hidden_child = GiftTag.objects.create(name="Hidden Child")
+    hidden_child.parent_tags.add(parent_tag)
+    inaccessible_gift = GiftFactory(name="Private tagged gift")
+    inaccessible_gift.tags.add(hidden_child)
+
+    response = authenticated_client.get(
+        reverse("gift_manager:gift_tag_detail", kwargs={"pk": parent_tag.tag_id})
+    )
+
+    assert response.status_code == 200
+    assert response.context["usage_stats"]["direct_gifts"] == 0
+    assert response.context["usage_stats"]["total_gifts"] == 0
+    assert response.context["usage_stats"]["child_tags"] == 0
 
 
 @pytest.mark.django_db

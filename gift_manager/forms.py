@@ -644,6 +644,46 @@ class EventForm(BaseFormMixin, forms.ModelForm):
             self.fields["date_type"].initial = "absolute"
         elif self.instance and self.instance.recurrence:
             self.fields["date_type"].initial = "recurrence"
+            self.initial["absolute_date"] = self.instance.usual_date
+
+    def clean(self):
+        """Normalize absolute and recurring event date fields."""
+        cleaned_data = super().clean()
+        date_type = cleaned_data.get("date_type")
+        anchor_date = cleaned_data.get("absolute_date")
+        recurrence = cleaned_data.get("recurrence")
+
+        if date_type == "absolute":
+            if not anchor_date:
+                self.add_error("absolute_date", gettext_lazy("Choose a date."))
+            cleaned_data["recurrence"] = None
+            return cleaned_data
+
+        if date_type == "recurrence":
+            if not anchor_date:
+                self.add_error("absolute_date", gettext_lazy("Choose a recurrence start date."))
+            if not recurrence:
+                self.add_error("recurrence", gettext_lazy("Choose a recurrence."))
+            return cleaned_data
+
+        self.add_error("date_type", gettext_lazy("Choose a valid date type."))
+        return cleaned_data
+
+    def save(self, commit=True):  # noqa: FBT002  # pylint: disable=arguments-differ
+        """Persist recurrent anchor dates to usual_date."""
+        instance = super().save(commit=False)
+
+        if self.cleaned_data.get("date_type") == "recurrence":
+            instance.usual_date = self.cleaned_data.get("absolute_date")
+            instance.absolute_date = None
+        else:
+            instance.usual_date = None
+            instance.recurrence = None
+
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
 
 
 class RelationForm(BaseFormMixin, forms.ModelForm):

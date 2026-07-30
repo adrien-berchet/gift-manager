@@ -65,10 +65,11 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         else:
             entity = factory()
 
-        # Grant permissions to the test user
-        PermissionService.create_or_update_permission(
-            self.user, entity, permission_level=permission_level
-        )
+        # NONE means no explicit permission row.
+        if permission_level > PermissionLevel.NONE:
+            PermissionService.create_or_update_permission(
+                self.user, entity, permission_level=permission_level
+            )
 
         return entity
 
@@ -143,34 +144,6 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                         except json.JSONDecodeError:
                             pass  # Skip if JSON parsing fails
 
-            # Check action button availability based on permission level
-            entity_id = getattr(entity, "pk", "")
-
-            # Define expected action availability based on permission level
-            expected_actions = {
-                PermissionLevel.NONE: {
-                    "view": False,
-                    "edit": False,
-                    "delete": False,
-                    "share": False,
-                },
-                PermissionLevel.VIEWER: {
-                    "view": True,
-                    "edit": False,
-                    "delete": False,
-                    "share": False,
-                },
-                PermissionLevel.EDITOR: {
-                    "view": True,
-                    "edit": True,
-                    "delete": False,
-                    "share": True,
-                },
-                PermissionLevel.OWNER: {"view": True, "edit": True, "delete": True, "share": True},
-            }
-
-            expected = expected_actions.get(permission_level, {})
-
             # Check for permission-aware JavaScript utilities
             if permission_level < PermissionLevel.EDITOR:
                 # For users with limited permissions, check that permission utilities are loaded
@@ -239,7 +212,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         action_requirements = {
             "edit": PermissionLevel.EDITOR,
             "delete": PermissionLevel.OWNER,
-            "share": PermissionLevel.EDITOR,
+            "share": PermissionLevel.OWNER,
         }
 
         required_permission = action_requirements.get(action, PermissionLevel.OWNER)
@@ -273,12 +246,11 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                         self.assertNotRegex(content, disabled_pattern)
                     else:
                         # Should be disabled or have permission tooltip
-                        has_permission_restriction = (
+                        self.assertTrue(
                             "disabled" in content
                             or "You do not have permission" in content
                             or "opacity: 0.5" in content
                         )
-                        # Note: We don't assert this strongly since implementation may vary
 
         except Exception:
             pass  # Skip if view has issues
@@ -310,9 +282,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
                 content = response.content.decode()
 
                 # Should include bulk operations JavaScript
-                bulk_operations_included = (
-                    "BulkOperations" in content or "bulk-operations" in content
-                )
+                self.assertTrue("BulkOperations" in content or "bulk-operations" in content)
 
                 # Should include permission data for bulk operations
                 assert_text_in_rendered("user_permissions", content)

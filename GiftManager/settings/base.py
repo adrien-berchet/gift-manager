@@ -164,6 +164,8 @@ ACCOUNT_RATE_LIMITS = {
 
 # Invitation settings
 INVITATION_EXPIRY_DAYS = 7
+INVITATION_SEND_LIMIT = 10
+INVITATION_SEND_WINDOW_SECONDS = 3600
 
 # Email encryption key for privacy
 # Generate with:

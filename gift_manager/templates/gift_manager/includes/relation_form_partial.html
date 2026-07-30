@@ -14,7 +14,6 @@
       hx-target="#offcanvasContent"
       hx-swap="innerHTML"
       hx-indicator="#offcanvasLoading"
-      hx-on::after-request="handleFormResponse(event)"
       class="offcanvas-form relation-form"
       data-form-type="{{ form_type|default:'relation' }}">
   {% csrf_token %}
