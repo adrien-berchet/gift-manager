@@ -11,6 +11,7 @@ def test_build_script_does_not_mutate_database_state():
     build_script = (PROJECT_ROOT / "build.sh").read_text()
 
     assert "uv sync --frozen --no-dev" in build_script
+    assert "DJANGO_SETTINGS_MODULE=GiftManager.settings.build" in build_script
     assert "collectstatic" in build_script
     assert "makemigrations" not in build_script
     assert "manage.py migrate" not in build_script

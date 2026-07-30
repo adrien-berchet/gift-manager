@@ -8,6 +8,6 @@ export UV_LINK_MODE=copy
 uv sync --frozen --no-dev
 
 echo "Collect static..."
-uv run --frozen python manage.py collectstatic --noinput --clear
+DJANGO_SETTINGS_MODULE=GiftManager.settings.build uv run --frozen python manage.py collectstatic --noinput --clear
 
 echo "Build process completed!"

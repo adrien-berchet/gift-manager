@@ -27,6 +27,9 @@ def _isolated_env() -> dict[str, str]:
         "EMAIL_HOST",
         "ALLOWED_HOSTS",
         "CSRF_TRUSTED_ORIGINS",
+        "VERCEL",
+        "VERCEL_ENV",
+        "VERCEL_URL",
     ):
         env.pop(key, None)
     env["PYTHON_DOTENV_DISABLED"] = "1"
@@ -198,6 +201,172 @@ def test_production_settings_valid_environment_imports():
     assert result.stdout == ""
 
 
+def test_vercel_preview_host_is_added_to_hosts_and_csrf_origins():
+    """Vercel previews should trust only the exact generated preview host."""
+    env = _production_env()
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-pr-123-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'example.com', 'gift-manager-pr-123-adrien.vercel.app'"
+        "]; "
+        "assert settings.CSRF_TRUSTED_ORIGINS == ["
+        "'https://example.com', 'https://gift-manager-pr-123-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_preview_host_can_supply_hosts_when_runtime_host_env_is_unset():
+    """Vercel previews should not need per-PR host variables."""
+    env = _production_env()
+    env.pop("ALLOWED_HOSTS")
+    env.pop("CSRF_TRUSTED_ORIGINS")
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-pr-456-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'gift-manager-pr-456-adrien.vercel.app'"
+        "]; "
+        "assert settings.CSRF_TRUSTED_ORIGINS == ["
+        "'https://gift-manager-pr-456-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_preview_ignores_inherited_csrf_env_when_allowed_hosts_is_unset():
+    """Preview deploys should not fail on production CSRF origins inherited from Vercel env."""
+    env = _production_env()
+    env.pop("ALLOWED_HOSTS")
+    env["CSRF_TRUSTED_ORIGINS"] = "https://production.example.com"
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-pr-789-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'gift-manager-pr-789-adrien.vercel.app'"
+        "]; "
+        "assert settings.CSRF_TRUSTED_ORIGINS == ["
+        "'https://gift-manager-pr-789-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_preview_keeps_strict_csrf_matching_when_allowed_hosts_is_set():
+    """Explicit preview host config should still fail closed on CSRF host mismatches."""
+    env = _production_env()
+    env["ALLOWED_HOSTS"] = "preview.example.com"
+    env["CSRF_TRUSTED_ORIGINS"] = "https://production.example.com"
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-pr-999-adrien.vercel.app",
+        }
+    )
+
+    result = _run_settings_import(env)
+
+    assert result.returncode != 0
+    assert "CSRF_TRUSTED_ORIGINS hosts must be present in ALLOWED_HOSTS" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "vercel_flags",
+    [
+        {"VERCEL": "1", "VERCEL_ENV": "production"},
+        {"VERCEL_ENV": "preview"},
+    ],
+)
+def test_vercel_url_is_only_added_for_vercel_preview_deployments(vercel_flags):
+    """Production and non-Vercel deploys should not inherit preview hosts."""
+    env = _production_env()
+    env.update(vercel_flags)
+    env["VERCEL_URL"] = "gift-manager-production.vercel.app"
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ['example.com']; "
+        "assert settings.CSRF_TRUSTED_ORIGINS == ['https://example.com']",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize("vercel_url", [None, "", " "])
+def test_vercel_preview_requires_system_preview_url(vercel_url):
+    """Vercel previews should fail clearly if the exact preview host is absent."""
+    env = _production_env()
+    env.update({"VERCEL": "1", "VERCEL_ENV": "preview"})
+    if vercel_url is None:
+        env.pop("VERCEL_URL", None)
+    else:
+        env["VERCEL_URL"] = vercel_url
+
+    result = _run_settings_import(env)
+
+    assert result.returncode != 0
+    assert "VERCEL_URL must be set" in result.stderr
+
+
+@pytest.mark.parametrize(
+    "vercel_url",
+    [
+        "*.vercel.app",
+        ".vercel.app",
+        "https://preview.vercel.app",
+        "preview.vercel.app/path",
+        "preview.vercel.app:443",
+        "evil.com,example.com",
+        "preview.vercel.app example.com",
+    ],
+)
+def test_vercel_preview_url_must_be_an_exact_hostname(vercel_url):
+    """Vercel preview support should not relax exact-host validation."""
+    env = _production_env()
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": vercel_url,
+        }
+    )
+
+    result = _run_settings_import(env)
+
+    assert result.returncode != 0
+    assert "ALLOWED_HOSTS" in result.stderr
+
+
 def test_production_settings_define_content_security_policy():
     """Production should expose an enforced CSP for app responses."""
     script = (
@@ -224,6 +393,23 @@ def test_explicit_testing_settings_module_imports_without_django_env():
     result = _run_python(
         "import django; django.setup(); "
         "from django.conf import settings; assert settings.TESTING is True",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_explicit_build_settings_module_imports_without_runtime_env():
+    """Static build settings should not require production runtime variables."""
+    env = _isolated_env()
+    env["DJANGO_SETTINGS_MODULE"] = "GiftManager.settings.build"
+
+    result = _run_python(
+        "import django; django.setup(); "
+        "from django.conf import settings; "
+        "assert settings.DEBUG is False; "
+        "assert settings.ALLOWED_HOSTS == ['localhost']; "
+        "assert settings.STATIC_ROOT.name == 'staticfiles'",
         env,
     )
 
