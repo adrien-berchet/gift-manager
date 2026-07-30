@@ -38,7 +38,7 @@ def get_env_variable(var_name: str, default: str | None = None, *, required: boo
         ImproperlyConfigured: If required=True and variable is not set.
     """
     value = os.environ.get(var_name, default)
-    if required and value is None:
+    if required and (value is None or not str(value).strip()):
         msg = f"The {var_name} environment variable is required but not set."
         raise ImproperlyConfigured(msg)
     return value

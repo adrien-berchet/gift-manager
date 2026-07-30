@@ -92,8 +92,7 @@ COPY --chown=appuser:appgroup . .
 RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     chown -R appuser:appgroup /app
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear 2>/dev/null || true
+# Static files are collected during deployment when production secrets are present.
 
 # Switch to non-root user
 USER appuser

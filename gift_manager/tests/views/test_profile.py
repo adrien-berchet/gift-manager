@@ -14,9 +14,11 @@ from gift_manager.email_encoding import encode_email
 from gift_manager.models import Gift
 from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
 from gift_manager.models import Profile
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.permissions import get_permission
+from gift_manager.services import PermissionService
 from gift_manager.views import ProfileDetailView
 
 
@@ -542,6 +544,65 @@ class TestRemoveFriendView:
         assert response.status_code == 302
         assert get_permission(gift, self.user2) == PermissionLevel.OWNER
         assert get_permission(gift, self.user1) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_revokes_requester_access_to_friend_linked_person(self, setup_users):
+        """Test cleanup handles former friend ownership implied by Person.user_link."""
+        self.client.force_login(self.user1)
+        person = Person.objects.create(
+            first_name="Friend",
+            family_name="Linked",
+            user_link=self.user2,
+        )
+        create_or_update_permission(self.user1, person, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        person.refresh_from_db()
+        assert person.user_link == self.user2
+        assert (
+            PermissionService.get_effective_permission(person, self.user2) == PermissionLevel.OWNER
+        )
+        assert get_permission(person, self.user1) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_revokes_friend_access_to_requester_linked_person(self, setup_users):
+        """Test cleanup preserves requester user_link ownership and drops friend access."""
+        self.client.force_login(self.user1)
+        person = Person.objects.create(
+            first_name="Requester",
+            family_name="Linked",
+            user_link=self.user1,
+        )
+        create_or_update_permission(self.user2, person, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        person.refresh_from_db()
+        assert person.user_link == self.user1
+        assert (
+            PermissionService.get_effective_permission(person, self.user1) == PermissionLevel.OWNER
+        )
+        assert get_permission(person, self.user2) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_preserves_mutual_owner_permissions(self, setup_users):
+        """Test cleanup never deletes direct owner rows when both users are owners."""
+        self.client.force_login(self.user1)
+        gift = Gift.objects.create(name="Co-owned")
+        create_or_update_permission(self.user1, gift, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(self.user2, gift, permission_level=PermissionLevel.OWNER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert get_permission(gift, self.user1) == PermissionLevel.OWNER
+        assert get_permission(gift, self.user2) == PermissionLevel.OWNER
 
     @override_settings(USE_I18N=False)
     def test_post_remove_friend_preserves_third_party_shared_objects(self, setup_users):

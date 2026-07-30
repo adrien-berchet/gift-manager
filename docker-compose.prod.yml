@@ -8,9 +8,9 @@ services:
   db:
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER:?DB_USER is required}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      POSTGRES_DB: ${DB_NAME:?DB_NAME is required}
     # Don't expose ports in production (access through internal network)
     ports: []
 
@@ -19,7 +19,7 @@ services:
   # =============================================================================
   redis:
     restart: always
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     # Don't expose ports in production
     ports: []
 
@@ -33,25 +33,27 @@ services:
     restart: always
     environment:
       - DJANGO_ENV=production
-      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
-      - DB_NAME=${DB_NAME}
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY is required}
+      - EMAIL_ENCRYPTION_KEY=${EMAIL_ENCRYPTION_KEY:?EMAIL_ENCRYPTION_KEY is required}
+      - DB_NAME=${DB_NAME:?DB_NAME is required}
+      - DB_USER=${DB_USER:?DB_USER is required}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - DB_HOST=db
       - DB_PORT=5432
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379/0
+      - DB_SSLMODE=${DB_SSLMODE:-prefer}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD is required}@redis:6379/0
       - DEBUG=false
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:?ALLOWED_HOSTS is required}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:?CSRF_TRUSTED_ORIGINS is required}
       - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-true}
-      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_HOST=${EMAIL_HOST:?EMAIL_HOST is required}
       - EMAIL_PORT=${EMAIL_PORT:-587}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:?DEFAULT_FROM_EMAIL is required}
       - SENTRY_DSN=${SENTRY_DSN:-}
     volumes:
-      - static_volume:/app/staticfiles:ro
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
     # Don't expose debug port in production
     ports:

@@ -13,8 +13,6 @@ import tempfile
 
 from .base import *  # noqa: F403
 
-print("USING TESTING ENVIRONMENT")
-
 # Flag to indicate we're in testing mode
 TESTING = True
 
@@ -79,8 +77,6 @@ def _get_test_database_config() -> dict:
 
 
 DATABASES = _get_test_database_config()
-
-print("USING DB:", DATABASES.get("default", {}).get("NAME", "# UNKNOWN #"))
 
 # Use in-memory email backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"

@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
@@ -49,6 +50,80 @@ class TestInlineEditing:
         person.refresh_from_db()
         assert person.first_name == "Jane"
 
+    def test_person_inline_update_rejects_missing_csrf_token(self):
+        """Test inline updates require CSRF validation in normal middleware flow."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        data = {"field": "first_name", "value": "Jane"}
+
+        response = csrf_client.post(url, data=json.dumps(data), content_type="application/json")
+
+        assert response.status_code == 403
+        person.refresh_from_db()
+        assert person.first_name == "John"
+
+    def test_person_inline_update_rejects_invalid_csrf_token(self):
+        """Test inline updates reject mismatched CSRF tokens."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        csrf_client.cookies[settings.CSRF_COOKIE_NAME] = "a" * 32
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        data = {"field": "first_name", "value": "Jane"}
+
+        response = csrf_client.post(
+            url,
+            data=json.dumps(data),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN="b" * 32,
+        )
+
+        assert response.status_code == 403
+        person.refresh_from_db()
+        assert person.first_name == "John"
+
+    def test_person_inline_update_accepts_valid_csrf_token(self):
+        """Test editors can still update inline with a valid CSRF token."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(self.user)
+        csrf_client.cookies[settings.CSRF_COOKIE_NAME] = "a" * 32
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        data = {"field": "first_name", "value": "Jane"}
+
+        response = csrf_client.post(
+            url,
+            data=json.dumps(data),
+            content_type="application/json",
+            HTTP_X_CSRFTOKEN="a" * 32,
+        )
+
+        assert response.status_code == 200
+        assert response.json()["success"] is True
+        person.refresh_from_db()
+        assert person.first_name == "Jane"
+
+    def test_person_inline_update_requires_json_content_type(self):
+        """Test inline updates reject non-JSON request bodies."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        response = self.client.post(url, data={"field": "first_name", "value": "Jane"})
+
+        assert response.status_code == 415
+        assert response.json()["success"] is False
+        person.refresh_from_db()
+        assert person.first_name == "John"
+
     def test_person_inline_update_permission_denied(self):
         """Test inline update fails without proper permissions."""
         # Create a person without editor permissions (viewer only)
@@ -68,6 +143,20 @@ class TestInlineEditing:
         assert "permission" in response_data["error"].lower()
 
         # Verify database not updated
+        person.refresh_from_db()
+        assert person.first_name == "John"
+
+    def test_person_inline_update_returns_404_for_inaccessible_object(self):
+        """Test private objects outside the editable queryset are not exposed."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        data = {"field": "first_name", "value": "Jane"}
+
+        response = self.client.post(url, data=json.dumps(data), content_type="application/json")
+
+        assert response.status_code == 404
+        assert response.json()["success"] is False
         person.refresh_from_db()
         assert person.first_name == "John"
 

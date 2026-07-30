@@ -102,6 +102,7 @@ class TestInlineEditingProperty:
         """
         # Create a person with insufficient permissions
         person = PersonFactory()
+        original_value = getattr(person, field_name)
         if permission_level > PermissionLevel.NONE:
             create_or_update_permission(self.user, person, permission_level=permission_level)
 
@@ -126,6 +127,9 @@ class TestInlineEditingProperty:
             )
         else:
             assert "not found" in response_data["error"].lower()
+
+        person.refresh_from_db()
+        assert getattr(person, field_name) == original_value
 
     @given(
         invalid_field=st.text().filter(

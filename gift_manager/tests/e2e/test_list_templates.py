@@ -369,8 +369,9 @@ class TestPersonListInlineEditing:
             inline_input.first.fill(new_value)
 
             # Wait for network response after Enter
-            with page.expect_response(lambda r: "inline-update" in r.url, timeout=5000):
+            with page.expect_response(lambda r: "inline-update" in r.url, timeout=5000) as response:
                 page.keyboard.press("Enter")
+            assert response.value.status == 200
 
             page.wait_for_timeout(800)
 

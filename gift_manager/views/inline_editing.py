@@ -7,9 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 from django.http import JsonResponse
-from django.utils.decorators import method_decorator
 from django.views import View
-from django.views.decorators.csrf import csrf_exempt
 
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -33,28 +31,24 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
         """Return the queryset for the model."""
         if hasattr(self.model.objects, "accessible_by"):
             return self.model.objects.accessible_by(self.request.user)
-        return self.model.objects.all()
-
-    @method_decorator(csrf_exempt)
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+        msg = f"{self.model.__name__} does not expose accessible_by() for inline editing."
+        raise AttributeError(msg)
 
     def post(self, request, *args, **kwargs):
         """Handle inline field update."""
+        if request.content_type != "application/json":
+            return JsonResponse(
+                {"success": False, "error": "Inline updates require JSON data."},
+                status=415,
+            )
+
         try:
             # Parse JSON data
             data = json.loads(request.body)
             field_name = data.get("field")
             field_value = data.get("value")
 
-            # Validate field is allowed
-            if field_name not in self.allowed_fields:
-                return JsonResponse(
-                    {"success": False, "error": f'Field "{field_name}" is not editable inline.'},
-                    status=400,
-                )
-
-            # Get the object first to check permissions
+            # Get the object first to avoid leaking field-schema details for private UUIDs
             obj = self.get_object()
 
             # Check permissions - user needs at least EDITOR level
@@ -63,6 +57,13 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
                 return JsonResponse(
                     {"success": False, "error": "You do not have permission to edit this item."},
                     status=403,
+                )
+
+            # Validate field is allowed
+            if field_name not in self.allowed_fields:
+                return JsonResponse(
+                    {"success": False, "error": f'Field "{field_name}" is not editable inline.'},
+                    status=400,
                 )
 
             # Now validate field value (remove null characters and other problematic characters)

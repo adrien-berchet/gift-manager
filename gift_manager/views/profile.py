@@ -152,14 +152,12 @@ class RemoveFriendView(LoginRequiredMixin, View):
     def _cleanup_former_friend_permissions(self, user, friend) -> None:
         """Remove cross-access between former friends without revoking owners."""
         for model in self.shared_object_models:
-            shared_objects = (
-                model.objects.accessible_by(user)
-                .filter(shared_with=friend)
-                .prefetch_related("shared_with")
-                .distinct()
-            )
-            for obj in shared_objects:
+            for obj in self._former_friend_cleanup_candidates(model, user, friend):
                 self._cleanup_former_friend_permission(user, friend, obj)
+
+    def _former_friend_cleanup_candidates(self, model, user, friend) -> object:
+        """Return objects where either former friend has a direct sharing row."""
+        return model.objects.filter(shared_with__in=(user, friend)).distinct()
 
     def _cleanup_former_friend_permission(self, user, friend, obj) -> None:
         """Remove the non-owner side of a two-user sharing relationship."""
@@ -167,8 +165,14 @@ class RemoveFriendView(LoginRequiredMixin, View):
         friend_permission = PermissionService.get_effective_permission(obj, friend)
 
         if user_permission == PermissionLevel.OWNER and friend_permission < PermissionLevel.OWNER:
-            PermissionService.delete_permission(friend, obj)
+            self._delete_direct_non_owner_permission(friend, obj)
         elif friend_permission == PermissionLevel.OWNER and user_permission < PermissionLevel.OWNER:
+            self._delete_direct_non_owner_permission(user, obj)
+
+    def _delete_direct_non_owner_permission(self, user, obj) -> None:
+        """Delete a direct permission row only when it is not an owner row."""
+        permission = PermissionService.get_permission(obj, user)
+        if PermissionLevel.NONE < permission < PermissionLevel.OWNER:
             PermissionService.delete_permission(user, obj)
 
     def get(self, *args, **kwargs):
