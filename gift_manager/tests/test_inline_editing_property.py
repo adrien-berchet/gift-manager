@@ -111,14 +111,21 @@ class TestInlineEditingProperty:
 
         response = self.client.post(url, data=json.dumps(data), content_type="application/json")
 
-        # Property: Should be denied for insufficient permissions
-        assert response.status_code == 403, f"Expected 403, got {response.status_code}"
+        # Property: Should be denied for insufficient permissions.
+        # No access is hidden behind the filtered queryset; viewer access is denied explicitly.
+        expected_status = 403 if permission_level > PermissionLevel.NONE else 404
+        assert response.status_code == expected_status, (
+            f"Expected {expected_status}, got {response.status_code}"
+        )
 
         response_data = response.json()
         assert response_data["success"] is False, "Update should have failed due to permissions"
-        assert "permission" in response_data["error"].lower(), (
-            "Error message should mention permissions"
-        )
+        if expected_status == 403:
+            assert "permission" in response_data["error"].lower(), (
+                "Error message should mention permissions"
+            )
+        else:
+            assert "not found" in response_data["error"].lower()
 
     @given(
         invalid_field=st.text().filter(

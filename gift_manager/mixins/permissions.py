@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from django.core.exceptions import PermissionDenied
+from django.http import Http404
 from django.http import HttpResponse
 from django.http import JsonResponse
 
@@ -447,6 +448,8 @@ class PermissionUpdateMixin:
         except User.DoesNotExist:
             logger.error(f"User {user_id} not found")
             return self._permission_update_error_response(request, "User not found", 404)
+        except Http404:
+            raise
         except PermissionDenied:
             raise
         except (ValueError, TypeError) as e:

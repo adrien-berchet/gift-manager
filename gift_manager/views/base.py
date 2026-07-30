@@ -813,6 +813,12 @@ class DeleteSharedMixin:
                     "You no longer have access to this {}, but it remains shared with other users"
                 ).format(gettext(self.get_display_object_type()).lower())
             else:
+                permission = PermissionService.get_effective_permission(self.object, request.user)
+                if permission < PermissionLevel.EDITOR:
+                    raise PermissionDenied(
+                        gettext("You do not have permission to delete this object.")
+                    )
+
                 # If not shared, completely delete the object
                 self.object.delete()
                 success_message = gettext("{} successfully deleted").format(
@@ -957,6 +963,26 @@ class BaseDeleteView(
     template_name = "gift_manager/confirm_delete.html"
     htmx_template_name = "gift_manager/includes/delete_confirmation_modal.html"
     close_modal = True
+    required_delete_permission = PermissionLevel.EDITOR
+
+    def get_object(self, queryset=None):
+        """Return the object only when the current user can delete it or leave it."""
+        obj = super().get_object(queryset)
+        self._ensure_user_can_delete_or_leave(obj)
+        return obj
+
+    def _ensure_user_can_delete_or_leave(self, obj) -> None:
+        """Deny delete confirmation access for users without a valid delete action."""
+        permission = PermissionService.get_effective_permission(obj, self.request.user)
+
+        if permission < PermissionLevel.VIEWER:
+            raise PermissionDenied(gettext("You do not have access to this object."))
+
+        if (
+            not PermissionService.has_other_access_holder(obj, self.request.user)
+            and permission < self.required_delete_permission
+        ):
+            raise PermissionDenied(gettext("You do not have permission to delete this object."))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

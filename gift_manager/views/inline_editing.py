@@ -5,6 +5,7 @@ import json
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import Http404
 from django.http import JsonResponse
 from django.utils.decorators import method_decorator
 from django.views import View
@@ -30,6 +31,8 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
 
     def get_queryset(self):
         """Return the queryset for the model."""
+        if hasattr(self.model.objects, "accessible_by"):
+            return self.model.objects.accessible_by(self.request.user)
         return self.model.objects.all()
 
     @method_decorator(csrf_exempt)
@@ -43,7 +46,6 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
             data = json.loads(request.body)
             field_name = data.get("field")
             field_value = data.get("value")
-            entity_id = kwargs.get("pk")
 
             # Validate field is allowed
             if field_name not in self.allowed_fields:
@@ -56,7 +58,7 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
             obj = self.get_object()
 
             # Check permissions - user needs at least EDITOR level
-            user_permission = PermissionService.get_permission(obj, request.user)
+            user_permission = PermissionService.get_effective_permission(obj, request.user)
             if user_permission < PermissionLevel.EDITOR:
                 return JsonResponse(
                     {"success": False, "error": "You do not have permission to edit this item."},
@@ -126,6 +128,8 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
 
         except json.JSONDecodeError:
             return JsonResponse({"success": False, "error": "Invalid JSON data."}, status=400)
+        except Http404:
+            return JsonResponse({"success": False, "error": "Item not found."}, status=404)
         except Exception:
             return JsonResponse(
                 {"success": False, "error": "An error occurred while updating the field."},

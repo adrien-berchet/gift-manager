@@ -108,10 +108,11 @@ class PermissionService:
     @classmethod
     def assert_can_leave_object(cls, user, obj) -> None:
         """Validate that user can remove their own access to obj."""
-        if (
-            cls.get_effective_permission(obj, user) == PermissionLevel.OWNER
-            and len(cls._owner_user_ids(obj)) <= 1
-        ):
+        user_permission = cls.get_effective_permission(obj, user)
+        if user_permission < PermissionLevel.VIEWER:
+            raise PermissionDenied(gettext("You do not have access to this object."))
+
+        if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
             raise PermissionDenied(gettext("At least one owner is required."))
 
     @classmethod
