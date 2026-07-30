@@ -1,3 +1,4 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db.models import Model
 from django.utils.translation import gettext
@@ -78,12 +79,57 @@ class PermissionService:
         if permission_level is not None:
             cls.validate_permission_level(permission_level)
 
-        target_permission = cls.get_effective_permission(obj, target_user)
+        target_permission = cls.get_permission(obj, target_user)
+        target_effective_permission = max(
+            target_permission,
+            PermissionLevel.OWNER
+            if getattr(obj, "user_link_id", None) == target_user.id
+            else PermissionLevel.NONE,
+        )
+        target_is_friend = cls.users_are_friends(actor, target_user)
+        expanding_non_friend_access = (
+            permission_level is not None
+            and permission_level > target_permission
+            and not target_is_friend
+        )
+        if target_permission == PermissionLevel.NONE and not target_is_friend:
+            raise PermissionDenied(gettext("Objects can only be shared with friends."))
+
+        if expanding_non_friend_access:
+            raise PermissionDenied(gettext("Objects can only be shared with friends."))
+
         is_demoting_or_removing_owner = (
-            target_permission == PermissionLevel.OWNER and permission_level != PermissionLevel.OWNER
+            target_effective_permission == PermissionLevel.OWNER
+            and permission_level != PermissionLevel.OWNER
         )
         if is_demoting_or_removing_owner and len(cls._owner_user_ids(obj)) <= 1:
             raise PermissionDenied(gettext("At least one owner is required."))
+
+    @classmethod
+    def assert_can_leave_object(cls, user, obj) -> None:
+        """Validate that user can remove their own access to obj."""
+        if (
+            cls.get_effective_permission(obj, user) == PermissionLevel.OWNER
+            and len(cls._owner_user_ids(obj)) <= 1
+        ):
+            raise PermissionDenied(gettext("At least one owner is required."))
+
+    @classmethod
+    def has_other_access_holder(cls, obj, user) -> bool:
+        """Return whether someone besides user has effective access to obj."""
+        if obj.shared_with.exclude(id=user.id).exists():
+            return True
+
+        linked_user_id = getattr(obj, "user_link_id", None)
+        return linked_user_id is not None and linked_user_id != user.id
+
+    @staticmethod
+    def users_are_friends(actor, target_user) -> bool:
+        """Return whether target_user is one of actor's friends."""
+        try:
+            return actor.profile.friends.filter(user=target_user).exists()
+        except (AttributeError, ObjectDoesNotExist):
+            return False
 
     @classmethod
     def _owner_user_ids(cls, obj) -> set[int]:
@@ -159,6 +205,7 @@ class PermissionService:
         cls, user, obj, *, permission_level=PermissionLevel.VIEWER, object_attr=None
     ) -> Model:
         """Create or update a permission for a user on an object."""
+        permission_level = cls.validate_permission_level(permission_level)
         model = cls.get_permission_model(obj)
         if not model:
             raise ValueError(gettext("Could not determine permission model for this object type"))

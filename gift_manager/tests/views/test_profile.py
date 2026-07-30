@@ -11,8 +11,12 @@ from django.urls import reverse
 from django.utils import timezone
 
 from gift_manager.email_encoding import encode_email
+from gift_manager.models import Gift
 from gift_manager.models import Invitation
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Profile
+from gift_manager.permissions import create_or_update_permission
+from gift_manager.permissions import get_permission
 from gift_manager.views import ProfileDetailView
 
 
@@ -506,6 +510,74 @@ class TestRemoveFriendView:
 
         assert self.profile2 not in self.profile1.friends.all()
         assert self.profile1 not in self.profile2.friends.all()
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_removes_former_friend_from_requester_owned_objects(
+        self, setup_users
+    ):
+        """Test removing a friend drops their non-owner access to requester-owned objects."""
+        self.client.force_login(self.user1)
+        gift = Gift.objects.create(name="Requester owned")
+        create_or_update_permission(self.user1, gift, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(self.user2, gift, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert get_permission(gift, self.user1) == PermissionLevel.OWNER
+        assert get_permission(gift, self.user2) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_preserves_former_friend_owner_permission(self, setup_users):
+        """Test removing a friend never revokes ownership from the former friend."""
+        self.client.force_login(self.user1)
+        gift = Gift.objects.create(name="Friend owned")
+        create_or_update_permission(self.user2, gift, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(self.user1, gift, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert get_permission(gift, self.user2) == PermissionLevel.OWNER
+        assert get_permission(gift, self.user1) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_preserves_third_party_shared_objects(self, setup_users):
+        """Test friend removal does not revoke access on third-party-owned objects."""
+        self.client.force_login(self.user1)
+        owner = User.objects.create_user(username="owner", email="owner@example.com")
+        gift = Gift.objects.create(name="Third party owned")
+        create_or_update_permission(owner, gift, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(self.user1, gift, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user2, gift, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert get_permission(gift, owner) == PermissionLevel.OWNER
+        assert get_permission(gift, self.user1) == PermissionLevel.VIEWER
+        assert get_permission(gift, self.user2) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_post_remove_friend_requires_confirmed_friendship_for_permission_cleanup(
+        self, setup_users
+    ):
+        """Test forged non-friend removal does not clean up permissions."""
+        self.client.force_login(self.user1)
+        non_friend = User.objects.create_user(username="nonfriend", email="nonfriend@example.com")
+        gift = Gift.objects.create(name="Forged cleanup")
+        create_or_update_permission(self.user1, gift, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(non_friend, gift, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:remove_friend", kwargs={"friend_id": non_friend.profile.pk})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert get_permission(gift, self.user1) == PermissionLevel.OWNER
+        assert get_permission(gift, non_friend) == PermissionLevel.VIEWER
 
     @override_settings(USE_I18N=False)
     def test_post_remove_friend_unauthenticated(self, setup_users):

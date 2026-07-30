@@ -267,27 +267,36 @@ class CreatePermissionMixin:
         # Save the object and get the response
         response = super().form_valid(form)
 
+        friend_user_ids = set(
+            User.objects.filter(profile__in=self.request.user.profile.friends.all()).values_list(
+                "id", flat=True
+            )
+        )
+
         # Process the shared users
         for key, value in self.request.POST.items():
             if (
                 key.startswith("share_with_") and value
             ):  # Not empty value means the user is selected
                 try:
-                    user_id = key.split("_")[-1]
-                    permission = int(value)
+                    user_id = int(key.split("_")[-1])
+                    permission = PermissionService.validate_permission_level(int(value))
                     user = User.objects.get(id=user_id)
-
-                    # Create or update the permission for this user
-                    PermissionService.create_or_update_permission(
-                        user, self.object, permission_level=permission
-                    )
 
                 except (ValueError, TypeError) as e:
                     logger.warning("Invalid permission value: %s", e)
-                    messages.error(self.request, gettext("Invalid permission value."))
+                    raise PermissionDenied(gettext("Invalid permission value.")) from e
                 except User.DoesNotExist:
                     logger.warning("User not found: %s", user_id)
-                    messages.error(self.request, gettext("User not found."))
+                    raise PermissionDenied(gettext("User not found.")) from None
+
+                if user_id not in friend_user_ids:
+                    raise PermissionDenied(gettext("Objects can only be shared with friends."))
+
+                # Create or update the permission for this user
+                PermissionService.create_or_update_permission(
+                    user, self.object, permission_level=permission
+                )
 
         return response
 
@@ -445,13 +454,6 @@ class EditPermissionMixin:
 
     def _process_main_form_permission_fields(self) -> None:
         """Apply non-JavaScript edit-time sharing changes from permission_<id> fields."""
-        current_user_profile = Profile.objects.get(user=self.request.user)
-        friend_user_ids = set(
-            User.objects.filter(profile__in=current_user_profile.friends.all()).values_list(
-                "id", flat=True
-            )
-        )
-
         for key, value in self.request.POST.items():
             if not key.startswith("permission_"):
                 continue
@@ -460,11 +462,7 @@ class EditPermissionMixin:
                 user_id = int(key.removeprefix("permission_"))
             except ValueError:
                 logger.warning("Invalid permission field name: %s", key)
-                continue
-
-            if user_id not in friend_user_ids:
-                logger.warning("Ignoring permission update for non-friend user id: %s", user_id)
-                continue
+                raise PermissionDenied(gettext("Invalid permission value.")) from None
 
             try:
                 user = User.objects.get(id=user_id)
@@ -495,9 +493,14 @@ class EditPermissionMixin:
                         self.object,
                         permission_level=permission_level,
                     )
-            except (User.DoesNotExist, ValueError, TypeError) as e:
+            except PermissionDenied:
+                raise
+            except User.DoesNotExist:
+                logger.warning("User not found for permission update: %s", user_id)
+                raise PermissionDenied(gettext("User not found.")) from None
+            except (ValueError, TypeError) as e:
                 logger.warning("Invalid permission update from main form: %s", e)
-                messages.error(self.request, gettext("Invalid permission value."))
+                raise PermissionDenied(gettext("Invalid permission value.")) from e
 
     def post(self, request, *args, **kwargs):  # noqa: PLR0911
         self.object = self.get_object()
@@ -523,7 +526,11 @@ class EditPermissionMixin:
 
             # Check if user is already shared
             user_id = request.POST.get("user_id")
-            user = User.objects.get(id=user_id)
+            try:
+                user = User.objects.get(id=user_id)
+            except (User.DoesNotExist, ValueError, TypeError):
+                logger.warning("User not found for permission update: %s", user_id)
+                return self._handle_error(request, gettext("User not found."))
             is_shared = self.object.shared_with.filter(id=user.id).exists()
 
             if is_shared:
@@ -797,17 +804,10 @@ class DeleteSharedMixin:
             self.object = self.get_object()
             success_url = self.get_success_url()
 
-            # Check if the object is shared with other users
-            other_users = self.object.shared_with.exclude(id=request.user.id)
-
-            if other_users.exists():
+            if PermissionService.has_other_access_holder(self.object, request.user):
                 # If shared, only remove the sharing with the current user
-                self.object.shared_with.remove(request.user)
-
-                # Delete the corresponding permission as well
-                self.object.shared_with.through.objects.filter(
-                    user=request.user, **{self.object_type: self.object}
-                ).delete()
+                PermissionService.assert_can_leave_object(request.user, self.object)
+                PermissionService.delete_permission(request.user, self.object)
 
                 success_message = gettext(
                     "You no longer have access to this {}, but it remains shared with other users"

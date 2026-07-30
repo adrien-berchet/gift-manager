@@ -13,6 +13,7 @@ from django.urls import reverse
 from gift_manager.models import PersonGroup
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.permissions import get_permission
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
@@ -385,7 +386,7 @@ class TestPersonGroupDeleteView:
 
     @override_settings(USE_I18N=False)
     def test_delete_view_shared_group_only_unshares(self):
-        """Test that deleting a shared group only removes sharing."""
+        """Test that deleting a shared group keeps the final owner."""
         other_user = UserFactory(username="otheruser")
         group = PersonGroupFactory(name="Shared Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.OWNER)
@@ -394,10 +395,30 @@ class TestPersonGroupDeleteView:
         url = reverse("gift_manager:person_group_delete", kwargs={"pk": group.group_id})
         response = self.client.post(url)
 
-        assert response.status_code == 302
-        # Group should still exist (shared with other user)
+        assert response.status_code == 403
         group.refresh_from_db()
         assert group.name == "Shared Group"
+        assert get_permission(group, self.user) == PermissionLevel.OWNER
+        assert get_permission(group, other_user, "group") == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_delete_view_shared_group_unshares_when_another_owner_remains(self):
+        """Test shared group delete removes current user if another owner remains."""
+        other_owner = UserFactory(username="otherowner")
+        viewer = UserFactory(username="viewer")
+        group = PersonGroupFactory(name="Shared Group")
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(other_owner, group, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(viewer, group, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_group_delete", kwargs={"pk": group.group_id})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        group.refresh_from_db()
+        assert get_permission(group, self.user, "group") == PermissionLevel.NONE
+        assert get_permission(group, other_owner, "group") == PermissionLevel.OWNER
+        assert get_permission(group, viewer, "group") == PermissionLevel.VIEWER
 
 
 @pytest.mark.django_db

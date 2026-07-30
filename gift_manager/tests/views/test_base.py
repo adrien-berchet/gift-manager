@@ -110,6 +110,43 @@ class TestBaseCreateView:
         permissions = get_permission(gift, friend)
         assert permissions == PermissionLevel.VIEWER
 
+    @override_settings(USE_I18N=False)
+    def test_gift_create_rejects_forged_non_friend_share(self):
+        """Test create forms do not trust forged non-friend share IDs."""
+        non_friend = UserFactory(username="stranger", email="stranger@example.com")
+
+        url = reverse("gift_manager:gift_create")
+        response = self.client.post(
+            url,
+            {
+                "name": "Forged Shared Gift",
+                "comment": "Gift with forged sharing",
+                f"share_with_{non_friend.id}": str(PermissionLevel.VIEWER),
+            },
+        )
+
+        assert response.status_code == 403
+        assert not Gift.objects.filter(name="Forged Shared Gift").exists()
+
+    @override_settings(USE_I18N=False)
+    def test_gift_create_rejects_invalid_share_permission_level(self):
+        """Test create forms reject forged permission levels."""
+        friend = UserFactory(username="testfriend", email="friend@example.com")
+        self.user.profile.friends.add(friend.profile)
+
+        url = reverse("gift_manager:gift_create")
+        response = self.client.post(
+            url,
+            {
+                "name": "Invalid Permission Gift",
+                "comment": "Gift with invalid sharing",
+                f"share_with_{friend.id}": "999",
+            },
+        )
+
+        assert response.status_code == 403
+        assert not Gift.objects.filter(name="Invalid Permission Gift").exists()
+
 
 @pytest.mark.django_db
 class TestEditPermissionMixin:
@@ -390,6 +427,197 @@ class TestEditPermissionMixin:
         assert get_permission(self.person, self.friend) == PermissionLevel.VIEWER
 
     @override_settings(USE_I18N=False)
+    def test_owner_cannot_share_with_non_friend_via_permission_update(self):
+        """Test owners cannot forge permission-update targets outside their friends."""
+        non_friend = UserFactory(username="stranger", email="stranger@example.com")
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(non_friend.id),
+                "permission": str(PermissionLevel.VIEWER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, non_friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_share_with_non_friend_via_ajax_permission_update(self):
+        """Test AJAX permission updates reject forged non-friend targets."""
+        non_friend = UserFactory(username="stranger", email="stranger@example.com")
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(non_friend.id),
+                "permission_level": str(PermissionLevel.VIEWER),
+            },
+            HTTP_X_PERMISSION_UPDATE="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, non_friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_share_with_non_friend_via_permission_action(self):
+        """Test explicit permission actions reject forged non-friend targets."""
+        non_friend = UserFactory(username="stranger", email="stranger@example.com")
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "share_with": "1",
+                "user_id": str(non_friend.id),
+                "permission": str(PermissionLevel.VIEWER),
+            },
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, non_friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_share_with_non_friend_via_main_form_field(self):
+        """Test forged normal form permission fields reject non-friend targets."""
+        non_friend = UserFactory(username="stranger", email="stranger@example.com")
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "first_name": "Should Roll Back",
+                "family_name": "Person",
+                "email_address": "rollback@example.com",
+                f"permission_{non_friend.id}": str(PermissionLevel.VIEWER),
+            },
+        )
+
+        assert response.status_code == 403
+        self.person.refresh_from_db()
+        assert self.person.first_name != "Should Roll Back"
+        assert get_permission(self.person, non_friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_raise_existing_non_friend_collaborator_permission(self):
+        """Test non-friend collaborators cannot receive expanded access."""
+        collaborator = UserFactory(username="collaborator", email="collaborator@example.com")
+        create_or_update_permission(
+            collaborator, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(collaborator.id),
+                "permission": str(PermissionLevel.EDITOR),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, collaborator) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_owner_cannot_raise_existing_non_friend_via_permission_action(self):
+        """Test explicit permission actions cannot expand non-friend access."""
+        collaborator = UserFactory(username="collaborator", email="collaborator@example.com")
+        create_or_update_permission(
+            collaborator, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "update_permission": "1",
+                "user_id": str(collaborator.id),
+                "permission": str(PermissionLevel.EDITOR),
+            },
+        )
+
+        assert response.status_code == 403
+        assert get_permission(self.person, collaborator) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_owner_can_lower_existing_non_friend_collaborator_permission(self):
+        """Test owners can reduce existing non-friend collaborator access."""
+        collaborator = UserFactory(username="collaborator", email="collaborator@example.com")
+        create_or_update_permission(
+            collaborator, self.person, permission_level=PermissionLevel.EDITOR
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(collaborator.id),
+                "permission": str(PermissionLevel.VIEWER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 204
+        assert get_permission(self.person, collaborator) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_owner_can_remove_existing_non_friend_collaborator(self):
+        """Test owners can remove existing collaborators who are no longer friends."""
+        collaborator = UserFactory(username="collaborator", email="collaborator@example.com")
+        create_or_update_permission(
+            collaborator, self.person, permission_level=PermissionLevel.VIEWER
+        )
+
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(collaborator.id),
+                "permission": "not_shared",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 204
+        assert get_permission(self.person, collaborator) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_permission_update_rejects_invalid_permission_value(self):
+        """Test permission update requests validate posted permission levels."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": str(self.friend.id),
+                "permission": "999",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 400
+        assert get_permission(self.person, self.friend) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_permission_update_rejects_unknown_user(self):
+        """Test permission update requests reject unknown target users."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        response = self.client.post(
+            url,
+            {
+                "user_id": "999999",
+                "permission": str(PermissionLevel.VIEWER),
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 404
+        assert self.person.shared_with.count() == 1
+
+    @override_settings(USE_I18N=False)
     def test_gift_tag_update_does_not_reveal_inaccessible_tag(self):
         """Test inaccessible gift tag edit URLs use the filtered queryset."""
         tag = GiftTag.objects.create(name="Private")
@@ -428,24 +656,56 @@ class TestDeleteSharedMixin:
         )
 
     @override_settings(USE_I18N=False)
-    def test_delete_shared_object(self):
-        """Test deleting an object shared with other users."""
+    def test_delete_shared_object_keeps_last_owner(self):
+        """Test owners cannot unshare themselves when no other owner remains."""
         url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
 
         # Act
         response = self.client.post(url)
 
         # Assert
-        assert response.status_code == 302  # Redirect after action
-
-        # The person should still exist (only sharing is removed)
+        assert response.status_code == 403
         self.person.refresh_from_db()
-
-        # Current user should not have access anymore
-        assert get_permission(self.person, self.user) == PermissionLevel.NONE
-
-        # Other user should still have access
+        assert get_permission(self.person, self.user) == PermissionLevel.OWNER
         assert get_permission(self.person, self.other_user) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_delete_shared_object_with_another_owner_removes_current_user(self):
+        """Test deleting a shared object can remove current user when another owner remains."""
+        other_owner = UserFactory(username="otherowner", email="owner@example.com")
+        create_or_update_permission(
+            other_owner, self.person, permission_level=PermissionLevel.OWNER
+        )
+
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        self.person.refresh_from_db()
+        assert get_permission(self.person, self.user) == PermissionLevel.NONE
+        assert get_permission(self.person, other_owner) == PermissionLevel.OWNER
+        assert get_permission(self.person, self.other_user) == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_delete_preserves_person_with_implicit_user_link_owner(self):
+        """Test editors cannot delete a person owned only through user_link."""
+        linked_owner = UserFactory(username="linkedowner", email="linked@example.com")
+        editor = UserFactory(username="editor", email="editor@example.com")
+        person = PersonFactory(
+            user_link=linked_owner,
+            first_name="Implicit",
+            family_name="Owner",
+        )
+        create_or_update_permission(editor, person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_delete", kwargs={"pk": person.person_id})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        person.refresh_from_db()
+        assert person.user_link == linked_owner
+        assert get_permission(person, editor) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
     def test_delete_non_shared_object(self):

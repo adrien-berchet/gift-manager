@@ -19,11 +19,14 @@ from django.views.generic import View
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
+from gift_manager.models import GiftTag
 from gift_manager.models import Invitation
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
 from gift_manager.models import Relation
+from gift_manager.services import PermissionService
 
 
 class ProfileDetailView(LoginRequiredMixin, DetailView):
@@ -123,64 +126,50 @@ class UpdateViewPreferencesView(LoginRequiredMixin, View):
 
 
 class RemoveFriendView(LoginRequiredMixin, View):
-    def post(self, request, friend_id, *args, **kwargs):  # noqa: C901
+    shared_object_models = (Person, PersonGroup, Gift, GiftTag, Event, Relation)
+
+    def post(self, request, friend_id, *args, **kwargs):
         with transaction.atomic():
             friend_profile = get_object_or_404(Profile, pk=friend_id)
             friend = friend_profile.user
             user_profile = get_object_or_404(Profile, user=request.user)
 
+            is_confirmed_friend = user_profile.friends.filter(pk=friend_profile.pk).exists()
+            if not is_confirmed_friend:
+                return redirect("gift_manager:profile_detail")
+
             # Remove the friend relationship (symmetric)
-            if friend_profile in user_profile.friends.all():
-                user_profile.friends.remove(friend_profile)
+            user_profile.friends.remove(friend_profile)
 
             # Symmetric removal
-            if user_profile in friend_profile.friends.all():
+            if friend_profile.friends.filter(pk=user_profile.pk).exists():
                 friend_profile.friends.remove(user_profile)
 
-            # Remove all shared objects between the two users
-            # Using prefetch_related to avoid N+1 queries
-
-            # Persons
-            persons_shared = Person.objects.filter(shared_with=request.user).prefetch_related(
-                "shared_with"
-            )
-            for person in persons_shared:
-                if friend in person.shared_with.all():
-                    person.shared_with.remove(friend)
-
-            # PersonGroups
-            person_groups_shared = PersonGroup.objects.filter(
-                shared_with=request.user
-            ).prefetch_related("shared_with")
-            for group in person_groups_shared:
-                if friend in group.shared_with.all():
-                    group.shared_with.remove(friend)
-
-            # Gifts
-            gifts_shared = Gift.objects.filter(shared_with=request.user).prefetch_related(
-                "shared_with"
-            )
-            for gift in gifts_shared:
-                if friend in gift.shared_with.all():
-                    gift.shared_with.remove(friend)
-
-            # Events
-            events_shared = Event.objects.filter(shared_with=request.user).prefetch_related(
-                "shared_with"
-            )
-            for event in events_shared:
-                if friend in event.shared_with.all():
-                    event.shared_with.remove(friend)
-
-            # Relations
-            relations_shared = Relation.objects.filter(shared_with=request.user).prefetch_related(
-                "shared_with"
-            )
-            for relation in relations_shared:
-                if friend in relation.shared_with.all():
-                    relation.shared_with.remove(friend)
+            self._cleanup_former_friend_permissions(request.user, friend)
 
         return redirect("gift_manager:profile_detail")
+
+    def _cleanup_former_friend_permissions(self, user, friend) -> None:
+        """Remove cross-access between former friends without revoking owners."""
+        for model in self.shared_object_models:
+            shared_objects = (
+                model.objects.accessible_by(user)
+                .filter(shared_with=friend)
+                .prefetch_related("shared_with")
+                .distinct()
+            )
+            for obj in shared_objects:
+                self._cleanup_former_friend_permission(user, friend, obj)
+
+    def _cleanup_former_friend_permission(self, user, friend, obj) -> None:
+        """Remove the non-owner side of a two-user sharing relationship."""
+        user_permission = PermissionService.get_effective_permission(obj, user)
+        friend_permission = PermissionService.get_effective_permission(obj, friend)
+
+        if user_permission == PermissionLevel.OWNER and friend_permission < PermissionLevel.OWNER:
+            PermissionService.delete_permission(friend, obj)
+        elif friend_permission == PermissionLevel.OWNER and user_permission < PermissionLevel.OWNER:
+            PermissionService.delete_permission(user, obj)
 
     def get(self, *args, **kwargs):
         # Redirect to the profile detail page

@@ -82,6 +82,97 @@ class TestBulkOperationsProperty:
 
         return entities
 
+    def test_bulk_delete_keeps_last_owner_on_shared_object(self):
+        """Bulk delete must not remove the final owner permission."""
+        viewer = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            self.user, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            viewer, gift, permission_level=PermissionLevel.VIEWER
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_delete",
+                    "entity_type": "gift",
+                    "entity_ids": [str(gift.gift_id)],
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is False
+        assert str(gift.gift_id) in response_data["permission_denied"]
+        assert PermissionService.get_permission(gift, self.user) == PermissionLevel.OWNER
+        assert PermissionService.get_permission(gift, viewer) == PermissionLevel.VIEWER
+
+    def test_bulk_delete_allows_non_owner_to_remove_own_share(self):
+        """Bulk delete can remove current user's non-owner access to a shared object."""
+        owner = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            owner, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            self.user, gift, permission_level=PermissionLevel.EDITOR
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_delete",
+                    "entity_type": "gift",
+                    "entity_ids": [str(gift.gift_id)],
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is True
+        assert str(gift.gift_id) in response_data["shared_removed"]
+        assert PermissionService.get_permission(gift, self.user) == PermissionLevel.NONE
+        assert PermissionService.get_permission(gift, owner) == PermissionLevel.OWNER
+
+    def test_bulk_delete_preserves_person_with_implicit_user_link_owner(self):
+        """Bulk delete must preserve persons owned only through user_link."""
+        linked_owner = UserFactory()
+        person = PersonFactory(user_link=linked_owner)
+        PermissionService.create_or_update_permission(
+            self.user, person, permission_level=PermissionLevel.EDITOR
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_delete",
+                    "entity_type": "person",
+                    "entity_ids": [str(person.person_id)],
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is True
+        assert str(person.person_id) in response_data["shared_removed"]
+        person.refresh_from_db()
+        assert person.user_link == linked_owner
+        assert PermissionService.get_permission(person, self.user) == PermissionLevel.NONE
+
     @given(
         entity_type=st.sampled_from(
             ["person", "gift", "event", "relation", "persongroup", "gifttag"]
@@ -239,9 +330,12 @@ class TestBulkOperationsProperty:
 
         # Set limited permissions
         for entity in entities:
-            PermissionService.create_or_update_permission(
-                self.user, entity, permission_level=permission_level
-            )
+            if permission_level == PermissionLevel.NONE:
+                PermissionService.delete_permission(self.user, entity)
+            else:
+                PermissionService.create_or_update_permission(
+                    self.user, entity, permission_level=permission_level
+                )
 
         entity_ids = [self.get_entity_id(entity_type, entity) for entity in entities]
 

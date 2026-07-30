@@ -5,6 +5,7 @@ import logging
 from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -18,11 +19,11 @@ from django.views.generic import TemplateView
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
-from gift_manager.permissions import PermissionService
-from gift_manager.services import PermissionLevel
+from gift_manager.services import PermissionService
 
 logger = logging.getLogger(__name__)
 
@@ -112,38 +113,7 @@ class BulkOperationView(LoginRequiredMixin, View):
         try:
             with transaction.atomic():
                 for entity_id in entity_ids:
-                    try:
-                        # Get the object with permission check (use UUID field, not auto PK)
-                        uuid_field = self.ENTITY_UUID_FIELDS.get(entity_type, model._meta.pk.name)
-                        obj = get_object_or_404(
-                            model.objects.accessible_by(request.user),
-                            **{uuid_field: entity_id},
-                        )
-
-                        # Check if user has at least EDITOR permission
-                        # Creator (user_link) is treated as OWNER
-                        is_creator = hasattr(obj, "user_link") and obj.user_link == request.user
-                        permission_level = PermissionService.get_permission(obj, request.user)
-                        if not is_creator and permission_level < PermissionLevel.EDITOR:
-                            results["permission_denied"].append(str(entity_id))
-                            continue
-
-                        # Check if object is shared with other users
-                        other_users = obj.shared_with.exclude(id=request.user.id)
-
-                        if other_users.exists():
-                            # Remove sharing with current user only
-                            obj.shared_with.remove(request.user)
-                            PermissionService.delete_permission(request.user, obj)
-                            results["shared_removed"].append(str(entity_id))
-                        else:
-                            # Delete the object completely
-                            obj.delete()
-                            results["deleted"].append(str(entity_id))
-
-                    except Exception as e:
-                        logger.warning("Failed to delete %s %s: %s", entity_type, entity_id, e)
-                        results["failed"].append({"id": str(entity_id), "error": str(e)})
+                    self._handle_bulk_delete_item(request, model, entity_type, entity_id, results)
 
                 # Generate success message
                 deleted_count = len(results["deleted"])
@@ -182,6 +152,46 @@ class BulkOperationView(LoginRequiredMixin, View):
             results["error"] = _("An error occurred during bulk delete")
 
         return JsonResponse(results)
+
+    def _handle_bulk_delete_item(
+        self,
+        request: HttpRequest,
+        model,
+        entity_type: str,
+        entity_id: str,
+        results: dict[str, list],
+    ) -> None:
+        """Handle one bulk delete item and record its result."""
+        try:
+            result_key = self._delete_or_unshare_object(request, model, entity_type, entity_id)
+            results[result_key].append(str(entity_id))
+        except PermissionDenied:
+            results["permission_denied"].append(str(entity_id))
+        except Exception as e:
+            logger.warning("Failed to delete %s %s: %s", entity_type, entity_id, e)
+            results["failed"].append({"id": str(entity_id), "error": str(e)})
+
+    def _delete_or_unshare_object(
+        self, request: HttpRequest, model, entity_type: str, entity_id: str
+    ) -> str:
+        """Delete an object or remove the current user's share."""
+        uuid_field = self.ENTITY_UUID_FIELDS.get(entity_type, model._meta.pk.name)
+        obj = get_object_or_404(
+            model.objects.accessible_by(request.user),
+            **{uuid_field: entity_id},
+        )
+
+        permission_level = PermissionService.get_effective_permission(obj, request.user)
+        if permission_level < PermissionLevel.EDITOR:
+            return "permission_denied"
+
+        if PermissionService.has_other_access_holder(obj, request.user):
+            PermissionService.assert_can_leave_object(request.user, obj)
+            PermissionService.delete_permission(request.user, obj)
+            return "shared_removed"
+
+        obj.delete()
+        return "deleted"
 
     def handle_bulk_share(
         self, request: HttpRequest, entity_type: str, entity_ids: list[str]
