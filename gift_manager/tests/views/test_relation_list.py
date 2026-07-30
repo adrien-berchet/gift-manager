@@ -143,7 +143,7 @@ class TestRelationList:
         assert response.status_code == 200
         row = response.context["data"][0]
         content = response.content.decode()
-        assert row["urgency_key"] == "no_date"
+        assert row["urgency_key"] == "ideas"
         assert row["needs_attention"] is False
         assert row["attention_label"] == ""
         assert row["has_missing_data"] is False
@@ -152,9 +152,45 @@ class TestRelationList:
         assert row["missing_due_date_label"] == ""
         assert row["has_missing_event"] is False
         assert row["missing_event_label"] == ""
-        assert 'urgencyKey: "no_date"' in content
+        assert 'urgencyKey: "ideas"' in content
         assert "needsAttention: false" in content
         assert "missingData: false" in content
+
+    def test_workspace_separates_open_ideas_from_needs_details(self, event_factory, gift_factory):
+        """Open-ended ideas should not appear in the actionable details bucket."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = self.relation.status.__class__.objects.get(status_en="Idea")
+        self.relation.due_date = None
+        self.relation.event = None
+        self.relation.save()
+
+        planned_relation = self.relation.__class__.objects.create(
+            person=self.relation.person,
+            gift=gift_factory(name="Deadline Needed Gift"),
+            event=event_factory(name="Birthday"),
+            status=planned_status,
+            due_date=None,
+        )
+        create_or_update_permission(
+            self.user,
+            planned_relation,
+            permission_level=PermissionLevel.VIEWER,
+        )
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        groups_by_key = {group["key"]: group for group in response.context["workspace_groups"]}
+        assert self.relation in [card["relation"] for card in groups_by_key["ideas"]["cards"]]
+        assert planned_relation in [
+            card["relation"] for card in groups_by_key["needs_details"]["cards"]
+        ]
+        assert response.context["workspace_summary"]["needs_details"] == 1
+        assert response.context["workspace_summary"]["ideas"] == 1
+        content = response.content.decode()
+        assert "gift-plan-urgency-section--ideas" in content
+        assert "gift-plan-urgency-section--needs_details" in content
+        assert "Deadline Needed Gift" in content
 
     def test_advanced_grid_marks_planned_rows_without_due_date_as_missing_data(self, event_factory):
         """Active gift plans without due dates should show missing-data metadata."""
@@ -169,7 +205,7 @@ class TestRelationList:
         assert response.status_code == 200
         row = response.context["data"][0]
         content = response.content.decode()
-        assert row["urgency_key"] == "no_date"
+        assert row["urgency_key"] == "needs_details"
         assert row["needs_attention"] is False
         assert row["has_missing_data"] is True
         assert row["missing_data_label"] == "Missing due date"
@@ -200,7 +236,7 @@ class TestRelationList:
 
         assert response.status_code == 200
         row = response.context["data"][0]
-        assert row["urgency_key"] == "no_date"
+        assert row["urgency_key"] == "needs_details"
         assert row["needs_attention"] is False
         assert row["has_missing_data"] is True
         assert row["has_missing_due_date"] is True
@@ -221,7 +257,7 @@ class TestRelationList:
         assert response.status_code == 200
         row = response.context["data"][0]
         content = response.content.decode()
-        assert row["urgency_key"] == "no_date"
+        assert row["urgency_key"] == "needs_details"
         assert row["needs_attention"] is False
         assert row["has_missing_data"] is True
         assert row["missing_data_label"] == "Missing due date, Missing event"
@@ -246,7 +282,7 @@ class TestRelationList:
         assert response.status_code == 200
         row = response.context["data"][0]
         content = response.content.decode()
-        assert row["urgency_key"] == "later"
+        assert row["urgency_key"] == "needs_details"
         assert row["needs_attention"] is False
         assert row["has_missing_data"] is True
         assert row["missing_data_label"] == "Missing event"
@@ -328,7 +364,7 @@ class TestRelationList:
         content = response.content.decode()
         assert "gift-plan-urgency-section--completed" in content
         assert "gift-plan-card--completed" in content
-        assert "gift-plan-card--no_date" not in content
+        assert "gift-plan-card--needs_details" not in content
 
     def test_detail_panel_uses_shared_status_and_due_badges(self):
         """Quick details should match the workspace card visual language."""

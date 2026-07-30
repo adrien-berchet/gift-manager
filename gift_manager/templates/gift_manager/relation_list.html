@@ -53,8 +53,12 @@
                 <span>{% trans "Needs attention" %}</span>
             </span>
             <span class="gift-plan-summary-item">
-                <strong>{{ workspace_summary.no_date }}</strong>
-                <span>{% trans "No date" %}</span>
+                <strong>{{ workspace_summary.needs_details }}</strong>
+                <span>{% trans "Needs details" %}</span>
+            </span>
+            <span class="gift-plan-summary-item">
+                <strong>{{ workspace_summary.ideas }}</strong>
+                <span>{% trans "Ideas" %}</span>
             </span>
         </div>
     </div>
@@ -550,7 +554,7 @@
                     attentionClass: 'gift-plan-grid-row--attention',
                     missingDataClass: 'gift-plan-grid-row--missing-data',
                     classPrefix: 'gift-plan-grid-row--',
-                    stateKeys: ['overdue', 'due_soon', 'later', 'no_date', 'completed', 'unknown']
+                    stateKeys: ['overdue', 'due_soon', 'needs_details', 'later', 'ideas', 'completed', 'unknown']
                 },
                 initialSort: [
                     { columnSelector: 'th:nth-child(6)' },  // Status

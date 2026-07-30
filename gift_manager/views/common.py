@@ -45,6 +45,11 @@ def _is_completed_status(status) -> bool:
     return is_terminal_status(status)
 
 
+def _gift_plan_requires_planning_fields(relation: Relation) -> bool:
+    """Return whether a gift plan expects concrete planning details."""
+    return not is_idea_status(relation.status) and not _is_completed_status(relation.status)
+
+
 def _safe_date(year: int, month: int, day: int) -> date:
     """Build a date, clamping the day to the target month when needed."""
     return date(year, month, min(day, monthrange(year, month)[1]))
@@ -152,7 +157,9 @@ def _build_gift_plan_action_groups(
             group_key = "upcoming"
         elif relation.due_date is None and is_idea_status(relation.status):
             continue
-        elif relation.due_date is None or relation.event_id is None:
+        elif _gift_plan_requires_planning_fields(relation) and (
+            relation.due_date is None or relation.event_id is None
+        ):
             group_key = "incomplete"
         elif relation.creation_date and relation.creation_date <= stale_before:
             group_key = "stale"

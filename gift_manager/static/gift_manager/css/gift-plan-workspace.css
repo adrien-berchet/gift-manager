@@ -99,9 +99,16 @@
     color: var(--color-warning);
 }
 
-.gift-plan-urgency-section--later .gift-plan-urgency-heading h3 i,
-.gift-plan-urgency-section--no_date .gift-plan-urgency-heading h3 i {
+.gift-plan-urgency-section--needs_details .gift-plan-urgency-heading h3 i {
+    color: var(--color-warning);
+}
+
+.gift-plan-urgency-section--later .gift-plan-urgency-heading h3 i {
     color: var(--color-info);
+}
+
+.gift-plan-urgency-section--ideas .gift-plan-urgency-heading h3 i {
+    color: var(--color-primary);
 }
 
 .gift-plan-urgency-section--completed .gift-plan-urgency-heading h3 i {
@@ -147,13 +154,17 @@
     border-left-color: var(--color-danger);
 }
 
-.gift-plan-card--due_soon {
+.gift-plan-card--due_soon,
+.gift-plan-card--needs_details {
     border-left-color: var(--color-warning);
 }
 
-.gift-plan-card--later,
-.gift-plan-card--no_date {
+.gift-plan-card--later {
     border-left-color: var(--color-info);
+}
+
+.gift-plan-card--ideas {
+    border-left-color: var(--color-primary);
 }
 
 .gift-plan-card--completed {

@@ -886,7 +886,7 @@ class TestRelationListGridLoading:
         )
 
         assert refreshed is True
-        expect(page.locator(".gift-plan-urgency-section--no_date")).to_contain_text(
+        expect(page.locator(".gift-plan-urgency-section--needs_details")).to_contain_text(
             "Workspace Refresh Kite"
         )
 

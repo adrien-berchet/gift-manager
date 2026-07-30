@@ -61,14 +61,18 @@ def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
     """Return the urgency bucket for a gift plan."""
     today = today or timezone.localdate()
     if is_completed_status(relation.status):
-        return "completed"
-    if relation.due_date is None:
-        return "no_date"
-    if relation.due_date < today:
-        return "overdue"
-    if relation.due_date <= today + timedelta(days=window_days):
-        return "due_soon"
-    return "later"
+        urgency_key = "completed"
+    elif relation.due_date is None:
+        urgency_key = "ideas" if is_idea_status(relation.status) else "needs_details"
+    elif relation.due_date < today:
+        urgency_key = "overdue"
+    elif relation.due_date <= today + timedelta(days=window_days):
+        urgency_key = "due_soon"
+    elif gift_plan_requires_planning_fields(relation) and relation.event_id is None:
+        urgency_key = "needs_details"
+    else:
+        urgency_key = "later"
+    return urgency_key
 
 
 def gift_plan_has_missing_due_date(relation) -> bool:
@@ -259,7 +263,14 @@ class RelationListView(PermissionContextMixin, BaseListView):
     template_name = "gift_manager/relation_list.html"
     object_type = gettext_noop("Gift Plans")
     workspace_window_days = 7
-    workspace_group_order = ("overdue", "due_soon", "later", "no_date", "completed")
+    workspace_group_order = (
+        "overdue",
+        "due_soon",
+        "needs_details",
+        "later",
+        "ideas",
+        "completed",
+    )
     attention_urgency_keys = frozenset(("overdue", "due_soon"))
     show_workspace = True
     show_advanced_list = False
@@ -352,11 +363,18 @@ class RelationListView(PermissionContextMixin, BaseListView):
                 "icon": "fa-calendar",
                 "cards": [],
             },
-            "no_date": {
-                "key": "no_date",
-                "label": gettext("No due date"),
-                "description": gettext("Needs a deadline"),
-                "icon": "fa-calendar-plus",
+            "needs_details": {
+                "key": "needs_details",
+                "label": gettext("Needs details"),
+                "description": gettext("Missing due date or event"),
+                "icon": "fa-list-check",
+                "cards": [],
+            },
+            "ideas": {
+                "key": "ideas",
+                "label": gettext("Ideas"),
+                "description": gettext("Open-ended ideas to revisit later"),
+                "icon": "fa-lightbulb",
                 "cards": [],
             },
             "completed": {
@@ -401,13 +419,16 @@ class RelationListView(PermissionContextMixin, BaseListView):
         """Return compact counts for the workspace summary strip."""
         counts = {group["key"]: len(group["cards"]) for group in workspace_groups}
         total = sum(counts.values())
-        attention = counts.get("overdue", 0) + counts.get("due_soon", 0)
+        attention = (
+            counts.get("overdue", 0) + counts.get("due_soon", 0) + counts.get("needs_details", 0)
+        )
         return {
             "total": total,
             "attention": attention,
             "overdue": counts.get("overdue", 0),
             "due_soon": counts.get("due_soon", 0),
-            "no_date": counts.get("no_date", 0),
+            "needs_details": counts.get("needs_details", 0),
+            "ideas": counts.get("ideas", 0),
         }
 
     def get_advanced_list_row_state(self, relation, today):

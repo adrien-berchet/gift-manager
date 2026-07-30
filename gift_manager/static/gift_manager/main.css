@@ -348,7 +348,8 @@ body.has-fixed-action-bar {
     color: var(--color-danger-hover);
 }
 
-.gift-plan-due-badge--due_soon {
+.gift-plan-due-badge--due_soon,
+.gift-plan-due-badge--needs_details {
     background-color: var(--color-warning-light);
     border-color: rgba(245, 158, 11, 0.4);
     color: var(--color-warning-hover);
@@ -358,6 +359,12 @@ body.has-fixed-action-bar {
     background-color: var(--color-info-light);
     border-color: rgba(59, 130, 246, 0.35);
     color: var(--color-info-hover);
+}
+
+.gift-plan-due-badge--ideas {
+    background-color: var(--color-primary-light);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--color-primary-hover);
 }
 
 .gift-plan-due-badge--no_date {

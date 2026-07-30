@@ -112,6 +112,13 @@ class TestHomeDashboard:
             shared_with=[self.user],
         )
         RelationFactory(
+            gift=GiftFactory(name="Loose future idea"),
+            event=None,
+            status=idea,
+            due_date=today + timedelta(days=70),
+            shared_with=[self.user],
+        )
+        RelationFactory(
             gift=GiftFactory(name="Rejected gadget"),
             status=abandoned,
             due_date=today - timedelta(days=5),
@@ -164,6 +171,7 @@ class TestHomeDashboard:
         assert "Soon puzzle" in content
         assert "Missing date" in content
         assert "Someday telescope" not in content
+        assert "Loose future idea" not in content
         assert "Rejected gadget" not in content
         assert "Old idea" in content
         assert "Already done" not in content

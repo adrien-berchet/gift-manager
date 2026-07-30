@@ -2615,6 +2615,24 @@ msgstr "Liste avancée"
 msgid "Workspace"
 msgstr "Espace de travail"
 
+#: gift_manager/templates/gift_manager/relation_list.html
+#: gift_manager/views/relation.py
+msgid "Needs details"
+msgstr "Informations à compléter"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+#: gift_manager/views/relation.py
+msgid "Ideas"
+msgstr "Idées"
+
+#: gift_manager/views/relation.py
+msgid "Missing due date or event"
+msgstr "Échéance ou événement manquant"
+
+#: gift_manager/views/relation.py
+msgid "Open-ended ideas to revisit later"
+msgstr "Idées ouvertes à revoir plus tard"
+
 #: gift_manager/templates/gift_manager/relation_list.html:201
 #: gift_manager/views/relation.py:393
 msgid "Advanced Gift Plans List"
