@@ -5,6 +5,7 @@
 {% block title %}Gift Manager - {% trans "Home" %}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 <style>
     .hero-section {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
@@ -536,83 +537,13 @@
         font-weight: 700;
     }
 
-    .dashboard-action-list {
-        display: grid;
-        gap: var(--space-3, 0.75rem);
-    }
-
-    .dashboard-action-list--responsive,
     .dashboard-action-list--paginated {
-        --gift-plan-section-card-min-width: 250px;
-
-        grid-template-columns:
-            repeat(
-                auto-fill,
-                minmax(min(100%, var(--gift-plan-section-card-min-width, 250px)), 1fr)
-            );
-        align-items: start;
-    }
-
-    .dashboard-action-list--paginated {
-        --dashboard-action-card-height: 8.5rem;
-
         align-content: start;
         overflow: visible;
     }
 
-    .dashboard-action-list--paginated .dashboard-action-item--compact {
-        height: var(--dashboard-action-card-height);
-        align-content: center;
-        overflow: hidden;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-item--compact.dashboard-action-item--has-note {
-        align-content: start;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-badges,
-    .dashboard-action-list--paginated .dashboard-action-meta,
-    .dashboard-action-list--paginated .dashboard-action-footer {
-        min-width: 0;
-        flex-wrap: nowrap;
-        overflow: hidden;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-badges {
-        max-width: 100%;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-status-badge,
-    .dashboard-action-list--paginated .gift-plan-due-badge {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-title,
-    .dashboard-action-list--paginated .dashboard-action-note {
-        display: -webkit-box;
-        overflow: hidden;
-        -webkit-box-orient: vertical;
-        overflow-wrap: normal;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-title {
-        -webkit-line-clamp: 1;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-meta,
-    .dashboard-action-list--paginated .dashboard-action-meta a,
-    .dashboard-action-list--paginated .dashboard-action-meta span {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .dashboard-action-list--paginated .dashboard-action-note {
-        -webkit-line-clamp: 1;
+    .dashboard-action-list--paginated.dashboard-action-list--short-page {
+        grid-auto-rows: auto;
     }
 
     .dashboard-action-pagination {
@@ -644,31 +575,6 @@
         padding: 0;
     }
 
-    .dashboard-action-item {
-        display: grid;
-        gap: var(--space-3);
-        min-width: 0;
-        padding: var(--space-4);
-        border: 1px solid var(--border-color);
-        border-left-width: 4px;
-        border-radius: var(--radius-md);
-        background: var(--surface-card);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .dashboard-action-item--overdue {
-        border-left-color: var(--color-danger);
-    }
-
-    .dashboard-action-item--upcoming {
-        border-left-color: var(--color-warning);
-    }
-
-    .dashboard-action-item--incomplete,
-    .dashboard-action-item--stale {
-        border-left-color: var(--color-info);
-    }
-
     @media (min-width: 768px) {
         .dashboard-action-group--incomplete,
         .dashboard-action-group--upcoming {
@@ -681,101 +587,6 @@
         .dashboard-action-group--upcoming {
             grid-column: 1 / -1;
         }
-    }
-
-    .dashboard-action-item--compact {
-        grid-template-columns: minmax(0, 1fr) auto;
-        grid-template-areas:
-            "title footer"
-            "meta footer"
-            "badges footer";
-        align-items: center;
-        gap: var(--space-2) var(--space-3);
-        padding: var(--space-3);
-        box-shadow: none;
-    }
-
-    .dashboard-action-item--compact.dashboard-action-item--has-note {
-        grid-template-areas:
-            "title footer"
-            "meta footer"
-            "badges footer"
-            "note note";
-    }
-
-    .dashboard-action-item--compact .dashboard-action-badges {
-        grid-area: badges;
-        gap: var(--space-1);
-    }
-
-    .dashboard-action-item--compact .dashboard-action-title {
-        grid-area: title;
-        min-width: 0;
-        font-size: var(--text-sm);
-        overflow-wrap: anywhere;
-    }
-
-    .dashboard-action-item--compact .dashboard-action-meta {
-        grid-area: meta;
-        font-size: var(--text-xs);
-    }
-
-    .dashboard-action-item--compact .dashboard-action-note {
-        grid-area: note;
-    }
-
-    .dashboard-action-item--compact .dashboard-action-footer {
-        grid-area: footer;
-        align-self: center;
-        justify-content: flex-end;
-    }
-
-    .dashboard-action-badges,
-    .dashboard-action-meta,
-    .dashboard-action-footer {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: var(--space-2);
-    }
-
-    .dashboard-action-title {
-        color: var(--text-primary);
-        font-weight: 700;
-        text-decoration: none;
-        line-height: 1.3;
-    }
-
-    .dashboard-action-title:hover {
-        color: var(--color-primary-hover);
-        text-decoration: underline;
-    }
-
-    .dashboard-action-meta {
-        color: var(--text-secondary);
-        font-size: var(--text-sm);
-    }
-
-    .dashboard-action-meta a {
-        color: var(--text-secondary);
-        font-weight: 600;
-        text-decoration: none;
-    }
-
-    .dashboard-action-meta a:hover {
-        color: var(--color-primary-hover);
-        text-decoration: underline;
-    }
-
-    .dashboard-action-note {
-        margin: 0;
-        color: var(--text-secondary);
-        font-size: var(--text-sm);
-        line-height: 1.45;
-    }
-
-    .dashboard-action-footer {
-        justify-content: flex-end;
     }
 
     .dashboard-empty-action {
@@ -859,13 +670,6 @@
         }
     }
 
-    @media (max-width: 767.98px) {
-        .dashboard-action-list--responsive,
-        .dashboard-action-list--paginated {
-            grid-template-columns: 1fr;
-        }
-    }
-
     /* Responsive - Mobile */
     @media (max-width: 576px) {
         .dashboard-topbar h1 {
@@ -880,37 +684,6 @@
 
         .dashboard-summary-tile {
             padding: var(--space-3);
-        }
-
-        .dashboard-action-footer {
-            justify-content: flex-start;
-        }
-
-        .dashboard-action-list--responsive,
-        .dashboard-action-list--paginated {
-            grid-template-columns: 1fr;
-        }
-
-        .dashboard-action-item--compact {
-            grid-template-columns: 1fr;
-            grid-template-areas:
-                "title"
-                "meta"
-                "badges"
-                "footer";
-        }
-
-        .dashboard-action-item--compact.dashboard-action-item--has-note {
-            grid-template-areas:
-                "title"
-                "meta"
-                "badges"
-                "note"
-                "footer";
-        }
-
-        .dashboard-action-item--compact .dashboard-action-footer {
-            justify-content: flex-start;
         }
 
         .hero-section {
@@ -1170,63 +943,10 @@
                     </h3>
                     <span class="dashboard-action-count">{{ group.items|length }}</span>
                 </div>
-                <div class="dashboard-action-list{% if group.is_paginated %} dashboard-action-list--responsive dashboard-action-list--paginated{% endif %}"
+                <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} dashboard-action-list--paginated{% endif %}"
                      {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
-                    {% for item in group.display_items %}
-                    <article class="dashboard-action-item dashboard-action-item--{{ item.action_key }}{% if group.is_paginated %} dashboard-action-item--compact{% endif %}{% if item.relation.comment %} dashboard-action-item--has-note{% endif %}"
-                             {% if group.is_paginated %}data-dashboard-action-card{% endif %}>
-                        <div class="dashboard-action-badges">
-                            <span class="gift-plan-status-badge {{ item.status_class }}">
-                                {{ item.relation.status }}
-                            </span>
-                            {% if item.relation.due_date %}
-                            <span class="gift-plan-due-badge gift-plan-due-badge--{{ item.due_class }}">
-                                <i class="fas fa-calendar-day" aria-hidden="true"></i>
-                                {{ item.relation.due_date|date:"M d, Y" }}
-                            </span>
-                            {% else %}
-                            <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
-                                <i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "No date" %}
-                            </span>
-                            {% endif %}
-                        </div>
-
-                        <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}"
-                           class="dashboard-action-title">
-                            {{ item.relation.gift.name }}
-                        </a>
-
-                        <div class="dashboard-action-meta">
-                            {% if item.relation.is_group_targeted %}
-                            <i class="fas fa-layer-group" aria-hidden="true"></i>
-                            {% else %}
-                            <i class="fas fa-user" aria-hidden="true"></i>
-                            {% endif %}
-                            {% if item.relation.recipient_url %}
-                            <a href="{{ item.relation.recipient_url }}">{{ item.relation.recipient_name }}</a>
-                            {% else %}
-                            <span>{{ item.relation.recipient_name }}</span>
-                            {% endif %}
-                            {% if item.relation.event %}
-                            <span>·</span>
-                            <a href="{% url 'gift_manager:event_detail' item.relation.event.event_id %}">
-                                {{ item.relation.event.name }}
-                            </a>
-                            {% endif %}
-                        </div>
-
-                        {% if item.relation.comment %}
-                        <p class="dashboard-action-note">{{ item.relation.comment|truncatechars:120 }}</p>
-                        {% endif %}
-
-                        <div class="dashboard-action-footer">
-                            <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}"
-                               class="btn btn-sm btn-outline-secondary"
-                               data-action="detail">
-                                <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Details" %}
-                            </a>
-                        </div>
-                    </article>
+                    {% for card in group.display_items %}
+                    {% include "gift_manager/includes/gift_plan_card.html" with card=card dashboard_paginated=group.is_paginated %}
                     {% endfor %}
                 </div>
                 {% if group.is_paginated %}
@@ -1507,6 +1227,7 @@
             group.dataset.dashboardPageSize = pageSize.toString();
 
             list.style.minHeight = '';
+            list.classList.remove('dashboard-action-list--short-page');
             cards.forEach((card, index) => {
                 card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
             });
@@ -1514,6 +1235,7 @@
             const visibleCount = Math.min(pageSize, Math.max(cards.length - firstVisibleIndex, 0));
             if (previousHeight > 0 && currentPage > 0 && visibleCount <= columns) {
                 list.style.minHeight = `${Math.ceil(previousHeight)}px`;
+                list.classList.add('dashboard-action-list--short-page');
             }
 
             if (!pagination) return;

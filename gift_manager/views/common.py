@@ -11,6 +11,7 @@ from django.db.models import Model
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
@@ -18,10 +19,12 @@ from django.views.decorators.http import require_GET
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionService
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
@@ -96,24 +99,29 @@ def _next_event_occurrence(event: Event, today: date, window_end: date) -> date 
     return None
 
 
-def _build_dashboard_action_item(relation: Relation, action_key: str) -> dict:
+def _build_dashboard_action_item(relation: Relation, action_key: str, user) -> dict:
     """Return presentation data for a dashboard gift-plan action."""
-    due_class = {
+    urgency_key = {
         "upcoming": "due_soon",
-        "incomplete": "no_date",
+        "incomplete": "needs_details",
         "stale": "later",
     }.get(action_key, action_key)
+    permission = PermissionService.get_permission(relation, user)
     return {
         "relation": relation,
         "action_key": action_key,
-        "due_class": due_class,
+        "urgency_key": urgency_key,
         "status_class": _gift_plan_status_class(relation.status),
+        "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
+        "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
+        "can_edit": permission >= PermissionLevel.EDITOR,
     }
 
 
 def _build_gift_plan_action_groups(
     relations: list[Relation],
     *,
+    user,
     today: date,
     now,
 ) -> list[dict]:
@@ -166,7 +174,7 @@ def _build_gift_plan_action_groups(
         else:
             continue
 
-        groups[group_key]["items"].append(_build_dashboard_action_item(relation, group_key))
+        groups[group_key]["items"].append(_build_dashboard_action_item(relation, group_key, user))
 
     group_order = ("overdue", "upcoming", "incomplete", "stale")
     action_groups = [groups[key] for key in group_order if groups[key]["items"]]
@@ -269,7 +277,12 @@ def home(request):
             .order_by("due_date", "creation_date", "gift__name")
         )
         gift_plans = list(gift_plan_queryset)
-        action_groups = _build_gift_plan_action_groups(gift_plans, today=today, now=now)
+        action_groups = _build_gift_plan_action_groups(
+            gift_plans,
+            user=user,
+            today=today,
+            now=now,
+        )
 
         unassigned_gifts_queryset = (
             Gift.objects.accessible_by(user)

@@ -89,7 +89,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 card.getBoundingClientRect().width
             );
             const noteMetrics = visibleCards.map((card) => {
-                const note = card.querySelector('.dashboard-action-note');
+                const note = card.querySelector('.gift-plan-note');
                 if (!note) return null;
                 return {
                     clientHeight: note.clientHeight,
@@ -118,7 +118,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 previousDisabled: group.querySelector('[data-dashboard-page="previous"]')?.disabled,
                 nextDisabled: group.querySelector('[data-dashboard-page="next"]')?.disabled,
                 visibleTitles: visibleCards.map((card) =>
-                    card.querySelector('.dashboard-action-title')?.textContent.trim()
+                    card.querySelector('.gift-plan-card-title')?.textContent.trim()
                 ),
                 positions,
                 visibleHeights,
@@ -148,7 +148,9 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert max(metrics["visibleHeights"]) - min(metrics["visibleHeights"]) <= 1
     assert max(metrics["visibleWidths"]) - min(metrics["visibleWidths"]) <= 1
     assert any(note["scrollHeight"] > note["clientHeight"] for note in metrics["noteMetrics"])
-    assert all(note["clientHeight"] <= note["lineHeight"] + 1 for note in metrics["noteMetrics"])
+    assert all(
+        note["clientHeight"] <= (note["lineHeight"] * 2) + 1 for note in metrics["noteMetrics"]
+    )
 
     positions = metrics["positions"]
     assert positions[1]["x"] > positions[0]["x"]
@@ -206,8 +208,8 @@ class TestDashboardLayout:
         """Due soon and needs-details groups should wrap, then paginate."""
         page.set_viewport_size({"width": 1280, "height": 900})
         tall_card_comment = (
-            "This deliberately long note should be clipped inside the fixed-size "
-            "dashboard card instead of expanding the row. "
+            "This deliberately long note should be clipped inside the dashboard "
+            "gift-plan card instead of expanding the row. "
             "ExtremelyLongUnbrokenCommentSegmentForDashboardCardClippingVerification"
         )
 
@@ -375,10 +377,10 @@ class TestDashboardLayout:
         assert refreshed is True
         expect(page.locator("#dashboard-live")).to_contain_text("Dashboard Refresh Kite")
 
-    def test_incomplete_action_cards_use_responsive_compact_layout(
+    def test_incomplete_action_cards_use_gift_plan_card_layout(
         self, page: Page, client, seed_data_e2e
     ):
-        """Incomplete gift plans should render as responsive compact task rows."""
+        """Incomplete gift plans should render with gift-plan card internals."""
         page.set_viewport_size({"width": 1280, "height": 900})
         create_dashboard_action_plans(
             seed_data_e2e,
@@ -392,41 +394,62 @@ class TestDashboardLayout:
         assert response.status_code == 200
         content = response.content.decode()
         assert "dashboard-action-group--incomplete" in content
-        assert "dashboard-action-list dashboard-action-list--responsive" in content
+        assert "dashboard-action-list gift-plan-card-grid" in content
+        assert "dashboard-action-list--responsive" not in content
+        assert "dashboard-action-item" not in content
+        assert "gift-plan-card gift-plan-card--needs_details" in content
         page.set_content(remove_scripts(content), wait_until="domcontentloaded")
 
-        list_grid = page.locator(
-            ".dashboard-action-group--incomplete .dashboard-action-list--responsive"
-        ).first
-        cards = list_grid.locator(".dashboard-action-item--incomplete")
+        list_grid = page.locator(".dashboard-action-group--incomplete .dashboard-action-list").first
+        cards = list_grid.locator("[data-dashboard-action-card].gift-plan-card--needs_details")
         card = cards.first
-        title = card.locator(".dashboard-action-title")
-        detail_action = card.locator("[data-action='detail']")
+        topline = card.locator(".gift-plan-card-topline")
+        title = card.locator(".gift-plan-card-title")
+        meta_rows = card.locator(".gift-plan-card-meta-row")
+        note = card.locator(".gift-plan-note")
+        detail_action = card.locator(".gift-plan-card-actions [data-action='detail']")
 
         expect(list_grid).to_be_visible()
         expect(card).to_be_visible()
+        expect(topline).to_be_visible()
         expect(title).to_be_visible()
+        expect(meta_rows.first).to_be_visible()
+        expect(note).to_be_visible()
         expect(detail_action).to_be_visible()
         assert cards.count() >= 2
 
         desktop_columns = get_grid_column_count(list_grid)
         assert desktop_columns >= 2
 
-        desktop_areas = card.evaluate("el => getComputedStyle(el).gridTemplateAreas")
-        assert '"title footer"' in desktop_areas
-        assert '"badges footer"' in desktop_areas
+        card_layout = card.evaluate(
+            """el => ({
+                display: getComputedStyle(el).display,
+                direction: getComputedStyle(el).flexDirection,
+            })"""
+        )
+        assert card_layout == {"display": "flex", "direction": "column"}
+        assert meta_rows.count() >= 1
 
         first_card_box = cards.nth(0).bounding_box()
         second_card_box = cards.nth(1).bounding_box()
+        topline_box = topline.bounding_box()
         title_box = title.bounding_box()
+        meta_box = meta_rows.first.bounding_box()
+        note_box = note.bounding_box()
         detail_box = detail_action.bounding_box()
         assert first_card_box is not None
         assert second_card_box is not None
+        assert topline_box is not None
         assert title_box is not None
+        assert meta_box is not None
+        assert note_box is not None
         assert detail_box is not None
         assert second_card_box["x"] > first_card_box["x"]
         assert abs(second_card_box["y"] - first_card_box["y"]) <= 2
-        assert title_box["x"] + title_box["width"] <= detail_box["x"] + 1
+        assert topline_box["y"] <= title_box["y"]
+        assert title_box["y"] <= meta_box["y"]
+        assert meta_box["y"] <= note_box["y"]
+        assert note_box["y"] <= detail_box["y"]
 
         page.set_viewport_size({"width": 700, "height": 900})
         page.wait_for_timeout(100)
@@ -437,10 +460,6 @@ class TestDashboardLayout:
 
         mobile_columns = get_grid_column_count(list_grid)
         assert mobile_columns == 1
-
-        mobile_areas = card.evaluate("el => getComputedStyle(el).gridTemplateAreas")
-        assert '"title"' in mobile_areas
-        assert '"footer"' in mobile_areas
 
         mobile_first_card_box = cards.nth(0).bounding_box()
         mobile_second_card_box = cards.nth(1).bounding_box()

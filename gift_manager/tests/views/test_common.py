@@ -176,26 +176,23 @@ class TestHomeDashboard:
         assert "Old idea" in content
         assert "Already done" not in content
         assert "Private plan" not in content
+        assert "gift-plan-card gift-plan-card--due_soon" in content
+        assert "gift-plan-card gift-plan-card--needs_details" in content
+        assert "gift-plan-card-topline" in content
+        assert "gift-plan-card-meta-row" in content
+        assert "recipient-type-badge" in content
         assert (
-            "dashboard-action-item dashboard-action-item--incomplete dashboard-action-item--compact"
-        ) in content
-        assert (
-            "dashboard-action-item dashboard-action-item--upcoming dashboard-action-item--compact"
-        ) in content
-        assert (
-            "dashboard-action-list dashboard-action-list--responsive "
-            "dashboard-action-list--paginated"
+            "dashboard-action-list gift-plan-card-grid dashboard-action-list--paginated"
         ) in content
         assert "dashboard-action-list--scrollable" not in content
+        assert "data-dashboard-action-card" in content
+        assert "dashboard-action-item" not in content
         assert "data-dashboard-action-paginated" in content
         assert "data-dashboard-pagination" in content
         assert 'id="dashboard-live"' in content
         assert "data-list-container" in content
         assert 'hx-trigger="refresh"' in content
         assert 'hx-select="#dashboard-live"' in content
-        assert (
-            "dashboard-action-item dashboard-action-item--stale dashboard-action-item--compact"
-        ) not in content
         assert content.index("Next actions") < content.index('class="stats-grid"')
 
     def test_dashboard_paginated_action_groups_render_all_items(self):

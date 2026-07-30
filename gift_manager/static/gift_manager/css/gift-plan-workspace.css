@@ -276,10 +276,10 @@
     overflow: hidden;
 }
 
-.gift-plan-workspace .gift-plan-status-badge,
-.gift-plan-workspace .gift-plan-due-badge,
-.gift-plan-workspace .gift-plan-tag-badge,
-.gift-plan-workspace .recipient-type-badge {
+.gift-plan-card .gift-plan-status-badge,
+.gift-plan-card .gift-plan-due-badge,
+.gift-plan-card .gift-plan-tag-badge,
+.gift-plan-card .recipient-type-badge {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -293,16 +293,16 @@
     padding-top: 0.125rem;
 }
 
-.gift-plan-workspace .gift-plan-status-badge,
-.gift-plan-workspace .gift-plan-due-badge,
-.gift-plan-workspace .gift-plan-tag-badge {
+.gift-plan-card .gift-plan-status-badge,
+.gift-plan-card .gift-plan-due-badge,
+.gift-plan-card .gift-plan-tag-badge {
     gap: 0.25rem;
     min-height: 1.5rem;
     padding: 0.18rem 0.45rem;
     font-size: 0.7rem;
 }
 
-.gift-plan-workspace .recipient-type-badge {
+.gift-plan-card .recipient-type-badge {
     padding: 0.1rem 0.4rem;
     font-size: 0.68rem;
 }
