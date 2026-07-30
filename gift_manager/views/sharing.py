@@ -26,14 +26,21 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.permissions import get_permission
 
 logger = logging.getLogger(__name__)
+
+NON_FRIEND_SHARE_ERROR = "Objects can only be shared with friends."
+UNSHAREABLE_OBJECT_ERROR = "One or more selected objects cannot be shared."
+INSUFFICIENT_SHARE_PERMISSION_ERROR = "You do not have permission to share this object."
+PERMISSION_ESCALATION_ERROR = "You cannot grant a higher permission than your own."
 
 
 class ShareObjectsView(LoginRequiredMixin, View):
     """View for sharing objects with friends."""
 
     template_name = "gift_manager/share_objects.html"
+    minimum_share_permission = PermissionLevel.EDITOR
 
     def get(self, request):
         """Display the sharing form."""
@@ -140,7 +147,10 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
                 if selection["person_ids"]:
                     shared_items["persons"] = self._share_persons(
-                        selection["person_ids"], friends, permission_level
+                        selection["person_ids"],
+                        friends,
+                        permission_level,
+                        actor=request.user,
                     )
 
                 if selection["person_group_ids"]:
@@ -150,21 +160,31 @@ class ShareObjectsView(LoginRequiredMixin, View):
                         share_members=share_group_persons,
                         share_children=share_child_groups,
                         permission_level=permission_level,
+                        actor=request.user,
                     )
 
                 if selection["gift_ids"]:
                     shared_items["gifts"] = self._share_gifts(
-                        selection["gift_ids"], friends, permission_level
+                        selection["gift_ids"],
+                        friends,
+                        permission_level,
+                        actor=request.user,
                     )
 
                 if selection["event_ids"]:
                     shared_items["events"] = self._share_events(
-                        selection["event_ids"], friends, permission_level
+                        selection["event_ids"],
+                        friends,
+                        permission_level,
+                        actor=request.user,
                     )
 
                 if selection["relation_ids"]:
                     shared_items["relations"] = self._share_relations(
-                        selection["relation_ids"], friends, permission_level
+                        selection["relation_ids"],
+                        friends,
+                        permission_level,
+                        actor=request.user,
                     )
 
             # Success message
@@ -208,8 +228,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
         Returns:
             Sequence of selected users
         """
-        friend_ids = request.POST.getlist("friends")
-        return User.objects.filter(id__in=friend_ids)
+        friend_ids = self._parse_user_ids(request.POST.getlist("friends"))
+        if not friend_ids:
+            return []
+
+        allowed_friend_profiles = request.user.profile.friends.all()
+        friends = list(
+            User.objects.filter(id__in=friend_ids, profile__in=allowed_friend_profiles)
+            .select_related("profile")
+            .order_by("username")
+        )
+        found_friend_ids = {friend.id for friend in friends}
+        if found_friend_ids != friend_ids:
+            logger.warning(
+                "User %s tried to share with non-friend or unknown users: %s",
+                request.user,
+                sorted(friend_ids - found_friend_ids),
+            )
+            raise PermissionDenied(NON_FRIEND_SHARE_ERROR)
+
+        return friends
+
+    def _parse_user_ids(self, raw_ids: list[str]) -> set[int]:
+        """Parse posted user IDs and reject malformed values."""
+        try:
+            return {int(raw_id) for raw_id in raw_ids}
+        except (TypeError, ValueError) as e:
+            raise ValidationError(gettext("Invalid friend selection.")) from e
 
     def _get_selection_from_request(self, request) -> dict[str, list[str]]:
         """Get the IDs of selected objects from the request.
@@ -229,7 +274,12 @@ class ShareObjectsView(LoginRequiredMixin, View):
         }
 
     def _share_persons(
-        self, person_ids: list[str], friends: Sequence[User], permission_level: int
+        self,
+        person_ids: list[str],
+        friends: Sequence[User],
+        permission_level: int,
+        *,
+        actor: User,
     ) -> int:
         """Share selected persons with selected friends.
 
@@ -237,15 +287,23 @@ class ShareObjectsView(LoginRequiredMixin, View):
             person_ids: List of person IDs to share
             friends: Sequence of friends to share with
             permission_level: Permission level to apply
+            actor: User performing the share
 
         Returns:
             Number of shared persons
         """
-        persons = Person.objects.filter(person_id__in=person_ids)
+        persons = self._get_shareable_objects(
+            actor,
+            Person,
+            "person_id",
+            person_ids,
+            permission_level,
+            object_label="persons",
+        )
 
         for person in persons:
             for friend in friends:
-                create_or_update_permission(friend, person, permission_level=permission_level)
+                self._share_object_with_friend(friend, person, permission_level)
 
         return len(persons)
 
@@ -257,6 +315,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
         share_members: bool = False,
         share_children: bool = False,
         permission_level: int,
+        actor: User,
     ) -> int:
         """Share selected groups with selected friends.
 
@@ -266,11 +325,19 @@ class ShareObjectsView(LoginRequiredMixin, View):
             share_members: If True, the persons in the groups are also shared
             share_children: If True, all child groups are also shared
             permission_level: Permission level to apply
+            actor: User performing the share
 
         Returns:
             Number of shared groups
         """
-        groups = PersonGroup.objects.filter(group_id__in=person_group_ids)
+        groups = self._get_shareable_objects(
+            actor,
+            PersonGroup,
+            "group_id",
+            person_group_ids,
+            permission_level,
+            object_label="person groups",
+        )
 
         # Collect all groups to share (including children if requested)
         all_groups_to_share = set()
@@ -280,25 +347,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
                 # Add all descendant groups
                 all_groups_to_share.update(group.get_descendants())
 
+        for group in all_groups_to_share:
+            self._validate_share_permission(actor, group, permission_level, "person groups")
+
+            if share_members:
+                for person in group.person_set.all():
+                    self._validate_share_permission(actor, person, permission_level, "persons")
+
         # Share all groups
         for group in all_groups_to_share:
             for friend in friends:
                 with transaction.atomic():
-                    create_or_update_permission(
-                        friend, group, permission_level=permission_level, object_attr="group"
-                    )
+                    self._share_object_with_friend(friend, group, permission_level)
 
                     # If requested, also share the persons in the group
                     if share_members:
                         for person in group.person_set.all():
-                            create_or_update_permission(
-                                friend, person, permission_level=permission_level
-                            )
+                            self._share_object_with_friend(friend, person, permission_level)
 
         return len(all_groups_to_share)
 
     def _share_gifts(
-        self, gift_ids: list[str], friends: Sequence[User], permission_level: int
+        self,
+        gift_ids: list[str],
+        friends: Sequence[User],
+        permission_level: int,
+        *,
+        actor: User,
     ) -> int:
         """Share selected gifts with selected friends.
 
@@ -306,20 +381,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
             gift_ids: List of gift IDs to share
             friends: Sequence of friends to share with
             permission_level: Permission level to apply
+            actor: User performing the share
 
         Returns:
             Number of shared gifts
         """
-        gifts = Gift.objects.filter(gift_id__in=gift_ids)
+        gifts = self._get_shareable_objects(
+            actor,
+            Gift,
+            "gift_id",
+            gift_ids,
+            permission_level,
+            object_label="gifts",
+        )
 
         for gift in gifts:
             for friend in friends:
-                create_or_update_permission(friend, gift, permission_level=permission_level)
+                self._share_object_with_friend(friend, gift, permission_level)
 
         return len(gifts)
 
     def _share_events(
-        self, event_ids: list[str], friends: Sequence[User], permission_level: int
+        self,
+        event_ids: list[str],
+        friends: Sequence[User],
+        permission_level: int,
+        *,
+        actor: User,
     ) -> int:
         """Share selected events with selected friends.
 
@@ -327,20 +415,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
             event_ids: List of event IDs to share
             friends: Sequence of friends to share with
             permission_level: Permission level to apply
+            actor: User performing the share
 
         Returns:
             Number of shared events
         """
-        events = Event.objects.filter(event_id__in=event_ids)
+        events = self._get_shareable_objects(
+            actor,
+            Event,
+            "event_id",
+            event_ids,
+            permission_level,
+            object_label="events",
+        )
 
         for event in events:
             for friend in friends:
-                create_or_update_permission(friend, event, permission_level=permission_level)
+                self._share_object_with_friend(friend, event, permission_level)
 
         return len(events)
 
     def _share_relations(
-        self, relation_ids: list[str], friends: Sequence[User], permission_level: int
+        self,
+        relation_ids: list[str],
+        friends: Sequence[User],
+        permission_level: int,
+        *,
+        actor: User,
     ) -> int:
         """Share selected relations with selected friends.
 
@@ -350,43 +451,133 @@ class ShareObjectsView(LoginRequiredMixin, View):
             relation_ids: List of relation IDs to share
             friends: Sequence of friends to share with
             permission_level: Permission level to apply
+            actor: User performing the share
 
         Returns:
             Number of shared relations
         """
-        relations = Relation.objects.filter(relation_id__in=relation_ids)
+        relations = self._get_shareable_objects(
+            actor,
+            Relation,
+            "relation_id",
+            relation_ids,
+            permission_level,
+            object_label="relations",
+        )
 
         for friend in friends:
             for relation in relations:
                 with transaction.atomic():
                     # Share the relation itself
-                    create_or_update_permission(friend, relation, permission_level=permission_level)
+                    self._share_object_with_friend(friend, relation, permission_level)
 
                     # Share the associated gift
                     if relation.gift:
-                        create_or_update_permission(
-                            friend, relation.gift, permission_level=permission_level
+                        self._validate_share_permission(
+                            actor, relation.gift, permission_level, "gifts"
                         )
+                        self._share_object_with_friend(friend, relation.gift, permission_level)
 
                     # Share the associated person
                     if relation.person:
-                        create_or_update_permission(
-                            friend, relation.person, permission_level=permission_level
+                        self._validate_share_permission(
+                            actor, relation.person, permission_level, "persons"
                         )
+                        self._share_object_with_friend(friend, relation.person, permission_level)
 
                     # Share the associated group
                     if relation.group:
-                        create_or_update_permission(
-                            friend,
-                            relation.group,
-                            permission_level=permission_level,
-                            object_attr="group",
+                        self._validate_share_permission(
+                            actor, relation.group, permission_level, "person groups"
                         )
+                        self._share_object_with_friend(friend, relation.group, permission_level)
 
                     # Share the associated event
                     if relation.event:
-                        create_or_update_permission(
-                            friend, relation.event, permission_level=permission_level
+                        self._validate_share_permission(
+                            actor, relation.event, permission_level, "events"
                         )
+                        self._share_object_with_friend(friend, relation.event, permission_level)
 
         return len(relations)
+
+    def _get_shareable_objects(
+        self,
+        actor: User,
+        model,
+        id_field: str,
+        object_ids: list[str],
+        permission_level: int,
+        *,
+        object_label: str,
+    ) -> list:
+        """Return selected objects only when every posted ID is shareable by the actor."""
+        requested_ids = {str(object_id) for object_id in object_ids}
+        if not requested_ids:
+            return []
+        if "" in requested_ids:
+            raise ValidationError(gettext("Invalid object selection."))
+
+        objects = list(
+            model.objects.accessible_by(actor).filter(**{f"{id_field}__in": requested_ids})
+        )
+        found_ids = {str(getattr(obj, id_field)) for obj in objects}
+        if found_ids != requested_ids:
+            logger.warning(
+                "User %s tried to share unauthorized or unknown %s: %s",
+                actor,
+                object_label,
+                sorted(requested_ids - found_ids),
+            )
+            raise PermissionDenied(UNSHAREABLE_OBJECT_ERROR)
+
+        for obj in objects:
+            self._validate_share_permission(actor, obj, permission_level, object_label)
+
+        return objects
+
+    def _validate_share_permission(
+        self, actor: User, obj, permission_level: int, object_label: str
+    ) -> None:
+        """Require editor-level share authority and block grants above actor permission."""
+        actor_permission = self._get_actor_permission(actor, obj)
+        if actor_permission < self.minimum_share_permission:
+            logger.warning(
+                "User %s with permission %s tried to share %s object %s",
+                actor,
+                actor_permission,
+                object_label,
+                obj,
+            )
+            raise PermissionDenied(INSUFFICIENT_SHARE_PERMISSION_ERROR)
+
+        if permission_level > actor_permission:
+            logger.warning(
+                "User %s with permission %s tried to grant permission %s on %s object %s",
+                actor,
+                actor_permission,
+                permission_level,
+                object_label,
+                obj,
+            )
+            raise PermissionDenied(PERMISSION_ESCALATION_ERROR)
+
+    def _get_actor_permission(self, actor: User, obj) -> int:
+        """Return actor permission, treating legacy linked Person owners as owners."""
+        if actor.is_superuser:
+            return PermissionLevel.OWNER
+
+        permission = get_permission(obj, actor)
+        if permission == PermissionLevel.NONE and getattr(obj, "user_link_id", None) == actor.id:
+            return PermissionLevel.OWNER
+        return permission
+
+    def _share_object_with_friend(self, friend: User, obj, permission_level: int) -> None:
+        """Create or update one object permission for a friend."""
+        object_attr = "group" if isinstance(obj, PersonGroup) else None
+        create_or_update_permission(
+            friend,
+            obj,
+            permission_level=permission_level,
+            object_attr=object_attr,
+        )
