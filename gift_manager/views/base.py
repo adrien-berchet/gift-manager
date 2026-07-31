@@ -39,6 +39,17 @@ class HTMXResponseMixin:
     close_modal = False
     close_offcanvas = False
 
+    @staticmethod
+    def build_hx_trigger_header(events) -> str:
+        """Return an HTMX trigger header from event names and event detail mappings."""
+        event_details = {}
+        for event in events:
+            if isinstance(event, str):
+                event_details[event] = {}
+            else:
+                event_details.update(event)
+        return json.dumps(event_details)
+
     def dispatch(self, request, *args, **kwargs):
         """Detect HTMX requests and store the flag."""
         self.is_htmx = request.headers.get("HX-Request") == "true"
@@ -78,18 +89,17 @@ class HTMXResponseMixin:
                 success_message = self.get_success_message()
                 if success_message:
                     triggers.append(
-                        json.dumps(
-                            {"showNotification": {"message": success_message, "type": "success"}}
-                        )
+                        {"showNotification": {"message": success_message, "type": "success"}}
                     )
 
             # For HTMX requests, don't redirect - return empty response with triggers
             if hasattr(response, "status_code") and response.status_code == 302:
                 response = HttpResponse("")
+                response["HX-Reswap"] = "none"
 
             # Set HX-Trigger header on the final response
             if triggers:
-                trigger_value = ", ".join(triggers)
+                trigger_value = self.build_hx_trigger_header(triggers)
                 response["HX-Trigger"] = trigger_value
                 logger.debug("[HTMXResponseMixin.form_valid] Set HX-Trigger: %s", trigger_value)
 
@@ -134,14 +144,12 @@ class HTMXResponseMixin:
                 success_message = self.get_success_message()
                 if success_message:
                     triggers.append(
-                        json.dumps(
-                            {"showNotification": {"message": success_message, "type": "success"}}
-                        )
+                        {"showNotification": {"message": success_message, "type": "success"}}
                     )
 
             # Set HX-Trigger header
             if triggers:
-                response["HX-Trigger"] = ", ".join(triggers)
+                response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
 
             # For HTMX requests, don't redirect - return empty response
             if hasattr(response, "status_code") and response.status_code == 302:
@@ -864,12 +872,10 @@ class DeleteSharedMixin:
                     triggers.append("modal:close")
 
                 triggers.append(
-                    json.dumps(
-                        {"showNotification": {"message": success_message, "type": "success"}}
-                    )
+                    {"showNotification": {"message": success_message, "type": "success"}}
                 )
 
-                response["HX-Trigger"] = ", ".join(triggers)
+                response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(triggers)
                 logger.debug("HTMX response - HX-Trigger: %s", response["HX-Trigger"])
                 return response
             # For regular requests, add message and redirect

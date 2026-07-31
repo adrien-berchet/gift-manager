@@ -295,10 +295,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const offcanvas = trigger.closest('.offcanvas');
 
         if (offcanvas) {
-            // Show loading state for forms in offcanvas
             if (trigger.tagName === 'FORM') {
-                const panelId = offcanvas.id;
-                showOffcanvasLoading(panelId);
+                offcanvas.classList.add('is-saving');
             }
         }
     });
@@ -310,6 +308,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (offcanvas) {
             const panelId = offcanvas.id;
+            offcanvas.classList.remove('is-saving');
             const isValidationResponse = trigger.tagName === 'FORM' &&
                 trigger.dataset.formType &&
                 (e.detail.xhr.status === 400 || e.detail.xhr.status === 422);

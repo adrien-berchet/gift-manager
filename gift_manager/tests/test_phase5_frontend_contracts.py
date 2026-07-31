@@ -13,6 +13,7 @@ def read(path: Path) -> str:
 
 def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
     base = read(TEMPLATE_ROOT / "base.html")
+    offcanvas = read(TEMPLATE_ROOT / "includes/offcanvas_base.html")
     partials = [
         TEMPLATE_ROOT / "includes/form_partial.html",
         TEMPLATE_ROOT / "includes/person_form_partial.html",
@@ -26,13 +27,27 @@ def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
     assert "htmx:beforeSwap" in base
     assert "xhr.status === 400 || xhr.status === 422" in base
     assert "showNotification('Changes saved successfully'" not in base
-    assert "triggerHeader" not in base
+    assert "parseHxTriggerEvents" in base
+    assert "dispatchManagedFormTriggerFallback" in base
+    assert "offcanvas:close" in base
+    assert "list:update" in base
     assert "escapeNotificationHtml(message)" in base
+    assert "function loadFormInPanel" in base
+    assert "loadFormInPanel(editUrl, target)" in base
+    assert "loadFormInPanel(createUrl, 'editPanel')" in base
+    assert "offcanvas.classList.add('is-saving')" in offcanvas
+    assert "showOffcanvasLoading(panelId);" not in offcanvas
 
     for partial in partials:
         content = read(partial)
         assert "data-form-type=" in content
         assert "hx-on::after-request" not in content
+
+    relation_form = read(TEMPLATE_ROOT / "includes/relation_form_partial.html")
+    assert 'hx-trigger="submit"' in relation_form
+    assert 'hx-target="this"' in relation_form
+    assert 'hx-swap="outerHTML"' in relation_form
+    assert 'hx-target="#offcanvasContent"' not in relation_form
 
 
 def test_status_updates_use_shared_helper_and_revert_contract():

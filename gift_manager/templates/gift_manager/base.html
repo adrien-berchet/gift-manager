@@ -996,6 +996,9 @@
             });
 
             // Offcanvas event handlers
+            let lastOffcanvasCloseAt = 0;
+            let lastListUpdateAt = 0;
+
             document.addEventListener('offcanvas:show', function(e) {
                 const target = e.detail?.target || 'editPanel';
                 const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById(target));
@@ -1003,13 +1006,16 @@
             });
 
             document.addEventListener('offcanvas:close', function(e) {
+                lastOffcanvasCloseAt = Date.now();
                 const target = e.detail?.target || 'editPanel';
+                resetPanelLoadingState(target);
                 const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById(target));
                 if (offcanvas) offcanvas.hide();
             });
 
             // List update event handler
             document.addEventListener('list:update', function(e) {
+                lastListUpdateAt = Date.now();
                 // Trigger HTMX refresh of list containers
                 const listContainers = document.querySelectorAll('[data-list-container]');
                 listContainers.forEach(container => {
@@ -1101,6 +1107,72 @@
                 }
             }
 
+            function resetPanelLoadingState(target) {
+                const panel = document.getElementById(target);
+                const loadingId = target === 'detailPanel' ? 'detailLoading' : 'offcanvasLoading';
+                const contentId = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
+                const loading = document.getElementById(loadingId);
+                const content = document.getElementById(contentId);
+
+                if (panel) {
+                    panel.classList.remove('is-saving');
+                }
+                if (loading) {
+                    loading.classList.add('d-none');
+                }
+                if (content) {
+                    content.classList.remove('d-none');
+                }
+            }
+
+            function parseHxTriggerEvents(headerValue) {
+                if (!headerValue) return {};
+
+                const trimmed = headerValue.trim();
+                if (trimmed.startsWith('{')) {
+                    try {
+                        return JSON.parse(trimmed);
+                    } catch (error) {
+                        console.error('Could not parse HX-Trigger header:', error);
+                        return {};
+                    }
+                }
+
+                return trimmed
+                    .split(',')
+                    .map((eventName) => eventName.trim())
+                    .filter(Boolean)
+                    .reduce((events, eventName) => {
+                        events[eventName] = {};
+                        return events;
+                    }, {});
+            }
+
+            function dispatchManagedFormTriggerFallback(xhr) {
+                const events = parseHxTriggerEvents(xhr.getResponseHeader('HX-Trigger'));
+                const hasOffcanvasClose = Object.prototype.hasOwnProperty.call(events, 'offcanvas:close');
+                const hasListUpdate = Object.prototype.hasOwnProperty.call(events, 'list:update');
+
+                if (!hasOffcanvasClose && !hasListUpdate) return;
+
+                window.setTimeout(function() {
+                    const nativeEventWindowMs = 250;
+                    const now = Date.now();
+
+                    if (hasOffcanvasClose && now - lastOffcanvasCloseAt > nativeEventWindowMs) {
+                        document.dispatchEvent(new CustomEvent('offcanvas:close', {
+                            detail: events['offcanvas:close'] || {}
+                        }));
+                    }
+
+                    if (hasListUpdate && now - lastListUpdateAt > nativeEventWindowMs) {
+                        document.dispatchEvent(new CustomEvent('list:update', {
+                            detail: events['list:update'] || {}
+                        }));
+                    }
+                }, 50);
+            }
+
             // Backwards-compatible entry point for older partials. Current form partials use HX-Trigger.
             window.handleFormResponse = function(event) {
                 const xhr = event.detail.xhr;
@@ -1154,6 +1226,8 @@
                     if (xhr.status >= 500) {
                         // Server error
                         showNotification('A server error occurred. Please try again.', 'error');
+                    } else if (e.detail.successful) {
+                        dispatchManagedFormTriggerFallback(xhr);
                     }
                 }
 
@@ -1313,6 +1387,58 @@
                 });
             });
 
+            function processPanelForms(container) {
+                htmx.process(container);
+
+                const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
+                htmxForms.forEach(form => {
+                    htmx.process(form);
+                });
+
+                if (window.FormInitializer) {
+                    const forms = container.querySelectorAll('form[data-form-type]');
+                    forms.forEach(form => {
+                        window.FormInitializer.initForm(form);
+                    });
+                }
+            }
+
+            function loadFormInPanel(formUrl, target = 'editPanel') {
+                if (!formUrl) return;
+
+                showOffcanvasLoading(target);
+
+                const panel = document.getElementById(target);
+                const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
+                offcanvas.show();
+
+                fetch(formUrl, {
+                    headers: {
+                        'HX-Request': 'true',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
+                    const container = document.getElementById(targetBody);
+                    container.innerHTML = html;
+                    processPanelForms(container);
+                })
+                .catch(error => {
+                    console.error('Error loading form:', error);
+                    const errorMessage = error.message.includes('403')
+                        ? 'You do not have permission to perform this action.'
+                        : 'Error loading form. Please try again.';
+                    showOffcanvasError(errorMessage, target);
+                });
+            }
+
             // Handle edit/create buttons
             document.addEventListener('click', function(e) {
                 if (e.target.matches('[data-action="edit"]') || e.target.closest('[data-action="edit"]')) {
@@ -1321,60 +1447,7 @@
                     const editUrl = button.getAttribute('href') || button.dataset.editUrl;
                     const target = button.dataset.target || 'editPanel';
 
-                    if (editUrl) {
-                        // Show loading state
-                        showOffcanvasLoading(target);
-
-                        // Show the panel first (reuse existing instance to avoid state corruption)
-                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById(target));
-                        offcanvas.show();
-
-                        // Load edit form content
-                        fetch(editUrl, {
-                            headers: {
-                                'HX-Request': 'true',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            }
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}`);
-                            }
-                            return response.text();
-                        })
-                        .then(html => {
-                            const targetBody = target === 'detailPanel' ? 'detailContent' : 'offcanvasContent';
-                            const container = document.getElementById(targetBody);
-                            container.innerHTML = html;
-
-                            // Process HTMX attributes on the new content
-                            // First process the container
-                            htmx.process(container);
-
-                            // Then explicitly process any forms inside
-                            const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
-                            htmxForms.forEach(form => {
-                                                                htmx.process(form);
-                            });
-
-                            // Initialize forms with FormInitializer
-                            if (window.FormInitializer) {
-                                const forms = container.querySelectorAll('form[data-form-type]');
-                                forms.forEach(form => {
-                                                                        window.FormInitializer.initForm(form);
-                                });
-                            }
-
-                            hideOffcanvasLoading(target);
-                        })
-                        .catch(error => {
-                            console.error('Error loading edit form:', error);
-                            const errorMessage = error.message.includes('403')
-                                ? 'You do not have permission to perform this action.'
-                                : 'Error loading form. Please try again.';
-                            showOffcanvasError(errorMessage, target);
-                        });
-                    }
+                    loadFormInPanel(editUrl, target);
                 }
             });
 
@@ -1385,59 +1458,7 @@
                     const button = e.target.matches('[data-action="create"]') ? e.target : e.target.closest('[data-action="create"]');
                     const createUrl = button.getAttribute('href') || button.dataset.createUrl;
 
-                    if (createUrl) {
-                        // Show loading state
-                        showOffcanvasLoading('editPanel');
-
-                        // Show the panel first (reuse existing instance to avoid state corruption)
-                        const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('editPanel'));
-                        offcanvas.show();
-
-                        // Load create form content
-                        fetch(createUrl, {
-                            headers: {
-                                'HX-Request': 'true',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            }
-                        })
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`HTTP ${response.status}`);
-                            }
-                            return response.text();
-                        })
-                        .then(html => {
-                            const container = document.getElementById('offcanvasContent');
-                            container.innerHTML = html;
-
-                            // Process HTMX attributes on the new content
-                            // First process the container
-                            htmx.process(container);
-
-                            // Then explicitly process any forms inside
-                            const htmxForms = container.querySelectorAll('form[hx-post], form[hx-get]');
-                            htmxForms.forEach(form => {
-                                                                htmx.process(form);
-                            });
-
-                            // Initialize forms with FormInitializer
-                            if (window.FormInitializer) {
-                                const forms = container.querySelectorAll('form[data-form-type]');
-                                forms.forEach(form => {
-                                                                        window.FormInitializer.initForm(form);
-                                });
-                            }
-
-                            hideOffcanvasLoading('editPanel');
-                        })
-                        .catch(error => {
-                            console.error('Error loading create form:', error);
-                            const errorMessage = error.message.includes('403')
-                                ? 'You do not have permission to perform this action.'
-                                : 'Error loading form. Please try again.';
-                            showOffcanvasError(errorMessage, 'editPanel');
-                        });
-                    }
+                    loadFormInPanel(createUrl, 'editPanel');
                 }
             });
 

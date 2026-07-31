@@ -1,6 +1,7 @@
 {% load i18n %}
 
 <form method="post"
+      id="relation-form"
       {% if object %}
       action="{% url 'gift_manager:relation_edit' object.relation_id %}"
       hx-post="{% url 'gift_manager:relation_edit' object.relation_id %}"
@@ -11,11 +12,12 @@
       action="{% url 'gift_manager:relation_create' %}"
       hx-post="{% url 'gift_manager:relation_create' %}"
       {% endif %}
-      hx-target="#offcanvasContent"
-      hx-swap="innerHTML"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
       hx-indicator="#offcanvasLoading"
       class="offcanvas-form relation-form"
-      data-form-type="{{ form_type|default:'relation' }}">
+      data-form-type="{{ form_type|default:'relation-edit' }}">
   {% csrf_token %}
 
   <div class="form-fields">
