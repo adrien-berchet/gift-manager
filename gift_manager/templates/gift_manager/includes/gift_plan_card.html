@@ -72,6 +72,74 @@
     {% endif %}
 
     <div class="gift-plan-card-actions">
+        {% for action in card.quick_actions %}
+            {% if action.kind == "status" %}
+            <form class="gift-plan-quick-action-form"
+                  hx-post="{{ card.quick_action_url }}"
+                  hx-swap="none">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="submit"
+                        class="btn btn-sm {{ action.button_class }}"
+                        data-action="quick-{{ action.name }}">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+            </form>
+            {% elif action.kind == "edit" %}
+            <a href="{{ card.edit_url }}"
+               class="btn btn-sm {{ action.button_class }}"
+               data-action="edit"
+               data-edit-url="{{ card.edit_url }}">
+                <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+            </a>
+            {% elif action.kind == "date" %}
+            <form class="gift-plan-date-action-form"
+                  action="{{ card.quick_action_url }}"
+                  method="post"
+                  data-quick-action-url="{{ card.quick_action_url }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="button"
+                        class="btn btn-sm {{ action.button_class }} gift-plan-date-action-button"
+                        data-action="quick-{{ action.name }}"
+                        data-gift-plan-date-picker-button
+                        data-current-due-date="{{ card.relation.due_date|date:'Y-m-d' }}"
+                        aria-haspopup="dialog"
+                        aria-expanded="false">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+            </form>
+            {% elif action.kind == "planning" %}
+            <form class="gift-plan-planning-action-form"
+                  action="{{ card.quick_action_url }}"
+                  method="post"
+                  data-quick-action-url="{{ card.quick_action_url }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="button"
+                        class="btn btn-sm {{ action.button_class }}"
+                        data-action="quick-{{ action.name }}"
+                        data-gift-plan-planning-button
+                        data-current-event="{% if card.relation.event %}{{ card.relation.event.event_id }}{% endif %}"
+                        data-current-due-date="{{ card.relation.due_date|date:'Y-m-d' }}"
+                        data-event-label="{% trans 'Event' %}"
+                        data-due-date-label="{% trans 'Due date' %}"
+                        data-choose-event-label="{% trans 'Choose event' %}"
+                        data-cancel-label="{% trans 'Cancel' %}"
+                        data-save-label="{% trans 'Save' %}"
+                        aria-haspopup="dialog"
+                        aria-expanded="false">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+                <template data-gift-plan-event-options>
+                    {% for event in card.event_options %}
+                    <option value="{{ event.event_id }}"
+                            {% if card.relation.event_id == event.id %}selected{% endif %}>{{ event.name }}</option>
+                    {% endfor %}
+                </template>
+            </form>
+            {% endif %}
+        {% endfor %}
         <a href="{{ card.detail_url }}"
            class="btn btn-sm btn-outline-secondary"
            data-action="detail"
@@ -79,12 +147,14 @@
             <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Details" %}
         </a>
         {% if card.can_edit %}
+        {% if not card.has_contextual_edit_action %}
         <a href="{{ card.edit_url }}"
            class="btn btn-sm btn-primary"
            data-action="edit"
            data-edit-url="{{ card.edit_url }}">
             <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Edit" %}
         </a>
+        {% endif %}
         {% else %}
         <button type="button"
                 class="btn btn-sm btn-outline-secondary"

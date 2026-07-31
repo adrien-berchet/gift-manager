@@ -159,6 +159,11 @@ urlpatterns = [
         name="relation_edit",
     ),
     path(
+        "relations/<uuid:pk>/quick-action/",
+        views.relation_quick_action,
+        name="relation_quick_action",
+    ),
+    path(
         "relations/<uuid:pk>/delete/",
         views.RelationDeleteView.as_view(),
         name="relation_delete",

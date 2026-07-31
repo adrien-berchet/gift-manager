@@ -87,6 +87,7 @@ class TestRelationList:
         assert "Birthday" in content
         assert "Books" in content
         assert "Unique Comment for Testing" in content
+        assert 'data-action="quick-given"' in content
         assert 'data-action="detail"' in content
         assert 'data-action="edit"' in content
         assert "/relations/advanced/" in content
@@ -130,6 +131,7 @@ class TestRelationList:
 
         assert cards_by_relation_id[self.relation.relation_id]["can_edit"] is False
         assert cards_by_relation_id[self.relation.relation_id]["can_delete"] is False
+        assert cards_by_relation_id[self.relation.relation_id]["quick_actions"] == []
         assert cards_by_relation_id[editor_relation.relation_id]["can_edit"] is True
         assert cards_by_relation_id[editor_relation.relation_id]["can_delete"] is False
         assert cards_by_relation_id[owner_relation.relation_id]["can_edit"] is True
@@ -151,6 +153,100 @@ class TestRelationList:
         get_permission.assert_called_once_with(self.relation, self.user)
         assert card["can_edit"] is True
         assert card["can_delete"] is False
+
+    def test_workspace_cards_expose_contextual_quick_actions(
+        self,
+        event_factory,
+        gift_factory,
+        relation_factory,
+    ):
+        """Workspace cards expose useful shortcuts for their current bucket."""
+        today = timezone.localdate()
+        idea_status = self.relation.status.__class__.objects.get(status_en="Idea")
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+
+        due_soon_relation = self.relation
+        due_soon_relation.gift.name = "Due soon quick action gift"
+        due_soon_relation.gift.save()
+        due_soon_relation.status = planned_status
+        due_soon_relation.event = event_factory()
+        due_soon_relation.due_date = today + timedelta(days=2)
+        due_soon_relation.save()
+
+        later_relation = relation_factory(
+            gift=gift_factory(name="Later quick action gift"),
+            event=event_factory(),
+            status=planned_status,
+            due_date=today + timedelta(days=20),
+        )
+        needs_details_relation = relation_factory(
+            gift=gift_factory(name="Needs details quick action gift"),
+            event=event_factory(),
+            status=planned_status,
+            due_date=None,
+        )
+        idea_relation = relation_factory(
+            gift=gift_factory(name="Idea quick action gift"),
+            event=None,
+            status=idea_status,
+            due_date=None,
+        )
+        planning_event = event_factory(name="Visible planning event", shared_with=[self.user])
+        private_event = event_factory(name="Hidden planning event")
+
+        for relation in (
+            due_soon_relation,
+            later_relation,
+            needs_details_relation,
+            idea_relation,
+        ):
+            create_or_update_permission(
+                self.user,
+                relation,
+                permission_level=PermissionLevel.EDITOR,
+            )
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        cards_by_gift_name = {
+            card["relation"].gift.name: card
+            for group in response.context["workspace_groups"]
+            for card in group["cards"]
+        }
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Due soon quick action gift"]["quick_actions"]
+        ] == ["given", "purchased"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Later quick action gift"]["quick_actions"]
+        ] == ["purchased"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Needs details quick action gift"]["quick_actions"]
+        ] == ["add_details", "set_date"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Idea quick action gift"]["quick_actions"]
+        ] == ["plan", "abandoned"]
+        assert planning_event in cards_by_gift_name["Idea quick action gift"]["event_options"]
+        assert private_event not in cards_by_gift_name["Idea quick action gift"]["event_options"]
+
+        content = response.content.decode()
+        assert 'data-action="quick-given"' in content
+        assert 'data-action="quick-purchased"' in content
+        assert 'data-action="quick-plan"' in content
+        assert "data-gift-plan-planning-button" in content
+        assert "Visible planning event" in content
+        assert "Hidden planning event" not in content
+        assert 'data-action="quick-abandoned"' in content
+        assert "gift-plan-date-action-button" in content
+        assert "data-gift-plan-date-picker-button" in content
+        assert "gift-plan-quick-actions.js" in content
+        assert 'type="date"' not in content
+        assert "gift-plan-date-action-input" not in content
+        assert "form-control form-control-sm gift-plan-date-action-input" not in content
 
     def test_advanced_grid_status_controls_are_permission_aware(self):
         """The retained Grid.js status control should not invite viewer-only edits."""

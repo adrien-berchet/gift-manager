@@ -293,6 +293,89 @@
     padding-top: 0.125rem;
 }
 
+.gift-plan-quick-action-form,
+.gift-plan-date-action-form,
+.gift-plan-planning-action-form {
+    margin: 0;
+}
+
+.gift-plan-date-action-form,
+.gift-plan-planning-action-form {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
+.gift-plan-date-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 0;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.gift-plan-date-picker-source {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gift-plan-quick-date-picker {
+    z-index: 1080;
+}
+
+.gift-plan-plan-popover {
+    position: fixed;
+    z-index: 1080;
+    display: block;
+    width: min(20rem, calc(100vw - 1rem));
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-xl);
+}
+
+.gift-plan-plan-popover[hidden] {
+    display: none;
+}
+
+.gift-plan-plan-panel-form {
+    display: grid;
+    gap: 0.625rem;
+}
+
+.gift-plan-plan-field {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.gift-plan-plan-field .form-label {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.gift-plan-plan-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.125rem;
+}
+
 .gift-plan-card .gift-plan-status-badge,
 .gift-plan-card .gift-plan-due-badge,
 .gift-plan-card .gift-plan-tag-badge {

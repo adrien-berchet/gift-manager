@@ -16,6 +16,7 @@ Templates tested:
 import re
 
 import pytest
+from django.utils import timezone
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
@@ -891,6 +892,127 @@ class TestRelationListGridLoading:
             "Workspace Refresh Kite"
         )
 
+    def test_workspace_quick_actions_work_after_manual_workspace_refresh(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Status quick actions should remain HTMX-enabled after workspace replacement."""
+        gift = Gift.objects.create(name="Workspace Single Click Given Gift")
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            gift,
+            permission_level=PermissionLevel.OWNER,
+        )
+        relation = Relation.objects.create(
+            person=seed_data_e2e.persons["dad"],
+            gift=gift,
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate(),
+            comment="Given should work after refresh",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/", wait_until="domcontentloaded")
+        expect(page.locator(".gift-plan-workspace")).to_contain_text(
+            "Workspace Single Click Given Gift"
+        )
+
+        first_refresh = page.evaluate(
+            """() => new Promise((resolve) => {
+                const timeout = setTimeout(() => resolve(false), 5000);
+                document.addEventListener('gift-plan-workspace:refreshed', () => {
+                    clearTimeout(timeout);
+                    resolve(true);
+                }, { once: true });
+                document.dispatchEvent(new CustomEvent('list:update'));
+            })"""
+        )
+        assert first_refresh is True
+
+        card = page.locator(".gift-plan-card", has_text="Workspace Single Click Given Gift").first
+        expect(card).to_be_visible()
+
+        page.evaluate(
+            """() => {
+                window.__givenRefreshDone = false;
+                document.addEventListener('gift-plan-workspace:refreshed', () => {
+                    window.__givenRefreshDone = true;
+                }, { once: true });
+            }"""
+        )
+        card.locator("[data-action='quick-given']").first.click()
+        page.wait_for_function("window.__givenRefreshDone === true", timeout=5_000)
+
+        relation.refresh_from_db()
+        assert relation.status == seed_data_e2e.statuses["given"]
+
+    def test_workspace_plan_action_collects_event_and_due_date(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Planning an idea should collect concrete planning details in a detached panel."""
+        gift = Gift.objects.create(name="Workspace Plan Panel Gift")
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            gift,
+            permission_level=PermissionLevel.OWNER,
+        )
+        event = seed_data_e2e.events["christmas"]
+        relation = Relation.objects.create(
+            person=seed_data_e2e.persons["dad"],
+            gift=gift,
+            event=None,
+            status=seed_data_e2e.statuses["idea"],
+            due_date=None,
+            comment="Planning panel should fill details",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/", wait_until="domcontentloaded")
+        page.wait_for_function("typeof window.flatpickr === 'function'", timeout=10_000)
+
+        card = page.locator(".gift-plan-card", has_text="Workspace Plan Panel Gift").first
+        panel = page.locator(".gift-plan-plan-popover").first
+        picker = page.locator(".flatpickr-calendar.gift-plan-quick-date-picker").first
+        expect(card).to_be_visible()
+
+        card.locator("[data-gift-plan-planning-button]").first.click()
+        expect(panel).to_be_visible()
+        panel.locator('select[name="event"]').select_option(str(event.event_id))
+        panel.locator('input[name="due_date"]').click()
+        expect(picker).to_be_visible()
+        picker.locator(
+            ".flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)"
+        ).first.click()
+        expect(panel).to_be_visible()
+        selected_due_date = panel.locator('input[name="due_date"]').input_value()
+        assert selected_due_date
+
+        page.evaluate(
+            """() => {
+                window.__planRefreshDone = false;
+                document.addEventListener('gift-plan-workspace:refreshed', () => {
+                    window.__planRefreshDone = true;
+                }, { once: true });
+            }"""
+        )
+        panel.locator("[data-gift-plan-plan-save]").click()
+        page.wait_for_function("window.__planRefreshDone === true", timeout=5_000)
+
+        relation.refresh_from_db()
+        assert relation.status == seed_data_e2e.statuses["planned"]
+        assert relation.event == event
+        assert relation.due_date.isoformat() == selected_due_date
+
     def test_workspace_cards_use_equal_height_compact_layout(
         self, page: Page, live_server, seed_data_e2e
     ):
@@ -1068,6 +1190,76 @@ class TestRelationListGridLoading:
         assert mobile_layout["cardLeft"] >= 0
         assert mobile_layout["cardRight"] <= mobile_layout["viewportWidth"]
         assert mobile_layout["actionsVisible"] is True
+
+    def test_workspace_set_date_action_opens_detached_picker_without_resizing_card(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """The Set date quick action should open a detached picker and refresh the card."""
+        gift = Gift.objects.create(name="Quick Date Browser Gift")
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            gift,
+            permission_level=PermissionLevel.OWNER,
+        )
+        relation = Relation.objects.create(
+            person=seed_data_e2e.persons["dad"],
+            gift=gift,
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=None,
+            comment="Needs a date from the quick action",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        page.set_viewport_size({"width": 1280, "height": 800})
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/", wait_until="networkidle")
+        page.wait_for_function("typeof window.flatpickr === 'function'", timeout=10_000)
+
+        card = page.locator(".gift-plan-card", has_text="Quick Date Browser Gift").first
+        button = card.locator("[data-gift-plan-date-picker-button]").first
+        picker = page.locator(".flatpickr-calendar.gift-plan-quick-date-picker").first
+
+        expect(card).to_be_visible()
+        expect(button).to_be_visible()
+
+        card.scroll_into_view_if_needed()
+        page.evaluate("window.scrollBy(0, -80)")
+        before_scroll = page.evaluate("window.scrollY")
+        before_box = card.bounding_box()
+        button.click()
+        expect(picker).to_be_visible()
+        after_box = card.bounding_box()
+
+        assert before_box is not None
+        assert after_box is not None
+        assert abs(after_box["width"] - before_box["width"]) <= 1
+        assert abs(after_box["height"] - before_box["height"]) <= 1
+
+        page.evaluate(
+            """() => {
+                window.__giftPlanWorkspaceRefreshed = false;
+                document.addEventListener(
+                    'gift-plan-workspace:refreshed',
+                    () => { window.__giftPlanWorkspaceRefreshed = true; },
+                    { once: true }
+                );
+            }"""
+        )
+        picker.locator(
+            ".flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)"
+        ).first.click()
+        page.wait_for_function("window.__giftPlanWorkspaceRefreshed === true", timeout=5_000)
+        after_scroll = page.evaluate("window.scrollY")
+
+        relation.refresh_from_db()
+        assert relation.due_date is not None
+        assert abs(after_scroll - before_scroll) <= 2
+        expect(picker).to_have_count(0)
 
 
 @pytest.mark.frontend

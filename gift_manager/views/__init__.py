@@ -84,6 +84,7 @@ from .relation import RelationListView
 from .relation import RelationStatusDetailView
 from .relation import RelationStatusListView
 from .relation import RelationUpdateView
+from .relation import relation_quick_action
 from .relation import update_relation_status
 
 # Sharing views
@@ -155,6 +156,7 @@ __all__ = [
     "get_user",
     "global_search",
     "home",
+    "relation_quick_action",
     "remove_person_from_group",
     "reparent_group",
     "update_relation_status",

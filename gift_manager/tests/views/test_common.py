@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
@@ -226,6 +227,115 @@ class TestHomeDashboard:
         content = response.content.decode()
         assert "Due soon paginated item 4" in content
         assert "Needs details paginated item 4" in content
+
+    def test_dashboard_cards_expose_editor_quick_actions(self):
+        today = timezone.localdate()
+        planned = RelationStatusFactory(status="Planned")
+        event = EventFactory(shared_with=[self.user])
+        overdue_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard overdue action"),
+            event=event,
+            status=planned,
+            due_date=today - timedelta(days=1),
+            shared_with=[self.user],
+        )
+        due_soon_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard soon action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=2),
+            shared_with=[self.user],
+        )
+        later_upcoming_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard later upcoming action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        missing_event_upcoming_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard missing event upcoming action"),
+            event=None,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        needs_details_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard details action"),
+            event=None,
+            status=planned,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        stale_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard stale action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=60),
+            shared_with=[self.user],
+        )
+        stale_relation.__class__.objects.filter(pk=stale_relation.pk).update(
+            creation_date=timezone.now() - timedelta(days=45)
+        )
+
+        for relation in (
+            overdue_relation,
+            due_soon_relation,
+            later_upcoming_relation,
+            missing_event_upcoming_relation,
+            needs_details_relation,
+            stale_relation,
+        ):
+            create_or_update_permission(
+                self.user,
+                relation,
+                permission_level=PermissionLevel.EDITOR,
+            )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        cards_by_gift_name = {
+            card["relation"].gift.name: card
+            for group in response.context["dashboard_action_groups"]
+            for card in group["items"]
+        }
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard overdue action"]["quick_actions"]
+        ] == ["given"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard soon action"]["quick_actions"]
+        ] == ["given", "purchased"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard later upcoming action"]["quick_actions"]
+        ] == ["purchased"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard missing event upcoming action"][
+                "quick_actions"
+            ]
+        ] == ["add_details", "set_date"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard details action"]["quick_actions"]
+        ] == ["add_details", "set_date"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard stale action"]["quick_actions"]
+        ] == ["purchased"]
+
+        content = response.content.decode()
+        assert 'data-action="quick-given"' in content
+        assert 'data-action="quick-purchased"' in content
+        assert "gift-plan-date-action-button" in content
+        assert "data-gift-plan-date-picker-button" in content
+        assert "gift-plan-quick-actions.js" in content
+        assert 'type="date"' not in content
+        assert "gift-plan-date-action-input" not in content
+        assert "form-control form-control-sm gift-plan-date-action-input" not in content
 
     def test_dashboard_surfaces_unassigned_gifts_and_upcoming_occasion_recipients(self):
         today = timezone.localdate()

@@ -16,6 +16,8 @@ from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
+from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
+from gift_manager.gift_plan_actions import gift_plan_has_contextual_edit_action
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -34,6 +36,7 @@ ModelType: TypeAlias = type[Model]
 SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 DASHBOARD_ACTION_WINDOW_DAYS = 30
+DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
 DASHBOARD_STALE_AFTER_DAYS = 30
 DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
 
@@ -99,14 +102,44 @@ def _next_event_occurrence(event: Event, today: date, window_end: date) -> date 
     return None
 
 
-def _build_dashboard_action_item(relation: Relation, action_key: str, user) -> dict:
+def _dashboard_quick_action_urgency_key(
+    relation: Relation,
+    urgency_key: str,
+    today: date,
+) -> str:
+    """Return the urgency key used to choose dashboard quick actions."""
+    if (
+        urgency_key == "due_soon"
+        and relation.due_date
+        and relation.due_date > today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
+    ):
+        if _gift_plan_requires_planning_fields(relation) and relation.event_id is None:
+            return "needs_details"
+        return "later"
+    return urgency_key
+
+
+def _build_dashboard_action_item(
+    relation: Relation,
+    action_key: str,
+    user,
+    *,
+    today: date,
+) -> dict:
     """Return presentation data for a dashboard gift-plan action."""
     urgency_key = {
         "upcoming": "due_soon",
         "incomplete": "needs_details",
         "stale": "later",
     }.get(action_key, action_key)
+    quick_action_urgency_key = _dashboard_quick_action_urgency_key(relation, urgency_key, today)
     permission = PermissionService.get_permission(relation, user)
+    can_edit = permission >= PermissionLevel.EDITOR
+    quick_actions = build_gift_plan_quick_actions(
+        relation,
+        quick_action_urgency_key,
+        can_edit=can_edit,
+    )
     return {
         "relation": relation,
         "action_key": action_key,
@@ -114,7 +147,13 @@ def _build_dashboard_action_item(relation: Relation, action_key: str, user) -> d
         "status_class": _gift_plan_status_class(relation.status),
         "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
         "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
-        "can_edit": permission >= PermissionLevel.EDITOR,
+        "quick_action_url": reverse(
+            "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
+        ),
+        "quick_actions": quick_actions,
+        "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
+        "event_options": [],
+        "can_edit": can_edit,
     }
 
 
@@ -174,7 +213,9 @@ def _build_gift_plan_action_groups(
         else:
             continue
 
-        groups[group_key]["items"].append(_build_dashboard_action_item(relation, group_key, user))
+        groups[group_key]["items"].append(
+            _build_dashboard_action_item(relation, group_key, user, today=today)
+        )
 
     group_order = ("overdue", "upcoming", "incomplete", "stale")
     action_groups = [groups[key] for key in group_order if groups[key]["items"]]

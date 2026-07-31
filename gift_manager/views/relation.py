@@ -1,9 +1,11 @@
 """Relation-related views."""
 
+from datetime import date
 from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Prefetch
@@ -14,7 +16,9 @@ from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
 from django.http import HttpResponse
+from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -29,6 +33,9 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.gift_plan_actions import ACTION_STATUS_SLUGS
+from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
+from gift_manager.gift_plan_actions import gift_plan_has_contextual_edit_action
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
@@ -46,6 +53,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.base import HTMXResponseMixin
 
 
 def gift_plan_status_class(status) -> str:
@@ -352,6 +360,11 @@ class RelationListView(PermissionContextMixin, BaseListView):
     def get_workspace_groups(self, relations):
         """Group gift plans by urgency for the primary workspace."""
         today = timezone.localdate()
+        event_options = list(
+            Event.objects.accessible_by(self.request.user)
+            .only("id", "event_id", "name")
+            .order_by("name")
+        )
         groups = {
             "overdue": {
                 "key": "overdue",
@@ -398,12 +411,12 @@ class RelationListView(PermissionContextMixin, BaseListView):
         }
 
         for relation in relations:
-            card = self.get_workspace_card(relation, today)
+            card = self.get_workspace_card(relation, today, event_options)
             groups[card["urgency_key"]]["cards"].append(card)
 
         return [groups[key] for key in self.workspace_group_order if groups[key]["cards"]]
 
-    def get_workspace_card(self, relation, today):
+    def get_workspace_card(self, relation, today, event_options=None):
         """Return presentation data for a single gift-plan card."""
         urgency_key = gift_plan_urgency_key(
             relation,
@@ -411,6 +424,9 @@ class RelationListView(PermissionContextMixin, BaseListView):
             window_days=self.workspace_window_days,
         )
         permission = self.get_workspace_card_permission(relation)
+        can_edit = permission >= PermissionLevel.EDITOR
+        quick_actions = build_gift_plan_quick_actions(relation, urgency_key, can_edit=can_edit)
+        has_planning_action = any(action["kind"] == "planning" for action in quick_actions)
         return {
             "relation": relation,
             "urgency_key": urgency_key,
@@ -422,7 +438,13 @@ class RelationListView(PermissionContextMixin, BaseListView):
             "delete_url": reverse(
                 "gift_manager:relation_delete", kwargs={"pk": relation.relation_id}
             ),
-            "can_edit": permission >= PermissionLevel.EDITOR,
+            "quick_action_url": reverse(
+                "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
+            ),
+            "quick_actions": quick_actions,
+            "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
+            "event_options": event_options if has_planning_action else [],
+            "can_edit": can_edit,
             "can_delete": permission >= PermissionLevel.OWNER,
         }
 
@@ -669,6 +691,131 @@ class RelationDetailView(BaseDetailView):
             },
         ]
         return context
+
+
+def _get_relation_status_by_slug(status_slug: str) -> RelationStatus:
+    """Return a relation status by canonical slug."""
+    for status in RelationStatus.objects.all():
+        if relation_status_slug(status) == status_slug:
+            return status
+    raise RelationStatus.DoesNotExist
+
+
+def _relation_quick_action_response(message: str) -> HttpResponse:
+    """Return a no-swap HTMX response that refreshes card lists."""
+    response = HttpResponse("")
+    response["HX-Reswap"] = "none"
+    response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
+        [
+            "list:update",
+            {"showNotification": {"message": message, "type": "success"}},
+        ]
+    )
+    return response
+
+
+def _available_relation_quick_action_names(relation) -> set[str]:
+    """Return POST-capable quick action names for the relation's current card bucket."""
+    urgency_key = gift_plan_urgency_key(relation)
+    actions = build_gift_plan_quick_actions(relation, urgency_key, can_edit=True)
+    return {action["name"] for action in actions if action["kind"] != "edit"}
+
+
+def _set_relation_quick_action_due_date(relation, due_date_value: str | None) -> None:
+    """Set a relation due date from a quick-action date value."""
+    if not due_date_value:
+        raise ValueError
+    relation.due_date = date.fromisoformat(due_date_value)
+    relation.save(update_fields=["due_date"])
+
+
+def _set_relation_quick_action_status(relation, action: str) -> None:
+    """Set a relation status for a status quick action."""
+    relation.status = _get_relation_status_by_slug(ACTION_STATUS_SLUGS[action])
+    relation.save(update_fields=["status"])
+
+
+def _set_relation_quick_action_plan(
+    relation,
+    user,
+    *,
+    event_id: str | None,
+    due_date_value: str | None,
+) -> None:
+    """Set concrete planning fields and mark an idea as planned."""
+    if not event_id or not due_date_value:
+        raise ValueError
+
+    try:
+        due_date = date.fromisoformat(due_date_value)
+        event = Event.objects.accessible_by(user).get(event_id=event_id)
+    except (Event.DoesNotExist, ValidationError, ValueError) as exc:
+        raise ValueError from exc
+
+    relation.status = _get_relation_status_by_slug("planned")
+    relation.event = event
+    relation.due_date = due_date
+    relation.save(update_fields=["status", "event", "due_date"])
+
+
+def _apply_relation_quick_action(relation, user, action: str, post_data) -> str:
+    """Apply a validated quick action and return its success message."""
+    if action == "plan":
+        try:
+            _set_relation_quick_action_plan(
+                relation,
+                user,
+                event_id=post_data.get("event"),
+                due_date_value=post_data.get("due_date"),
+            )
+        except ValueError as exc:
+            msg = gettext("Choose a valid event and due date.")
+            raise ValueError(msg) from exc
+        return gettext("Gift plan marked as planned.")
+
+    if action == "set_date":
+        try:
+            _set_relation_quick_action_due_date(relation, post_data.get("due_date"))
+        except ValueError as exc:
+            msg = gettext("Choose a valid due date.")
+            raise ValueError(msg) from exc
+        return gettext("Due date updated.")
+
+    _set_relation_quick_action_status(relation, action)
+    messages = {
+        "given": gettext("Gift plan marked as given."),
+        "purchased": gettext("Gift plan marked as purchased."),
+        "planned": gettext("Gift plan marked as planned."),
+        "abandoned": gettext("Gift plan abandoned."),
+    }
+    return messages[action]
+
+
+@login_required
+@require_POST
+def relation_quick_action(request, pk):
+    """Apply a small gift-plan card action and trigger card list refreshes."""
+    relation = get_object_or_404(Relation.objects.accessible_by(request.user), relation_id=pk)
+    if PermissionService.get_effective_permission(relation, request.user) < PermissionLevel.EDITOR:
+        return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
+
+    action = request.POST.get("action")
+    if action not in _available_relation_quick_action_names(relation):
+        return JsonResponse(
+            {"error": gettext("This quick action is not available for this gift plan.")},
+            status=400,
+        )
+
+    try:
+        message = _apply_relation_quick_action(relation, request.user, action, request.POST)
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+    except RelationStatus.DoesNotExist:
+        return JsonResponse(
+            {"error": gettext("Required relation status is not configured.")},
+            status=400,
+        )
+    return _relation_quick_action_response(message)
 
 
 @login_required

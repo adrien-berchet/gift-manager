@@ -133,3 +133,48 @@ def test_global_search_combobox_and_stale_response_contract():
     assert "requestId !== searchRequestId" in content
     assert "safeIconClass" in content
     assert "safeSearchUrl" in content
+
+
+def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contract():
+    template = read(TEMPLATE_ROOT / "includes/gift_plan_card.html")
+    script = read(STATIC_ROOT / "js/gift-plan-quick-actions.js")
+    styles = read(STATIC_ROOT / "css/gift-plan-workspace.css")
+
+    assert "data-gift-plan-date-picker-button" in template
+    assert "data-gift-plan-planning-button" in template
+    assert "data-gift-plan-event-options" in template
+    assert 'type="date"' not in template
+    assert "gift-plan-date-action-input" not in template
+    assert "gift-plan-quick-actions.js" in read(TEMPLATE_ROOT / "home.html")
+    relation_list = read(TEMPLATE_ROOT / "relation_list.html")
+    assert "gift-plan-quick-actions.js" in relation_list
+    assert "window.htmx.process(nextWorkspace)" in relation_list
+    assert relation_list.index("window.htmx.process(nextWorkspace)") < relation_list.index(
+        "gift-plan-workspace:refreshed"
+    )
+
+    assert 'activeInput.type = "text"' in script
+    assert "appendTo: document.body" in script
+    assert "positionElement: button" in script
+    assert "disableMobile: true" in script
+    assert 'formData.set("action"' in script
+    assert 'formData.set("due_date"' in script
+    assert '"HX-Request": "true"' in script
+    assert '"X-CSRFToken": getCsrfToken(form)' in script
+    assert "dispatchHxTriggerEvents(response)" in script
+    assert script.index("closePicker();\n                dispatchHxTriggerEvents(response)") > -1
+    assert "rememberScrollPosition()" in script
+    assert "finishPendingScrollRestore()" in script
+    assert 'document.addEventListener("list:update", closeQuickActionControls)' in script
+    assert 'document.body.addEventListener("htmx:afterSwap"' in script
+    assert "createPlanningPanel" in script
+    assert "gift-plan-plan-popover" in script
+    assert 'formData.set("action", (actionInput && actionInput.value) || "plan")' in script
+    assert 'formData.set("event"' in script
+    assert "[data-gift-plan-planning-button]" in script
+    assert "showPicker" not in script
+
+    assert ".gift-plan-date-picker-source" in styles
+    assert "position: fixed;" in styles
+    assert ".gift-plan-quick-date-picker" in styles
+    assert ".gift-plan-plan-popover" in styles
