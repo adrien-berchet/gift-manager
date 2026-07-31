@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from django.contrib.auth.decorators import login_required
 from django.db.models import Case
 from django.db.models import CharField
+from django.db.models import Prefetch
 from django.db.models import TextField
 from django.db.models import Value
 from django.db.models import When
@@ -34,6 +35,7 @@ from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
+from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_idea_status
@@ -333,7 +335,17 @@ class RelationListView(PermissionContextMixin, BaseListView):
         return (
             Relation.objects.accessible_by(self.request.user)
             .with_related_objects()
-            .prefetch_related("gift__tags")
+            .prefetch_related(
+                "gift__tags",
+                Prefetch(
+                    "relationpermission_set",
+                    queryset=RelationPermission.objects.filter(user=self.request.user).only(
+                        "permission_type",
+                        "relation_id",
+                    ),
+                    to_attr="current_user_permissions",
+                ),
+            )
             .order_by("due_date", "status__pk", "gift__name")
         )
 
@@ -398,7 +410,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
             today=today,
             window_days=self.workspace_window_days,
         )
-        permission = PermissionService.get_permission(relation, self.request.user)
+        permission = self.get_workspace_card_permission(relation)
         return {
             "relation": relation,
             "urgency_key": urgency_key,
@@ -413,6 +425,16 @@ class RelationListView(PermissionContextMixin, BaseListView):
             "can_edit": permission >= PermissionLevel.EDITOR,
             "can_delete": permission >= PermissionLevel.OWNER,
         }
+
+    def get_workspace_card_permission(self, relation) -> int:
+        """Return the current user's permission using workspace prefetch data."""
+        current_user_permissions = getattr(relation, "current_user_permissions", None)
+        if current_user_permissions is not None:
+            if not current_user_permissions:
+                return PermissionLevel.NONE
+            return current_user_permissions[0].permission_type
+
+        return PermissionService.get_permission(relation, self.request.user)
 
     def get_workspace_summary(self, workspace_groups):
         """Return compact counts for the workspace summary strip."""

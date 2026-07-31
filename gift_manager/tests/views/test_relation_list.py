@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
 from django.template.loader import render_to_string
@@ -9,6 +10,7 @@ from django.utils import timezone
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.views import RelationAdvancedListView
+from gift_manager.views import RelationListView
 
 
 @pytest.mark.django_db
@@ -91,6 +93,64 @@ class TestRelationList:
         assert "Advanced List" in content
         assert 'id="gift-plan-advanced-list"' not in content
         assert 'id="relation-grid"' not in content
+
+    def test_workspace_cards_use_prefetched_permissions(self, gift_factory, relation_factory):
+        """Workspace cards should not query permissions once per relation."""
+        editor_relation = relation_factory(
+            gift=gift_factory(name="Editor gift"),
+            shared_with=[self.user],
+        )
+        owner_relation = relation_factory(
+            gift=gift_factory(name="Owner gift"),
+            shared_with=[self.user],
+        )
+        create_or_update_permission(
+            self.user,
+            editor_relation,
+            permission_level=PermissionLevel.EDITOR,
+        )
+        create_or_update_permission(
+            self.user,
+            owner_relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        with patch(
+            "gift_manager.views.relation.PermissionService.get_permission"
+        ) as get_permission:
+            response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        get_permission.assert_not_called()
+        cards_by_relation_id = {
+            card["relation"].relation_id: card
+            for group in response.context["workspace_groups"]
+            for card in group["cards"]
+        }
+
+        assert cards_by_relation_id[self.relation.relation_id]["can_edit"] is False
+        assert cards_by_relation_id[self.relation.relation_id]["can_delete"] is False
+        assert cards_by_relation_id[editor_relation.relation_id]["can_edit"] is True
+        assert cards_by_relation_id[editor_relation.relation_id]["can_delete"] is False
+        assert cards_by_relation_id[owner_relation.relation_id]["can_edit"] is True
+        assert cards_by_relation_id[owner_relation.relation_id]["can_delete"] is True
+
+    def test_workspace_card_permission_falls_back_for_unoptimized_relation(self):
+        """Direct workspace card calls should still use the permission service."""
+        request = RequestFactory().get(reverse("gift_manager:relations"))
+        request.user = self.user
+        view = RelationListView()
+        view.request = request
+
+        with patch(
+            "gift_manager.views.relation.PermissionService.get_permission",
+            return_value=PermissionLevel.EDITOR,
+        ) as get_permission:
+            card = view.get_workspace_card(self.relation, timezone.localdate())
+
+        get_permission.assert_called_once_with(self.relation, self.user)
+        assert card["can_edit"] is True
+        assert card["can_delete"] is False
 
     def test_advanced_grid_status_controls_are_permission_aware(self):
         """The retained Grid.js status control should not invite viewer-only edits."""
