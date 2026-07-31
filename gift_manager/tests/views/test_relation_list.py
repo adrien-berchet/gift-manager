@@ -173,6 +173,18 @@ class TestRelationList:
         due_soon_relation.due_date = today + timedelta(days=2)
         due_soon_relation.save()
 
+        overdue_missing_event_relation = relation_factory(
+            gift=gift_factory(name="Overdue missing event quick action gift"),
+            event=None,
+            status=planned_status,
+            due_date=today - timedelta(days=2),
+        )
+        due_soon_missing_event_relation = relation_factory(
+            gift=gift_factory(name="Due soon missing event quick action gift"),
+            event=None,
+            status=planned_status,
+            due_date=today + timedelta(days=2),
+        )
         later_relation = relation_factory(
             gift=gift_factory(name="Later quick action gift"),
             event=event_factory(),
@@ -196,6 +208,8 @@ class TestRelationList:
 
         for relation in (
             due_soon_relation,
+            overdue_missing_event_relation,
+            due_soon_missing_event_relation,
             later_relation,
             needs_details_relation,
             idea_relation,
@@ -214,10 +228,43 @@ class TestRelationList:
             for group in response.context["workspace_groups"]
             for card in group["cards"]
         }
+        groups_by_key = {group["key"]: group for group in response.context["workspace_groups"]}
+        assert overdue_missing_event_relation in [
+            card["relation"] for card in groups_by_key["overdue"]["cards"]
+        ]
+        assert due_soon_missing_event_relation in [
+            card["relation"] for card in groups_by_key["due_soon"]["cards"]
+        ]
+        assert overdue_missing_event_relation not in [
+            card["relation"] for card in groups_by_key["needs_details"]["cards"]
+        ]
+        assert due_soon_missing_event_relation not in [
+            card["relation"] for card in groups_by_key["needs_details"]["cards"]
+        ]
         assert [
             action["name"]
             for action in cards_by_gift_name["Due soon quick action gift"]["quick_actions"]
         ] == ["given", "purchased"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Overdue missing event quick action gift"][
+                "quick_actions"
+            ]
+        ] == ["given", "add_details"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Due soon missing event quick action gift"][
+                "quick_actions"
+            ]
+        ] == ["given", "purchased", "add_details"]
+        assert (
+            cards_by_gift_name["Overdue missing event quick action gift"]["has_missing_event"]
+            is True
+        )
+        assert (
+            cards_by_gift_name["Due soon missing event quick action gift"]["missing_event_label"]
+            == "Missing event"
+        )
         assert [
             action["name"]
             for action in cards_by_gift_name["Later quick action gift"]["quick_actions"]
@@ -236,6 +283,10 @@ class TestRelationList:
         content = response.content.decode()
         assert 'data-action="quick-given"' in content
         assert 'data-action="quick-purchased"' in content
+        assert "Overdue missing event quick action gift" in content
+        assert "Due soon missing event quick action gift" in content
+        assert "gift-plan-missing-data-badge" in content
+        assert "Missing event" in content
         assert 'data-action="quick-plan"' in content
         assert "data-gift-plan-planning-button" in content
         assert "Visible planning event" in content

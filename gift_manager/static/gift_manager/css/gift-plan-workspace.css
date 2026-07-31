@@ -279,6 +279,7 @@
 .gift-plan-card .gift-plan-status-badge,
 .gift-plan-card .gift-plan-due-badge,
 .gift-plan-card .gift-plan-tag-badge,
+.gift-plan-card .gift-plan-missing-data-badge,
 .gift-plan-card .recipient-type-badge {
     min-width: 0;
     overflow: hidden;
@@ -378,7 +379,8 @@
 
 .gift-plan-card .gift-plan-status-badge,
 .gift-plan-card .gift-plan-due-badge,
-.gift-plan-card .gift-plan-tag-badge {
+.gift-plan-card .gift-plan-tag-badge,
+.gift-plan-card .gift-plan-missing-data-badge {
     gap: 0.25rem;
     min-height: 1.5rem;
     padding: 0.18rem 0.45rem;
@@ -394,6 +396,12 @@
     padding: 0.2rem 0.5rem;
     font-size: 0.78rem;
     line-height: 1.25;
+}
+
+.gift-plan-card--needs_details .gift-plan-due-badge--no_date {
+    background-color: var(--color-danger-light);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--color-danger-hover);
 }
 
 .gift-plan-empty-state {
@@ -446,23 +454,31 @@
 }
 
 #relation-grid .gridjs-tr.gift-plan-grid-row--missing-data td.gridjs-td:first-child {
-    box-shadow: inset 3px 0 0 var(--color-warning);
+    box-shadow: inset 3px 0 0 var(--color-danger);
 }
 
-#relation-grid .gift-plan-missing-data-badge {
+.gift-plan-missing-data-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     min-height: 1.5rem;
     padding: 0.18rem 0.45rem;
-    border: 1px solid rgba(245, 158, 11, 0.4);
+    border: 1px solid rgba(239, 68, 68, 0.35);
     border-radius: var(--radius-full);
-    background-color: var(--color-warning-light);
-    color: var(--color-warning-hover);
+    background-color: var(--color-danger-light);
+    color: var(--color-danger-hover);
     font-size: 0.66rem;
     font-weight: 600;
     line-height: 1.1;
     white-space: nowrap;
+}
+
+.gift-plan-missing-data-badge i {
+    color: inherit;
+}
+
+.gift-plan-card .gift-plan-missing-data-badge {
+    font-size: 0.7rem;
 }
 
 @media (max-width: 767.98px) {

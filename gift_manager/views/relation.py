@@ -427,6 +427,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
         can_edit = permission >= PermissionLevel.EDITOR
         quick_actions = build_gift_plan_quick_actions(relation, urgency_key, can_edit=can_edit)
         has_planning_action = any(action["kind"] == "planning" for action in quick_actions)
+        has_missing_event = gift_plan_has_missing_event(relation)
         return {
             "relation": relation,
             "urgency_key": urgency_key,
@@ -444,6 +445,8 @@ class RelationListView(PermissionContextMixin, BaseListView):
             "quick_actions": quick_actions,
             "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
             "event_options": event_options if has_planning_action else [],
+            "has_missing_event": has_missing_event,
+            "missing_event_label": gettext("Missing event") if has_missing_event else "",
             "can_edit": can_edit,
             "can_delete": permission >= PermissionLevel.OWNER,
         }

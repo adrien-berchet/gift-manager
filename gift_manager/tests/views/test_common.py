@@ -317,7 +317,19 @@ class TestHomeDashboard:
             for action in cards_by_gift_name["Dashboard missing event upcoming action"][
                 "quick_actions"
             ]
-        ] == ["add_details", "set_date"]
+        ] == ["add_details"]
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["urgency_key"]
+            == "due_soon"
+        )
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["has_missing_event"]
+            is True
+        )
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["missing_event_label"]
+            == "Missing event"
+        )
         assert [
             action["name"]
             for action in cards_by_gift_name["Dashboard details action"]["quick_actions"]
@@ -330,6 +342,9 @@ class TestHomeDashboard:
         content = response.content.decode()
         assert 'data-action="quick-given"' in content
         assert 'data-action="quick-purchased"' in content
+        assert "Dashboard missing event upcoming action" in content
+        assert "gift-plan-missing-data-badge" in content
+        assert "Missing event" in content
         assert "gift-plan-date-action-button" in content
         assert "data-gift-plan-date-picker-button" in content
         assert "gift-plan-quick-actions.js" in content

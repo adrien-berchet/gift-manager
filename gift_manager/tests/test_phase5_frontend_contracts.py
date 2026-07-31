@@ -11,6 +11,13 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def css_block(styles: str, selector: str) -> str:
+    start = styles.index(f"\n{selector} {{")
+    block_start = styles.index("{", start)
+    block_end = styles.index("}", block_start)
+    return styles[block_start:block_end]
+
+
 def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
     base = read(TEMPLATE_ROOT / "base.html")
     offcanvas = read(TEMPLATE_ROOT / "includes/offcanvas_base.html")
@@ -138,11 +145,14 @@ def test_global_search_combobox_and_stale_response_contract():
 def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contract():
     template = read(TEMPLATE_ROOT / "includes/gift_plan_card.html")
     script = read(STATIC_ROOT / "js/gift-plan-quick-actions.js")
+    main_styles = read(STATIC_ROOT / "main.css")
     styles = read(STATIC_ROOT / "css/gift-plan-workspace.css")
 
     assert "data-gift-plan-date-picker-button" in template
     assert "data-gift-plan-planning-button" in template
     assert "data-gift-plan-event-options" in template
+    assert "card.has_missing_event" in template
+    assert "gift-plan-missing-data-badge" in template
     assert 'type="date"' not in template
     assert "gift-plan-date-action-input" not in template
     assert "gift-plan-quick-actions.js" in read(TEMPLATE_ROOT / "home.html")
@@ -178,3 +188,21 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert "position: fixed;" in styles
     assert ".gift-plan-quick-date-picker" in styles
     assert ".gift-plan-plan-popover" in styles
+    assert ".gift-plan-missing-data-badge" in styles
+    assert ".gift-plan-status--given" in main_styles
+    assert ".gift-plan-due-badge--completed" in main_styles
+    assert ".gift-plan-due-badge--due_soon" in main_styles
+    assert ".gift-plan-due-badge--overdue" in main_styles
+    assert ".gift-plan-card--needs_details .gift-plan-due-badge--no_date" in styles
+    assert "background-color: var(--color-success-light)" in main_styles
+    assert "background-color: var(--color-warning-light)" in main_styles
+
+    missing_badge_styles = css_block(styles, ".gift-plan-missing-data-badge")
+    missing_row_marker_styles = css_block(
+        styles,
+        "#relation-grid .gridjs-tr.gift-plan-grid-row--missing-data td.gridjs-td:first-child",
+    )
+    assert "background-color: var(--color-danger-light)" in missing_badge_styles
+    assert "color: var(--color-danger-hover)" in missing_badge_styles
+    assert "rgba(239, 68, 68, 0.35)" in missing_badge_styles
+    assert "var(--color-danger)" in missing_row_marker_styles

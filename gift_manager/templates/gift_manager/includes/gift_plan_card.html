@@ -51,6 +51,14 @@
                 {{ card.relation.event.name }}
             </a>
         </div>
+        {% elif card.has_missing_event %}
+        <div class="gift-plan-card-meta-row">
+            <span class="gift-plan-missing-data-badge"
+                  title="{{ card.missing_event_label }}"
+                  aria-label="{{ card.missing_event_label }}">
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>{{ card.missing_event_label }}
+            </span>
+        </div>
         {% endif %}
     </div>
 

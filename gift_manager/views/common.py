@@ -56,6 +56,11 @@ def _gift_plan_requires_planning_fields(relation: Relation) -> bool:
     return not is_idea_status(relation.status) and not _is_completed_status(relation.status)
 
 
+def _gift_plan_has_missing_event(relation: Relation) -> bool:
+    """Return whether an active gift plan is missing its event."""
+    return _gift_plan_requires_planning_fields(relation) and relation.event_id is None
+
+
 def _safe_date(year: int, month: int, day: int) -> date:
     """Build a date, clamping the day to the target month when needed."""
     return date(year, month, min(day, monthrange(year, month)[1]))
@@ -140,6 +145,7 @@ def _build_dashboard_action_item(
         quick_action_urgency_key,
         can_edit=can_edit,
     )
+    has_missing_event = _gift_plan_has_missing_event(relation)
     return {
         "relation": relation,
         "action_key": action_key,
@@ -153,6 +159,8 @@ def _build_dashboard_action_item(
         "quick_actions": quick_actions,
         "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
         "event_options": [],
+        "has_missing_event": has_missing_event,
+        "missing_event_label": gettext("Missing event") if has_missing_event else "",
         "can_edit": can_edit,
     }
 

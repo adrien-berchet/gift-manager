@@ -2,6 +2,7 @@
 
 from django.utils.translation import gettext
 
+from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
 
@@ -57,6 +58,16 @@ def _planning_action() -> dict:
     }
 
 
+def _requires_planning_fields(relation) -> bool:
+    """Return whether the relation should have concrete planning details."""
+    return not is_idea_status(relation.status) and not is_terminal_status(relation.status)
+
+
+def _has_missing_event(relation) -> bool:
+    """Return whether the relation needs an event to complete its planning details."""
+    return _requires_planning_fields(relation) and relation.event_id is None
+
+
 def build_gift_plan_quick_actions(relation, urgency_key: str, *, can_edit: bool) -> list[dict]:
     """Return the quick actions that should be shown for a gift-plan card."""
     if not can_edit:
@@ -90,9 +101,13 @@ def build_gift_plan_quick_actions(relation, urgency_key: str, *, can_edit: bool)
             )
         )
 
+    if urgency_key in {"overdue", "due_soon"} and _has_missing_event(relation):
+        actions.append(_edit_action())
+
     if urgency_key == "needs_details":
         actions.append(_edit_action())
-        actions.append(_date_action())
+        if relation.due_date is None:
+            actions.append(_date_action())
 
     if urgency_key == "ideas" and not current_status_is_terminal:
         if current_status_slug != "planned":
