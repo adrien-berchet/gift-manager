@@ -1,3 +1,4 @@
+import json
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -101,6 +102,7 @@ class TestBaseCreateView:
 
         # Assert
         assert response.status_code == 302  # Redirect after success
+        assert response.url == reverse("gift_manager:gifts")
 
         # Check that gift was created
         gift = Gift.objects.get(name="Test Shared Gift")
@@ -109,6 +111,74 @@ class TestBaseCreateView:
         # Check that sharing was created
         permissions = get_permission(gift, friend)
         assert permissions == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_gift_create_can_redirect_to_new_gift_plan_form(self):
+        """The secondary save action continues into the new gift's gift plan flow."""
+        url = reverse("gift_manager:gift_create")
+
+        response = self.client.post(
+            url,
+            {
+                "name": "Gift with immediate plan",
+                "comment": "Continue planning after save",
+                "after_save": "create_gift_plan",
+            },
+        )
+
+        gift = Gift.objects.get(name="Gift with immediate plan")
+        assert response.status_code == 302
+        assert response.url == reverse(
+            "gift_manager:gift_relation_create", kwargs={"pk": gift.gift_id}
+        )
+        assert get_permission(gift, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_gift_create_can_continue_to_new_gift_plan_form(self):
+        """The offcanvas secondary save action swaps in the new gift's plan form."""
+        url = reverse("gift_manager:gift_create")
+
+        response = self.client.post(
+            url,
+            {
+                "name": "HTMX gift with immediate plan",
+                "comment": "Continue planning after save",
+                "after_save": "create_gift_plan",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+
+        gift = Gift.objects.get(name="HTMX gift with immediate plan")
+        plan_url = reverse("gift_manager:gift_relation_create", kwargs={"pk": gift.gift_id})
+        content = response.content.decode()
+        triggers = json.loads(response["HX-Trigger"])
+
+        assert response.status_code == 200
+        assert "HX-Redirect" not in response
+        assert "offcanvas:close" not in triggers
+        assert "list:update" in triggers
+        assert triggers["showNotification"]["type"] == "success"
+        assert 'id="relation-form"' in content
+        assert f'action="{plan_url}"' in content
+        assert f'hx-post="{plan_url}"' in content
+        assert 'name="recipient"' in content
+        assert get_permission(gift, self.user) == PermissionLevel.OWNER
+
+    @override_settings(USE_I18N=False)
+    def test_invalid_gift_create_does_not_redirect_to_new_gift_plan_form(self):
+        """Invalid secondary submissions stay on the gift form."""
+        response = self.client.post(
+            reverse("gift_manager:gift_create"),
+            {
+                "name": "",
+                "comment": "Missing name",
+                "after_save": "create_gift_plan",
+            },
+        )
+
+        assert response.status_code == 200
+        assert "HX-Redirect" not in response
+        assert not Gift.objects.filter(comment="Missing name").exists()
 
     @override_settings(USE_I18N=False)
     def test_gift_create_rejects_forged_non_friend_share(self):

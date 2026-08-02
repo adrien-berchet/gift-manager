@@ -93,6 +93,40 @@ def test_create_forms_share_full_page_and_htmx_structure(
 
 
 @pytest.mark.django_db
+def test_gift_create_forms_offer_save_and_create_gift_plan(authenticated_client):
+    url = reverse("gift_manager:gift_create")
+
+    full_page_response = authenticated_client.get(url)
+    htmx_response = authenticated_client.get(url, HTTP_HX_REQUEST="true")
+
+    assert full_page_response.status_code == 200
+    assert htmx_response.status_code == 200
+
+    for response in (full_page_response, htmx_response):
+        content = response.content.decode()
+        assert 'name="after_save"' in content
+        assert 'value="create_gift_plan"' in content
+        assert "Save and create gift plan" in content
+
+
+@pytest.mark.django_db
+def test_non_gift_create_forms_do_not_offer_save_and_create_gift_plan(
+    authenticated_client,
+    form_choice_data,
+):
+    urls = [
+        reverse("gift_manager:person_create"),
+        reverse("gift_manager:gift_edit", kwargs={"pk": form_choice_data["gift"].gift_id}),
+    ]
+
+    for url in urls:
+        response = authenticated_client.get(url, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        assert 'value="create_gift_plan"' not in response.content.decode()
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("url_name", "object_key", "pk_attr"),
     [

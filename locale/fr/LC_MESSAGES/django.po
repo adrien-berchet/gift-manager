@@ -3069,6 +3069,10 @@ msgstr "Vous êtes maintenant ami avec {}"
 msgid "Display preferences saved successfully."
 msgstr "Préférences d'affichage enregistrées avec succès"
 
+#: gift_manager/views/gift.py:121
+msgid "Save and create gift plan"
+msgstr "Sauvegarder et créer un projet de cadeau"
+
 #: gift_manager/views/relation.py:46 gift_manager/views/relation.py:80
 #: gift_manager/views/relation.py:116 gift_manager/views/relation.py:268
 #: gift_manager/views/relation.py:301

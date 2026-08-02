@@ -209,6 +209,20 @@
     min-width: 100px;
 }
 
+.panel-form-actions.has-secondary-submit-actions {
+    flex-wrap: wrap;
+}
+
+.panel-form-actions.has-secondary-submit-actions .form-secondary-submit-action {
+    flex: 1 0 100%;
+    order: -1;
+    white-space: normal;
+}
+
+.panel-form-actions.has-secondary-submit-actions .btn:not(.form-secondary-submit-action) {
+    flex: 1 1 0;
+}
+
 /* Sharing controls styling */
 .sharing-controls {
     max-height: 300px;
