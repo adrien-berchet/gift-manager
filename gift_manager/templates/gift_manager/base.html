@@ -374,6 +374,9 @@
 </head>
 
 <body>
+    <a class="skip-link" href="#main-content">{% trans "Skip to main content" %}</a>
+    <div id="sr-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
     <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
@@ -389,39 +392,57 @@
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
-                            <i class="fas fa-users me-1"></i>{% trans "Recipients" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}">
-                            <i class="fas fa-gift me-1"></i>{% trans "Gifts" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'gift_tag' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:gift_tag_explorer' %}">
-                            <i class="fas fa-tags me-1"></i>{% trans "Tags" %}
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if 'event' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:events' %}">
-                            <i class="fas fa-calendar-alt me-1"></i>{% trans "Events" %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}">
+                            <i class="fas fa-house me-1" aria-hidden="true"></i>{% trans "Dashboard" %}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %}active{% endif %}" href="{% url 'gift_manager:relations' %}">
-                            <i class="fas fa-hand-holding-heart me-1"></i>{% trans "Gift Plans" %}
+                            <i class="fas fa-hand-holding-heart me-1" aria-hidden="true"></i>{% trans "Gift Plans" %}
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'relation_status' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:relation_statuses' %}">
-                            <i class="fas fa-tasks me-1"></i>{% trans "Statuses" %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
+                            <i class="fas fa-users me-1" aria-hidden="true"></i>{% trans "Recipients" %}
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'share_objects' %}active{% endif %}" href="{% url 'gift_manager:share_objects' %}">
-                            <i class="fas fa-share-alt me-1"></i>{% trans "Share" %}
+                        <a class="nav-link {% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}">
+                            <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Gifts" %}
                         </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'gift_tag' in request.resolver_match.url_name or 'event' in request.resolver_match.url_name or 'relation_status' in request.resolver_match.url_name or request.resolver_match.url_name == 'share_objects' %}active{% endif %}"
+                           href="#"
+                           id="navbarMoreDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            <i class="fas fa-ellipsis me-1" aria-hidden="true"></i>{% trans "More" %}
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarMoreDropdown">
+                            <li>
+                                <a class="dropdown-item {% if 'event' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:events' %}">
+                                    <i class="fas fa-calendar-alt me-2" aria-hidden="true"></i>{% trans "Events" %}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if 'gift_tag' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:gift_tag_explorer' %}">
+                                    <i class="fas fa-tags me-2" aria-hidden="true"></i>{% trans "Tags" %}
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {% if 'relation_status' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:relation_statuses' %}">
+                                    <i class="fas fa-tasks me-2" aria-hidden="true"></i>{% trans "Statuses" %}
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item {% if request.resolver_match.url_name == 'share_objects' %}active{% endif %}" href="{% url 'gift_manager:share_objects' %}">
+                                    <i class="fas fa-share-alt me-2" aria-hidden="true"></i>{% trans "Share" %}
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 </ul>
                 {% endif %}
@@ -597,9 +618,9 @@
     {% include 'gift_manager/includes/modal_base.html' %}
     {% include 'gift_manager/includes/offcanvas_base.html' %}
 
-    <div class="container mt-4" id="main-content">
+    <main class="container mt-4" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
-    </div>
+    </main>
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- HTMX -->

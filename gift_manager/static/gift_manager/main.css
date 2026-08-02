@@ -415,8 +415,30 @@ body.has-fixed-action-bar {
    Advanced List Tools
    ========================================================================== */
 
-.advanced-list-tools {
+.list-tools-shell {
+    display: grid;
+    gap: var(--space-3);
     margin: var(--space-4) 0;
+}
+
+.list-search-control {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.list-search-control .filter-section {
+    min-width: 0;
+}
+
+.list-search-control .filter-section-label {
+    margin-bottom: var(--space-2);
+}
+
+.advanced-list-tools {
+    margin: 0;
     overflow: hidden;
     background: var(--surface-card);
     border: 1px solid var(--border-color);
@@ -496,6 +518,10 @@ body.has-fixed-action-bar {
     box-shadow: none;
 }
 
+[data-theme="dark"] .list-search-control {
+    box-shadow: none;
+}
+
 /* ==========================================================================
    Utility Classes
    ========================================================================== */
@@ -540,6 +566,10 @@ body.has-fixed-action-bar {
 }
 
 @media (max-width: 576px) {
+    .list-search-control {
+        padding: var(--space-3);
+    }
+
     .advanced-list-tools-summary {
         padding: var(--space-3);
     }

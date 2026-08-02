@@ -120,6 +120,13 @@ class TestHomeDashboard:
             shared_with=[self.user],
         )
         RelationFactory(
+            gift=GiftFactory(name="Later planned gift"),
+            event=stale_event,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        RelationFactory(
             gift=GiftFactory(name="Rejected gadget"),
             status=abandoned,
             due_date=today - timedelta(days=5),
@@ -165,14 +172,19 @@ class TestHomeDashboard:
         content = response.content.decode()
         groups_by_key = {group["key"]: group for group in groups}
         assert groups_by_key["upcoming"]["is_paginated"] is True
+        assert groups_by_key["upcoming"]["is_compact"] is True
+        assert groups_by_key["upcoming"]["workspace_focus"] == "due_soon"
         assert groups_by_key["upcoming"]["display_items"] == groups_by_key["upcoming"]["items"]
         assert groups_by_key["incomplete"]["is_paginated"] is True
+        assert groups_by_key["incomplete"]["is_compact"] is True
+        assert groups_by_key["incomplete"]["workspace_focus"] == "needs_details"
         assert groups_by_key["incomplete"]["display_items"] == groups_by_key["incomplete"]["items"]
         assert "Overdue scarf" in content
         assert "Soon puzzle" in content
         assert "Missing date" in content
         assert "Someday telescope" not in content
         assert "Loose future idea" not in content
+        assert "Later planned gift" not in content
         assert "Rejected gadget" not in content
         assert "Old idea" in content
         assert "Already done" not in content
@@ -185,6 +197,10 @@ class TestHomeDashboard:
         assert (
             "dashboard-action-list gift-plan-card-grid dashboard-action-list--paginated"
         ) in content
+        assert "dashboard-action-group--compact" in content
+        assert 'data-dashboard-rows-per-page="1"' in content
+        assert "?focus=due_soon#gift-plan-group-due_soon" in content
+        assert "?focus=needs_details#gift-plan-group-needs_details" in content
         assert "dashboard-action-list--scrollable" not in content
         assert "data-dashboard-action-card" in content
         assert "dashboard-action-item" not in content
@@ -308,10 +324,7 @@ class TestHomeDashboard:
             action["name"]
             for action in cards_by_gift_name["Dashboard soon action"]["quick_actions"]
         ] == ["given", "purchased"]
-        assert [
-            action["name"]
-            for action in cards_by_gift_name["Dashboard later upcoming action"]["quick_actions"]
-        ] == ["purchased"]
+        assert "Dashboard later upcoming action" not in cards_by_gift_name
         assert [
             action["name"]
             for action in cards_by_gift_name["Dashboard missing event upcoming action"][
@@ -320,7 +333,7 @@ class TestHomeDashboard:
         ] == ["add_details"]
         assert (
             cards_by_gift_name["Dashboard missing event upcoming action"]["urgency_key"]
-            == "due_soon"
+            == "needs_details"
         )
         assert (
             cards_by_gift_name["Dashboard missing event upcoming action"]["has_missing_event"]

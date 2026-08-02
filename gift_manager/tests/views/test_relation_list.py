@@ -95,6 +95,24 @@ class TestRelationList:
         assert 'id="gift-plan-advanced-list"' not in content
         assert 'id="relation-grid"' not in content
 
+    def test_workspace_focus_filters_to_requested_bucket(self, event_factory):
+        """Dashboard links can focus a real workspace urgency bucket server-side."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.event = event_factory(name="Anniversary")
+        self.relation.due_date = timezone.localdate() + timedelta(days=2)
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relations"), {"focus": "due_soon"})
+
+        assert response.status_code == 200
+        assert response.context["workspace_focus"] == "due_soon"
+        assert [group["key"] for group in response.context["workspace_groups"]] == ["due_soon"]
+        content = response.content.decode()
+        assert "gift-plan-focus-note" in content
+        assert "gift-plan-urgency-section--due_soon" in content
+        assert "gift-plan-urgency-section--ideas" not in content
+
     def test_workspace_cards_use_prefetched_permissions(self, gift_factory, relation_factory):
         """Workspace cards should not query permissions once per relation."""
         editor_relation = relation_factory(

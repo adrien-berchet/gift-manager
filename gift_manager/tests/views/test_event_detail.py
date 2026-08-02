@@ -60,8 +60,9 @@ class TestEventDetail:
         assert edit_url in content
         assert delete_url in content
 
-        # Check for the Actions column header
-        assert "Actions" in content
+        # The modern detail page uses card actions instead of a Grid.js Actions column.
+        assert "detail-page-shell" in content
+        assert "relation-actions" in content
 
         # Check for the Comment column
         assert "Comment" in content

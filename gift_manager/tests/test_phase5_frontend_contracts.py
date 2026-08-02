@@ -60,11 +60,14 @@ def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
 def test_status_updates_use_shared_helper_and_revert_contract():
     grid_utils = read(STATIC_ROOT / "grid-utils.js")
     status_templates = [
+        TEMPLATE_ROOT / "relation_list.html",
+        TEMPLATE_ROOT / "person_group_detail.html",
+    ]
+    unified_detail_templates = [
         TEMPLATE_ROOT / "gift_detail.html",
         TEMPLATE_ROOT / "person_detail.html",
         TEMPLATE_ROOT / "event_detail.html",
-        TEMPLATE_ROOT / "relation_list.html",
-        TEMPLATE_ROOT / "person_group_detail.html",
+        TEMPLATE_ROOT / "relation_detail.html",
     ]
 
     assert "async function updateStatusSelect" in grid_utils
@@ -78,6 +81,12 @@ def test_status_updates_use_shared_helper_and_revert_contract():
         assert "GridUtils.updateStatusSelect(e.target)" in content
         assert "fetch(updateUrl" not in content
 
+    for template in unified_detail_templates:
+        content = read(template)
+        assert "GridUtils.updateStatusSelect(e.target)" not in content
+        assert "includes/" in content
+        assert "full_page_detail=True" in content
+
 
 def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
     content = read(TEMPLATE_ROOT / "share_objects.html")
@@ -89,6 +98,9 @@ def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
     assert 'data-bs-toggle="collapse"' in content
     assert 'aria-controls="collapsePersons"' in content
     assert "document.addEventListener('DOMContentLoaded'" in content
+    assert 'id="share-button"' in content
+    assert 'id="share-button" disabled' not in content
+    assert "shareButton.disabled = true;" in content
     assert "$(" not in content
 
     for legacy_class in [
@@ -104,18 +116,41 @@ def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
 
 def test_filter_panel_aria_state_is_rendered_and_synchronized():
     template = read(TEMPLATE_ROOT / "includes/filter_panel.html")
+    visible_search_template = read(TEMPLATE_ROOT / "includes/list_search_control.html")
     script = read(STATIC_ROOT / "filter-panel.js")
+    dynamic_filters = read(STATIC_ROOT / "dynamic-filters.js")
 
     assert 'aria-expanded="false"' in template
     assert 'aria-controls="{{ grid_id }}-filter-content"' in template
-    assert 'for="{{ grid_id }}-search"' in template
+    assert 'for="{{ grid_id }}-search"' in visible_search_template
+    assert 'id="{{ grid_id }}-search"' in visible_search_template
     assert 'aria-pressed="false"' in template
     assert 'aria-pressed="true"' in template
 
     assert "syncFilterExpanded" in script
+    assert "const controlRoot = listTools || filterPanel || filterContent;" in script
     assert "filterToggle.setAttribute('aria-expanded'" in script
     assert "multiSortToggle.setAttribute('aria-pressed'" in script
     assert "btn.setAttribute('aria-pressed'" in script
+    assert "searchableIndices: getSearchableColumnIndices(columns)" in dynamic_filters
+    assert "function matchesSearchTerm" in dynamic_filters
+    assert "applyFilters(grid, originalData, filterState);" in dynamic_filters
+
+
+def test_base_renders_skip_link_and_static_live_region():
+    content = read(TEMPLATE_ROOT / "base.html")
+    accessibility_styles = read(STATIC_ROOT / "css/accessibility.css")
+    accessibility_script = read(STATIC_ROOT / "js/accessibility.js")
+
+    assert 'class="skip-link" href="#main-content"' in content
+    assert 'id="sr-live-region"' in content
+    assert 'aria-live="polite"' in content
+    assert '<main class="container mt-4" id="main-content" tabindex="-1">' in content
+    assert "[tabindex]:focus:not(.offcanvas):not(.modal)" in accessibility_styles
+    assert "#main-content:focus,\n#main-content:focus-visible" in accessibility_styles
+    assert "#main-content.skip-link-focus-visible:focus" in accessibility_styles
+    assert "setupSkipLinkFocusTarget()" in accessibility_script
+    assert "skip-link-focus-visible" in accessibility_script
 
 
 def test_group_tree_has_keyboard_and_touch_move_workflow():

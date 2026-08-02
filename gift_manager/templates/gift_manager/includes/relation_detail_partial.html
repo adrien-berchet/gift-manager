@@ -18,7 +18,9 @@
                     <label class="detail-label">{% trans "Gift" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-gift me-2 text-primary"></i>
-                        <strong>{{ object.gift.name }}</strong>
+                        <a href="{% url 'gift_manager:gift_detail' pk=object.gift.gift_id %}">
+                            <strong>{{ object.gift.name }}</strong>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -113,7 +115,9 @@
         <div class="event-info border rounded p-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="fas fa-calendar-alt me-2 text-primary"></i>
-                <strong>{{ object.event.name }}</strong>
+                <a href="{% url 'gift_manager:event_detail' pk=object.event.event_id %}">
+                    <strong>{{ object.event.name }}</strong>
+                </a>
             </div>
 
             {% if object.event.comment %}
@@ -157,7 +161,9 @@
         <div class="gift-info border rounded p-3">
             <div class="d-flex align-items-center mb-2">
                 <i class="fas fa-gift me-2 text-primary"></i>
-                <strong>{{ object.gift.name }}</strong>
+                <a href="{% url 'gift_manager:gift_detail' pk=object.gift.gift_id %}">
+                    <strong>{{ object.gift.name }}</strong>
+                </a>
             </div>
 
             {% if object.gift.comment %}

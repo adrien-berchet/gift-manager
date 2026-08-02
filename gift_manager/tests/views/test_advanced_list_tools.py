@@ -19,14 +19,21 @@ def test_advanced_list_tools_wrap_filters_and_selection(authenticated_client, ur
 
     assert response.status_code == 200
     content = response.content.decode()
+    list_tools_id = f'id="{grid_id}-list-tools"'
+    search_input_id = f'id="{grid_id}-search"'
     advanced_tools_id = f'id="{grid_id}-advanced-tools"'
     select_button_id = f'id="toggle-selection-{grid_id}"'
     filter_panel_id = f'id="{grid_id}-filter-panel"'
 
+    assert 'class="list-tools-shell"' in content
+    assert list_tools_id in content
+    assert search_input_id in content
     assert 'class="advanced-list-tools"' in content
     assert advanced_tools_id in content
     assert select_button_id in content
     assert filter_panel_id in content
+    assert content.index(list_tools_id) < content.index(search_input_id)
+    assert content.index(search_input_id) < content.index(advanced_tools_id)
     assert content.index(advanced_tools_id) < content.index(select_button_id)
     assert content.index(advanced_tools_id) < content.index(filter_panel_id)
 
@@ -38,9 +45,14 @@ def test_status_filters_are_advanced_without_bulk_selection(authenticated_client
     assert response.status_code == 200
     content = response.content.decode()
 
+    assert 'id="status-grid-search"' in content
     assert 'id="status-grid-advanced-tools"' in content
     assert 'id="status-grid-filter-panel"' in content
     assert 'id="toggle-selection-status-grid"' not in content
+    assert content.index('id="status-grid-search"') < content.index(
+        'id="status-grid-advanced-tools"'
+    )
+    assert "RealTimeSearch.init('status-grid', grid, data);" in content
     assert "GridUtils.setupAdvancedControls('status-grid', true" in content
 
 

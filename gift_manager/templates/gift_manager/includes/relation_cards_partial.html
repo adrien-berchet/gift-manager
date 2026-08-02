@@ -128,14 +128,14 @@
                         <i class="fas fa-link" aria-hidden="true"></i>
                     </a>
                     {% if is_editor %}
-                    <button type="button"
-                            class="btn btn-outline-primary btn-sm"
-                            data-action="edit"
-                            data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
-                            title="{% trans 'Edit gift plan' %}"
-                            data-bs-toggle="tooltip">
+                    <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                       class="btn btn-outline-primary btn-sm"
+                       data-action="edit"
+                       data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                       title="{% trans 'Edit gift plan' %}"
+                       data-bs-toggle="tooltip">
                         <i class="fas fa-edit" aria-hidden="true"></i>
-                    </button>
+                    </a>
                     {% endif %}
                 </div>
             </div>

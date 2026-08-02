@@ -1,5 +1,30 @@
 /* Detail View Styles for Modern UX Interface */
 
+.detail-page-header {
+    margin-bottom: 1rem;
+}
+
+.detail-page-shell {
+    max-width: 1120px;
+    margin: 0 0 2rem;
+    padding: 1.25rem;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-page-shell .detail-header h4 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+}
+
+@media (max-width: 767.98px) {
+    .detail-page-shell {
+        padding: 1rem;
+    }
+}
+
 /* Detail Section Styling */
 .detail-section {
     border-bottom: 1px solid var(--bs-border-color);

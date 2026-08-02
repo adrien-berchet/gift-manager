@@ -8,21 +8,10 @@
             aria-expanded="false"
             aria-controls="{{ grid_id }}-filter-content">
         <i class="fas fa-sliders-h" aria-hidden="true"></i>
-        <span>{% trans "Search, Filters & Sort" %}</span>
+        <span>{% trans "Filters & Sort" %}</span>
         <i class="fas fa-chevron-down ms-auto" aria-hidden="true"></i>
     </button>
     <div class="filter-content" id="{{ grid_id }}-filter-content">
-        {# Search section #}
-        <div class="filter-section search-section">
-            <label class="filter-section-label" for="{{ grid_id }}-search">{% trans "Search" %}</label>
-            <div class="input-clearable">
-                <input type="text" class="form-control filter-search-input" id="{{ grid_id }}-search"
-                       placeholder="{% trans 'Search...' %}">
-                <button type="button" class="input-clear-btn" aria-label="{% trans 'Clear' %}">
-                    <i class="fas fa-times" aria-hidden="true"></i>
-                </button>
-            </div>
-        </div>
         {# Sort section #}
         <div class="filter-section sort-section">
             <div class="sort-section-header">

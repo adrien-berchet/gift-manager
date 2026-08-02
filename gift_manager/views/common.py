@@ -39,6 +39,7 @@ DASHBOARD_ACTION_WINDOW_DAYS = 30
 DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
 DASHBOARD_STALE_AFTER_DAYS = 30
 DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
+DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
 
 
 def _gift_plan_status_class(status) -> str:
@@ -173,7 +174,7 @@ def _build_gift_plan_action_groups(
     now,
 ) -> list[dict]:
     """Build priority-ordered dashboard action groups for gift plans."""
-    window_end = today + timedelta(days=DASHBOARD_ACTION_WINDOW_DAYS)
+    due_soon_end = today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
     stale_before = now - timedelta(days=DASHBOARD_STALE_AFTER_DAYS)
     groups = {
         "overdue": {
@@ -208,7 +209,7 @@ def _build_gift_plan_action_groups(
 
         if relation.due_date and relation.due_date < today:
             group_key = "overdue"
-        elif relation.due_date and relation.due_date <= window_end:
+        elif relation.due_date and relation.due_date <= due_soon_end:
             group_key = "upcoming"
         elif relation.due_date is None and is_idea_status(relation.status):
             continue
@@ -230,6 +231,11 @@ def _build_gift_plan_action_groups(
     for group in action_groups:
         is_paginated = group["key"] in DASHBOARD_PAGINATED_ACTION_GROUPS
         group["is_paginated"] = is_paginated
+        group["is_compact"] = group["key"] in DASHBOARD_COMPACT_ACTION_GROUPS
+        group["workspace_focus"] = {
+            "upcoming": "due_soon",
+            "incomplete": "needs_details",
+        }.get(group["key"], "")
         group["display_items"] = group["items"] if is_paginated else group["items"][:4]
     return action_groups
 

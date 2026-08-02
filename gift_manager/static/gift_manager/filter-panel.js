@@ -16,6 +16,8 @@
         const filterToggle = document.getElementById(gridId + '-filter-toggle');
         const filterContent = document.getElementById(gridId + '-filter-content');
         const filterPanel = document.getElementById(gridId + '-filter-panel');
+        const listTools = document.getElementById(gridId + '-list-tools');
+        const controlRoot = listTools || filterPanel || filterContent;
         const searchInput = document.getElementById(gridId + '-search');
         const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
 
@@ -65,13 +67,13 @@
         }
 
         // Hide all clear buttons on init (they start visible since no CSS display:none)
-        filterContent.querySelectorAll('.input-clear-btn').forEach(function(btn) {
+        controlRoot.querySelectorAll('.input-clear-btn').forEach(function(btn) {
             btn.style.display = 'none';
         });
 
         // Sync on input/keyup/change events (delegated, works for dynamic elements)
         ['input', 'keyup', 'change'].forEach(function(evt) {
-            filterContent.addEventListener(evt, function(e) {
+            controlRoot.addEventListener(evt, function(e) {
                 if (e.target.closest('.input-clearable')) {
                     syncClearButton(e.target);
                 }
@@ -79,7 +81,7 @@
         });
 
         // Sync on focus (catches pre-filled values)
-        filterContent.addEventListener('focusin', function(e) {
+        controlRoot.addEventListener('focusin', function(e) {
             if (e.target.closest('.input-clearable')) {
                 syncClearButton(e.target);
             }
@@ -87,9 +89,9 @@
 
         // Sync all clearable inputs after dynamic filters are created
         function syncAllClearButtons() {
-            filterContent.querySelectorAll('.input-clearable input').forEach(syncClearButton);
+            controlRoot.querySelectorAll('.input-clearable input').forEach(syncClearButton);
             // Also hide buttons for newly created wrappers that have no value
-            filterContent.querySelectorAll('.input-clear-btn').forEach(function(btn) {
+            controlRoot.querySelectorAll('.input-clear-btn').forEach(function(btn) {
                 var wrapper = btn.closest('.input-clearable');
                 if (!wrapper) return;
                 var input = wrapper.querySelector('input');
@@ -101,7 +103,7 @@
         setTimeout(syncAllClearButtons, 500);
 
         // Clear button — mousedown + preventDefault to avoid input blur
-        filterContent.addEventListener('mousedown', function(e) {
+        controlRoot.addEventListener('mousedown', function(e) {
             var clearBtn = e.target.closest('.input-clear-btn');
             if (!clearBtn) return;
 

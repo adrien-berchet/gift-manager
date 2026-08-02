@@ -1,134 +1,25 @@
 {% extends "gift_manager/base.html" %}
-{% load custom_filters %}
-
 {% load i18n %}
+
 {% block title %}Gift Manager - {% trans "Gift Plan details" %}{% endblock %}
 
 {% block content %}
 {% if request.META.HTTP_HX_REQUEST %}
     {% include "gift_manager/includes/relation_detail_partial.html" %}
 {% else %}
-<h1 class="my-4">{% trans "Gift Plan details" %}</h1>
-<p><strong>{% trans "Recipient:" %}</strong>
-    {% if relation.recipient_url %}
-    <a href="{{ relation.recipient_url }}">{{ relation.recipient_name }}</a>
-    {% else %}
-    {{ relation.recipient_name }}
-    {% endif %}
-    <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-2">
-        {{ relation.recipient_type_label }}
-    </span>
-    {% if relation.is_group_targeted %}
-    <span class="text-muted small ms-2">{% trans "Gift plan for this group directly." %}</span>
-    {% endif %}
-</p>
-<p><strong>{% trans "Gift:" %}</strong> <a href="{% url 'gift_manager:gift_detail' relation.gift.gift_id %}">{{ relation.gift.name }}</a></p>
-{% if relation.gift.tags.all %}
-<p><strong>{% trans "Tags:" %}</strong>
-    {% for tag in relation.gift.tags.all %}
-    <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}" class="gift-plan-tag-badge">
-        <i class="fas fa-tag" aria-hidden="true"></i>{{ tag.name }}
-    </a>
-    {% endfor %}
-</p>
-{% endif %}
-<p><strong>{% trans "Event:" %}</strong> {% if relation.event %}<a href="{% url 'gift_manager:event_detail' relation.event.event_id %}">{{ relation.event.name }}</a>{% endif %}
-</p>
-<p><strong>{% trans "Comment:" %}</strong> {{ relation.comment }}</p>
-<p><strong>{% trans "Status:" %}</strong>
-    <a href="{% url 'gift_manager:relation_status_detail' relation.status.id %}"
-       class="gift-plan-status-badge {{ gift_plan_status_class }}">
-        {{ relation.status.status }}
-    </a>
-</p>
-<p><strong>{% trans "Due date:" %}</strong>
-    {% if relation.due_date %}
-    <span class="gift-plan-due-badge gift-plan-due-badge--{{ gift_plan_urgency_key }}">
-        <i class="fas fa-calendar-day" aria-hidden="true"></i>{{ relation.due_date|date:"M d, Y" }}
-    </span>
-    {% else %}
-    <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
-        <i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "No date" %}
-    </span>
-    {% endif %}
-</p>
-<p><strong>{% trans "Creation date:" %}</strong> {{ relation.creation_date|replace_none:"" }}</p>
-
-<div class="mt-4">
-    <h5>{% trans "Shared with:" %}</h5>
-    {% if shared_users %}
-    <div id="shares-grid" class="mt-3"></div>
-    {% else %}
-    <p>{% trans "This gift plan is not shared with any friend." %}</p>
-    {% endif %}
+<div class="page-header detail-page-header">
+    <h1>{% trans "Gift Plan details" %}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2" aria-hidden="true"></i>{% trans "Gift Plans" %}
+        </a>
+    </div>
 </div>
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
+
+<div class="detail-page-shell">
+    {% include "gift_manager/includes/relation_detail_partial.html" with full_page_detail=True %}
+</div>
 {% endif %}
-{% endblock %}
-
-{% block extra_js %}
-{% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-{% include "gift_manager/includes/grid-translations.html" %}
-
-<script>
-    (function () {
-        {% if shared_users %}
-        // Shares Grid
-        const sharesData = [
-            {% for shared_user in shared_users %}
-            [
-                "{{ shared_user.user.username|escapejs }}",
-                "{{ shared_user.permission }}",
-                "{{ shared_user.permission_label|escapejs }}"
-            ],
-            {% endfor %}
-        ];
-
-        const sharesColumns = [
-            {
-                name: "{% trans 'Username' %}",
-                sort: {
-                    compare: GridUtils.sortString()
-                }
-            },
-            { name: 'permission', hidden: true },
-            {
-                name: "{% trans 'Permission' %}",
-                formatter: (cell, row) => {
-                    const permission = parseInt(row.cells[1].data);
-                    const label = row.cells[2].data;
-
-                    let badgeClass = 'bg-primary';
-                    let icon = 'fa-eye';
-                    let title = "{% trans 'Can only view this object' %}";
-
-                    if (permission > 20) {
-                        badgeClass = 'bg-warning text-dark';
-                        icon = 'fa-crown';
-                        title = "{% trans 'Has full control over this object' %}";
-                    } else if (permission > 10) {
-                        badgeClass = 'bg-success';
-                        icon = 'fa-edit';
-                        title = "{% trans 'Can edit this object' %}";
-                    }
-
-                    return gridjs.html(`
-                        <span class="badge ${GridUtils.escapeAttribute(badgeClass)}" title="${GridUtils.escapeAttribute(title)}">
-                            <i class="fas ${GridUtils.escapeAttribute(icon)} me-1"></i> ${GridUtils.escapeHtml(label)}
-                        </span>
-                    `);
-                }
-            }
-        ];
-
-        GridUtils.initGrid('shares-grid', sharesColumns, sharesData, {
-            pagination: { enabled: true, limit: 5 },
-            search: false,
-            sort: false
-        });
-        {% endif %}
-    }) ();
-</script>
 {% endblock %}

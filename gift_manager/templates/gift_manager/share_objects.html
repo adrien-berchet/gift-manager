@@ -6,6 +6,10 @@
 
 {% block extra_head %}
 <style>
+    .share-workspace {
+        max-width: 1120px;
+        margin: 0 auto 2rem;
+    }
     .object-list {
         max-height: 300px;
         overflow-y: auto;
@@ -18,8 +22,13 @@
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1 class="mb-4">{% trans "Share Objects with Friends" %}</h1>
+<div class="share-workspace">
+    <div class="page-header">
+        <div>
+            <h1>{% trans "Share Objects with Friends" %}</h1>
+            <p class="text-muted mb-0">{% trans "Choose friends, set a permission level, then select the items to share." %}</p>
+        </div>
+    </div>
 
     <form method="post">
         {% csrf_token %}
@@ -273,7 +282,7 @@
         </div>
 
         <div class="mt-4">
-            <button type="submit" class="btn btn-primary btn-lg" id="share-button" disabled>
+            <button type="submit" class="btn btn-primary btn-lg" id="share-button">
                 {% trans "Share Selected Items" %}
             </button>
             <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-secondary btn-lg ms-2">{% trans "Cancel" %}</a>
@@ -286,6 +295,9 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const shareButton = document.getElementById('share-button');
+    if (shareButton) {
+        shareButton.disabled = true;
+    }
     const groups = [
         { selector: '.person-checkbox', counterId: 'persons-selected', selectAllId: 'select-all-persons' },
         { selector: '.group-checkbox', counterId: 'groups-selected', selectAllId: 'select-all-groups' },

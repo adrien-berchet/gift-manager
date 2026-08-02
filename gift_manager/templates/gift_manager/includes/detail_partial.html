@@ -18,15 +18,22 @@
 
     {% if back_url %}
     <div class="mb-3">
+        {% if full_page_detail %}
+        <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
+        </a>
+        {% else %}
         <button type="button"
                 class="btn btn-sm btn-outline-secondary"
                 data-action="detail"
                 data-detail-url="{{ back_url }}">
             <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
         </button>
+        {% endif %}
     </div>
     {% endif %}
 
+    {% if not full_page_detail %}
     <div class="detail-actions mb-4">
         <div class="btn-group" role="group">
             {% if is_editor %}
@@ -70,6 +77,7 @@
             {% endif %}
         </div>
     </div>
+    {% endif %}
 
     <div class="detail-fields">
         {% block detail_fields %}

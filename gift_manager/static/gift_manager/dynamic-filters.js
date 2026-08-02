@@ -30,6 +30,7 @@
         const filterState = {
             search: "",
             columnFilters: new Map(),
+            searchableIndices: getSearchableColumnIndices(columns),
             sortState: [],
         };
 
@@ -331,7 +332,11 @@
         if (searchInput) {
             searchInput.addEventListener("input", (e) => {
                 filterState.search = e.target.value;
-                saveFilterState(gridId, filterState);
+                clearTimeout(filterTimeout);
+                filterTimeout = setTimeout(() => {
+                    applyFilters(grid, originalData, filterState);
+                    saveFilterState(gridId, filterState);
+                }, FILTER_DEBOUNCE_DELAY);
             });
         }
 
@@ -382,6 +387,11 @@
      */
     function applyFilters(grid, originalData, filterState) {
         let filteredData = [...originalData];
+        const searchTerm = (filterState.search || "").trim().toLowerCase();
+
+        if (searchTerm) {
+            filteredData = filteredData.filter((row) => matchesSearchTerm(row, searchTerm, filterState));
+        }
 
         // Apply column filters
         filterState.columnFilters.forEach((filter, columnIndex) => {
@@ -412,6 +422,42 @@
         } catch (error) {
             console.error("Error applying filters:", error);
         }
+    }
+
+    /**
+     * Return column indexes that should participate in global search.
+     */
+    function getSearchableColumnIndices(columns) {
+        const searchableIndices = [];
+        if (!columns) return searchableIndices;
+
+        columns.forEach((column, index) => {
+            if (column.hidden || index === 0 || column.sort === false) return;
+            searchableIndices.push(index);
+        });
+
+        return searchableIndices;
+    }
+
+    /**
+     * Check whether a row matches the global search term.
+     */
+    function matchesSearchTerm(row, searchTerm, filterState) {
+        return (filterState.searchableIndices || []).some((columnIndex) => {
+            const cellValue = row[columnIndex];
+            if (cellValue == null) return false;
+
+            if (Array.isArray(cellValue)) {
+                return cellValue.some((item) => {
+                    if (typeof item === "object" && item.name) {
+                        return item.name.toLowerCase().includes(searchTerm);
+                    }
+                    return String(item).toLowerCase().includes(searchTerm);
+                });
+            }
+
+            return extractFilterValue(cellValue).toLowerCase().includes(searchTerm);
+        });
     }
 
     /**

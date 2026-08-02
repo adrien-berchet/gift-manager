@@ -556,8 +556,24 @@ class RelationListView(PermissionContextMixin, BaseListView):
 
         if self.show_workspace:
             workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())
-            context["workspace_groups"] = workspace_groups
             context["workspace_summary"] = self.get_workspace_summary(workspace_groups)
+            workspace_focus = self.request.GET.get("focus", "")
+            available_group_keys = {group["key"] for group in workspace_groups}
+            if workspace_focus not in available_group_keys:
+                workspace_focus = ""
+
+            context["workspace_focus"] = workspace_focus
+            context["workspace_focus_label"] = ""
+            if workspace_focus:
+                focused_groups = []
+                for group in workspace_groups:
+                    if group["key"] == workspace_focus:
+                        focused_groups = [group]
+                        context["workspace_focus_label"] = group["label"]
+                        break
+                context["workspace_groups"] = focused_groups
+            else:
+                context["workspace_groups"] = workspace_groups
         return context
 
 

@@ -18,6 +18,7 @@ class AccessibilityManager {
 
     init() {
         this.setupFocusManagement();
+        this.setupSkipLinkFocusTarget();
         this.setupKeyboardShortcuts();
         this.setupAriaSupport();
         this.setupScreenReaderAnnouncements();
@@ -57,6 +58,43 @@ class AccessibilityManager {
 
         document.addEventListener('shown.bs.offcanvas', (e) => {
             this.setInitialFocus(e.target);
+        });
+    }
+
+    /**
+     * Keep the main landmark visually quiet for programmatic focus, while still
+     * confirming keyboard skip-link navigation landed in the right place.
+     */
+    setupSkipLinkFocusTarget() {
+        const skipLink = document.querySelector('.skip-link[href="#main-content"]');
+        const mainContent = document.getElementById('main-content');
+        if (!skipLink || !mainContent) return;
+
+        let skipLinkKeyboardActivated = false;
+
+        skipLink.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                skipLinkKeyboardActivated = true;
+            }
+        });
+
+        skipLink.addEventListener('click', () => {
+            mainContent.classList.toggle(
+                'skip-link-focus-visible',
+                skipLinkKeyboardActivated
+            );
+            skipLinkKeyboardActivated = false;
+        });
+
+        mainContent.addEventListener('blur', () => {
+            mainContent.classList.remove('skip-link-focus-visible');
+        });
+
+        document.addEventListener('pointerdown', (event) => {
+            if (event.target !== skipLink) {
+                skipLinkKeyboardActivated = false;
+                mainContent.classList.remove('skip-link-focus-visible');
+            }
         });
     }
 

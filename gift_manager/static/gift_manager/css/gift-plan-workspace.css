@@ -57,6 +57,26 @@
     color: var(--color-warning-hover);
 }
 
+.gift-plan-focus-note {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    border-radius: var(--radius-md);
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+}
+
+.gift-plan-focus-note span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
 .gift-plan-urgency-board {
     display: grid;
     gap: 1.125rem;
@@ -65,6 +85,11 @@
 .gift-plan-urgency-section {
     padding-top: 0.875rem;
     border-top: 1px solid var(--border-color);
+    scroll-margin-top: calc(var(--navbar-height, 64px) + 1rem);
+}
+
+.gift-plan-urgency-section:target {
+    border-top-color: var(--color-primary);
 }
 
 .gift-plan-urgency-heading {

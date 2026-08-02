@@ -63,14 +63,27 @@
         </div>
     </div>
 
+    {% if workspace_focus %}
+    <div class="gift-plan-focus-note" role="status">
+        <span>
+            <i class="fas fa-filter" aria-hidden="true"></i>
+            {% trans "Showing" %}: <strong>{{ workspace_focus_label }}</strong>
+        </span>
+        <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-secondary">
+            {% trans "Show all gift plans" %}
+        </a>
+    </div>
+    {% endif %}
+
     {% if workspace_groups %}
     <div class="gift-plan-urgency-board">
         {% for group in workspace_groups %}
         <section class="gift-plan-urgency-section gift-plan-urgency-section--{{ group.key }}"
-                 aria-labelledby="gift-plan-group-{{ group.key }}">
+                 id="gift-plan-group-{{ group.key }}"
+                 aria-labelledby="gift-plan-group-{{ group.key }}-heading">
             <div class="gift-plan-urgency-heading">
                 <div>
-                    <h3 id="gift-plan-group-{{ group.key }}">
+                    <h3 id="gift-plan-group-{{ group.key }}-heading">
                         <i class="fas {{ group.icon }}" aria-hidden="true"></i>
                         {{ group.label }}
                     </h3>

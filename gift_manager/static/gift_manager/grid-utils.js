@@ -1866,6 +1866,7 @@
 
         // Track initialization state
         var editState = { inlineEditingInitialized: false };
+        var listControlsInitialized = false;
         var advancedFeaturesInitialized = false;
 
         // Auto-detect ID field index if not provided
@@ -1903,10 +1904,24 @@
             }
         }
 
+        function initializeListControls() {
+            if (listControlsInitialized) return;
+            listControlsInitialized = true;
+
+            if (features.filterPanel !== false && window.FilterPanel) {
+                FilterPanel.init(gridId, grid, columns);
+            }
+
+            if (features.realTimeSearch && window.RealTimeSearch) {
+                RealTimeSearch.init(gridId, grid, data);
+            }
+        }
+
         function initializeAdvancedFeatures() {
             if (advancedFeaturesInitialized) return;
             advancedFeaturesInitialized = true;
 
+            initializeListControls();
             addAdvancedDataAttributes();
 
             if (bulkOperations) {
@@ -1915,16 +1930,8 @@
 
             initializeInlineEditing();
 
-            if (features.filterPanel !== false && window.FilterPanel) {
-                FilterPanel.init(gridId, grid, columns);
-            }
-
-            if (features.realTimeSearch && window.RealTimeSearch) {
-                RealTimeSearch.init(gridId, grid, getCurrentGridData());
-            }
-
             if (features.dynamicFilters && window.DynamicFilters) {
-                DynamicFilters.init(gridId, grid, getCurrentGridData(), columns);
+                DynamicFilters.init(gridId, grid, data, columns);
             }
 
             if (bulkOperations) {
@@ -1981,6 +1988,8 @@
                 addAdvancedDataAttributes();
             });
         }
+
+        initializeListControls();
 
         if (useAdvancedControls) {
             setupAdvancedControls(gridId, advancedControls, initializeAdvancedFeatures);

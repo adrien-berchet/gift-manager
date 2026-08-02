@@ -114,14 +114,28 @@
                         {% endif %}
                     </div>
 
-                    <div class="relation-actions">
-                        <button type="button"
-                                class="btn btn-outline-primary btn-sm"
-                                data-action="edit"
-                                data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
-                                title="{% trans 'Edit gift plan' %}">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                    <div class="relation-actions d-flex gap-1">
+                        <a href="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}"
+                           class="btn btn-outline-secondary btn-sm"
+                           data-action="detail"
+                           data-detail-url="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}"
+                           title="{% trans 'View gift plan details' %}">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                        </a>
+                        <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                           class="btn btn-outline-primary btn-sm"
+                           data-action="edit"
+                           data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                           title="{% trans 'Edit gift plan' %}">
+                            <i class="fas fa-edit" aria-hidden="true"></i>
+                        </a>
+                        <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
+                           class="btn btn-outline-danger btn-sm"
+                           data-action="delete"
+                           data-delete-url="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
+                           title="{% trans 'Delete gift plan' %}">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                        </a>
                     </div>
                 </div>
             </div>

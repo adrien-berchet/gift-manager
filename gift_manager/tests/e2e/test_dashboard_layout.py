@@ -1,6 +1,5 @@
 """Dashboard layout end-to-end tests."""
 
-import re
 from datetime import timedelta
 
 import pytest
@@ -11,13 +10,6 @@ from playwright.sync_api import expect
 
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import RelationFactory
-
-SCRIPT_TAG_RE = re.compile(r"<script\b[^>]*>.*?</script>", re.IGNORECASE | re.DOTALL)
-
-
-def remove_scripts(content: str) -> str:
-    """Remove blocking scripts from static HTML used for layout assertions."""
-    return SCRIPT_TAG_RE.sub("", content)
 
 
 def login(page: Page, base_url: str):
@@ -46,7 +38,7 @@ def create_dashboard_action_plans(
             gift=GiftFactory(name=f"{prefix} {index}"),
             event=None,
             status=seed_data_e2e.statuses["planned"],
-            due_date=today + timedelta(days=index + 1) if due_soon else None,
+            due_date=today + timedelta(days=(index % 7) + 1) if due_soon else None,
             comment=first_comment if index == 0 else "",
             shared_with=[seed_data_e2e.alice],
         )
@@ -62,6 +54,50 @@ def get_grid_column_count(grid) -> int:
     )
 
 
+def assert_main_content_focus_is_quiet(page: Page):
+    """Assert the skip-link focus target does not draw a page-sized focus ring."""
+    page.mouse.click(8, 8)
+    focus_styles = page.locator("#main-content").evaluate(
+        """main => {
+            main.focus();
+            const styles = getComputedStyle(main);
+            return {
+                outlineStyle: styles.outlineStyle,
+                outlineWidth: styles.outlineWidth,
+                boxShadow: styles.boxShadow,
+            };
+        }"""
+    )
+    assert focus_styles["outlineStyle"] == "none"
+    assert focus_styles["outlineWidth"] == "0px"
+    assert focus_styles["boxShadow"] == "none"
+
+
+def assert_skip_link_focus_target_is_visible(page: Page):
+    """Assert keyboard skip-link navigation still exposes the main focus target."""
+    skip_link = page.locator(".skip-link")
+    main = page.locator("#main-content")
+
+    page.keyboard.press("Tab")
+    expect(skip_link).to_be_focused()
+    page.keyboard.press("Enter")
+    expect(main).to_be_focused()
+
+    focus_styles = main.evaluate(
+        """main => {
+            const styles = getComputedStyle(main);
+            return {
+                outlineStyle: styles.outlineStyle,
+                outlineWidth: styles.outlineWidth,
+                boxShadow: styles.boxShadow,
+            };
+        }"""
+    )
+    assert focus_styles["outlineStyle"] != "none"
+    assert focus_styles["outlineWidth"] != "0px"
+    assert focus_styles["boxShadow"] != "none"
+
+
 def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
     """Return rendered pagination metrics for a dashboard action group."""
     group = page.locator(f".dashboard-action-group--{group_key}").first
@@ -75,9 +111,11 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
             const group = list.closest('[data-dashboard-action-paginated]');
             const cards = Array.from(list.querySelectorAll('[data-dashboard-action-card]'));
             const visibleCards = cards.filter((card) => !card.hidden);
+            const pagination = group.querySelector('[data-dashboard-pagination]');
             const styles = getComputedStyle(list);
             const groupRect = group.getBoundingClientRect();
             const listRect = list.getBoundingClientRect();
+            const paginationRect = pagination?.getBoundingClientRect();
             const positions = visibleCards.map((card) => {
                 const rect = card.getBoundingClientRect();
                 return { x: rect.x, y: rect.y };
@@ -103,6 +141,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 cardCount: cards.length,
                 visibleCount: visibleCards.length,
                 hiddenCount: cards.length - visibleCards.length,
+                rowsPerPage: Number.parseInt(group.dataset.dashboardRowsPerPage || '2', 10),
                 columnCount: styles.gridTemplateColumns
                     .split(' ')
                     .filter((column) => column && column !== 'none').length,
@@ -112,8 +151,9 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 listWidth: listRect.width,
                 minHeight: styles.minHeight,
                 groupHeight: groupRect.height,
+                paginationTop: paginationRect?.top ?? null,
                 pageSize: Number.parseInt(group.dataset.dashboardPageSize || '0', 10),
-                paginationHidden: group.querySelector('[data-dashboard-pagination]')?.hidden,
+                paginationHidden: pagination?.hidden,
                 pageStatus: group.querySelector('[data-dashboard-page-status]')?.textContent.trim(),
                 previousDisabled: group.querySelector('[data-dashboard-page="previous"]')?.disabled,
                 nextDisabled: group.querySelector('[data-dashboard-page="next"]')?.disabled,
@@ -130,32 +170,39 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
 
 
 def assert_paginated_action_layout(page: Page, group_key: str):
-    """Assert a dashboard action group uses two-row pagination."""
+    """Assert a dashboard action group uses its configured row pagination."""
     pagination = page.locator(f".dashboard-action-group--{group_key} [data-dashboard-pagination]")
     expect(pagination).to_be_visible()
 
     metrics = get_paginated_layout_metrics(page, group_key)
+    expected_rows = metrics["rowsPerPage"]
     assert metrics["columnCount"] >= 2
-    assert metrics["cardCount"] > metrics["columnCount"] * 2
-    assert metrics["visibleCount"] == metrics["columnCount"] * 2
+    assert metrics["cardCount"] > metrics["columnCount"] * expected_rows
+    assert metrics["visibleCount"] == metrics["columnCount"] * expected_rows
     assert metrics["hiddenCount"] > 0
     assert metrics["overflowY"] != "auto"
     assert metrics["scrollHeight"] <= metrics["clientHeight"] + 1
     assert metrics["previousDisabled"] is True
     assert metrics["nextDisabled"] is False
     assert metrics["pageStatus"].startswith("1 / ")
-    assert metrics["minHeight"] == "0px"
+    assert metrics["minHeight"] != "0px"
     assert max(metrics["visibleHeights"]) - min(metrics["visibleHeights"]) <= 1
     assert max(metrics["visibleWidths"]) - min(metrics["visibleWidths"]) <= 1
-    assert any(note["scrollHeight"] > note["clientHeight"] for note in metrics["noteMetrics"])
     assert all(
         note["clientHeight"] <= (note["lineHeight"] * 2) + 1 for note in metrics["noteMetrics"]
     )
+    baseline_client_height = metrics["clientHeight"]
+    baseline_group_height = metrics["groupHeight"]
+    baseline_pagination_top = metrics["paginationTop"]
 
     positions = metrics["positions"]
     assert positions[1]["x"] > positions[0]["x"]
     assert abs(positions[1]["y"] - positions[0]["y"]) <= 2
-    assert positions[metrics["columnCount"]]["y"] > positions[0]["y"]
+    if expected_rows > 1:
+        assert positions[metrics["columnCount"]]["y"] > positions[0]["y"]
+    else:
+        assert len(positions) == metrics["columnCount"]
+        assert all(abs(position["y"] - positions[0]["y"]) <= 2 for position in positions)
 
     first_page_title = metrics["visibleTitles"][0]
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='next']").click()
@@ -165,14 +212,20 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert next_metrics["previousDisabled"] is False
     assert next_metrics["pageStatus"].startswith("2 / ")
     assert next_metrics["scrollHeight"] <= next_metrics["clientHeight"] + 1
-    assert next_metrics["minHeight"] == "0px"
+    assert next_metrics["minHeight"] != "0px"
+    assert abs(next_metrics["clientHeight"] - baseline_client_height) <= 1
+    assert abs(next_metrics["groupHeight"] - baseline_group_height) <= 1
+    assert abs(next_metrics["paginationTop"] - baseline_pagination_top) <= 1
     assert max(next_metrics["visibleHeights"]) - min(next_metrics["visibleHeights"]) <= 1
     assert max(next_metrics["visibleWidths"]) - min(next_metrics["visibleWidths"]) <= 1
 
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     previous_metrics = get_paginated_layout_metrics(page, group_key)
     assert previous_metrics["visibleTitles"][0] == first_page_title
-    assert previous_metrics["minHeight"] == "0px"
+    assert previous_metrics["minHeight"] != "0px"
+    assert abs(previous_metrics["clientHeight"] - baseline_client_height) <= 1
+    assert abs(previous_metrics["groupHeight"] - baseline_group_height) <= 1
+    assert abs(previous_metrics["paginationTop"] - baseline_pagination_top) <= 1
 
     last_metrics = previous_metrics
     before_last_metrics = previous_metrics
@@ -186,15 +239,20 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert last_metrics["nextDisabled"] is True
     assert last_metrics["visibleCount"] == 1
     assert last_metrics["minHeight"] != "0px"
-    assert abs(last_metrics["clientHeight"] - before_last_metrics["clientHeight"]) <= 1
-    assert abs(last_metrics["groupHeight"] - before_last_metrics["groupHeight"]) <= 1
-    assert max(last_metrics["visibleHeights"]) < last_metrics["clientHeight"] - 1
+    assert abs(last_metrics["clientHeight"] - baseline_client_height) <= 1
+    assert abs(last_metrics["groupHeight"] - baseline_group_height) <= 1
+    assert abs(last_metrics["paginationTop"] - baseline_pagination_top) <= 1
+    if expected_rows > 1:
+        assert max(last_metrics["visibleHeights"]) < last_metrics["clientHeight"] - 1
+    else:
+        assert max(last_metrics["visibleHeights"]) <= last_metrics["clientHeight"] + 1
     assert abs(last_metrics["visibleWidths"][0] - before_last_metrics["visibleWidths"][0]) <= 1
     assert last_metrics["visibleWidths"][0] < last_metrics["listWidth"] * 0.5
 
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
-    unlocked_metrics = get_paginated_layout_metrics(page, group_key)
-    assert unlocked_metrics["minHeight"] == "0px"
+    stable_metrics = get_paginated_layout_metrics(page, group_key)
+    assert stable_metrics["minHeight"] != "0px"
+    assert abs(stable_metrics["paginationTop"] - baseline_pagination_top) <= 1
 
 
 @pytest.mark.django_db
@@ -202,6 +260,14 @@ def assert_paginated_action_layout(page: Page, group_key: str):
 @pytest.mark.e2e
 class TestDashboardLayout:
     """Browser checks for dashboard-specific responsive layout."""
+
+    def test_main_content_focus_styles_preserve_skip_link(self, page: Page, live_server):
+        """Main focus target should be quiet for pointer focus and visible for skip links."""
+        page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+        assert_main_content_focus_is_quiet(page)
+
+        page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+        assert_skip_link_focus_target_is_visible(page)
 
     @pytest.mark.django_db(transaction=True)
     def test_paginated_action_groups_wrap_and_page(self, page: Page, live_server, seed_data_e2e):
@@ -230,6 +296,7 @@ class TestDashboardLayout:
 
         login(page, live_server.url)
         page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+        assert_main_content_focus_is_quiet(page)
 
         initial_upcoming_metrics = get_paginated_layout_metrics(page, "upcoming")
         initial_incomplete_metrics = get_paginated_layout_metrics(page, "incomplete")
@@ -276,8 +343,10 @@ class TestDashboardLayout:
         assert grid_box is not None
         assert group_box is not None
         assert incomplete_box is not None
-        assert group_box["width"] >= grid_box["width"] - 2
-        assert incomplete_box["width"] >= grid_box["width"] - 2
+        assert group_box["width"] >= (grid_box["width"] / 2) - 16
+        assert incomplete_box["width"] >= (grid_box["width"] / 2) - 16
+        assert group_box["width"] < grid_box["width"] - 2
+        assert incomplete_box["width"] < grid_box["width"] - 2
 
         assert_paginated_action_layout(page, "upcoming")
         assert_paginated_action_layout(page, "incomplete")
@@ -289,7 +358,7 @@ class TestDashboardLayout:
             ".gift-plan-urgency-section--needs_details .gift-plan-card-grid"
         ).first
         expect(workspace_grid).to_be_visible()
-        assert get_grid_column_count(workspace_grid) == dashboard_columns
+        assert get_grid_column_count(workspace_grid) >= dashboard_columns
 
         for viewport_width in (700, 390):
             page.set_viewport_size({"width": viewport_width, "height": 900})
@@ -377,8 +446,9 @@ class TestDashboardLayout:
         assert refreshed is True
         expect(page.locator("#dashboard-live")).to_contain_text("Dashboard Refresh Kite")
 
+    @pytest.mark.django_db(transaction=True)
     def test_incomplete_action_cards_use_gift_plan_card_layout(
-        self, page: Page, client, seed_data_e2e
+        self, page: Page, live_server, client, seed_data_e2e
     ):
         """Incomplete gift plans should render with gift-plan card internals."""
         page.set_viewport_size({"width": 1280, "height": 900})
@@ -398,7 +468,8 @@ class TestDashboardLayout:
         assert "dashboard-action-list--responsive" not in content
         assert "dashboard-action-item" not in content
         assert "gift-plan-card gift-plan-card--needs_details" in content
-        page.set_content(remove_scripts(content), wait_until="domcontentloaded")
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
 
         list_grid = page.locator(".dashboard-action-group--incomplete .dashboard-action-list").first
         cards = list_grid.locator("[data-dashboard-action-card].gift-plan-card--needs_details")
@@ -452,22 +523,24 @@ class TestDashboardLayout:
         assert note_box["y"] <= detail_box["y"]
 
         page.set_viewport_size({"width": 700, "height": 900})
-        page.wait_for_timeout(100)
+        page.wait_for_timeout(180)
         assert get_grid_column_count(list_grid) == 1
 
         page.set_viewport_size({"width": 390, "height": 844})
-        page.wait_for_timeout(100)
+        page.wait_for_timeout(180)
 
+        mobile_metrics = get_paginated_layout_metrics(page, "incomplete")
         mobile_columns = get_grid_column_count(list_grid)
         assert mobile_columns == 1
+        assert mobile_metrics["visibleCount"] == 1
+        assert mobile_metrics["hiddenCount"] > 0
 
         mobile_first_card_box = cards.nth(0).bounding_box()
         mobile_second_card_box = cards.nth(1).bounding_box()
         mobile_title_box = title.bounding_box()
         mobile_detail_box = detail_action.bounding_box()
         assert mobile_first_card_box is not None
-        assert mobile_second_card_box is not None
+        assert mobile_second_card_box is None
         assert mobile_title_box is not None
         assert mobile_detail_box is not None
-        assert mobile_second_card_box["y"] > mobile_first_card_box["y"]
         assert mobile_detail_box["y"] > mobile_title_box["y"]

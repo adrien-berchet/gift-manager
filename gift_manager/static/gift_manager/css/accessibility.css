@@ -251,6 +251,18 @@ a:focus {
     }
 }
 
+#main-content:focus,
+#main-content:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#main-content.skip-link-focus-visible:focus {
+    outline: var(--focus-outline-width) solid var(--focus-color) !important;
+    outline-offset: var(--focus-outline-offset) !important;
+    box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
+}
+
 /* Keyboard Navigation Hints */
 .keyboard-hint {
     font-size: 0.75rem;

@@ -575,17 +575,28 @@
         padding: 0;
     }
 
-    @media (min-width: 768px) {
-        .dashboard-action-group--incomplete,
-        .dashboard-action-group--upcoming {
-            grid-column: span 2;
-        }
+    .dashboard-action-group--compact {
+        align-self: start;
     }
 
-    @media (min-width: 1200px) {
-        .dashboard-action-group--incomplete,
-        .dashboard-action-group--upcoming {
-            grid-column: 1 / -1;
+    .dashboard-action-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--color-primary);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .dashboard-action-link:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    @media (min-width: 768px) {
+        .dashboard-action-group--compact {
+            grid-column: span 2;
         }
     }
 
@@ -893,21 +904,21 @@
          hx-target="this"
          hx-swap="outerHTML">
     <div class="dashboard-summary-strip" aria-label="{% trans 'Dashboard summary' %}">
-        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile dashboard-summary-tile--attention">
+        <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="dashboard-summary-tile dashboard-summary-tile--attention">
             <i class="fas fa-bell" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.attention|default:0 }}</strong>
                 <span>{% trans "Needs attention" %}</span>
             </div>
         </a>
-        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile">
+        <a href="{% url 'gift_manager:relations' %}?focus=overdue#gift-plan-group-overdue" class="dashboard-summary-tile">
             <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.overdue|default:0 }}</strong>
                 <span>{% trans "Overdue" %}</span>
             </div>
         </a>
-        <a href="{% url 'gift_manager:relations' %}" class="dashboard-summary-tile">
+        <a href="{% url 'gift_manager:relations' %}?focus=due_soon#gift-plan-group-due_soon" class="dashboard-summary-tile">
             <i class="fas fa-clock" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.upcoming|default:0 }}</strong>
@@ -926,7 +937,7 @@
     <section class="next-action-board" aria-labelledby="next-action-heading">
         <div class="section-heading">
             <h2 id="next-action-heading">{% trans "Needs attention" %}</h2>
-            <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-primary">
+            <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="btn btn-sm btn-outline-primary">
                 {% trans "Open workspace" %}
             </a>
         </div>
@@ -934,14 +945,24 @@
         {% if dashboard_action_groups %}
         <div class="action-group-grid">
             {% for group in dashboard_action_groups %}
-            <section class="dashboard-action-group dashboard-action-group--{{ group.key }}"
+            <section class="dashboard-action-group dashboard-action-group--{{ group.key }}{% if group.is_compact %} dashboard-action-group--compact{% endif %}"
                      {% if group.is_paginated %}data-dashboard-action-paginated{% endif %}
+                     {% if group.is_compact %}data-dashboard-rows-per-page="1"{% endif %}
                      aria-labelledby="dashboard-action-group-{{ group.key }}">
                 <div class="dashboard-action-heading">
                     <h3 id="dashboard-action-group-{{ group.key }}">
                         <i class="fas {{ group.icon }}" aria-hidden="true"></i>{{ group.label }}
                     </h3>
-                    <span class="dashboard-action-count">{{ group.items|length }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if group.is_compact and group.workspace_focus %}
+                        <a href="{% url 'gift_manager:relations' %}?focus={{ group.workspace_focus }}#gift-plan-group-{{ group.workspace_focus }}"
+                           class="dashboard-action-link">
+                            {% trans "View all" %}
+                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
+                        <span class="dashboard-action-count">{{ group.items|length }}</span>
+                    </div>
                 </div>
                 <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} dashboard-action-list--paginated{% endif %}"
                      {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
@@ -1180,7 +1201,7 @@
 <script src="{% static 'gift_manager/js/gift-plan-quick-actions.js' %}"></script>
 <script>
     (function () {
-        const rowsPerPage = 2;
+        const defaultRowsPerPage = 2;
         let resizeTimer = null;
 
         function getCards(group) {
@@ -1205,17 +1226,47 @@
             return Math.max(columns || 1, 1);
         }
 
-        function updateGroup(group, options) {
+        function measureStablePageHeight(list, cards, pageSize, pageCount) {
+            const previousHiddenStates = cards.map((card) => card.hidden);
+            const previousMinHeight = list.style.minHeight;
+            const hadShortPage = list.classList.contains('dashboard-action-list--short-page');
+            let stableHeight = 0;
+
+            list.style.minHeight = '';
+            list.classList.remove('dashboard-action-list--short-page');
+
+            for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+                const firstVisibleIndex = pageIndex * pageSize;
+                const firstHiddenIndex = firstVisibleIndex + pageSize;
+                cards.forEach((card, index) => {
+                    card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
+                });
+                stableHeight = Math.max(stableHeight, list.getBoundingClientRect().height);
+            }
+
+            cards.forEach((card, index) => {
+                card.hidden = previousHiddenStates[index];
+            });
+            list.style.minHeight = previousMinHeight;
+            list.classList.toggle('dashboard-action-list--short-page', hadShortPage);
+
+            return stableHeight;
+        }
+
+        function updateGroup(group) {
             const list = group.querySelector('[data-dashboard-action-list]');
             const pagination = group.querySelector('[data-dashboard-pagination]');
             const previousButton = group.querySelector('[data-dashboard-page="previous"]');
             const nextButton = group.querySelector('[data-dashboard-page="next"]');
             const status = group.querySelector('[data-dashboard-page-status]');
             const cards = getCards(group);
-            const previousHeight = options?.previousHeight || 0;
 
             if (!list || cards.length === 0) return;
 
+            const rowsPerPage = Number.parseInt(
+                group.dataset.dashboardRowsPerPage || defaultRowsPerPage.toString(),
+                10
+            ) || defaultRowsPerPage;
             const columns = getColumnCount(list, cards);
             const pageSize = Math.max(columns * rowsPerPage, 1);
             const pageCount = Math.max(Math.ceil(cards.length / pageSize), 1);
@@ -1229,13 +1280,18 @@
 
             list.style.minHeight = '';
             list.classList.remove('dashboard-action-list--short-page');
+            const stablePageHeight = pageCount > 1
+                ? measureStablePageHeight(list, cards, pageSize, pageCount)
+                : 0;
             cards.forEach((card, index) => {
                 card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
             });
 
             const visibleCount = Math.min(pageSize, Math.max(cards.length - firstVisibleIndex, 0));
-            if (previousHeight > 0 && currentPage > 0 && visibleCount <= columns) {
-                list.style.minHeight = `${Math.ceil(previousHeight)}px`;
+            if (stablePageHeight > 0) {
+                list.style.minHeight = `${Math.ceil(stablePageHeight)}px`;
+            }
+            if (stablePageHeight > 0 && visibleCount < pageSize) {
                 list.classList.add('dashboard-action-list--short-page');
             }
 
@@ -1269,12 +1325,10 @@
             const group = button.closest('[data-dashboard-action-paginated]');
             if (!group) return;
 
-            const list = group.querySelector('[data-dashboard-action-list]');
-            const previousHeight = list ? list.getBoundingClientRect().height : 0;
             const direction = button.dataset.dashboardPage === 'next' ? 1 : -1;
             const currentPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10) || 0;
             group.dataset.dashboardCurrentPage = (currentPage + direction).toString();
-            updateGroup(group, { previousHeight });
+            updateGroup(group);
         });
 
         window.addEventListener('resize', function () {
