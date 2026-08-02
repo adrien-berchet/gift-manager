@@ -151,7 +151,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 listWidth: listRect.width,
                 minHeight: styles.minHeight,
                 groupHeight: groupRect.height,
-                paginationTop: paginationRect?.top ?? null,
+                paginationOffsetTop: paginationRect ? paginationRect.top - groupRect.top : null,
                 pageSize: Number.parseInt(group.dataset.dashboardPageSize || '0', 10),
                 paginationHidden: pagination?.hidden,
                 pageStatus: group.querySelector('[data-dashboard-page-status]')?.textContent.trim(),
@@ -193,7 +193,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     )
     baseline_client_height = metrics["clientHeight"]
     baseline_group_height = metrics["groupHeight"]
-    baseline_pagination_top = metrics["paginationTop"]
+    baseline_pagination_offset_top = metrics["paginationOffsetTop"]
 
     positions = metrics["positions"]
     assert positions[1]["x"] > positions[0]["x"]
@@ -215,7 +215,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert next_metrics["minHeight"] != "0px"
     assert abs(next_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(next_metrics["groupHeight"] - baseline_group_height) <= 1
-    assert abs(next_metrics["paginationTop"] - baseline_pagination_top) <= 1
+    assert abs(next_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
     assert max(next_metrics["visibleHeights"]) - min(next_metrics["visibleHeights"]) <= 1
     assert max(next_metrics["visibleWidths"]) - min(next_metrics["visibleWidths"]) <= 1
 
@@ -225,7 +225,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert previous_metrics["minHeight"] != "0px"
     assert abs(previous_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(previous_metrics["groupHeight"] - baseline_group_height) <= 1
-    assert abs(previous_metrics["paginationTop"] - baseline_pagination_top) <= 1
+    assert abs(previous_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
 
     last_metrics = previous_metrics
     before_last_metrics = previous_metrics
@@ -241,7 +241,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert last_metrics["minHeight"] != "0px"
     assert abs(last_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(last_metrics["groupHeight"] - baseline_group_height) <= 1
-    assert abs(last_metrics["paginationTop"] - baseline_pagination_top) <= 1
+    assert abs(last_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
     if expected_rows > 1:
         assert max(last_metrics["visibleHeights"]) < last_metrics["clientHeight"] - 1
     else:
@@ -252,7 +252,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     stable_metrics = get_paginated_layout_metrics(page, group_key)
     assert stable_metrics["minHeight"] != "0px"
-    assert abs(stable_metrics["paginationTop"] - baseline_pagination_top) <= 1
+    assert abs(stable_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
 
 
 @pytest.mark.django_db

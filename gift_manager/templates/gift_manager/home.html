@@ -232,38 +232,6 @@
         flex-shrink: 0;
     }
 
-    /* Status Pills */
-    .status-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-    }
-
-    .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        background: var(--color-gray-100);
-        border-radius: var(--radius-full);
-        font-size: var(--text-sm);
-        font-weight: 500;
-        color: var(--text-secondary);
-    }
-
-    [data-theme="dark"] .status-pill {
-        background: var(--surface-elevated);
-    }
-
-    .status-pill .count {
-        background: var(--color-primary);
-        color: white;
-        padding: 2px 8px;
-        border-radius: var(--radius-full);
-        font-size: var(--text-xs);
-        font-weight: 600;
-    }
-
     /* Quick Actions */
     .quick-actions {
         display: flex;
@@ -616,13 +584,6 @@
         font-size: 2rem;
     }
 
-    .dashboard-support-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: var(--space-5);
-        margin-bottom: var(--space-8);
-    }
-
     .dashboard-secondary-section {
         padding-top: var(--space-5);
         border-top: 1px solid var(--border-color);
@@ -688,8 +649,7 @@
         }
 
         .dashboard-summary-strip,
-        .action-group-grid,
-        .dashboard-support-grid {
+        .action-group-grid {
             grid-template-columns: 1fr;
         }
 
@@ -797,15 +757,6 @@
 
         .item-subtitle {
             font-size: 10px;
-        }
-
-        .status-list {
-            gap: var(--space-1);
-        }
-
-        .status-pill {
-            font-size: var(--text-xs);
-            padding: var(--space-1) var(--space-2);
         }
 
         .empty-state {
@@ -1004,88 +955,6 @@
         {% endif %}
     </section>
 
-    <div class="dashboard-support-grid">
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-gift"></i> {% trans "Gift ideas without a plan" %}</h3>
-                <a href="{% url 'gift_manager:gifts' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if unassigned_gifts %}
-                <ul class="item-list">
-                    {% for gift in unassigned_gifts %}
-                    <li>
-                        <div class="item-icon gift">
-                            <i class="fas fa-gift"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:gift_detail' gift.gift_id %}" class="item-title">
-                                {{ gift.name }}
-                            </a>
-                            {% if gift.comment %}
-                            <span class="item-subtitle">{{ gift.comment|truncatewords:8 }}</span>
-                            {% endif %}
-                        </div>
-                        <a href="{% url 'gift_manager:gift_relation_create' gift.gift_id %}"
-                           class="btn btn-sm btn-outline-primary"
-                           data-action="create">
-                            {% trans "Plan" %}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-gift"></i>
-                    <p>{% trans "No gifts added yet" %}</p>
-                    <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add a gift" %}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-calendar-alt"></i> {% trans "Upcoming occasions" %}</h3>
-                <a href="{% url 'gift_manager:events' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if upcoming_occasion_recipients %}
-                <ul class="item-list">
-                    {% for item in upcoming_occasion_recipients %}
-                    <li>
-                        <div class="item-icon event">
-                            <i class="fas fa-calendar-alt"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:relation_detail' item.relation.relation_id %}" class="item-title">
-                                {{ item.relation.recipient_name }}
-                            </a>
-                            <span class="item-subtitle">
-                                {{ item.event.name }} &middot; {{ item.relation.gift.name }}
-                            </span>
-                        </div>
-                        <span class="gift-plan-due-badge gift-plan-due-badge--due_soon">
-                            {{ item.occurrence_date|date:"M d" }}
-                        </span>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-calendar-check"></i>
-                    <p>{% trans "No upcoming occasions in the next 30 days." %}</p>
-                    <a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary btn-sm" data-action="create">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add an event" %}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-
     <section class="dashboard-secondary-section" aria-labelledby="dashboard-library-heading">
         <div class="section-heading">
             <h2 id="dashboard-library-heading">{% trans "Library" %}</h2>
@@ -1140,16 +1009,6 @@
             </a>
         </div>
 
-        {% if status_counts %}
-        <div class="status-list">
-            {% for item in status_counts %}
-            <div class="status-pill">
-                {{ item.status }}
-                <span class="count">{{ item.count }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
     </section>
     </div>
 

@@ -1,6 +1,5 @@
 """Common utilities and type definitions for views."""
 
-from calendar import monthrange
 from datetime import date
 from datetime import timedelta
 from typing import TypeAlias
@@ -25,7 +24,6 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
-from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
@@ -35,7 +33,6 @@ from gift_manager.statuses import relation_status_slug
 ModelType: TypeAlias = type[Model]
 SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
-DASHBOARD_ACTION_WINDOW_DAYS = 30
 DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
 DASHBOARD_STALE_AFTER_DAYS = 30
 DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
@@ -60,52 +57,6 @@ def _gift_plan_requires_planning_fields(relation: Relation) -> bool:
 def _gift_plan_has_missing_event(relation: Relation) -> bool:
     """Return whether an active gift plan is missing its event."""
     return _gift_plan_requires_planning_fields(relation) and relation.event_id is None
-
-
-def _safe_date(year: int, month: int, day: int) -> date:
-    """Build a date, clamping the day to the target month when needed."""
-    return date(year, month, min(day, monthrange(year, month)[1]))
-
-
-def _next_monthly_occurrence(usual_date: date, today: date) -> date:
-    """Return the next monthly occurrence for an event's usual date."""
-    candidate = _safe_date(today.year, today.month, usual_date.day)
-    if candidate >= today:
-        return candidate
-
-    month = today.month + 1
-    year = today.year
-    if month > 12:
-        month = 1
-        year += 1
-    return _safe_date(year, month, usual_date.day)
-
-
-def _next_event_occurrence(event: Event, today: date, window_end: date) -> date | None:
-    """Return an event's next occurrence in the dashboard window."""
-    if event.absolute_date and today <= event.absolute_date <= window_end:
-        return event.absolute_date
-
-    if not event.usual_date:
-        return None
-
-    if event.recurrence == "daily":
-        occurrence = today
-    elif event.recurrence == "weekly":
-        days_until = (event.usual_date.weekday() - today.weekday()) % 7
-        occurrence = today + timedelta(days=days_until)
-    elif event.recurrence == "monthly":
-        occurrence = _next_monthly_occurrence(event.usual_date, today)
-    elif event.recurrence == "yearly":
-        occurrence = _safe_date(today.year, event.usual_date.month, event.usual_date.day)
-        if occurrence < today:
-            occurrence = _safe_date(today.year + 1, event.usual_date.month, event.usual_date.day)
-    else:
-        occurrence = event.usual_date
-
-    if today <= occurrence <= window_end:
-        return occurrence
-    return None
 
 
 def _dashboard_quick_action_urgency_key(
@@ -240,38 +191,6 @@ def _build_gift_plan_action_groups(
     return action_groups
 
 
-def _build_upcoming_occasion_recipients(
-    relations: list[Relation],
-    *,
-    today: date,
-) -> list[dict]:
-    """Return recipients attached to gift plans with upcoming occasions."""
-    window_end = today + timedelta(days=DASHBOARD_ACTION_WINDOW_DAYS)
-    items = []
-    for relation in relations:
-        if not relation.event or _is_completed_status(relation.status):
-            continue
-
-        occurrence = _next_event_occurrence(relation.event, today, window_end)
-        if not occurrence:
-            continue
-
-        items.append(
-            {
-                "relation": relation,
-                "event": relation.event,
-                "occurrence_date": occurrence,
-                "days_until": (occurrence - today).days,
-                "status_class": _gift_plan_status_class(relation.status),
-            }
-        )
-
-    return sorted(
-        items,
-        key=lambda item: (item["occurrence_date"], item["relation"].recipient_name.lower()),
-    )[:5]
-
-
 def _build_dashboard_summary(action_groups: list[dict], unassigned_gift_count: int) -> dict:
     """Return compact action counts for the dashboard summary strip."""
     action_counts = {group["key"]: len(group["items"]) for group in action_groups}
@@ -339,34 +258,14 @@ def home(request):
             now=now,
         )
 
-        unassigned_gifts_queryset = (
-            Gift.objects.accessible_by(user)
-            .filter(gifts__isnull=True)
-            .prefetch_related("tags")
-            .distinct()
-            .order_by("-creation_date")
+        unassigned_gift_count = (
+            Gift.objects.accessible_by(user).filter(gifts__isnull=True).distinct().count()
         )
-        unassigned_gift_count = unassigned_gifts_queryset.count()
         context["dashboard_action_groups"] = action_groups
-        context["dashboard_has_actions"] = bool(action_groups or unassigned_gift_count)
-        context["unassigned_gifts"] = unassigned_gifts_queryset[:5]
-        context["upcoming_occasion_recipients"] = _build_upcoming_occasion_recipients(
-            gift_plans,
-            today=today,
-        )
         context["dashboard_summary"] = _build_dashboard_summary(
             action_groups,
             unassigned_gift_count,
         )
-
-        # Gift plans by status
-        statuses = RelationStatus.objects.all()
-        status_counts = []
-        for status in statuses:
-            count = Relation.objects.accessible_by(user).filter(status=status).count()
-            if count > 0:
-                status_counts.append({"status": status, "count": count})
-        context["status_counts"] = status_counts
 
         # Recent gifts (last 5)
         context["recent_gifts"] = Gift.objects.accessible_by(user).order_by("-creation_date")[:5]

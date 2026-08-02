@@ -365,10 +365,10 @@ class TestHomeDashboard:
         assert "gift-plan-date-action-input" not in content
         assert "form-control form-control-sm gift-plan-date-action-input" not in content
 
-    def test_dashboard_surfaces_unassigned_gifts_and_upcoming_occasion_recipients(self):
+    def test_dashboard_keeps_summary_count_without_support_cards(self):
         today = timezone.localdate()
         idea = RelationStatusFactory(status="Idea")
-        unassigned_gift = GiftFactory(name="Loose puzzle", shared_with=[self.user])
+        GiftFactory(name="Loose puzzle", shared_with=[self.user])
         assigned_gift = GiftFactory(name="Assigned candle", shared_with=[self.user])
         event = EventFactory(
             name="Birthday",
@@ -393,27 +393,29 @@ class TestHomeDashboard:
         response = self.client.get(reverse("gift_manager:home"))
 
         assert response.status_code == 200
-        assert list(response.context["unassigned_gifts"]) == [unassigned_gift]
-        occasion_items = response.context["upcoming_occasion_recipients"]
-        assert len(occasion_items) == 1
-        assert occasion_items[0]["event"] == event
-        assert occasion_items[0]["relation"].recipient_name == "Ada Lovelace"
+        assert response.context["dashboard_summary"]["unassigned_gifts"] == 1
+        assert "upcoming_occasion_recipients" not in response.context
+        assert "unassigned_gifts" not in response.context
 
         content = response.content.decode()
-        assert "Loose puzzle" in content
+        assert "dashboard-support-grid" not in content
+        assert "Gift ideas without a plan" not in content
+        assert "Upcoming occasions" not in content
+        assert "Loose puzzle" not in content
         assert "Assigned candle" in content
         assert "Ada Lovelace" in content
         assert "Birthday" in content
-        assert "Plan" in content
 
     def test_empty_dashboard_keeps_create_actions_before_secondary_counts(self):
         response = self.client.get(reverse("gift_manager:home"))
 
         assert response.status_code == 200
+        assert "status_counts" not in response.context
         content = response.content.decode()
         assert "No gift plans need attention." in content
         assert "Create a gift plan" in content
-        assert "Add a gift" in content
+        assert "status-list" not in content
+        assert "status-pill" not in content
         assert content.index("Needs attention") < content.index("Library")
         assert content.index("Library") < content.index('class="stats-grid"')
 
