@@ -249,14 +249,47 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert ".gift-plan-due-badge--due_soon" in main_styles
     assert ".gift-plan-due-badge--overdue" in main_styles
     assert ".gift-plan-card--needs_details .gift-plan-due-badge--no_date" in styles
+    assert ".gift-plan-card-actions .btn-primary" in styles
+    assert ".gift-plan-card-actions .btn-outline-primary" in styles
+    assert ".gift-plan-card-actions .btn-success" in styles
+    assert ".gift-plan-card-actions .btn-outline-secondary" in styles
+    assert (
+        ".gift-plan-quick-action-form,\n.gift-plan-date-action-form,\n.gift-plan-planning-action-form"
+        in styles
+    )
     assert "background-color: var(--color-success-light)" in main_styles
     assert "background-color: var(--color-warning-light)" in main_styles
 
+    action_palette_styles = css_block(styles, ".gift-plan-card-actions")
+    dark_action_palette_styles = css_block(styles, '[data-theme="dark"] .gift-plan-card-actions')
+    action_button_styles = css_block(styles, ".gift-plan-card-actions .btn")
+    primary_button_styles = css_block(styles, ".gift-plan-card-actions .btn-primary")
+    primary_soft_button_styles = css_block(styles, ".gift-plan-card-actions .btn-outline-primary")
+    secondary_button_styles = css_block(styles, ".gift-plan-card-actions .btn-outline-secondary")
     missing_badge_styles = css_block(styles, ".gift-plan-missing-data-badge")
     missing_row_marker_styles = css_block(
         styles,
         "#relation-grid .gridjs-tr.gift-plan-grid-row--missing-data td.gridjs-td:first-child",
     )
+    assert "--gift-plan-action-primary-bg: #4338ca" in action_palette_styles
+    assert "--gift-plan-action-primary-soft-bg: #eef2ff" in action_palette_styles
+    assert "--gift-plan-action-success-bg: #047857" in action_palette_styles
+    assert "--gift-plan-action-secondary-bg: #e2e8f0" in action_palette_styles
+    assert "--gift-plan-action-disabled-bg: #f8fafc" in action_palette_styles
+    assert "--gift-plan-action-primary-bg: #4f46e5" in dark_action_palette_styles
+    assert "--gift-plan-action-primary-soft-bg: #312e81" in dark_action_palette_styles
+    assert "--gift-plan-action-secondary-bg: #334155" in dark_action_palette_styles
+    assert "--gift-plan-action-disabled-bg: #0f172a" in dark_action_palette_styles
+    assert "display: inline-flex" in action_button_styles
+    assert "min-height: 1.75rem" in action_button_styles
+    assert "border-width: 1px" in action_button_styles
+    assert "font-weight: 700" in action_button_styles
+    assert "white-space: nowrap" in action_button_styles
+    assert "background-color: var(--gift-plan-action-primary-bg)" in primary_button_styles
+    assert "background-color: var(--gift-plan-action-primary-soft-bg)" in primary_soft_button_styles
+    assert "color: var(--gift-plan-action-primary-soft-text)" in primary_soft_button_styles
+    assert "background-color: var(--gift-plan-action-secondary-bg)" in secondary_button_styles
+    assert "color: var(--gift-plan-action-secondary-text)" in secondary_button_styles
     assert "background-color: var(--color-danger-light)" in missing_badge_styles
     assert "color: var(--color-danger-hover)" in missing_badge_styles
     assert "rgba(239, 68, 68, 0.35)" in missing_badge_styles
