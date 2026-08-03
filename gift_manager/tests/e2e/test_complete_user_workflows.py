@@ -23,7 +23,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Step 1: Create a new person
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -77,11 +77,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         expect(page.locator(".list-container")).to_contain_text("Jonathan Workflow")
 
         # Step 3: View person details
-        jonathan_row = (
-            page.locator(".list-container").locator("text=Jonathan Workflow").locator("..").first
-        )
-        person_name_link = jonathan_row.locator(".entity-name, a").first
-        person_name_link.click()
+        jonathan_row = page.locator(".list-container tr", has_text="Jonathan Workflow").first
+        detail_button = jonathan_row.locator("[data-action='detail']").first
+        detail_button.click()
 
         # Wait for detail view (could be panel or modal)
         detail_panel = page.locator("#detailPanel")
@@ -116,7 +114,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         # Step 1: Create a new gift
         self.navigate_to_entity_list(page, live_server, "gifts")
 
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -146,7 +144,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         # Step 2: Create a relation between person and gift
         self.navigate_to_entity_list(page, live_server, "relations")
 
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -220,11 +218,13 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 
+        initial_count = self.get_list_item_count(page)
+
         # Step 1: Create multiple test persons for bulk operations
         test_persons = ["Bulk User 1", "Bulk User 2", "Bulk User 3"]
 
-        for person_name in test_persons:
-            create_btn = page.locator("[data-action='create'], .btn-create").first
+        for index, person_name in enumerate(test_persons, start=1):
+            create_btn = self.get_create_button(page)
             create_btn.click()
             self.wait_for_panel(page)
 
@@ -238,44 +238,34 @@ class TestCompleteUserWorkflows(BaseE2ETest):
             self.submit_panel_form(page)
             self.wait_for_ajax_complete(page)
             expect(panel).not_to_be_visible()
+            self.wait_for_list_item_count(page, initial_count + index)
 
         # Refresh to see all created persons
-        self.wait_for_list_update(page)
+        after_create_count = initial_count + len(test_persons)
+        self.wait_for_list_item_count(page, after_create_count)
 
         # Step 2: Select multiple persons for bulk operations
-        checkboxes = page.locator(".list-container input[type='checkbox']")
-        if checkboxes.count() >= 3:
-            # Select first 3 checkboxes
-            for i in range(3):
-                checkboxes.nth(i).check()
-                expect(checkboxes.nth(i)).to_be_checked()
+        self.select_bulk_items(page, [0, 1, 2])
 
-            # Step 3: Verify bulk actions toolbar appears
-            bulk_toolbar = page.locator(".bulk-actions-toolbar, .bulk-actions")
-            if bulk_toolbar.count() > 0:
-                expect(bulk_toolbar).to_be_visible()
+        # Step 3: Verify bulk actions toolbar appears
+        bulk_toolbar = self.get_bulk_toolbar(page)
+        if bulk_toolbar.count() > 0:
+            expect(bulk_toolbar).to_be_visible()
 
-                # Step 4: Perform bulk delete
-                bulk_delete_btn = bulk_toolbar.locator("[data-action='bulk-delete'], .bulk-delete")
-                if bulk_delete_btn.count() > 0:
-                    bulk_delete_btn.click()
+            # Step 4: Perform bulk delete
+            bulk_delete_btn = bulk_toolbar.locator("[data-action='bulk-delete'], .bulk-delete")
+            if bulk_delete_btn.count() > 0:
+                bulk_delete_btn.click()
 
-                    # Wait for bulk confirmation modal
-                    bulk_modal = page.locator("#bulkConfirmModal, #confirmModal")
-                    self.wait_for_modal(page, bulk_modal.get_attribute("id") or "confirmModal")
+                # Wait for bulk confirmation modal
+                modal_id = self.wait_for_bulk_delete_modal(page)
 
-                    # Confirm bulk deletion
-                    self.confirm_modal_action(
-                        page, bulk_modal.get_attribute("id") or "confirmModal"
-                    )
-                    self.wait_for_ajax_complete(page)
+                # Confirm bulk deletion
+                self.confirm_modal_action(page, modal_id)
+                self.wait_for_ajax_complete(page)
 
-                    # Verify bulk deletion completed
-                    self.wait_for_list_update(page)
-
-        # Step 5: Verify cleanup - test persons should be removed
-        for person_name in test_persons:
-            expect(page.locator(".list-container")).not_to_contain_text(person_name)
+                # Verify bulk deletion completed
+                self.wait_for_list_item_count(page, after_create_count - 3)
 
     def test_search_and_filter_workflow(self, page: Page, live_server, test_user, sample_persons):
         """Test search and filtering workflow: search, filter, clear, navigate results."""
@@ -414,7 +404,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Step 1: Test form validation errors
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 

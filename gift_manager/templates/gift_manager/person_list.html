@@ -30,7 +30,7 @@
 {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
-<div id="person-grid"></div>
+<div id="person-grid" class="list-container"></div>
 {% endblock %}
 
 {% block extra_js %}
@@ -76,6 +76,11 @@
             name: '{{ column_names.first_name|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
+            },
+            formatter: (cell) => {
+                return gridjs.html(
+                    `<span class="entity-name">${GridUtils.escapeHtml(cell)}</span>`
+                );
             }
         },
         {

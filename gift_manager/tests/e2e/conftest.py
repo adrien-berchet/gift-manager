@@ -120,14 +120,14 @@ def test_admin_user(transactional_db):
 
 
 @pytest.fixture
-def sample_persons(transactional_db):
+def sample_persons(transactional_db, test_user):
     """Create sample persons for testing list operations."""
     return [
-        PersonFactory(first_name="Alice", family_name="Johnson"),
-        PersonFactory(first_name="Bob", family_name="Smith"),
-        PersonFactory(first_name="Carol", family_name="Williams"),
-        PersonFactory(first_name="David", family_name="Brown"),
-        PersonFactory(first_name="Eve", family_name="Davis"),
+        PersonFactory(first_name="Alice", family_name="Johnson", user_link=test_user),
+        PersonFactory(first_name="Bob", family_name="Smith", user_link=test_user),
+        PersonFactory(first_name="Carol", family_name="Williams", user_link=test_user),
+        PersonFactory(first_name="David", family_name="Brown", user_link=test_user),
+        PersonFactory(first_name="Eve", family_name="Davis", user_link=test_user),
     ]
 
 
@@ -301,13 +301,43 @@ def list_helpers():
 
     def _select_list_items(page: Page, indices, list_selector=".list-container"):
         """Select multiple items in a list by their indices."""
-        checkboxes = page.locator(f"{list_selector} input[type='checkbox']")
+        checkboxes = page.locator(
+            f"{list_selector} .bulk-select-item, "
+            f"{list_selector} input[type='checkbox']:not(.bulk-select-all)"
+        )
+        if checkboxes.count() > 0 and not checkboxes.first.is_visible():
+            toggle_btn = page.locator("[id^='toggle-selection-']").first
+            if toggle_btn.count() > 0:
+                advanced_tools = page.locator("details.advanced-list-tools").first
+                if advanced_tools.count() > 0 and not toggle_btn.is_visible():
+                    advanced_tools.evaluate("element => { element.open = true; }")
+                    expect(toggle_btn).to_be_visible()
+                toggle_btn.click()
+                page.evaluate("""
+                    () => new Promise(resolve => {
+                        requestAnimationFrame(() => requestAnimationFrame(resolve));
+                    })
+                """)
+                expect(checkboxes.first).to_be_visible()
+
+        expect(checkboxes.first).to_be_visible()
         for index in indices:
-            checkboxes.nth(index).check()
+            checkbox = checkboxes.nth(index)
+            checkbox.click()
+            expect(checkbox).to_be_checked()
+
+        selected_count = page.locator(".bulk-actions-toolbar, .bulk-actions").first.locator(
+            ".selected-count"
+        )
+        expect(selected_count).to_have_text(str(len(indices)))
 
     def _get_quick_action_button(page: Page, item_index, action, list_selector=".list-container"):
         """Get a quick action button for a specific list item."""
-        item = page.locator(f"{list_selector} .list-item").nth(item_index)
+        item = page.locator(
+            f"{list_selector} .list-item, "
+            f"{list_selector} tr[data-entity-id], "
+            f"{list_selector} tbody tr.gridjs-tr"
+        ).nth(item_index)
         return item.locator(f"[data-action='{action}']")
 
     return {

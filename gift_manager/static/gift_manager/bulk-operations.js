@@ -301,30 +301,18 @@
             const gridContainer = document.getElementById(this.gridId);
             if (!gridContainer) return;
 
-            // Bind select-all checkbox
-            const selectAllCheckbox = gridContainer.querySelector(".bulk-select-all");
-            if (selectAllCheckbox) {
-                // Remove old event listener if any
-                selectAllCheckbox.replaceWith(selectAllCheckbox.cloneNode(true));
-                const newSelectAll = gridContainer.querySelector(".bulk-select-all");
+            if (gridContainer.dataset.bulkCheckboxEventsBound === "true") return;
 
-                newSelectAll.addEventListener("change", (e) => {
+            gridContainer.addEventListener("change", (e) => {
+                if (e.target.matches(".bulk-select-all")) {
                     this.handleSelectAll(e.target.checked);
-                });
-            }
-
-            // Bind individual item checkboxes
-            const itemCheckboxes = gridContainer.querySelectorAll(".bulk-select-item");
-            itemCheckboxes.forEach((checkbox) => {
-                // Remove old event listener by cloning
-                const parent = checkbox.parentNode;
-                const newCheckbox = checkbox.cloneNode(true);
-                parent.replaceChild(newCheckbox, checkbox);
-
-                newCheckbox.addEventListener("change", (e) => {
+                    return;
+                }
+                if (e.target.matches(".bulk-select-item")) {
                     this.handleItemSelect(e.target);
-                });
+                }
             });
+            gridContainer.dataset.bulkCheckboxEventsBound = "true";
         },
 
         /**

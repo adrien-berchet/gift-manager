@@ -223,7 +223,7 @@ class TestPanelInteractions(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Click create button
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
 
         # Wait for panel to appear
@@ -256,7 +256,7 @@ class TestPanelFormValidation(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create panel
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -277,7 +277,7 @@ class TestPanelFormValidation(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create panel
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -340,7 +340,6 @@ class TestUnsavedChangesProtection(BaseE2ETest):
         # Make changes to form
         panel = page.locator("#editPanel")
         first_name_field = panel.locator("[name='first_name']")
-        original_value = first_name_field.input_value()
         first_name_field.fill("Modified Name")
 
         # Verify field shows modified indicator

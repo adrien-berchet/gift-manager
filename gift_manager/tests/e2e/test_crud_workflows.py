@@ -42,10 +42,8 @@ class TestPersonCRUDWorkflow(BaseCRUDTest):
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 
-        # Click on person name to view details
-        person_link = page.locator(".list-container .entity-name").first
-        person_name = person_link.text_content()
-        person_link.click()
+        person_name = page.locator(".list-container .entity-name").first.text_content()
+        self.click_quick_action(page, 0, "detail")
 
         # Wait for detail panel to open
         self.wait_for_panel(page, "detailPanel")
@@ -53,13 +51,13 @@ class TestPersonCRUDWorkflow(BaseCRUDTest):
         # Verify person details are displayed
         detail_panel = page.locator("#detailPanel")
         expect(detail_panel).to_contain_text(person_name)
-        expect(detail_panel).to_contain_text("Person Details")
+        expect(detail_panel).to_contain_text("Basic Information")
 
         # Test quick actions in detail panel
-        edit_btn = detail_panel.locator("[data-action='edit']")
+        edit_btn = detail_panel.locator("[data-action='edit']").first
         expect(edit_btn).to_be_visible()
 
-        delete_btn = detail_panel.locator("[data-action='delete']")
+        delete_btn = detail_panel.locator("[data-action='delete']").first
         expect(delete_btn).to_be_visible()
 
 
@@ -138,7 +136,7 @@ class TestBulkOperationsWorkflow(BaseCRUDTest):
         self.select_bulk_items(page, [0, 1, 2])
 
         # Verify bulk actions toolbar appears
-        bulk_toolbar = page.locator(".bulk-actions-toolbar, .bulk-actions")
+        bulk_toolbar = self.get_bulk_toolbar(page)
         if bulk_toolbar.count() > 0:
             expect(bulk_toolbar).to_be_visible()
 
@@ -148,9 +146,8 @@ class TestBulkOperationsWorkflow(BaseCRUDTest):
                 bulk_delete_btn.click()
 
                 # Wait for bulk confirmation modal
-                bulk_modal = page.locator("#bulkConfirmModal, #confirmModal")
-                modal_id = bulk_modal.get_attribute("id") or "confirmModal"
-                self.wait_for_modal(page, modal_id)
+                modal_id = self.wait_for_bulk_delete_modal(page)
+                bulk_modal = page.locator(f"#{modal_id}")
 
                 # Verify modal shows correct count
                 expect(bulk_modal).to_contain_text("3")
@@ -162,11 +159,8 @@ class TestBulkOperationsWorkflow(BaseCRUDTest):
                 self.wait_for_ajax_complete(page)
 
                 # Verify items were deleted
-                self.wait_for_list_update(page)
-                final_count = self.get_list_item_count(page)
-                assert final_count == initial_count - 3, (
-                    f"Expected {initial_count - 3} items, got {final_count}"
-                )
+                expected_count = initial_count - 3
+                self.wait_for_list_item_count(page, expected_count)
 
 
 class TestInlineEditingWorkflow(BaseCRUDTest):

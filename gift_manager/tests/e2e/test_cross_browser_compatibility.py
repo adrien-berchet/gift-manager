@@ -240,7 +240,7 @@ class TestCrossBrowserCompatibility(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -379,7 +379,7 @@ class TestBrowserSpecificFeatures(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Firefox may handle form validation differently
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 

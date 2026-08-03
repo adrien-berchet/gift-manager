@@ -161,7 +161,7 @@ class TestMobileDeviceInteractions(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.tap()
         self.wait_for_panel(page)
 
@@ -284,15 +284,16 @@ class TestMobileDeviceInteractions(BaseE2ETest):
         checkboxes = page.locator(".list-container input[type='checkbox']")
         if checkboxes.count() > 0:
             # Select multiple items via touch
-            for i in range(min(3, checkboxes.count())):
-                checkbox = checkboxes.nth(i)
-                checkbox.tap()
-                expect(checkbox).to_be_checked()
+            row_checkboxes = self.show_bulk_selection_checkboxes(page)
+            for index in range(min(3, row_checkboxes.count())):
+                checkbox = row_checkboxes.nth(index)
+                self.click_bulk_checkbox(checkbox)
 
             # Check if bulk actions toolbar appears
-            bulk_toolbar = page.locator(".bulk-actions-toolbar, .bulk-actions")
+            bulk_toolbar = self.get_bulk_toolbar(page)
             if bulk_toolbar.count() > 0:
                 expect(bulk_toolbar).to_be_visible()
+                expect(bulk_toolbar.locator(".selected-count")).to_have_text("3")
 
                 # Verify toolbar is mobile-friendly
                 toolbar_box = bulk_toolbar.bounding_box()

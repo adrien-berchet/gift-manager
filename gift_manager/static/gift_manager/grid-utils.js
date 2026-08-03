@@ -448,9 +448,13 @@
             // Uses MutationObserver to survive Grid.js re-renders (sort, pagination)
             var hasCheckboxColumn = columns.some(function(col) { return col.id === 'checkbox'; });
             if (hasCheckboxColumn) {
+                var selectAllRowsLabel = escapeAttribute(
+                    window.gridTranslations?.selectAllRows || 'Select all rows'
+                );
                 var checkboxHtml =
                     '<div class="form-check">' +
                     '<input type="checkbox" class="form-check-input bulk-select-all"' +
+                    ' aria-label="' + selectAllRowsLabel + '"' +
                     ' id="bulk-select-all-' + containerId + '">' +
                     '</div>';
                 var injectCheckbox = function() {
@@ -1448,11 +1452,15 @@
             formatter: (cell, row) => {
                 const entityId = row.cells[entityIdIndex].data;
                 const safeEntityId = escapeAttribute(entityId);
+                const selectRowLabel = escapeAttribute(
+                    window.gridTranslations?.selectRow || 'Select row'
+                );
                 return gridjs.html(`
                     <div class="form-check">
                         <input type="checkbox" class="form-check-input bulk-select-item"
                                value="${safeEntityId}"
-                               data-entity-id="${safeEntityId}">
+                               data-entity-id="${safeEntityId}"
+                               aria-label="${selectRowLabel}">
                     </div>
                 `);
             }
@@ -1468,9 +1476,13 @@
         const gridContainer = document.getElementById(gridId);
         const firstHeaderCell = gridContainer?.querySelector('thead tr th:first-child');
         if (firstHeaderCell && !firstHeaderCell.querySelector('.bulk-select-all')) {
+            const selectAllRowsLabel = escapeAttribute(
+                window.gridTranslations?.selectAllRows || 'Select all rows'
+            );
             firstHeaderCell.innerHTML =
                 '<div class="form-check">' +
                 '<input type="checkbox" class="form-check-input bulk-select-all"' +
+                ' aria-label="' + selectAllRowsLabel + '"' +
                 ' id="bulk-select-all-' + gridId + '">' +
                 '</div>';
             return true;

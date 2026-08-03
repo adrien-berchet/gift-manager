@@ -50,7 +50,9 @@ class TestPerformanceBenchmarks(BaseE2ETest):
                 const resources = performance.getEntriesByType('resource');
 
                 return {
-                    domContentLoaded: navigation ? navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart : 0,
+                    domContentLoaded: navigation
+                        ? navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart
+                        : 0,
                     loadComplete: navigation ? navigation.loadEventEnd - navigation.loadEventStart : 0,
                     resourceCount: resources.length,
                     totalResourceSize: resources.reduce((sum, r) => sum + (r.transferSize || 0), 0)
@@ -82,7 +84,8 @@ class TestPerformanceBenchmarks(BaseE2ETest):
 
             # Assert performance threshold
             assert metrics["duration_ms"] < self.performance_thresholds["page_load"], (
-                f"{entity_type} page load took {metrics['duration_ms']:.0f}ms, should be under {self.performance_thresholds['page_load']}ms"
+                f"{entity_type} page load took {metrics['duration_ms']:.0f}ms, "
+                f"should be under {self.performance_thresholds['page_load']}ms"
             )
 
             # Log metrics for analysis
@@ -105,7 +108,8 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         metrics = self.measure_operation(page, "open_delete_modal", open_modal)
 
         assert metrics["duration_ms"] < self.performance_thresholds["modal_open"], (
-            f"Modal open took {metrics['duration_ms']:.0f}ms, should be under {self.performance_thresholds['modal_open']}ms"
+            f"Modal open took {metrics['duration_ms']:.0f}ms, "
+            f"should be under {self.performance_thresholds['modal_open']}ms"
         )
 
         assert metrics["result"], "Modal should be visible after opening"
@@ -130,7 +134,8 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         metrics = self.measure_operation(page, "open_edit_panel", open_panel)
 
         assert metrics["duration_ms"] < self.performance_thresholds["panel_open"], (
-            f"Panel open took {metrics['duration_ms']:.0f}ms, should be under {self.performance_thresholds['panel_open']}ms"
+            f"Panel open took {metrics['duration_ms']:.0f}ms, "
+            f"should be under {self.performance_thresholds['panel_open']}ms"
         )
 
         assert metrics["result"], "Panel should be visible after opening"
@@ -158,7 +163,7 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -180,7 +185,8 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         metrics = self.measure_operation(page, "submit_create_form", submit_form)
 
         assert metrics["duration_ms"] < self.performance_thresholds["form_submit"], (
-            f"Form submission took {metrics['duration_ms']:.0f}ms, should be under {self.performance_thresholds['form_submit']}ms"
+            f"Form submission took {metrics['duration_ms']:.0f}ms, "
+            f"should be under {self.performance_thresholds['form_submit']}ms"
         )
 
         assert metrics["result"], "Form should be submitted successfully"
@@ -215,7 +221,8 @@ class TestPerformanceBenchmarks(BaseE2ETest):
             metrics = self.measure_operation(page, "search_persons", perform_search)
 
             assert metrics["duration_ms"] < self.performance_thresholds["search_response"], (
-                f"Search took {metrics['duration_ms']:.0f}ms, should be under {self.performance_thresholds['search_response']}ms"
+                f"Search took {metrics['duration_ms']:.0f}ms, "
+                f"should be under {self.performance_thresholds['search_response']}ms"
             )
 
             print(f"Search Performance: {metrics['duration_ms']:.0f}ms")
@@ -233,7 +240,7 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         # Create test data for bulk operations
         test_persons = []
         for i in range(5):
-            create_btn = page.locator("[data-action='create'], .btn-create").first
+            create_btn = self.get_create_button(page)
             create_btn.click()
             self.wait_for_panel(page)
 
@@ -255,8 +262,7 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         if checkboxes.count() >= 3:
 
             def select_bulk_items():
-                for i in range(3):
-                    checkboxes.nth(i).check()
+                self.select_bulk_items(page, [0, 1, 2])
                 return 3
 
             select_metrics = self.measure_operation(page, "bulk_select", select_bulk_items)
@@ -266,16 +272,15 @@ class TestPerformanceBenchmarks(BaseE2ETest):
             )
 
             # Test bulk delete performance (if available)
-            bulk_toolbar = page.locator(".bulk-actions-toolbar, .bulk-actions")
+            bulk_toolbar = self.get_bulk_toolbar(page)
             if bulk_toolbar.count() > 0:
                 bulk_delete_btn = bulk_toolbar.locator("[data-action='bulk-delete'], .bulk-delete")
                 if bulk_delete_btn.count() > 0:
 
                     def perform_bulk_delete():
                         bulk_delete_btn.click()
-                        modal = page.locator("#bulkConfirmModal, #confirmModal")
-                        self.wait_for_modal(page, modal.get_attribute("id") or "confirmModal")
-                        self.confirm_modal_action(page, modal.get_attribute("id") or "confirmModal")
+                        modal_id = self.wait_for_bulk_delete_modal(page)
+                        self.confirm_modal_action(page, modal_id)
                         self.wait_for_ajax_complete(page)
                         return True
 
@@ -446,11 +451,13 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         # Performance should be reasonable across all viewport sizes
         max_time = 8000 if viewport_size["width"] < 500 else 6000  # Allow more time for mobile
         assert metrics["duration_ms"] < max_time, (
-            f"Responsive performance at {viewport_size['width']}x{viewport_size['height']} took {metrics['duration_ms']:.0f}ms, should be under {max_time}ms"
+            f"Responsive performance at {viewport_size['width']}x{viewport_size['height']} "
+            f"took {metrics['duration_ms']:.0f}ms, should be under {max_time}ms"
         )
 
         print(
-            f"Responsive Performance ({viewport_size['width']}x{viewport_size['height']}): {metrics['duration_ms']:.0f}ms"
+            f"Responsive Performance ({viewport_size['width']}x{viewport_size['height']}): "
+            f"{metrics['duration_ms']:.0f}ms"
         )
 
     def test_concurrent_operations_performance(
@@ -482,4 +489,3 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         """Clean up after performance tests."""
         # Performance tests may create test data that needs cleanup
         # This is handled by the transactional database in conftest.py
-        super().teardown_method()

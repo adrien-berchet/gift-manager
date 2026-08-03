@@ -43,8 +43,8 @@ class TestKeyboardAccessibility(BaseE2ETest):
         page.keyboard.press("Tab")
 
         # Should be able to navigate between modal buttons
-        cancel_btn = modal.locator(".btn-secondary, [data-bs-dismiss='modal']")
-        confirm_btn = modal.locator(".btn-danger, .btn-primary")
+        cancel_btn = modal.locator(".btn-secondary, [data-bs-dismiss='modal']").first
+        confirm_btn = modal.locator(".btn-danger, .btn-primary").first
 
         if cancel_btn.count() > 0 and confirm_btn.count() > 0:
             # Test that we can reach both buttons
@@ -147,7 +147,7 @@ class TestKeyboardAccessibility(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -200,9 +200,11 @@ class TestKeyboardAccessibility(BaseE2ETest):
             # Focus should move to main content
             main_content = page.locator("#main, main, .main-content")
             if main_content.count() > 0:
-                focused_element = page.evaluate("document.activeElement")
-                main_element = main_content.evaluate("el => el")
                 # Focus should be within or on main content area
+                focus_is_in_main = main_content.first.evaluate(
+                    "main => main === document.activeElement || main.contains(document.activeElement)"
+                )
+                assert focus_is_in_main
 
 
 @pytest.mark.frontend
@@ -255,7 +257,7 @@ class TestARIACompliance(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -360,9 +362,6 @@ class TestARIACompliance(BaseE2ETest):
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 
-        # Look for live regions
-        live_regions = page.locator("[aria-live], [role='status'], [role='alert']")
-
         # Test notification areas
         notification_areas = page.locator(".alert, .toast, .notification")
         for i in range(notification_areas.count()):
@@ -411,7 +410,7 @@ class TestScreenReaderSupport(BaseE2ETest):
         expect(modal).to_be_visible()
 
         # Modal should have appropriate ARIA attributes for screen readers
-        modal_content = modal.locator(".modal-content, .modal-dialog")
+        modal_content = modal.locator(".modal-content, .modal-dialog").first
         if modal_content.count() > 0:
             role = modal_content.get_attribute("role")
             aria_modal = modal_content.get_attribute("aria-modal")
@@ -430,7 +429,7 @@ class TestScreenReaderSupport(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -441,7 +440,10 @@ class TestScreenReaderSupport(BaseE2ETest):
         self.submit_panel_form(page)
 
         # Look for error messages with appropriate ARIA attributes
-        error_messages = panel.locator(".invalid-feedback, .error, .alert-danger")
+        error_messages = panel.locator(
+            "#offcanvasContent .form-error-summary, #offcanvasContent .invalid-feedback, "
+            "#offcanvasContent .error, #offcanvasContent .alert-danger"
+        )
         if error_messages.count() > 0:
             first_error = error_messages.first
 
@@ -588,7 +590,7 @@ class TestColorContrastAndVisibility(BaseE2ETest):
         self.navigate_to_entity_list(page, live_server, "persons")
 
         # Open create form and trigger validation errors
-        create_btn = page.locator("[data-action='create'], .btn-create").first
+        create_btn = self.get_create_button(page)
         create_btn.click()
         self.wait_for_panel(page)
 
@@ -596,7 +598,10 @@ class TestColorContrastAndVisibility(BaseE2ETest):
         self.submit_panel_form(page)
 
         # Check error message visibility
-        error_messages = panel.locator(".invalid-feedback, .error, .alert-danger")
+        error_messages = panel.locator(
+            "#offcanvasContent .form-error-summary, #offcanvasContent .invalid-feedback, "
+            "#offcanvasContent .error, #offcanvasContent .alert-danger"
+        )
         if error_messages.count() > 0:
             first_error = error_messages.first
             expect(first_error).to_be_visible()
