@@ -1,33 +1,32 @@
-"""Progressive enhancement mixins for Django views."""
+"""Fallback-mode mixins for Django views."""
 
-import logging
-from typing import Any
+from collections.abc import Mapping
+from contextlib import suppress
 
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
+from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
 
-logger = logging.getLogger(__name__)
 
-
-class ProgressiveEnhancementMixin:
-    """Mixin to handle progressive enhancement in views."""
+class FallbackModeMixin:
+    """Mixin to handle explicit no-JS and fallback rendering in views."""
 
     # Template names for different modes
     fallback_template_name = None
     no_js_template_name = None
 
-    def dispatch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        """Detect request type and set appropriate flags."""
+    def dispatch(self, request: HttpRequest, *args: object, **kwargs: object) -> HttpResponse:
+        """Detect request type and set fallback flags."""
         # Detect if JavaScript is disabled
         self.no_js = request.GET.get("no_js") == "1" or request.POST.get("no_js") == "1"
 
-        # Detect if this is a fallback request
-        self.is_fallback = self.no_js or not self.supports_enhanced_features(request)
+        # Detect if this is an explicit fallback request.
+        self.is_fallback = self.no_js or not self.supports_standard_mode(request)
 
         # Store original HTMX flag
         self.is_htmx = getattr(self, "is_htmx", request.headers.get("HX-Request") == "true")
@@ -38,30 +37,23 @@ class ProgressiveEnhancementMixin:
 
         return super().dispatch(request, *args, **kwargs)
 
-    def supports_enhanced_features(self, request: HttpRequest) -> bool:
-        """Check if the request supports enhanced features."""
-        # Check for modern browser capabilities
+    def supports_standard_mode(self, request: HttpRequest) -> bool:
+        """Check if the request can use the standard app templates."""
         user_agent = request.META.get("HTTP_USER_AGENT", "").lower()
 
-        # Basic checks for very old browsers
         old_browsers = [
             "msie 6",
             "msie 7",
-            "msie 8",  # Old IE versions
-            "opera/9",  # Old Opera
-            "firefox/3",  # Very old Firefox
+            "msie 8",
+            "opera/9",
+            "firefox/3",
         ]
 
-        for old_browser in old_browsers:
-            if old_browser in user_agent:
-                return False
+        return all(old_browser not in user_agent for old_browser in old_browsers)
 
-        # Check for JavaScript support indicators
-        if "javascript" in request.META.get("HTTP_ACCEPT", ""):
-            return True
-
-        # Default to supporting enhanced features
-        return True
+    def supports_enhanced_features(self, request: HttpRequest) -> bool:
+        """Compatibility alias for older callers."""
+        return self.supports_standard_mode(request)
 
     def get_template_names(self) -> list:
         """Return appropriate template based on request type."""
@@ -84,17 +76,20 @@ class ProgressiveEnhancementMixin:
 
         return templates
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        """Add progressive enhancement context."""
+    def get_context_data(self, **kwargs: object) -> dict[str, object]:
+        """Add fallback-mode context."""
         context = super().get_context_data(**kwargs)
 
         fallback_urls = {}
+        context["no_js"] = self.no_js
+        context["is_fallback"] = self.is_fallback
 
         if hasattr(self, "object") and self.object:
-            model_name = self.object._meta.model_name
-            pk = getattr(self.object, self.object._meta.pk.name)
+            model_meta = self.object._meta
+            model_name = model_meta.model_name
+            pk = getattr(self.object, model_meta.pk.name)
 
-            try:
+            with suppress(NoReverseMatch):
                 fallback_urls.update(
                     {
                         "edit": reverse(f"gift_manager:{model_name}_edit", kwargs={"pk": pk})
@@ -104,28 +99,25 @@ class ProgressiveEnhancementMixin:
                         "detail": reverse(f"gift_manager:{model_name}_detail", kwargs={"pk": pk}),
                     }
                 )
-            except Exception:
-                # Fallback URL generation failed, continue without them
-                pass
 
         context["fallback_urls"] = fallback_urls
         return context
 
     def form_valid(self, form) -> HttpResponse:
-        """Handle form validation with progressive enhancement."""
+        """Handle fallback-aware form validation."""
         response = super().form_valid(form)
 
         # For non-AJAX requests, always redirect to avoid re-submission
-        if not self.is_htmx or self.is_fallback:
-            if hasattr(response, "status_code") and response.status_code == 200:
-                # Convert to redirect
-                success_url = self.get_success_url()
-                return redirect(success_url)
+        if (not self.is_htmx or self.is_fallback) and (
+            hasattr(response, "status_code") and response.status_code == 200
+        ):
+            success_url = self.get_success_url()
+            return redirect(success_url)
 
         return response
 
     def form_invalid(self, form) -> HttpResponse:
-        """Handle form validation errors with progressive enhancement."""
+        """Handle fallback-aware form validation errors."""
         response = super().form_invalid(form)
 
         # For fallback mode, ensure errors are clearly displayed
@@ -156,7 +148,7 @@ class NoJSRedirectMixin:
 class FallbackFormMixin:
     """Mixin to provide fallback form handling."""
 
-    def get_form_kwargs(self) -> dict[str, Any]:
+    def get_form_kwargs(self) -> dict[str, object]:
         """Add fallback-specific form kwargs."""
         kwargs = super().get_form_kwargs()
 
@@ -191,7 +183,7 @@ class AccessibleErrorMixin:
 
         return response
 
-    def get_accessible_errors(self, form) -> dict[str, Any]:
+    def get_accessible_errors(self, form) -> dict[str, object]:
         """Get structured error information for accessibility."""
         accessible_errors = {
             "has_errors": form.errors or form.non_field_errors(),
@@ -217,7 +209,7 @@ class AccessibleErrorMixin:
 class FallbackListMixin:
     """Mixin to provide fallback list functionality."""
 
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+    def get_context_data(self, **kwargs: object) -> dict[str, object]:
         """Add fallback list context."""
         context = super().get_context_data(**kwargs)
 
@@ -230,7 +222,7 @@ class FallbackListMixin:
 
         return context
 
-    def get_fallback_table_data(self) -> dict[str, Any]:
+    def get_fallback_table_data(self) -> dict[str, object]:
         """Get data for fallback table rendering."""
         queryset = self.get_queryset()
 
@@ -246,18 +238,23 @@ class FallbackListMixin:
         for obj in queryset:
             row = {}
             for column in columns:
-                field_name = column["field"]
-                if hasattr(obj, field_name):
-                    value = getattr(obj, field_name)
-                    row[field_name] = self.format_fallback_value(value, column)
-                else:
-                    row[field_name] = ""
+                field_name = str(column["field"])
+                value = self.get_fallback_field_value(obj, field_name)
+                row[field_name] = self.format_fallback_value(value, column)
 
             # Add action URLs
             row["actions"] = self.get_fallback_actions(obj)
             table_data["rows"].append(row)
 
         return table_data
+
+    def get_fallback_field_value(self, obj, field_name: str) -> object:
+        """Return a table value from model instances or values-queryset dicts."""
+        if isinstance(obj, Mapping):
+            return obj.get(field_name, "")
+        if field_name == "__str__":
+            return str(obj)
+        return getattr(obj, field_name, "")
 
     def get_fallback_columns(self) -> list:
         """Get column definitions for fallback table."""
@@ -267,7 +264,7 @@ class FallbackListMixin:
             {"field": "__str__", "label": "Name", "type": "text"},
         ]
 
-    def format_fallback_value(self, value: Any, column: dict[str, Any]) -> str:
+    def format_fallback_value(self, value: object, column: dict[str, object]) -> str:
         """Format value for fallback table display."""
         if value is None:
             return ""
@@ -285,10 +282,22 @@ class FallbackListMixin:
     def get_fallback_actions(self, obj) -> list:
         """Get action links for fallback table."""
         actions = []
-        model_name = obj._meta.model_name
-        pk = getattr(obj, obj._meta.pk.name)
+        if isinstance(obj, Mapping):
+            model = getattr(self, "model", None)
+            if model is None:
+                return actions
+            model_meta = model._meta
+            pk = obj.get(model_meta.pk.name)
+        else:
+            model_meta = obj._meta
+            pk = getattr(obj, model_meta.pk.name)
 
-        try:
+        if pk is None:
+            return actions
+
+        model_name = model_meta.model_name
+
+        with suppress(NoReverseMatch):
             actions.extend(
                 [
                     {
@@ -310,59 +319,21 @@ class FallbackListMixin:
                     },
                 ]
             )
-        except Exception:
-            # URL generation failed, provide basic actions
-            pass
 
         return actions
 
 
-class ComprehensiveProgressiveEnhancementMixin(
-    ProgressiveEnhancementMixin, NoJSRedirectMixin, FallbackFormMixin, AccessibleErrorMixin
+class FallbackModeContextMixin(
+    FallbackModeMixin, NoJSRedirectMixin, FallbackFormMixin, AccessibleErrorMixin
 ):
-    """Complete progressive enhancement mixin combining all features."""
-
-    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
-        """Add comprehensive progressive enhancement context."""
-        context = super().get_context_data(**kwargs)
-
-        # Add browser capability information
-        context["browser_capabilities"] = self.get_browser_capabilities()
-
-        # Add fallback instructions
-        if self.is_fallback:
-            context["fallback_instructions"] = self.get_fallback_instructions()
-
-        return context
-
-    def get_browser_capabilities(self) -> dict[str, bool]:
-        """Detect browser capabilities."""
-        request = self.request
-        user_agent = request.META.get("HTTP_USER_AGENT", "").lower()
-
-        capabilities = {
-            "javascript": not self.no_js,
-            "css3": "webkit" in user_agent or "gecko" in user_agent or "trident" in user_agent,
-            "ajax": not self.is_fallback,
-            "modern_browser": self.supports_enhanced_features(request),
-        }
-
-        return capabilities
-
-    def get_fallback_instructions(self) -> dict[str, str]:
-        """Get instructions for fallback mode."""
-        return {
-            "title": "Simplified Mode Active",
-            "message": "The application is running in compatibility mode. All features are available but may require page refreshes.",
-            "help_text": "Enable JavaScript in your browser for the best experience.",
-        }
+    """Combine fallback-mode helpers for form and list views."""
 
 
 @method_decorator(vary_on_headers("User-Agent"), name="dispatch")
-class ProgressiveEnhancementListMixin(ComprehensiveProgressiveEnhancementMixin, FallbackListMixin):
-    """Complete progressive enhancement mixin for list views."""
+class FallbackModeListMixin(FallbackModeContextMixin, FallbackListMixin):
+    """Fallback-mode mixin for list views."""
 
 
 @method_decorator(vary_on_headers("User-Agent"), name="dispatch")
-class ProgressiveEnhancementFormMixin(ComprehensiveProgressiveEnhancementMixin):
-    """Complete progressive enhancement mixin for form views."""
+class FallbackModeFormMixin(FallbackModeContextMixin):
+    """Fallback-mode mixin for form views."""

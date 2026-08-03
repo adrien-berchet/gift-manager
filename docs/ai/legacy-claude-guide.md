@@ -75,7 +75,7 @@ gift-manager/
 │   │   ├── permissions.py   # Permission context mixins
 │   │   ├── notifications.py # Server-side notification integration
 │   │   ├── performance.py   # Query optimization mixins
-│   │   └── progressive_enhancement.py  # Non-JS fallback support
+│   │   └── fallback_mode.py     # Non-JS fallback support
 │   ├── views/               # Views organized by domain
 │   │   ├── base.py          # Base classes and mixins
 │   │   ├── person.py        # Person CRUD views

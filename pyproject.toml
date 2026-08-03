@@ -209,7 +209,7 @@ ignore-variadic-names = true
     "TRY300",
     "TRY400",
 ]
-"gift_manager/mixins/progressive_enhancement.py" = [
+"gift_manager/mixins/fallback_mode.py" = [
     "ANN401",
     "E501",
     "RET504",

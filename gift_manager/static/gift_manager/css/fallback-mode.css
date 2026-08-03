@@ -1,0 +1,146 @@
+/**
+ * Fallback Mode Styles
+ * Loaded only by explicit no-JS/fallback templates.
+ */
+
+noscript {
+    display: block;
+}
+
+.fallback-form {
+    display: block;
+}
+
+.fallback-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.fallback-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.fallback-table th,
+.fallback-table td {
+    border: 1px solid #dee2e6;
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.fallback-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.fallback-table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+
+.fallback-table tbody tr:hover {
+    background-color: #e9ecef;
+}
+
+.fallback-mode form button[type="submit"],
+.fallback-mode form input[type="submit"] {
+    display: inline-block !important;
+    margin-top: 1rem;
+}
+
+.fallback-mode .enhanced-only {
+    display: none !important;
+}
+
+.fallback-mode .basic-only {
+    display: block !important;
+}
+
+.fallback-mode .sr-only {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: normal !important;
+    border: 0 !important;
+}
+
+.fallback-mode a,
+.fallback-mode button,
+.fallback-mode input,
+.fallback-mode select,
+.fallback-mode textarea {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+}
+
+.fallback-mode a:focus,
+.fallback-mode button:focus,
+.fallback-mode input:focus,
+.fallback-mode select:focus,
+.fallback-mode textarea:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.critical-function,
+.critical-function form {
+    display: block !important;
+}
+
+.critical-function .btn {
+    display: inline-block !important;
+}
+
+.invalid-feedback {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+@media (prefers-contrast: high) {
+    .fallback-mode .btn,
+    .fallback-mode .form-control,
+    .fallback-mode .alert {
+        border-width: 2px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fallback-mode * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .fallback-actions {
+        flex-direction: column;
+    }
+
+    .fallback-actions .btn {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+}
+
+@media print {
+    .fallback-mode .btn,
+    .fallback-mode .alert,
+    .fallback-mode .modal,
+    .fallback-mode .offcanvas {
+        border: 1px solid #000 !important;
+        background: white !important;
+        color: black !important;
+    }
+}

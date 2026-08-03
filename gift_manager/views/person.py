@@ -11,13 +11,13 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import PersonForm
+from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
+from gift_manager.mixins.fallback_mode import FallbackModeListMixin
 from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
@@ -30,7 +30,7 @@ from gift_manager.views.base import BaseUpdateView
 
 
 class PersonListView(
-    ProgressiveEnhancementListMixin,
+    FallbackModeListMixin,
     QueryOptimizationMixin,
     BatchOperationMixin,
     PermissionContextMixin,
@@ -104,7 +104,7 @@ class PersonListView(
         ]
 
 
-class PersonCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
+class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Person
     form_class = PersonForm
     success_url = reverse_lazy("gift_manager:persons")
@@ -125,7 +125,7 @@ class PersonCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, 
 
 
 class PersonUpdateView(
-    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
+    PermissionUpdateMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseUpdateView
 ):
     model = Person
     form_class = PersonForm

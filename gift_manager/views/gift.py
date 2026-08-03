@@ -13,13 +13,13 @@ from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import GiftForm
 from gift_manager.forms import GiftRelationForm
+from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
+from gift_manager.mixins.fallback_mode import FallbackModeListMixin
 from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -34,7 +34,7 @@ from gift_manager.views.base import BaseUpdateView
 
 
 class GiftListView(
-    ProgressiveEnhancementListMixin,
+    FallbackModeListMixin,
     QueryOptimizationMixin,
     BatchOperationMixin,
     PermissionContextMixin,
@@ -96,7 +96,7 @@ class GiftListView(
         ]
 
 
-class GiftCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
+class GiftCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Gift
     form_class = GiftForm
     success_url = reverse_lazy("gift_manager:gifts")
@@ -181,7 +181,7 @@ class GiftCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, Ba
 
 
 class GiftUpdateView(
-    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
+    PermissionUpdateMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseUpdateView
 ):
     model = Gift
     form_class = GiftForm

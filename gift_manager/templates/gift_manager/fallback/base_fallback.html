@@ -1,5 +1,5 @@
 {% extends "gift_manager/base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% comment %}
 Fallback base template for users without JavaScript or modern browser features
@@ -8,7 +8,7 @@ Provides basic functionality with traditional page-based navigation
 
 {% block extra_css %}
     {{ block.super }}
-    <link rel="stylesheet" href="{% static 'gift_manager/css/progressive-enhancement.css' %}">
+    <link rel="stylesheet" href="{% static 'gift_manager/css/fallback-mode.css' %}">
     <style>
         /* Additional fallback styles */
         .fallback-notice {

@@ -6,12 +6,12 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager.forms import EventForm
+from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
+from gift_manager.mixins.fallback_mode import FallbackModeListMixin
 from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementFormMixin
-from gift_manager.mixins.progressive_enhancement import ProgressiveEnhancementListMixin
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
@@ -23,7 +23,7 @@ from gift_manager.views.base import BaseUpdateView
 
 
 class EventListView(
-    ProgressiveEnhancementListMixin,
+    FallbackModeListMixin,
     QueryOptimizationMixin,
     BatchOperationMixin,
     PermissionContextMixin,
@@ -47,8 +47,17 @@ class EventListView(
         """Return Events for the current user or shared with the user."""
         return Event.objects.for_list_display(self.request.user).order_by("name")
 
+    def get_fallback_columns(self):
+        """Get column definitions for fallback table."""
+        return [
+            {"field": "name", "label": _("Event name"), "type": "text"},
+            {"field": "comment", "label": _("Comment"), "type": "text"},
+            {"field": "schedule_type", "label": _("Schedule type"), "type": "text"},
+            {"field": "date", "label": _("Date"), "type": "date"},
+        ]
 
-class EventCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
+
+class EventCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Event
     form_class = EventForm
     success_url = reverse_lazy("gift_manager:events")
@@ -62,7 +71,7 @@ class EventCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, B
 
 
 class EventUpdateView(
-    PermissionUpdateMixin, ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseUpdateView
+    PermissionUpdateMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseUpdateView
 ):
     model = Event
     form_class = EventForm
