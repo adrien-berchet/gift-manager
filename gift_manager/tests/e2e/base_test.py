@@ -206,7 +206,9 @@ class BaseE2ETest:
                 const entries = performance.getEntriesByType('measure');
                 const navigation = performance.getEntriesByType('navigation')[0];
                 return {
-                    domContentLoaded: navigation ? navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart : 0,
+                    domContentLoaded: navigation
+                        ? navigation.domContentLoadedEventEnd - navigation.domContentLoadedEventStart
+                        : 0,
                     loadComplete: navigation ? navigation.loadEventEnd - navigation.loadEventStart : 0,
                 };
             }
@@ -238,14 +240,7 @@ class BaseCRUDTest(BaseE2ETest):
 
         # Fill form
         for field_name, value in form_data.items():
-            field = page.locator(f"[name='{field_name}']")
-            if field.get_attribute("type") == "checkbox":
-                if value:
-                    field.check()
-                else:
-                    field.uncheck()
-            else:
-                field.fill(str(value))
+            self.fill_form_field(page, field_name, value)
 
         # Submit form
         self.submit_panel_form(page)
@@ -272,14 +267,12 @@ class BaseCRUDTest(BaseE2ETest):
         self.wait_for_panel(page)
 
         # Verify form is populated with existing data
-        for field_name in form_data:
-            field = page.locator(f"[name='{field_name}']")
-            expect(field).not_to_have_value("")
+        for field_name, value in form_data.items():
+            self.expect_form_field_populated(page, field_name, value)
 
         # Update form
         for field_name, value in form_data.items():
-            field = page.locator(f"[name='{field_name}']")
-            field.fill(str(value))
+            self.fill_form_field(page, field_name, value)
 
         # Submit form
         self.submit_panel_form(page)
@@ -291,6 +284,48 @@ class BaseCRUDTest(BaseE2ETest):
         # Verify entity was updated
         self.wait_for_list_update(page)
         expect(page.locator(".list-container")).to_contain_text(str(list(form_data.values())[0]))
+
+    def fill_form_field(self, page: Page, field_name: str, value):
+        """Fill a form field using the appropriate browser interaction."""
+        field = page.locator(f"[name='{field_name}']").first
+        field_type = field.get_attribute("type")
+        tag_name = field.evaluate("element => element.tagName.toLowerCase()")
+
+        if field_type == "checkbox":
+            if value:
+                field.check()
+            else:
+                field.uncheck()
+            return
+
+        if field_type == "radio":
+            page.locator(f"[name='{field_name}'][value='{value}']").check()
+            return
+
+        if tag_name == "select":
+            field.select_option(str(value))
+            return
+
+        field.fill(str(value))
+
+    def expect_form_field_populated(self, page: Page, field_name: str, value):
+        """Assert an edit form field is populated using field-specific checks."""
+        field = page.locator(f"[name='{field_name}']").first
+        field_type = field.get_attribute("type")
+        tag_name = field.evaluate("element => element.tagName.toLowerCase()")
+
+        if field_type == "radio":
+            expect(page.locator(f"[name='{field_name}'][value='{value}']")).to_be_checked()
+            return
+
+        if field_type == "checkbox":
+            return
+
+        if tag_name == "select":
+            expect(field).not_to_have_value("")
+            return
+
+        expect(field).not_to_have_value("")
 
     def test_delete_workflow(
         self, page: Page, live_server, test_user, entity_type: str, item_index: int

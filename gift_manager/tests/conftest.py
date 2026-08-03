@@ -196,8 +196,8 @@ def event_comment():
 
 
 @pytest.fixture
-def event_usual_date():
-    """Create a test event usual date."""
+def event_date():
+    """Create a test event date."""
     return date(2000, 5, 15)
 
 
@@ -208,12 +208,13 @@ def event_recurrence():
 
 
 @pytest.fixture
-def event(event_name, event_comment, event_usual_date, event_recurrence):
+def event(event_name, event_comment, event_date, event_recurrence):
     """Create a test event."""
     return Event.objects.create(
         name=event_name,
         comment=event_comment,
-        usual_date=event_usual_date,
+        schedule_type=Event.ScheduleType.RECURRING,
+        date=event_date,
         recurrence=event_recurrence,
     )
 

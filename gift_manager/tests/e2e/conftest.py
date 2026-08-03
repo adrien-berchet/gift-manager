@@ -6,6 +6,7 @@ interacting with the modern UX interface components.
 """
 
 import pytest
+from allauth.account.models import EmailAddress
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
@@ -85,23 +86,37 @@ def browser_type_launch_args(browser_type_launch_args, browser_name):
 @pytest.fixture
 def test_user(transactional_db):
     """Create a test user for authentication in e2e tests."""
-    return UserFactory(
+    user = UserFactory(
         username="testuser",
         email="test@example.com",
         first_name="Test",
         last_name="User",
     )
+    EmailAddress.objects.create(
+        user=user,
+        email="test@example.com",
+        primary=True,
+        verified=True,
+    )
+    return user
 
 
 @pytest.fixture
 def test_admin_user(transactional_db):
     """Create an admin user for testing admin-specific functionality."""
-    return UserFactory(
+    user = UserFactory(
         username="admin",
         email="admin@example.com",
         is_staff=True,
         is_superuser=True,
     )
+    EmailAddress.objects.create(
+        user=user,
+        email="admin@example.com",
+        primary=True,
+        verified=True,
+    )
+    return user
 
 
 @pytest.fixture
@@ -149,7 +164,7 @@ def sample_events(transactional_db):
         EventFactory(name="Birthday", recurrence="yearly"),
         EventFactory(name="Anniversary", recurrence="yearly"),
         EventFactory(name="Christmas", recurrence="yearly"),
-        EventFactory(name="Graduation", recurrence="none"),
+        EventFactory(name="Graduation", schedule_type="one_time", recurrence=None),
     ]
 
 
@@ -312,7 +327,6 @@ def accessibility_helpers():
 
         for expected_selector in expected_stops:
             page.keyboard.press("Tab")
-            focused_element = page.evaluate("document.activeElement")
             expected_element = page.locator(expected_selector)
             expect(expected_element).to_be_focused()
 
@@ -402,7 +416,11 @@ def mobile_context_args():
     """Browser context configuration for mobile testing."""
     return {
         "viewport": {"width": 375, "height": 667},  # iPhone SE size
-        "user_agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+        "user_agent": (
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 "
+            "Mobile/15E148 Safari/604.1"
+        ),
         "device_scale_factor": 2,
         "is_mobile": True,
         "has_touch": True,
@@ -414,7 +432,11 @@ def tablet_context_args():
     """Browser context configuration for tablet testing."""
     return {
         "viewport": {"width": 768, "height": 1024},  # iPad size
-        "user_agent": "Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+        "user_agent": (
+            "Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 "
+            "Mobile/15E148 Safari/604.1"
+        ),
         "device_scale_factor": 2,
         "is_mobile": True,
         "has_touch": True,

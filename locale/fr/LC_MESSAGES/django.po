@@ -307,6 +307,20 @@ msgstr "Date absolue"
 msgid "Recurrent"
 msgstr "Récurrent"
 
+#: gift_manager/forms.py:625 gift_manager/views/event.py:43
+#: gift_manager/templates/gift_manager/includes/event_detail_partial.html:46
+#: gift_manager/templates/gift_manager/includes/event_detail_partial.html:52
+msgid "Schedule"
+msgstr "Planification"
+
+#: gift_manager/forms.py:626
+msgid "Date"
+msgstr "Date"
+
+#: gift_manager/forms.py:630
+msgid "Use the event date for one-time events, or the typical date for repeating events."
+msgstr "Utilisez la date de l'événement ponctuel, ou la date habituelle d'un événement récurrent."
+
 #: gift_manager/forms.py:630
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:75
 msgid "Recurrence"
@@ -937,6 +951,59 @@ msgstr "Non Partagé"
 msgid "An error occurred while updating permissions"
 msgstr "Une erreur s'est produite lors de l'édition du partage"
 
+#: gift_manager/models.py:1027 gift_manager/models.py:1079
+msgid "No date yet"
+msgstr "Aucune date pour le moment"
+
+#: gift_manager/models.py:1028
+msgid "One-time"
+msgstr "Ponctuel"
+
+#: gift_manager/models.py:1029
+msgid "Repeating"
+msgstr "Récurrent"
+
+#: gift_manager/models.py:1032
+msgid "Daily"
+msgstr "Quotidien"
+
+#: gift_manager/models.py:1033
+msgid "Weekly"
+msgstr "Hebdomadaire"
+
+#: gift_manager/models.py:1034
+msgid "Monthly"
+msgstr "Mensuel"
+
+#: gift_manager/models.py:1035
+msgid "Yearly"
+msgstr "Annuel"
+
+#: gift_manager/models.py:1083
+#, python-format
+msgid "Repeats %(recurrence)s from %(date)s"
+msgstr "Se répète %(recurrence)s à partir du %(date)s"
+
+#: gift_manager/models.py:1092
+msgctxt "event recurrence adverb"
+msgid "daily"
+msgstr "quotidiennement"
+
+#: gift_manager/models.py:1093
+msgctxt "event recurrence adverb"
+msgid "weekly"
+msgstr "hebdomadairement"
+
+#: gift_manager/models.py:1094
+msgctxt "event recurrence adverb"
+msgid "monthly"
+msgstr "mensuellement"
+
+#: gift_manager/models.py:1095
+msgctxt "event recurrence adverb"
+msgid "yearly"
+msgstr "annuellement"
+
 #: gift_manager/templates/gift_manager/event_detail.html:5
 #: gift_manager/templates/gift_manager/event_detail.html:11
 msgid "Event details"
@@ -969,6 +1036,10 @@ msgstr "Échéance :"
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:125
 msgid "Recurrence:"
 msgstr "Récurrence :"
+
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:132
+msgid "Schedule:"
+msgstr "Planification :"
 
 #: gift_manager/templates/gift_manager/event_detail.html:17
 #: gift_manager/templates/gift_manager/gift_detail.html:15

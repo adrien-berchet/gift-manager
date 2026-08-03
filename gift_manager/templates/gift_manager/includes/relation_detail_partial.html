@@ -127,21 +127,19 @@
             </div>
             {% endif %}
 
-            {% if object.event.usual_date %}
             <div class="text-muted small mb-1">
                 <i class="fas fa-calendar-day me-1"></i>
-                {% trans "Usual Date:" %} {{ object.event.usual_date|date:"M d" }}
+                {% trans "Schedule:" %} {{ object.event.date_summary }}
             </div>
-            {% endif %}
 
-            {% if object.event.absolute_date %}
+            {% if object.event.is_scheduled %}
             <div class="text-muted small mb-1">
                 <i class="fas fa-calendar-check me-1"></i>
-                {% trans "Absolute Date:" %} {{ object.event.absolute_date|date:"M d, Y" }}
+                {% trans "Date:" %} {{ object.event.date|date:"M d, Y" }}
             </div>
             {% endif %}
 
-            {% if object.event.recurrence %}
+            {% if object.event.is_recurring %}
             <div class="text-muted small">
                 <i class="fas fa-redo me-1"></i>
                 {% trans "Recurrence:" %} {{ object.event.get_recurrence_display }}

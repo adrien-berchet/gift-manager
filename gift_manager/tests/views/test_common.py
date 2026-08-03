@@ -8,6 +8,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from gift_manager.models import Event
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
@@ -81,7 +82,8 @@ class TestHomeDashboard:
         completed = RelationStatusFactory(status="Given")
         stale_event = EventFactory(
             name="Winter party",
-            usual_date=today + timedelta(days=60),
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=today + timedelta(days=60),
             recurrence="yearly",
             shared_with=[self.user],
         )
@@ -372,7 +374,8 @@ class TestHomeDashboard:
         assigned_gift = GiftFactory(name="Assigned candle", shared_with=[self.user])
         event = EventFactory(
             name="Birthday",
-            usual_date=today + timedelta(days=5),
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=today + timedelta(days=5),
             recurrence="yearly",
             shared_with=[self.user],
         )

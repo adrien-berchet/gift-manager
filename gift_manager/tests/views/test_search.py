@@ -1,6 +1,7 @@
 import pytest
 from django.urls import reverse
 
+from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import PersonFactory
@@ -38,3 +39,33 @@ def test_gift_search_serializes_current_tag_id(client):
     payload = response.json()
     assert payload["count"] == 1
     assert payload["data"][0]["tags_info"] == [{"id": str(tag.tag_id), "name": "Books"}]
+
+
+@pytest.mark.django_db
+def test_event_search_serializes_schedule_contract(client):
+    user = UserFactory()
+    client.force_login(user)
+    event = EventFactory(
+        name="Graduation",
+        schedule_type="one_time",
+        recurrence="yearly",
+        shared_with=[user],
+    )
+
+    response = client.get(reverse("gift_manager:event_search"), {"search": "Graduation"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] == 1
+    assert payload["data"][0] == {
+        "event_id": str(event.event_id),
+        "name": "Graduation",
+        "comment": event.comment,
+        "schedule_type": "one_time",
+        "schedule_type_label": event.get_schedule_type_display(),
+        "date": event.date.isoformat(),
+        "date_summary": event.date_summary,
+        "schedule_display": event.date_summary,
+        "recurrence": "",
+        "recurrence_label": "",
+    }

@@ -1,7 +1,10 @@
+from datetime import date
 from importlib import import_module
 
 import pytest
 from django.apps import apps
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
 
 from gift_manager.models import RelationStatus
 
@@ -60,3 +63,57 @@ class TestNormalizeAbandonedStatusSpellingMigration:
         assert not RelationStatus.objects.filter(status="Abandonned").exists()
         assert not RelationStatus.objects.filter(status_en="Abandonned").exists()
         assert RelationStatus.objects.filter(status="Abandoned").count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+class TestEventScheduleModelMigration:
+    """Regression tests for the event schedule data migration."""
+
+    migrate_from = [("gift_manager", "0026_relation_exactly_one_recipient_constraint")]
+    migrate_to = [("gift_manager", "0027_event_schedule_model")]
+
+    def test_maps_legacy_event_dates_to_schedule_contract(self):
+        executor = MigrationExecutor(connection)
+        leaf_nodes = executor.loader.graph.leaf_nodes()
+
+        try:
+            executor.migrate(self.migrate_from)
+            old_apps = executor.loader.project_state(self.migrate_from).apps
+            legacy_event = old_apps.get_model("gift_manager", "Event")
+
+            legacy_event.objects.create(
+                name="Graduation",
+                usual_date=date(2026, 6, 1),
+                absolute_date=date(2026, 6, 20),
+                recurrence="yearly",
+            )
+            legacy_event.objects.create(
+                name="Birthday",
+                usual_date=date(2000, 5, 15),
+                recurrence="yearly",
+            )
+            legacy_event.objects.create(
+                name="Visit",
+                usual_date=date(2026, 8, 2),
+            )
+            legacy_event.objects.create(name="Someday")
+
+            executor = MigrationExecutor(connection)
+            executor.migrate(self.migrate_to)
+            new_apps = executor.loader.project_state(self.migrate_to).apps
+            Event = new_apps.get_model("gift_manager", "Event")
+
+            schedules = {
+                event.name: (event.schedule_type, event.date, event.recurrence)
+                for event in Event.objects.order_by("name")
+            }
+
+            assert schedules == {
+                "Birthday": ("recurring", date(2000, 5, 15), "yearly"),
+                "Graduation": ("one_time", date(2026, 6, 20), None),
+                "Someday": ("unscheduled", None, None),
+                "Visit": ("one_time", date(2026, 8, 2), None),
+            }
+        finally:
+            executor = MigrationExecutor(connection)
+            executor.migrate(leaf_nodes)

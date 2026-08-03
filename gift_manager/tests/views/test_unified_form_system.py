@@ -26,7 +26,13 @@ def form_choice_data(user):
     )
     group = PersonGroup.objects.create(name="Family")
     gift = Gift.objects.create(name="Notebook", comment="")
-    event = Event.objects.create(name="Birthday", comment="", recurrence="yearly")
+    event = Event.objects.create(
+        name="Birthday",
+        comment="",
+        schedule_type=Event.ScheduleType.RECURRING,
+        date="2026-08-15",
+        recurrence="yearly",
+    )
     tag = GiftTag.objects.create(name="Books")
     RelationStatus.objects.create(status="Idea")
     grant_owner(user, group, gift, event, tag)
@@ -51,7 +57,7 @@ def form_choice_data(user):
         ("gift_manager:gift_create", ["name", "comment", "tags"], "gift"),
         (
             "gift_manager:event_create",
-            ["name", "comment", "date_type", "absolute_date", "recurrence"],
+            ["name", "comment", "schedule_type", "date", "recurrence"],
             "event-edit",
         ),
         (

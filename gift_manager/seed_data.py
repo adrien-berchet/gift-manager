@@ -248,19 +248,22 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     christmas = Event.objects.create(
         name="Christmas",
         comment="Annual holiday",
-        usual_date=date(2000, 12, 25),
+        schedule_type=Event.ScheduleType.RECURRING,
+        date=date(2000, 12, 25),
         recurrence="yearly",
     )
     mom_birthday = Event.objects.create(
         name="Mom Birthday",
         comment="Mom's special day",
-        usual_date=date(2000, 3, 15),
+        schedule_type=Event.ScheduleType.RECURRING,
+        date=date(2000, 3, 15),
         recurrence="yearly",
     )
     graduation = Event.objects.create(
         name="Graduation",
         comment="University graduation",
-        absolute_date=date(2026, 6, 15),
+        schedule_type=Event.ScheduleType.ONE_TIME,
+        date=date(2026, 6, 15),
     )
 
     events: dict[str, Event] = {

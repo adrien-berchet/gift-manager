@@ -74,15 +74,34 @@ gift_data = st.fixed_dictionaries(
     }
 )
 
-event_data = st.fixed_dictionaries(
-    {
-        "name": safe_text,
-        "comment": st.one_of(st.none(), safe_text),
-        "usual_date": st.one_of(st.none(), future_date),
-        "recurrence": st.one_of(
-            st.none(), st.sampled_from(["daily", "weekly", "monthly", "yearly"])
-        ),
-    }
+event_data = st.one_of(
+    st.fixed_dictionaries(
+        {
+            "name": safe_text,
+            "comment": st.one_of(st.none(), safe_text),
+            "schedule_type": st.just("unscheduled"),
+            "date": st.none(),
+            "recurrence": st.none(),
+        }
+    ),
+    st.fixed_dictionaries(
+        {
+            "name": safe_text,
+            "comment": st.one_of(st.none(), safe_text),
+            "schedule_type": st.just("one_time"),
+            "date": future_date,
+            "recurrence": st.none(),
+        }
+    ),
+    st.fixed_dictionaries(
+        {
+            "name": safe_text,
+            "comment": st.one_of(st.none(), safe_text),
+            "schedule_type": st.just("recurring"),
+            "date": future_date,
+            "recurrence": st.sampled_from(["daily", "weekly", "monthly", "yearly"]),
+        }
+    ),
 )
 
 person_group_data = st.fixed_dictionaries(
@@ -159,7 +178,8 @@ form_field_names = st.sampled_from(
         "family_name",
         "comment",
         "email_address",
-        "usual_date",
+        "schedule_type",
+        "date",
         "recurrence",
         "is_public",
         "due_date",

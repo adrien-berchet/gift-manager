@@ -115,7 +115,7 @@ class TestEditFormDisplayProperty:
         field_mappings = {
             "person": ["first_name", "family_name", "email_address", "groups"],
             "gift": ["name", "comment", "tags"],
-            "event": ["name", "comment", "date_type", "absolute_date", "recurrence"],
+            "event": ["name", "comment", "schedule_type", "date", "recurrence"],
             "relation": ["recipient", "gift", "event", "status"],
             "persongroup": ["name", "parent_groups", "child_groups", "persons"],
             "gifttag": ["name", "parent_tags"],

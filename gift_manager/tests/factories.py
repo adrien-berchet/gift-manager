@@ -183,7 +183,8 @@ class EventFactory(DjangoModelFactory):
 
     name = factory.Sequence(lambda n: f"Event {n}")
     comment = factory.Faker("sentence")
-    usual_date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
+    schedule_type = Event.ScheduleType.RECURRING
+    date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
     recurrence = "yearly"
 
     @factory.post_generation

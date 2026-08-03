@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines
+import calendar
 import uuid
+from datetime import date as date_class
 from datetime import timedelta
 
 from django.conf import settings
@@ -19,9 +21,12 @@ from django.db.models.functions import NullIf
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
+from django.utils import formats
 from django.utils import timezone
 from django.utils.functional import classproperty
+from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
+from django.utils.translation import pgettext
 
 from .email_encoding import decode_email
 from .email_encoding import encode_email
@@ -195,7 +200,14 @@ class EventManager(UserPermissionManager):
 
     def for_list_display(self, user):
         """Return queryset optimized for list display."""
-        return self.accessible_by(user).values("event_id", "name", "comment", "usual_date")
+        return self.accessible_by(user).only(
+            "event_id",
+            "name",
+            "comment",
+            "schedule_type",
+            "date",
+            "recurrence",
+        )
 
 
 class RelationQuerySet(UserPermissionQuerySet):
@@ -1012,19 +1024,30 @@ class GiftPermission(models.Model):
 class Event(models.Model):
     """Model for an event."""
 
+    class ScheduleType(models.TextChoices):
+        UNSCHEDULED = "unscheduled", gettext_lazy("No date yet")
+        ONE_TIME = "one_time", gettext_lazy("One-time")
+        RECURRING = "recurring", gettext_lazy("Repeating")
+
+    RECURRENCE_CHOICES = [
+        ("daily", gettext_lazy("Daily")),
+        ("weekly", gettext_lazy("Weekly")),
+        ("monthly", gettext_lazy("Monthly")),
+        ("yearly", gettext_lazy("Yearly")),
+    ]
+
     event_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
-    usual_date = models.DateField(unique=False, null=True, blank=True)
-    absolute_date = models.DateField(unique=False, null=True, blank=True)
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=ScheduleType.choices,
+        default=ScheduleType.UNSCHEDULED,
+    )
+    date = models.DateField(unique=False, null=True, blank=True)
     recurrence = models.CharField(
         max_length=20,
-        choices=[
-            ("daily", "Daily"),
-            ("weekly", "Weekly"),
-            ("monthly", "Monthly"),
-            ("yearly", "Yearly"),
-        ],
+        choices=RECURRENCE_CHOICES,
         null=True,
         blank=True,
     )
@@ -1042,6 +1065,115 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}"
+
+    @property
+    def is_scheduled(self) -> bool:
+        return self.schedule_type != self.ScheduleType.UNSCHEDULED and self.date is not None
+
+    @property
+    def is_recurring(self) -> bool:
+        return self.schedule_type == self.ScheduleType.RECURRING and bool(self.recurrence)
+
+    @property
+    def date_summary(self) -> str:
+        if not self.is_scheduled:
+            return gettext("No date yet")
+
+        formatted_date = formats.date_format(self.date, "DATE_FORMAT")
+        if self.is_recurring:
+            return gettext("Repeats %(recurrence)s from %(date)s") % {
+                "recurrence": self.recurrence_sentence_label,
+                "date": formatted_date,
+            }
+        return formatted_date
+
+    @property
+    def recurrence_sentence_label(self) -> str:
+        """Return the recurrence label in the grammar used by date summaries."""
+        labels = {
+            "daily": pgettext("event recurrence adverb", "daily"),
+            "weekly": pgettext("event recurrence adverb", "weekly"),
+            "monthly": pgettext("event recurrence adverb", "monthly"),
+            "yearly": pgettext("event recurrence adverb", "yearly"),
+        }
+        return labels.get(self.recurrence, self.get_recurrence_display().lower())
+
+    def clean(self):
+        """Keep the schedule fields consistent with the selected schedule type."""
+        super().clean()
+        errors = {}
+
+        if self.schedule_type == self.ScheduleType.UNSCHEDULED:
+            if self.date is not None:
+                errors["date"] = gettext_lazy("Leave the date empty for unscheduled events.")
+            if self.recurrence:
+                errors["recurrence"] = gettext_lazy(
+                    "Leave the recurrence empty for unscheduled events."
+                )
+        elif self.schedule_type == self.ScheduleType.ONE_TIME:
+            if self.date is None:
+                errors["date"] = gettext_lazy("Choose a date.")
+            if self.recurrence:
+                errors["recurrence"] = gettext_lazy("One-time events cannot have a recurrence.")
+        elif self.schedule_type == self.ScheduleType.RECURRING:
+            if self.date is None:
+                errors["date"] = gettext_lazy("Choose a date.")
+            if not self.recurrence:
+                errors["recurrence"] = gettext_lazy("Choose a recurrence.")
+        else:
+            errors["schedule_type"] = gettext_lazy("Choose a valid schedule.")
+
+        if errors:
+            raise ValidationError(errors)
+
+    def next_occurrence(self, today=None):
+        """Return the next occurrence date for scheduled events."""
+        if not self.is_scheduled:
+            return None
+
+        today = today or timezone.localdate()
+        if self.schedule_type == self.ScheduleType.ONE_TIME:
+            return self.date if self.date >= today else None
+
+        if self.date >= today:
+            return self.date
+
+        recurrence_handlers = {
+            "daily": self._next_daily_occurrence,
+            "weekly": self._next_weekly_occurrence,
+            "monthly": self._next_monthly_occurrence,
+            "yearly": self._next_yearly_occurrence,
+        }
+        handler = recurrence_handlers.get(self.recurrence)
+        return handler(today) if handler else None
+
+    def _next_daily_occurrence(self, today: date_class) -> date_class:
+        return today
+
+    def _next_weekly_occurrence(self, today: date_class) -> date_class:
+        days_until_next = (7 - ((today - self.date).days % 7)) % 7
+        return today + timedelta(days=days_until_next)
+
+    def _next_monthly_occurrence(self, today: date_class) -> date_class:
+        day = min(self.date.day, calendar.monthrange(today.year, today.month)[1])
+        candidate = date_class(today.year, today.month, day)
+        if candidate >= today:
+            return candidate
+
+        year = today.year + (today.month // 12)
+        month = 1 if today.month == 12 else today.month + 1
+        day = min(self.date.day, calendar.monthrange(year, month)[1])
+        return date_class(year, month, day)
+
+    def _next_yearly_occurrence(self, today: date_class) -> date_class:
+        candidate = self._date_for_year(today.year)
+        if candidate >= today:
+            return candidate
+        return self._date_for_year(today.year + 1)
+
+    def _date_for_year(self, year: int) -> date_class:
+        day = min(self.date.day, calendar.monthrange(year, self.date.month)[1])
+        return date_class(year, self.date.month, day)
 
 
 class EventPermission(models.Model):

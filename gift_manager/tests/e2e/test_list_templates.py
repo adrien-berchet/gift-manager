@@ -661,7 +661,7 @@ class TestEventListGridLoading:
         assert _filter_js_errors(console_errors) == []
 
     def test_correct_columns_rendered(self, page: Page, live_server, seed_data_e2e):
-        """Event grid shows name, comment, usual_date, and actions columns."""
+        """Event grid shows name, comment, schedule, and actions columns."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/events/")
         _wait_for_grid(page, "event-grid")
@@ -669,6 +669,8 @@ class TestEventListGridLoading:
         headers = _get_header_texts(page, "event-grid")
         lower_headers = [h.lower() for h in headers]
         assert any("name" in h for h in lower_headers), f"Name missing: {headers}"
+        assert any("comment" in h for h in lower_headers), f"Comment missing: {headers}"
+        assert any("schedule" in h for h in lower_headers), f"Schedule missing: {headers}"
         assert any("action" in h for h in lower_headers), f"Actions missing: {headers}"
 
     def test_event_data_displayed(self, page: Page, live_server, seed_data_e2e):
@@ -680,6 +682,7 @@ class TestEventListGridLoading:
         body = _grid_body_text(page, "event-grid")
         assert "Christmas" in body
         assert "Graduation" in body
+        assert "Repeats yearly from" in body
 
     def test_three_events_visible(self, page: Page, live_server, seed_data_e2e):
         """Alice sees all 3 seed events."""

@@ -7,6 +7,7 @@ from django.urls import reverse
 from hypothesis import given
 from hypothesis import strategies as st
 
+from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import EventFactory
@@ -88,6 +89,10 @@ class TestEditFormSaveProperty:
         PermissionService.create_or_update_permission(
             self.user, entity, permission_level=PermissionLevel.OWNER
         )
+        if entity_type.lower() == "relation" and entity.event:
+            PermissionService.create_or_update_permission(
+                self.user, entity.event, permission_level=PermissionLevel.OWNER
+            )
 
         return entity
 
@@ -132,17 +137,20 @@ class TestEditFormSaveProperty:
         elif entity_type.lower() == "event":
             form_data["name"] = updated_data.get("name", entity.name)
             form_data["comment"] = updated_data.get("comment", entity.comment or "")
-            if entity.usual_date:
-                form_data["usual_date"] = entity.usual_date.strftime("%Y-%m-%d")
+            form_data["schedule_type"] = entity.schedule_type
+            form_data["date"] = entity.date.strftime("%Y-%m-%d") if entity.date else ""
+            form_data["recurrence"] = (
+                entity.recurrence if entity.schedule_type == Event.ScheduleType.RECURRING else ""
+            )
         elif entity_type.lower() == "persongroup" or entity_type.lower() == "gifttag":
             form_data["name"] = updated_data.get("name", entity.name)
         elif entity_type.lower() == "relation":
-            form_data["person"] = entity.person.person_id
+            form_data["recipient"] = entity.recipient_key
             if entity.gift:
-                form_data["gift"] = entity.gift.gift_id
+                form_data["gift"] = entity.gift.pk
             if entity.event:
-                form_data["event"] = entity.event.event_id
-            form_data["status"] = entity.status
+                form_data["event"] = entity.event.pk
+            form_data["status"] = entity.status.pk
 
         return form_data
 
@@ -293,7 +301,7 @@ class TestEditFormSaveProperty:
                         decoded_email = decode_email(entity.email_address)
                         if decoded_email == form_data["email_address"]:
                             pass  # Email correctly updated
-                    except:
+                    except Exception:
                         # If decoding fails, assume the update worked if the encrypted value changed
                         pass
 
@@ -318,8 +326,8 @@ class TestEditFormSaveProperty:
 
         elif entity_type.lower() == "relation":
             # For relations, verify the core relationships are maintained
-            assert entity.person.person_id == form_data["person"], (
-                f"Relation person not maintained: expected '{form_data['person']}', got '{entity.person.person_id}'"
+            assert entity.recipient_key == form_data["recipient"], (
+                f"Relation recipient not maintained: expected '{form_data['recipient']}', got '{entity.recipient_key}'"
             )
 
         # Test HTMX response headers for proper AJAX handling
@@ -391,6 +399,8 @@ class TestEditFormSaveProperty:
                 "gift_tags",
                 "gift-tag",
             ]
+            if entity_type.lower() == "relation":
+                url_patterns.extend(["persons", "person_groups"])
             assert any(pattern in redirect_url for pattern in url_patterns), (
                 f"Fallback redirect URL not appropriate for {entity_type}: {redirect_url}"
             )

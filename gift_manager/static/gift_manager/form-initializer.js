@@ -157,36 +157,34 @@
     });
 
     /**
-     * Event date type initializer
-     * Shows the absolute date or recurrence field based on the selected date type.
+     * Event schedule initializer
+     * Shows date and recurrence controls based on the selected schedule type.
      */
-    FormInitializer.register("dateTypeToggle", function (form) {
-        const dateTypeRadios = form.querySelectorAll('input[name="date_type"]');
-        const absoluteDateField = form.querySelector("#absolute-date-field");
+    FormInitializer.register("scheduleTypeToggle", function (form) {
+        const scheduleTypeRadios = form.querySelectorAll('input[name="schedule_type"]');
+        const eventDateField = form.querySelector("#event-date-field");
         const recurrenceField = form.querySelector("#recurrence-field");
 
-        if (!dateTypeRadios.length || !absoluteDateField || !recurrenceField) {
+        if (!scheduleTypeRadios.length || !eventDateField || !recurrenceField) {
             return;
         }
 
-        const toggleDateFields = function () {
-            const selectedType = form.querySelector('input[name="date_type"]:checked');
+        const toggleScheduleFields = function () {
+            const selectedType = form.querySelector('input[name="schedule_type"]:checked');
             if (!selectedType) {
                 return;
             }
 
-            if (selectedType.value === "absolute") {
-                absoluteDateField.style.display = "block";
-                recurrenceField.style.display = "none";
-            } else {
-                absoluteDateField.style.display = "none";
-                recurrenceField.style.display = "block";
-            }
+            const isUnscheduled = selectedType.value === "unscheduled";
+            const isRecurring = selectedType.value === "recurring";
+
+            eventDateField.style.display = isUnscheduled ? "none" : "block";
+            recurrenceField.style.display = isRecurring ? "block" : "none";
         };
 
-        toggleDateFields();
-        dateTypeRadios.forEach((radio) => {
-            radio.addEventListener("change", toggleDateFields);
+        toggleScheduleFields();
+        scheduleTypeRadios.forEach((radio) => {
+            radio.addEventListener("change", toggleScheduleFields);
         });
     });
 

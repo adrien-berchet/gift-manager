@@ -7,7 +7,9 @@ from django.urls import reverse
 from hypothesis import given
 from hypothesis import strategies as st
 
+from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
+from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
@@ -63,6 +65,9 @@ class TestCreateFormProperty:
         elif entity_type.lower() == "event":
             form_data["name"] = entity_data.get("name", "Test Event")[:100]
             form_data["comment"] = entity_data.get("comment", "")[:500]
+            form_data["schedule_type"] = Event.ScheduleType.ONE_TIME
+            form_data["date"] = "2026-08-15"
+            form_data["recurrence"] = ""
         elif entity_type.lower() == "persongroup":
             form_data["name"] = entity_data.get("name", "Test Group")[:100]
         elif entity_type.lower() == "gifttag":
@@ -77,8 +82,10 @@ class TestCreateFormProperty:
             PermissionService.create_or_update_permission(
                 self.user, gift, permission_level=PermissionLevel.OWNER
             )
-            form_data["person"] = person.person_id
-            form_data["gift"] = gift.gift_id
+            form_data["recipient"] = f"person:{person.person_id}"
+            form_data["gift"] = gift.pk
+            status = RelationStatus.objects.get_or_create(status="Idea")[0]
+            form_data["status"] = status.pk
 
         return form_data
 
@@ -183,10 +190,12 @@ class TestCreateFormProperty:
         # Verify that the entity was created with the correct data
         if entity_type.lower() == "person":
             assert created_entity.first_name == form_data["first_name"].strip(), (
-                f"Person first_name not set correctly: expected '{form_data['first_name']}', got '{created_entity.first_name}'"
+                "Person first_name not set correctly: expected "
+                f"'{form_data['first_name']}', got '{created_entity.first_name}'"
             )
             assert created_entity.family_name == form_data["family_name"].strip(), (
-                f"Person family_name not set correctly: expected '{form_data['family_name']}', got '{created_entity.family_name}'"
+                "Person family_name not set correctly: expected "
+                f"'{form_data['family_name']}', got '{created_entity.family_name}'"
             )
             if form_data.get("email_address"):
                 # For encrypted email addresses, we need to check if the email was set
@@ -194,25 +203,29 @@ class TestCreateFormProperty:
 
         elif entity_type.lower() in ["gift", "event"]:
             assert created_entity.name == form_data["name"].strip(), (
-                f"{entity_type.title()} name not set correctly: expected '{form_data['name']}', got '{created_entity.name}'"
+                f"{entity_type.title()} name not set correctly: expected "
+                f"'{form_data['name']}', got '{created_entity.name}'"
             )
             if form_data.get("comment"):
                 assert created_entity.comment == form_data["comment"].strip(), (
-                    f"{entity_type.title()} comment not set correctly: expected '{form_data['comment']}', got '{created_entity.comment}'"
+                    f"{entity_type.title()} comment not set correctly: expected "
+                    f"'{form_data['comment']}', got '{created_entity.comment}'"
                 )
 
         elif entity_type.lower() in ["persongroup", "gifttag"]:
             assert created_entity.name == form_data["name"].strip(), (
-                f"{entity_type.title()} name not set correctly: expected '{form_data['name']}', got '{created_entity.name}'"
+                f"{entity_type.title()} name not set correctly: expected "
+                f"'{form_data['name']}', got '{created_entity.name}'"
             )
 
         elif entity_type.lower() == "relation":
-            assert str(created_entity.person.person_id) == str(form_data["person"]), (
-                f"Relation person not set correctly: expected '{form_data['person']}', got '{created_entity.person.person_id}'"
+            assert form_data["recipient"] == created_entity.recipient_key, (
+                "Relation recipient not set correctly: expected "
+                f"'{form_data['recipient']}', got '{created_entity.recipient_key}'"
             )
             if form_data.get("gift"):
-                assert str(created_entity.gift.gift_id) == str(form_data["gift"]), (
-                    f"Relation gift not set correctly: expected '{form_data['gift']}', got '{created_entity.gift.gift_id}'"
+                assert str(created_entity.gift.pk) == str(form_data["gift"]), (
+                    f"Relation gift not set correctly: expected '{form_data['gift']}', got '{created_entity.gift.pk}'"
                 )
 
         # Verify that the user has proper permissions on the created entity
@@ -279,7 +292,8 @@ class TestCreateFormProperty:
         # Verify another entity was created for fallback request
         new_count_fallback = model_class.objects.count()
         assert new_count_fallback == initial_count_fallback + 1, (
-            f"Fallback create did not create new {entity_type}: expected {initial_count_fallback + 1}, got {new_count_fallback}"
+            f"Fallback create did not create new {entity_type}: expected "
+            f"{initial_count_fallback + 1}, got {new_count_fallback}"
         )
 
         # If it's a redirect, it should redirect to a reasonable location

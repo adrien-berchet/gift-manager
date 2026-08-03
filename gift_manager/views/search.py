@@ -165,9 +165,15 @@ class EventSearchView(HTMXListSearchView):
                     "event_id": str(event.event_id),
                     "name": event.name,
                     "comment": event.comment or "",
-                    "usual_date": event.usual_date,
-                    "absolute_date": event.absolute_date,
-                    "recurrence": event.recurrence,
+                    "schedule_type": event.schedule_type,
+                    "schedule_type_label": event.get_schedule_type_display(),
+                    "date": event.date,
+                    "date_summary": event.date_summary,
+                    "schedule_display": event.date_summary,
+                    "recurrence": event.recurrence if event.is_recurring else "",
+                    "recurrence_label": event.get_recurrence_display()
+                    if event.is_recurring
+                    else "",
                 }
             )
 

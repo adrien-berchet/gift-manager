@@ -115,7 +115,7 @@ class TestDetailViewDisplayProperty:
         field_mappings = {
             "person": ["first_name", "family_name", "email_address", "creation_date"],
             "gift": ["name", "comment", "creation_date"],
-            "event": ["name", "comment", "usual_date", "creation_date"],
+            "event": ["name", "comment", "date", "creation_date"],
             "relation": ["person", "gift", "event", "status", "creation_date"],
             "persongroup": ["name", "creation_date"],
             "gifttag": ["name", "creation_date"],

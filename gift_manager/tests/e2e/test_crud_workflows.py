@@ -99,6 +99,8 @@ class TestEventCRUDWorkflow(BaseCRUDTest):
         form_data = {
             "name": "Birthday Party",
             "comment": "Annual celebration",
+            "schedule_type": "recurring",
+            "date": "2026-08-15",
             "recurrence": "yearly",
         }
 
@@ -109,6 +111,8 @@ class TestEventCRUDWorkflow(BaseCRUDTest):
         form_data = {
             "name": "Updated Birthday Party",
             "comment": "Updated celebration details",
+            "schedule_type": "recurring",
+            "date": "2026-08-15",
             "recurrence": "yearly",
         }
 

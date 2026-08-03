@@ -268,9 +268,7 @@ class TestRealTimeListFeaturesProperty:
         """
         # Create one test entity to ensure we have data
         if entity_type == "person":
-            entity = PersonFactory(
-                first_name="TestPerson", family_name="TestUser", user_link=self.user
-            )
+            PersonFactory(first_name="TestPerson", family_name="TestUser", user_link=self.user)
             expected_fields = [
                 "person_id",
                 "first_name",
@@ -279,28 +277,32 @@ class TestRealTimeListFeaturesProperty:
                 "groups_info",
             ]
         elif entity_type == "gift":
-            entity = GiftFactory(name="TestGift", shared_with=[self.user])
+            GiftFactory(name="TestGift", shared_with=[self.user])
             expected_fields = ["gift_id", "name", "comment", "tags_info"]
         elif entity_type == "event":
-            entity = EventFactory(name="TestEvent", shared_with=[self.user])
+            EventFactory(name="TestEvent", shared_with=[self.user])
             expected_fields = [
                 "event_id",
                 "name",
                 "comment",
-                "usual_date",
-                "absolute_date",
+                "schedule_type",
+                "schedule_type_label",
+                "date",
+                "date_summary",
+                "schedule_display",
                 "recurrence",
+                "recurrence_label",
             ]
         elif entity_type == "relation":
             person = PersonFactory(user_link=self.user)
             gift = GiftFactory(shared_with=[self.user])
-            entity = RelationFactory(person=person, gift=gift, shared_with=[self.user])
+            RelationFactory(person=person, gift=gift, shared_with=[self.user])
             expected_fields = ["relation_id", "person_name", "gift_name", "event_name", "status"]
         elif entity_type == "persongroup":
-            entity = PersonGroupFactory(name="TestGroup", shared_with=[self.user])
+            PersonGroupFactory(name="TestGroup", shared_with=[self.user])
             expected_fields = ["person_group_id", "name", "comment"]
         elif entity_type == "gifttag":
-            entity = GiftTagFactory(name="TestTag", shared_with=[self.user])
+            GiftTagFactory(name="TestTag", shared_with=[self.user])
             expected_fields = ["gift_tag_id", "name"]
 
         # Test search endpoint
@@ -349,29 +351,27 @@ class TestRealTimeListFeaturesProperty:
 
         # Create entities for current user
         if entity_type == "person":
-            my_entity = PersonFactory(first_name="MyPerson", user_link=self.user)
-            other_entity = PersonFactory(first_name="OtherPerson", user_link=other_user)
+            PersonFactory(first_name="MyPerson", user_link=self.user)
+            PersonFactory(first_name="OtherPerson", user_link=other_user)
         elif entity_type == "gift":
-            my_entity = GiftFactory(name="MyGift", shared_with=[self.user])
-            other_entity = GiftFactory(name="OtherGift", shared_with=[other_user])
+            GiftFactory(name="MyGift", shared_with=[self.user])
+            GiftFactory(name="OtherGift", shared_with=[other_user])
         elif entity_type == "event":
-            my_entity = EventFactory(name="MyEvent", shared_with=[self.user])
-            other_entity = EventFactory(name="OtherEvent", shared_with=[other_user])
+            EventFactory(name="MyEvent", shared_with=[self.user])
+            EventFactory(name="OtherEvent", shared_with=[other_user])
         elif entity_type == "relation":
             my_person = PersonFactory(first_name="MyRelPerson", user_link=self.user)
             my_gift = GiftFactory(name="MyRelGift", shared_with=[self.user])
-            my_entity = RelationFactory(person=my_person, gift=my_gift, shared_with=[self.user])
+            RelationFactory(person=my_person, gift=my_gift, shared_with=[self.user])
             other_person = PersonFactory(first_name="OtherRelPerson", user_link=other_user)
             other_gift = GiftFactory(name="OtherRelGift", shared_with=[other_user])
-            other_entity = RelationFactory(
-                person=other_person, gift=other_gift, shared_with=[other_user]
-            )
+            RelationFactory(person=other_person, gift=other_gift, shared_with=[other_user])
         elif entity_type == "persongroup":
-            my_entity = PersonGroupFactory(name="MyGroup", shared_with=[self.user])
-            other_entity = PersonGroupFactory(name="OtherGroup", shared_with=[other_user])
+            PersonGroupFactory(name="MyGroup", shared_with=[self.user])
+            PersonGroupFactory(name="OtherGroup", shared_with=[other_user])
         elif entity_type == "gifttag":
-            my_entity = GiftTagFactory(name="MyTag", shared_with=[self.user])
-            other_entity = GiftTagFactory(name="OtherTag", shared_with=[other_user])
+            GiftTagFactory(name="MyTag", shared_with=[self.user])
+            GiftTagFactory(name="OtherTag", shared_with=[other_user])
 
         # Test search endpoint
         search_url_map = {

@@ -13,6 +13,7 @@ from django.db import connection
 from django.db import transaction
 from django.test import override_settings
 from django.utils import timezone
+from django.utils.translation import override
 
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
@@ -713,13 +714,15 @@ class TestGift:
 class TestEvent:
     """Tests for the Event model."""
 
-    def test_event_creation(self, event, event_name, event_comment, event_usual_date):
+    def test_event_creation(self, event, event_name, event_comment, event_date):
         """Test creating an event."""
         assert event.name == event_name
         assert event.comment == event_comment
-        assert event.usual_date == event_usual_date
-        assert event.absolute_date is None
+        assert event.schedule_type == Event.ScheduleType.RECURRING
+        assert event.date == event_date
         assert event.recurrence == "yearly"
+        assert event.is_scheduled
+        assert event.is_recurring
         assert event.event_id is not None
         assert isinstance(event.event_id, uuid.UUID)
         assert isinstance(event.creation_date, datetime)
@@ -1546,9 +1549,55 @@ class TestEventManagerMethods:
         assert len(results) == 1
         result = results[0]
 
-        assert "event_id" in result
-        assert "name" in result
-        assert "usual_date" in result
+        assert result.event_id == event.event_id
+        assert result.name == event.name
+        assert result.date_summary
+
+    def test_one_time_event_next_occurrence_is_none_after_date(self):
+        event = Event.objects.create(
+            name="Graduation",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() - timedelta(days=1),
+        )
+
+        assert event.next_occurrence() is None
+
+    def test_event_model_rejects_inconsistent_schedule_fields(self):
+        event = Event(
+            name="Graduation",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.datetime(2026, 6, 1).date(),
+            recurrence="yearly",
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            event.full_clean()
+
+        assert "recurrence" in exc_info.value.message_dict
+
+    def test_yearly_event_next_occurrence_uses_next_matching_date(self):
+        event = Event.objects.create(
+            name="Birthday",
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=timezone.datetime(2000, 5, 15).date(),
+            recurrence="yearly",
+        )
+
+        assert event.next_occurrence(today=timezone.datetime(2026, 5, 16).date()).isoformat() == (
+            "2027-05-15"
+        )
+
+    def test_date_summary_translates_recurrence_sentence_label(self):
+        event = Event(
+            name="Christmas",
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=timezone.datetime(2000, 12, 25).date(),
+            recurrence="yearly",
+        )
+
+        with override("fr"):
+            assert event.get_recurrence_display() == "Annuel"
+            assert event.date_summary == "Se répète annuellement à partir du 25 décembre 2000"
 
 
 @pytest.mark.django_db

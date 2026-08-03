@@ -610,80 +610,60 @@ class GiftRelationForm(BaseFormMixin, forms.ModelForm):
 
 
 class EventForm(BaseFormMixin, forms.ModelForm):
-    date_type = forms.ChoiceField(
-        label=gettext_lazy("Date type"),
-        choices=[
-            ("absolute", gettext_lazy("Absolute date")),
-            ("recurrence", gettext_lazy("Recurrent")),
-        ],
-        widget=forms.RadioSelect,
-    )
-
     class Meta:
         model = Event
-        fields = ["name", "comment", "date_type", "absolute_date", "recurrence"]
+        fields = ["name", "comment", "schedule_type", "date", "recurrence"]
         widgets = {
             "name": forms.TextInput(attrs={"rows": 1}),
             "comment": forms.Textarea(attrs={"rows": 3}),
-            "absolute_date": forms.DateInput(attrs={"type": "date"}),
+            "schedule_type": forms.RadioSelect,
+            "date": forms.DateInput(attrs={"type": "date"}),
         }
         labels = {
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
-            "date_type": gettext_lazy("Date type"),
-            "absolute_date": gettext_lazy("Absolute date"),
+            "schedule_type": gettext_lazy("Schedule"),
+            "date": gettext_lazy("Date"),
             "recurrence": gettext_lazy("Recurrence"),
+        }
+        help_texts = {
+            "date": gettext_lazy(
+                "Use the event date for one-time events, or the typical date for repeating events."
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["absolute_date"].required = False
+        self.fields["date"].required = False
         self.fields["recurrence"].required = False
 
-        if self.instance and self.instance.absolute_date:
-            self.fields["date_type"].initial = "absolute"
-        elif self.instance and self.instance.recurrence:
-            self.fields["date_type"].initial = "recurrence"
-            self.initial["absolute_date"] = self.instance.usual_date
-
     def clean(self):
-        """Normalize absolute and recurring event date fields."""
+        """Validate and normalize event schedule fields."""
         cleaned_data = super().clean()
-        date_type = cleaned_data.get("date_type")
-        anchor_date = cleaned_data.get("absolute_date")
+        schedule_type = cleaned_data.get("schedule_type")
+        event_date = cleaned_data.get("date")
         recurrence = cleaned_data.get("recurrence")
 
-        if date_type == "absolute":
-            if not anchor_date:
-                self.add_error("absolute_date", gettext_lazy("Choose a date."))
+        if schedule_type == Event.ScheduleType.UNSCHEDULED:
+            cleaned_data["date"] = None
             cleaned_data["recurrence"] = None
             return cleaned_data
 
-        if date_type == "recurrence":
-            if not anchor_date:
-                self.add_error("absolute_date", gettext_lazy("Choose a recurrence start date."))
+        if schedule_type == Event.ScheduleType.ONE_TIME:
+            if not event_date:
+                self.add_error("date", gettext_lazy("Choose a date."))
+            cleaned_data["recurrence"] = None
+            return cleaned_data
+
+        if schedule_type == Event.ScheduleType.RECURRING:
+            if not event_date:
+                self.add_error("date", gettext_lazy("Choose a date."))
             if not recurrence:
                 self.add_error("recurrence", gettext_lazy("Choose a recurrence."))
             return cleaned_data
 
-        self.add_error("date_type", gettext_lazy("Choose a valid date type."))
+        self.add_error("schedule_type", gettext_lazy("Choose a valid schedule."))
         return cleaned_data
-
-    def save(self, commit=True):  # noqa: FBT002  # pylint: disable=arguments-differ
-        """Persist recurrent anchor dates to usual_date."""
-        instance = super().save(commit=False)
-
-        if self.cleaned_data.get("date_type") == "recurrence":
-            instance.usual_date = self.cleaned_data.get("absolute_date")
-            instance.absolute_date = None
-        else:
-            instance.usual_date = None
-            instance.recurrence = None
-
-        if commit:
-            instance.save()
-            self.save_m2m()
-        return instance
 
 
 class RelationForm(BaseFormMixin, forms.ModelForm):

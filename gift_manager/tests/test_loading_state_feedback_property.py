@@ -145,7 +145,7 @@ class TestLoadingStateFeedbackProperty:
         # Property 11: Test form submission with loading states
         try:
             create_url = reverse(f"gift_manager:{entity_type}_create")
-        except:
+        except Exception:
             pytest.skip(f"Create URL not available for {entity_type}")
 
         # Get the create form
@@ -187,7 +187,7 @@ class TestLoadingStateFeedbackProperty:
         # Property 11.4: Test error feedback for validation errors
         try:
             create_url = reverse(f"gift_manager:{entity_type}_create")
-        except:
+        except Exception:
             pytest.skip(f"Create URL not available for {entity_type}")
 
         # Submit form with invalid data
@@ -211,7 +211,8 @@ class TestLoadingStateFeedbackProperty:
             "event": {
                 "name": "Test Event",
                 "comment": "Test comment",
-                "usual_date": "2024-12-25",
+                "schedule_type": "recurring",
+                "date": "2024-12-25",
                 "recurrence": "yearly",
             },
         }

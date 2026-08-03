@@ -40,36 +40,34 @@
         </div>
     </div>
 
-    <!-- Date Information -->
+    <!-- Schedule Information -->
     <div class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">
-            <i class="fas fa-clock me-2"></i>{% trans "Date Information" %}
+            <i class="fas fa-clock me-2"></i>{% trans "Schedule" %}
         </h6>
 
         <div class="row g-3">
-            {% if object.usual_date %}
             <div class="col-md-6">
                 <div class="detail-field">
-                    <label class="detail-label">{% trans "Usual Date" %}</label>
+                    <label class="detail-label">{% trans "Schedule" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-calendar-day me-1 text-muted"></i>
-                        {{ object.usual_date|date:"M d" }}
+                        {{ object.date_summary }}
                     </div>
                 </div>
             </div>
-            {% endif %}
-            {% if object.absolute_date %}
+            {% if object.is_scheduled %}
             <div class="col-md-6">
                 <div class="detail-field">
-                    <label class="detail-label">{% trans "Absolute Date" %}</label>
+                    <label class="detail-label">{% trans "Date" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-calendar-check me-1 text-muted"></i>
-                        {{ object.absolute_date|date:"M d, Y" }}
+                        {{ object.date|date:"M d, Y" }}
                     </div>
                 </div>
             </div>
             {% endif %}
-            {% if object.recurrence %}
+            {% if object.is_recurring %}
             <div class="col-12">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Recurrence" %}</label>

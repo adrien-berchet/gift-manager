@@ -40,16 +40,12 @@ class EventListView(
         self.column_names = {
             "name": gettext("Event name"),
             "comment": gettext("Comment"),
-            "usual_date": gettext("Usual date"),
+            "schedule": gettext("Schedule"),
         }
 
     def get_queryset(self):
         """Return Events for the current user or shared with the user."""
-        return (
-            Event.objects.accessible_by(self.request.user)
-            .values("event_id", *self.column_names)
-            .order_by("name")
-        )
+        return Event.objects.for_list_display(self.request.user).order_by("name")
 
 
 class EventCreateView(ProgressiveEnhancementFormMixin, QueryOptimizationMixin, BaseCreateView):
