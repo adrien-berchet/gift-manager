@@ -163,9 +163,6 @@ Provides basic functionality with traditional page-based navigation
 
 {% block extra_js %}
     {{ block.super }}
-    <!-- Progressive Enhancement Script -->
-    <script src="{% static 'gift_manager/progressive-enhancement.js' %}"></script>
-
     <script>
         // Mark page as fallback mode if needed
         {% if is_fallback %}

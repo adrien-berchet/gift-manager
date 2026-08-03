@@ -153,6 +153,20 @@ def test_base_renders_skip_link_and_static_live_region():
     assert "skip-link-focus-visible" in accessibility_script
 
 
+def test_runtime_compatibility_mode_banner_is_removed_from_app_shell():
+    base = read(TEMPLATE_ROOT / "base.html")
+    fallback_base = read(TEMPLATE_ROOT / "fallback/base_fallback.html")
+    fallback_styles = read(STATIC_ROOT / "css/progressive-enhancement.css")
+
+    assert not (STATIC_ROOT / "progressive-enhancement.js").exists()
+    assert "progressive-enhancement.js" not in base
+    assert "progressive-enhancement.js" not in fallback_base
+    assert "css/progressive-enhancement.css" not in base
+    assert "css/progressive-enhancement.css" in fallback_base
+    assert "Enhanced features temporarily unavailable" not in base
+    assert "fallback-message" not in fallback_styles
+
+
 def test_group_tree_has_keyboard_and_touch_move_workflow():
     content = read(TEMPLATE_ROOT / "person_group_list.html")
 
