@@ -284,6 +284,12 @@ def test_grid_templates_route_html_renderers_through_safe_helpers():
 
     for template_path in template_paths:
         content = template_path.read_text()
+        has_inline_grid_renderer = (
+            "GridUtils." in content or "gridjs.html" in content or "formatter:" in content
+        )
+        if not has_inline_grid_renderer:
+            continue
+
         assert "GridUtils.linkHtml" in content or "GridUtils.escapeHtml" in content
         for pattern in unsafe_patterns:
             assert pattern not in content, f"{template_path.name} contains unsafe pattern {pattern}"

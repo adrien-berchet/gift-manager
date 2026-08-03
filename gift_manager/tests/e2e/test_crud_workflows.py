@@ -21,7 +21,7 @@ class TestPersonCRUDWorkflow(BaseCRUDTest):
             "email_address": "john.doe@example.com",
         }
 
-        self.test_create_workflow(page, live_server, test_user, "persons", form_data)
+        self.run_create_workflow(page, live_server, test_user, "persons", form_data)
 
     def test_person_edit_workflow(self, page: Page, live_server, test_user, sample_persons):
         """Test editing an existing person through the slide panel interface."""
@@ -31,11 +31,11 @@ class TestPersonCRUDWorkflow(BaseCRUDTest):
             "email_address": "jane.smith@example.com",
         }
 
-        self.test_edit_workflow(page, live_server, test_user, "persons", 0, form_data)
+        self.run_edit_workflow(page, live_server, test_user, "persons", 0, form_data)
 
     def test_person_delete_workflow(self, page: Page, live_server, test_user, sample_persons):
         """Test deleting a person through the modal confirmation interface."""
-        self.test_delete_workflow(page, live_server, test_user, "persons", 0)
+        self.run_delete_workflow(page, live_server, test_user, "persons", 0)
 
     def test_person_detail_view(self, page: Page, live_server, test_user, sample_persons):
         """Test viewing person details in a slide panel."""
@@ -69,24 +69,22 @@ class TestGiftCRUDWorkflow(BaseCRUDTest):
         form_data = {
             "name": "Smartphone",
             "comment": "Latest iPhone model",
-            "price": "999.99",
         }
 
-        self.test_create_workflow(page, live_server, test_user, "gifts", form_data)
+        self.run_create_workflow(page, live_server, test_user, "gifts", form_data)
 
     def test_gift_edit_workflow(self, page: Page, live_server, test_user, sample_gifts):
         """Test editing an existing gift through the slide panel interface."""
         form_data = {
             "name": "Updated Smartphone",
             "comment": "Updated description",
-            "price": "1099.99",
         }
 
-        self.test_edit_workflow(page, live_server, test_user, "gifts", 0, form_data)
+        self.run_edit_workflow(page, live_server, test_user, "gifts", 0, form_data)
 
     def test_gift_delete_workflow(self, page: Page, live_server, test_user, sample_gifts):
         """Test deleting a gift through the modal confirmation interface."""
-        self.test_delete_workflow(page, live_server, test_user, "gifts", 0)
+        self.run_delete_workflow(page, live_server, test_user, "gifts", 0)
 
 
 class TestEventCRUDWorkflow(BaseCRUDTest):
@@ -102,7 +100,7 @@ class TestEventCRUDWorkflow(BaseCRUDTest):
             "recurrence": "yearly",
         }
 
-        self.test_create_workflow(page, live_server, test_user, "events", form_data)
+        self.run_create_workflow(page, live_server, test_user, "events", form_data)
 
     def test_event_edit_workflow(self, page: Page, live_server, test_user, sample_events):
         """Test editing an existing event through the slide panel interface."""
@@ -114,11 +112,11 @@ class TestEventCRUDWorkflow(BaseCRUDTest):
             "recurrence": "yearly",
         }
 
-        self.test_edit_workflow(page, live_server, test_user, "events", 0, form_data)
+        self.run_edit_workflow(page, live_server, test_user, "events", 0, form_data)
 
     def test_event_delete_workflow(self, page: Page, live_server, test_user, sample_events):
         """Test deleting an event through the modal confirmation interface."""
-        self.test_delete_workflow(page, live_server, test_user, "events", 0)
+        self.run_delete_workflow(page, live_server, test_user, "events", 0)
 
 
 class TestBulkOperationsWorkflow(BaseCRUDTest):

@@ -217,6 +217,10 @@
     FormInitializer.register("unsavedChanges", function (form) {
         let formModified = false;
 
+        if (window.UnsavedChanges?.addForm) {
+            window.UnsavedChanges.addForm(form);
+        }
+
         // Track form changes (but not permission selector changes)
         const handleInput = function (e) {
             // Don't mark as modified if it's a permission selector
@@ -245,6 +249,9 @@
         const offcanvas = form.closest(".offcanvas");
         if (offcanvas) {
             const handleHide = function (e) {
+                if (offcanvas.dataset.skipUnsavedPrompt === "true") {
+                    return;
+                }
                 if (formModified) {
                     const confirmed = confirm(
                         "You have unsaved changes. Are you sure you want to close?"

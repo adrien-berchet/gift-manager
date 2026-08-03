@@ -188,7 +188,7 @@ class TestKeyboardAccessibility(BaseE2ETest):
         page.goto(f"{live_server.url}/")
 
         # Test skip to main content link
-        skip_link = page.locator("a[href='#main'], .skip-link")
+        skip_link = page.locator("a[href='#main-content'], a[href='#main']").first
         if skip_link.count() > 0:
             # Skip links are often hidden until focused
             skip_link.focus()
@@ -198,7 +198,7 @@ class TestKeyboardAccessibility(BaseE2ETest):
             page.keyboard.press("Enter")
 
             # Focus should move to main content
-            main_content = page.locator("#main, main, .main-content")
+            main_content = page.locator("#main-content, #main, main, .main-content")
             if main_content.count() > 0:
                 # Focus should be within or on main content area
                 focus_is_in_main = main_content.first.evaluate(

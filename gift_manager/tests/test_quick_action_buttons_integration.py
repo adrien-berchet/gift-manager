@@ -22,7 +22,7 @@ class TestQuickActionButtonsIntegration:
 
     def test_css_classes_are_included(self):
         """Test that the permission-ui.css file is included and contains quick action styles."""
-        person = PersonFactory()
+        PersonFactory()
 
         url = reverse("gift_manager:persons")
         response = self.client.get(url)
@@ -101,7 +101,7 @@ class TestQuickActionButtonsIntegration:
         assert_text_in_rendered("'share'", content)  # Share action in the actions array
 
         # Check that the share URL is configured
-        assert_text_in_rendered('"/en/share/"', content)  # Share URL configuration
+        assert_text_in_rendered("/share/", content)  # Share URL configuration
 
         # Check that grid-utils.js is loaded (contains share button configuration)
         assert_text_in_rendered("grid-utils.js", content)

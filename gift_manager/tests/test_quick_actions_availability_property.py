@@ -59,7 +59,7 @@ class TestQuickActionsAvailabilityProperty:
             "person": "gift_manager:persons",
             "gift": "gift_manager:gifts",
             "event": "gift_manager:events",
-            "relation": "gift_manager:relations",
+            "relation": "gift_manager:relation_advanced_list",
             "persongroup": "gift_manager:person_groups",
             "gifttag": "gift_manager:gift_tag_explorer",
         }

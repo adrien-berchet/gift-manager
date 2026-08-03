@@ -8,8 +8,9 @@
       action="{% url 'gift_manager:gift_tag_create' %}"
       hx-post="{% url 'gift_manager:gift_tag_create' %}"
       {% endif %}
-      hx-target="#offcanvasContent"
-      hx-swap="innerHTML"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
       hx-indicator="#offcanvasLoading"
       class="offcanvas-form gift-tag-form"
       data-form-type="{{ form_type|default:'gift_tag' }}">

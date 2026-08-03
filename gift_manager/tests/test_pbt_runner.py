@@ -14,6 +14,7 @@ import pytest
 
 from .test_pbt_config import PBT_COMPREHENSIVE_SETTINGS
 from .test_pbt_config import PBT_FAST_SETTINGS
+from .test_pbt_config import PBT_PR_SETTINGS
 from .test_pbt_config import PBT_SETTINGS
 from .test_pbt_config import PROPERTY_METADATA
 
@@ -52,7 +53,7 @@ class PropertyTestRunner:
         """Initialize the test runner.
 
         Args:
-            test_mode: 'fast', 'normal', or 'comprehensive'
+            test_mode: 'fast', 'pr', 'normal', or 'comprehensive'
         """
         self.test_mode = test_mode
         self.results = []
@@ -62,6 +63,8 @@ class PropertyTestRunner:
         # Configure Hypothesis settings based on test mode
         if test_mode == "fast":
             self.hypothesis_settings = PBT_FAST_SETTINGS
+        elif test_mode == "pr":
+            self.hypothesis_settings = PBT_PR_SETTINGS
         elif test_mode == "comprehensive":
             self.hypothesis_settings = PBT_COMPREHENSIVE_SETTINGS
         else:

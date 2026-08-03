@@ -86,7 +86,7 @@ class HTMXResponseMixin:
 
             # Add success notification
             if hasattr(self, "get_success_message"):
-                success_message = self.get_success_message()
+                success_message = self.get_success_message()  # pylint: disable=assignment-from-none
                 if success_message:
                     triggers.append(
                         {"showNotification": {"message": success_message, "type": "success"}}
@@ -141,7 +141,7 @@ class HTMXResponseMixin:
 
             # Add success notification
             if hasattr(self, "get_success_message"):
-                success_message = self.get_success_message()
+                success_message = self.get_success_message()  # pylint: disable=assignment-from-none
                 if success_message:
                     triggers.append(
                         {"showNotification": {"message": success_message, "type": "success"}}

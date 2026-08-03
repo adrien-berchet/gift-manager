@@ -96,9 +96,5 @@ class Command(BaseCommand):
         self.stdout.write(f"  Events:            {len(data.events)}")
         self.stdout.write(f"  Relations:         {len(data.relations)}")
         self.stdout.write("")
-        self.stdout.write(
-            "  Login as:  alice / alice_password   |   bob / bob_password"
-        )
-        self.stdout.write(
-            "  Admin:     testuser / testpass123"
-        )
+        self.stdout.write("  Login as:  alice / alice_password   |   bob / bob_password")
+        self.stdout.write("  Admin:     testuser / testpass123")

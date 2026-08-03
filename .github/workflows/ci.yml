@@ -18,7 +18,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        include:
+          - python-version: "3.10"
+            tox-env: "py310,lint"
+          - python-version: "3.11"
+            tox-env: "py311"
+          - python-version: "3.12"
+            tox-env: "py312"
 
     services:
       postgres:
@@ -67,8 +73,8 @@ jobs:
           DB_HOST: localhost
           DB_PORT: 5432
 
-      - name: Run tests with coverage
-        run: uv run --frozen tox
+      - name: Run tox checks
+        run: uv run --frozen tox run -e ${{ matrix.tox-env }}
         env:
           DB_NAME: gift_manager_test
           DB_USER: test_user

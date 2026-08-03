@@ -28,6 +28,13 @@ PBT_FAST_SETTINGS = settings(
     verbosity=Verbosity.quiet,
 )
 
+# PR settings keep property tests in the review gate while reducing example count
+PBT_PR_SETTINGS = settings(
+    max_examples=25,
+    deadline=30000,
+    verbosity=Verbosity.normal,
+)
+
 # Comprehensive settings for CI/production testing
 PBT_COMPREHENSIVE_SETTINGS = settings(
     max_examples=200,  # More examples for thorough testing

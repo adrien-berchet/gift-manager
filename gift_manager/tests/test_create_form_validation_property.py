@@ -195,9 +195,10 @@ class TestCreateFormValidationProperty:
         response = self.client.post(create_url, data=form_data, HTTP_HX_REQUEST="true")
 
         # Property 4: Error Handling Consistency
-        # The response should indicate validation failure (200 with errors or 400)
-        assert response.status_code in [200, 400], (
-            f"Invalid create operation should return 200 or 400 for {entity_type}, got {response.status_code}"
+        # The response should indicate validation failure (200 with errors, 400, or 422)
+        assert response.status_code in [200, 400, 422], (
+            f"Invalid create operation should return 200, 400, or 422 for {entity_type}, "
+            f"got {response.status_code}"
         )
 
         # Check if this is an error response
@@ -217,9 +218,12 @@ class TestCreateFormValidationProperty:
         operation_failed = new_count == initial_count
 
         # At least one form of error indication should be present
+        content_indicators = [
+            ind for ind in ["error", "invalid", "required", "danger"] if ind in content.lower()
+        ]
         assert has_error_notification or has_error_content or operation_failed, (
             f"No error indication found for invalid {entity_type} creation. "
-            f"HX-Trigger: {hx_trigger}, Content indicators: {[ind for ind in ['error', 'invalid', 'required', 'danger'] if ind in content.lower()]}, "
+            f"HX-Trigger: {hx_trigger}, Content indicators: {content_indicators}, "
             f"Entity count: {initial_count} -> {new_count}"
         )
 

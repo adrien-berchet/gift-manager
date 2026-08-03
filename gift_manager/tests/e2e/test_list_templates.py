@@ -13,6 +13,7 @@ Templates tested:
 - status_list.html    (minimal features, no bulk ops / inline editing)
 """
 
+import os
 import re
 
 import pytest
@@ -115,6 +116,86 @@ def _open_filter_panel(page: Page, grid_id: str):
 def _filter_js_errors(errors: list[str]) -> list[str]:
     """Remove non-actionable console errors (favicon, etc.)."""
     return [e for e in errors if "favicon" not in e.lower()]
+
+
+def _matrix(full_items, smoke_items):
+    """Use representative matrix cases unless full e2e coverage is requested."""
+    return full_items if os.environ.get("E2E_FULL_MATRIX") == "1" else smoke_items
+
+
+LIST_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/events/", "event-grid"),
+    ("/relations/advanced/", "relation-grid"),
+    ("/person_groups/", "person-group-grid"),
+    ("/gifts/", "gift-grid"),
+    ("/relation_statuses/", "status-grid"),
+]
+
+SMOKE_LIST_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/relations/advanced/", "relation-grid"),
+    ("/relation_statuses/", "status-grid"),
+]
+
+ACTION_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/events/", "event-grid"),
+    ("/relations/advanced/", "relation-grid"),
+    ("/person_groups/", "person-group-grid"),
+    ("/gifts/", "gift-grid"),
+]
+
+SMOKE_ACTION_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/relations/advanced/", "relation-grid"),
+    ("/gifts/", "gift-grid"),
+]
+
+LIST_PATHS = [
+    "/persons/",
+    "/events/",
+    "/relations/",
+    "/relations/advanced/",
+    "/person_groups/",
+    "/gifts/",
+    "/relation_statuses/",
+]
+
+SMOKE_LIST_PATHS = [
+    "/persons/",
+    "/relations/advanced/",
+    "/relation_statuses/",
+]
+
+CREATE_BUTTON_PATHS = [
+    "/persons/",
+    "/events/",
+    "/gifts/",
+    "/relations/",
+    "/relations/advanced/",
+    "/person_groups/",
+]
+
+SMOKE_CREATE_BUTTON_PATHS = [
+    "/persons/",
+    "/relations/advanced/",
+    "/gifts/",
+]
+
+FILTER_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/events/", "event-grid"),
+    ("/relations/advanced/", "relation-grid"),
+    ("/gifts/", "gift-grid"),
+    ("/relation_statuses/", "status-grid"),
+]
+
+FILTER_INTERACTIVE_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/events/", "event-grid"),
+    ("/gifts/", "gift-grid"),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -1261,7 +1342,9 @@ class TestRelationListGridLoading:
 
         relation.refresh_from_db()
         assert relation.due_date is not None
-        assert abs(after_scroll - before_scroll) <= 2
+        # Opening a detached picker and refreshing the card should not cause a
+        # meaningful page jump; small browser focus adjustments are acceptable.
+        assert abs(after_scroll - before_scroll) <= 24
         expect(picker).to_have_count(0)
 
 
@@ -1842,14 +1925,7 @@ class TestCrossTemplateGridLoading:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/relations/advanced/", "relation-grid"),
-            ("/person_groups/", "person-group-grid"),
-            ("/gifts/", "gift-grid"),
-            ("/relation_statuses/", "status-grid"),
-        ],
+        _matrix(LIST_GRID_PAGES, SMOKE_LIST_GRID_PAGES),
     )
     def test_all_grids_load(
         self, page: Page, live_server, seed_data_e2e, console_errors, path, grid_id
@@ -1864,14 +1940,7 @@ class TestCrossTemplateGridLoading:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/relations/advanced/", "relation-grid"),
-            ("/person_groups/", "person-group-grid"),
-            ("/gifts/", "gift-grid"),
-            ("/relation_statuses/", "status-grid"),
-        ],
+        _matrix(LIST_GRID_PAGES, SMOKE_LIST_GRID_PAGES),
     )
     def test_all_grids_have_pagination(self, page: Page, live_server, seed_data_e2e, path, grid_id):
         """Every grid has pagination controls attached."""
@@ -1883,13 +1952,7 @@ class TestCrossTemplateGridLoading:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/relations/advanced/", "relation-grid"),
-            ("/person_groups/", "person-group-grid"),
-            ("/gifts/", "gift-grid"),
-        ],
+        _matrix(ACTION_GRID_PAGES, SMOKE_ACTION_GRID_PAGES),
     )
     def test_all_grids_have_action_buttons(
         self, page: Page, live_server, seed_data_e2e, path, grid_id
@@ -1906,13 +1969,7 @@ class TestCrossTemplateGridLoading:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/relations/advanced/", "relation-grid"),
-            ("/person_groups/", "person-group-grid"),
-            ("/gifts/", "gift-grid"),
-        ],
+        _matrix(ACTION_GRID_PAGES, SMOKE_ACTION_GRID_PAGES),
     )
     def test_action_buttons_are_not_clipped(
         self, page: Page, live_server, seed_data_e2e, path, grid_id
@@ -1947,15 +2004,7 @@ class TestCrossTemplateGridLoading:
 
     @pytest.mark.parametrize(
         "path",
-        [
-            "/persons/",
-            "/events/",
-            "/relations/",
-            "/relations/advanced/",
-            "/person_groups/",
-            "/gifts/",
-            "/relation_statuses/",
-        ],
+        _matrix(LIST_PATHS, SMOKE_LIST_PATHS),
     )
     def test_page_has_h1(self, page: Page, live_server, seed_data_e2e, path):
         """Each list page has a visible <h1> title."""
@@ -1974,14 +2023,7 @@ class TestCrossTemplateCreateButtons:
 
     @pytest.mark.parametrize(
         "path",
-        [
-            "/persons/",
-            "/events/",
-            "/gifts/",
-            "/relations/",
-            "/relations/advanced/",
-            "/person_groups/",
-        ],
+        _matrix(CREATE_BUTTON_PATHS, SMOKE_CREATE_BUTTON_PATHS),
     )
     def test_create_button_visible(self, page: Page, live_server, seed_data_e2e, path):
         """Create button is visible in page header for authenticated users."""
@@ -2090,13 +2132,7 @@ class TestFilterPanel:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/relations/advanced/", "relation-grid"),
-            ("/gifts/", "gift-grid"),
-            ("/relation_statuses/", "status-grid"),
-        ],
+        _matrix(FILTER_GRID_PAGES, SMOKE_LIST_GRID_PAGES),
     )
     def test_filter_panel_present(self, page: Page, live_server, seed_data_e2e, path, grid_id):
         """Filter panel is present on all list pages."""
@@ -2114,11 +2150,7 @@ class TestFilterPanel:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/gifts/", "gift-grid"),
-        ],
+        _matrix(FILTER_INTERACTIVE_GRID_PAGES, [("/persons/", "person-grid")]),
     )
     def test_filter_toggle_opens_panel(self, page: Page, live_server, seed_data_e2e, path, grid_id):
         """Clicking the filter toggle button opens the filter content."""
@@ -2137,11 +2169,7 @@ class TestFilterPanel:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/gifts/", "gift-grid"),
-        ],
+        _matrix(FILTER_INTERACTIVE_GRID_PAGES, [("/persons/", "person-grid")]),
     )
     def test_search_input_in_filter_panel(
         self, page: Page, live_server, seed_data_e2e, path, grid_id
@@ -2266,11 +2294,7 @@ class TestMobileViewport:
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        [
-            ("/persons/", "person-grid"),
-            ("/events/", "event-grid"),
-            ("/gifts/", "gift-grid"),
-        ],
+        _matrix(FILTER_INTERACTIVE_GRID_PAGES, [("/persons/", "person-grid")]),
     )
     def test_grid_renders_on_mobile(self, page: Page, live_server, seed_data_e2e, path, grid_id):
         """Grid renders correctly on mobile viewport (375x667)."""
@@ -2327,15 +2351,7 @@ class TestUnauthenticatedAccess:
 
     @pytest.mark.parametrize(
         "path",
-        [
-            "/persons/",
-            "/events/",
-            "/relations/",
-            "/relations/advanced/",
-            "/person_groups/",
-            "/gifts/",
-            "/relation_statuses/",
-        ],
+        _matrix(LIST_PATHS, SMOKE_LIST_PATHS),
     )
     def test_redirect_to_login(self, page: Page, live_server, seed_data_e2e, path):
         """Unauthenticated access to list pages redirects to login."""

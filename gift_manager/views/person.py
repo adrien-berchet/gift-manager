@@ -53,6 +53,7 @@ class PersonListView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        self._populate_group_info_fallback(context.get("data", []))
         context["unique_groups"] = (
             PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
@@ -61,6 +62,28 @@ class PersonListView(
         )
 
         return context
+
+    def _populate_group_info_fallback(self, data) -> None:
+        """Populate group metadata when the database cannot annotate JSON rows."""
+        items = [item for item in data if isinstance(item, dict)]
+        person_ids = [item.get("person_id") for item in items if not item.get("groups_info")]
+        if not person_ids:
+            return
+
+        groups_by_person = {person_id: [] for person_id in person_ids}
+        for row in (
+            Person.objects.filter(person_id__in=person_ids)
+            .values("person_id", "groups__group_id", "groups__name")
+            .order_by("groups__name")
+        ):
+            group_id = row["groups__group_id"]
+            group_name = row["groups__name"]
+            if group_id and group_name:
+                groups_by_person[row["person_id"]].append({"id": str(group_id), "name": group_name})
+
+        for item in items:
+            if not item.get("groups_info"):
+                item["groups_info"] = groups_by_person.get(item["person_id"], [])
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""

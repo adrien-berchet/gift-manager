@@ -227,6 +227,7 @@
         const originalValue = cell.textContent.trim();
         const originalHTML = cell.innerHTML;
         let isSaving = false; // Flag to prevent multiple saves
+        let isCancelled = false; // Prevent blur from saving after Escape
 
         // Create input element
         const input = document.createElement('input');
@@ -255,6 +256,7 @@
 
         // Handle save on Enter or blur
         const saveEdit = () => {
+            if (isCancelled) return;
             if (isSaving) return; // Prevent multiple saves
 
             const newValue = input.value.trim();
@@ -274,6 +276,7 @@
         const cancelEdit = () => {
             if (isSaving) return; // Don't cancel if already saving
 
+            isCancelled = true;
             cell.classList.remove(INLINE_EDITING_CONFIG.classes.editing);
             cell.innerHTML = originalHTML;
         };
@@ -291,7 +294,9 @@
 
         input.addEventListener('blur', function() {
             // Small delay to prevent race condition with keydown
-            setTimeout(saveEdit, 10);
+            setTimeout(() => {
+                if (!isCancelled) saveEdit();
+            }, 10);
         });
     }
 

@@ -226,6 +226,8 @@ class TestMobileResponsivenessProperty:
 
 
 @pytest.mark.playwright
+@pytest.mark.frontend
+@pytest.mark.e2e
 @pytest.mark.django_db
 class TestMobileResponsivenessPlaywright:
     """Playwright-based property tests for mobile responsiveness."""

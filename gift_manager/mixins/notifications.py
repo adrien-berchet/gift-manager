@@ -1,5 +1,6 @@
-"""Notification mixins for Django views
-Provides server-side integration with client-side notification system
+"""Notification mixins for Django views.
+
+Provides server-side integration with client-side notification system.
 Requirements: 8.4, 4.4
 """
 
@@ -13,6 +14,7 @@ from django.utils.translation import gettext as _
 
 class NotificationMixin:
     """Mixin to add notification support to Django views.
+
     Integrates with the client-side notification system.
     """
 

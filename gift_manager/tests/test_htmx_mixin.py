@@ -5,28 +5,31 @@ import pytest
 from gift_manager.views.base import HTMXResponseMixin
 
 
+class TemplateParent:
+    """Parent view stand-in with the default template behavior."""
+
+    def get_template_names(self):
+        """Return default template names."""
+        return ["default.html"]
+
+
+class HTMXTestView(HTMXResponseMixin, TemplateParent):
+    """Concrete test view that exercises HTMXResponseMixin.super()."""
+
+
 class TestHTMXResponseMixin:
     """Test cases for HTMXResponseMixin."""
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.mixin = HTMXResponseMixin()
+        self.mixin = HTMXTestView()
 
     def test_get_template_names_with_htmx(self):
         """Test template selection for HTMX requests."""
         self.mixin.is_htmx = True
         self.mixin.htmx_template_name = "test_partial.html"
 
-        # Mock the parent method to return default templates
-        def mock_super_get_template_names():
-            return ["default.html"]
-
-        # Temporarily replace the super() call
-        self.mixin.get_template_names = lambda: mock_super_get_template_names()
-
-        # Test that HTMX template is returned when available
-        original_method = HTMXResponseMixin.get_template_names
-        result = original_method(self.mixin)
+        result = self.mixin.get_template_names()
 
         assert result == ["test_partial.html"]
 
@@ -34,13 +37,6 @@ class TestHTMXResponseMixin:
         """Test template selection for regular requests."""
         self.mixin.is_htmx = False
         self.mixin.htmx_template_name = "test_partial.html"
-
-        # Mock the parent method to return default templates
-        def mock_super_get_template_names():
-            return ["default.html"]
-
-        # Temporarily replace the super() call
-        self.mixin.get_template_names = lambda: mock_super_get_template_names()
 
         result = self.mixin.get_template_names()
         assert result == ["default.html"]
@@ -50,20 +46,12 @@ class TestHTMXResponseMixin:
         self.mixin.is_htmx = True
         self.mixin.htmx_template_name = None
 
-        # Mock the parent method to return default templates
-        def mock_super_get_template_names():
-            return ["default.html"]
-
-        # Temporarily replace the super() call
-        self.mixin.get_template_names = lambda: mock_super_get_template_names()
-
         result = self.mixin.get_template_names()
         assert result == ["default.html"]
 
     def test_get_success_message_default(self):
         """Test default get_success_message method."""
-        result = self.mixin.get_success_message()
-        assert result is None
+        assert self.mixin.get_success_message() is None
 
 
 @pytest.mark.django_db

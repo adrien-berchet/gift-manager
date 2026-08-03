@@ -373,6 +373,7 @@
 
 <body>
     <a class="skip-link" href="#main-content">{% trans "Skip to main content" %}</a>
+    <a class="skip-link" href="#navigation">{% trans "Skip to navigation" %}</a>
     <div id="sr-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
     <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
@@ -1025,9 +1026,20 @@
             document.addEventListener('offcanvas:close', function(e) {
                 lastOffcanvasCloseAt = Date.now();
                 const target = e.detail?.target || 'editPanel';
+                const panel = document.getElementById(target);
+                if (!panel) return;
+                panel.dataset.skipUnsavedPrompt = 'true';
+                if (window.UnsavedChanges?.clearUnsavedChanges) {
+                    window.UnsavedChanges.clearUnsavedChanges();
+                }
                 resetPanelLoadingState(target);
-                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById(target));
-                if (offcanvas) offcanvas.hide();
+                const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
+                if (offcanvas) {
+                    panel.addEventListener('hidden.bs.offcanvas', function() {
+                        delete panel.dataset.skipUnsavedPrompt;
+                    }, { once: true });
+                    offcanvas.hide();
+                }
             });
 
             // List update event handler
@@ -1289,10 +1301,13 @@
             document.body.addEventListener('htmx:afterSwap', initializeTooltips);
 
             // Handle delete confirmation
+            let lastConfirmModalTrigger = null;
+
             document.addEventListener('click', function(e) {
                 if (e.target.matches('[data-action="delete"]') || e.target.closest('[data-action="delete"]')) {
                     e.preventDefault();
                     const button = e.target.matches('[data-action="delete"]') ? e.target : e.target.closest('[data-action="delete"]');
+                    lastConfirmModalTrigger = button;
                     const deleteUrl = button.getAttribute('href') || button.dataset.deleteUrl;
 
                     if (deleteUrl) {
@@ -1375,6 +1390,10 @@
                         confirmBtn.innerHTML = '{% trans "Confirm" %}';
                         confirmBtn.className = 'btn btn-danger';
                     }
+                    if (lastConfirmModalTrigger?.isConnected) {
+                        lastConfirmModalTrigger.focus({ preventScroll: true });
+                    }
+                    lastConfirmModalTrigger = null;
                 });
             }
 

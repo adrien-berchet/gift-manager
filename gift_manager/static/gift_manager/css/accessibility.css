@@ -61,7 +61,7 @@ input:focus,
 select:focus,
 textarea:focus,
 a:focus,
-[tabindex]:focus:not(.offcanvas):not(.modal) {
+[tabindex]:focus:not(.offcanvas):not(.modal):not(#main-content) {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
     box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
@@ -385,9 +385,18 @@ body.keyboard-navigation-active {
     /* Enhanced focus indicators when keyboard navigation is detected */
 }
 
-body.keyboard-navigation-active *:focus {
+body.keyboard-navigation-active *:focus:not(#main-content) {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
+}
+
+body.keyboard-navigation-active #main-content:focus:not(.skip-link-focus-visible),
+body.keyboard-navigation-active #main-content:focus-visible:not(.skip-link-focus-visible),
+#main-content:focus:not(.skip-link-focus-visible),
+#main-content:focus-visible:not(.skip-link-focus-visible) {
+    outline: none !important;
+    outline-width: 0 !important;
+    box-shadow: none !important;
 }
 
 /* Print Styles - Remove focus indicators */

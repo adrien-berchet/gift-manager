@@ -64,6 +64,7 @@ class PersonFactory(DjangoModelFactory):
 
     class Meta:
         model = Person
+        skip_postgeneration_save = True
 
     first_name = factory.Faker("first_name")
     family_name = factory.Faker("last_name")
@@ -98,6 +99,7 @@ class PersonGroupFactory(DjangoModelFactory):
 
     class Meta:
         model = PersonGroup
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Group {n}")
 
@@ -120,6 +122,7 @@ class GiftTagFactory(DjangoModelFactory):
 
     class Meta:
         model = GiftTag
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Tag {n}")
     is_public = False
@@ -150,6 +153,7 @@ class GiftFactory(DjangoModelFactory):
 
     class Meta:
         model = Gift
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Gift {n}")
     comment = factory.Faker("sentence")
@@ -180,6 +184,7 @@ class EventFactory(DjangoModelFactory):
 
     class Meta:
         model = Event
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Event {n}")
     comment = factory.Faker("sentence")
@@ -216,6 +221,7 @@ class RelationFactory(DjangoModelFactory):
 
     class Meta:
         model = Relation
+        skip_postgeneration_save = True
 
     person = factory.SubFactory(PersonFactory)
     group = None

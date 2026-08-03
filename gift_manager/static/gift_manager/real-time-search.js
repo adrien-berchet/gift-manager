@@ -31,8 +31,17 @@
         const columns = grid.config.columns;
         if (columns) {
             columns.forEach((col, index) => {
-                // Skip hidden columns, checkbox column (index 0), and actions column
-                if (col.hidden || index === 0 || col.sort === false) return;
+                const columnName = typeof col.name === "string" ? col.name.trim().toLowerCase() : "";
+                const isCheckboxColumn = col.id === "checkbox" || columnName === "";
+                const isActionsColumn = col.id === "actions" || columnName === "actions";
+
+                // Skip hidden/control columns, but keep visible data columns even when unsortable.
+                if (col.hidden || isCheckboxColumn || isActionsColumn) return;
+                searchableIndices.push(index);
+            });
+        }
+        if (searchableIndices.length === 0 && originalData.length > 0) {
+            originalData[0].forEach((_, index) => {
                 searchableIndices.push(index);
             });
         }

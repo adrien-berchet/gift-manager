@@ -56,6 +56,7 @@ class GiftListView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        self._populate_tag_info_fallback(context.get("data", []))
         context["unique_tags"] = (
             GiftTag.objects.accessible_by(self.request.user)
             .values("name")
@@ -63,6 +64,28 @@ class GiftListView(
             .order_by("name")
         )
         return context
+
+    def _populate_tag_info_fallback(self, data) -> None:
+        """Populate tag metadata when the database cannot annotate JSON rows."""
+        items = [item for item in data if isinstance(item, dict)]
+        gift_ids = [item.get("gift_id") for item in items if not item.get("tags_info")]
+        if not gift_ids:
+            return
+
+        tags_by_gift = {gift_id: [] for gift_id in gift_ids}
+        for row in (
+            Gift.objects.filter(gift_id__in=gift_ids)
+            .values("gift_id", "tags__tag_id", "tags__name")
+            .order_by("tags__name")
+        ):
+            tag_id = row["tags__tag_id"]
+            tag_name = row["tags__name"]
+            if tag_id and tag_name:
+                tags_by_gift[row["gift_id"]].append({"id": str(tag_id), "name": tag_name})
+
+        for item in items:
+            if not item.get("tags_info"):
+                item["tags_info"] = tags_by_gift.get(item["gift_id"], [])
 
     def get_queryset(self):
         """Return Gifts for the current user or shared with the user."""

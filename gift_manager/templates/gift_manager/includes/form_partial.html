@@ -3,8 +3,9 @@
 <form method="post"
       action="{{ form_action_url }}"
       hx-post="{{ form_action_url }}"
-      hx-target="#offcanvasContent"
-      hx-swap="innerHTML"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
       hx-indicator="#offcanvasLoading"
       class="offcanvas-form {{ form_css_class }}"
       data-form-type="{{ form_type|default:'entity' }}">

@@ -1801,7 +1801,7 @@ h4, h5, h6 {
    ========================================================================== */
 
 /* Focus visible for keyboard navigation */
-:focus-visible {
+:focus-visible:not(#main-content) {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }

@@ -1004,6 +1004,18 @@ msgctxt "event recurrence adverb"
 msgid "yearly"
 msgstr "annuellement"
 
+msgid "daily"
+msgstr "quotidiennement"
+
+msgid "weekly"
+msgstr "hebdomadairement"
+
+msgid "monthly"
+msgstr "mensuellement"
+
+msgid "yearly"
+msgstr "annuellement"
+
 #: gift_manager/templates/gift_manager/event_detail.html:5
 #: gift_manager/templates/gift_manager/event_detail.html:11
 msgid "Event details"

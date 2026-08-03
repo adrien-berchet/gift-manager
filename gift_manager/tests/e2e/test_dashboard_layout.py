@@ -75,7 +75,7 @@ def assert_main_content_focus_is_quiet(page: Page):
 
 def assert_skip_link_focus_target_is_visible(page: Page):
     """Assert keyboard skip-link navigation still exposes the main focus target."""
-    skip_link = page.locator(".skip-link")
+    skip_link = page.locator(".skip-link[href='#main-content']")
     main = page.locator("#main-content")
 
     page.keyboard.press("Tab")

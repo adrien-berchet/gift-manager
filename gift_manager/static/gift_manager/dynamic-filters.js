@@ -432,7 +432,11 @@
         if (!columns) return searchableIndices;
 
         columns.forEach((column, index) => {
-            if (column.hidden || index === 0 || column.sort === false) return;
+            const columnName = typeof column.name === "string" ? column.name.trim().toLowerCase() : "";
+            const isCheckboxColumn = column.id === "checkbox" || columnName === "";
+            const isActionsColumn = column.id === "actions" || columnName === "actions";
+
+            if (column.hidden || isCheckboxColumn || isActionsColumn) return;
             searchableIndices.push(index);
         });
 

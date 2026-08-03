@@ -267,6 +267,7 @@ class TestRealTimeListFeaturesProperty:
         with required fields for frontend processing.
         """
         # Create one test entity to ensure we have data
+        expected_fields = []
         if entity_type == "person":
             PersonFactory(first_name="TestPerson", family_name="TestUser", user_link=self.user)
             expected_fields = [
@@ -304,6 +305,8 @@ class TestRealTimeListFeaturesProperty:
         elif entity_type == "gifttag":
             GiftTagFactory(name="TestTag", shared_with=[self.user])
             expected_fields = ["gift_tag_id", "name"]
+        else:
+            pytest.skip(f"Entity type {entity_type} not supported")
 
         # Test search endpoint
         search_url_map = {

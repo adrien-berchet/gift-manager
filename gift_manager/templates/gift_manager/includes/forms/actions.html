@@ -40,8 +40,13 @@
   <button type="submit"
           class="btn btn-primary"
           data-loading-text="{% trans 'Saving...' %}"
+          data-keyboard-hint="Ctrl+S"
+          title="{% trans 'Save changes' %} (Ctrl+S)"
           aria-label="{% trans 'Save changes' %}">
     <i class="fas fa-save me-1" aria-hidden="true"></i>
     {% trans "Save" %}
   </button>
+  <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+    {% trans "Ready to save" %}
+  </span>
 </div>

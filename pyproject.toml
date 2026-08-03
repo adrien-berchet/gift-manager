@@ -9,7 +9,7 @@ classifiers = ["Programming Language :: Python"]
 dynamic = ["version"]
 dependencies = [
     "click>=8.3.3",
-    "cryptography>=46.0.7",
+    "cryptography>=50.0.0",
     "django-allauth>=65.14.1",
     "django-debug-toolbar>=4.2",
     "django-grappelli>=4.0",
@@ -85,6 +85,7 @@ markers = [
     "playwright: marks tests as playwright-specific tests",
     "integration: marks tests as integration tests",
     "e2e: marks tests as end-to-end tests",
+    "property_based: marks Hypothesis/property-based tests",
     "mobile: marks tests as mobile device tests",
     "performance: marks tests as performance benchmarks",
     "accessibility: marks tests as accessibility compliance tests",

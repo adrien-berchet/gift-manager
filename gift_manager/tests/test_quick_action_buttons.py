@@ -86,7 +86,7 @@ class TestQuickActionButtons:
         """Test that relation list contains quick action buttons."""
         RelationFactory()
 
-        url = reverse("gift_manager:relations")
+        url = reverse("gift_manager:relation_advanced_list")
         response = self.client.get(url)
 
         assert response.status_code == 200

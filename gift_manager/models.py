@@ -26,7 +26,6 @@ from django.utils import timezone
 from django.utils.functional import classproperty
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
-from django.utils.translation import pgettext
 
 from .email_encoding import decode_email
 from .email_encoding import encode_email
@@ -1091,10 +1090,10 @@ class Event(models.Model):
     def recurrence_sentence_label(self) -> str:
         """Return the recurrence label in the grammar used by date summaries."""
         labels = {
-            "daily": pgettext("event recurrence adverb", "daily"),
-            "weekly": pgettext("event recurrence adverb", "weekly"),
-            "monthly": pgettext("event recurrence adverb", "monthly"),
-            "yearly": pgettext("event recurrence adverb", "yearly"),
+            "daily": gettext("daily"),
+            "weekly": gettext("weekly"),
+            "monthly": gettext("monthly"),
+            "yearly": gettext("yearly"),
         }
         return labels.get(self.recurrence, self.get_recurrence_display().lower())
 

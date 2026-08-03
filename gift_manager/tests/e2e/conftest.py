@@ -5,11 +5,15 @@ including browser configuration, test data setup, and utility functions for
 interacting with the modern UX interface components.
 """
 
+import re
+
 import pytest
 from allauth.account.models import EmailAddress
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
@@ -137,7 +141,8 @@ def sample_groups(transactional_db):
     family = PersonGroupFactory(name="Family")
     friends = PersonGroupFactory(name="Friends")
     work = PersonGroupFactory(name="Work Colleagues")
-    close_friends = PersonGroupFactory(name="Close Friends", parent_groups=[friends])
+    close_friends = PersonGroupFactory(name="Close Friends")
+    close_friends.parent_groups.add(friends)
     return {
         "family": family,
         "friends": friends,
@@ -147,25 +152,31 @@ def sample_groups(transactional_db):
 
 
 @pytest.fixture
-def sample_gifts(transactional_db):
+def sample_gifts(transactional_db, test_user):
     """Create sample gifts for testing."""
-    return [
+    gifts = [
         GiftFactory(name="Smartphone", comment="Latest model"),
         GiftFactory(name="Book", comment="Programming guide"),
         GiftFactory(name="Coffee Mug", comment="Personalized"),
         GiftFactory(name="Headphones", comment="Noise cancelling"),
     ]
+    for gift in gifts:
+        create_or_update_permission(test_user, gift, permission_level=PermissionLevel.OWNER)
+    return gifts
 
 
 @pytest.fixture
-def sample_events(transactional_db):
+def sample_events(transactional_db, test_user):
     """Create sample events for testing."""
-    return [
+    events = [
         EventFactory(name="Birthday", recurrence="yearly"),
         EventFactory(name="Anniversary", recurrence="yearly"),
         EventFactory(name="Christmas", recurrence="yearly"),
         EventFactory(name="Graduation", schedule_type="one_time", recurrence=None),
     ]
+    for event in events:
+        create_or_update_permission(test_user, event, permission_level=PermissionLevel.OWNER)
+    return events
 
 
 @pytest.fixture
@@ -261,7 +272,7 @@ def panel_helpers():
         """Wait for a slide panel to appear and be visible."""
         panel = page.locator(f"#{panel_id}")
         expect(panel).to_be_visible(timeout=timeout)
-        expect(panel).to_have_class("show")
+        expect(panel).to_have_class(re.compile(r"\bshow\b"))
         return panel
 
     def _close_panel(page: Page, panel_id="editPanel"):
@@ -274,7 +285,8 @@ def panel_helpers():
     def _submit_panel_form(page: Page, panel_id="editPanel"):
         """Submit the form within a slide panel."""
         panel = page.locator(f"#{panel_id}")
-        submit_btn = panel.locator("button[type='submit'], .btn-primary").first
+        submit_btn = panel.locator("button[type='submit'].btn-primary").first
+        expect(submit_btn).to_be_visible()
         submit_btn.click()
 
     return {

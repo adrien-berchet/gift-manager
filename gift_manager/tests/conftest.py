@@ -10,11 +10,14 @@ Usage:
 """
 
 # pylint: disable=redefined-outer-name
+import os
 from datetime import date
 
 import pytest
 from django.contrib.auth.models import User
 from django.test import Client
+from hypothesis import Verbosity
+from hypothesis import settings as hypothesis_settings
 
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -35,6 +38,45 @@ from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.tests.factories import UserFactory
+
+
+def _configure_hypothesis_profiles():
+    """Register Gift Manager Hypothesis profiles and load the requested one."""
+    hypothesis_settings.register_profile(
+        "gift_manager_fast",
+        max_examples=10,
+        deadline=10000,
+        verbosity=Verbosity.quiet,
+    )
+    hypothesis_settings.register_profile(
+        "gift_manager_pr",
+        max_examples=25,
+        deadline=30000,
+        verbosity=Verbosity.normal,
+    )
+    hypothesis_settings.register_profile(
+        "gift_manager_comprehensive",
+        max_examples=200,
+        deadline=60000,
+        verbosity=Verbosity.normal,
+    )
+
+    profile = os.environ.get("HYPOTHESIS_PROFILE")
+    if profile:
+        hypothesis_settings.load_profile(profile)
+
+
+_configure_hypothesis_profiles()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items):
+    """Mark Hypothesis/property tests so fast local runs can deselect them."""
+    for item in items:
+        test_func = getattr(item, "obj", None)
+        if getattr(test_func, "hypothesis", None) is not None or "property" in item.nodeid:
+            item.add_marker(pytest.mark.property_based)
+
 
 # =============================================================================
 # User Fixtures

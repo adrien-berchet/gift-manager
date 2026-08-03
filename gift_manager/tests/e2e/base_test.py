@@ -83,10 +83,12 @@ class BaseE2ETest:
         page.wait_for_timeout(self.animation_timeout)
         return modal.get_attribute("id") or "confirmModal"
 
-    def wait_for_panel(self, page: Page, panel_id: str = "editPanel") -> None:
+    def wait_for_panel(
+        self, page: Page, panel_id: str = "editPanel", timeout: int | None = None
+    ) -> None:
         """Wait for a slide panel to appear and be fully visible."""
         panel = page.locator(f"#{panel_id}")
-        expect(panel).to_be_visible(timeout=self.ajax_timeout)
+        expect(panel).to_be_visible(timeout=timeout or self.ajax_timeout)
         expect(panel).to_have_class(re.compile(r"\bshow\b"))
 
         # Wait for panel animation to complete
@@ -146,7 +148,16 @@ class BaseE2ETest:
     def submit_panel_form(self, page: Page, panel_id: str = "editPanel") -> None:
         """Submit the form within a slide panel."""
         panel = page.locator(f"#{panel_id}")
-        submit_btn = panel.locator("button[type='submit'], .btn-primary").first
+        submit_btn = panel.locator("button[type='submit'].btn-primary").first
+        expect(submit_btn).to_be_visible(timeout=self.ajax_timeout)
+        page.evaluate("""
+            () => {
+                document.activeElement?.blur?.();
+                document.querySelectorAll(".flatpickr-input").forEach((input) => {
+                    input._flatpickr?.close();
+                });
+            }
+        """)
         submit_btn.click()
 
     def wait_for_ajax_complete(self, page: Page) -> None:
@@ -337,7 +348,7 @@ class BaseE2ETest:
 class BaseCRUDTest(BaseE2ETest):
     """Base class for testing CRUD operations with the modern UX interface."""
 
-    def test_create_workflow(
+    def run_create_workflow(
         self, page: Page, live_server, test_user, entity_type: str, form_data: dict
     ):
         """Test the complete create workflow for an entity."""
@@ -366,7 +377,7 @@ class BaseCRUDTest(BaseE2ETest):
         self.wait_for_list_update(page)
         expect(page.locator(".list-container")).to_contain_text(str(list(form_data.values())[0]))
 
-    def test_edit_workflow(
+    def run_edit_workflow(
         self, page: Page, live_server, test_user, entity_type: str, item_index: int, form_data: dict
     ):
         """Test the complete edit workflow for an entity."""
@@ -420,6 +431,7 @@ class BaseCRUDTest(BaseE2ETest):
             return
 
         field.fill(str(value))
+        field.evaluate("element => element.blur()")
 
     def expect_form_field_populated(self, page: Page, field_name: str, value):
         """Assert an edit form field is populated using field-specific checks."""
@@ -440,7 +452,7 @@ class BaseCRUDTest(BaseE2ETest):
 
         expect(field).not_to_have_value("")
 
-    def test_delete_workflow(
+    def run_delete_workflow(
         self, page: Page, live_server, test_user, entity_type: str, item_index: int
     ):
         """Test the complete delete workflow for an entity."""

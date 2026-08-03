@@ -96,6 +96,7 @@ class TestLoadingStateFeedbackProperty:
         }
 
         # Property 11.1: AJAX operations should provide loading indicators
+        url = None
         try:
             if operation == "create":
                 url = reverse(f"gift_manager:{entity_type}_create")
@@ -106,8 +107,13 @@ class TestLoadingStateFeedbackProperty:
 
                 pk_value = getattr(entity, pk_field)
                 url = reverse(f"gift_manager:{entity_type}_{operation}", kwargs={"pk": pk_value})
+            else:
+                pytest.skip(f"Operation {operation} not supported for loading state checks")
         except Exception as e:
             pytest.skip(f"URL not available for {entity_type} {operation}: {e!s}")
+
+        if url is None:
+            pytest.skip(f"URL not available for {entity_type} {operation}")
 
         # Test HTMX request for loading state support
         response = self.client.get(url, HTTP_HX_REQUEST="true")
