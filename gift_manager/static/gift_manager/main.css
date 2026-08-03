@@ -242,18 +242,45 @@ body.has-fixed-action-bar {
     border-radius: 20px;
 }
 
-/* Recipient badges */
-.recipient-type-badge {
+/* Recipient badges and type markers */
+.recipient-type-badge,
+.recipient-type-marker,
+.recipient-plan-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     border: 1px solid transparent;
+    font-weight: 700;
+    line-height: 1;
 }
 
-.recipient-type-badge--person {
+.recipient-type-marker {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+}
+
+.recipient-plan-count {
+    min-height: 1.5rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+    font-size: 0.75rem;
+}
+
+.recipient-type-badge--person,
+.recipient-type-marker--person,
+.recipient-icon--person {
     background-color: var(--color-info-light);
     border-color: rgba(59, 130, 246, 0.35);
     color: var(--color-info-hover);
 }
 
-.recipient-type-badge--group {
+.recipient-type-badge--group,
+.recipient-type-marker--group,
+.recipient-icon--group {
     background-color: var(--color-success-light);
     border-color: rgba(16, 185, 129, 0.35);
     color: var(--color-success-hover);
@@ -265,18 +292,23 @@ body.has-fixed-action-bar {
     color: var(--color-gray-700);
 }
 
-[data-theme="dark"] .recipient-type-badge--person {
+[data-theme="dark"] .recipient-type-badge--person,
+[data-theme="dark"] .recipient-type-marker--person,
+[data-theme="dark"] .recipient-icon--person {
     background-color: rgba(59, 130, 246, 0.18);
     border-color: rgba(147, 197, 253, 0.35);
     color: #93c5fd;
 }
 
-[data-theme="dark"] .recipient-type-badge--group {
+[data-theme="dark"] .recipient-type-badge--group,
+[data-theme="dark"] .recipient-type-marker--group,
+[data-theme="dark"] .recipient-icon--group {
     background-color: rgba(16, 185, 129, 0.18);
     border-color: rgba(110, 231, 183, 0.35);
     color: #6ee7b7;
 }
 
+[data-theme="dark"] .recipient-plan-count,
 [data-theme="dark"] .recipient-membership-badge {
     background-color: #334155;
     border-color: #475569;

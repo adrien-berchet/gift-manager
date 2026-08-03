@@ -30,18 +30,27 @@
     <div class="gift-plan-card-meta">
         <div class="gift-plan-card-meta-row">
             {% if card.relation.is_group_targeted %}
-            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            <span class="recipient-type-marker recipient-type-marker--group"
+                  role="img"
+                  data-bs-toggle="tooltip"
+                  title="{{ card.relation.recipient_type_label }}"
+                  aria-label="{{ card.relation.recipient_type_label }}">
+                <i class="fas fa-layer-group" aria-hidden="true"></i>
+            </span>
             {% else %}
-            <i class="fas fa-user" aria-hidden="true"></i>
+            <span class="recipient-type-marker recipient-type-marker--person"
+                  role="img"
+                  data-bs-toggle="tooltip"
+                  title="{{ card.relation.recipient_type_label }}"
+                  aria-label="{{ card.relation.recipient_type_label }}">
+                <i class="fas fa-user" aria-hidden="true"></i>
+            </span>
             {% endif %}
             {% if card.relation.recipient_url %}
             <a href="{{ card.relation.recipient_url }}">{{ card.relation.recipient_name }}</a>
             {% else %}
             <span>{{ card.relation.recipient_name }}</span>
             {% endif %}
-            <span class="badge recipient-type-badge recipient-type-badge--{{ card.relation.recipient_type }}">
-                {{ card.relation.recipient_type_label }}
-            </span>
         </div>
 
         {% if card.relation.event %}

@@ -27,8 +27,33 @@
     align-items: center;
     justify-content: center;
     border-radius: 8px;
+    border: 1px solid transparent;
     background: var(--bs-tertiary-bg);
     color: var(--bs-primary);
+  }
+
+  .recipient-icon.recipient-icon--person {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+  }
+
+  .recipient-icon.recipient-icon--group {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+  }
+
+  [data-theme="dark"] .recipient-icon.recipient-icon--person {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: rgba(147, 197, 253, 0.35);
+    color: #93c5fd;
+  }
+
+  [data-theme="dark"] .recipient-icon.recipient-icon--group {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(110, 231, 183, 0.35);
+    color: #6ee7b7;
   }
 
   .recipient-meta {
@@ -102,20 +127,25 @@
        data-recipient-type="{{ recipient.type }}"
        data-recipient-search="{{ recipient.name }} {{ recipient.type_label }}{% for group in recipient.groups %} {{ group.name }}{% endfor %}">
     <div class="d-flex gap-3 min-w-0">
-      <span class="recipient-icon flex-shrink-0">
+      <span class="recipient-icon flex-shrink-0 recipient-icon--{{ recipient.type }}"
+            role="img"
+            data-bs-toggle="tooltip"
+            title="{{ recipient.type_label }}"
+            aria-label="{{ recipient.type_label }}">
         {% if recipient.type == "group" %}
-        <i class="fas fa-layer-group"></i>
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
         {% else %}
-        <i class="fas fa-user"></i>
+        <i class="fas fa-user" aria-hidden="true"></i>
         {% endif %}
+        <span class="visually-hidden">{{ recipient.type_label }}</span>
       </span>
       <div class="min-w-0">
         <div class="d-flex flex-wrap align-items-center gap-2">
           <a href="{{ recipient.detail_url }}" class="fw-semibold text-decoration-none">
             {{ recipient.name }}
           </a>
-          <span class="badge recipient-type-badge recipient-type-badge--{{ recipient.type }}">
-            {{ recipient.type_label }}
+          <span class="recipient-plan-count">
+            {% blocktrans count count=recipient.plan_count %}{{ count }} gift plan{% plural %}{{ count }} gift plans{% endblocktrans %}
           </span>
         </div>
         <div class="recipient-meta text-muted small">

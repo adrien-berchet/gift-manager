@@ -254,9 +254,16 @@
     font-size: 0.8125rem;
 }
 
-.gift-plan-card-meta-row i {
+.gift-plan-card-meta-row > i {
     flex: 0 0 auto;
     color: var(--text-muted);
+}
+
+.gift-plan-card-meta-row > .recipient-type-marker {
+    flex: 0 0 auto;
+    width: 1.35rem;
+    height: 1.35rem;
+    font-size: 0.72rem;
 }
 
 .gift-plan-card-meta-row a {
@@ -269,7 +276,7 @@
     white-space: nowrap;
 }
 
-.gift-plan-card-meta-row > span:not(.badge) {
+.gift-plan-card-meta-row > span:not(.badge):not(.recipient-type-marker) {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -304,8 +311,7 @@
 .gift-plan-card .gift-plan-status-badge,
 .gift-plan-card .gift-plan-due-badge,
 .gift-plan-card .gift-plan-tag-badge,
-.gift-plan-card .gift-plan-missing-data-badge,
-.gift-plan-card .recipient-type-badge {
+.gift-plan-card .gift-plan-missing-data-badge {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -410,11 +416,6 @@
     min-height: 1.5rem;
     padding: 0.18rem 0.45rem;
     font-size: 0.7rem;
-}
-
-.gift-plan-card .recipient-type-badge {
-    padding: 0.1rem 0.4rem;
-    font-size: 0.68rem;
 }
 
 .gift-plan-card-actions .btn {

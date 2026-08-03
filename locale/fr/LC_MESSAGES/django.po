@@ -2623,6 +2623,13 @@ msgstr "Tous"
 msgid "Group Explorer"
 msgstr "Explorateur de groupes"
 
+#: gift_manager/templates/gift_manager/recipient_list.html:146
+#, python-format
+msgid "%(count)s gift plan"
+msgid_plural "%(count)s gift plans"
+msgstr[0] "%(count)s projet de cadeau"
+msgstr[1] "%(count)s projets de cadeaux"
+
 #: gift_manager/templates/gift_manager/recipient_list.html:122
 #, python-format
 msgid "%(count)s member"

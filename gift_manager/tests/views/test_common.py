@@ -195,7 +195,8 @@ class TestHomeDashboard:
         assert "gift-plan-card gift-plan-card--needs_details" in content
         assert "gift-plan-card-topline" in content
         assert "gift-plan-card-meta-row" in content
-        assert "recipient-type-badge" in content
+        assert "recipient-type-marker" in content
+        assert "recipient-type-badge" not in content
         assert (
             "dashboard-action-list gift-plan-card-grid dashboard-action-list--paginated"
         ) in content

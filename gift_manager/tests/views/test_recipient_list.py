@@ -5,8 +5,10 @@ from django.urls import reverse
 
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.tests.factories import GroupRelationFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
 
 
@@ -25,7 +27,16 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
         groups=[family],
         shared_with=[user],
     )
-    PersonFactory(first_name="Grace", family_name="Hopper", groups=[team], shared_with=[user])
+    unplanned_person = PersonFactory(
+        first_name="Grace",
+        family_name="Hopper",
+        groups=[team],
+        shared_with=[user],
+    )
+    RelationFactory(person=person, shared_with=[user])
+    RelationFactory(person=person, shared_with=[user])
+    GroupRelationFactory(group=team, shared_with=[user])
+    GroupRelationFactory(group=team, shared_with=[user])
 
     private_person = PersonFactory(first_name="Private", family_name="Person")
     private_group = PersonGroupFactory(name="Private Group")
@@ -46,9 +57,17 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
         for recipient in response.context["recipients"]
         if recipient["key"] == f"person:{person.person_id}"
     )
+    unplanned_recipient = next(
+        recipient
+        for recipient in response.context["recipients"]
+        if recipient["key"] == f"person:{unplanned_person.person_id}"
+    )
     assert team_recipient["member_count"] == 1
     assert team_recipient["child_count"] == 1
+    assert team_recipient["plan_count"] == 2
     assert list(person_recipient["groups"]) == [family]
+    assert person_recipient["plan_count"] == 2
+    assert unplanned_recipient["plan_count"] == 0
 
     content = response.content.decode("utf-8")
     assert "Recipients" in content
@@ -62,8 +81,12 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
         f'href="{reverse("gift_manager:person_group_relation_create", kwargs={"pk": team.group_id})}" '
         'class="btn btn-sm btn-primary" data-action="create"'
     ) in content
-    assert "recipient-type-badge--person" in content
-    assert "recipient-type-badge--group" in content
+    assert "recipient-icon--person" in content
+    assert "recipient-icon--group" in content
+    assert "recipient-plan-count" in content
+    assert "recipient-type-badge" not in content
+    assert "2 gift plans" in content
+    assert "0 gift plans" in content
     assert "recipient-membership-badge" in content
     assert "Gift plans target this group directly." in content
     assert "Manage Groups" in content

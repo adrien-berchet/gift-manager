@@ -1,6 +1,7 @@
 """Recipient-oriented views."""
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db.models import Count
 from django.db.models import Prefetch
 from django.urls import reverse
 from django.utils.translation import gettext
@@ -8,6 +9,7 @@ from django.views.generic import TemplateView
 
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import Relation
 
 
 class RecipientListView(LoginRequiredMixin, TemplateView):
@@ -48,6 +50,19 @@ class RecipientListView(LoginRequiredMixin, TemplateView):
                 ),
             )
         )
+        accessible_relations = Relation.objects.accessible_by(user)
+        person_plan_counts = {
+            item["person_id"]: item["count"]
+            for item in accessible_relations.filter(person_id__isnull=False)
+            .values("person_id")
+            .annotate(count=Count("pk"))
+        }
+        group_plan_counts = {
+            item["group_id"]: item["count"]
+            for item in accessible_relations.filter(group_id__isnull=False)
+            .values("group_id")
+            .annotate(count=Count("pk"))
+        }
 
         recipients = [
             {
@@ -64,6 +79,7 @@ class RecipientListView(LoginRequiredMixin, TemplateView):
                 "groups": list(person.accessible_groups),
                 "member_count": None,
                 "child_count": None,
+                "plan_count": person_plan_counts.get(person.pk, 0),
             }
             for person in persons
         ]
@@ -84,6 +100,7 @@ class RecipientListView(LoginRequiredMixin, TemplateView):
                     "groups": [],
                     "member_count": len(group.accessible_members),
                     "child_count": len(group.accessible_child_groups),
+                    "plan_count": group_plan_counts.get(group.pk, 0),
                 }
                 for group in groups
             ]
