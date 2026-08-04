@@ -35,8 +35,8 @@ SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
 DASHBOARD_STALE_AFTER_DAYS = 30
-DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
-DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
+DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("overdue", "upcoming", "incomplete"))
+DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("overdue", "upcoming", "incomplete"))
 
 
 def _gift_plan_status_class(status) -> str:
@@ -184,6 +184,7 @@ def _build_gift_plan_action_groups(
         group["is_paginated"] = is_paginated
         group["is_compact"] = group["key"] in DASHBOARD_COMPACT_ACTION_GROUPS
         group["workspace_focus"] = {
+            "overdue": "overdue",
             "upcoming": "due_soon",
             "incomplete": "needs_details",
         }.get(group["key"], "")

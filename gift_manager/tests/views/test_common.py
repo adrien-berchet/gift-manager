@@ -173,6 +173,10 @@ class TestHomeDashboard:
 
         content = response.content.decode()
         groups_by_key = {group["key"]: group for group in groups}
+        assert groups_by_key["overdue"]["is_paginated"] is True
+        assert groups_by_key["overdue"]["is_compact"] is True
+        assert groups_by_key["overdue"]["workspace_focus"] == "overdue"
+        assert groups_by_key["overdue"]["display_items"] == groups_by_key["overdue"]["items"]
         assert groups_by_key["upcoming"]["is_paginated"] is True
         assert groups_by_key["upcoming"]["is_compact"] is True
         assert groups_by_key["upcoming"]["workspace_focus"] == "due_soon"
@@ -209,6 +213,7 @@ class TestHomeDashboard:
         assert "dashboard-action-item" not in content
         assert "data-dashboard-action-paginated" in content
         assert "data-dashboard-pagination" in content
+        assert "?focus=overdue#gift-plan-group-overdue" in content
         assert 'id="dashboard-live"' in content
         assert "data-list-container" in content
         assert 'hx-trigger="refresh"' in content
@@ -220,6 +225,12 @@ class TestHomeDashboard:
         planned = RelationStatusFactory(status="Planned")
 
         for index in range(5):
+            RelationFactory(
+                gift=GiftFactory(name=f"Overdue paginated item {index}"),
+                status=planned,
+                due_date=today - timedelta(days=index + 1),
+                shared_with=[self.user],
+            )
             RelationFactory(
                 gift=GiftFactory(name=f"Due soon paginated item {index}"),
                 status=planned,
@@ -240,10 +251,12 @@ class TestHomeDashboard:
         groups_by_key = {
             group["key"]: group for group in response.context["dashboard_action_groups"]
         }
+        assert len(groups_by_key["overdue"]["display_items"]) == 5
         assert len(groups_by_key["upcoming"]["display_items"]) == 5
         assert len(groups_by_key["incomplete"]["display_items"]) == 5
 
         content = response.content.decode()
+        assert "Overdue paginated item 4" in content
         assert "Due soon paginated item 4" in content
         assert "Needs details paginated item 4" in content
 
