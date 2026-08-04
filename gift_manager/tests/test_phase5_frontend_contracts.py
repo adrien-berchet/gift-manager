@@ -166,6 +166,37 @@ def test_bulk_relation_status_updates_are_scoped_and_refresh_lists():
     assert ".bulk-status-select" in bulk_styles
 
 
+def test_comment_columns_wrap_in_list_views():
+    grid_utils = read(STATIC_ROOT / "grid-utils.js")
+    theme_styles = read(STATIC_ROOT / "theme.css")
+    fallback_template = read(TEMPLATE_ROOT / "fallback/list_fallback.html")
+    fallback_styles = read(STATIC_ROOT / "css/fallback-mode.css")
+    comment_templates = [
+        TEMPLATE_ROOT / "gift_list.html",
+        TEMPLATE_ROOT / "event_list.html",
+        TEMPLATE_ROOT / "relation_list.html",
+        TEMPLATE_ROOT / "gift_tag_detail.html",
+        TEMPLATE_ROOT / "relation_status_detail.html",
+        TEMPLATE_ROOT / "person_group_detail.html",
+    ]
+
+    assert "function applyColumnDataAttributes" in grid_utils
+    assert "cell.setAttribute('data-column-id', column.id)" in grid_utils
+    assert "applyColumnDataAttributes(container, columns)" in grid_utils
+
+    for template in comment_templates:
+        assert "id: 'comment'" in read(template)
+
+    assert '.gridjs-td[data-column-id="comment"]' in theme_styles
+    assert "white-space: normal;" in theme_styles
+    assert "overflow-wrap: anywhere;" in theme_styles
+    assert "max-width: clamp(12rem, 28vw, 26rem);" in theme_styles
+
+    assert 'data-column-field="{{ column.field }}"' in fallback_template
+    assert '.fallback-table td[data-column-field="comment"]' in fallback_styles
+    assert "overflow-wrap: anywhere;" in fallback_styles
+
+
 def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
     content = read(TEMPLATE_ROOT / "share_objects.html")
 

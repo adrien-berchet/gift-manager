@@ -2720,6 +2720,24 @@ h4, h5, h6 {
     display: none;
 }
 
+.gridjs-wrapper .gridjs-th[data-column-id="comment"],
+.gridjs-wrapper .gridjs-td[data-column-id="comment"] {
+    width: clamp(12rem, 28vw, 26rem);
+    max-width: clamp(12rem, 28vw, 26rem);
+}
+
+.gridjs-wrapper .gridjs-td[data-column-id="comment"] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.45;
+}
+
+[data-view="card"] .gridjs-td[data-column-id="comment"] {
+    width: auto;
+    max-width: none;
+}
+
 /* ==========================================================================
    List Page Header
    ========================================================================== */
