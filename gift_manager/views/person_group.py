@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Prefetch
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -44,108 +45,142 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.column_names = {
-            "name": gettext("Group name"),
-        }
+        self.column_names = get_person_group_grid_column_names()
 
     def get_queryset(self):
-        return (
-            PersonGroup.objects.accessible_by(self.request.user)
-            .prefetch_related("parent_groups", "child_groups", "person_set")
-            .order_by("name")
-        )
+        return get_person_group_grid_queryset(self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        # Get all groups as model instances for tree view
-        all_groups = list(self.get_queryset())
-        accessible_group_ids = {group.pk for group in all_groups}
-
-        # Also provide data as dictionaries for Grid.js view compatibility
-        # (Grid.js template expects dictionaries with .get() method)
-        context["data"] = [
-            {
-                "group_id": g.group_id,
-                "name": g.name,
-            }
-            for g in all_groups
-        ]
-
-        # Build hierarchical tree data for tree view
-        def build_tree_node(group, depth=0, visited=None) -> dict:
-            """Recursively build tree nodes with hierarchy information."""
-            if visited is None:
-                visited = set()
-
-            # Prevent infinite loops
-            if group.pk in visited:
-                return None
-            visited.add(group.pk)
-
-            # Use len() on prefetched data instead of .count()/.exists()
-            # to avoid extra database queries
-            prefetched_members = list(group.person_set.all())
-            prefetched_parents = [
-                parent for parent in group.parent_groups.all() if parent.pk in accessible_group_ids
-            ]
-            prefetched_children = [
-                child for child in group.child_groups.all() if child.pk in accessible_group_ids
-            ]
-
-            node = {
-                "group": group,
-                "group_id": str(group.group_id),
-                "name": group.name,
-                "depth": depth,
-                "member_count": len(prefetched_members),
-                "has_children": len(prefetched_children) > 0,
-                "parent_ids": [str(parent.group_id) for parent in prefetched_parents],
-                "children": [],
-            }
-
-            # Add children recursively (use prefetched_children to avoid extra query)
-            for child in prefetched_children:
-                child_node = build_tree_node(child, depth + 1, visited.copy())
-                if child_node:
-                    node["children"].append(child_node)
-
-            return node
-
-        # Find roots within the user's accessible subset.
-        root_groups = [
-            group
-            for group in all_groups
-            if not any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
-        ]
-
-        # Build tree from roots
-        tree_data = []
-        for root in root_groups:
-            tree_node = build_tree_node(root)
-            if tree_node:
-                tree_data.append(tree_node)
-
-        # Flatten tree for easier rendering
-        def flatten_tree(nodes, result=None) -> list:
-            """Flatten tree structure for template rendering."""
-            if result is None:
-                result = []
-            for node in nodes:
-                result.append(node)
-                if node["children"]:
-                    flatten_tree(node["children"], result)
-            return result
-
-        context["tree_data"] = flatten_tree(tree_data)
-        # Use len() on prefetched data instead of .exists() to avoid 2N queries
-        context["has_hierarchy"] = any(
-            any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
-            or any(child.pk in accessible_group_ids for child in group.child_groups.all())
-            for group in all_groups
+        context.update(
+            get_person_group_management_context(self.request.user, include_permissions=False)
         )
-
         return context
+
+
+def get_person_group_grid_column_names():
+    """Return translated column labels for the group management grid."""
+    return {
+        "name": gettext("Group name"),
+    }
+
+
+def get_person_group_grid_queryset(user, member_queryset=None):
+    """Return groups prepared for the shared management grid and tree view."""
+    if member_queryset is None:
+        member_queryset = Person.objects.accessible_by(user)
+
+    return (
+        PersonGroup.objects.accessible_by(user)
+        .prefetch_related(
+            "parent_groups",
+            "child_groups",
+            Prefetch(
+                "person_set",
+                queryset=member_queryset,
+                to_attr="accessible_members",
+            ),
+        )
+        .order_by("name")
+    )
+
+
+def get_person_group_management_context(
+    user, *, include_permissions=True, member_queryset=None
+) -> dict:
+    """Build the shared person-group management context."""
+    all_groups = list(get_person_group_grid_queryset(user, member_queryset=member_queryset))
+    accessible_group_ids = {group.pk for group in all_groups}
+    tree_data = _build_person_group_tree_data(all_groups, accessible_group_ids)
+    has_hierarchy = any(
+        any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
+        or any(child.pk in accessible_group_ids for child in group.child_groups.all())
+        for group in all_groups
+    )
+
+    context = {
+        "column_names": get_person_group_grid_column_names(),
+        "data": [{"group_id": group.group_id, "name": group.name} for group in all_groups],
+        "tree_data": tree_data,
+        "has_hierarchy": has_hierarchy,
+    }
+
+    if include_permissions:
+        permissions = {
+            str(group.group_id): PermissionService.get_effective_permission(group, user)
+            for group in all_groups
+        }
+        context["user_permissions_json"] = json.dumps(permissions)
+
+    return context
+
+
+def _build_person_group_tree_data(all_groups, accessible_group_ids) -> list[dict]:
+    """Build flattened tree data for accessible groups."""
+
+    def build_tree_node(group, depth=0, visited=None) -> dict | None:
+        if visited is None:
+            visited = set()
+
+        if group.pk in visited:
+            return None
+        visited.add(group.pk)
+
+        prefetched_members = _get_prefetched_group_members(group)
+        prefetched_parents = [
+            parent for parent in group.parent_groups.all() if parent.pk in accessible_group_ids
+        ]
+        prefetched_children = [
+            child for child in group.child_groups.all() if child.pk in accessible_group_ids
+        ]
+
+        node = {
+            "group": group,
+            "group_id": str(group.group_id),
+            "name": group.name,
+            "depth": depth,
+            "member_count": len(prefetched_members),
+            "has_children": len(prefetched_children) > 0,
+            "parent_ids": [str(parent.group_id) for parent in prefetched_parents],
+            "children": [],
+        }
+
+        for child in prefetched_children:
+            child_node = build_tree_node(child, depth + 1, visited.copy())
+            if child_node:
+                node["children"].append(child_node)
+
+        return node
+
+    def flatten_tree(nodes, result=None) -> list:
+        if result is None:
+            result = []
+        for node in nodes:
+            result.append(node)
+            if node["children"]:
+                flatten_tree(node["children"], result)
+        return result
+
+    root_groups = [
+        group
+        for group in all_groups
+        if not any(parent.pk in accessible_group_ids for parent in group.parent_groups.all())
+    ]
+
+    tree_data = []
+    for root in root_groups:
+        tree_node = build_tree_node(root)
+        if tree_node:
+            tree_data.append(tree_node)
+
+    return flatten_tree(tree_data)
+
+
+def _get_prefetched_group_members(group) -> list[Person]:
+    prefetched_members = getattr(group, "accessible_members", None)
+    if prefetched_members is not None:
+        return prefetched_members
+    return list(group.person_set.all())
 
 
 class PersonGroupCreateView(BaseCreateView):

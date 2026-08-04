@@ -119,15 +119,20 @@ def test_filter_panel_aria_state_is_rendered_and_synchronized():
     visible_search_template = read(TEMPLATE_ROOT / "includes/list_search_control.html")
     script = read(STATIC_ROOT / "filter-panel.js")
     dynamic_filters = read(STATIC_ROOT / "dynamic-filters.js")
+    main_styles = read(STATIC_ROOT / "main.css")
 
     assert 'aria-expanded="false"' in template
     assert 'aria-controls="{{ grid_id }}-filter-content"' in template
+    assert 'id="toggle-selection-{{ grid_id }}"' in template
+    assert "filter-selection-section" in template
     assert 'for="{{ grid_id }}-search"' in visible_search_template
     assert 'id="{{ grid_id }}-search"' in visible_search_template
     assert 'aria-pressed="false"' in template
     assert 'aria-pressed="true"' in template
 
     assert "syncFilterExpanded" in script
+    assert "const isInAdvancedTools" in script
+    assert "syncFilterExpanded(isInAdvancedTools)" in script
     assert "const controlRoot = listTools || filterPanel || filterContent;" in script
     assert "filterToggle.setAttribute('aria-expanded'" in script
     assert "multiSortToggle.setAttribute('aria-pressed'" in script
@@ -135,6 +140,10 @@ def test_filter_panel_aria_state_is_rendered_and_synchronized():
     assert "searchableIndices: getSearchableColumnIndices(columns)" in dynamic_filters
     assert "function matchesSearchTerm" in dynamic_filters
     assert "applyFilters(grid, originalData, filterState);" in dynamic_filters
+    assert ".advanced-list-tools .filter-toggle-btn" in main_styles
+    assert ".advanced-list-tools .filter-content.expanded" in main_styles
+    assert ".advanced-list-tools .filter-selection-section" in main_styles
+    assert "grid-template-columns: auto auto minmax(120px, 1fr);" in main_styles
 
 
 def test_base_renders_skip_link_and_static_live_region():
@@ -151,6 +160,15 @@ def test_base_renders_skip_link_and_static_live_region():
     assert "#main-content.skip-link-focus-visible:focus" in accessibility_styles
     assert "setupSkipLinkFocusTarget()" in accessibility_script
     assert "skip-link-focus-visible" in accessibility_script
+
+
+def test_root_scrollbar_gutter_prevents_main_content_shift():
+    theme_styles = read(STATIC_ROOT / "theme.css")
+    html_styles = css_block(theme_styles, "html")
+
+    assert "scrollbar-gutter: stable;" in html_styles
+    assert "@supports not (scrollbar-gutter: stable)" in theme_styles
+    assert "overflow-y: scroll;" in theme_styles
 
 
 def test_runtime_compatibility_mode_banner_is_removed_from_app_shell():
@@ -174,7 +192,9 @@ def test_runtime_compatibility_mode_banner_is_removed_from_app_shell():
 
 
 def test_group_tree_has_keyboard_and_touch_move_workflow():
-    content = read(TEMPLATE_ROOT / "person_group_list.html")
+    content = read(TEMPLATE_ROOT / "includes/person_group_management_grid.html") + read(
+        TEMPLATE_ROOT / "includes/person_group_management_grid_script.html"
+    )
 
     assert "tree-move-btn" in content
     assert "groupMoveModal" in content

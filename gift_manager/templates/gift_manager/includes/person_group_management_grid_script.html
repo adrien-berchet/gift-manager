@@ -1,0 +1,480 @@
+{% load custom_filters %}
+{% load i18n %}
+
+<script>
+    (function () {
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
+        const numDataColumns = 1 + {{ column_names.items|length }};
+    const groupIdIdx = numDataColumns;
+    const giveUrlIdx = numDataColumns + 1;
+    const detailUrlIdx = numDataColumns + 2;
+    const editUrlIdx = numDataColumns + 3;
+    const deleteUrlIdx = numDataColumns + 4;
+
+    const data = [
+        {% for item in data %}
+    [
+        '',
+        {% for col, name in column_names.items %}
+    {% if col != "groups" %}
+    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
+    {% else %}
+    {% if item.grouped_groups %}
+    [{% for group_name, group_id in item.grouped_groups %}{ id: "{{ group_id|escapejs }}", name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]
+    {% if not forloop.last %}, {% endif %}
+    {% else %}
+    []{% if not forloop.last %}, {% endif %}
+    {% endif %}
+    {% endif %}
+    {% endfor %},
+    "{{ item.group_id }}",
+        "{% url 'gift_manager:person_group_relation_create' item.group_id %}",
+        "{% url 'gift_manager:person_group_detail' item.group_id %}",
+        "{% url 'gift_manager:person_group_edit' item.group_id %}",
+        "{% url 'gift_manager:person_group_delete' item.group_id %}"
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+        ];
+
+    const columns = [
+        GridUtils.createCheckboxColumn(groupIdIdx),
+        {% for col, name in column_names.items %}
+    {% if col != "groups" %}
+    {
+        name: '{{ name|escapejs }}',
+            sort: {
+            compare: GridUtils.sortString()
+        }
+    } {% if not forloop.last %}, {% endif %}
+    {% else %}
+    {
+        name: '{{ name|escapejs }}',
+            formatter: GridUtils.multiLinkFormatter()
+    } {% if not forloop.last %}, {% endif %}
+    {% endif %}
+    {% endfor %},
+    { name: 'group_id', hidden: true },
+    { name: 'group_relation_create_url', hidden: true },
+    { name: 'group_detail_url', hidden: true },
+    { name: 'group_edit_url', hidden: true },
+    { name: 'group_delete_url', hidden: true },
+    {
+        id: 'actions',
+        name: '{% trans "Actions"|escapejs %}',
+        width: '360px',
+        sort: false,
+        formatter: PermissionUtils.permissionAwareActionFormatter({
+            give: (row) => row.cells[giveUrlIdx].data,
+            details: (row) => row.cells[detailUrlIdx].data,
+            edit: (row) => row.cells[editUrlIdx].data,
+            delete: (row) => row.cells[deleteUrlIdx].data,
+            share: () => "{% url 'gift_manager:share_objects' %}"
+        }, ['give', 'details', 'edit', 'delete', 'share'], {
+            idResolver: (row) => row.cells[groupIdIdx].data
+        }, userPermissions)
+    }
+    ];
+
+    const inlineEditingMapping = {
+        1: 'name'
+    };
+
+    try {
+        GridUtils.initStandardListGrid({
+            gridId: 'person-group-grid',
+            entityType: 'persongroup',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }
+                ]
+            },
+            idFieldIndex: groupIdIdx
+        });
+
+    } catch (error) {
+        console.error('[PersonGroupList] Error initializing grid:', error);
+    }
+    }) ();
+
+    (function() {
+        const gridViewBtn = document.getElementById('grid-view-btn');
+        const treeViewBtn = document.getElementById('tree-view-btn');
+        const gridViewContainer = document.querySelector('.grid-view-container');
+        const treeViewContainer = document.querySelector('.tree-view-container');
+
+        if (!gridViewBtn || !treeViewBtn || !treeViewContainer) {
+            return;
+        }
+
+        const savedView = localStorage.getItem('personGroupView') || 'grid';
+
+        function showGridView() {
+            gridViewContainer.classList.add('active');
+            treeViewContainer.classList.remove('active');
+            gridViewBtn.classList.add('active');
+            treeViewBtn.classList.remove('active');
+            localStorage.setItem('personGroupView', 'grid');
+        }
+
+        function showTreeView() {
+            gridViewContainer.classList.remove('active');
+            treeViewContainer.classList.add('active');
+            gridViewBtn.classList.remove('active');
+            treeViewBtn.classList.add('active');
+            localStorage.setItem('personGroupView', 'tree');
+        }
+
+        if (savedView === 'tree') {
+            showTreeView();
+        } else {
+            showGridView();
+        }
+
+        gridViewBtn.addEventListener('click', showGridView);
+        treeViewBtn.addEventListener('click', showTreeView);
+
+        const treeNodes = document.querySelectorAll('.tree-node');
+        const collapsedNodes = new Set();
+
+        const childrenMap = new Map();
+        treeNodes.forEach(node => {
+            const groupId = node.dataset.groupId;
+            const depth = parseInt(node.dataset.depth);
+            const children = [];
+            let foundCurrent = false;
+
+            treeNodes.forEach(potentialChild => {
+                if (potentialChild === node) {
+                    foundCurrent = true;
+                    return;
+                }
+
+                if (foundCurrent) {
+                    const childDepth = parseInt(potentialChild.dataset.depth);
+
+                    if (childDepth <= depth) {
+                        foundCurrent = false;
+                        return;
+                    }
+
+                    if (childDepth === depth + 1) {
+                        children.push(potentialChild);
+                    }
+                }
+            });
+
+            childrenMap.set(groupId, children);
+        });
+
+        function getAllDescendants(groupId) {
+            const descendants = [];
+            const directChildren = childrenMap.get(groupId) || [];
+
+            directChildren.forEach(child => {
+                descendants.push(child);
+                const childId = child.dataset.groupId;
+                const childDescendants = getAllDescendants(childId);
+                descendants.push(...childDescendants);
+            });
+
+            return descendants;
+        }
+
+        function toggleNode(node) {
+            const groupId = node.dataset.groupId;
+            const hasChildren = node.dataset.hasChildren === 'true';
+
+            if (!hasChildren) {
+                return;
+            }
+
+            const isCollapsed = collapsedNodes.has(groupId);
+            const toggleIcon = node.querySelector('.toggle-icon i');
+
+            if (isCollapsed) {
+                collapsedNodes.delete(groupId);
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('fa-chevron-right');
+                    toggleIcon.classList.add('fa-chevron-down');
+                }
+
+                const descendants = getAllDescendants(groupId);
+                descendants.forEach(descendant => {
+                    const descendantId = descendant.dataset.groupId;
+                    let shouldShow = true;
+                    let currentNode = descendant;
+
+                    while (currentNode) {
+                        const prevDepth = parseInt(currentNode.dataset.depth);
+                        let found = false;
+
+                        for (let i = 0; i < treeNodes.length; i++) {
+                            if (treeNodes[i] === currentNode) {
+                                for (let j = i - 1; j >= 0; j--) {
+                                    const parentDepth = parseInt(treeNodes[j].dataset.depth);
+                                    if (parentDepth < prevDepth) {
+                                        const parentId = treeNodes[j].dataset.groupId;
+                                        if (collapsedNodes.has(parentId)) {
+                                            shouldShow = false;
+                                        }
+                                        currentNode = treeNodes[j];
+                                        found = true;
+                                        break;
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        if (!found || parseInt(currentNode.dataset.depth) === 0) {
+                            break;
+                        }
+                    }
+
+                    if (shouldShow && descendantId) {
+                        descendant.style.display = '';
+                    }
+                });
+            } else {
+                collapsedNodes.add(groupId);
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('fa-chevron-down');
+                    toggleIcon.classList.add('fa-chevron-right');
+                }
+
+                const descendants = getAllDescendants(groupId);
+                descendants.forEach(descendant => {
+                    descendant.style.display = 'none';
+                });
+            }
+        }
+
+        treeNodes.forEach(node => {
+            const hasChildren = node.dataset.hasChildren === 'true';
+
+            if (hasChildren) {
+                const toggleIcon = node.querySelector('.toggle-icon');
+                if (toggleIcon) {
+                    toggleIcon.style.cursor = 'pointer';
+                    toggleIcon.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleNode(node);
+                    });
+                }
+            }
+        });
+
+        let draggedNode = null;
+
+        function getCsrfToken() {
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) return csrfInput.value;
+            const csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+            return csrfCookie ? csrfCookie.split('=')[1] : '';
+        }
+
+        function wouldCreateCycle(draggedGroupId, targetGroupId) {
+            const descendants = getAllDescendants(draggedGroupId);
+            return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
+        }
+
+        function currentParentIds(node) {
+            return (node.dataset.parentIds || '').split(',').filter(Boolean);
+        }
+
+        function findTreeNode(groupId) {
+            return Array.from(treeNodes).find(node => node.dataset.groupId === groupId);
+        }
+
+        function validMoveTargets(sourceGroupId) {
+            const invalidIds = new Set([sourceGroupId]);
+            getAllDescendants(sourceGroupId).forEach(descendant => {
+                invalidIds.add(descendant.dataset.groupId);
+            });
+
+            return Array.from(treeNodes).filter(node => !invalidIds.has(node.dataset.groupId));
+        }
+
+        function showMoveError(message) {
+            const fallback = "{% trans 'An error occurred while moving the group' %}";
+            if (window.showNotification) {
+                window.showNotification(message || fallback, 'error');
+            } else {
+                alert(message || fallback);
+            }
+        }
+
+        async function reparentGroup(groupId, parentIds) {
+            const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    group_id: groupId,
+                    parent_ids: parentIds,
+                    action: 'set'
+                })
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = { message: "{% trans 'An error occurred while moving the group' %}" };
+            }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "{% trans 'An error occurred while moving the group' %}");
+            }
+
+            return data;
+        }
+
+        const groupMoveModal = document.getElementById('groupMoveModal');
+        const groupMoveForm = document.getElementById('group-move-form');
+        const groupMoveSourceInput = document.getElementById('group-move-source-id');
+        const groupMoveParentSelect = document.getElementById('group-move-parent');
+        const groupMoveSubmit = document.getElementById('group-move-submit');
+        const groupMoveTitle = document.getElementById('groupMoveModalLabel');
+
+        if (groupMoveModal && groupMoveForm && groupMoveSourceInput && groupMoveParentSelect) {
+            groupMoveModal.addEventListener('show.bs.modal', function(event) {
+                const trigger = event.relatedTarget;
+                const sourceGroupId = trigger?.dataset.groupId;
+                const sourceGroupName = trigger?.dataset.groupName || '';
+                const sourceNode = findTreeNode(sourceGroupId);
+
+                groupMoveSourceInput.value = sourceGroupId || '';
+                groupMoveTitle.textContent = sourceGroupName
+                    ? "{% trans 'Move' %} " + sourceGroupName
+                    : "{% trans 'Move group' %}";
+
+                groupMoveParentSelect.innerHTML = '';
+                groupMoveParentSelect.appendChild(new Option("{% trans 'Root group' %}", ''));
+
+                if (sourceNode) {
+                    validMoveTargets(sourceGroupId).forEach(targetNode => {
+                        const depth = parseInt(targetNode.dataset.depth, 10) || 0;
+                        const label = '-- '.repeat(depth) + targetNode.dataset.groupName;
+                        groupMoveParentSelect.appendChild(new Option(label, targetNode.dataset.groupId));
+                    });
+
+                    const parents = currentParentIds(sourceNode);
+                    groupMoveParentSelect.value = parents[0] || '';
+                }
+            });
+
+            groupMoveForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const sourceGroupId = groupMoveSourceInput.value;
+                const selectedParentId = groupMoveParentSelect.value;
+                const parentIds = selectedParentId ? [selectedParentId] : [];
+
+                if (!sourceGroupId) return;
+
+                groupMoveSubmit.disabled = true;
+
+                try {
+                    await reparentGroup(sourceGroupId, parentIds);
+                    window.location.reload();
+                } catch (error) {
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
+                } finally {
+                    groupMoveSubmit.disabled = false;
+                }
+            });
+        }
+
+        treeNodes.forEach(node => {
+            node.addEventListener('dragstart', (e) => {
+                draggedNode = node;
+                node.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', node.dataset.groupId);
+            });
+
+            node.addEventListener('dragend', () => {
+                node.classList.remove('dragging');
+                treeNodes.forEach(candidate => {
+                    candidate.classList.remove('drag-over', 'drop-invalid');
+                });
+                draggedNode = null;
+            });
+
+            node.addEventListener('dragover', (e) => {
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
+
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                treeNodes.forEach(candidate => {
+                    candidate.classList.remove('drag-over', 'drop-invalid');
+                });
+
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const targetGroupId = node.dataset.groupId;
+
+                if (draggedGroupId === targetGroupId || wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    node.classList.add('drop-invalid');
+                } else {
+                    node.classList.add('drag-over');
+                }
+            });
+
+            node.addEventListener('dragleave', () => {
+                node.classList.remove('drag-over', 'drop-invalid');
+            });
+
+            node.addEventListener('drop', async (e) => {
+                e.preventDefault();
+                node.classList.remove('drag-over', 'drop-invalid');
+
+                if (!draggedNode || draggedNode === node) {
+                    return;
+                }
+
+                const draggedGroupId = draggedNode.dataset.groupId;
+                const draggedGroupName = draggedNode.dataset.groupName;
+                const targetGroupId = node.dataset.groupId;
+                const targetGroupName = node.dataset.groupName;
+
+                if (wouldCreateCycle(draggedGroupId, targetGroupId)) {
+                    alert("{% trans 'Cannot move group: this would create a cycle in the hierarchy' %}");
+                    return;
+                }
+
+                const confirmMessage = "{% trans 'Move' %} '" + draggedGroupName + "' {% trans 'under' %} '" + targetGroupName + "'?";
+                if (!confirm(confirmMessage)) {
+                    return;
+                }
+
+                try {
+                    await reparentGroup(draggedGroupId, [targetGroupId]);
+                    window.location.reload();
+                } catch (error) {
+                    console.error('Reparenting error:', error);
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
+                }
+            });
+        });
+    })();
+</script>

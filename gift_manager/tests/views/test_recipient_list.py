@@ -101,6 +101,79 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
     assert "2 child groups" not in content
 
 
+@pytest.mark.django_db
+def test_recipient_people_view_embeds_person_management_grid(client):
+    user = UserFactory()
+    client.force_login(user)
+    accessible_group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+    hidden_group = PersonGroupFactory(name="Hidden Circle")
+    person = PersonFactory(
+        first_name="Ada",
+        family_name="Lovelace",
+        groups=[accessible_group, hidden_group],
+        shared_with=[user],
+    )
+
+    response = client.get(f"{reverse('gift_manager:recipients')}?view=people")
+
+    assert response.status_code == 200
+    assert response.context["recipient_view"] == "people"
+    assert response.context["person_count"] == 1
+    assert response.context["group_count"] == 1
+    groups_info = response.context["person_grid_data"][0]["groups_info"]
+    assert {group["name"] for group in groups_info} == {accessible_group.name}
+    assert {str(group["id"]) for group in groups_info} == {str(accessible_group.group_id)}
+
+    content = response.content.decode("utf-8")
+    assert '?view=people"' in content
+    assert 'id="person-grid-list-tools"' in content
+    assert 'id="person-grid"' in content
+    assert (
+        "inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } }"
+        in content
+    )
+    assert str(person.person_id) in content
+    assert accessible_group.name in content
+    assert str(accessible_group.group_id) in content
+    assert hidden_group.name not in content
+    assert str(hidden_group.group_id) not in content
+    assert "data-recipient-key=" not in content
+
+
+@pytest.mark.django_db
+def test_recipient_groups_view_embeds_group_management_grid(client):
+    user = UserFactory()
+    client.force_login(user)
+    group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+    PersonFactory(
+        first_name="Ada",
+        family_name="Lovelace",
+        groups=[group],
+        shared_with=[user],
+    )
+    PersonFactory(first_name="Hidden", family_name="Member", groups=[group])
+
+    response = client.get(f"{reverse('gift_manager:recipients')}?view=groups")
+
+    assert response.status_code == 200
+    assert response.context["recipient_view"] == "groups"
+    assert response.context["person_count"] == 1
+    assert response.context["group_count"] == 1
+
+    content = response.content.decode("utf-8")
+    assert '?view=groups"' in content
+    assert 'id="person-group-grid-list-tools"' in content
+    assert 'id="person-group-grid"' in content
+    assert "inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping }" in content
+    assert str(group.group_id) in content
+    assert group.name in content
+    assert response.context["person_group_tree_data"][0]["member_count"] == 1
+    assert "Ada Lovelace" not in content
+    assert "Hidden Member" not in content
+    assert "2 members" not in content
+    assert "data-recipient-key=" not in content
+
+
 def assert_recipients_nav_is_active_without_groups_nav(content):
     recipients_url = reverse("gift_manager:recipients")
     groups_url = reverse("gift_manager:person_groups")

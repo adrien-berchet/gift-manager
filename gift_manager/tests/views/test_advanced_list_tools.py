@@ -24,6 +24,7 @@ def test_advanced_list_tools_wrap_filters_and_selection(authenticated_client, ur
     advanced_tools_id = f'id="{grid_id}-advanced-tools"'
     select_button_id = f'id="toggle-selection-{grid_id}"'
     filter_panel_id = f'id="{grid_id}-filter-panel"'
+    filter_content_id = f'id="{grid_id}-filter-content"'
 
     assert 'class="list-tools-shell"' in content
     assert list_tools_id in content
@@ -32,28 +33,32 @@ def test_advanced_list_tools_wrap_filters_and_selection(authenticated_client, ur
     assert advanced_tools_id in content
     assert select_button_id in content
     assert filter_panel_id in content
+    assert filter_content_id in content
+    assert 'class="advanced-list-actions"' not in content
     assert content.index(list_tools_id) < content.index(search_input_id)
     assert content.index(search_input_id) < content.index(advanced_tools_id)
-    assert content.index(advanced_tools_id) < content.index(select_button_id)
     assert content.index(advanced_tools_id) < content.index(filter_panel_id)
+    assert content.index(filter_panel_id) < content.index(filter_content_id)
+    assert content.index(filter_content_id) < content.index(select_button_id)
 
 
 @pytest.mark.django_db
-def test_status_filters_are_advanced_without_bulk_selection(authenticated_client):
+def test_status_list_omits_advanced_controls(authenticated_client):
     response = authenticated_client.get(reverse("gift_manager:relation_statuses"))
 
     assert response.status_code == 200
     content = response.content.decode()
 
-    assert 'id="status-grid-search"' in content
-    assert 'id="status-grid-advanced-tools"' in content
-    assert 'id="status-grid-filter-panel"' in content
+    assert 'id="status-grid"' in content
+    assert "GridUtils.initGrid('status-grid'" in content
+    assert 'id="status-grid-search"' not in content
+    assert 'id="status-grid-advanced-tools"' not in content
+    assert 'id="status-grid-filter-panel"' not in content
     assert 'id="toggle-selection-status-grid"' not in content
-    assert content.index('id="status-grid-search"') < content.index(
-        'id="status-grid-advanced-tools"'
-    )
-    assert "RealTimeSearch.init('status-grid', grid, data);" in content
-    assert "GridUtils.setupAdvancedControls('status-grid', true" in content
+    assert "FilterPanel.init('status-grid'" not in content
+    assert "RealTimeSearch.init('status-grid'" not in content
+    assert "DynamicFilters.init('status-grid'" not in content
+    assert "GridUtils.setupAdvancedControls('status-grid'" not in content
 
 
 @pytest.mark.django_db
@@ -67,7 +72,7 @@ def test_basic_page_actions_stay_before_advanced_tools(authenticated_client, url
     assert content.index('data-action="create"') < content.index(f'id="{grid_id}-advanced-tools"')
 
 
-def test_standard_grid_features_are_gated_by_advanced_controls():
+def test_standard_grid_heavy_features_are_gated_by_advanced_controls():
     grid_utils = Path("gift_manager/static/gift_manager/grid-utils.js").read_text()
 
     assert "function setupAdvancedControls" in grid_utils
@@ -78,4 +83,6 @@ def test_standard_grid_features_are_gated_by_advanced_controls():
     )
     assert "setupRowStateMarkers(gridId, features.rowStateMarkers)" in grid_utils
     assert "missingDataClass" in grid_utils
-    assert "inlineEditing && !useAdvancedControls" in grid_utils
+    assert "inlineEditing && !useAdvancedControls" not in grid_utils
+    assert "if (inlineEditing) {" in grid_utils
+    assert "setupInlineEditingFallback(gridId, inlineEntityType" in grid_utils

@@ -8,6 +8,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 
+from gift_manager.email_encoding import is_encrypted_email
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
@@ -49,6 +50,29 @@ class TestInlineEditing:
         # Verify database update
         person.refresh_from_db()
         assert person.first_name == "Jane"
+
+    def test_person_inline_update_email_is_encoded(self):
+        """Person email inline updates should use encoded storage."""
+        person = PersonFactory(first_name="John", family_name="Doe")
+        person.set_email("old@example.com")
+        person.save(update_fields=["email_address"])
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+
+        url = reverse("gift_manager:person_inline_update", kwargs={"pk": person.person_id})
+        data = {"field": "email_address", "value": "new@example.com"}
+
+        response = self.client.post(url, data=json.dumps(data), content_type="application/json")
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["success"] is True
+        assert response_data["old_value"] == "old@example.com"
+        assert response_data["new_value"] == "new@example.com"
+
+        person.refresh_from_db()
+        assert person.email_address != "new@example.com"
+        assert is_encrypted_email(person.email_address)
+        assert person.email == "new@example.com"
 
     def test_person_inline_update_rejects_missing_csrf_token(self):
         """Test inline updates require CSRF validation in normal middleware flow."""

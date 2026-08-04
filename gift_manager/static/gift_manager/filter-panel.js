@@ -20,6 +20,7 @@
         const controlRoot = listTools || filterPanel || filterContent;
         const searchInput = document.getElementById(gridId + '-search');
         const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
+        const isInAdvancedTools = Boolean(filterPanel && filterPanel.closest('.advanced-list-tools'));
 
         if (!filterToggle || !filterContent) {
             console.warn('Filter panel elements not found for grid:', gridId);
@@ -37,9 +38,8 @@
             filterToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         }
 
-        // On mobile: collapsed by default. On desktop: CSS handles visibility
         function setDefaultState() {
-            syncFilterExpanded(false);
+            syncFilterExpanded(isInAdvancedTools);
         }
 
         // Set initial state
@@ -52,10 +52,11 @@
             resizeTimeout = setTimeout(setDefaultState, 250);
         });
 
-        // Toggle filter panel
-        filterToggle.addEventListener('click', function() {
-            syncFilterExpanded(!filterContent.classList.contains('expanded'));
-        });
+        if (!isInAdvancedTools) {
+            filterToggle.addEventListener('click', function() {
+                syncFilterExpanded(!filterContent.classList.contains('expanded'));
+            });
+        }
 
         // Show or hide the clear button based on input value
         function syncClearButton(input) {
