@@ -304,7 +304,7 @@ class TestUnsavedChangesProtection(BaseE2ETest):
     """Test unsaved changes protection in panels."""
 
     def test_unsaved_changes_warning(self, page: Page, live_server, test_user, sample_persons):
-        """Test that unsaved changes trigger warning when closing panel."""
+        """Test that unsaved changes trigger the custom warning when closing panel."""
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 
@@ -319,20 +319,21 @@ class TestUnsavedChangesProtection(BaseE2ETest):
 
         # Try to close panel
         close_btn = panel.locator(".btn-close")
-        dialog_messages = []
-
-        def dismiss_unsaved_dialog(dialog):
-            dialog_messages.append(dialog.message)
-            dialog.dismiss()
-
-        page.once("dialog", dismiss_unsaved_dialog)
         close_btn.click(timeout=5000)
-        page.wait_for_timeout(400)
 
-        # Verify native unsaved-changes confirmation appears and can block closing.
-        assert any("unsaved changes" in message.lower() for message in dialog_messages)
+        unsaved_modal = page.locator("#unsaved-changes-modal")
+        expect(unsaved_modal).to_be_visible()
+        expect(unsaved_modal.locator(".modal-title")).to_contain_text("Unsaved changes")
+        expect(unsaved_modal.locator("#save-changes-btn")).to_be_visible()
 
+        unsaved_modal.locator("#keep-editing-btn").click()
+        expect(unsaved_modal).not_to_be_visible()
         expect(panel).to_be_visible()
+
+        close_btn.click(timeout=5000)
+        expect(unsaved_modal).to_be_visible()
+        unsaved_modal.locator("#discard-changes-btn").click()
+        expect(panel).not_to_be_visible()
 
     def test_unsaved_changes_visual_indicators(
         self, page: Page, live_server, test_user, sample_persons
@@ -353,7 +354,8 @@ class TestUnsavedChangesProtection(BaseE2ETest):
         # Verify field shows modified indicator
         expect(first_name_field).to_have_class(re.compile(r"\bfield-unsaved\b"))
 
-        # Or check for other visual indicators
-        modified_indicator = panel.locator(".field-modified, .unsaved-indicator")
-        if modified_indicator.count() > 0:
-            expect(modified_indicator).to_be_visible()
+        expect(panel.locator(".unsaved-changes-badge")).to_be_visible()
+        expect(panel.locator(".panel-form-actions")).to_have_class(
+            re.compile(r"\bhas-unsaved-changes\b")
+        )
+        expect(panel.locator(".unsaved-changes-status")).to_be_visible()

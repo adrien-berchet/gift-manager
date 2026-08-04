@@ -1439,8 +1439,15 @@
                 }
             }
 
-            function loadFormInPanel(formUrl, target = 'editPanel') {
+            function loadFormInPanel(formUrl, target = 'editPanel', options = {}) {
                 if (!formUrl) return;
+
+                if (!options.skipUnsavedCheck && window.UnsavedChanges?.confirmPanelReplacement) {
+                    const canLoad = window.UnsavedChanges.confirmPanelReplacement(target, function() {
+                        loadFormInPanel(formUrl, target, { skipUnsavedCheck: true });
+                    });
+                    if (!canLoad) return;
+                }
 
                 showOffcanvasLoading(target);
 
