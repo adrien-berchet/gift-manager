@@ -39,11 +39,14 @@ def get_person_grid_column_names():
     }
 
 
-def get_person_grid_queryset(user, column_names=None):
+def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
     """Return person rows formatted for the shared Grid.js management view."""
     from django.db import connection
 
     column_names = column_names or get_person_grid_column_names()
+    if accessible_groups is None:
+        accessible_groups = PersonGroup.objects.accessible_by(user)
+    accessible_group_ids = accessible_groups.values("pk")
     value_fields = [field for field in column_names if field != "groups"]
     base_queryset = (
         Person.objects.accessible_by(user)
@@ -65,23 +68,27 @@ def get_person_grid_queryset(user, column_names=None):
                     F("groups__name"),
                     function="jsonb_build_object",
                 ),
-                filter=Q(groups__group_id__isnull=False),
+                filter=Q(groups__group_id__isnull=False, groups__pk__in=accessible_group_ids),
                 distinct=True,
             ),
         )
     return base_queryset.prefetch_related("groups")
 
 
-def populate_person_grid_group_info(data) -> None:
+def populate_person_grid_group_info(data, user, accessible_groups=None) -> None:
     """Populate group metadata when the database cannot annotate JSON rows."""
     items = [item for item in data if isinstance(item, dict)]
     person_ids = [item.get("person_id") for item in items if not item.get("groups_info")]
     if not person_ids:
         return
 
+    if accessible_groups is None:
+        accessible_groups = PersonGroup.objects.accessible_by(user)
+    accessible_group_ids = accessible_groups.values("pk")
     groups_by_person = {person_id: [] for person_id in person_ids}
     for row in (
         Person.objects.filter(person_id__in=person_ids)
+        .filter(groups__pk__in=accessible_group_ids)
         .values("person_id", "groups__group_id", "groups__name")
         .order_by("groups__name")
     ):
@@ -114,7 +121,7 @@ class PersonListView(
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        populate_person_grid_group_info(context.get("data", []))
+        populate_person_grid_group_info(context.get("data", []), self.request.user)
         context["unique_groups"] = (
             PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
@@ -126,7 +133,7 @@ class PersonListView(
 
     def _populate_group_info_fallback(self, data) -> None:
         """Populate group metadata when the database cannot annotate JSON rows."""
-        populate_person_grid_group_info(data)
+        populate_person_grid_group_info(data, self.request.user)
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""

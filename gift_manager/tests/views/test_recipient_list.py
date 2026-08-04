@@ -105,8 +105,14 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
 def test_recipient_people_view_embeds_person_management_grid(client):
     user = UserFactory()
     client.force_login(user)
-    person = PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
-    group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+    accessible_group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+    hidden_group = PersonGroupFactory(name="Hidden Circle")
+    person = PersonFactory(
+        first_name="Ada",
+        family_name="Lovelace",
+        groups=[accessible_group, hidden_group],
+        shared_with=[user],
+    )
 
     response = client.get(f"{reverse('gift_manager:recipients')}?view=people")
 
@@ -114,6 +120,9 @@ def test_recipient_people_view_embeds_person_management_grid(client):
     assert response.context["recipient_view"] == "people"
     assert response.context["person_count"] == 1
     assert response.context["group_count"] == 1
+    groups_info = response.context["person_grid_data"][0]["groups_info"]
+    assert {group["name"] for group in groups_info} == {accessible_group.name}
+    assert {str(group["id"]) for group in groups_info} == {str(accessible_group.group_id)}
 
     content = response.content.decode("utf-8")
     assert '?view=people"' in content
@@ -124,7 +133,10 @@ def test_recipient_people_view_embeds_person_management_grid(client):
         in content
     )
     assert str(person.person_id) in content
-    assert group.name not in content
+    assert accessible_group.name in content
+    assert str(accessible_group.group_id) in content
+    assert hidden_group.name not in content
+    assert str(hidden_group.group_id) not in content
     assert "data-recipient-key=" not in content
 
 
@@ -132,8 +144,14 @@ def test_recipient_people_view_embeds_person_management_grid(client):
 def test_recipient_groups_view_embeds_group_management_grid(client):
     user = UserFactory()
     client.force_login(user)
-    PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
     group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+    PersonFactory(
+        first_name="Ada",
+        family_name="Lovelace",
+        groups=[group],
+        shared_with=[user],
+    )
+    PersonFactory(first_name="Hidden", family_name="Member", groups=[group])
 
     response = client.get(f"{reverse('gift_manager:recipients')}?view=groups")
 
@@ -149,7 +167,10 @@ def test_recipient_groups_view_embeds_group_management_grid(client):
     assert "inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping }" in content
     assert str(group.group_id) in content
     assert group.name in content
+    assert response.context["person_group_tree_data"][0]["member_count"] == 1
     assert "Ada Lovelace" not in content
+    assert "Hidden Member" not in content
+    assert "2 members" not in content
     assert "data-recipient-key=" not in content
 
 

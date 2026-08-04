@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Prefetch
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -51,7 +52,9 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(get_person_group_management_context(self.request.user))
+        context.update(
+            get_person_group_management_context(self.request.user, include_permissions=False)
+        )
         return context
 
 
@@ -62,18 +65,31 @@ def get_person_group_grid_column_names():
     }
 
 
-def get_person_group_grid_queryset(user):
+def get_person_group_grid_queryset(user, member_queryset=None):
     """Return groups prepared for the shared management grid and tree view."""
+    if member_queryset is None:
+        member_queryset = Person.objects.accessible_by(user)
+
     return (
         PersonGroup.objects.accessible_by(user)
-        .prefetch_related("parent_groups", "child_groups", "person_set")
+        .prefetch_related(
+            "parent_groups",
+            "child_groups",
+            Prefetch(
+                "person_set",
+                queryset=member_queryset,
+                to_attr="accessible_members",
+            ),
+        )
         .order_by("name")
     )
 
 
-def get_person_group_management_context(user) -> dict:
+def get_person_group_management_context(
+    user, *, include_permissions=True, member_queryset=None
+) -> dict:
     """Build the shared person-group management context."""
-    all_groups = list(get_person_group_grid_queryset(user))
+    all_groups = list(get_person_group_grid_queryset(user, member_queryset=member_queryset))
     accessible_group_ids = {group.pk for group in all_groups}
     tree_data = _build_person_group_tree_data(all_groups, accessible_group_ids)
     has_hierarchy = any(
@@ -81,18 +97,22 @@ def get_person_group_management_context(user) -> dict:
         or any(child.pk in accessible_group_ids for child in group.child_groups.all())
         for group in all_groups
     )
-    permissions = {
-        str(group.group_id): PermissionService.get_effective_permission(group, user)
-        for group in all_groups
-    }
 
-    return {
+    context = {
         "column_names": get_person_group_grid_column_names(),
         "data": [{"group_id": group.group_id, "name": group.name} for group in all_groups],
         "tree_data": tree_data,
         "has_hierarchy": has_hierarchy,
-        "user_permissions_json": json.dumps(permissions),
     }
+
+    if include_permissions:
+        permissions = {
+            str(group.group_id): PermissionService.get_effective_permission(group, user)
+            for group in all_groups
+        }
+        context["user_permissions_json"] = json.dumps(permissions)
+
+    return context
 
 
 def _build_person_group_tree_data(all_groups, accessible_group_ids) -> list[dict]:
@@ -106,7 +126,7 @@ def _build_person_group_tree_data(all_groups, accessible_group_ids) -> list[dict
             return None
         visited.add(group.pk)
 
-        prefetched_members = list(group.person_set.all())
+        prefetched_members = _get_prefetched_group_members(group)
         prefetched_parents = [
             parent for parent in group.parent_groups.all() if parent.pk in accessible_group_ids
         ]
@@ -154,6 +174,13 @@ def _build_person_group_tree_data(all_groups, accessible_group_ids) -> list[dict
             tree_data.append(tree_node)
 
     return flatten_tree(tree_data)
+
+
+def _get_prefetched_group_members(group) -> list[Person]:
+    prefetched_members = getattr(group, "accessible_members", None)
+    if prefetched_members is not None:
+        return prefetched_members
+    return list(group.person_set.all())
 
 
 class PersonGroupCreateView(BaseCreateView):

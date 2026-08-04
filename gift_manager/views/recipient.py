@@ -49,8 +49,10 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
 
         if recipient_view == "people":
             person_column_names = get_person_grid_column_names()
-            person_grid_data = list(get_person_grid_queryset(user, person_column_names))
-            populate_person_grid_group_info(person_grid_data)
+            person_grid_data = list(
+                get_person_grid_queryset(user, person_column_names, accessible_groups)
+            )
+            populate_person_grid_group_info(person_grid_data, user, accessible_groups)
             person_permission_context = self.get_permission_context(person_grid_data)
             context["person_grid_data"] = person_grid_data
             context["person_column_names"] = person_column_names
@@ -64,7 +66,10 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             return context
 
         if recipient_view == "groups":
-            group_context = get_person_group_management_context(user)
+            group_context = get_person_group_management_context(
+                user,
+                member_queryset=accessible_persons,
+            )
             context["person_group_grid_data"] = group_context["data"]
             context["person_group_column_names"] = group_context["column_names"]
             context["person_group_tree_data"] = group_context["tree_data"]

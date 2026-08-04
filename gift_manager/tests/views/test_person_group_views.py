@@ -2,6 +2,7 @@
 
 # pylint: disable=too-many-lines
 import json
+from unittest.mock import patch
 
 import pytest
 from django.contrib.messages.storage.fallback import FallbackStorage
@@ -18,6 +19,7 @@ from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
 from gift_manager.views.person_group import _check_editor_permission
+from gift_manager.views.person_group import get_person_group_management_context
 
 
 @pytest.mark.django_db
@@ -122,8 +124,8 @@ class TestPersonGroupListView:
     def test_list_view_member_count(self):
         """Test member count is correctly computed."""
         group = PersonGroupFactory(name="Group with members")
-        person1 = PersonFactory(first_name="John", family_name="Doe")
-        person2 = PersonFactory(first_name="Jane", family_name="Doe")
+        person1 = PersonFactory(first_name="John", family_name="Doe", shared_with=[self.user])
+        person2 = PersonFactory(first_name="Jane", family_name="Doe", shared_with=[self.user])
         person1.groups.add(group)
         person2.groups.add(group)
 
@@ -135,6 +137,51 @@ class TestPersonGroupListView:
         tree_data = response.context["tree_data"]
         assert len(tree_data) == 1
         assert tree_data[0]["member_count"] == 2
+
+    def test_list_view_member_count_excludes_inaccessible_people(self):
+        """Member count only includes people the user can access."""
+        group = PersonGroupFactory(name="Group with hidden members")
+        visible_person = PersonFactory(
+            first_name="John", family_name="Doe", shared_with=[self.user]
+        )
+        hidden_person = PersonFactory(first_name="Jane", family_name="Doe")
+        visible_person.groups.add(group)
+        hidden_person.groups.add(group)
+
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        tree_data = response.context["tree_data"]
+        assert len(tree_data) == 1
+        assert tree_data[0]["member_count"] == 1
+
+    def test_management_context_can_skip_permission_json(self):
+        """The list view can keep the permission mapping already built by its mixin."""
+        group = PersonGroupFactory(name="Group")
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
+
+        context = get_person_group_management_context(self.user, include_permissions=False)
+
+        assert "user_permissions_json" not in context
+
+    def test_list_view_reuses_permission_context(self):
+        """The management helper does not recompute permissions after the mixin."""
+        group1 = PersonGroupFactory(name="Group A")
+        group2 = PersonGroupFactory(name="Group B")
+        create_or_update_permission(self.user, group1, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, group2, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_groups")
+        with patch(
+            "gift_manager.services.PermissionService.get_effective_permission",
+            return_value=PermissionLevel.VIEWER,
+        ) as get_effective_permission:
+            response = self.client.get(url)
+
+        assert response.status_code == 200
+        assert get_effective_permission.call_count == 2
 
     def test_list_view_requires_login(self):
         """Test list view requires authentication."""
