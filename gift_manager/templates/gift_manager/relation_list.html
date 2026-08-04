@@ -199,6 +199,12 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
+    {% trans "Status" as bulk_status_label %}
+    {% trans "Choose status" as bulk_status_choose_label %}
+    {% trans "Apply status" as bulk_status_apply_label %}
+    {% trans "Updating..." as bulk_status_processing_label %}
+    {% trans "Bulk status update failed:" as bulk_status_failure_label %}
+    {% trans "Bulk status update completed" as bulk_status_completed_label %}
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
         const recipientTypeLabels = {
@@ -461,7 +467,18 @@
                 enabled: true
             },
             features: {
-                bulkOperations: true,
+                bulkOperations: {
+                    enableBulkStatus: true,
+                    statusOptions: relationStatusOptions,
+                    bulkStatusLabels: {
+                        status: "{{ bulk_status_label|escapejs }}",
+                        chooseStatus: "{{ bulk_status_choose_label|escapejs }}",
+                        applyStatus: "{{ bulk_status_apply_label|escapejs }}",
+                        processing: "{{ bulk_status_processing_label|escapejs }}",
+                        failure: "{{ bulk_status_failure_label|escapejs }}",
+                        completed: "{{ bulk_status_completed_label|escapejs }}"
+                    }
+                },
                 inlineEditing: { mapping: { 4: 'comment', 7: 'due_date' } },
                 advancedControls: true,
                 realTimeSearch: true,
