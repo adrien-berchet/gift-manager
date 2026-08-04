@@ -10,6 +10,24 @@
         return;
     }
 
+    const translatedMessages = window.unsavedChangesTranslations || {};
+    const messages = {
+        navigationWarning:
+            "You have unsaved changes. Are you sure you want to leave this page?",
+        modalTitle: "Unsaved changes",
+        modalBody: "Your changes have not been saved yet.",
+        closeBody: "Save your changes, discard them, or keep editing.",
+        navigationBody: "Discard your changes to continue to the new page.",
+        saveButton: "Save",
+        discardButton: "Discard changes",
+        keepEditingButton: "Keep editing",
+        statusText: "Unsaved changes",
+        badgeText: "Unsaved",
+        fieldTitle: "This field has been changed",
+        closeButton: "Close",
+        ...translatedMessages,
+    };
+
     const CONFIG = {
         classes: {
             modified: "form-modified",
@@ -27,22 +45,21 @@
             formActions: ".panel-form-actions, .page-form-actions",
             fieldGroup: ".form-group, .mb-3, .form-floating, .form-check, .field-wrapper",
         },
-        messages: {
-            navigationWarning:
-                "You have unsaved changes. Are you sure you want to leave this page?",
-            modalTitle: "Unsaved changes",
-            modalBody: "Your changes have not been saved yet.",
-            closeBody: "Save your changes, discard them, or keep editing.",
-            navigationBody: "Discard your changes to continue to the new page.",
-            saveButton: "Save",
-            discardButton: "Discard changes",
-            keepEditingButton: "Keep editing",
-            statusText: "Unsaved changes",
-            badgeText: "Unsaved",
-            fieldTitle: "This field has been changed",
-        },
+        messages,
         debounceDelay: 150,
     };
+
+    function escapeHtml(value) {
+        const replacements = {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;",
+        };
+
+        return String(value ?? "").replace(/[&<>"']/g, (character) => replacements[character]);
+    }
 
     const trackedForms = new Set();
     const formStates = new WeakMap();
@@ -313,24 +330,24 @@
                         <div class="modal-header">
                             <h5 class="modal-title" id="unsaved-changes-modal-label">
                                 <i class="fas fa-exclamation-circle text-warning me-2" aria-hidden="true"></i>
-                                ${CONFIG.messages.modalTitle}
+                                ${escapeHtml(CONFIG.messages.modalTitle)}
                             </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="${escapeHtml(CONFIG.messages.closeButton)}"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-0" id="unsaved-changes-modal-body">${CONFIG.messages.modalBody}</p>
+                            <p class="mb-0" id="unsaved-changes-modal-body">${escapeHtml(CONFIG.messages.modalBody)}</p>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-outline-danger" id="discard-changes-btn">
                                 <i class="fas fa-undo me-1" aria-hidden="true"></i>
-                                ${CONFIG.messages.discardButton}
+                                ${escapeHtml(CONFIG.messages.discardButton)}
                             </button>
                             <button type="button" class="btn btn-outline-primary" id="save-changes-btn">
                                 <i class="fas fa-save me-1" aria-hidden="true"></i>
-                                ${CONFIG.messages.saveButton}
+                                ${escapeHtml(CONFIG.messages.saveButton)}
                             </button>
                             <button type="button" class="btn btn-primary" id="keep-editing-btn" data-bs-dismiss="modal">
-                                ${CONFIG.messages.keepEditingButton}
+                                ${escapeHtml(CONFIG.messages.keepEditingButton)}
                             </button>
                         </div>
                     </div>
@@ -480,7 +497,7 @@
             status.setAttribute("aria-live", "polite");
             status.innerHTML = `
                 <i class="fas fa-circle" aria-hidden="true"></i>
-                <span>${CONFIG.messages.statusText}</span>
+                <span>${escapeHtml(CONFIG.messages.statusText)}</span>
             `;
             actions.insertBefore(status, actions.firstChild);
         }
@@ -509,7 +526,7 @@
             badge.setAttribute("aria-live", "polite");
             badge.innerHTML = `
                 <i class="fas fa-circle" aria-hidden="true"></i>
-                <span>${CONFIG.messages.badgeText}</span>
+                <span>${escapeHtml(CONFIG.messages.badgeText)}</span>
             `;
             title.appendChild(badge);
         }

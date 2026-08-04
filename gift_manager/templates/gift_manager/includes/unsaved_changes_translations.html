@@ -1,0 +1,29 @@
+{% load i18n %}
+{% trans "You have unsaved changes. Are you sure you want to leave this page?" as navigation_warning %}
+{% trans "Unsaved changes" as modal_title %}
+{% trans "Your changes have not been saved yet." as modal_body %}
+{% trans "Save your changes, discard them, or keep editing." as close_body %}
+{% trans "Discard your changes to continue to the new page." as navigation_body %}
+{% trans "Save" as save_button %}
+{% trans "Discard changes" as discard_button %}
+{% trans "Keep editing" as keep_editing_button %}
+{% trans "Unsaved changes" as status_text %}
+{% trans "Unsaved" as badge_text %}
+{% trans "This field has been changed" as field_title %}
+{% trans "Close" as close_button %}
+<script>
+    window.unsavedChangesTranslations = {
+        navigationWarning: "{{ navigation_warning|escapejs }}",
+        modalTitle: "{{ modal_title|escapejs }}",
+        modalBody: "{{ modal_body|escapejs }}",
+        closeBody: "{{ close_body|escapejs }}",
+        navigationBody: "{{ navigation_body|escapejs }}",
+        saveButton: "{{ save_button|escapejs }}",
+        discardButton: "{{ discard_button|escapejs }}",
+        keepEditingButton: "{{ keep_editing_button|escapejs }}",
+        statusText: "{{ status_text|escapejs }}",
+        badgeText: "{{ badge_text|escapejs }}",
+        fieldTitle: "{{ field_title|escapejs }}",
+        closeButton: "{{ close_button|escapejs }}"
+    };
+</script>
