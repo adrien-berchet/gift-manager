@@ -37,6 +37,7 @@ DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
 DASHBOARD_STALE_AFTER_DAYS = 30
 DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("overdue", "upcoming", "incomplete"))
 DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("overdue", "upcoming", "incomplete"))
+DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP = 24
 
 
 def _gift_plan_status_class(status) -> str:
@@ -188,7 +189,8 @@ def _build_gift_plan_action_groups(
             "upcoming": "due_soon",
             "incomplete": "needs_details",
         }.get(group["key"], "")
-        group["display_items"] = group["items"] if is_paginated else group["items"][:4]
+        display_limit = DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP if is_paginated else 4
+        group["display_items"] = group["items"][:display_limit]
     return action_groups
 
 

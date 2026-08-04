@@ -143,6 +143,34 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                     text: note.textContent.trim(),
                 };
             }).filter(Boolean);
+            const titleMetrics = visibleCards.map((card) => {
+                const title = card.querySelector('.gift-plan-card-title a');
+                if (!title) return null;
+                const titleStyles = getComputedStyle(title);
+                return {
+                    clientHeight: title.clientHeight,
+                    scrollWidth: title.scrollWidth,
+                    clientWidth: title.clientWidth,
+                    lineHeight: Number.parseFloat(titleStyles.lineHeight),
+                    textOverflow: titleStyles.textOverflow,
+                    whiteSpace: titleStyles.whiteSpace,
+                };
+            }).filter(Boolean);
+            const recipientMetrics = visibleCards.map((card) => {
+                const recipientSelector = [
+                    '.gift-plan-card-meta-row a',
+                    '.gift-plan-card-meta-row span:not(.badge):not(.recipient-type-marker)',
+                ].join(', ');
+                const recipient = card.querySelector(recipientSelector);
+                if (!recipient) return null;
+                const recipientStyles = getComputedStyle(recipient);
+                return {
+                    scrollWidth: recipient.scrollWidth,
+                    clientWidth: recipient.clientWidth,
+                    textOverflow: recipientStyles.textOverflow,
+                    whiteSpace: recipientStyles.whiteSpace,
+                };
+            }).filter(Boolean);
 
             return {
                 cardCount: cards.length,
@@ -152,11 +180,11 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 columnCount: styles.gridTemplateColumns
                     .split(' ')
                     .filter((column) => column && column !== 'none').length,
+                gridAutoRows: styles.gridAutoRows,
                 overflowY: styles.overflowY,
                 scrollHeight: list.scrollHeight,
                 clientHeight: list.clientHeight,
                 listWidth: listRect.width,
-                minHeight: styles.minHeight,
                 groupHeight: groupRect.height,
                 paginationOffsetTop: paginationRect ? paginationRect.top - groupRect.top : null,
                 pageSize: Number.parseInt(group.dataset.dashboardPageSize || '0', 10),
@@ -171,6 +199,8 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
                 visibleHeights,
                 visibleWidths,
                 noteMetrics,
+                titleMetrics,
+                recipientMetrics,
             };
         }"""
     )
@@ -192,12 +222,19 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert metrics["previousDisabled"] is True
     assert metrics["nextDisabled"] is False
     assert metrics["pageStatus"].startswith("1 / ")
-    assert metrics["minHeight"] != "0px"
+    assert metrics["gridAutoRows"] not in ("auto", "none", "0px")
     assert max(metrics["visibleHeights"]) - min(metrics["visibleHeights"]) <= 1
     assert max(metrics["visibleWidths"]) - min(metrics["visibleWidths"]) <= 1
     assert all(
         note["clientHeight"] <= (note["lineHeight"] * 2) + 1 for note in metrics["noteMetrics"]
     )
+    assert all(
+        title["clientHeight"] <= title["lineHeight"] + 1 for title in metrics["titleMetrics"]
+    )
+    assert all(title["textOverflow"] == "ellipsis" for title in metrics["titleMetrics"])
+    assert all(title["whiteSpace"] == "nowrap" for title in metrics["titleMetrics"])
+    assert all(recipient["textOverflow"] == "ellipsis" for recipient in metrics["recipientMetrics"])
+    assert all(recipient["whiteSpace"] == "nowrap" for recipient in metrics["recipientMetrics"])
     baseline_client_height = metrics["clientHeight"]
     baseline_group_height = metrics["groupHeight"]
     baseline_pagination_offset_top = metrics["paginationOffsetTop"]
@@ -219,7 +256,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     assert next_metrics["previousDisabled"] is False
     assert next_metrics["pageStatus"].startswith("2 / ")
     assert next_metrics["scrollHeight"] <= next_metrics["clientHeight"] + 1
-    assert next_metrics["minHeight"] != "0px"
+    assert next_metrics["gridAutoRows"] == metrics["gridAutoRows"]
     assert abs(next_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(next_metrics["groupHeight"] - baseline_group_height) <= 1
     assert abs(next_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
@@ -229,7 +266,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     previous_metrics = get_paginated_layout_metrics(page, group_key)
     assert previous_metrics["visibleTitles"][0] == first_page_title
-    assert previous_metrics["minHeight"] != "0px"
+    assert previous_metrics["gridAutoRows"] == metrics["gridAutoRows"]
     assert abs(previous_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(previous_metrics["groupHeight"] - baseline_group_height) <= 1
     assert abs(previous_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
@@ -245,7 +282,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
 
     assert last_metrics["nextDisabled"] is True
     assert last_metrics["visibleCount"] == 1
-    assert last_metrics["minHeight"] != "0px"
+    assert last_metrics["gridAutoRows"] == metrics["gridAutoRows"]
     assert abs(last_metrics["clientHeight"] - baseline_client_height) <= 1
     assert abs(last_metrics["groupHeight"] - baseline_group_height) <= 1
     assert abs(last_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
@@ -258,7 +295,7 @@ def assert_paginated_action_layout(page: Page, group_key: str):
 
     page.locator(f".dashboard-action-group--{group_key} [data-dashboard-page='previous']").click()
     stable_metrics = get_paginated_layout_metrics(page, group_key)
-    assert stable_metrics["minHeight"] != "0px"
+    assert stable_metrics["gridAutoRows"] == metrics["gridAutoRows"]
     assert abs(stable_metrics["paginationOffsetTop"] - baseline_pagination_offset_top) <= 1
 
 
