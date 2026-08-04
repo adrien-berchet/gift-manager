@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Gift Manager PostgreSQL backup nightly
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=gift-manager-postgres-backup.service
+
+[Install]
+WantedBy=timers.target

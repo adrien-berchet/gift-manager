@@ -1,0 +1,280 @@
+{% extends "gift_manager/fallback/base_fallback.html" %}
+{% load i18n %}
+{% load fallback_tags %}
+
+{% comment %}
+Fallback list template for users without JavaScript
+Provides simple table-based listing with basic pagination
+{% endcomment %}
+
+{% block fallback_content %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>{{ translated_type|default:type }}</h2>
+
+        {% if perms.gift_manager.add %}
+            <div class="fallback-actions">
+                <a href="{% url 'gift_manager:'|add:object_type|lower|add:'_create' %}?no_js=1"
+                   class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>{% trans "Add" %} {{ translated_type|default:type }}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if fallback_table_data %}
+        <!-- Search Form -->
+        <div class="fallback-form">
+            <h5>{% trans "Search" %}</h5>
+            <form method="get" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text"
+                           name="search"
+                           value="{{ request.GET.search }}"
+                           class="form-control"
+                           placeholder="{% trans 'Search...' %}">
+                    <input type="hidden" name="no_js" value="1">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-search me-2"></i>{% trans "Search" %}
+                    </button>
+                    {% if request.GET.search %}
+                        <a href="?no_js=1" class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-2"></i>{% trans "Clear" %}
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Table -->
+        <div class="table-responsive">
+            <table class="fallback-table table table-striped">
+                <thead>
+                    <tr>
+                        {% for column in fallback_table_data.columns %}
+                            <th>{{ column.label }}</th>
+                        {% endfor %}
+                        <th>{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in fallback_table_data.rows %}
+                        <tr>
+                            {% for column in fallback_table_data.columns %}
+                                <td>{{ row|lookup:column.field|default:"-" }}</td>
+                            {% endfor %}
+                            <td>
+                                <div class="fallback-actions">
+                                    {% for action in row.actions %}
+                                        <a href="{{ action.url }}" class="{{ action.class }}">
+                                            {{ action.label }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="{{ fallback_table_data.columns|length|add:1 }}" class="text-center text-muted">
+                                {% if request.GET.search %}
+                                    {% trans "No results found for your search." %}
+                                {% else %}
+                                    {% trans "No items found." %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <nav aria-label="{% trans 'Page navigation' %}">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                                {% trans "First" %}
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                                {% trans "Previous" %}
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            {% trans "Page" %} {{ page_obj.number }} {% trans "of" %} {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                                {% trans "Next" %}
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&no_js=1">
+                                {% trans "Last" %}
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+
+    {% else %}
+        <!-- Fallback for when table data is not available -->
+        <div class="fallback-form">
+            <h5>{% trans "Items" %}</h5>
+            {% if object_list %}
+                <div class="list-group">
+                    {% for object in object_list %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ object }}</h6>
+                                {% if object.description %}
+                                    <p class="mb-1 text-muted">{{ object.description|truncatewords:20 }}</p>
+                                {% endif %}
+                            </div>
+                            <div class="fallback-actions">
+                                <a href="{{ object.get_absolute_url }}" class="btn btn-sm btn-outline-primary">
+                                    {% trans "View" %}
+                                </a>
+                                {% if perms.gift_manager.change %}
+                                    <a href="{{ object.get_absolute_url }}edit/?no_js=1" class="btn btn-sm btn-outline-warning">
+                                        {% trans "Edit" %}
+                                    </a>
+                                {% endif %}
+                                {% if perms.gift_manager.delete %}
+                                    <a href="{{ object.get_absolute_url }}delete/?no_js=1" class="btn btn-sm btn-outline-danger">
+                                        {% trans "Delete" %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Simple pagination -->
+                {% if is_paginated %}
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            {% trans "Showing" %} {{ page_obj.start_index }} - {{ page_obj.end_index }}
+                            {% trans "of" %} {{ page_obj.paginator.count }} {% trans "items" %}
+                        </div>
+                        <div class="fallback-actions">
+                            {% if page_obj.has_previous %}
+                                <a href="?page={{ page_obj.previous_page_number }}&no_js=1" class="btn btn-outline-primary">
+                                    {% trans "Previous" %}
+                                </a>
+                            {% endif %}
+                            {% if page_obj.has_next %}
+                                <a href="?page={{ page_obj.next_page_number }}&no_js=1" class="btn btn-outline-primary">
+                                    {% trans "Next" %}
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-inbox fa-3x mb-3"></i>
+                    <p>{% trans "No items found." %}</p>
+                    {% if perms.gift_manager.add %}
+                        <a href="{% url 'gift_manager:'|add:object_type|lower|add:'_create' %}?no_js=1"
+                           class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>{% trans "Add the first" %} {{ translated_type|default:type }}
+                        </a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+    {{ block.super }}
+    <script>
+        // Add table sorting for fallback tables
+        document.addEventListener('DOMContentLoaded', function() {
+            const tables = document.querySelectorAll('.fallback-table');
+            tables.forEach(function(table) {
+                const headers = table.querySelectorAll('th');
+                headers.forEach(function(header, index) {
+                    if (index < headers.length - 1) { // Skip actions column
+                        header.style.cursor = 'pointer';
+                        header.title = '{% trans "Click to sort" %}';
+
+                        header.addEventListener('click', function() {
+                            sortTable(table, index);
+                        });
+                    }
+                });
+            });
+        });
+
+        function sortTable(table, columnIndex) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            // Determine sort direction
+            const isAscending = !table.dataset.sortAsc || table.dataset.sortAsc === 'false';
+            table.dataset.sortAsc = isAscending.toString();
+
+            // Sort rows
+            rows.sort(function(a, b) {
+                const aText = a.cells[columnIndex].textContent.trim();
+                const bText = b.cells[columnIndex].textContent.trim();
+
+                // Try numeric sort first
+                const aNum = parseFloat(aText);
+                const bNum = parseFloat(bText);
+
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return isAscending ? aNum - bNum : bNum - aNum;
+                }
+
+                // Fallback to string sort
+                return isAscending ?
+                    aText.localeCompare(bText) :
+                    bText.localeCompare(aText);
+            });
+
+            // Re-append sorted rows
+            rows.forEach(function(row) {
+                tbody.appendChild(row);
+            });
+
+            // Update header indicators
+            const headers = table.querySelectorAll('th');
+            headers.forEach(function(header, index) {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (index === columnIndex) {
+                    header.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+    </script>
+
+    <style>
+        .fallback-table th.sort-asc::after {
+            content: ' ↑';
+            color: #0d6efd;
+        }
+
+        .fallback-table th.sort-desc::after {
+            content: ' ↓';
+            color: #0d6efd;
+        }
+
+        .fallback-table th[style*="cursor: pointer"]:hover {
+            background-color: #dee2e6;
+        }
+    </style>
+{% endblock %}

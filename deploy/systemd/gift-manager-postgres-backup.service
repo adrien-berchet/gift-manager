@@ -1,0 +1,11 @@
+[Unit]
+Description=Gift Manager PostgreSQL backup
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/gift-manager
+EnvironmentFile=/etc/gift-manager/backup.env
+Environment=BACKUP_REASON=scheduled
+ExecStart=/opt/gift-manager/scripts/postgres_backup.sh

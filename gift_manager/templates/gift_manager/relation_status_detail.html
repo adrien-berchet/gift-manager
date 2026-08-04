@@ -2,17 +2,17 @@
 {% load custom_filters %}
 
 {% load i18n %}
-{% block title %}Gift Manager - {% trans "Gifting status details" %}{% endblock %}
+{% block title %}Gift Manager - {% trans "Gift Plan status details" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Gifting status details" %}</h1>
+<h1 class="my-4">{% trans "Gift Plan status details" %}</h1>
 <p><strong>{% trans "Status" %}:</strong> {{ status.status }}</p>
 
-<h2 class="my-4">{% trans "Giftings with this status" %}</h2>
+<h2 class="my-4">{% trans "Gift Plans with this status" %}</h2>
 {% if relations %}
 <div id="relations-grid" class="mt-3"></div>
 {% else %}
-<p class="text-center text-muted">{% trans "No giftings with this status" %}</p>
+<p class="text-center text-muted">{% trans "No gift plans with this status" %}</p>
 {% endif %}
 {% endblock %}
 
@@ -23,49 +23,64 @@
 
 <script>
     (function () {
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
+
         {% if relations %}
         // Relations Grid
         const relationsData = [
             {% for relation in relations %}
-    [
-        {% if relation.person %}"person"{% else %} "group"{% endif %},
-    {% if relation.person %} "{{ relation.person.person_id }}"{% else %} "{{ relation.group.group_id }}"{% endif %},
-    {% if relation.person %} "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}"{% else %} "{{ relation.group.name|escapejs }}"{% endif %},
-    {% if relation.person %} "{% url 'gift_manager:person_detail' relation.person.person_id %}"{% else %} "{% url 'gift_manager:person_group_detail' relation.group.group_id %}"{% endif %},
-    "{{ relation.gift.gift_id }}",
-        "{{ relation.gift.name|escapejs }}",
-        "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-        "{{ relation.comment|escapejs }}",
-        "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
-        "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
-        {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
-    "{{ relation.relation_id }}",
-        "{% url 'gift_manager:relation_detail' relation.relation_id %}",
-        "{% url 'gift_manager:relation_edit' relation.relation_id %}",
-        "{% url 'gift_manager:relation_delete' relation.relation_id %}",
-        {% if relation.group %}false{% else %} true{% endif %}
+            [
+                "{{ relation.recipient_type|escapejs }}",
+                "{{ relation.recipient_key|escapejs }}",
+                "{{ relation.recipient_name|escapejs }}",
+                "{{ relation.recipient_url|escapejs }}",
+                "{{ relation.gift.gift_id }}",
+                "{{ relation.gift.name|escapejs }}",
+                "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
+                "{{ relation.comment|escapejs }}",
+                "{% if relation.event %}{{ relation.event.name|escapejs }}{% endif %}",
+                "{% if relation.event %}{% url 'gift_manager:event_detail' relation.event.event_id %}{% endif %}",
+                {% if relation.due_date %}{ iso: "{{ relation.due_date|date:'Y-m-d' }}", display: "{{ relation.due_date|date }}" }{% else %}null{% endif %},
+                "{{ relation.relation_id }}",
+                "{% url 'gift_manager:relation_detail' relation.relation_id %}",
+                "{% url 'gift_manager:relation_edit' relation.relation_id %}",
+                "{% url 'gift_manager:relation_delete' relation.relation_id %}",
+                {% if relation.is_group_targeted %}false{% else %} true{% endif %}
             ],
-    {% endfor %}
+            {% endfor %}
         ];
 
-    const relationsColumns = [
-        { name: 'type', hidden: true },
-        { name: 'id', hidden: true },
-        {
-            name: "{% trans 'Person' %} / {% trans 'Group' %}",
-            sort: {
-                compare: GridUtils.sortString()
-            },
-            formatter: (cell, row) => {
-                const name = row.cells[2].data;
-                const url = row.cells[3].data;
-                if (url) {
-                    return gridjs.html(`<a href="${url}">${name}</a>`);
+        const relationsColumns = [
+            { name: 'type', hidden: true },
+            { name: 'id', hidden: true },
+            {
+                name: "{% trans 'Recipient' %}",
+                sort: {
+                    compare: GridUtils.sortString()
+                },
+                formatter: (cell, row) => {
+                    const type = row.cells[0].data;
+                    const name = row.cells[2].data;
+                    const url = row.cells[3].data;
+                    const typeLabel = recipientTypeLabels[type] || '';
+                    const badgeClass = recipientTypeBadgeClasses[type] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? GridUtils.badgeHtml(typeLabel, null, `badge ${badgeClass} ms-2`)
+                        : '';
+                    if (url) {
+                        return gridjs.html(`${GridUtils.linkHtml(url, name)}${badge}`);
+                    }
+                    return gridjs.html(`${GridUtils.escapeHtml(name)}${badge}`);
                 }
-                return name;
-            }
-        },
-        { name: 'person_group_url', hidden: true },
+            },
+        { name: 'recipient_url', hidden: true },
         { name: 'gift_id', hidden: true },
         {
             name: "{% trans 'Gift' %}",
@@ -75,7 +90,7 @@
             formatter: (cell, row) => {
                 const giftName = row.cells[5].data;
                 const giftUrl = row.cells[6].data;
-                return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+                return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
             }
         },
         { name: 'gift_url', hidden: true },
@@ -94,7 +109,7 @@
                 const eventName = row.cells[8].data;
                 const eventUrl = row.cells[9].data;
                 if (eventName && eventUrl) {
-                    return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(eventUrl, eventName));
                 }
                 return eventName;
             }

@@ -5,6 +5,7 @@
 {% block title %}Gift Manager - {% trans "Home" %}{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 <style>
     .hero-section {
         background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
@@ -231,38 +232,6 @@
         flex-shrink: 0;
     }
 
-    /* Status Pills */
-    .status-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-2);
-    }
-
-    .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: var(--space-2);
-        padding: var(--space-2) var(--space-3);
-        background: var(--color-gray-100);
-        border-radius: var(--radius-full);
-        font-size: var(--text-sm);
-        font-weight: 500;
-        color: var(--text-secondary);
-    }
-
-    [data-theme="dark"] .status-pill {
-        background: var(--surface-elevated);
-    }
-
-    .status-pill .count {
-        background: var(--color-primary);
-        color: white;
-        padding: 2px 8px;
-        border-radius: var(--radius-full);
-        font-size: var(--text-xs);
-        font-weight: 600;
-    }
-
     /* Quick Actions */
     .quick-actions {
         display: flex;
@@ -380,8 +349,268 @@
         color: var(--color-danger);
     }
 
+    /* Action-oriented dashboard */
+    .dashboard-topbar {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-4);
+        margin-bottom: var(--space-5);
+    }
+
+    .dashboard-kicker {
+        margin-bottom: var(--space-1);
+        color: var(--text-muted);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dashboard-topbar h1 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-3xl);
+        font-weight: 700;
+    }
+
+    .dashboard-top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: var(--space-2);
+    }
+
+    .dashboard-summary-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--space-3);
+        margin-bottom: var(--space-6);
+    }
+
+    .dashboard-summary-tile {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        min-width: 0;
+        padding: var(--space-4);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        color: var(--text-secondary);
+        text-decoration: none;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .dashboard-summary-tile i {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: var(--radius-md);
+        background: var(--surface-elevated);
+        color: var(--color-primary);
+        flex-shrink: 0;
+    }
+
+    .dashboard-summary-tile strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: var(--text-xl);
+        line-height: 1;
+    }
+
+    .dashboard-summary-tile span {
+        display: block;
+        margin-top: 0.2rem;
+        font-size: var(--text-xs);
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+
+    .dashboard-summary-tile--attention {
+        border-color: rgba(245, 158, 11, 0.45);
+        background: var(--color-warning-light);
+    }
+
+    .dashboard-summary-tile--attention i {
+        background: rgba(245, 158, 11, 0.16);
+        color: var(--color-warning-hover);
+    }
+
+    .next-action-board {
+        margin-bottom: var(--space-8);
+    }
+
+    .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-bottom: var(--space-4);
+    }
+
+    .section-heading h2 {
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-xl);
+        font-weight: 700;
+    }
+
+    .action-group-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--space-4);
+    }
+
+    .dashboard-action-group {
+        min-width: 0;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .dashboard-action-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-3);
+        margin-bottom: var(--space-3);
+    }
+
+    .dashboard-action-heading h3 {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        margin: 0;
+        color: var(--text-primary);
+        font-size: var(--text-base);
+        font-weight: 700;
+    }
+
+    .dashboard-action-heading i {
+        color: var(--color-primary);
+    }
+
+    .dashboard-action-count {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        min-height: 1.75rem;
+        padding: 0.2rem 0.45rem;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        background: var(--surface-card);
+        color: var(--text-secondary);
+        font-weight: 700;
+    }
+
+    .dashboard-action-list--paginated {
+        align-content: start;
+        overflow: visible;
+    }
+
+    .dashboard-action-list--paginated.dashboard-action-list--short-page {
+        grid-auto-rows: auto;
+    }
+
+    .dashboard-action-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        margin-top: var(--space-3);
+    }
+
+    .dashboard-action-pagination[hidden] {
+        display: none !important;
+    }
+
+    .dashboard-action-page-status {
+        min-width: 3.5rem;
+        color: var(--text-secondary);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-align: center;
+    }
+
+    .dashboard-action-pagination .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2rem;
+        height: 2rem;
+        padding: 0;
+    }
+
+    .dashboard-action-group--compact {
+        align-self: start;
+    }
+
+    .dashboard-action-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        color: var(--color-primary);
+        font-size: var(--text-sm);
+        font-weight: 700;
+        text-decoration: none;
+    }
+
+    .dashboard-action-link:hover {
+        color: var(--color-primary-hover);
+        text-decoration: underline;
+    }
+
+    @media (min-width: 768px) {
+        .dashboard-action-group--compact {
+            grid-column: span 2;
+        }
+    }
+
+    .dashboard-empty-action {
+        display: grid;
+        justify-items: center;
+        gap: var(--space-3);
+        padding: var(--space-8) var(--space-4);
+        border: 1px dashed var(--border-color);
+        border-radius: var(--radius-md);
+        color: var(--text-muted);
+        text-align: center;
+    }
+
+    .dashboard-empty-action i {
+        color: var(--color-success);
+        font-size: 2rem;
+    }
+
+    .dashboard-secondary-section {
+        padding-top: var(--space-5);
+        border-top: 1px solid var(--border-color);
+    }
+
+    .secondary-stats-heading {
+        margin: 0 0 var(--space-3);
+        color: var(--text-primary);
+        font-size: var(--text-base);
+        font-weight: 700;
+    }
+
     /* Responsive - Tablet */
     @media (max-width: 768px) {
+        .dashboard-topbar,
+        .section-heading {
+            display: grid;
+        }
+
+        .dashboard-top-actions {
+            justify-content: flex-start;
+        }
+
+        .dashboard-summary-strip {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
         .hero-section {
             padding: var(--space-6) var(--space-5);
         }
@@ -415,6 +644,19 @@
 
     /* Responsive - Mobile */
     @media (max-width: 576px) {
+        .dashboard-topbar h1 {
+            font-size: var(--text-2xl);
+        }
+
+        .dashboard-summary-strip,
+        .action-group-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-summary-tile {
+            padding: var(--space-3);
+        }
+
         .hero-section {
             padding: var(--space-5) var(--space-4);
             text-align: center;
@@ -517,15 +759,6 @@
             font-size: 10px;
         }
 
-        .status-list {
-            gap: var(--space-1);
-        }
-
-        .status-pill {
-            font-size: var(--text-xs);
-            padding: var(--space-1) var(--space-2);
-        }
-
         .empty-state {
             padding: var(--space-4) var(--space-2);
         }
@@ -562,7 +795,7 @@
 
         .welcome-section .d-flex.gap-3 {
             flex-direction: column;
-            gap: var(--space-2) !important;
+            gap: var(--space-2);
         }
 
         .welcome-section .btn-lg {
@@ -599,229 +832,184 @@
 {% block content %}
 
 {% if user.is_authenticated %}
-    <!-- Hero Section -->
-    <div class="hero-section animate-fade-in">
-        <div class="hero-content">
-            <div class="d-flex align-items-center gap-4 mb-3">
-                <img src="{% static 'gift_manager/images/gift.png' %}" alt="Gift" class="hero-icon">
-                <div>
-                    <h1>{% trans "Welcome back" %}{% if user.first_name %}, {{ user.first_name }}{% endif %}!</h1>
-                    <p class="mb-0">{% trans "Manage your gifts, track special occasions, and never forget a thoughtful present." %}</p>
-                </div>
-            </div>
+    <div class="dashboard-topbar animate-fade-in">
+        <div>
+            <div class="dashboard-kicker">{% trans "Dashboard" %}</div>
+            <h1>{% trans "Next actions" %}{% if user.first_name %}, {{ user.first_name }}{% endif %}</h1>
+        </div>
+        <div class="dashboard-top-actions">
+            <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+                <i class="fas fa-hand-holding-heart me-2"></i>{% trans "New Gift Plan" %}
+            </a>
+            <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-2"></i>{% trans "Gift Plans" %}
+            </a>
         </div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="stats-grid">
-        <a href="{% url 'gift_manager:persons' %}" class="stat-card">
-            <div class="stat-icon persons">
-                <i class="fas fa-users"></i>
+    <div id="dashboard-live"
+         data-list-container
+         hx-get="{% url 'gift_manager:home' %}"
+         hx-trigger="refresh"
+         hx-select="#dashboard-live"
+         hx-target="this"
+         hx-swap="outerHTML">
+    <div class="dashboard-summary-strip" aria-label="{% trans 'Dashboard summary' %}">
+        <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="dashboard-summary-tile dashboard-summary-tile--attention">
+            <i class="fas fa-bell" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.attention|default:0 }}</strong>
+                <span>{% trans "Needs attention" %}</span>
             </div>
-            <div class="stat-value">{{ stats.persons|default:0 }}</div>
-            <div class="stat-label">{% trans "Persons" %}</div>
         </a>
-        <a href="{% url 'gift_manager:person_groups' %}" class="stat-card">
-            <div class="stat-icon groups">
-                <i class="fas fa-layer-group"></i>
+        <a href="{% url 'gift_manager:relations' %}?focus=overdue#gift-plan-group-overdue" class="dashboard-summary-tile">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.overdue|default:0 }}</strong>
+                <span>{% trans "Overdue" %}</span>
             </div>
-            <div class="stat-value">{{ stats.groups|default:0 }}</div>
-            <div class="stat-label">{% trans "Groups" %}</div>
         </a>
-        <a href="{% url 'gift_manager:gifts' %}" class="stat-card">
-            <div class="stat-icon gifts">
-                <i class="fas fa-gift"></i>
+        <a href="{% url 'gift_manager:relations' %}?focus=due_soon#gift-plan-group-due_soon" class="dashboard-summary-tile">
+            <i class="fas fa-clock" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.upcoming|default:0 }}</strong>
+                <span>{% trans "Due soon" %}</span>
             </div>
-            <div class="stat-value">{{ stats.gifts|default:0 }}</div>
-            <div class="stat-label">{% trans "Gifts" %}</div>
         </a>
-        <a href="{% url 'gift_manager:events' %}" class="stat-card">
-            <div class="stat-icon events">
-                <i class="fas fa-calendar-alt"></i>
+        <a href="{% url 'gift_manager:gifts' %}" class="dashboard-summary-tile">
+            <i class="fas fa-gift" aria-hidden="true"></i>
+            <div>
+                <strong>{{ dashboard_summary.unassigned_gifts|default:0 }}</strong>
+                <span>{% trans "Unassigned gifts" %}</span>
             </div>
-            <div class="stat-value">{{ stats.events|default:0 }}</div>
-            <div class="stat-label">{% trans "Events" %}</div>
-        </a>
-        <a href="{% url 'gift_manager:relations' %}" class="stat-card">
-            <div class="stat-icon relations">
-                <i class="fas fa-hand-holding-heart"></i>
-            </div>
-            <div class="stat-value">{{ stats.relations|default:0 }}</div>
-            <div class="stat-label">{% trans "Giftings" %}</div>
         </a>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="dashboard-card mb-4">
-        <div class="dashboard-card-header">
-            <h3><i class="fas fa-bolt"></i> {% trans "Quick Actions" %}</h3>
-        </div>
-        <div class="dashboard-card-body">
-            <div class="quick-actions">
-                <a href="{% url 'gift_manager:gift_create' %}" class="quick-action-btn">
-                    <i class="fas fa-plus-circle"></i>
-                    {% trans "New Gift" %}
-                </a>
-                <a href="{% url 'gift_manager:person_create' %}" class="quick-action-btn">
-                    <i class="fas fa-user-plus"></i>
-                    {% trans "New Person" %}
-                </a>
-                <a href="{% url 'gift_manager:person_group_create' %}" class="quick-action-btn">
-                    <i class="fas fa-users"></i>
-                    {% trans "New Group" %}
-                </a>
-                <a href="{% url 'gift_manager:event_create' %}" class="quick-action-btn">
-                    <i class="fas fa-calendar-plus"></i>
-                    {% trans "New Event" %}
-                </a>
-                <a href="{% url 'gift_manager:relation_create' %}" class="quick-action-btn">
-                    <i class="fas fa-hand-holding-heart"></i>
-                    {% trans "New Gifting" %}
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Dashboard Grid -->
-    <div class="dashboard-grid">
-        <!-- Upcoming Giftings -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-clock"></i> {% trans "Upcoming Giftings" %}</h3>
-                <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if upcoming_giftings %}
-                <ul class="item-list">
-                    {% for relation in upcoming_giftings %}
-                    <li>
-                        <div class="item-icon gift">
-                            <i class="fas fa-gift"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:relation_detail' relation.relation_id %}" class="item-title">
-                                {{ relation.gift.name }}
-                            </a>
-                            <span class="item-subtitle">
-                                {% if relation.person %}
-                                    {% trans "For" %} {{ relation.person }}
-                                {% elif relation.group %}
-                                    {% trans "For" %} {{ relation.group.name }}
-                                {% endif %}
-                                {% if relation.event %} - {{ relation.event.name }}{% endif %}
-                            </span>
-                        </div>
-                        <div class="item-badge">
-                            <span class="badge {% if relation.due_date|timesince|slice:':1' == '0' %}bg-danger{% else %}bg-warning{% endif %}">
-                                {{ relation.due_date|date:"M d" }}
-                            </span>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-calendar-check"></i>
-                    <p>{% trans "No upcoming giftings in the next 30 days" %}</p>
-                </div>
-                {% endif %}
-            </div>
+    <section class="next-action-board" aria-labelledby="next-action-heading">
+        <div class="section-heading">
+            <h2 id="next-action-heading">{% trans "Needs attention" %}</h2>
+            <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="btn btn-sm btn-outline-primary">
+                {% trans "Open workspace" %}
+            </a>
         </div>
 
-        <!-- Giftings by Status -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-chart-pie"></i> {% trans "Giftings by Status" %}</h3>
-            </div>
-            <div class="dashboard-card-body">
-                {% if status_counts %}
-                <div class="status-list">
-                    {% for item in status_counts %}
-                    <div class="status-pill">
-                        {{ item.status }}
-                        <span class="count">{{ item.count }}</span>
+        {% if dashboard_action_groups %}
+        <div class="action-group-grid">
+            {% for group in dashboard_action_groups %}
+            <section class="dashboard-action-group dashboard-action-group--{{ group.key }}{% if group.is_compact %} dashboard-action-group--compact{% endif %}"
+                     {% if group.is_paginated %}data-dashboard-action-paginated{% endif %}
+                     {% if group.is_compact %}data-dashboard-rows-per-page="1"{% endif %}
+                     aria-labelledby="dashboard-action-group-{{ group.key }}">
+                <div class="dashboard-action-heading">
+                    <h3 id="dashboard-action-group-{{ group.key }}">
+                        <i class="fas {{ group.icon }}" aria-hidden="true"></i>{{ group.label }}
+                    </h3>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if group.is_compact and group.workspace_focus %}
+                        <a href="{% url 'gift_manager:relations' %}?focus={{ group.workspace_focus }}#gift-plan-group-{{ group.workspace_focus }}"
+                           class="dashboard-action-link">
+                            {% trans "View all" %}
+                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
+                        <span class="dashboard-action-count">{{ group.items|length }}</span>
                     </div>
+                </div>
+                <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} dashboard-action-list--paginated{% endif %}"
+                     {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
+                    {% for card in group.display_items %}
+                    {% include "gift_manager/includes/gift_plan_card.html" with card=card dashboard_paginated=group.is_paginated %}
                     {% endfor %}
                 </div>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-inbox"></i>
-                    <p>{% trans "No giftings yet" %}</p>
+                {% if group.is_paginated %}
+                <div class="dashboard-action-pagination" data-dashboard-pagination hidden>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            data-dashboard-page="previous"
+                            aria-label="{% trans 'Previous page' %}">
+                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <span class="dashboard-action-page-status"
+                          data-dashboard-page-status
+                          aria-live="polite"
+                          aria-atomic="true">1 / 1</span>
+                    <button type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            data-dashboard-page="next"
+                            aria-label="{% trans 'Next page' %}">
+                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                    </button>
                 </div>
                 {% endif %}
+            </section>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="dashboard-empty-action">
+            <i class="fas fa-circle-check" aria-hidden="true"></i>
+            <p>{% trans "No gift plans need attention." %}</p>
+            <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Create a gift plan" %}
+            </a>
+        </div>
+        {% endif %}
+    </section>
+
+    <section class="dashboard-secondary-section" aria-labelledby="dashboard-library-heading">
+        <div class="section-heading">
+            <h2 id="dashboard-library-heading">{% trans "Library" %}</h2>
+            <div class="quick-actions">
+                <a href="{% url 'gift_manager:gift_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-plus-circle"></i>{% trans "New Gift" %}
+                </a>
+                <a href="{% url 'gift_manager:person_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-user-plus"></i>{% trans "New Person" %}
+                </a>
+                <a href="{% url 'gift_manager:event_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-calendar-plus"></i>{% trans "New Event" %}
+                </a>
             </div>
         </div>
 
-        <!-- Recent Gifts -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-gift"></i> {% trans "Recent Gifts" %}</h3>
-                <a href="{% url 'gift_manager:gifts' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if recent_gifts %}
-                <ul class="item-list">
-                    {% for gift in recent_gifts %}
-                    <li>
-                        <div class="item-icon gift">
-                            <i class="fas fa-gift"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:gift_detail' gift.gift_id %}" class="item-title">
-                                {{ gift.name }}
-                            </a>
-                            {% if gift.comment %}
-                            <span class="item-subtitle">{{ gift.comment|truncatewords:8 }}</span>
-                            {% endif %}
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fas fa-gift"></i>
-                    <p>{% trans "No gifts added yet" %}</p>
-                    <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add your first gift" %}
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Recent Persons -->
-        <div class="dashboard-card">
-            <div class="dashboard-card-header">
-                <h3><i class="fas fa-users"></i> {% trans "Recent Persons" %}</h3>
-                <a href="{% url 'gift_manager:persons' %}" class="btn btn-sm btn-outline-primary">{% trans "View all" %}</a>
-            </div>
-            <div class="dashboard-card-body">
-                {% if recent_persons %}
-                <ul class="item-list">
-                    {% for person in recent_persons %}
-                    <li>
-                        <div class="item-icon person">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="item-content">
-                            <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="item-title">
-                                {{ person.first_name }} {{ person.family_name|default:"" }}
-                            </a>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="empty-state">
+        <div class="stats-grid">
+            <a href="{% url 'gift_manager:recipients' %}" class="stat-card">
+                <div class="stat-icon persons">
                     <i class="fas fa-users"></i>
-                    <p>{% trans "No persons added yet" %}</p>
-                    <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary btn-sm">
-                        <i class="fas fa-plus me-1"></i>{% trans "Add your first person" %}
-                    </a>
                 </div>
-                {% endif %}
-            </div>
+                <div class="stat-value">{{ stats.recipients|default:0 }}</div>
+                <div class="stat-label">{% trans "Recipients" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:person_groups' %}" class="stat-card">
+                <div class="stat-icon groups">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="stat-value">{{ stats.groups|default:0 }}</div>
+                <div class="stat-label">{% trans "Groups" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:gifts' %}" class="stat-card">
+                <div class="stat-icon gifts">
+                    <i class="fas fa-gift"></i>
+                </div>
+                <div class="stat-value">{{ stats.gifts|default:0 }}</div>
+                <div class="stat-label">{% trans "Gifts" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:events' %}" class="stat-card">
+                <div class="stat-icon events">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <div class="stat-value">{{ stats.events|default:0 }}</div>
+                <div class="stat-label">{% trans "Events" %}</div>
+            </a>
+            <a href="{% url 'gift_manager:relations' %}" class="stat-card">
+                <div class="stat-icon relations">
+                    <i class="fas fa-hand-holding-heart"></i>
+                </div>
+                <div class="stat-value">{{ stats.relations|default:0 }}</div>
+                <div class="stat-label">{% trans "Gift Plans" %}</div>
+            </a>
         </div>
+
+    </section>
     </div>
 
 {% else %}
@@ -865,4 +1053,171 @@
     </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script src="{% static 'gift_manager/js/gift-plan-quick-actions.js' %}"></script>
+<script>
+    (function () {
+        const defaultRowsPerPage = 2;
+        let resizeTimer = null;
+
+        function getCards(group) {
+            return Array.from(group.querySelectorAll('[data-dashboard-action-card]'));
+        }
+
+        function getColumnCount(list, cards) {
+            const previousHiddenStates = cards.map((card) => card.hidden);
+            cards.forEach((card) => {
+                card.hidden = false;
+            });
+
+            const styles = window.getComputedStyle(list);
+            const columns = styles.gridTemplateColumns
+                .split(' ')
+                .filter((column) => column && column !== 'none').length;
+
+            cards.forEach((card, index) => {
+                card.hidden = previousHiddenStates[index];
+            });
+
+            return Math.max(columns || 1, 1);
+        }
+
+        function measureStablePageHeight(list, cards, pageSize, pageCount) {
+            const previousHiddenStates = cards.map((card) => card.hidden);
+            const previousMinHeight = list.style.minHeight;
+            const hadShortPage = list.classList.contains('dashboard-action-list--short-page');
+            let stableHeight = 0;
+
+            list.style.minHeight = '';
+            list.classList.remove('dashboard-action-list--short-page');
+
+            for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+                const firstVisibleIndex = pageIndex * pageSize;
+                const firstHiddenIndex = firstVisibleIndex + pageSize;
+                cards.forEach((card, index) => {
+                    card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
+                });
+                stableHeight = Math.max(stableHeight, list.getBoundingClientRect().height);
+            }
+
+            cards.forEach((card, index) => {
+                card.hidden = previousHiddenStates[index];
+            });
+            list.style.minHeight = previousMinHeight;
+            list.classList.toggle('dashboard-action-list--short-page', hadShortPage);
+
+            return stableHeight;
+        }
+
+        function updateGroup(group) {
+            const list = group.querySelector('[data-dashboard-action-list]');
+            const pagination = group.querySelector('[data-dashboard-pagination]');
+            const previousButton = group.querySelector('[data-dashboard-page="previous"]');
+            const nextButton = group.querySelector('[data-dashboard-page="next"]');
+            const status = group.querySelector('[data-dashboard-page-status]');
+            const cards = getCards(group);
+
+            if (!list || cards.length === 0) return;
+
+            const rowsPerPage = Number.parseInt(
+                group.dataset.dashboardRowsPerPage || defaultRowsPerPage.toString(),
+                10
+            ) || defaultRowsPerPage;
+            const columns = getColumnCount(list, cards);
+            const pageSize = Math.max(columns * rowsPerPage, 1);
+            const pageCount = Math.max(Math.ceil(cards.length / pageSize), 1);
+            const requestedPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10);
+            const currentPage = Math.min(Math.max(requestedPage || 0, 0), pageCount - 1);
+            const firstVisibleIndex = currentPage * pageSize;
+            const firstHiddenIndex = firstVisibleIndex + pageSize;
+
+            group.dataset.dashboardCurrentPage = currentPage.toString();
+            group.dataset.dashboardPageSize = pageSize.toString();
+
+            list.style.minHeight = '';
+            list.classList.remove('dashboard-action-list--short-page');
+            const stablePageHeight = pageCount > 1
+                ? measureStablePageHeight(list, cards, pageSize, pageCount)
+                : 0;
+            cards.forEach((card, index) => {
+                card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
+            });
+
+            const visibleCount = Math.min(pageSize, Math.max(cards.length - firstVisibleIndex, 0));
+            if (stablePageHeight > 0) {
+                list.style.minHeight = `${Math.ceil(stablePageHeight)}px`;
+            }
+            if (stablePageHeight > 0 && visibleCount < pageSize) {
+                list.classList.add('dashboard-action-list--short-page');
+            }
+
+            if (!pagination) return;
+
+            pagination.hidden = pageCount <= 1;
+            if (previousButton) {
+                previousButton.disabled = currentPage <= 0;
+            }
+            if (nextButton) {
+                nextButton.disabled = currentPage >= pageCount - 1;
+            }
+            if (status) {
+                status.textContent = `${currentPage + 1} / ${pageCount}`;
+            }
+        }
+
+        function initDashboardPagination(root) {
+            const scope = root && root.querySelectorAll ? root : document;
+            const groups = scope.matches && scope.matches('[data-dashboard-action-paginated]')
+                ? [scope]
+                : Array.from(scope.querySelectorAll('[data-dashboard-action-paginated]'));
+
+            groups.forEach(updateGroup);
+        }
+
+        document.addEventListener('click', function (event) {
+            const button = event.target.closest('[data-dashboard-page]');
+            if (!button) return;
+
+            const group = button.closest('[data-dashboard-action-paginated]');
+            if (!group) return;
+
+            const direction = button.dataset.dashboardPage === 'next' ? 1 : -1;
+            const currentPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10) || 0;
+            group.dataset.dashboardCurrentPage = (currentPage + direction).toString();
+            updateGroup(group);
+        });
+
+        window.addEventListener('resize', function () {
+            window.clearTimeout(resizeTimer);
+            resizeTimer = window.setTimeout(function () {
+                initDashboardPagination(document);
+            }, 120);
+        });
+
+        document.body.addEventListener('htmx:afterSwap', function () {
+            window.setTimeout(function () {
+                initDashboardPagination(document.getElementById('dashboard-live') || document);
+            }, 0);
+        });
+
+        document.addEventListener('dashboard-live:refreshed', function () {
+            initDashboardPagination(document.getElementById('dashboard-live') || document);
+        });
+
+        window.GiftManagerDashboardPagination = {
+            init: initDashboardPagination,
+        };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                initDashboardPagination(document);
+            });
+        } else {
+            initDashboardPagination(document);
+        }
+    })();
+</script>
 {% endblock %}

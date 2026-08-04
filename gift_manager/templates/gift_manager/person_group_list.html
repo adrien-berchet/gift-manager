@@ -2,9 +2,15 @@
 
 {% load i18n %}
 {% load static %}
+{% load permission_tags %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
 <style>
     /* Tree view styles */
     .tree-view-container {
@@ -52,7 +58,9 @@
     }
     .tree-node-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
+        justify-content: flex-end;
     }
     .tree-children {
         margin-left: 0;
@@ -96,6 +104,9 @@
     .drag-handle:hover {
         color: #495057;
     }
+    .tree-move-btn {
+        white-space: nowrap;
+    }
 </style>
 {% endblock %}
 
@@ -106,7 +117,7 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary">
+        <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new group" %}
         </a>
         <a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-secondary">
@@ -115,8 +126,7 @@
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="person-group-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-group-grid" show_bulk_select=True %}
 
 <!-- View Toggle Buttons (only show if hierarchy exists) -->
 {% if has_hierarchy %}
@@ -134,7 +144,7 @@
 
 <!-- Grid View Container -->
 <div class="grid-view-container active mt-3">
-    <div id="person-group-grid"></div>
+    <div id="person-group-grid" class="list-container"></div>
 </div>
 
 <!-- Tree View Container -->
@@ -168,6 +178,15 @@
                         <span class="badge bg-secondary badge-count ms-2">{{ node.member_count }} {% trans "members" %}</span>
                     </div>
                     <div class="tree-node-actions">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary tree-move-btn"
+                                data-bs-toggle="modal"
+                                data-bs-target="#groupMoveModal"
+                                data-group-id="{{ node.group_id }}"
+                                data-group-name="{{ node.name }}"
+                                title="{% trans 'Move group' %}">
+                            <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                        </button>
                         {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True %}
                     </div>
                 </div>
@@ -178,18 +197,51 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="groupMoveModal" tabindex="-1" aria-labelledby="groupMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="group-move-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="groupMoveModalLabel">{% trans "Move group" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="group-move-source-id">
+                    <label for="group-move-parent" class="form-label">{% trans "Parent group" %}</label>
+                    <select id="group-move-parent" class="form-select"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" id="group-move-submit">
+                        <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
         // Calculate column indices for clarity
-        const numDataColumns = {{ column_names.items| length }};
+        const numDataColumns = 1 + {{ column_names.items| length }};  // +1 for checkbox column
     const groupIdIdx = numDataColumns;           // Index of group_id
     const giveUrlIdx = numDataColumns + 1;       // Index of give/relation create URL
     const detailUrlIdx = numDataColumns + 2;     // Index of detail URL
@@ -197,15 +249,17 @@
     const deleteUrlIdx = numDataColumns + 4;     // Index of delete URL
 
     // Prepare data for Grid.js
+    // Include placeholder (empty string) for checkbox column as first element
     const data = [
         {% for item in data %}
     [
+        '', // Checkbox column placeholder
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
     "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
     {% else %}
     {% if item.grouped_groups %}
-    [{% for group_name, group_id in item.grouped_groups %}{ id: { { group_id } }, name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]
+    [{% for group_name, group_id in item.grouped_groups %}{ id: "{{ group_id|escapejs }}", name: "{{ group_name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group_id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]
     {% if not forloop.last %}, {% endif %}
     {% else %}
     []{% if not forloop.last %}, {% endif %}
@@ -222,7 +276,9 @@
         ];
 
     // Build columns dynamically
+    // Checkbox column first, managed by Grid.js
     const columns = [
+        GridUtils.createCheckboxColumn(groupIdIdx),
         {% for col, name in column_names.items %}
     {% if col != "groups" %}
     {
@@ -244,36 +300,54 @@
     { name: 'group_edit_url', hidden: true },
     { name: 'group_delete_url', hidden: true },
     {
+        id: 'actions',
         name: '{% trans "Actions"|escapejs %}',
-            width: '180px',
-                sort: false,
-                    formatter: GridUtils.actionButtonsFormatter({
-                        give: (row) => row.cells[giveUrlIdx].data,
-                        details: (row) => row.cells[detailUrlIdx].data,
-                        edit: (row) => row.cells[editUrlIdx].data,
-                        delete: (row) => row.cells[deleteUrlIdx].data
-                    }, ['give', 'details', 'edit', 'delete'])
+        width: '360px',
+        sort: false,
+        formatter: PermissionUtils.permissionAwareActionFormatter({
+            give: (row) => row.cells[giveUrlIdx].data,
+            details: (row) => row.cells[detailUrlIdx].data,
+            edit: (row) => row.cells[editUrlIdx].data,
+            delete: (row) => row.cells[deleteUrlIdx].data,
+            share: () => "{% url 'gift_manager:share_objects' %}"
+        }, ['give', 'details', 'edit', 'delete', 'share'], {
+            idResolver: (row) => row.cells[groupIdIdx].data  // group_id
+        }, userPermissions)
     }
     ];
 
+    const inlineEditingMapping = {
+        1: 'name'
+    };
+
     // Initialize Grid.js
-    const grid = GridUtils.initGrid('person-group-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        }
-    });
+    try {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'person-group-grid',
+            entityType: 'persongroup',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }
+                ]
+            },
+            idFieldIndex: groupIdIdx
+        });
 
-    // Initialize filter panel
-    FilterPanel.init('person-group-grid', grid, columns);
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const statusHeader = document.querySelector('#person-group-grid th:nth-child(1)');
-        if (statusHeader) {
-            statusHeader.click();
-        }
-    }, 100);
+    } catch (error) {
+        console.error('[PersonGroupList] Error initializing grid:', error);
+    }
     }) ();
 
     // Tree View functionality
@@ -484,6 +558,116 @@
             return descendants.some(descendant => descendant.dataset.groupId === targetGroupId);
         }
 
+        function currentParentIds(node) {
+            return (node.dataset.parentIds || '').split(',').filter(Boolean);
+        }
+
+        function findTreeNode(groupId) {
+            return Array.from(treeNodes).find(node => node.dataset.groupId === groupId);
+        }
+
+        function validMoveTargets(sourceGroupId) {
+            const invalidIds = new Set([sourceGroupId]);
+            getAllDescendants(sourceGroupId).forEach(descendant => {
+                invalidIds.add(descendant.dataset.groupId);
+            });
+
+            return Array.from(treeNodes).filter(node => !invalidIds.has(node.dataset.groupId));
+        }
+
+        function showMoveError(message) {
+            const fallback = "{% trans 'An error occurred while moving the group' %}";
+            if (window.showNotification) {
+                window.showNotification(message || fallback, 'error');
+            } else {
+                alert(message || fallback);
+            }
+        }
+
+        async function reparentGroup(groupId, parentIds) {
+            const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
+                body: JSON.stringify({
+                    group_id: groupId,
+                    parent_ids: parentIds,
+                    action: 'set'
+                })
+            });
+
+            let data = {};
+            try {
+                data = await response.json();
+            } catch (error) {
+                data = { message: "{% trans 'An error occurred while moving the group' %}" };
+            }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "{% trans 'An error occurred while moving the group' %}");
+            }
+
+            return data;
+        }
+
+        const groupMoveModal = document.getElementById('groupMoveModal');
+        const groupMoveForm = document.getElementById('group-move-form');
+        const groupMoveSourceInput = document.getElementById('group-move-source-id');
+        const groupMoveParentSelect = document.getElementById('group-move-parent');
+        const groupMoveSubmit = document.getElementById('group-move-submit');
+        const groupMoveTitle = document.getElementById('groupMoveModalLabel');
+
+        if (groupMoveModal && groupMoveForm && groupMoveSourceInput && groupMoveParentSelect) {
+            groupMoveModal.addEventListener('show.bs.modal', function(event) {
+                const trigger = event.relatedTarget;
+                const sourceGroupId = trigger?.dataset.groupId;
+                const sourceGroupName = trigger?.dataset.groupName || '';
+                const sourceNode = findTreeNode(sourceGroupId);
+
+                groupMoveSourceInput.value = sourceGroupId || '';
+                groupMoveTitle.textContent = sourceGroupName
+                    ? "{% trans 'Move' %} " + sourceGroupName
+                    : "{% trans 'Move group' %}";
+
+                groupMoveParentSelect.innerHTML = '';
+                groupMoveParentSelect.appendChild(new Option("{% trans 'Root group' %}", ''));
+
+                if (sourceNode) {
+                    validMoveTargets(sourceGroupId).forEach(targetNode => {
+                        const depth = parseInt(targetNode.dataset.depth, 10) || 0;
+                        const label = '-- '.repeat(depth) + targetNode.dataset.groupName;
+                        groupMoveParentSelect.appendChild(new Option(label, targetNode.dataset.groupId));
+                    });
+
+                    const parents = currentParentIds(sourceNode);
+                    groupMoveParentSelect.value = parents[0] || '';
+                }
+            });
+
+            groupMoveForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const sourceGroupId = groupMoveSourceInput.value;
+                const selectedParentId = groupMoveParentSelect.value;
+                const parentIds = selectedParentId ? [selectedParentId] : [];
+
+                if (!sourceGroupId) return;
+
+                groupMoveSubmit.disabled = true;
+
+                try {
+                    await reparentGroup(sourceGroupId, parentIds);
+                    window.location.reload();
+                } catch (error) {
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
+                } finally {
+                    groupMoveSubmit.disabled = false;
+                }
+            });
+        }
+
         treeNodes.forEach(node => {
             // Drag start
             node.addEventListener('dragstart', (e) => {
@@ -561,30 +745,11 @@
 
                 // Call API to reparent
                 try {
-                    const response = await fetch("{% url 'gift_manager:api_reparent_group' %}", {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': getCsrfToken()
-                        },
-                        body: JSON.stringify({
-                            group_id: draggedGroupId,
-                            parent_ids: [targetGroupId],
-                            action: 'set'
-                        })
-                    });
-
-                    const data = await response.json();
-
-                    if (data.success) {
-                        // Success - reload the page to show updated hierarchy
-                        window.location.reload();
-                    } else {
-                        alert("{% trans 'Error:' %} " + data.message);
-                    }
+                    await reparentGroup(draggedGroupId, [targetGroupId]);
+                    window.location.reload();
                 } catch (error) {
                     console.error('Reparenting error:', error);
-                    alert("{% trans 'An error occurred while moving the group' %}");
+                    showMoveError(error.message || "{% trans 'An error occurred while moving the group' %}");
                 }
             });
         });

@@ -1,5 +1,6 @@
 """Common utilities and type definitions for views."""
 
+from datetime import date
 from datetime import timedelta
 from typing import TypeAlias
 
@@ -9,20 +10,199 @@ from django.db.models import Model
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
+from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
+from gift_manager.gift_plan_actions import gift_plan_has_contextual_edit_action
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
-from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionService
+from gift_manager.statuses import is_idea_status
+from gift_manager.statuses import is_terminal_status
+from gift_manager.statuses import relation_status_slug
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]
 SharedObjectType = Person | PersonGroup | Gift | Event | Relation
+
+DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS = 7
+DASHBOARD_STALE_AFTER_DAYS = 30
+DASHBOARD_PAGINATED_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
+DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("upcoming", "incomplete"))
+
+
+def _gift_plan_status_class(status) -> str:
+    """Return the shared gift-plan status CSS class."""
+    return f"gift-plan-status--{relation_status_slug(status)}"
+
+
+def _is_completed_status(status) -> bool:
+    """Return whether a gift-plan status is considered completed."""
+    return is_terminal_status(status)
+
+
+def _gift_plan_requires_planning_fields(relation: Relation) -> bool:
+    """Return whether a gift plan expects concrete planning details."""
+    return not is_idea_status(relation.status) and not _is_completed_status(relation.status)
+
+
+def _gift_plan_has_missing_event(relation: Relation) -> bool:
+    """Return whether an active gift plan is missing its event."""
+    return _gift_plan_requires_planning_fields(relation) and relation.event_id is None
+
+
+def _dashboard_quick_action_urgency_key(
+    relation: Relation,
+    urgency_key: str,
+    today: date,
+) -> str:
+    """Return the urgency key used to choose dashboard quick actions."""
+    if (
+        urgency_key == "due_soon"
+        and relation.due_date
+        and relation.due_date > today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
+    ):
+        if _gift_plan_requires_planning_fields(relation) and relation.event_id is None:
+            return "needs_details"
+        return "later"
+    return urgency_key
+
+
+def _build_dashboard_action_item(
+    relation: Relation,
+    action_key: str,
+    user,
+    *,
+    today: date,
+) -> dict:
+    """Return presentation data for a dashboard gift-plan action."""
+    urgency_key = {
+        "upcoming": "due_soon",
+        "incomplete": "needs_details",
+        "stale": "later",
+    }.get(action_key, action_key)
+    quick_action_urgency_key = _dashboard_quick_action_urgency_key(relation, urgency_key, today)
+    permission = PermissionService.get_permission(relation, user)
+    can_edit = permission >= PermissionLevel.EDITOR
+    quick_actions = build_gift_plan_quick_actions(
+        relation,
+        quick_action_urgency_key,
+        can_edit=can_edit,
+    )
+    has_missing_event = _gift_plan_has_missing_event(relation)
+    return {
+        "relation": relation,
+        "action_key": action_key,
+        "urgency_key": urgency_key,
+        "status_class": _gift_plan_status_class(relation.status),
+        "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
+        "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
+        "quick_action_url": reverse(
+            "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
+        ),
+        "quick_actions": quick_actions,
+        "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
+        "event_options": [],
+        "has_missing_event": has_missing_event,
+        "missing_event_label": gettext("Missing event") if has_missing_event else "",
+        "can_edit": can_edit,
+    }
+
+
+def _build_gift_plan_action_groups(
+    relations: list[Relation],
+    *,
+    user,
+    today: date,
+    now,
+) -> list[dict]:
+    """Build priority-ordered dashboard action groups for gift plans."""
+    due_soon_end = today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
+    stale_before = now - timedelta(days=DASHBOARD_STALE_AFTER_DAYS)
+    groups = {
+        "overdue": {
+            "key": "overdue",
+            "label": gettext("Overdue"),
+            "icon": "fa-triangle-exclamation",
+            "items": [],
+        },
+        "upcoming": {
+            "key": "upcoming",
+            "label": gettext("Due soon"),
+            "icon": "fa-clock",
+            "items": [],
+        },
+        "incomplete": {
+            "key": "incomplete",
+            "label": gettext("Needs details"),
+            "icon": "fa-list-check",
+            "items": [],
+        },
+        "stale": {
+            "key": "stale",
+            "label": gettext("Stale"),
+            "icon": "fa-hourglass-half",
+            "items": [],
+        },
+    }
+
+    for relation in relations:
+        if _is_completed_status(relation.status):
+            continue
+
+        if relation.due_date and relation.due_date < today:
+            group_key = "overdue"
+        elif relation.due_date and relation.due_date <= due_soon_end:
+            group_key = "upcoming"
+        elif relation.due_date is None and is_idea_status(relation.status):
+            continue
+        elif _gift_plan_requires_planning_fields(relation) and (
+            relation.due_date is None or relation.event_id is None
+        ):
+            group_key = "incomplete"
+        elif relation.creation_date and relation.creation_date <= stale_before:
+            group_key = "stale"
+        else:
+            continue
+
+        groups[group_key]["items"].append(
+            _build_dashboard_action_item(relation, group_key, user, today=today)
+        )
+
+    group_order = ("overdue", "upcoming", "incomplete", "stale")
+    action_groups = [groups[key] for key in group_order if groups[key]["items"]]
+    for group in action_groups:
+        is_paginated = group["key"] in DASHBOARD_PAGINATED_ACTION_GROUPS
+        group["is_paginated"] = is_paginated
+        group["is_compact"] = group["key"] in DASHBOARD_COMPACT_ACTION_GROUPS
+        group["workspace_focus"] = {
+            "upcoming": "due_soon",
+            "incomplete": "needs_details",
+        }.get(group["key"], "")
+        group["display_items"] = group["items"] if is_paginated else group["items"][:4]
+    return action_groups
+
+
+def _build_dashboard_summary(action_groups: list[dict], unassigned_gift_count: int) -> dict:
+    """Return compact action counts for the dashboard summary strip."""
+    action_counts = {group["key"]: len(group["items"]) for group in action_groups}
+    attention_count = sum(action_counts.values()) + unassigned_gift_count
+    return {
+        "attention": attention_count,
+        "overdue": action_counts.get("overdue", 0),
+        "upcoming": action_counts.get("upcoming", 0),
+        "incomplete": action_counts.get("incomplete", 0),
+        "stale": action_counts.get("stale", 0),
+        "unassigned_gifts": unassigned_gift_count,
+    }
 
 
 def get_user(user_id, *, return_id=False) -> tuple[User, str] | tuple[User, str, str]:
@@ -50,35 +230,45 @@ def home(request):
         user = request.user
 
         # Statistics
+        person_count = Person.objects.accessible_by(user).count()
+        group_count = PersonGroup.objects.accessible_by(user).count()
         context["stats"] = {
-            "persons": Person.objects.accessible_by(user).count(),
-            "groups": PersonGroup.objects.accessible_by(user).count(),
+            "recipients": person_count + group_count,
+            "persons": person_count,
+            "groups": group_count,
             "gifts": Gift.objects.accessible_by(user).count(),
             "events": Event.objects.accessible_by(user).count(),
             "relations": Relation.objects.accessible_by(user).count(),
         }
 
-        # Recent gifts (last 5)
-        context["recent_gifts"] = Gift.objects.accessible_by(user).order_by("-creation_date")[:5]
+        now = timezone.now()
+        today = timezone.localdate()
 
-        # Upcoming due dates (next 30 days)
-        today = timezone.now().date()
-        thirty_days = today + timedelta(days=30)
-        context["upcoming_giftings"] = (
+        gift_plan_queryset = (
             Relation.objects.accessible_by(user)
-            .filter(due_date__gte=today, due_date__lte=thirty_days)
-            .select_related("gift", "person", "group", "status", "event")
-            .order_by("due_date")[:5]
+            .with_related_objects()
+            .prefetch_related("gift__tags")
+            .order_by("due_date", "creation_date", "gift__name")
+        )
+        gift_plans = list(gift_plan_queryset)
+        action_groups = _build_gift_plan_action_groups(
+            gift_plans,
+            user=user,
+            today=today,
+            now=now,
         )
 
-        # Giftings by status
-        statuses = RelationStatus.objects.all()
-        status_counts = []
-        for status in statuses:
-            count = Relation.objects.accessible_by(user).filter(status=status).count()
-            if count > 0:
-                status_counts.append({"status": status, "count": count})
-        context["status_counts"] = status_counts
+        unassigned_gift_count = (
+            Gift.objects.accessible_by(user).filter(gifts__isnull=True).distinct().count()
+        )
+        context["dashboard_action_groups"] = action_groups
+        context["dashboard_summary"] = _build_dashboard_summary(
+            action_groups,
+            unassigned_gift_count,
+        )
+
+        # Recent gifts (last 5)
+        context["recent_gifts"] = Gift.objects.accessible_by(user).order_by("-creation_date")[:5]
 
         # Recent persons (last 5)
         context["recent_persons"] = Person.objects.accessible_by(user).order_by("-creation_date")[
@@ -127,10 +317,10 @@ def global_search(request):
     )
     results.extend(
         {
-            "type": "person",
+            "type": "recipient",
             "icon": "fa-user",
             "title": str(person),
-            "subtitle": "",
+            "subtitle": gettext("Person"),
             "url": f"/persons/{person.person_id}/",
         }
         for person in persons
@@ -144,10 +334,10 @@ def global_search(request):
     )
     results.extend(
         {
-            "type": "group",
+            "type": "recipient",
             "icon": "fa-layer-group",
             "title": group.name,
-            "subtitle": "",
+            "subtitle": gettext("Group"),
             "url": f"/person_groups/{group.group_id}/",
         }
         for group in groups

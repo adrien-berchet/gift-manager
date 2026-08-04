@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Gift Manager media backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:45:00
+Persistent=true
+RandomizedDelaySec=15m
+Unit=gift-manager-media-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -38,7 +38,7 @@ def get_env_variable(var_name: str, default: str | None = None, *, required: boo
         ImproperlyConfigured: If required=True and variable is not set.
     """
     value = os.environ.get(var_name, default)
-    if required and value is None:
+    if required and (value is None or not str(value).strip()):
         msg = f"The {var_name} environment variable is required but not set."
         raise ImproperlyConfigured(msg)
     return value
@@ -75,6 +75,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "gift_manager.middleware.ContentSecurityPolicyMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -154,7 +155,6 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_ADAPTER = "gift_manager.adapters.EncryptedEmailAccountAdapter"
 ACCOUNT_SIGNUP_FIELDS = ["email*", "email2*", "username*", "password1*", "password2*"]
 ACCOUNT_CHANGE_EMAIL = True
-ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
 ACCOUNT_RATE_LIMITS = {
@@ -164,6 +164,8 @@ ACCOUNT_RATE_LIMITS = {
 
 # Invitation settings
 INVITATION_EXPIRY_DAYS = 7
+INVITATION_SEND_LIMIT = 10
+INVITATION_SEND_WINDOW_SECONDS = 3600
 
 # Email encryption key for privacy
 # Generate with:
@@ -182,7 +184,7 @@ LANGUAGES = [
     ("fr", gettext_lazy("French")),
 ]
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "en"
 
 LOCALE_PATHS = [
     BASE_DIR / "locale",
@@ -219,6 +221,10 @@ STORAGES = {
 # Media files (Uploaded files)
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Production settings define an enforced policy. Non-production defaults to no
+# CSP header so local tools and tests can opt in deliberately.
+CONTENT_SECURITY_POLICY = ""
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

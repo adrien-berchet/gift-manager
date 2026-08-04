@@ -4,9 +4,105 @@ This module contains security-hardened settings for production deployment.
 All sensitive values MUST be set via environment variables.
 """
 
+import os
+from urllib.parse import urlparse
+
+from django.core.exceptions import ImproperlyConfigured
+
 from .base import *  # noqa: F403
 from .base import get_bool_env
 from .base import get_env_variable
+
+
+def get_csv_env(var_name: str, *, required: bool) -> list[str]:
+    """Return values from a comma-separated environment variable."""
+    values = [
+        value.strip() for value in get_env_variable(var_name, "", required=required).split(",")
+    ]
+    values = [value for value in values if value]
+    if required and not values:
+        msg = f"The {var_name} environment variable must contain at least one value."
+        raise ImproperlyConfigured(msg)
+    return values
+
+
+def get_required_csv_env(var_name: str) -> list[str]:
+    """Return a non-empty comma-separated environment variable."""
+    return get_csv_env(var_name, required=True)
+
+
+def has_env_value(var_name: str) -> bool:
+    """Return whether an environment variable contains a non-blank value."""
+    return bool(os.environ.get(var_name, "").strip())
+
+
+def validate_allowed_hosts(hosts: list[str]) -> list[str]:
+    """Require exact hostnames for production host validation."""
+    for host in hosts:
+        if not host or "," in host or any(character.isspace() for character in host):
+            msg = "ALLOWED_HOSTS values must be exact non-empty hostnames."
+            raise ImproperlyConfigured(msg)
+        if host == "*" or host.startswith(".") or "*" in host:
+            msg = "ALLOWED_HOSTS must contain exact hostnames; wildcards are not allowed."
+            raise ImproperlyConfigured(msg)
+        if "://" in host or "/" in host or ":" in host:
+            msg = "ALLOWED_HOSTS values must be hostnames only, without schemes, ports, or paths."
+            raise ImproperlyConfigured(msg)
+    return hosts
+
+
+def validate_csrf_origins(origins: list[str], allowed_hosts: list[str]) -> list[str]:
+    """Require exact HTTPS CSRF origins that match allowed production hosts."""
+    allowed_host_set = {host.lower() for host in allowed_hosts}
+    for origin in origins:
+        parsed = urlparse(origin)
+        if parsed.scheme != "https" or not parsed.hostname:
+            msg = "CSRF_TRUSTED_ORIGINS must contain exact https:// origins."
+            raise ImproperlyConfigured(msg)
+        if "*" in parsed.hostname:
+            msg = "CSRF_TRUSTED_ORIGINS must not contain wildcard hosts."
+            raise ImproperlyConfigured(msg)
+        if parsed.path not in ("", "/") or parsed.params or parsed.query or parsed.fragment:
+            msg = "CSRF_TRUSTED_ORIGINS must not include paths, queries, or fragments."
+            raise ImproperlyConfigured(msg)
+        if parsed.hostname.lower() not in allowed_host_set:
+            msg = "CSRF_TRUSTED_ORIGINS hosts must be present in ALLOWED_HOSTS."
+            raise ImproperlyConfigured(msg)
+    return origins
+
+
+def get_vercel_preview_host() -> str | None:
+    """Return Vercel's exact generated preview hostname when available."""
+    if os.environ.get("VERCEL") != "1":
+        return None
+    if os.environ.get("VERCEL_ENV", "").strip().lower() != "preview":
+        return None
+    host = os.environ.get("VERCEL_URL", "").strip()
+    if not host:
+        msg = (
+            "VERCEL_URL must be set for Vercel preview deployments. "
+            "Enable Vercel system environment variables for this project."
+        )
+        raise ImproperlyConfigured(msg)
+    return host
+
+
+def include_vercel_preview_host(hosts: list[str], preview_host: str | None) -> list[str]:
+    """Add Vercel's exact preview host without allowing wildcard preview hosts."""
+    if not preview_host or preview_host in hosts:
+        return hosts
+    return [*hosts, preview_host]
+
+
+def include_vercel_preview_origin(origins: list[str], preview_host: str | None) -> list[str]:
+    """Add Vercel's exact preview HTTPS origin for CSRF validation."""
+    if not preview_host:
+        return origins
+    preview_origin = f"https://{preview_host}"
+    if preview_origin in origins:
+        return origins
+    return [*origins, preview_origin]
+
 
 # SECURITY: Secret key must be set in production
 SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
@@ -15,11 +111,24 @@ SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
 DEBUG = False
 
 # Allowed hosts - configure based on your domain
-ALLOWED_HOSTS = [
-    host.strip()
-    for host in get_env_variable("ALLOWED_HOSTS", ".vercel.app,gift-manager.vercel.app").split(",")
-    if host.strip()
-]
+VERCEL_PREVIEW_HOST = get_vercel_preview_host()
+ALLOWED_HOSTS_ENV_CONFIGURED = has_env_value("ALLOWED_HOSTS")
+ALLOWED_HOSTS = validate_allowed_hosts(
+    include_vercel_preview_host(
+        get_csv_env("ALLOWED_HOSTS", required=VERCEL_PREVIEW_HOST is None),
+        VERCEL_PREVIEW_HOST,
+    )
+)
+
+EMAIL_ENCRYPTION_KEY = get_env_variable("EMAIL_ENCRYPTION_KEY", required=True)
+
+try:
+    from cryptography.fernet import Fernet
+
+    Fernet(EMAIL_ENCRYPTION_KEY.encode())
+except (ImportError, ValueError) as exc:
+    msg = "EMAIL_ENCRYPTION_KEY must be a valid Fernet key."
+    raise ImproperlyConfigured(msg) from exc
 
 # Database configuration from environment
 DATABASES = {
@@ -60,16 +169,34 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in get_env_variable("CSRF_TRUSTED_ORIGINS", "https://*.vercel.app").split(",")
-    if origin.strip()
-]
+CSRF_ENV_REQUIRED = VERCEL_PREVIEW_HOST is None
+CSRF_ENV_USABLE = CSRF_ENV_REQUIRED or ALLOWED_HOSTS_ENV_CONFIGURED
+CSRF_TRUSTED_ORIGINS = validate_csrf_origins(
+    include_vercel_preview_origin(
+        get_csv_env("CSRF_TRUSTED_ORIGINS", required=CSRF_ENV_REQUIRED) if CSRF_ENV_USABLE else [],
+        VERCEL_PREVIEW_HOST,
+    ),
+    ALLOWED_HOSTS,
+)
 
 # Content security
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; "
+    "style-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com "
+    "https://fonts.googleapis.com 'unsafe-inline'; "
+    "font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com data:; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "upgrade-insecure-requests"
+)
 
 # Referrer policy
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
@@ -85,7 +212,7 @@ EMAIL_USE_TLS = get_bool_env("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = get_bool_env("EMAIL_USE_SSL", default=False)
 EMAIL_HOST_USER = get_env_variable("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = get_env_variable("EMAIL_HOST_PASSWORD", "")
-DEFAULT_FROM_EMAIL = get_env_variable("DEFAULT_FROM_EMAIL", "noreply@gift-manager.com")
+DEFAULT_FROM_EMAIL = get_env_variable("DEFAULT_FROM_EMAIL", required=True)
 SERVER_EMAIL = get_env_variable("SERVER_EMAIL", DEFAULT_FROM_EMAIL)
 
 # Admin emails for error notifications

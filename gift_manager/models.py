@@ -1,5 +1,7 @@
 # pylint: disable=too-many-lines
+import calendar
 import uuid
+from datetime import date as date_class
 from datetime import timedelta
 
 from django.conf import settings
@@ -19,8 +21,10 @@ from django.db.models.functions import NullIf
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
+from django.utils import formats
 from django.utils import timezone
 from django.utils.functional import classproperty
+from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
 
 from .email_encoding import decode_email
@@ -87,19 +91,25 @@ class PersonQuerySet(UserPermissionQuerySet):
 
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""
-        return self.annotate(
-            groups_info=JSONBAgg(
-                Func(
-                    Value("id"),
-                    F("groups__group_id"),
-                    Value("name"),
-                    F("groups__name"),
-                    function="jsonb_build_object",
-                ),
-                filter=Q(groups__group_id__isnull=False),
-                distinct=True,
+        from django.db import connection
+
+        # Use database-specific aggregation
+        if connection.vendor == "postgresql":
+            return self.annotate(
+                groups_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("groups__group_id"),
+                        Value("name"),
+                        F("groups__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(groups__group_id__isnull=False),
+                    distinct=True,
+                )
             )
-        )
+        # For SQLite and other databases, use a simpler approach
+        return self.prefetch_related("groups")
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
@@ -140,19 +150,25 @@ class GiftQuerySet(UserPermissionQuerySet):
 
     def with_tags_annotated(self):
         """Return gifts with tags information annotated for Grid.js."""
-        return self.annotate(
-            tags_info=JSONBAgg(
-                Func(
-                    Value("id"),
-                    F("tags__tag_id"),
-                    Value("name"),
-                    F("tags__name"),
-                    function="jsonb_build_object",
-                ),
-                filter=Q(tags__tag_id__isnull=False),
-                distinct=True,
+        from django.db import connection
+
+        # Use database-specific aggregation
+        if connection.vendor == "postgresql":
+            return self.annotate(
+                tags_info=JSONBAgg(
+                    Func(
+                        Value("id"),
+                        F("tags__tag_id"),
+                        Value("name"),
+                        F("tags__name"),
+                        function="jsonb_build_object",
+                    ),
+                    filter=Q(tags__tag_id__isnull=False),
+                    distinct=True,
+                )
             )
-        )
+        # For SQLite and other databases, use a simpler approach
+        return self.prefetch_related("tags")
 
 
 class GiftManager(models.Manager):
@@ -183,7 +199,14 @@ class EventManager(UserPermissionManager):
 
     def for_list_display(self, user):
         """Return queryset optimized for list display."""
-        return self.accessible_by(user).values("event_id", "name", "comment", "usual_date")
+        return self.accessible_by(user).only(
+            "event_id",
+            "name",
+            "comment",
+            "schedule_type",
+            "date",
+            "recurrence",
+        )
 
 
 class RelationQuerySet(UserPermissionQuerySet):
@@ -341,10 +364,10 @@ class Invitation(models.Model):
 
     def is_expired(self):
         """Check if the invitation has expired."""
-        if not hasattr(settings, "INVITATION_EXPIRY_DAYS"):
+        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", None)
+        if expiry_days is None:
             return False  # If not configured, invitations don't expire
 
-        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", 7)
         expiry_date = self.created_at + timedelta(days=expiry_days)
         return timezone.now() > expiry_date
 
@@ -412,6 +435,25 @@ class PersonPermission(models.Model):
 
 class PersonGroupManager(UserPermissionManager):
     """Manager for PersonGroup model with hierarchy query methods."""
+
+    def accessible_by(self, user):
+        """Return groups accessible directly or through inherited parent permissions."""
+        queryset = self.get_queryset()
+        if not user or not user.is_authenticated:
+            return queryset.none()
+
+        inherited_group_ids = set()
+        inherited_permissions = (
+            PersonGroupPermission.objects.filter(user=user, inherit_permissions=True)
+            .select_related("group")
+            .order_by("group_id")
+        )
+        for permission in inherited_permissions:
+            inherited_group_ids.update(
+                descendant.pk for descendant in permission.group.get_descendants()
+            )
+
+        return queryset.filter(Q(shared_with=user) | Q(pk__in=inherited_group_ids)).distinct()
 
     def root_groups_for_user(self, user):
         """Return all root groups (without parents) accessible by a user."""
@@ -681,7 +723,7 @@ class PersonGroupPermission(models.Model):
 class GiftTagManager(models.Manager):
     def accessible_by(self, user):
         """Return all tags accessible by a user."""
-        return self.filter(Q(is_public=True) | Q(shared_with=user))
+        return self.filter(Q(is_public=True) | Q(shared_with=user)).distinct()
 
     def root_tags_for_user(self, user):
         """Return all root tags accessible by a user."""
@@ -873,10 +915,21 @@ class GiftTag(models.Model):
         # Check if we are already an ancestor of the potential parent
         return self in potential_parent.get_ancestors()
 
-    def get_all_gifts(self):
-        """Returns all gifts associated with this tag and its descendants."""
-        tags = [self, *self.get_descendants()]
-        return Gift.objects.filter(tags__in=tags).distinct()
+    def get_all_gifts(self, user=None):
+        """Returns gifts associated with this tag and descendants, optionally user-filtered."""
+        if user is None:
+            tags = [self, *self.get_descendants()]
+            return Gift.objects.filter(tags__in=tags).distinct()
+
+        accessible_tag_ids = set(GiftTag.objects.accessible_by(user).values_list("pk", flat=True))
+        if self.pk not in accessible_tag_ids:
+            return Gift.objects.none()
+
+        tags = [
+            self,
+            *[tag for tag in self.get_descendants() if tag.pk in accessible_tag_ids],
+        ]
+        return Gift.objects.accessible_by(user).filter(tags__in=tags).distinct()
 
     def clear_hierarchy_cache(self):
         """Clear cached hierarchy data for this tag and related tags."""
@@ -970,19 +1023,30 @@ class GiftPermission(models.Model):
 class Event(models.Model):
     """Model for an event."""
 
+    class ScheduleType(models.TextChoices):
+        UNSCHEDULED = "unscheduled", gettext_lazy("No date yet")
+        ONE_TIME = "one_time", gettext_lazy("One-time")
+        RECURRING = "recurring", gettext_lazy("Repeating")
+
+    RECURRENCE_CHOICES = [
+        ("daily", gettext_lazy("Daily")),
+        ("weekly", gettext_lazy("Weekly")),
+        ("monthly", gettext_lazy("Monthly")),
+        ("yearly", gettext_lazy("Yearly")),
+    ]
+
     event_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
-    usual_date = models.DateField(unique=False, null=True, blank=True)
-    absolute_date = models.DateField(unique=False, null=True, blank=True)
+    schedule_type = models.CharField(
+        max_length=20,
+        choices=ScheduleType.choices,
+        default=ScheduleType.UNSCHEDULED,
+    )
+    date = models.DateField(unique=False, null=True, blank=True)
     recurrence = models.CharField(
         max_length=20,
-        choices=[
-            ("daily", "Daily"),
-            ("weekly", "Weekly"),
-            ("monthly", "Monthly"),
-            ("yearly", "Yearly"),
-        ],
+        choices=RECURRENCE_CHOICES,
         null=True,
         blank=True,
     )
@@ -1000,6 +1064,115 @@ class Event(models.Model):
 
     def __str__(self) -> str:
         return f"{self.name}"
+
+    @property
+    def is_scheduled(self) -> bool:
+        return self.schedule_type != self.ScheduleType.UNSCHEDULED and self.date is not None
+
+    @property
+    def is_recurring(self) -> bool:
+        return self.schedule_type == self.ScheduleType.RECURRING and bool(self.recurrence)
+
+    @property
+    def date_summary(self) -> str:
+        if not self.is_scheduled:
+            return gettext("No date yet")
+
+        formatted_date = formats.date_format(self.date, "DATE_FORMAT")
+        if self.is_recurring:
+            return gettext("Repeats %(recurrence)s from %(date)s") % {
+                "recurrence": self.recurrence_sentence_label,
+                "date": formatted_date,
+            }
+        return formatted_date
+
+    @property
+    def recurrence_sentence_label(self) -> str:
+        """Return the recurrence label in the grammar used by date summaries."""
+        labels = {
+            "daily": gettext("daily"),
+            "weekly": gettext("weekly"),
+            "monthly": gettext("monthly"),
+            "yearly": gettext("yearly"),
+        }
+        return labels.get(self.recurrence, self.get_recurrence_display().lower())
+
+    def clean(self):
+        """Keep the schedule fields consistent with the selected schedule type."""
+        super().clean()
+        errors = {}
+
+        if self.schedule_type == self.ScheduleType.UNSCHEDULED:
+            if self.date is not None:
+                errors["date"] = gettext_lazy("Leave the date empty for unscheduled events.")
+            if self.recurrence:
+                errors["recurrence"] = gettext_lazy(
+                    "Leave the recurrence empty for unscheduled events."
+                )
+        elif self.schedule_type == self.ScheduleType.ONE_TIME:
+            if self.date is None:
+                errors["date"] = gettext_lazy("Choose a date.")
+            if self.recurrence:
+                errors["recurrence"] = gettext_lazy("One-time events cannot have a recurrence.")
+        elif self.schedule_type == self.ScheduleType.RECURRING:
+            if self.date is None:
+                errors["date"] = gettext_lazy("Choose a date.")
+            if not self.recurrence:
+                errors["recurrence"] = gettext_lazy("Choose a recurrence.")
+        else:
+            errors["schedule_type"] = gettext_lazy("Choose a valid schedule.")
+
+        if errors:
+            raise ValidationError(errors)
+
+    def next_occurrence(self, today=None):
+        """Return the next occurrence date for scheduled events."""
+        if not self.is_scheduled:
+            return None
+
+        today = today or timezone.localdate()
+        if self.schedule_type == self.ScheduleType.ONE_TIME:
+            return self.date if self.date >= today else None
+
+        if self.date >= today:
+            return self.date
+
+        recurrence_handlers = {
+            "daily": self._next_daily_occurrence,
+            "weekly": self._next_weekly_occurrence,
+            "monthly": self._next_monthly_occurrence,
+            "yearly": self._next_yearly_occurrence,
+        }
+        handler = recurrence_handlers.get(self.recurrence)
+        return handler(today) if handler else None
+
+    def _next_daily_occurrence(self, today: date_class) -> date_class:
+        return today
+
+    def _next_weekly_occurrence(self, today: date_class) -> date_class:
+        days_until_next = (7 - ((today - self.date).days % 7)) % 7
+        return today + timedelta(days=days_until_next)
+
+    def _next_monthly_occurrence(self, today: date_class) -> date_class:
+        day = min(self.date.day, calendar.monthrange(today.year, today.month)[1])
+        candidate = date_class(today.year, today.month, day)
+        if candidate >= today:
+            return candidate
+
+        year = today.year + (today.month // 12)
+        month = 1 if today.month == 12 else today.month + 1
+        day = min(self.date.day, calendar.monthrange(year, month)[1])
+        return date_class(year, month, day)
+
+    def _next_yearly_occurrence(self, today: date_class) -> date_class:
+        candidate = self._date_for_year(today.year)
+        if candidate >= today:
+            return candidate
+        return self._date_for_year(today.year + 1)
+
+    def _date_for_year(self, year: int) -> date_class:
+        day = min(self.date.day, calendar.monthrange(year, self.date.month)[1])
+        return date_class(year, self.date.month, day)
 
 
 class EventPermission(models.Model):
@@ -1080,24 +1253,92 @@ class Relation(models.Model):
     class Meta:
         verbose_name = gettext_lazy("Relation")
         verbose_name_plural = gettext_lazy("Relations")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(person__isnull=False, group__isnull=True)
+                    | Q(person__isnull=True, group__isnull=False)
+                ),
+                name="relation_exactly_one_recipient",
+            )
+        ]
 
     def __str__(self) -> str:
-        return f"{self.person} - {self.gift} ({self.status})"
+        return f"{self.recipient_name} - {self.gift} ({self.status})"
 
     def save(self, *args, **kwargs):
-        """Override save to ensure validation."""
-        self.clean()
+        """Override save method.
+
+        Note: Validation is handled at the form level to avoid recursion issues
+        when updating existing instances.
+        """
         super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
-        return reverse("gift_manager:person_edit", kwargs={"pk": self.pk})
+        return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
 
     def clean(self):
-        """Ensure that at least person or group is set."""
+        """Ensure that exactly one of person or group is set.
+
+        This is primarily used for form validation. For model-level validation,
+        forms should call this explicitly.
+        """
         if (self.person is None) == (self.group is None):
             raise ValidationError(
-                gettext_lazy("Either a person or a group must be specified but not both.")
+                gettext_lazy("Choose exactly one recipient: a person or a group.")
             )
+
+    @property
+    def recipient(self) -> Person | PersonGroup | None:
+        """Return the person or group targeted by this gift plan."""
+        return self.person or self.group
+
+    @property
+    def recipient_name(self) -> str:
+        """Return the display name for the gift plan recipient."""
+        recipient = self.recipient
+        return str(recipient) if recipient else ""
+
+    @property
+    def recipient_type(self) -> str:
+        """Return the stable recipient type identifier."""
+        if self.person_id is not None:
+            return "person"
+        if self.group_id is not None:
+            return "group"
+        return ""
+
+    @property
+    def recipient_type_label(self) -> str:
+        """Return the user-facing recipient type."""
+        if self.person_id is not None:
+            return gettext_lazy("Person")
+        if self.group_id is not None:
+            return gettext_lazy("Group")
+        return ""
+
+    @property
+    def recipient_key(self) -> str:
+        """Return a typed recipient key for forms and UI state."""
+        if self.person_id is not None:
+            return f"person:{self.person.person_id}"
+        if self.group_id is not None:
+            return f"group:{self.group.group_id}"
+        return ""
+
+    @property
+    def recipient_url(self) -> str:
+        """Return the recipient detail URL."""
+        if self.person_id is not None:
+            return reverse("gift_manager:person_detail", kwargs={"pk": self.person.person_id})
+        if self.group_id is not None:
+            return reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        return ""
+
+    @property
+    def is_group_targeted(self) -> bool:
+        """Return whether this gift plan targets a group directly."""
+        return self.group_id is not None
 
 
 class RelationPermission(models.Model):
@@ -1131,7 +1372,7 @@ def clear_gifttag_cache_on_save(sender, instance, **kwargs):
 def clear_gifttag_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_tags relationship changes."""
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.clear_hierarchy_cache()
+        _clear_hierarchy_cache_for_model(GiftTag, "gifttag")
 
 
 # Signal handlers for PersonGroup cache invalidation
@@ -1145,4 +1386,19 @@ def clear_persongroup_cache_on_save(sender, instance, **kwargs):
 def clear_persongroup_cache_on_parent_change(sender, instance, action, **kwargs):
     """Clear hierarchy cache when parent_groups relationship changes."""
     if action in ["post_add", "post_remove", "post_clear"]:
-        instance.clear_hierarchy_cache()
+        _clear_hierarchy_cache_for_model(PersonGroup, "persongroup")
+
+
+def _clear_hierarchy_cache_for_model(model, cache_prefix: str) -> None:
+    """Clear all hierarchy cache entries for a tree/DAG model after relationship changes."""
+    object_ids = model.objects.values_list("pk", flat=True)
+    keys = [
+        key
+        for object_id in object_ids
+        for key in (
+            f"{cache_prefix}_descendants_{object_id}",
+            f"{cache_prefix}_ancestors_{object_id}",
+        )
+    ]
+    if keys:
+        cache.delete_many(keys)

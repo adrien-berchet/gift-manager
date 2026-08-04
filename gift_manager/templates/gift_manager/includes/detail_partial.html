@@ -1,0 +1,102 @@
+{% load i18n %}
+<!-- Partial template for detail views in offcanvas panels -->
+<div class="detail-content">
+    <div class="detail-header mb-4">
+        <h4 class="mb-1">
+            {% if person %}{{ person }}
+            {% elif gift %}{{ gift }}
+            {% elif event %}{{ event }}
+            {% elif relation %}{{ relation }}
+            {% elif group %}{{ group }}
+            {% elif gift_tag %}{{ gift_tag }}
+            {% else %}{{ object }}{% endif %}
+        </h4>
+        {% if object_type %}
+        <small class="text-muted">{{ object_type|title }}</small>
+        {% endif %}
+    </div>
+
+    {% if back_url %}
+    <div class="mb-3">
+        {% if full_page_detail %}
+        <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
+        </a>
+        {% else %}
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                data-action="detail"
+                data-detail-url="{{ back_url }}">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
+        </button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if not full_page_detail %}
+    <div class="detail-actions mb-4">
+        <div class="btn-group" role="group">
+            {% if is_editor %}
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    data-action="edit"
+                    data-edit-url="{% block edit_url %}#{% endblock %}"
+                    title="{% trans 'Edit' %}">
+                <i class="fas fa-edit me-1"></i>{% trans "Edit" %}
+            </button>
+            {% else %}
+            <button type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    disabled
+                    title="{% trans 'You do not have permission to edit this object' %}">
+                <i class="fas fa-lock me-1"></i>{% trans "Edit" %}
+            </button>
+            {% endif %}
+            {% if is_editor %}
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    data-action="delete"
+                    data-delete-url="{% block delete_url %}#{% endblock %}"
+                    title="{% trans 'Delete' %}">
+                <i class="fas fa-trash me-1"></i>{% trans "Delete" %}
+            </button>
+            {% else %}
+            <button type="button"
+                    class="btn btn-outline-danger btn-sm"
+                    disabled
+                    title="{% trans 'You do not have permission to delete this object' %}">
+                <i class="fas fa-lock me-1"></i>{% trans "Delete" %}
+            </button>
+            {% endif %}
+            {% if person.get_absolute_url or gift.get_absolute_url or event.get_absolute_url or relation.get_absolute_url or group.get_absolute_url or gift_tag.get_absolute_url or object.get_absolute_url %}
+            <a href="{% if person %}{{ person.get_absolute_url }}{% elif gift %}{{ gift.get_absolute_url }}{% elif event %}{{ event.get_absolute_url }}{% elif relation %}{{ relation.get_absolute_url }}{% elif group %}{{ group.get_absolute_url }}{% elif gift_tag %}{{ gift_tag.get_absolute_url }}{% else %}{{ object.get_absolute_url }}{% endif %}"
+               class="btn btn-outline-secondary btn-sm"
+               title="{% trans 'View full page' %}">
+                <i class="fas fa-external-link-alt me-1"></i>{% trans "Full view" %}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="detail-fields">
+        {% block detail_fields %}
+        <!-- Override in specific templates -->
+        {% endblock %}
+    </div>
+
+    {% if related_objects %}
+    <div class="related-objects mt-4">
+        <h6 class="text-muted mb-3">{% trans "Related Items" %}</h6>
+        {% for related in related_objects %}
+        <div class="related-item mb-2">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-{{ related.icon }} me-2 text-muted"></i>
+                <span class="fw-medium">{{ related.name }}</span>
+                <span class="badge bg-secondary ms-auto">{{ related.count }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

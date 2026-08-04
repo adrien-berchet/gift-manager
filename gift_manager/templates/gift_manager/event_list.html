@@ -1,7 +1,18 @@
 {% extends "gift_manager/base.html" %}
 
+{% load permission_tags %}
 {% load i18n %}
 {% load static %}
+{% load custom_filters %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+{% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
@@ -10,93 +21,125 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary">
+        <a href="{% url 'gift_manager:event_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new event" %}
         </a>
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="event-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="event-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
-<div id="event-grid" class="mt-3"></div>
+<div id="event-grid" class="list-container"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
-    {% load custom_filters %}
     (function () {
-        // Calculate column indices for clarity
-        // Data columns: {% for col, name in column_names.items %}{{ forloop.counter }}{% if forloop.last %} columns{% endif %}{% endfor %}
-        const numDataColumns = {{ column_names.items| length }};
-    const eventIdIdx = numDataColumns;      // Index of event_id
-    const detailUrlIdx = numDataColumns + 1; // Index of detail URL
-    const editUrlIdx = numDataColumns + 2;   // Index of edit URL
-    const deleteUrlIdx = numDataColumns + 3; // Index of delete URL
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
 
-    // Prepare data for Grid.js
-    const data = [
-        {% for item in data %}
+        // Prepare data for Grid.js
+        // Include placeholder (empty string) for checkbox column as first element
+        const data = [
+            {% for item in data %}
     [
-        {% for col, name in column_names.items %}
-    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-    {% endfor %},
-    "{{ item.event_id }}",  // cells[numDataColumns]
-        "{% url 'gift_manager:event_detail' item.event_id %}",  // cells[numDataColumns + 1]
-        "{% url 'gift_manager:event_edit' item.event_id %}",     // cells[numDataColumns + 2]
-        "{% url 'gift_manager:event_delete' item.event_id %}"    // cells[numDataColumns + 3]
+        '', // Checkbox column placeholder - Index 0
+        "{{ item.name|escapejs }}",                                    // Index 1
+        "{{ item.comment|default:''|escapejs }}",                      // Index 2
+        "{{ item.date_summary|escapejs }}",                            // Index 3
+        "{{ item.event_id }}",                                         // Index 4
+        "{% url 'gift_manager:event_detail' item.event_id %}",        // Index 5
+        "{% url 'gift_manager:event_edit' item.event_id %}",          // Index 6
+        "{% url 'gift_manager:event_delete' item.event_id %}"         // Index 7
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
 
-    // Build columns dynamically
+    // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
-        {% for col, name in column_names.items %}
-    {
-        name: '{{ name|escapejs }}',
+        GridUtils.createCheckboxColumn(4),
+        {
+            id: 'name',
+            name: '{{ column_names.name|escapejs }}',
             sort: {
-            compare: GridUtils.sortString()
+                compare: GridUtils.sortString()
+            }
+        },
+        {
+            id: 'comment',
+            name: '{{ column_names.comment|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
+        {
+            id: 'schedule',
+            name: '{{ column_names.schedule|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
+        { name: 'event_id', hidden: true },
+        { name: 'event_detail_url', hidden: true },
+        { name: 'event_edit_url', hidden: true },
+        { name: 'event_delete_url', hidden: true },
+        {
+            id: 'actions',
+            name: '{% trans "Actions"|escapejs %}',
+            width: '340px',
+            sort: false,
+            formatter: PermissionUtils.permissionAwareActionFormatter({
+                details: (row) => row.cells[5].data,
+                edit: (row) => row.cells[6].data,
+                delete: (row) => row.cells[7].data,
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[4].data
+            }, userPermissions)
         }
-    } {% if not forloop.last %}, {% endif %}
-    {% endfor %},
-    { name: 'event_id', hidden: true },
-    { name: 'event_detail_url', hidden: true },
-    { name: 'event_edit_url', hidden: true },
-    { name: 'event_delete_url', hidden: true },
-    {
-        name: '{% trans "Actions"|escapejs %}',
-            width: '150px',
-                sort: false,
-                    formatter: GridUtils.actionButtonsFormatter({
-                        details: (row) => row.cells[detailUrlIdx].data,
-                        edit: (row) => row.cells[editUrlIdx].data,
-                        delete: (row) => row.cells[deleteUrlIdx].data
-                    }, ['details', 'edit', 'delete'])
-    }
     ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('event-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        }
-    });
+    // Initialize Grid.js with all features using the standard helper
+    try {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'event-grid',
+            entityType: 'event',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            sort: {
+                multiColumn: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }  // Name
+                ]
+            },
+            idFieldIndex: 4
+        });
 
-    // Initialize filter panel
-    FilterPanel.init('event-grid', grid, columns);
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const statusHeader = document.querySelector('#event-grid th:nth-child(1)');
-        if (statusHeader) {
-            statusHeader.click();
-        }
-    }, 100);
+} catch (error) {
+        console.error('[EventList] Error initializing grid:', error);
+    }
     }) ();
 </script>
 {% endblock %}

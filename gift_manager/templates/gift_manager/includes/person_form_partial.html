@@ -1,0 +1,27 @@
+{% load i18n %}
+
+<form method="post"
+      id="person-form"
+      {% if object %}
+      action="{% url 'gift_manager:person_edit' object.person_id %}"
+      hx-post="{% url 'gift_manager:person_edit' object.person_id %}"
+      {% else %}
+      action="{% url 'gift_manager:person_create' %}"
+      hx-post="{% url 'gift_manager:person_create' %}"
+      {% endif %}
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form person-form"
+      data-form-type="{{ form_type|default:'person-edit' }}">
+  {% csrf_token %}
+
+  <div class="form-fields">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/person_fields.html" %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
+</form>

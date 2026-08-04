@@ -128,3 +128,20 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .vercel
+
+# AI agents
+.agents/
+.codex-log/
+.claude/settings.local.json
+.claude/logs/
+.claude/.cache/
+.kilocode/
+.kiro/
+.gemini/
+.playwright-mcp/
+CLAUDE.local.md
+*.pem
+certs/
+
+# Playwright
+playwright-report/

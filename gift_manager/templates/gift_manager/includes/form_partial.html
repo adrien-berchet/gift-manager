@@ -1,0 +1,25 @@
+{% load i18n %}
+
+<form method="post"
+      action="{{ form_action_url }}"
+      hx-post="{{ form_action_url }}"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form {{ form_css_class }}"
+      data-form-type="{{ form_type|default:'entity' }}">
+  {% csrf_token %}
+
+  <div class="form-fields">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% if form_fields_template %}
+      {% include form_fields_template %}
+    {% else %}
+      {% include "gift_manager/includes/forms/generic_fields.html" %}
+    {% endif %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
+</form>

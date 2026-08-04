@@ -1,0 +1,232 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Recipients" %}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .recipient-toolbar {
+    border-bottom: 1px solid var(--bs-border-color);
+    padding-bottom: 1rem;
+  }
+
+  .recipient-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--bs-border-color);
+  }
+
+  .recipient-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: var(--bs-tertiary-bg);
+    color: var(--bs-primary);
+  }
+
+  .recipient-icon.recipient-icon--person {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+  }
+
+  .recipient-icon.recipient-icon--group {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+  }
+
+  [data-theme="dark"] .recipient-icon.recipient-icon--person {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: rgba(147, 197, 253, 0.35);
+    color: #93c5fd;
+  }
+
+  [data-theme="dark"] .recipient-icon.recipient-icon--group {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(110, 231, 183, 0.35);
+    color: #6ee7b7;
+  }
+
+  .recipient-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.35rem;
+  }
+
+  @media (max-width: 767.98px) {
+    .recipient-row {
+      grid-template-columns: 1fr;
+    }
+
+    .recipient-actions {
+      justify-content: flex-start !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% trans "Recipients" %}</h1>
+  <div class="page-header-actions">
+    <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary" data-action="create">
+      <i class="fas fa-user-plus me-2"></i>{% trans "New Person" %}
+    </a>
+    <a href="{% url 'gift_manager:person_group_create' %}" class="btn btn-outline-primary" data-action="create">
+      <i class="fas fa-layer-group me-2"></i>{% trans "New Group" %}
+    </a>
+    <a href="{% url 'gift_manager:person_groups' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-sitemap me-2"></i>{% trans "Manage Groups" %}
+    </a>
+  </div>
+</div>
+
+<div class="recipient-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <input type="search"
+           class="form-control"
+           id="recipient-search"
+           placeholder="{% trans 'Search recipients' %}"
+           aria-label="{% trans 'Search recipients' %}"
+           style="max-width: 260px;">
+    <div class="btn-group" role="group" aria-label="{% trans 'Filter recipients' %}">
+      <button type="button" class="btn btn-outline-secondary active" data-recipient-filter="all">
+        {% trans "All" %}
+        <span class="badge text-bg-secondary ms-1">{{ recipient_count }}</span>
+      </button>
+      <button type="button" class="btn btn-outline-secondary" data-recipient-filter="person">
+        {% trans "People" %}
+        <span class="badge text-bg-secondary ms-1">{{ person_count }}</span>
+      </button>
+      <button type="button" class="btn btn-outline-secondary" data-recipient-filter="group">
+        {% trans "Groups" %}
+        <span class="badge text-bg-secondary ms-1">{{ group_count }}</span>
+      </button>
+    </div>
+  </div>
+  <a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-folder-tree me-2"></i>{% trans "Group Explorer" %}
+  </a>
+</div>
+
+{% if recipients %}
+<div class="recipient-list" id="recipient-list">
+  {% for recipient in recipients %}
+  <div class="recipient-row"
+       data-recipient-key="{{ recipient.key }}"
+       data-recipient-type="{{ recipient.type }}"
+       data-recipient-search="{{ recipient.name }} {{ recipient.type_label }}{% for group in recipient.groups %} {{ group.name }}{% endfor %}">
+    <div class="d-flex gap-3 min-w-0">
+      <span class="recipient-icon flex-shrink-0 recipient-icon--{{ recipient.type }}"
+            role="img"
+            data-bs-toggle="tooltip"
+            title="{{ recipient.type_label }}"
+            aria-label="{{ recipient.type_label }}">
+        {% if recipient.type == "group" %}
+        <i class="fas fa-layer-group" aria-hidden="true"></i>
+        {% else %}
+        <i class="fas fa-user" aria-hidden="true"></i>
+        {% endif %}
+        <span class="visually-hidden">{{ recipient.type_label }}</span>
+      </span>
+      <div class="min-w-0">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <a href="{{ recipient.detail_url }}" class="fw-semibold text-decoration-none">
+            {{ recipient.name }}
+          </a>
+          <span class="recipient-plan-count">
+            {% blocktrans count count=recipient.plan_count %}{{ count }} gift plan{% plural %}{{ count }} gift plans{% endblocktrans %}
+          </span>
+        </div>
+        <div class="recipient-meta text-muted small">
+          {% if recipient.type == "group" %}
+          <span>
+            {% blocktrans count count=recipient.member_count %}{{ count }} member{% plural %}{{ count }} members{% endblocktrans %}
+          </span>
+          <span>
+            {% blocktrans count count=recipient.child_count %}{{ count }} child group{% plural %}{{ count }} child groups{% endblocktrans %}
+          </span>
+          <span>{% trans "Gift plans target this group directly." %}</span>
+          {% elif recipient.groups %}
+          {% for group in recipient.groups %}
+          <a href="{% url 'gift_manager:person_group_detail' group.group_id %}" class="badge recipient-membership-badge text-decoration-none">
+            {{ group.name }}
+          </a>
+          {% endfor %}
+          {% else %}
+          <span>{% trans "No groups" %}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="recipient-actions d-flex gap-2 justify-content-end">
+      <a href="{{ recipient.gift_plan_url }}" class="btn btn-sm btn-primary" data-action="create">
+        <i class="fas fa-hand-holding-heart me-1"></i>{% trans "New Gift Plan" %}
+      </a>
+      <a href="{{ recipient.detail_url }}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-eye me-1"></i>{% trans "Open" %}
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="text-muted mt-3 d-none" id="recipient-empty-filter">{% trans "No recipients match this filter." %}</p>
+{% else %}
+<div class="text-center text-muted py-5">
+  <i class="fas fa-users fa-2x mb-3"></i>
+  <p>{% trans "No recipients yet." %}</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const rows = Array.from(document.querySelectorAll('.recipient-row'));
+  const searchInput = document.getElementById('recipient-search');
+  const filterButtons = Array.from(document.querySelectorAll('[data-recipient-filter]'));
+  const emptyMessage = document.getElementById('recipient-empty-filter');
+  let activeFilter = 'all';
+
+  function applyFilters() {
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    let visibleCount = 0;
+
+    rows.forEach((row) => {
+      const typeMatches = activeFilter === 'all' || row.dataset.recipientType === activeFilter;
+      const text = (row.dataset.recipientSearch || '').toLowerCase();
+      const searchMatches = !query || text.includes(query);
+      const visible = typeMatches && searchMatches;
+      row.classList.toggle('d-none', !visible);
+      if (visible) visibleCount += 1;
+    });
+
+    if (emptyMessage) {
+      emptyMessage.classList.toggle('d-none', visibleCount !== 0);
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilters);
+  }
+
+  filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      activeFilter = button.dataset.recipientFilter;
+      filterButtons.forEach((item) => item.classList.toggle('active', item === button));
+      applyFilters();
+    });
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk tox run:*)",
+      "Bash(tox run:*)",
+      "Bash(rtk python manage.py check:*)",
+      "Bash(python manage.py check:*)",
+      "Bash(rtk python manage.py makemigrations --check --dry-run:*)",
+      "Bash(python manage.py makemigrations --check --dry-run:*)",
+      "Bash(rtk python manage.py makemessages:*)",
+      "Bash(python manage.py makemessages:*)",
+      "Bash(rtk python manage.py compilemessages:*)",
+      "Bash(python manage.py compilemessages:*)",
+      "Bash(rtk rg:*)",
+      "Bash(rg:*)",
+      "Bash(rtk git status:*)",
+      "Bash(git status:*)",
+      "Bash(rtk git diff:*)",
+      "Bash(git diff:*)",
+      "Bash(rtk git show:*)",
+      "Bash(git show:*)",
+      "mcp__plugin_playwright_playwright__browser_install",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "mcp__plugin_playwright_playwright__browser_fill_form",
+      "mcp__plugin_playwright_playwright__browser_wait_for",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_snapshot"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env_prod)",
+      "Read(*.pem)",
+      "Read(certs/**)",
+      "Read(.git/**)",
+      "Edit(.env)",
+      "Edit(.env_prod)",
+      "Edit(*.pem)",
+      "Edit(certs/**)",
+      "Edit(.git/**)",
+      "Bash(git reset:*)",
+      "Bash(git checkout:*)",
+      "Bash(git clean:*)",
+      "Bash(rm:*)"
+    ]
+  }
+}

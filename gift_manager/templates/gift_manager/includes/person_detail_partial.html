@@ -1,0 +1,150 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n custom_filters %}
+
+{% block edit_url %}{% url 'gift_manager:person_edit' pk=person.person_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:person_delete' pk=person.person_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="row g-4">
+
+    <!-- Left column: Basic info, groups, sharing -->
+    <div class="col-lg-5">
+
+        <!-- Basic Information -->
+        <div class="detail-section mb-4">
+            <h6 class="detail-section-title text-muted mb-3">
+                <i class="fas fa-user me-2"></i>{% trans "Basic Information" %}
+            </h6>
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="detail-field">
+                        <label class="detail-label">{% trans "First Name" %}</label>
+                        <div class="detail-value">{{ person.first_name|default:"—" }}</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="detail-field">
+                        <label class="detail-label">{% trans "Family Name" %}</label>
+                        <div class="detail-value">{{ person.family_name|default:"—" }}</div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="detail-field">
+                        <label class="detail-label">{% trans "Email Address" %}</label>
+                        <div class="detail-value">
+                            {% if person.email_address %}
+                                <a href="mailto:{{ person.email_address|decode_email }}" class="text-decoration-none">
+                                    <i class="fas fa-envelope me-1"></i>{{ person.email_address|decode_email }}
+                                </a>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="detail-field">
+                        <label class="detail-label">{% trans "Created" %}</label>
+                        <div class="detail-value">
+                            <i class="fas fa-calendar me-1 text-muted"></i>
+                            {{ person.creation_date|date:"M d, Y" }}
+                            <small class="text-muted">{{ person.creation_date|time:"H:i" }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Groups -->
+        {% if direct_groups or ancestor_groups %}
+        <div class="detail-section mb-4">
+            <h6 class="detail-section-title text-muted mb-3">
+                <i class="fas fa-layer-group me-2"></i>{% trans "Groups" %}
+            </h6>
+            {% if direct_groups %}
+            <div class="mb-2">
+                <label class="detail-label">{% trans "Direct Groups" %}</label>
+                <div class="detail-value mt-1">
+                    {% for group in direct_groups %}
+                    <span class="badge bg-primary me-1 mb-1">
+                        <i class="fas fa-layer-group me-1"></i>{{ group.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if ancestor_groups %}
+            <div class="mb-2">
+                <label class="detail-label">{% trans "Inherited Groups" %}</label>
+                <div class="detail-value mt-1">
+                    {% for group in ancestor_groups %}
+                    <span class="badge bg-secondary me-1 mb-1">
+                        <i class="fas fa-layer-group me-1"></i>{{ group.name }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Shared With -->
+        {% if shared_users %}
+        <div class="detail-section mb-4">
+            <h6 class="detail-section-title text-muted mb-3">
+                <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+                <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+            </h6>
+            <div class="shared-users-list">
+                {% for shared_user in shared_users %}
+                <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-user me-2 text-muted"></i>
+                        <span>{{ shared_user.user.username }}</span>
+                    </div>
+                    <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Right column: Gift plans -->
+    <div class="col-lg-7">
+
+        <div class="detail-section">
+            <h6 class="detail-section-title text-muted mb-3">
+                <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift Plans" %}
+                {% if relations %}<span class="badge bg-secondary ms-2">{{ relations|length }}</span>{% endif %}
+            </h6>
+
+            <!-- Stats summary -->
+            <div class="row g-2 mb-3">
+                <div class="col-4">
+                    <div class="stat-card p-2 text-center rounded">
+                        <div class="stat-number h5 mb-0">{{ relations|length }}</div>
+                        <div class="stat-label text-muted">{% trans "Gift Plans" %}</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card p-2 text-center rounded">
+                        <div class="stat-number h5 mb-0">{{ direct_groups|length }}</div>
+                        <div class="stat-label text-muted">{% trans "Groups" %}</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="stat-card p-2 text-center rounded">
+                        <div class="stat-number h5 mb-0">{{ shared_users|length }}</div>
+                        <div class="stat-label text-muted">{% trans "Shared" %}</div>
+                    </div>
+                </div>
+            </div>
+
+            {% include "gift_manager/includes/relation_cards_partial.html" with relations=relations person=person is_editor=is_editor only %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+name: End-to-End Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      browser:
+        description: 'Browser to test with'
+        required: false
+        default: 'chromium'
+        type: choice
+        options:
+          - chromium
+          - firefox
+          - webkit
+          - all
+      comprehensive:
+        description: 'Run full e2e matrix including performance tests'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  e2e-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11']
+        browser: ${{ (github.event_name == 'schedule' || github.event.inputs.comprehensive == 'true' || github.event.inputs.browser == 'all') && fromJson('["chromium", "firefox", "webkit"]') || fromJson(format('["{0}"]', github.event.inputs.browser || 'chromium')) }}
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: gift_manager_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libpq-dev \
+          gettext \
+          libjpeg-dev \
+          libpng-dev \
+          libwebp-dev \
+          zlib1g-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install uv==0.10.7
+        uv sync --frozen --extra test
+
+    - name: Install Playwright browsers
+      run: |
+        uv run --frozen python -m playwright install ${{ matrix.browser }}
+        uv run --frozen python -m playwright install-deps ${{ matrix.browser }}
+
+    - name: Set up environment variables
+      run: |
+        echo "DJANGO_SETTINGS_MODULE=GiftManager.settings.testing" >> $GITHUB_ENV
+        echo "DJANGO_ENV=testing" >> $GITHUB_ENV
+        echo "DB_NAME=gift_manager_test" >> $GITHUB_ENV
+        echo "DB_USER=postgres" >> $GITHUB_ENV
+        echo "DB_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_PORT=5432" >> $GITHUB_ENV
+        echo "CI=true" >> $GITHUB_ENV
+        echo "E2E_FULL_MATRIX=${{ (github.event_name == 'schedule' || github.event.inputs.comprehensive == 'true' || github.event.inputs.browser == 'all') && '1' || '0' }}" >> $GITHUB_ENV
+        echo "E2E_MARKER=${{ (github.event_name == 'schedule' || github.event.inputs.comprehensive == 'true' || github.event.inputs.browser == 'all') && 'frontend or not frontend' || 'not performance' }}" >> $GITHUB_ENV
+
+    - name: Run database migrations
+      run: |
+        uv run --frozen python manage.py migrate --noinput
+
+    - name: Collect static files
+      run: |
+        uv run --frozen python manage.py collectstatic --noinput
+
+    - name: Run end-to-end tests
+      run: |
+        uv run --frozen pytest gift_manager/tests/e2e/ \
+          --browser ${{ matrix.browser }} \
+          -m "$E2E_MARKER" \
+          --html=reports/e2e-${{ matrix.browser }}.html \
+          --self-contained-html \
+          --junit-xml=reports/e2e-${{ matrix.browser }}.xml \
+          --maxfail=5 \
+          --tb=short \
+          -v
+
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-test-results-${{ matrix.browser }}
+        path: |
+          reports/e2e-${{ matrix.browser }}.html
+          reports/e2e-${{ matrix.browser }}.xml
+          test-results/
+        retention-days: 30
+
+    - name: Upload Playwright traces
+      uses: actions/upload-artifact@v4
+      if: failure()
+      with:
+        name: playwright-traces-${{ matrix.browser }}
+        path: test-results/
+        retention-days: 30
+
+    - name: Publish test results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: E2E Tests (${{ matrix.browser }})
+        path: reports/e2e-${{ matrix.browser }}.xml
+        reporter: java-junit
+        fail-on-error: true
+
+  e2e-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: e2e-tests
+    if: github.event_name == 'schedule' || github.event.inputs.comprehensive == 'true' || github.event.inputs.browser == 'all' || github.event.inputs.browser == 'webkit'
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: gift_manager_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpq-dev gettext
+        python -m pip install --upgrade pip
+        pip install uv==0.10.7
+        uv sync --frozen --extra test
+
+    - name: Install Playwright browsers
+      run: |
+        uv run --frozen python -m playwright install webkit
+        uv run --frozen python -m playwright install-deps webkit
+
+    - name: Set up environment variables
+      run: |
+        echo "DJANGO_SETTINGS_MODULE=GiftManager.settings.testing" >> $GITHUB_ENV
+        echo "DJANGO_ENV=testing" >> $GITHUB_ENV
+        echo "DB_NAME=gift_manager_test" >> $GITHUB_ENV
+        echo "DB_USER=postgres" >> $GITHUB_ENV
+        echo "DB_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_PORT=5432" >> $GITHUB_ENV
+        echo "CI=true" >> $GITHUB_ENV
+        echo "E2E_FULL_MATRIX=1" >> $GITHUB_ENV
+
+    - name: Run database migrations
+      run: |
+        uv run --frozen python manage.py migrate --noinput
+
+    - name: Collect static files
+      run: |
+        uv run --frozen python manage.py collectstatic --noinput
+
+    - name: Run mobile end-to-end tests
+      run: |
+        uv run --frozen pytest gift_manager/tests/e2e/ \
+          --browser webkit \
+          -m "mobile" \
+          --html=reports/e2e-mobile.html \
+          --self-contained-html \
+          --junit-xml=reports/e2e-mobile.xml \
+          --maxfail=3 \
+          --tb=short \
+          -v
+
+    - name: Upload mobile test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-mobile-test-results
+        path: |
+          reports/e2e-mobile.html
+          reports/e2e-mobile.xml
+          test-results/
+        retention-days: 30

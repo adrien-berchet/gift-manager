@@ -4,7 +4,15 @@
 {% load static %}
 
 {% block extra_head %}
+{% if show_advanced_list %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+{% endif %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -14,34 +22,227 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>{% trans "Create new gifting" %}
+        <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+            <i class="fas fa-plus me-2"></i>{% trans "Create new gift plan" %}
         </a>
+        {% if show_workspace %}
+        <a href="{% url 'gift_manager:relation_advanced_list' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-table-list me-2" aria-hidden="true"></i>{% trans "Advanced List" %}
+        </a>
+        {% elif show_advanced_list %}
+        <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-table-cells-large me-2" aria-hidden="true"></i>{% trans "Workspace" %}
+        </a>
+        {% endif %}
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="relation-grid" %}
+{% if show_workspace %}
+<section class="gift-plan-workspace" aria-labelledby="gift-plan-workspace-heading">
+    <div class="gift-plan-workspace-header">
+        <div>
+            <h2 id="gift-plan-workspace-heading">{% trans "Workspace" %}</h2>
+        </div>
+        <div class="gift-plan-summary-strip" aria-label="{% trans 'Gift plan summary' %}">
+            <span class="gift-plan-summary-item">
+                <strong>{{ workspace_summary.total }}</strong>
+                <span>{% trans "Total" %}</span>
+            </span>
+            <span class="gift-plan-summary-item gift-plan-summary-item--attention">
+                <strong>{{ workspace_summary.attention }}</strong>
+                <span>{% trans "Needs attention" %}</span>
+            </span>
+            <span class="gift-plan-summary-item">
+                <strong>{{ workspace_summary.needs_details }}</strong>
+                <span>{% trans "Needs details" %}</span>
+            </span>
+            <span class="gift-plan-summary-item">
+                <strong>{{ workspace_summary.ideas }}</strong>
+                <span>{% trans "Ideas" %}</span>
+            </span>
+        </div>
+    </div>
 
-<!-- Grid.js container -->
-<div id="relation-grid"></div>
+    {% if workspace_focus %}
+    <div class="gift-plan-focus-note" role="status">
+        <span>
+            <i class="fas fa-filter" aria-hidden="true"></i>
+            {% trans "Showing" %}: <strong>{{ workspace_focus_label }}</strong>
+        </span>
+        <a href="{% url 'gift_manager:relations' %}" class="btn btn-sm btn-outline-secondary">
+            {% trans "Show all gift plans" %}
+        </a>
+    </div>
+    {% endif %}
+
+    {% if workspace_groups %}
+    <div class="gift-plan-urgency-board">
+        {% for group in workspace_groups %}
+        <section class="gift-plan-urgency-section gift-plan-urgency-section--{{ group.key }}"
+                 id="gift-plan-group-{{ group.key }}"
+                 aria-labelledby="gift-plan-group-{{ group.key }}-heading">
+            <div class="gift-plan-urgency-heading">
+                <div>
+                    <h3 id="gift-plan-group-{{ group.key }}-heading">
+                        <i class="fas {{ group.icon }}" aria-hidden="true"></i>
+                        {{ group.label }}
+                    </h3>
+                    <p>{{ group.description }}</p>
+                </div>
+                <span class="gift-plan-group-count">{{ group.cards|length }}</span>
+            </div>
+
+            <div class="gift-plan-card-grid">
+                {% for card in group.cards %}
+                {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="gift-plan-empty-state">
+        <i class="fas fa-hand-holding-heart" aria-hidden="true"></i>
+        <h3>{% trans "No gift plans yet." %}</h3>
+        <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
+            <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "Create new gift plan" %}
+        </a>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+{% if show_advanced_list %}
+<section class="gift-plan-advanced-list" id="gift-plan-advanced-list" aria-labelledby="gift-plan-advanced-heading">
+    <div class="gift-plan-advanced-header">
+        <div>
+            <h2 id="gift-plan-advanced-heading">{% trans "Advanced Gift Plans List" %}</h2>
+        </div>
+    </div>
+
+    {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="relation-grid" show_bulk_select=True %}
+
+    <!-- Grid.js container -->
+    <div id="relation-grid" class="list-container"></div>
+</section>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% if show_workspace %}
+<script src="{% static 'gift_manager/js/gift-plan-quick-actions.js' %}"></script>
+{% endif %}
+{% if show_workspace %}
+<script>
+    (function () {
+        let workspaceRefreshTimer = null;
+        let workspaceRefreshController = null;
+
+        function refreshGiftPlanWorkspace() {
+            if (!document.querySelector('.gift-plan-workspace')) return;
+
+            clearTimeout(workspaceRefreshTimer);
+            workspaceRefreshTimer = setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('_workspace_t', Date.now().toString());
+
+                if (workspaceRefreshController) {
+                    workspaceRefreshController.abort();
+                }
+                workspaceRefreshController = new AbortController();
+
+                fetch(url.toString(), {
+                    cache: 'no-store',
+                    credentials: 'same-origin',
+                    signal: workspaceRefreshController.signal,
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                })
+                    .then((response) => {
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return response.text();
+                    })
+                    .then((html) => {
+                        const parsed = new DOMParser().parseFromString(html, 'text/html');
+                        const nextWorkspace = parsed.querySelector('.gift-plan-workspace');
+                        const currentWorkspace = document.querySelector('.gift-plan-workspace');
+                        if (nextWorkspace && currentWorkspace) {
+                            currentWorkspace.replaceWith(nextWorkspace);
+                            if (window.htmx) {
+                                window.htmx.process(nextWorkspace);
+                            }
+                            document.dispatchEvent(new CustomEvent('gift-plan-workspace:refreshed'));
+                        }
+                    })
+                    .catch((error) => {
+                        if (error.name !== 'AbortError') {
+                            console.error('Error refreshing gift plan workspace:', error);
+                        }
+                    });
+            }, 80);
+        }
+
+        document.addEventListener('list:update', refreshGiftPlanWorkspace);
+    })();
+</script>
+{% endif %}
+{% if show_advanced_list %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
         const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+        const recipientTypeLabels = {
+            person: "{% trans 'Person' %}",
+            group: "{% trans 'Group' %}"
+        };
+        const recipientTypeBadgeClasses = {
+            person: "recipient-type-badge recipient-type-badge--person",
+            group: "recipient-type-badge recipient-type-badge--group"
+        };
+        const editorPermission = 20;
+        const statusReadonlyMessage = "{% trans 'You do not have permission to edit this gift plan' %}";
+        const missingDueDateLabel = "{% trans 'Missing due date' %}";
+        const missingEventLabel = "{% trans 'Missing event' %}";
+        const relationStatusOptions = [
+            {% for status in relation_statuses %}
+            { value: "{{ status.pk }}", label: "{{ status.status|escapejs }}" }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
 
+        function giftPlanStatusClass(statusLabel) {
+            const slug = String(statusLabel || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+            return `gift-plan-status--${slug || 'unknown'}`;
+        }
 
+        function escapeHtml(value) {
+            return GridUtils.escapeHtml(value);
+        }
+
+        // Get permission data from template
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
 
         // Prepare data for Grid.js
         const data = [
             {% for item in data %}
             [
+                '', // Checkbox column placeholder
                 {% if item.gift__gift_id %}
                 { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
                 {% else %}
@@ -49,6 +250,7 @@
                 {% endif %}
                 {
                     text: "{{ item.related_object|escapejs }}",
+                    recipientType: "{{ item.recipient_type|escapejs }}",
                     personId: {% if item.person__person_id %} "{{item.person__person_id}}" {% else %} null {% endif %},
                     groupId: {% if item.group__group_id %} "{{item.group__group_id}}" {% else %} null {% endif %},
                     url: {% if item.person__person_id %} "{% url 'gift_manager:person_detail' item.person__person_id %}" {% elif item.group__group_id %} "{% url 'gift_manager:person_group_detail' item.group__group_id %}" {% else %} null {% endif %}
@@ -62,6 +264,17 @@
                 "{{ item.status }}",
                 "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
                 {% if item.due_date %}{ iso: "{{ item.due_date|date:'Y-m-d' }}", display: "{{ item.due_date|date }}" }{% else %}null{% endif %},
+                {
+                    urgencyKey: "{{ item.urgency_key|default:'unknown'|escapejs }}",
+                    needsAttention: {% if item.needs_attention %}true{% else %}false{% endif %},
+                    label: "{{ item.attention_label|default:''|escapejs }}",
+                    missingData: {% if item.has_missing_data %}true{% else %}false{% endif %},
+                    missingDataLabel: "{{ item.missing_data_label|default:''|escapejs }}",
+                    missingDueDate: {% if item.has_missing_due_date %}true{% else %}false{% endif %},
+                    missingDueDateLabel: "{{ item.missing_due_date_label|default:''|escapejs }}",
+                    missingEvent: {% if item.has_missing_event %}true{% else %}false{% endif %},
+                    missingEventLabel: "{{ item.missing_event_label|default:''|escapejs }}"
+                },
                 "{{item.relation_id}}",
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
@@ -73,6 +286,7 @@
 
         // Define columns
         const columns = [
+            GridUtils.createCheckboxColumn(9),
             {
                 name: '{{ column_names.gift__name|escapejs }}',
                 sort: {
@@ -80,7 +294,7 @@
                 },
                 formatter: function (cell) {
                     if (!cell || !cell.id) return '';
-                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(cell.url, cell.name));
                 }
             },
             {
@@ -90,10 +304,15 @@
                 },
                 formatter: function (cell) {
                     if (!cell || !cell.text) return '';
+                    const typeLabel = recipientTypeLabels[cell.recipientType] || '';
+                    const badgeClass = recipientTypeBadgeClasses[cell.recipientType] || 'recipient-type-badge';
+                    const badge = typeLabel
+                        ? GridUtils.badgeHtml(typeLabel, null, `badge ${badgeClass} ms-2`)
+                        : '';
                     if (cell.url) {
-                        return gridjs.html(`<a href="${cell.url}">${cell.text}</a>`);
+                        return gridjs.html(`${GridUtils.linkHtml(cell.url, cell.text)}${badge}`);
                     }
-                    return cell.text;
+                    return gridjs.html(`${GridUtils.escapeHtml(cell.text)}${badge}`);
                 }
             },
             {
@@ -101,9 +320,21 @@
                 sort: {
                     compare: GridUtils.sortByProperty('name')
                 },
-                formatter: function (cell) {
+                formatter: function (cell, row) {
+                    const rowState = row.cells[8].data || {};
+                    if (!cell && rowState.missingEvent) {
+                        const rawLabel = rowState.missingEventLabel || missingEventLabel;
+                        const label = escapeHtml(rawLabel);
+                        return gridjs.html(`
+                            <span class="gift-plan-missing-data-badge"
+                                  title="${GridUtils.escapeAttribute(rawLabel)}"
+                                  aria-label="${GridUtils.escapeAttribute(rawLabel)}">
+                                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
+                            </span>
+                        `);
+                    }
                     if (!cell || !cell.id) return '';
-                    return gridjs.html(`<a href="${cell.url}">${cell.name}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(cell.url, cell.name));
                 }
             },
             {
@@ -115,23 +346,46 @@
             {
                 name: '{{ column_names.status__status|escapejs }}',
                 formatter: function (cell, row) {
-                    const statusPk = row.cells[4].data;
-                    const statusLabel = row.cells[5].data;
-                    const relationId = row.cells[7].data;
-                    return gridjs.html(`
-                        <form id="status-form-${relationId}" style="display: inline;">
-                            <select class="form-select form-select-sm status-selector"
-                                    name="new_status"
-                                    data-relation-id="${relationId}"
-                                    data-update-url="${updateStatusUrl}">
-                                {% for status in relation_statuses %}
-                                <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                    {{ status.status }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
-                    `);
+                    const statusPk = row.cells[5].data;
+                    const statusLabel = row.cells[6].data;
+                    const rowState = row.cells[8].data || {};
+                    const relationId = row.cells[9].data;
+                    const statusClass = giftPlanStatusClass(statusLabel);
+                    const permission = Number(userPermissions[relationId] || 0);
+                    const canEditStatus = permission >= editorPermission;
+                    const urgencyKey = escapeHtml(rowState.urgencyKey || 'unknown');
+                    const needsAttention = rowState.needsAttention ? 'true' : 'false';
+                    const attentionLabel = escapeHtml(rowState.label || '');
+                    const hasMissingData = rowState.missingData ? 'true' : 'false';
+                    const missingDataLabel = escapeHtml(rowState.missingDataLabel || '');
+                    const hasMissingDueDate = rowState.missingDueDate ? 'true' : 'false';
+                    const missingDueDateLabel = escapeHtml(rowState.missingDueDateLabel || '');
+                    const hasMissingEvent = rowState.missingEvent ? 'true' : 'false';
+                    const missingEventLabel = escapeHtml(rowState.missingEventLabel || '');
+                    const rowStateHtml = `
+                        <span class="gift-plan-grid-row-state visually-hidden"
+                              data-grid-row-state
+                              data-urgency-key="${urgencyKey}"
+                              data-needs-attention="${needsAttention}"
+                              data-attention-label="${attentionLabel}"
+                              data-has-missing-data="${hasMissingData}"
+                              data-missing-data-label="${missingDataLabel}"
+                              data-has-missing-due-date="${hasMissingDueDate}"
+                              data-missing-due-date-label="${missingDueDateLabel}"
+                              data-has-missing-event="${hasMissingEvent}"
+                              data-missing-event-label="${missingEventLabel}">${attentionLabel || missingDataLabel}</span>
+                    `;
+                    return gridjs.html(rowStateHtml + GridUtils.statusSelectFormHtml({
+                        relationId,
+                        updateUrl: updateStatusUrl,
+                        currentValue: statusPk,
+                        options: relationStatusOptions,
+                        formClass: 'gift-plan-status-form',
+                        formStyle: '',
+                        selectClass: `gift-plan-status-select ${statusClass}`,
+                        disabled: !canEditStatus,
+                        disabledTitle: statusReadonlyMessage
+                    }));
                 }
             },
             {
@@ -143,10 +397,28 @@
                 sort: {
                     compare: GridUtils.sortDateObject()
                 },
-                formatter: GridUtils.dateObjectFormatter
+                formatter: function (cell, row) {
+                    const rowState = row.cells[8].data || {};
+                    if (!cell && rowState.missingDueDate) {
+                        const rawLabel = rowState.missingDueDateLabel || missingDueDateLabel;
+                        const label = escapeHtml(rawLabel);
+                        return gridjs.html(`
+                            <span class="gift-plan-missing-data-badge"
+                                  title="${GridUtils.escapeAttribute(rawLabel)}"
+                                  aria-label="${GridUtils.escapeAttribute(rawLabel)}">
+                                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>${label}
+                            </span>
+                        `);
+                    }
+                    return GridUtils.dateObjectFormatter(cell);
+                }
             },
             {
-                name: 'Relation ID',
+                name: 'Row State',
+                hidden: true
+            },
+            {
+                name: 'Gift Plan ID',
                 hidden: true
             },
             { name: 'relation_detail_url', hidden: true },
@@ -154,107 +426,80 @@
             { name: 'relation_delete_url', hidden: true },
             {
                 name: '{% trans "Actions"|escapejs %}',
-                width: '150px',
+                width: '340px',
                 sort: false,
-                formatter: GridUtils.actionButtonsFormatter({
-                    details: (row) => row.cells[8].data,
-                    edit: (row) => row.cells[9].data,
-                    delete: (row) => row.cells[10].data
-                }, ['details', 'edit', 'delete'])
+                formatter: PermissionUtils.permissionAwareActionFormatter({
+                    details: (row) => row.cells[10].data,
+                    edit: (row) => row.cells[11].data,
+                    delete: (row) => row.cells[12].data,
+                    share: () => "{% url 'gift_manager:share_objects' %}"
+                }, ['details', 'edit', 'delete', 'share'], {
+                    idResolver: (row) => row.cells[9].data  // relation_id
+                }, userPermissions)
             }
         ];
 
-        // Initialize Grid.js
-        const grid = GridUtils.initGrid('relation-grid', columns, data, {
+        // Track if inline editing has been initialized
+        const editState = { inlineEditingInitialized: false };
+        const inlineEditingMapping = {
+            4: 'comment',
+            7: 'due_date'
+        };
+
+        // Initialize Grid.js with all features using the standard helper
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'relation-grid',
+            entityType: 'relation',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
             pagination: {
-                enabled: true,
-                limit: 10
+                enabled: true
             },
             sort: {
                 multiColumn: true,
                 enabled: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 4: 'comment', 7: 'due_date' } },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                rowStateMarkers: {
+                    markerSelector: '[data-grid-row-state]',
+                    rowClass: 'gift-plan-grid-row',
+                    attentionClass: 'gift-plan-grid-row--attention',
+                    missingDataClass: 'gift-plan-grid-row--missing-data',
+                    classPrefix: 'gift-plan-grid-row--',
+                    stateKeys: ['overdue', 'due_soon', 'needs_details', 'later', 'ideas', 'completed', 'unknown']
+                },
+                initialSort: [
+                    { columnSelector: 'th:nth-child(6)' },  // Status
+                    { columnSelector: 'th:nth-child(3)', shift: true },  // Recipient
+                    { columnSelector: 'th:nth-child(2)', shift: true }  // Gift
+                ]
+            },
+            idFieldIndex: 9
+        });
+
+        document.addEventListener('inline-edit:success', function (event) {
+            if (
+                event.detail?.entityType === 'relation' &&
+                event.detail?.fieldName === 'due_date'
+            ) {
+                document.dispatchEvent(new CustomEvent('list:update'));
             }
         });
 
-        // Initialize filter panel
-        FilterPanel.init('relation-grid', grid, columns);
-
-        // Setup filter dropdown UI
-        GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
-
-        // Setup custom status filter
-        GridUtils.setupCustomColumnFilter(grid, 4, '.status-filter');
-
-        // Handle status selector changes with event delegation
+// Handle status selector changes with event delegation
         document.getElementById('relation-grid').addEventListener('change', function (e) {
             if (e.target.classList.contains('status-selector')) {
-                const select = e.target;
-                const relationId = select.dataset.relationId;
-                const updateUrl = select.dataset.updateUrl;
-                const newStatus = select.value;
-                const form = select.closest('form');
-
-                // Get CSRF token
-                function getCookie(name) {
-                    let cookieValue = null;
-                    if (document.cookie && document.cookie !== '') {
-                        const cookies = document.cookie.split(';');
-                        for (let i = 0; i < cookies.length; i++) {
-                            const cookie = cookies[i].trim();
-                            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                                break;
-                            }
-                        }
-                    }
-                    return cookieValue;
-                }
-
-                // Make POST request
-                fetch(updateUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: `relation_id=${relationId}&new_status=${newStatus}`
-                })
-                    .then(response => response.text())
-                    .then(html => {
-                        // Replace the form with the server response
-                        form.outerHTML = html;
-                    })
-                    .catch(error => {
-                        console.error('Error updating status:', error);
-                        alert('Failed to update status. Please try again.');
-                    });
+                GridUtils.updateStatusSelect(e.target);
             }
         });
-
-        // Trigger initial sort on status column to make Grid.js aware of the sort
-        // Trigger initial sort: Status (5) then Family Name (2) then Gift (1)
-        setTimeout(() => {
-            const statusHeader = document.querySelector('#relation-grid th:nth-child(5)');
-            const familyNameHeader = document.querySelector('#relation-grid th:nth-child(2)');
-            const giftHeader = document.querySelector('#relation-grid th:nth-child(1)');
-
-            if (statusHeader && familyNameHeader && giftHeader) {
-                // Primary sort: Status
-                statusHeader.click();
-
-                // Secondary sort: Family Name (simulate Shift+Click)
-                const shiftClick = new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    view: window,
-                    shiftKey: true
-                });
-                familyNameHeader.dispatchEvent(shiftClick);
-
-                // Third sort: Gift (simulate Shift+Click)
-                giftHeader.dispatchEvent(shiftClick);
-            }
-        }, 100);
     }) ();
 </script>
+{% endif %}
 {% endblock %}

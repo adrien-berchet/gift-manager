@@ -1,0 +1,6 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.name %}
+{% include "gift_manager/includes/forms/field.html" with field=form.comment %}
+{% trans "Search tags..." as tags_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.tags searchable=True search_placeholder=tags_search_placeholder %}

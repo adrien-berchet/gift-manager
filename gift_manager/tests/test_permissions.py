@@ -128,7 +128,6 @@ class TestGetPermission:
     @pytest.mark.parametrize(
         ("permission_level"),
         [
-            (PermissionLevel.NONE),
             (PermissionLevel.VIEWER),
             (PermissionLevel.EDITOR),
             (PermissionLevel.OWNER),
@@ -272,6 +271,11 @@ class TestCreateOrUpdatePermission:
             mock_permission.save.assert_called_once()
             mock_obj.shared_with.add.assert_called_once_with(mock_user)
             assert result == mock_permission
+
+    def test_create_permission_rejects_invalid_level(self, mock_user, mock_obj):
+        """Test permission rows cannot be created with unsupported levels."""
+        with pytest.raises(ValueError, match="Invalid permission value"):
+            create_or_update_permission(mock_user, mock_obj, permission_level=999)
 
     def test_no_permission_level_change(self, mock_user, mock_obj):
         """Test that permission isn't updated when level is unchanged."""

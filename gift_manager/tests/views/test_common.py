@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest.mock import Mock
 from unittest.mock import patch
 
@@ -5,14 +6,19 @@ import pytest
 from django.contrib.auth.models import User
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
+from gift_manager.models import Event
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.views import get_user
 from gift_manager.views import home
 
@@ -56,6 +62,366 @@ def test_home_view(mock_render, user):
     assert mock_render.call_args[0][0] == mock_request
     assert mock_render.call_args[0][1] == "gift_manager/home.html"
     assert result == mock_render.return_value
+
+
+@pytest.mark.django_db
+class TestHomeDashboard:
+    """Tests for the action-oriented authenticated dashboard."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, client, user):
+        self.client = client
+        self.user = user
+        self.client.force_login(user)
+
+    def test_dashboard_prioritizes_action_groups_and_filters_private_plans(self):
+        today = timezone.localdate()
+        idea = RelationStatusFactory(status="Idea")
+        planned = RelationStatusFactory(status="Planned")
+        abandoned = RelationStatusFactory(status="Abandoned")
+        completed = RelationStatusFactory(status="Given")
+        stale_event = EventFactory(
+            name="Winter party",
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=today + timedelta(days=60),
+            recurrence="yearly",
+            shared_with=[self.user],
+        )
+
+        RelationFactory(
+            gift=GiftFactory(name="Overdue scarf"),
+            status=idea,
+            due_date=today - timedelta(days=1),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Soon puzzle"),
+            status=idea,
+            due_date=today + timedelta(days=3),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Missing date"),
+            event=None,
+            status=planned,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Someday telescope"),
+            event=None,
+            status=idea,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Loose future idea"),
+            event=None,
+            status=idea,
+            due_date=today + timedelta(days=70),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Later planned gift"),
+            event=stale_event,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Rejected gadget"),
+            status=abandoned,
+            due_date=today - timedelta(days=5),
+            shared_with=[self.user],
+        )
+        stale_plan = RelationFactory(
+            gift=GiftFactory(name="Old idea"),
+            event=stale_event,
+            status=idea,
+            due_date=today + timedelta(days=70),
+            shared_with=[self.user],
+        )
+        stale_plan.__class__.objects.filter(pk=stale_plan.pk).update(
+            creation_date=timezone.now() - timedelta(days=45)
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Already done"),
+            status=completed,
+            due_date=today - timedelta(days=2),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Private plan"),
+            status=idea,
+            due_date=today - timedelta(days=2),
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        groups = response.context["dashboard_action_groups"]
+        assert [group["key"] for group in groups] == [
+            "overdue",
+            "upcoming",
+            "incomplete",
+            "stale",
+        ]
+        assert response.context["dashboard_summary"]["overdue"] == 1
+        assert response.context["dashboard_summary"]["upcoming"] == 1
+        assert response.context["dashboard_summary"]["incomplete"] == 1
+        assert response.context["dashboard_summary"]["stale"] == 1
+
+        content = response.content.decode()
+        groups_by_key = {group["key"]: group for group in groups}
+        assert groups_by_key["upcoming"]["is_paginated"] is True
+        assert groups_by_key["upcoming"]["is_compact"] is True
+        assert groups_by_key["upcoming"]["workspace_focus"] == "due_soon"
+        assert groups_by_key["upcoming"]["display_items"] == groups_by_key["upcoming"]["items"]
+        assert groups_by_key["incomplete"]["is_paginated"] is True
+        assert groups_by_key["incomplete"]["is_compact"] is True
+        assert groups_by_key["incomplete"]["workspace_focus"] == "needs_details"
+        assert groups_by_key["incomplete"]["display_items"] == groups_by_key["incomplete"]["items"]
+        assert "Overdue scarf" in content
+        assert "Soon puzzle" in content
+        assert "Missing date" in content
+        assert "Someday telescope" not in content
+        assert "Loose future idea" not in content
+        assert "Later planned gift" not in content
+        assert "Rejected gadget" not in content
+        assert "Old idea" in content
+        assert "Already done" not in content
+        assert "Private plan" not in content
+        assert "gift-plan-card gift-plan-card--due_soon" in content
+        assert "gift-plan-card gift-plan-card--needs_details" in content
+        assert "gift-plan-card-topline" in content
+        assert "gift-plan-card-meta-row" in content
+        assert "recipient-type-marker" in content
+        assert "recipient-type-badge" not in content
+        assert (
+            "dashboard-action-list gift-plan-card-grid dashboard-action-list--paginated"
+        ) in content
+        assert "dashboard-action-group--compact" in content
+        assert 'data-dashboard-rows-per-page="1"' in content
+        assert "?focus=due_soon#gift-plan-group-due_soon" in content
+        assert "?focus=needs_details#gift-plan-group-needs_details" in content
+        assert "dashboard-action-list--scrollable" not in content
+        assert "data-dashboard-action-card" in content
+        assert "dashboard-action-item" not in content
+        assert "data-dashboard-action-paginated" in content
+        assert "data-dashboard-pagination" in content
+        assert 'id="dashboard-live"' in content
+        assert "data-list-container" in content
+        assert 'hx-trigger="refresh"' in content
+        assert 'hx-select="#dashboard-live"' in content
+        assert content.index("Next actions") < content.index('class="stats-grid"')
+
+    def test_dashboard_paginated_action_groups_render_all_items(self):
+        today = timezone.localdate()
+        planned = RelationStatusFactory(status="Planned")
+
+        for index in range(5):
+            RelationFactory(
+                gift=GiftFactory(name=f"Due soon paginated item {index}"),
+                status=planned,
+                due_date=today + timedelta(days=index + 1),
+                shared_with=[self.user],
+            )
+            RelationFactory(
+                gift=GiftFactory(name=f"Needs details paginated item {index}"),
+                event=None,
+                status=planned,
+                due_date=None,
+                shared_with=[self.user],
+            )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        groups_by_key = {
+            group["key"]: group for group in response.context["dashboard_action_groups"]
+        }
+        assert len(groups_by_key["upcoming"]["display_items"]) == 5
+        assert len(groups_by_key["incomplete"]["display_items"]) == 5
+
+        content = response.content.decode()
+        assert "Due soon paginated item 4" in content
+        assert "Needs details paginated item 4" in content
+
+    def test_dashboard_cards_expose_editor_quick_actions(self):
+        today = timezone.localdate()
+        planned = RelationStatusFactory(status="Planned")
+        event = EventFactory(shared_with=[self.user])
+        overdue_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard overdue action"),
+            event=event,
+            status=planned,
+            due_date=today - timedelta(days=1),
+            shared_with=[self.user],
+        )
+        due_soon_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard soon action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=2),
+            shared_with=[self.user],
+        )
+        later_upcoming_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard later upcoming action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        missing_event_upcoming_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard missing event upcoming action"),
+            event=None,
+            status=planned,
+            due_date=today + timedelta(days=20),
+            shared_with=[self.user],
+        )
+        needs_details_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard details action"),
+            event=None,
+            status=planned,
+            due_date=None,
+            shared_with=[self.user],
+        )
+        stale_relation = RelationFactory(
+            gift=GiftFactory(name="Dashboard stale action"),
+            event=event,
+            status=planned,
+            due_date=today + timedelta(days=60),
+            shared_with=[self.user],
+        )
+        stale_relation.__class__.objects.filter(pk=stale_relation.pk).update(
+            creation_date=timezone.now() - timedelta(days=45)
+        )
+
+        for relation in (
+            overdue_relation,
+            due_soon_relation,
+            later_upcoming_relation,
+            missing_event_upcoming_relation,
+            needs_details_relation,
+            stale_relation,
+        ):
+            create_or_update_permission(
+                self.user,
+                relation,
+                permission_level=PermissionLevel.EDITOR,
+            )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        cards_by_gift_name = {
+            card["relation"].gift.name: card
+            for group in response.context["dashboard_action_groups"]
+            for card in group["items"]
+        }
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard overdue action"]["quick_actions"]
+        ] == ["given"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard soon action"]["quick_actions"]
+        ] == ["given", "purchased"]
+        assert "Dashboard later upcoming action" not in cards_by_gift_name
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard missing event upcoming action"][
+                "quick_actions"
+            ]
+        ] == ["add_details"]
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["urgency_key"]
+            == "needs_details"
+        )
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["has_missing_event"]
+            is True
+        )
+        assert (
+            cards_by_gift_name["Dashboard missing event upcoming action"]["missing_event_label"]
+            == "Missing event"
+        )
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard details action"]["quick_actions"]
+        ] == ["add_details", "set_date"]
+        assert [
+            action["name"]
+            for action in cards_by_gift_name["Dashboard stale action"]["quick_actions"]
+        ] == ["purchased"]
+
+        content = response.content.decode()
+        assert 'data-action="quick-given"' in content
+        assert 'data-action="quick-purchased"' in content
+        assert "Dashboard missing event upcoming action" in content
+        assert "gift-plan-missing-data-badge" in content
+        assert "Missing event" in content
+        assert "gift-plan-date-action-button" in content
+        assert "data-gift-plan-date-picker-button" in content
+        assert "gift-plan-quick-actions.js" in content
+        assert 'type="date"' not in content
+        assert "gift-plan-date-action-input" not in content
+        assert "form-control form-control-sm gift-plan-date-action-input" not in content
+
+    def test_dashboard_keeps_summary_count_without_support_cards(self):
+        today = timezone.localdate()
+        idea = RelationStatusFactory(status="Idea")
+        GiftFactory(name="Loose puzzle", shared_with=[self.user])
+        assigned_gift = GiftFactory(name="Assigned candle", shared_with=[self.user])
+        event = EventFactory(
+            name="Birthday",
+            schedule_type=Event.ScheduleType.RECURRING,
+            date=today + timedelta(days=5),
+            recurrence="yearly",
+            shared_with=[self.user],
+        )
+        person = PersonFactory(
+            first_name="Ada",
+            family_name="Lovelace",
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            person=person,
+            gift=assigned_gift,
+            event=event,
+            status=idea,
+            due_date=today + timedelta(days=4),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        assert response.context["dashboard_summary"]["unassigned_gifts"] == 1
+        assert "upcoming_occasion_recipients" not in response.context
+        assert "unassigned_gifts" not in response.context
+
+        content = response.content.decode()
+        assert "dashboard-support-grid" not in content
+        assert "Gift ideas without a plan" not in content
+        assert "Upcoming occasions" not in content
+        assert "Loose puzzle" not in content
+        assert "Assigned candle" in content
+        assert "Ada Lovelace" in content
+        assert "Birthday" in content
+
+    def test_empty_dashboard_keeps_create_actions_before_secondary_counts(self):
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        assert "status_counts" not in response.context
+        content = response.content.decode()
+        assert "No gift plans need attention." in content
+        assert "Create a gift plan" in content
+        assert "status-list" not in content
+        assert "status-pill" not in content
+        assert content.index("Needs attention") < content.index("Library")
+        assert content.index("Library") < content.index('class="stats-grid"')
 
 
 @pytest.mark.django_db
@@ -126,7 +492,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        person_results = [r for r in data["results"] if r["type"] == "person"]
+        person_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Person"
+        ]
         assert len(person_results) == 1
         assert person_results[0]["icon"] == "fa-user"
         assert f"/persons/{person.person_id}/" in person_results[0]["url"]
@@ -144,7 +512,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        person_results = [r for r in data["results"] if r["type"] == "person"]
+        person_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Person"
+        ]
         assert len(person_results) == 1
 
     def test_search_finds_person_groups(self):
@@ -160,7 +530,9 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        group_results = [r for r in data["results"] if r["type"] == "group"]
+        group_results = [
+            r for r in data["results"] if r["type"] == "recipient" and r["subtitle"] == "Group"
+        ]
         assert len(group_results) == 1
         assert group_results[0]["title"] == "Family Friends"
         assert group_results[0]["icon"] == "fa-layer-group"
@@ -311,4 +683,4 @@ class TestGlobalSearchView:
         types_found = {r["type"] for r in data["results"]}
         assert "gift" in types_found
         assert "event" in types_found
-        assert "person" in types_found
+        assert "recipient" in types_found

@@ -5,10 +5,15 @@ from typing import Any
 
 from django import template
 from django.urls import reverse
-from django.utils.html import escapejs
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 register = template.Library()
+
+
+def _safe_json(value: Any) -> str:
+    """Serialize JSON without raw HTML tokens."""
+    serialized = json.dumps(value)
+    return serialized.replace("&", "\\u0026").replace("<", "\\u003C").replace(">", "\\u003E")
 
 
 @register.simple_tag
@@ -46,7 +51,7 @@ def grid_action_urls(object_type: str, object_id: str, actions: list[str] | None
             # Skip actions that don't have URLs
             continue
 
-    return mark_safe(json.dumps(url_map))
+    return _safe_json(url_map)
 
 
 @register.filter
@@ -77,7 +82,7 @@ def to_grid_data(queryset, columns: dict | None = None) -> str:
 
         data.append(row)
 
-    return mark_safe(json.dumps(data))
+    return _safe_json(data)
 
 
 @register.filter
@@ -94,7 +99,7 @@ def to_grid_columns(columns: dict, actions: list[str] | None = None) -> str:
     grid_columns = []
 
     for col_key, col_label in columns.items():
-        grid_columns.append({"id": col_key, "name": escapejs(str(col_label))})
+        grid_columns.append({"id": col_key, "name": str(col_label)})
 
     # Add actions column if specified
     if actions:
@@ -106,7 +111,7 @@ def to_grid_columns(columns: dict, actions: list[str] | None = None) -> str:
             }
         )
 
-    return mark_safe(json.dumps(grid_columns))
+    return _safe_json(grid_columns)
 
 
 @register.simple_tag
@@ -128,19 +133,17 @@ def grid_data_row(item: dict, columns: dict, id_field: str = "id") -> str:
 
         # Handle special cases
         if isinstance(value, (list, dict)):
-            # JSON encode complex values
-            row_data.append(json.dumps(value))
+            row_data.append(value)
         elif value is None:
-            row_data.append('""')
+            row_data.append("")
         else:
-            # Escape and quote strings
-            row_data.append(f'"{escapejs(str(value))}"')
+            row_data.append(str(value))
 
     # Add ID field
     id_value = item.get(id_field, "")
-    row_data.append(f'"{escapejs(str(id_value))}"')
+    row_data.append(str(id_value))
 
-    return mark_safe(f"[{', '.join(row_data)}]")
+    return _safe_json(row_data)
 
 
 @register.simple_tag(takes_context=True)
@@ -160,10 +163,10 @@ def grid_create_button(context: dict, object_type: str, label: str | None = None
 
     try:
         url = reverse(f"gift_manager:{object_type}_create")
-        return mark_safe(
-            f'<a href="{url}" class="btn btn-primary mb-3">'
-            f'<i class="fas fa-plus me-2"></i>{escapejs(label)}'
-            f"</a>"
+        return format_html(
+            '<a href="{}" class="btn btn-primary mb-3"><i class="fas fa-plus me-2"></i>{}</a>',
+            url,
+            label,
         )
     except Exception:
         return ""
@@ -193,7 +196,7 @@ def format_grid_value(value: Any, column_type: str = "text") -> str:
         return str(value)
     if column_type == "email":
         # Email with mailto link
-        return f'<a href="mailto:{value}">{value}</a>'
+        return format_html('<a href="mailto:{}">{}</a>', value, value)
     return str(value)
 
 
@@ -222,4 +225,4 @@ def grid_config(
         "resizable": resizable,
     }
 
-    return mark_safe(json.dumps(config))
+    return _safe_json(config)

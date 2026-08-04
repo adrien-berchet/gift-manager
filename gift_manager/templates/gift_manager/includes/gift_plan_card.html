@@ -1,0 +1,184 @@
+{% load i18n %}
+
+<article class="gift-plan-card gift-plan-card--{{ card.urgency_key }}"
+         {% if dashboard_paginated %}data-dashboard-action-card{% endif %}>
+    <div class="gift-plan-card-topline">
+        <span class="gift-plan-status-badge {{ card.status_class }}">
+            {{ card.relation.status }}
+        </span>
+        {% if card.relation.due_date %}
+        <span class="gift-plan-due-badge gift-plan-due-badge--{{ card.urgency_key }}">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+            {{ card.relation.due_date|date:"M d, Y" }}
+        </span>
+        {% else %}
+        <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+            <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+            {% trans "No date" %}
+        </span>
+        {% endif %}
+    </div>
+
+    <h4 class="gift-plan-card-title">
+        <a href="{{ card.detail_url }}"
+           data-action="detail"
+           data-detail-url="{{ card.detail_url }}">
+            {{ card.relation.gift.name }}
+        </a>
+    </h4>
+
+    <div class="gift-plan-card-meta">
+        <div class="gift-plan-card-meta-row">
+            {% if card.relation.is_group_targeted %}
+            <span class="recipient-type-marker recipient-type-marker--group"
+                  role="img"
+                  data-bs-toggle="tooltip"
+                  title="{{ card.relation.recipient_type_label }}"
+                  aria-label="{{ card.relation.recipient_type_label }}">
+                <i class="fas fa-layer-group" aria-hidden="true"></i>
+            </span>
+            {% else %}
+            <span class="recipient-type-marker recipient-type-marker--person"
+                  role="img"
+                  data-bs-toggle="tooltip"
+                  title="{{ card.relation.recipient_type_label }}"
+                  aria-label="{{ card.relation.recipient_type_label }}">
+                <i class="fas fa-user" aria-hidden="true"></i>
+            </span>
+            {% endif %}
+            {% if card.relation.recipient_url %}
+            <a href="{{ card.relation.recipient_url }}">{{ card.relation.recipient_name }}</a>
+            {% else %}
+            <span>{{ card.relation.recipient_name }}</span>
+            {% endif %}
+        </div>
+
+        {% if card.relation.event %}
+        <div class="gift-plan-card-meta-row">
+            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+            <a href="{% url 'gift_manager:event_detail' card.relation.event.event_id %}">
+                {{ card.relation.event.name }}
+            </a>
+        </div>
+        {% elif card.has_missing_event %}
+        <div class="gift-plan-card-meta-row">
+            <span class="gift-plan-missing-data-badge"
+                  title="{{ card.missing_event_label }}"
+                  aria-label="{{ card.missing_event_label }}">
+                <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>{{ card.missing_event_label }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if card.relation.gift.tags.all %}
+    <div class="gift-plan-tag-list">
+        {% for tag in card.relation.gift.tags.all %}
+        <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}"
+           class="gift-plan-tag-badge">
+            <i class="fas fa-tag" aria-hidden="true"></i>{{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if card.relation.comment %}
+    <p class="gift-plan-note">{{ card.relation.comment|truncatechars:160 }}</p>
+    {% else %}
+    <p class="gift-plan-note gift-plan-note--empty">{% trans "No notes yet." %}</p>
+    {% endif %}
+
+    <div class="gift-plan-card-actions">
+        {% for action in card.quick_actions %}
+            {% if action.kind == "status" %}
+            <form class="gift-plan-quick-action-form"
+                  hx-post="{{ card.quick_action_url }}"
+                  hx-swap="none">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="submit"
+                        class="btn btn-sm {{ action.button_class }}"
+                        data-action="quick-{{ action.name }}">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+            </form>
+            {% elif action.kind == "edit" %}
+            <a href="{{ card.edit_url }}"
+               class="btn btn-sm {{ action.button_class }}"
+               data-action="edit"
+               data-edit-url="{{ card.edit_url }}">
+                <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+            </a>
+            {% elif action.kind == "date" %}
+            <form class="gift-plan-date-action-form"
+                  action="{{ card.quick_action_url }}"
+                  method="post"
+                  data-quick-action-url="{{ card.quick_action_url }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="button"
+                        class="btn btn-sm {{ action.button_class }} gift-plan-date-action-button"
+                        data-action="quick-{{ action.name }}"
+                        data-gift-plan-date-picker-button
+                        data-current-due-date="{{ card.relation.due_date|date:'Y-m-d' }}"
+                        aria-haspopup="dialog"
+                        aria-expanded="false">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+            </form>
+            {% elif action.kind == "planning" %}
+            <form class="gift-plan-planning-action-form"
+                  action="{{ card.quick_action_url }}"
+                  method="post"
+                  data-quick-action-url="{{ card.quick_action_url }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="{{ action.name }}">
+                <button type="button"
+                        class="btn btn-sm {{ action.button_class }}"
+                        data-action="quick-{{ action.name }}"
+                        data-gift-plan-planning-button
+                        data-current-event="{% if card.relation.event %}{{ card.relation.event.event_id }}{% endif %}"
+                        data-current-due-date="{{ card.relation.due_date|date:'Y-m-d' }}"
+                        data-event-label="{% trans 'Event' %}"
+                        data-due-date-label="{% trans 'Due date' %}"
+                        data-choose-event-label="{% trans 'Choose event' %}"
+                        data-cancel-label="{% trans 'Cancel' %}"
+                        data-save-label="{% trans 'Save' %}"
+                        aria-haspopup="dialog"
+                        aria-expanded="false">
+                    <i class="fas {{ action.icon }} me-1" aria-hidden="true"></i>{{ action.label }}
+                </button>
+                <template data-gift-plan-event-options>
+                    {% for event in card.event_options %}
+                    <option value="{{ event.event_id }}"
+                            {% if card.relation.event_id == event.id %}selected{% endif %}>{{ event.name }}</option>
+                    {% endfor %}
+                </template>
+            </form>
+            {% endif %}
+        {% endfor %}
+        <a href="{{ card.detail_url }}"
+           class="btn btn-sm btn-outline-secondary"
+           data-action="detail"
+           data-detail-url="{{ card.detail_url }}">
+            <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Details" %}
+        </a>
+        {% if card.can_edit %}
+        {% if not card.has_contextual_edit_action %}
+        <a href="{{ card.edit_url }}"
+           class="btn btn-sm btn-primary"
+           data-action="edit"
+           data-edit-url="{{ card.edit_url }}">
+            <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Edit" %}
+        </a>
+        {% endif %}
+        {% else %}
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary"
+                disabled
+                title="{% trans 'You do not have permission to edit this gift plan' %}">
+            <i class="fas fa-lock me-1" aria-hidden="true"></i>{% trans "Edit" %}
+        </button>
+        {% endif %}
+    </div>
+</article>

@@ -1,0 +1,73 @@
+{% load i18n %}
+
+{% if field %}
+  {% if field.is_hidden %}
+    {{ field }}
+  {% else %}
+  <div class="form-group form-field mb-3{% if field.errors %} has-errors{% endif %}"{% if field_id %} id="{{ field_id }}"{% endif %}>
+    {% if field.field.widget.input_type == "radio" %}
+      <div class="form-label">
+        {{ field.label }}
+        {% if field.field.required %}
+        <span class="text-danger" aria-hidden="true">*</span>
+        <span class="visually-hidden">{% trans "required" %}</span>
+        {% endif %}
+      </div>
+      <div class="{{ radio_group_class|default:'form-choice-list' }}">
+        {% for choice in field %}
+        <div class="form-check">
+          {{ choice.tag }}
+          <label class="form-check-label" for="{{ choice.id_for_label }}">
+            {{ choice.choice_label }}
+          </label>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <label for="{{ field.id_for_label }}" class="form-label">
+        {{ field.label }}
+        {% if field.field.required %}
+        <span class="text-danger" aria-hidden="true">*</span>
+        <span class="visually-hidden">{% trans "required" %}</span>
+        {% endif %}
+      </label>
+
+      {% if searchable %}
+      <div class="searchable-select-wrapper">
+        <input type="search"
+               class="searchable-select-search form-control mb-2"
+               placeholder="{{ search_placeholder }}"
+               aria-label="{{ search_placeholder }}">
+        <div class="btn-group btn-group-sm mb-2" role="group" aria-label="{% trans 'Selection controls' %}">
+          <button type="button"
+                  class="btn btn-outline-primary select-all-btn"
+                  {% if select_all_action %}data-action="{{ select_all_action }}"{% endif %}>
+            {% trans "Select all" %}
+          </button>
+          <button type="button"
+                  class="btn btn-outline-secondary clear-all-btn"
+                  {% if clear_all_action %}data-action="{{ clear_all_action }}"{% endif %}>
+            {% trans "Clear all" %}
+          </button>
+        </div>
+        {{ field }}
+      </div>
+      {% else %}
+        {{ field }}
+      {% endif %}
+    {% endif %}
+
+    {% if field.help_text %}
+    <div class="form-text">{{ field.help_text }}</div>
+    {% endif %}
+
+    {% if field.errors %}
+    <div class="invalid-feedback d-block">
+      {% for error in field.errors %}
+        <div>{{ error }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endif %}

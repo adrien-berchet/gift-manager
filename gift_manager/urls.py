@@ -4,6 +4,21 @@ from django.contrib import admin
 from django.urls import path
 
 from . import views
+from .views.bulk_operations import BulkDeleteConfirmationView
+from .views.bulk_operations import BulkOperationProgressView
+from .views.bulk_operations import BulkOperationView
+from .views.inline_editing import EventInlineUpdateView
+from .views.inline_editing import GiftInlineUpdateView
+from .views.inline_editing import GiftTagInlineUpdateView
+from .views.inline_editing import PersonGroupInlineUpdateView
+from .views.inline_editing import PersonInlineUpdateView
+from .views.inline_editing import RelationInlineUpdateView
+from .views.search import EventSearchView
+from .views.search import GiftSearchView
+from .views.search import GiftTagSearchView
+from .views.search import PersonGroupSearchView
+from .views.search import PersonSearchView
+from .views.search import RelationSearchView
 
 app_name = "gift_manager"
 
@@ -33,6 +48,7 @@ urlpatterns = [
         views.UpdateViewPreferencesView.as_view(),
         name="update_view_preferences",
     ),
+    path("recipients/", views.RecipientListView.as_view(), name="recipients"),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),
     path("persons/<uuid:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
@@ -123,6 +139,11 @@ urlpatterns = [
         name="relations",
     ),
     path(
+        "relations/advanced/",
+        views.RelationAdvancedListView.as_view(),
+        name="relation_advanced_list",
+    ),
+    path(
         "relations/create/",
         views.RelationCreateView.as_view(),
         name="relation_create",
@@ -136,6 +157,11 @@ urlpatterns = [
         "relations/<uuid:pk>/edit/",
         views.RelationUpdateView.as_view(),
         name="relation_edit",
+    ),
+    path(
+        "relations/<uuid:pk>/quick-action/",
+        views.relation_quick_action,
+        name="relation_quick_action",
     ),
     path(
         "relations/<uuid:pk>/delete/",
@@ -155,6 +181,56 @@ urlpatterns = [
     ),
     path("relation_status_update/", views.update_relation_status, name="relation_status_update"),
     path("share/", views.ShareObjectsView.as_view(), name="share_objects"),
+    # Inline editing endpoints
+    path(
+        "api/persons/<uuid:pk>/inline-update/",
+        PersonInlineUpdateView.as_view(),
+        name="person_inline_update",
+    ),
+    path(
+        "api/gifts/<uuid:pk>/inline-update/",
+        GiftInlineUpdateView.as_view(),
+        name="gift_inline_update",
+    ),
+    path(
+        "api/events/<uuid:pk>/inline-update/",
+        EventInlineUpdateView.as_view(),
+        name="event_inline_update",
+    ),
+    path(
+        "api/person-groups/<uuid:pk>/inline-update/",
+        PersonGroupInlineUpdateView.as_view(),
+        name="person_group_inline_update",
+    ),
+    path(
+        "api/gift-tags/<uuid:pk>/inline-update/",
+        GiftTagInlineUpdateView.as_view(),
+        name="gift_tag_inline_update",
+    ),
+    path(
+        "api/relations/<uuid:pk>/inline-update/",
+        RelationInlineUpdateView.as_view(),
+        name="relation_inline_update",
+    ),
+    # Bulk operations endpoints
+    path("api/bulk-operations/", BulkOperationView.as_view(), name="bulk_operations"),
+    path(
+        "api/bulk-delete-confirmation/",
+        BulkDeleteConfirmationView.as_view(),
+        name="bulk_delete_confirmation",
+    ),
+    path(
+        "api/bulk-operation-progress/",
+        BulkOperationProgressView.as_view(),
+        name="bulk_operation_progress",
+    ),
+    # HTMX search endpoints
+    path("api/search/persons/", PersonSearchView.as_view(), name="person_search"),
+    path("api/search/gifts/", GiftSearchView.as_view(), name="gift_search"),
+    path("api/search/events/", EventSearchView.as_view(), name="event_search"),
+    path("api/search/relations/", RelationSearchView.as_view(), name="relation_search"),
+    path("api/search/person-groups/", PersonGroupSearchView.as_view(), name="person_group_search"),
+    path("api/search/gift-tags/", GiftTagSearchView.as_view(), name="gift_tag_search"),
 ]
 
 if settings.DEBUG:

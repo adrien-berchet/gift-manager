@@ -1,0 +1,210 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n %}
+
+{% block edit_url %}{% url 'gift_manager:relation_edit' pk=object.relation_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:relation_delete' pk=object.relation_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <!-- Basic Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Basic Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Gift" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-gift me-2 text-primary"></i>
+                        <a href="{% url 'gift_manager:gift_detail' pk=object.gift.gift_id %}">
+                            <strong>{{ object.gift.name }}</strong>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Recipient" %}</label>
+                    <div class="detail-value">
+                        {% if object.is_group_targeted %}
+                        <i class="fas fa-layer-group me-2 text-primary"></i>
+                        {% else %}
+                        <i class="fas fa-user me-2 text-primary"></i>
+                        {% endif %}
+                        {% if object.recipient_url %}
+                        <a href="{{ object.recipient_url }}"><strong>{{ object.recipient_name }}</strong></a>
+                        {% else %}
+                        <strong>{{ object.recipient_name }}</strong>
+                        {% endif %}
+                        <span class="badge recipient-type-badge recipient-type-badge--{{ object.recipient_type }} ms-2">
+                            {{ object.recipient_type_label }}
+                        </span>
+                        {% if object.is_group_targeted %}
+                        <div class="text-muted small mt-1">{% trans "Gift plan for this group directly." %}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% if object.status %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Status" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
+                            {{ object.status }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.due_date %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Due Date" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-due-badge gift-plan-due-badge--{{ gift_plan_urgency_key }}">
+                            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+                            {{ object.due_date|date:"M d, Y" }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Due Date" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+                            <i class="fas fa-calendar-plus" aria-hidden="true"></i>
+                            {% trans "No date" %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.comment %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Comment" %}</label>
+                    <div class="detail-value">{{ object.comment }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Created" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar me-1 text-muted"></i>
+                        {{ object.creation_date|date:"M d, Y" }}
+                        <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Information -->
+    {% if object.event %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-calendar-alt me-2"></i>{% trans "Event Information" %}
+        </h6>
+
+        <div class="event-info border rounded p-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-calendar-alt me-2 text-primary"></i>
+                <a href="{% url 'gift_manager:event_detail' pk=object.event.event_id %}">
+                    <strong>{{ object.event.name }}</strong>
+                </a>
+            </div>
+
+            {% if object.event.comment %}
+            <div class="text-muted small mb-2">
+                <i class="fas fa-comment me-1"></i>
+                {{ object.event.comment }}
+            </div>
+            {% endif %}
+
+            <div class="text-muted small mb-1">
+                <i class="fas fa-calendar-day me-1"></i>
+                {% trans "Schedule:" %} {{ object.event.date_summary }}
+            </div>
+
+            {% if object.event.is_scheduled %}
+            <div class="text-muted small mb-1">
+                <i class="fas fa-calendar-check me-1"></i>
+                {% trans "Date:" %} {{ object.event.date|date:"M d, Y" }}
+            </div>
+            {% endif %}
+
+            {% if object.event.is_recurring %}
+            <div class="text-muted small">
+                <i class="fas fa-redo me-1"></i>
+                {% trans "Recurrence:" %} {{ object.event.get_recurrence_display }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gift Details -->
+    {% if object.gift %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-gift me-2"></i>{% trans "Gift Details" %}
+        </h6>
+
+        <div class="gift-info border rounded p-3">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-gift me-2 text-primary"></i>
+                <a href="{% url 'gift_manager:gift_detail' pk=object.gift.gift_id %}">
+                    <strong>{{ object.gift.name }}</strong>
+                </a>
+            </div>
+
+            {% if object.gift.comment %}
+            <div class="text-muted small mb-2">
+                <i class="fas fa-comment me-1"></i>
+                {{ object.gift.comment }}
+            </div>
+            {% endif %}
+
+            {% if object.gift.tags.all %}
+            <div class="gift-tags">
+                <small class="text-muted">{% trans "Tags:" %}</small>
+                {% for tag in object.gift.tags.all %}
+                <span class="gift-plan-tag-badge">
+                    <i class="fas fa-tag me-1"></i>{{ tag.name }}
+                </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Shared With -->
+    {% if shared_users %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+            <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+        </h6>
+
+        <div class="shared-users-list">
+            {% for shared_user in shared_users %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ shared_user.user.username }}</span>
+                </div>
+                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

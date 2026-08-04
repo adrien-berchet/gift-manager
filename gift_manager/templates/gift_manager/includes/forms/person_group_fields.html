@@ -1,0 +1,9 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.name %}
+{% trans "Search parent groups..." as parent_groups_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.parent_groups searchable=True search_placeholder=parent_groups_search_placeholder %}
+{% trans "Search child groups..." as child_groups_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.child_groups searchable=True search_placeholder=child_groups_search_placeholder %}
+{% trans "Search members..." as members_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.persons searchable=True search_placeholder=members_search_placeholder %}

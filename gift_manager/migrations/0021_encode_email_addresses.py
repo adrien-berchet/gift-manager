@@ -42,7 +42,7 @@ def decrypt_email(encrypted_email) -> str | None:
         return encrypted_email
 
 
-def encrypt_existing_emails(apps, schema_editor) -> None:  # noqa: ARG001
+def encrypt_existing_emails(apps, schema_editor) -> None:
     """Encrypt all existing email addresses in the database."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")
@@ -67,7 +67,7 @@ def encrypt_existing_emails(apps, schema_editor) -> None:  # noqa: ARG001
             user.save(update_fields=["email"])
 
 
-def decrypt_existing_emails(apps, schema_editor) -> None:  # noqa: ARG001
+def decrypt_existing_emails(apps, schema_editor) -> None:
     """Decrypt all existing email addresses in the database (for reverse migration)."""
     Person = apps.get_model("gift_manager", "Person")
     Invitation = apps.get_model("gift_manager", "Invitation")

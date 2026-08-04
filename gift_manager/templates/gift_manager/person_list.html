@@ -1,11 +1,17 @@
 {% extends "gift_manager/base.html" %}
 
+{% load permission_tags %}
 {% load i18n %}
 {% load static %}
 {% load custom_filters %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -15,30 +21,40 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary">
+        <a href="{% url 'gift_manager:person_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new person" %}
         </a>
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="person-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
-<div id="person-grid"></div>
+<div id="person-grid" class="list-container"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
         // Prepare data for Grid.js
+        // Include placeholder (empty string) for checkbox column as first element
         const data = [
             {% for item in data %}
     [
+        '', // Checkbox column placeholder
         "{{ item.first_name|escapejs }}",
         "{{ item.family_name|escapejs }}",
         "{{ item.email_address|decode_email|default:''|escapejs }}",
@@ -52,13 +68,19 @@
     {% endfor %}
             ];
 
-    // Define columns
+    // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
+        GridUtils.createCheckboxColumn(5),
         {
             id: 'first_name',
             name: '{{ column_names.first_name|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
+            },
+            formatter: (cell) => {
+                return gridjs.html(
+                    `<span class="entity-name">${GridUtils.escapeHtml(cell)}</span>`
+                );
             }
         },
         {
@@ -82,57 +104,52 @@
         {
             id: 'actions',
             name: '{% trans "Actions"|escapejs %}',
-            width: '180px',
+            width: '360px',
             sort: false,
-            formatter: GridUtils.actionButtonsFormatter({
-                give: (row) => row.cells[5].data,
-                details: (row) => row.cells[6].data,
-                edit: (row) => row.cells[7].data,
-                delete: (row) => row.cells[8].data
-            }, ['give', 'details', 'edit', 'delete'])
+            formatter: PermissionUtils.permissionAwareActionFormatter({
+                give: (row) => row.cells[6].data,
+                details: (row) => row.cells[7].data,
+                edit: (row) => row.cells[8].data,
+                delete: (row) => row.cells[9].data,
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['give', 'details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[5].data  // person_id is at index 5
+            }, userPermissions)
         }
     ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('person-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        },
-        sort: {
-            multiColumn: true
-        }
-    });
+    // Initialize Grid.js with all features using the standard helper
+    try {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'person-grid',
+            entityType: 'person',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            sort: {
+                multiColumn: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(3)' },  // Family Name (column 3)
+                    { columnSelector: 'th:nth-child(2)', shift: true }  // First Name (column 2)
+                ]
+            },
+            idFieldIndex: 5
+        });
 
-    // Initialize filter panel
-    FilterPanel.init('person-grid', grid, columns);
-
-    // Setup filter dropdown UI
-    GridUtils.setupFilterDropdown('.filter-icon', '.dropdown-filter');
-
-    // Setup custom group filter
-    GridUtils.setupCustomColumnFilter(grid, 2, '.group-filter'); // Column index 2 for groups
+} catch (error) {
+        console.error('[PersonList] Error initializing grid:', error);
+    }
     }) ();
-
-    // Trigger initial sort on status column to make Grid.js aware of the sort
-    // Trigger initial sort: Family Name (2) then First Name (1)
-    setTimeout(() => {
-        const familyNameHeader = document.querySelector('#person-grid th:nth-child(2)');
-        const firstNameHeader = document.querySelector('#person-grid th:nth-child(1)');
-
-        if (familyNameHeader && firstNameHeader) {
-            // Primary sort: Family Name
-            familyNameHeader.click();
-
-            // Secondary sort: First Name (simulate Shift+Click)
-            const shiftClick = new MouseEvent('click', {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-                shiftKey: true
-            });
-            firstNameHeader.dispatchEvent(shiftClick);
-        }
-    }, 100);
 </script>
 {% endblock %}

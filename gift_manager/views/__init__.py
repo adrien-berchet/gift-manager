@@ -68,11 +68,15 @@ from .profile import RemoveFriendView
 from .profile import SendInvitationView
 from .profile import UpdateViewPreferencesView
 
+# Recipient views
+from .recipient import RecipientListView
+
 # Relation views
 from .relation import GiftRelationCreateView
 from .relation import GiftRelationDeleteView
 from .relation import PersonGroupRelationCreateView
 from .relation import PersonRelationCreateView
+from .relation import RelationAdvancedListView
 from .relation import RelationCreateView
 from .relation import RelationDeleteView
 from .relation import RelationDetailView
@@ -80,6 +84,7 @@ from .relation import RelationListView
 from .relation import RelationStatusDetailView
 from .relation import RelationStatusListView
 from .relation import RelationUpdateView
+from .relation import relation_quick_action
 from .relation import update_relation_status
 
 # Sharing views
@@ -132,6 +137,8 @@ __all__ = [
     "PersonRelationCreateView",
     "PersonUpdateView",
     "ProfileDetailView",
+    "RecipientListView",
+    "RelationAdvancedListView",
     "RelationCreateView",
     "RelationDeleteView",
     "RelationDetailView",
@@ -149,6 +156,7 @@ __all__ = [
     "get_user",
     "global_search",
     "home",
+    "relation_quick_action",
     "remove_person_from_group",
     "reparent_group",
     "update_relation_status",

@@ -1,0 +1,26 @@
+{% load i18n %}
+
+<form method="post"
+      {% if object %}
+      action="{% url 'gift_manager:gift_tag_edit' object.tag_id %}"
+      hx-post="{% url 'gift_manager:gift_tag_edit' object.tag_id %}"
+      {% else %}
+      action="{% url 'gift_manager:gift_tag_create' %}"
+      hx-post="{% url 'gift_manager:gift_tag_create' %}"
+      {% endif %}
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form gift-tag-form"
+      data-form-type="{{ form_type|default:'gift_tag' }}">
+  {% csrf_token %}
+
+  <div class="form-fields">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/gift_tag_fields.html" %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
+</form>

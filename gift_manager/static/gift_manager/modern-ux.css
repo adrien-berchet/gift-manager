@@ -1,0 +1,696 @@
+/* Modern UX Interface Styles */
+
+/* Modal Enhancements */
+.modal-content {
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-card);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal-body {
+    background: var(--surface-card);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    background: var(--surface-card);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* Enhanced Offcanvas Styles */
+.offcanvas {
+    border: none;
+    box-shadow: var(--shadow-xl);
+    background: var(--surface-card);
+    width: 400px; /* Default width for desktop */
+    transition: transform 0.3s ease-in-out;
+}
+
+.offcanvas-header {
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-elevated);
+    padding: var(--space-4);
+    min-height: 60px;
+}
+
+.offcanvas-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.offcanvas-body {
+    background: var(--surface-card);
+    padding: var(--space-4);
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Mobile Responsiveness for Offcanvas - Full Screen on Small Screens */
+@media (max-width: 768px) {
+    .offcanvas-end {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .offcanvas-mobile-fullscreen {
+        width: 100vw;
+        height: 100vh;
+        max-width: none;
+        border-radius: 0;
+    }
+
+    .offcanvas-mobile-fullscreen .offcanvas-header {
+        border-radius: 0;
+        padding: var(--space-3) var(--space-4);
+    }
+
+    .offcanvas-mobile-fullscreen .offcanvas-body {
+        padding: var(--space-3);
+    }
+}
+
+/* Extra small devices - ensure touch-friendly interface */
+@media (max-width: 576px) {
+    .offcanvas-header {
+        padding: var(--space-3);
+    }
+
+    .offcanvas-body {
+        padding: var(--space-3);
+    }
+
+    .btn-close {
+        padding: var(--space-3);
+        margin: calc(-1 * var(--space-3));
+    }
+}
+
+/* Large screens - wider panels for better content display */
+@media (min-width: 1200px) {
+    .offcanvas-end {
+        width: 480px;
+    }
+}
+
+/* Loading States */
+.loading-state {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: inherit;
+}
+
+[data-theme="dark"] .loading-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.loading-spinner {
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid var(--color-gray-300);
+    border-top: 2px solid var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error States */
+.error-state {
+    padding: var(--space-4);
+}
+
+.error-state .alert {
+    border-radius: var(--radius-md);
+}
+
+/* Content Container */
+.content-container {
+    min-height: 100px;
+}
+
+/* Quick Action Buttons - Enhanced for Task 6.1 */
+.quick-actions-container {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+    justify-content: flex-end;
+    align-items: center;
+    width: max-content;
+    max-width: none;
+    opacity: 0.7;
+    transition: opacity var(--transition-fast);
+}
+
+/* Show actions on row hover */
+.gridjs-tr:hover .quick-actions-container {
+    opacity: 1;
+}
+
+.quick-action-btn {
+    position: relative;
+    padding: var(--space-1) var(--space-2);
+    font-size: var(--text-sm);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 32px;
+    min-height: 32px;
+    border: 1px solid transparent;
+    overflow: visible;
+}
+
+/* Hover effects for each button type */
+.quick-action-btn.btn-primary {
+    background-color: var(--color-primary);
+    color: white;
+}
+
+.quick-action-btn.btn-primary:hover {
+    background-color: var(--color-primary-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-primary-dark);
+}
+
+.quick-action-btn.btn-info {
+    background-color: var(--color-info);
+    color: white;
+}
+
+.quick-action-btn.btn-info:hover {
+    background-color: var(--color-info-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-info-dark);
+}
+
+.quick-action-btn.btn-warning {
+    background-color: var(--color-warning);
+    color: var(--color-gray-800);
+}
+
+.quick-action-btn.btn-warning:hover {
+    background-color: var(--color-warning-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-warning-dark);
+    color: white;
+}
+
+.quick-action-btn.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.quick-action-btn.btn-danger:hover {
+    background-color: var(--color-danger-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-danger-dark);
+}
+
+.quick-action-btn.btn-success {
+    background-color: var(--color-success);
+    color: white;
+}
+
+.quick-action-btn.btn-success:hover {
+    background-color: var(--color-success-dark);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--color-success-dark);
+}
+
+/* Active/pressed state */
+.quick-action-btn:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Focus state for accessibility */
+.quick-action-btn:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    z-index: 1;
+}
+
+/* Button text that appears on larger screens */
+.quick-action-btn .btn-text {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Loading state for buttons */
+.quick-action-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.quick-action-btn.loading i {
+    animation: spin 1s linear infinite;
+}
+
+/* Disabled state */
+.quick-action-btn:disabled,
+.quick-action-btn.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .quick-actions-container {
+        opacity: 1; /* Always visible on mobile */
+        gap: var(--space-1);
+    }
+
+    .quick-action-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: var(--space-2);
+    }
+
+    .quick-action-btn .btn-text {
+        display: none; /* Hide text on mobile */
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .quick-action-btn {
+        min-width: 40px;
+        min-height: 40px;
+        font-size: var(--text-base);
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .quick-action-btn {
+        border-width: 2px;
+    }
+
+    .quick-action-btn:hover {
+        border-width: 2px;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .quick-action-btn,
+    .quick-actions-container {
+        transition: none;
+    }
+
+    .quick-action-btn:hover {
+        transform: none;
+    }
+
+    .quick-action-btn.loading i {
+        animation: none;
+    }
+}
+
+/* Tooltip enhancements for action buttons */
+.tooltip {
+    font-size: var(--text-xs);
+}
+
+.tooltip-inner {
+    background-color: var(--color-gray-900);
+    color: white;
+    border-radius: var(--radius-md);
+    padding: var(--space-1) var(--space-2);
+}
+
+[data-theme="dark"] .tooltip-inner {
+    background-color: var(--color-gray-100);
+    color: var(--color-gray-900);
+}
+
+/* Grid row hover enhancements */
+.gridjs-wrapper {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.gridjs-tr {
+    transition: background-color var(--transition-fast);
+}
+
+.gridjs-tr:hover {
+    background-color: var(--color-gray-50);
+}
+
+[data-theme="dark"] .gridjs-tr:hover {
+    background-color: var(--surface-elevated);
+}
+
+/* Action column styling */
+.gridjs-th:last-child,
+.gridjs-td:last-child {
+    text-align: right;
+    padding-right: var(--space-3);
+    min-width: max-content;
+}
+
+/* Ensure action buttons don't wrap */
+.gridjs-td:last-child {
+    white-space: nowrap;
+    width: auto;
+}
+
+[data-view="card"] .gridjs-td:last-child {
+    min-width: 0;
+    width: 100%;
+    text-align: left;
+    padding-right: 0;
+}
+
+[data-view="card"] .gridjs-td:last-child .quick-actions-container {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+}
+
+[data-view="card"] .gridjs-td:last-child .quick-action-btn {
+    flex: 1 1 auto;
+}
+
+/* List Item Enhancements */
+.list-item {
+    transition: all var(--transition-fast);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    margin-bottom: var(--space-2);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+}
+
+.list-item:hover {
+    background: var(--color-primary-light);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.list-item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.entity-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+/* Expandable Details */
+.expandable-details {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-color);
+    background: var(--color-gray-50);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+[data-theme="dark"] .expandable-details {
+    background: var(--surface-elevated);
+}
+
+/* Skeleton Screens */
+.skeleton {
+    background: linear-gradient(90deg, var(--color-gray-200) 25%, var(--color-gray-100) 50%, var(--color-gray-200) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: var(--radius-md);
+}
+
+[data-theme="dark"] .skeleton {
+    background: linear-gradient(90deg, var(--surface-elevated) 25%, var(--surface-card) 50%, var(--surface-elevated) 75%);
+    background-size: 200% 100%;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-text {
+    height: 1rem;
+    margin-bottom: var(--space-2);
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-text.medium {
+    width: 80%;
+}
+
+.skeleton-text.long {
+    width: 100%;
+}
+
+/* Bulk Selection */
+.bulk-actions-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-primary);
+    color: white;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow-lg);
+}
+
+.bulk-actions-toolbar.show {
+    display: flex;
+}
+
+.bulk-selection-count {
+    font-weight: 500;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.bulk-actions-toolbar.show .bulk-actions .btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.bulk-actions-toolbar.show .bulk-actions .btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Checkbox Styling */
+.form-check-input:checked {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+/* Inline Editing */
+.inline-edit-field {
+    border: none;
+    background: transparent;
+    padding: var(--space-1);
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.inline-edit-field:focus {
+    background: var(--surface-card);
+    border: 1px solid var(--color-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+}
+
+/* Toast Notifications */
+.toast {
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+.toast-body {
+    color: var(--text-primary);
+}
+
+/* Form Enhancements in Panels */
+.offcanvas-body .form-group {
+    margin-bottom: var(--space-4);
+}
+
+.offcanvas-body .form-label {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.offcanvas-body .form-control,
+.offcanvas-body .form-select {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    background: var(--surface-card);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+    min-height: 44px; /* Touch-friendly minimum height */
+}
+
+.offcanvas-body .form-control:focus,
+.offcanvas-body .form-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.2);
+    outline: none;
+}
+
+/* Form Actions in Panels */
+.panel-form-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--surface-card);
+    border-top: 1px solid var(--border-color);
+    padding: var(--space-4);
+    margin: 0 calc(-1 * var(--space-4));
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
+    z-index: 10;
+}
+
+.panel-form-actions .btn {
+    min-height: 44px; /* Touch-friendly buttons */
+    padding: var(--space-2) var(--space-4);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+    .quick-actions {
+        opacity: 1; /* Always show on mobile */
+    }
+
+    .quick-actions .btn {
+        padding: var(--space-2);
+        font-size: var(--text-xs);
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .list-item-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+    }
+
+    .panel-form-actions {
+        flex-direction: column;
+        padding: var(--space-3);
+    }
+
+    .panel-form-actions .btn {
+        width: 100%;
+        margin-bottom: var(--space-2);
+    }
+
+    .panel-form-actions .btn:last-child {
+        margin-bottom: 0;
+    }
+}
+
+/* Focus Management and Accessibility */
+.offcanvas:focus-within {
+    outline: none;
+}
+
+.offcanvas .btn-close:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Accessibility Enhancements */
+.btn:focus,
+.form-control:focus,
+.form-select:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .list-item {
+        border-width: 2px;
+    }
+
+    .btn {
+        border-width: 2px;
+    }
+
+    .offcanvas {
+        border: 2px solid var(--border-color);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .list-item,
+    .quick-actions,
+    .loading-spinner,
+    .skeleton,
+    .offcanvas {
+        transition: none;
+        animation: none;
+    }
+}
+
+/* Print styles - hide offcanvas panels when printing */
+@media print {
+    .offcanvas {
+        display: none !important;
+    }
+}

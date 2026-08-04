@@ -4,6 +4,14 @@ from allauth.account.adapter import DefaultAccountAdapter
 
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
+from gift_manager.email_encoding import is_encrypted_email
+
+
+def ensure_user_email_encoded(user) -> None:
+    """Ensure Django's User.email field remains encoded after allauth sync hooks."""
+    if user.email and not is_encrypted_email(user.email):
+        user.email = encode_email(user.email)
+        user.save(update_fields=["email"])
 
 
 class EncryptedEmailAccountAdapter(DefaultAccountAdapter):  # pylint: disable=abstract-method

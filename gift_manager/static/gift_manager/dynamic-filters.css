@@ -1,0 +1,235 @@
+/**
+ * Dynamic filters styles
+ */
+
+/* Filters section */
+.filters-section .filter-section-label {
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: #495057;
+}
+
+.filters-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 2px;
+}
+
+/* Column filter wrapper */
+.column-filter-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.column-filter-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.column-filter {
+    font-size: 0.875rem;
+}
+
+/* Date filter group */
+.date-filter-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.date-filter-group .form-control {
+    flex: 1;
+}
+
+/* Number filter group */
+.number-filter-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.number-filter-group .form-control {
+    flex: 1;
+}
+
+/* Filters section header with clear button */
+.filters-section .filter-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2, 0.5rem);
+    margin-bottom: var(--space-2, 0.5rem);
+}
+
+.filters-section .filter-section-header .filter-section-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+}
+
+/* Clear filters button */
+.clear-filters-btn {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Filter states */
+.column-filter:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.column-filter.has-value {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+
+/* Active filter indicator */
+.column-filter-wrapper.has-active-filter .column-filter-label::after {
+    content: '●';
+    color: #0d6efd;
+    margin-left: 0.25rem;
+    font-size: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Filter panel enhancements */
+.grid-filter-panel .filters-section {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.grid-filter-panel .filters-section::-webkit-scrollbar {
+    width: 6px;
+}
+
+.grid-filter-panel .filters-section::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.grid-filter-panel .filters-section::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.grid-filter-panel .filters-section::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .filters-container {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+
+    .date-filter-group,
+    .number-filter-group {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .column-filter-label {
+        font-size: 0.875rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .filters-section {
+        padding-top: 0.75rem;
+        margin-top: 0.75rem;
+    }
+
+    .filters-container {
+        gap: 0.5rem;
+    }
+}
+
+/* Filter animation */
+.column-filter {
+    transition: border-color 0.15s ease-in-out, background-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Filter count badge */
+.filter-section-label .filter-count {
+    background: #0d6efd;
+    color: white;
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.75rem;
+    margin-left: 0.5rem;
+    font-weight: 500;
+}
+
+/* Empty state enhancements for filters */
+.grid-empty-state .empty-state-content {
+    max-width: 400px;
+}
+
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .filters-section {
+        border-top-color: #495057;
+    }
+
+    .filters-section .filter-section-label {
+        color: #adb5bd;
+    }
+
+    .column-filter-label {
+        color: #6c757d;
+    }
+
+    .column-filter.has-value {
+        background-color: #1a1d29;
+        border-color: #0d6efd;
+    }
+
+    .clear-filters-btn {
+        background: #495057;
+        border-color: #6c757d;
+        color: #f8f9fa;
+    }
+
+    .clear-filters-btn:hover {
+        background: #5a6268;
+        border-color: #6c757d;
+    }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+    .column-filter {
+        border-width: 2px;
+    }
+
+    .column-filter:focus {
+        border-width: 3px;
+    }
+
+    .column-filter-wrapper.has-active-filter .column-filter-label::after {
+        font-size: 0.75rem;
+        font-weight: bold;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .column-filter {
+        transition: none;
+    }
+}
+
+/* Print styles */
+@media print {
+    .filters-section,
+    .clear-filters-btn {
+        display: none;
+    }
+}

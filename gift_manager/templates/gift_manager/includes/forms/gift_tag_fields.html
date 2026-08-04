@@ -1,0 +1,5 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.name %}
+{% trans "Search parent tags..." as parent_tags_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.parent_tags searchable=True search_placeholder=parent_tags_search_placeholder %}

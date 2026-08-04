@@ -41,6 +41,7 @@ urlpatterns = [
     path("admin_redirect/", admin_redirect, name="admin_redirect"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("accounts/login/", views.CustomLoginView.as_view(), name="account_login"),
+    path("accounts/signup/", views.InvitationBoundSignupView.as_view(), name="account_signup"),
     path(
         "accounts/user_deactivate",
         views.UserAccountDeactivateView.as_view(),
@@ -55,8 +56,8 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
 ]
 
-# Add debug toolbar URLs only in debug mode
-if settings.DEBUG:
+# Add debug toolbar URLs only in debug mode and if debug_toolbar is installed
+if settings.DEBUG and "debug_toolbar" in settings.INSTALLED_APPS:
     try:
         from debug_toolbar.toolbar import debug_toolbar_urls
 

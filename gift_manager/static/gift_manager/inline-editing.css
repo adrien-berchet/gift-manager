@@ -1,0 +1,169 @@
+/**
+ * Inline Editing Styles
+ * Visual feedback and styling for inline editing functionality
+ */
+
+/* Editable cell styling */
+.inline-editable {
+    cursor: pointer;
+    position: relative;
+    /* No special background or transition - use same as regular cells */
+}
+
+.inline-editable::after {
+    content: '✎';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    color: #6c757d;
+    opacity: 0;
+    transition: opacity var(--transition-fast, 150ms ease);
+}
+
+/* Show edit icon on row hover instead of cell hover */
+.gridjs-tr:hover .inline-editable::after {
+    opacity: 1;
+}
+
+/* Editing state - compound selector beats vendor td.gridjs-td (0,1,1) */
+td.gridjs-td.inline-editing {
+    background-color: rgba(255, 193, 7, 0.2);
+    box-shadow: inset 0 0 0 2px #ffc107, 0 0 0 1px #ffc107;
+}
+
+.inline-edit-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    outline: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    line-height: inherit;
+    vertical-align: baseline;
+}
+
+.inline-edit-input:focus {
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Saving state */
+td.gridjs-td.inline-saving {
+    background-color: rgba(108, 117, 125, 0.2);
+    color: #6c757d;
+}
+
+.inline-saving .spinner-border-sm {
+    width: 0.75rem;
+    height: 0.75rem;
+}
+
+/* Success state */
+td.gridjs-td.inline-success {
+    background-color: rgba(25, 135, 84, 0.2);
+    box-shadow: inset 0 0 0 2px #198754, 0 0 0 1px #198754;
+    animation: inline-success-pulse 0.6s ease-out;
+}
+
+@keyframes inline-success-pulse {
+    0% {
+        background-color: rgba(25, 135, 84, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        background-color: rgba(25, 135, 84, 0.6);
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: rgba(25, 135, 84, 0.2);
+        transform: scale(1);
+    }
+}
+
+/* Error state */
+td.gridjs-td.inline-error {
+    background-color: rgba(220, 53, 69, 0.2);
+    box-shadow: inset 0 0 0 2px #dc3545, 0 0 0 1px #dc3545;
+    animation: inline-error-shake 0.6s ease-out;
+}
+
+@keyframes inline-error-shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+    20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .inline-editable::after {
+        display: none;
+    }
+
+    .gridjs-tr:hover .inline-editable::after {
+        display: none;
+    }
+
+    /* Make touch targets larger on mobile */
+    .inline-editable {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
+}
+
+/* Grid.js specific adjustments */
+/* Note: no padding override here — cells keep their Grid.js padding so text
+   doesn't shift when the inline-editable class is added post-load. */
+
+/* Accessibility improvements */
+.inline-editable[aria-label]::before {
+    content: attr(aria-label);
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+/* Focus indicators for keyboard navigation */
+.inline-editable:focus {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+.inline-edit-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .inline-editing {
+        background-color: rgba(255, 255, 0, 0.3) !important;
+        box-shadow: inset 0 0 0 2px #000, 0 0 0 1px #000 !important;
+    }
+
+    .inline-success {
+        background-color: rgba(0, 255, 0, 0.3) !important;
+        box-shadow: inset 0 0 0 2px #008000, 0 0 0 1px #008000 !important;
+    }
+
+    .inline-error {
+        background-color: rgba(255, 0, 0, 0.3) !important;
+        box-shadow: inset 0 0 0 2px #800000, 0 0 0 1px #800000 !important;
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .inline-editable,
+    .inline-editing,
+    .inline-saving,
+    .inline-success,
+    .inline-error,
+    .inline-editable::after {
+        transition: none !important;
+        animation: none !important;
+    }
+}

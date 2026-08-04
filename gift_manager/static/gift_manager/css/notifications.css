@@ -1,0 +1,458 @@
+/* Enhanced Notification Styles */
+/* Requirements: 8.4, 4.4 */
+
+/* =========================================================================
+   Toast Container
+   ========================================================================= */
+
+.toast-container {
+    max-width: 420px;
+}
+
+/* =========================================================================
+   Toast Enhancements
+   ========================================================================= */
+
+.toast {
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+    min-width: 300px;
+    max-width: 400px;
+}
+
+.toast.text-bg-success,
+.toast.text-bg-danger,
+.toast.text-bg-warning,
+.toast.text-bg-info {
+    --bs-bg-opacity: 0.95;
+}
+
+.toast.text-bg-success {
+    border-left: 4px solid var(--color-success);
+}
+
+.toast.text-bg-danger {
+    border-left: 4px solid var(--color-danger);
+}
+
+.toast.text-bg-warning {
+    border-left: 4px solid var(--color-warning);
+}
+
+.toast.text-bg-info {
+    border-left: 4px solid var(--color-info);
+}
+
+/* =========================================================================
+   Toast Body Enhancements
+   ========================================================================= */
+
+.toast-body {
+    padding: var(--space-4);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+.toast-body .fw-semibold {
+    font-weight: 600;
+    font-size: var(--text-base);
+}
+
+.toast-body .notification-message {
+    word-wrap: break-word;
+    hyphens: auto;
+}
+
+/* Icon styling in toasts */
+.toast-body i {
+    font-size: var(--text-lg);
+    opacity: 0.9;
+}
+
+/* Action buttons in toasts */
+.toast-body .btn {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.toast-body .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* =========================================================================
+   Progress Notifications
+   ========================================================================= */
+
+.toast .progress {
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    margin-top: var(--space-2);
+}
+
+.toast .progress-bar {
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: width 0.3s ease;
+    border-radius: inherit;
+}
+
+/* =========================================================================
+   Close Button Enhancements
+   ========================================================================= */
+
+.toast .btn-close {
+    opacity: 0.8;
+    transition: opacity var(--transition-fast);
+    padding: var(--space-2);
+    margin: calc(-1 * var(--space-2));
+}
+
+.toast .btn-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.toast .btn-close:focus {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+}
+
+/* =========================================================================
+   Animation Enhancements
+   ========================================================================= */
+
+.toast.showing {
+    animation: toast-slide-in 0.3s ease-out;
+}
+
+.toast.hide {
+    animation: toast-slide-out 0.3s ease-in;
+}
+
+@keyframes toast-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toast-slide-out {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* =========================================================================
+   Notification Types with Icons
+   ========================================================================= */
+
+.toast.notification-success .toast-body::before {
+    content: '\f058'; /* fa-check-circle */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.9);
+    margin-right: var(--space-2);
+    font-size: var(--text-lg);
+}
+
+.toast.notificatio
+st.notification-info .toast-body::before {
+    content: '\f05a'; /* fa-info-circle */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.9);
+    margin-right: var(--space-2);
+    font-size: var(--text-lg);
+}
+
+/* =========================================================================
+   Validation Error Notifications
+   ========================================================================= */
+
+.toast.validation-error {
+    max-width: 450px;
+}
+
+.toast.validation-error .toast-body {
+    padding: var(--space-4);
+}
+
+.toast.validation-error .notification-message {
+    white-space: pre-line;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    line-height: 1.6;
+}
+
+.toast.validation-error .notification-message::before {
+    content: '';
+    display: block;
+    margin-bottom: var(--space-2);
+}
+
+/* =========================================================================
+   Bulk Operation Notifications
+   ========================================================================= */
+
+.bulk-operation-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    box-shadow: var(--shadow-xl);
+    z-index: 1060;
+    min-width: 350px;
+    max-width: 500px;
+    text-align: center;
+}
+
+.bulk-operation-notification .operation-icon {
+    font-size: 3rem;
+    color: var(--color-primary);
+    margin-bottom: var(--space-4);
+}
+
+.bulk-operation-notification .operation-title {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--space-2);
+}
+
+.bulk-operation-notification .operation-message {
+    color: var(--text-muted);
+    margin-bottom: var(--space-4);
+}
+
+.bulk-operation-notification .progress {
+    height: 8px;
+    background-color: var(--color-gray-200);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-3);
+}
+
+.bulk-operation-notification .progress-bar {
+    background-color: var(--color-primary);
+    transition: width 0.3s ease;
+}
+
+.bulk-operation-notification .operation-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+}
+
+/* =========================================================================
+   Mobile Optimizations
+   ========================================================================= */
+
+@media (max-width: 768px) {
+    .toast-container {
+        position: fixed !important;
+        inset: var(--space-4) var(--space-4) auto var(--space-4) !important;
+        max-width: none;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: none;
+        width: 100%;
+    }
+
+    .toast-body {
+        padding: var(--space-3);
+        font-size: var(--text-sm);
+    }
+
+    .toast-body .fw-semibold {
+        font-size: var(--text-sm);
+    }
+
+    .bulk-operation-notification {
+        left: var(--space-4);
+        right: var(--space-4);
+        transform: translateY(-50%);
+        min-width: auto;
+        max-width: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .toast-container {
+        inset: var(--space-3) var(--space-3) auto var(--space-3) !important;
+    }
+
+    .toast-body {
+        padding: var(--space-2);
+    }
+
+    .toast-body .btn {
+        font-size: var(--text-xs);
+        padding: var(--space-1);
+        margin-top: var(--space-2);
+        width: 100%;
+    }
+}
+
+/* =========================================================================
+   Dark Theme Adjustments
+   ========================================================================= */
+
+[data-theme="dark"] .toast.text-bg-success,
+[data-theme="dark"] .toast.text-bg-danger,
+[data-theme="dark"] .toast.text-bg-warning,
+[data-theme="dark"] .toast.text-bg-info {
+    --bs-bg-opacity: 0.9;
+}
+
+/* Bootstrap handles warning text color via .text-bg-warning */
+
+[data-theme="dark"] .bulk-operation-notification {
+    background: var(--surface-elevated);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .bulk-operation-notification .progress {
+    background-color: var(--surface-card);
+}
+
+/* =========================================================================
+   High Contrast Mode
+   ========================================================================= */
+
+@media (prefers-contrast: high) {
+    .toast {
+        border: 2px solid currentColor;
+        backdrop-filter: none;
+    }
+
+    .toast.text-bg-success {
+        background-color: var(--color-success) !important;
+    }
+
+    .toast.text-bg-danger {
+        background-color: var(--color-danger) !important;
+    }
+
+    .toast.text-bg-warning {
+        background-color: var(--color-warning) !important;
+        color: var(--color-gray-900) !important;
+    }
+
+    .toast.text-bg-info {
+        background-color: var(--color-info) !important;
+    }
+
+    .toast-body .btn {
+        border: 2px solid currentColor;
+    }
+}
+
+/* =========================================================================
+   Reduced Motion
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+    .toast.showing,
+    .toast.hide {
+        animation: none;
+    }
+
+    .toast-body .btn:hover {
+        transform: none;
+    }
+
+    .toast .btn-close:hover {
+        transform: none;
+    }
+
+    .toast .progress-bar {
+        transition: none;
+    }
+}
+
+/* =========================================================================
+   Print Styles
+   ========================================================================= */
+
+@media print {
+    .toast-container,
+    .bulk-operation-notification {
+        display: none !important;
+    }
+}
+
+/* =========================================================================
+   Notification Queue Styles
+   ========================================================================= */
+
+.toast-container .toast + .toast {
+    margin-top: var(--space-2);
+}
+
+/* Stacking animation for multiple toasts */
+.toast-container .toast:nth-child(n+4) {
+    opacity: 0.8;
+    transform: scale(0.95);
+}
+
+.toast-container .toast:nth-child(n+5) {
+    opacity: 0.6;
+    transform: scale(0.9);
+}
+
+.toast-container .toast:nth-child(n+6) {
+    display: none;
+}
+
+/* =========================================================================
+   Accessibility Enhancements
+   ========================================================================= */
+
+.toast[role="alert"] {
+    /* Ensure screen readers announce errors immediately */
+}
+
+.toast[role="status"] {
+    /* Ensure screen readers announce status politely */
+}
+
+.toast .visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Focus management for toast close buttons */
+.toast .btn-close:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}

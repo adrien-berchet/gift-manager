@@ -119,14 +119,14 @@
 
 /* Fixed Action Bar (for forms) */
 .fixed-action-bar {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background-color: rgba(248, 249, 250, 0.95);
     padding: 15px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
-    z-index: 100000 !important;
+    z-index: 100000;
     border-top: 2px solid #007bff;
 }
 
@@ -138,8 +138,8 @@
 
 /* Add padding to body when fixed action bar is present */
 body.has-fixed-action-bar {
-    padding-bottom: 80px !important;
-    margin-bottom: 0 !important;
+    padding-bottom: 80px;
+    margin-bottom: 0;
 }
 
 /* ==========================================================================
@@ -183,7 +183,7 @@ body.has-fixed-action-bar {
     margin: 0 2px;
 }
 
-/* Ensure Grid.js table looks consistent with Bootstrap */
+/* Grid.js table - base fallback styles (theme.css has more specific overrides) */
 .gridjs-table {
     border-collapse: collapse;
 }
@@ -191,7 +191,7 @@ body.has-fixed-action-bar {
 .gridjs-th {
     background-color: #f8f9fa;
     font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
     vertical-align: middle;
 }
 
@@ -215,7 +215,7 @@ body.has-fixed-action-bar {
 }
 
 .selected-for-sharing {
-    background-color: #cfe2ff !important;
+    background-color: #cfe2ff;
 }
 
 .permission-select {
@@ -240,6 +240,318 @@ body.has-fixed-action-bar {
     align-items: center;
     justify-content: center;
     border-radius: 20px;
+}
+
+/* Recipient badges and type markers */
+.recipient-type-badge,
+.recipient-type-marker,
+.recipient-plan-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.recipient-type-marker {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 999px;
+}
+
+.recipient-plan-count {
+    min-height: 1.5rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 999px;
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+    font-size: 0.75rem;
+}
+
+.recipient-type-badge--person,
+.recipient-type-marker--person,
+.recipient-icon--person {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.recipient-type-badge--group,
+.recipient-type-marker--group,
+.recipient-icon--group {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.recipient-membership-badge {
+    background-color: var(--color-gray-100);
+    border: 1px solid var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+[data-theme="dark"] .recipient-type-badge--person,
+[data-theme="dark"] .recipient-type-marker--person,
+[data-theme="dark"] .recipient-icon--person {
+    background-color: rgba(59, 130, 246, 0.18);
+    border-color: rgba(147, 197, 253, 0.35);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .recipient-type-badge--group,
+[data-theme="dark"] .recipient-type-marker--group,
+[data-theme="dark"] .recipient-icon--group {
+    background-color: rgba(16, 185, 129, 0.18);
+    border-color: rgba(110, 231, 183, 0.35);
+    color: #6ee7b7;
+}
+
+[data-theme="dark"] .recipient-plan-count,
+[data-theme="dark"] .recipient-membership-badge {
+    background-color: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+/* Gift plan status, due date, and tag badges */
+.gift-plan-status-badge,
+.gift-plan-due-badge,
+.gift-plan-tag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 1.75rem;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.gift-plan-status--idea,
+.gift-plan-status--unknown {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+.gift-plan-status--planned,
+.gift-plan-status--ordered {
+    background-color: var(--color-primary-light);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--color-primary-hover);
+}
+
+.gift-plan-status--purchased {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.gift-plan-status--wrapped {
+    background-color: var(--color-warning-light);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--color-warning-hover);
+}
+
+.gift-plan-status--abandoned,
+.gift-plan-status--abandonne {
+    background-color: var(--color-danger-light);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--color-danger-hover);
+}
+
+.gift-plan-status--given,
+.gift-plan-status--received,
+.gift-plan-status--done,
+.gift-plan-status--completed {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.gift-plan-due-badge--overdue {
+    background-color: var(--color-danger-light);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--color-danger-hover);
+}
+
+.gift-plan-due-badge--due_soon,
+.gift-plan-due-badge--needs_details {
+    background-color: var(--color-warning-light);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--color-warning-hover);
+}
+
+.gift-plan-due-badge--later {
+    background-color: var(--color-info-light);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: var(--color-info-hover);
+}
+
+.gift-plan-due-badge--ideas {
+    background-color: var(--color-primary-light);
+    border-color: rgba(99, 102, 241, 0.35);
+    color: var(--color-primary-hover);
+}
+
+.gift-plan-due-badge--no_date {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+}
+
+.gift-plan-due-badge--completed {
+    background-color: var(--color-success-light);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: var(--color-success-hover);
+}
+
+.gift-plan-tag-badge {
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+    text-decoration: none;
+}
+
+.gift-plan-tag-badge:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
+    text-decoration: none;
+}
+
+.gift-plan-status-form {
+    display: inline-block;
+    margin: 0;
+}
+
+.gift-plan-status-select {
+    border-radius: var(--radius-full);
+    border-width: 1px;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .gift-plan-status--idea,
+[data-theme="dark"] .gift-plan-status--unknown,
+[data-theme="dark"] .gift-plan-due-badge--no_date {
+    background-color: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
+}
+
+/* ==========================================================================
+   Advanced List Tools
+   ========================================================================== */
+
+.list-tools-shell {
+    display: grid;
+    gap: var(--space-3);
+    margin: var(--space-4) 0;
+}
+
+.list-search-control {
+    padding: var(--space-3) var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.list-search-control .filter-section {
+    min-width: 0;
+}
+
+.list-search-control .filter-section-label {
+    margin-bottom: var(--space-2);
+}
+
+.advanced-list-tools {
+    margin: 0;
+    overflow: hidden;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.advanced-list-tools-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 3rem;
+    padding: var(--space-3) var(--space-4);
+    color: var(--text-primary);
+    cursor: pointer;
+    list-style: none;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.advanced-list-tools-summary::-webkit-details-marker {
+    display: none;
+}
+
+.advanced-list-tools-summary:hover,
+.advanced-list-tools-summary:focus-visible {
+    background: var(--surface-elevated);
+}
+
+.advanced-list-tools-title {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: 600;
+}
+
+.advanced-list-tools-chevron {
+    color: var(--text-muted);
+    transition: transform var(--transition-fast);
+}
+
+.advanced-list-tools[open] .advanced-list-tools-chevron {
+    transform: rotate(180deg);
+}
+
+.advanced-list-tools-body {
+    padding: var(--space-4);
+    background: var(--surface-background);
+    border-top: 1px solid var(--border-color);
+}
+
+.advanced-list-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+}
+
+.advanced-list-tools .grid-filter-panel {
+    position: static;
+    z-index: auto;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+}
+
+.advanced-list-tools .filter-toggle-btn {
+    margin-bottom: 0;
+}
+
+.advanced-list-tools .filter-content {
+    margin-top: var(--space-3);
+    margin-bottom: 0;
+}
+
+[data-theme="dark"] .advanced-list-tools {
+    box-shadow: none;
+}
+
+[data-theme="dark"] .list-search-control {
+    box-shadow: none;
 }
 
 /* ==========================================================================
@@ -277,7 +589,7 @@ body.has-fixed-action-bar {
     }
 
     body.has-fixed-action-bar {
-        padding-bottom: 120px !important;
+        padding-bottom: 120px;
     }
 
     #share-counter {
@@ -286,6 +598,22 @@ body.has-fixed-action-bar {
 }
 
 @media (max-width: 576px) {
+    .list-search-control {
+        padding: var(--space-3);
+    }
+
+    .advanced-list-tools-summary {
+        padding: var(--space-3);
+    }
+
+    .advanced-list-tools-body {
+        padding: var(--space-3);
+    }
+
+    .advanced-list-actions .btn {
+        width: 100%;
+    }
+
     .dropdown-filter {
         max-width: 100%;
     }

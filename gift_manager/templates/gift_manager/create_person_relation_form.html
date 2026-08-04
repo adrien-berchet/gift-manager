@@ -1,14 +1,32 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
-{% block title %}Gift Manager - {% trans "Add Relation" %}{% endblock %}
+{% load static %}
+
+{% block title %}Gift Manager - {% trans "Add Gift Plan" %}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{% trans "Add Relation for" %} {{ person.first_name }} {{ person.family_name }}</h1>
-<form method="post">
+<div class="container form-page-container">
+  <div class="form-page-header">
+    <h1>{% trans "Add Gift Plan for" %} {{ person.first_name }} {{ person.family_name }}</h1>
+  </div>
+
+  {% url 'gift_manager:person_detail' person.person_id as cancel_url %}
+  <form method="post"
+        id="main-form"
+        class="page-form relation-form"
+        data-form-type="relation"
+        data-track-changes>
     {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
-    <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
-</form>
+    <div class="form-fields">
+      {% include "gift_manager/includes/forms/errors.html" %}
+      {% include "gift_manager/includes/forms/relation_fields.html" %}
+    </div>
+    {% include "gift_manager/includes/forms/actions.html" with form_surface="page" %}
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'gift_manager/unsaved-changes.js' %}"></script>
 {% endblock %}

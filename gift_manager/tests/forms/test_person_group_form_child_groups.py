@@ -58,7 +58,7 @@ def test_queryset_excludes_ancestors_for_child_groups(group_setup):
     queryset = form.fields["child_groups"].queryset
 
     assert g4 in queryset
-    assert g3 in queryset  # G3 is already a child, should be in queryset to be pre-selected or kept
+    assert g3 in queryset  # G3 is already a child, should be in queryset to be preselected or kept
     assert g1 not in queryset  # G1 is ancestor, cannot be child (cycle G1->G2->G1)
     assert g2 not in queryset  # Self cannot be child
 

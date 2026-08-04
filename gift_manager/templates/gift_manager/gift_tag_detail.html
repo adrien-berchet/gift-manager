@@ -5,6 +5,9 @@
 {% block title %}Gift Manager - {% trans "Gift tag details" %}{% endblock %}
 
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/gift_tag_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Gift tag details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ gift_tag.name }}</p>
 <p><strong>{% trans "Parent tags:" %}</strong>
@@ -59,6 +62,7 @@
 {% else %}
 <p class="text-center text-muted">{% trans "No gift with this tag" %}</p>
 {% endif %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -91,7 +95,7 @@
                 formatter: (cell, row) => {
                     const giftName = row.cells[1].data;
                     const giftUrl = row.cells[3].data;
-                    return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+                    return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
                 }
             },
             {
@@ -159,10 +163,10 @@
                     }
 
                     return gridjs.html(`
-                            <span class="badge ${badgeClass}" title="${title}">
-                                <i class="fas ${icon} me-1"></i> ${label}
-                            </span>
-                        `);
+                        <span class="badge ${GridUtils.escapeAttribute(badgeClass)}" title="${GridUtils.escapeAttribute(title)}">
+                            <i class="fas ${GridUtils.escapeAttribute(icon)} me-1"></i> ${GridUtils.escapeHtml(label)}
+                        </span>
+                    `);
                 }
             }
         ];

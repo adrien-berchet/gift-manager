@@ -116,6 +116,15 @@
     --navbar-bg: var(--surface-card);
     --navbar-border: var(--border-color);
     --navbar-height: 64px;
+
+    /* Bootstrap CSS custom property overrides
+       These match our design system colors so .bg-primary etc. use our palette */
+    --bs-primary-rgb: 99, 102, 241;
+    --bs-secondary-rgb: 139, 92, 246;
+    --bs-success-rgb: 16, 185, 129;
+    --bs-danger-rgb: 239, 68, 68;
+    --bs-warning-rgb: 245, 158, 11;
+    --bs-info-rgb: 59, 130, 246;
 }
 
 /* ==========================================================================
@@ -179,25 +188,40 @@
 
     --navbar-bg: #1e293b;
     --navbar-border: #475569;
+
+    /* Bootstrap CSS custom property overrides
+       Bootstrap utilities (.bg-primary, .text-muted, etc.) use !important
+       with --bs-* vars. Overriding these vars here makes Bootstrap compute
+       the correct dark mode colors without us needing !important. */
+    --bs-primary-rgb: 99, 102, 241;
+    --bs-secondary-rgb: 124, 58, 237;
+    --bs-success-rgb: 5, 150, 105;
+    --bs-danger-rgb: 220, 38, 38;
+    --bs-warning-rgb: 217, 119, 6;
+    --bs-info-rgb: 2, 132, 199;
+    --bs-body-color: #f8fafc;
+    --bs-body-bg: #0f172a;
+    --bs-secondary-color: #94a3b8;
+    --bs-tertiary-color: #cbd5e1;
 }
 
-/* Dark mode link colors - high contrast */
-[data-theme="dark"] a {
+/* Dark mode link colors - high contrast (exclude buttons) */
+[data-theme="dark"] a:not(.btn) {
     color: #93c5fd;
 }
 
-[data-theme="dark"] a:hover {
+[data-theme="dark"] a:not(.btn):hover {
     color: #bfdbfe;
 }
 
-/* Dark mode links in cards and tables */
-[data-theme="dark"] .card a,
-[data-theme="dark"] .gridjs-td a {
+/* Dark mode links in cards and tables (exclude buttons) */
+[data-theme="dark"] .card a:not(.btn),
+[data-theme="dark"] .gridjs-td a:not(.btn) {
     color: #93c5fd;
 }
 
-[data-theme="dark"] .card a:hover,
-[data-theme="dark"] .gridjs-td a:hover {
+[data-theme="dark"] .card a:not(.btn):hover,
+[data-theme="dark"] .gridjs-td a:not(.btn):hover {
     color: #bfdbfe;
 }
 
@@ -262,6 +286,57 @@
     color: #ffffff;
 }
 
+/* Dark mode quick action buttons in grids - override variable-based styles from modern-ux.css */
+[data-theme="dark"] .quick-action-btn.btn-primary {
+    background-color: #6366f1;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-primary:hover {
+    background-color: #818cf8;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-info {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-info:hover {
+    background-color: #0ea5e9;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-warning {
+    background-color: #d97706;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-warning:hover {
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-danger {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-danger:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-success {
+    background-color: #059669;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .quick-action-btn.btn-success:hover {
+    background-color: #10b981;
+    color: #ffffff;
+}
+
 [data-theme="dark"] .btn-outline-primary {
     border-color: #818cf8;
     color: #a5b4fc;
@@ -307,36 +382,7 @@
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
 
-/* Dark mode badges with better contrast */
-[data-theme="dark"] .badge.bg-primary {
-    background-color: #6366f1 !important;
-    color: #ffffff !important;
-}
-
-[data-theme="dark"] .badge.bg-secondary {
-    background-color: #7c3aed !important;
-    color: #ffffff !important;
-}
-
-[data-theme="dark"] .badge.bg-success {
-    background-color: #059669 !important;
-    color: #ffffff !important;
-}
-
-[data-theme="dark"] .badge.bg-danger {
-    background-color: #dc2626 !important;
-    color: #ffffff !important;
-}
-
-[data-theme="dark"] .badge.bg-warning {
-    background-color: #d97706 !important;
-    color: #ffffff !important;
-}
-
-[data-theme="dark"] .badge.bg-info {
-    background-color: #0284c7 !important;
-    color: #ffffff !important;
-}
+/* Dark mode badges - colors handled via --bs-*-rgb overrides in [data-theme="dark"] */
 
 /* Dark mode icons - ensure visibility */
 [data-theme="dark"] .fas,
@@ -357,15 +403,15 @@
 
 /* Dark mode navbar icons and links */
 [data-theme="dark"] .navbar-nav .nav-link {
-    color: #e2e8f0 !important;
+    color: #e2e8f0;
 }
 
 [data-theme="dark"] .navbar-nav .nav-link:hover {
-    color: #ffffff !important;
+    color: #ffffff;
 }
 
 [data-theme="dark"] .navbar-nav .nav-link.active {
-    color: #a5b4fc !important;
+    color: #a5b4fc;
 }
 
 /* Dark mode navbar toggler icon */
@@ -385,6 +431,12 @@
     color: #f8fafc;
 }
 
+[data-theme="dark"] .card-header.bg-light {
+    background-color: #334155 !important;
+    border-bottom-color: #475569;
+    color: #f8fafc;
+}
+
 [data-theme="dark"] .card-footer {
     background-color: #334155;
     border-top-color: #475569;
@@ -396,7 +448,7 @@
 }
 
 [data-theme="dark"] .gridjs-th {
-    color: #e2e8f0 !important;
+    color: #e2e8f0;
 }
 
 /* Dark mode alerts */
@@ -478,11 +530,11 @@
 
 /* Dark mode text utilities */
 [data-theme="dark"] .text-muted {
-    color: #94a3b8 !important;
+    color: #94a3b8;
 }
 
 [data-theme="dark"] .text-secondary {
-    color: #cbd5e1 !important;
+    color: #cbd5e1;
 }
 
 /* Dark mode breadcrumbs */
@@ -665,25 +717,25 @@ body,
    Modern Navbar
    ========================================================================== */
 
-.navbar {
-    background-color: var(--navbar-bg) !important;
+html .navbar {
+    background-color: var(--navbar-bg);
     border-bottom: 1px solid var(--navbar-border);
     box-shadow: var(--shadow-sm);
     padding: var(--space-3) var(--space-4);
     min-height: var(--navbar-height);
 }
 
-.navbar-brand {
+html .navbar-brand {
     font-weight: 700;
     font-size: var(--text-xl);
-    color: var(--color-primary) !important;
+    color: var(--color-primary);
     display: flex;
     align-items: center;
     gap: var(--space-2);
 }
 
-.navbar-brand:hover {
-    color: var(--color-primary-hover) !important;
+html .navbar-brand:hover {
+    color: var(--color-primary-hover);
 }
 
 .navbar-brand img {
@@ -691,22 +743,22 @@ body,
     width: auto;
 }
 
-.navbar-nav .nav-link {
-    color: var(--text-secondary) !important;
+html .navbar-nav .nav-link {
+    color: var(--text-secondary);
     font-weight: 500;
-    padding: var(--space-2) var(--space-3) !important;
+    padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-md);
     transition: all var(--transition-fast);
     position: relative;
 }
 
-.navbar-nav .nav-link:hover {
-    color: var(--color-primary) !important;
+html .navbar-nav .nav-link:hover {
+    color: var(--color-primary);
     background-color: var(--color-primary-light);
 }
 
-.navbar-nav .nav-link.active {
-    color: var(--color-primary) !important;
+html .navbar-nav .nav-link.active {
+    color: var(--color-primary);
     background-color: var(--color-primary-light);
 }
 
@@ -993,11 +1045,11 @@ body,
 
 [data-theme="dark"] .gridjs-wrapper {
     background-color: var(--surface-card);
+    border-color: var(--border-color-hover);
 }
 
 .gridjs-table {
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     background-color: var(--surface-card);
 }
 
@@ -1021,70 +1073,69 @@ body,
     background-color: var(--surface-elevated);
 }
 
-/* Grid.js table headers - !important needed to override CDN styles */
+/* Grid.js table headers - vendor CSS self-hosted with custom properties */
 .gridjs-wrapper .gridjs-th {
-    background-color: var(--color-gray-50) !important;
-    color: var(--text-secondary) !important;
     font-weight: 600;
     text-transform: uppercase;
     font-size: var(--text-xs);
     letter-spacing: 0.05em;
-    padding: var(--space-4) !important;
-    border-bottom: 2px solid var(--border-color) !important;
-    border-right: 1px solid var(--border-color) !important;
+}
+
+/* Vertically align sort chevrons with column titles */
+.gridjs-wrapper .gridjs-sort {
+    background-position-y: 25%;
+}
+
+/* Override --border-color within Grid.js wrapper so the vendor CSS
+   automatically uses our design system's gray-300 for all borders.
+   The vendor already uses var(--border-color) as an integration point,
+   including for :first-child/:last-child rules — so overriding the
+   variable here avoids all specificity battles. */
+.gridjs-wrapper {
+    --border-color: var(--color-gray-300);
 }
 
 [data-theme="dark"] .gridjs-wrapper .gridjs-th {
-    background-color: var(--surface-elevated) !important;
-    border-bottom-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color-hover);
 }
 
-/* Grid.js table cells */
 .gridjs-wrapper .gridjs-td {
-    padding: var(--space-4) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    border-right: 1px solid var(--border-color) !important;
     color: var(--text-primary);
     background-color: var(--surface-card);
 }
 
+/* Remove bottom border on last row to avoid doubling with wrapper border */
+.gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+    border-bottom: none;
+}
+
+/* Zebra striping for better readability */
+.gridjs-wrapper .gridjs-tr:nth-child(even) .gridjs-td {
+    background-color: var(--color-gray-50);
+}
+
 [data-theme="dark"] .gridjs-wrapper .gridjs-td {
     background-color: var(--surface-card);
-    border-bottom-color: var(--border-color) !important;
-    border-right-color: var(--border-color) !important;
+    border-color: var(--border-color-hover);
+}
+
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+    border-bottom: none;
+}
+
+/* Dark mode zebra striping */
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:nth-child(even) .gridjs-td {
+    background-color: var(--surface-elevated);
 }
 
 /* Hover states */
 .gridjs-wrapper .gridjs-tr:hover .gridjs-td {
-    background-color: var(--color-primary-light) !important;
+    background-color: #dbeafe;
 }
 
 [data-theme="dark"] .gridjs-wrapper .gridjs-tr:hover .gridjs-td {
-    background-color: var(--surface-elevated) !important;
-}
-
-/* Grid.js search - Hidden because we use custom search in filter panel */
-.gridjs-search {
-    display: none !important;
-}
-
-/* Grid.js search input (kept for reference, not used) */
-.gridjs-search-input {
-    background-color: var(--surface-card) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: var(--radius-md) !important;
-    padding: var(--space-3) var(--space-4) !important;
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .gridjs-search-input {
-    background-color: var(--surface-elevated) !important;
-}
-
-.gridjs-search-input:focus {
-    border-color: var(--color-primary) !important;
-    box-shadow: 0 0 0 3px var(--color-primary-light) !important;
+    background-color: rgba(99, 102, 241, 0.2);
 }
 
 /* Grid empty state */
@@ -1130,12 +1181,12 @@ body,
 .gridjs-footer {
     padding: var(--space-4);
     background: transparent;
-    border: none !important;
+    border: none;
 }
 
 [data-theme="dark"] .gridjs-footer {
     background: transparent;
-    border: none !important;
+    border: none;
 }
 
 /* Grid.js pagination - colored background */
@@ -1151,23 +1202,23 @@ body,
 }
 
 .gridjs-pages button {
-    border-radius: var(--radius-md) !important;
-    padding: var(--space-2) var(--space-3) !important;
-    margin: 0 var(--space-1) !important;
-    border: 1px solid var(--border-color) !important;
-    background-color: var(--surface-card) !important;
-    color: var(--text-primary) !important;
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    margin: 0 var(--space-1);
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-card);
+    color: var(--text-primary);
 }
 
 .gridjs-pages button:hover {
-    background-color: var(--color-primary-light) !important;
-    border-color: var(--color-primary) !important;
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
 }
 
 .gridjs-pages button.gridjs-currentPage {
-    background-color: var(--color-primary) !important;
-    border-color: var(--color-primary) !important;
-    color: var(--text-inverse) !important;
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--text-inverse);
 }
 
 /* ==========================================================================
@@ -1183,29 +1234,9 @@ body,
     letter-spacing: 0.025em;
 }
 
-.badge.bg-primary {
-    background-color: var(--color-primary) !important;
-}
-
-.badge.bg-secondary {
-    background-color: var(--color-secondary) !important;
-}
-
-.badge.bg-success {
-    background-color: var(--color-success) !important;
-}
-
-.badge.bg-danger {
-    background-color: var(--color-danger) !important;
-}
-
+/* Badge colors handled via --bs-*-rgb overrides in :root and [data-theme="dark"] */
 .badge.bg-warning {
-    background-color: var(--color-warning) !important;
-    color: var(--text-inverse) !important;
-}
-
-.badge.bg-info {
-    background-color: var(--color-info) !important;
+    color: var(--text-inverse);
 }
 
 /* ==========================================================================
@@ -1244,16 +1275,16 @@ body,
    ========================================================================== */
 
 .fixed-action-bar {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background-color: var(--surface-card);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding: var(--space-4) var(--space-6);
     box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
-    z-index: 100000 !important;
+    z-index: 100000;
     border-top: 1px solid var(--border-color);
 }
 
@@ -1388,7 +1419,7 @@ h4, h5, h6 {
     }
 
     body.has-fixed-action-bar {
-        padding-bottom: 100px !important;
+        padding-bottom: 100px;
     }
 
     /* Form elements - ensure they fit screen */
@@ -1401,9 +1432,9 @@ h4, h5, h6 {
     /* Permission selects - responsive width */
     .permission-select,
     select.permission-select {
-        min-width: 100% !important;
-        width: 100% !important;
-        max-width: 100% !important;
+        min-width: 100%;
+        width: 100%;
+        max-width: 100%;
     }
 
     /* Grid.js mobile - base styles for container */
@@ -1451,15 +1482,15 @@ h4, h5, h6 {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        padding: var(--space-2) 0 !important;
-        border-bottom: 1px solid var(--border-color) !important;
-        background: transparent !important;
+        padding: var(--space-2) 0;
+        border-bottom: 1px solid var(--border-color);
+        background: transparent;
         width: 100%;
     }
 
     [data-view="card"] .gridjs-td:last-child {
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
+        border-bottom: none;
+        padding-bottom: 0;
     }
 
     [data-view="card"] .gridjs-td::before {
@@ -1475,7 +1506,7 @@ h4, h5, h6 {
     /* Action buttons in mobile cards - wrap and stack */
     [data-view="card"] .gridjs-td .btn-group,
     [data-view="card"] .gridjs-td [style*="white-space: nowrap"] {
-        white-space: normal !important;
+        white-space: normal;
         display: flex;
         flex-wrap: wrap;
         gap: var(--space-2);
@@ -1496,28 +1527,28 @@ h4, h5, h6 {
     }
 
     [data-view="list"] .gridjs-table {
-        display: table !important;
+        display: table;
         min-width: 600px;
     }
 
     [data-view="list"] .gridjs-thead {
-        display: table-header-group !important;
+        display: table-header-group;
     }
 
     [data-view="list"] .gridjs-tbody {
-        display: table-row-group !important;
+        display: table-row-group;
     }
 
     [data-view="list"] .gridjs-tr {
-        display: table-row !important;
+        display: table-row;
     }
 
     [data-view="list"] .gridjs-th,
     [data-view="list"] .gridjs-td {
-        display: table-cell !important;
+        display: table-cell;
         white-space: nowrap;
         font-size: var(--text-sm);
-        padding: var(--space-2) var(--space-3) !important;
+        padding: var(--space-2) var(--space-3);
     }
 
     /* Actions column - keep all buttons on one line */
@@ -1538,7 +1569,7 @@ h4, h5, h6 {
     }
 
     [data-view="list"] .gridjs-td::before {
-        display: none !important;
+        display: none;
     }
 
     /* Grid.js pagination on mobile */
@@ -1672,7 +1703,7 @@ h4, h5, h6 {
     }
 
     .navbar-nav .nav-link {
-        padding: var(--space-2) !important;
+        padding: var(--space-2);
         font-size: var(--text-sm);
     }
 
@@ -1770,7 +1801,7 @@ h4, h5, h6 {
    ========================================================================== */
 
 /* Focus visible for keyboard navigation */
-:focus-visible {
+:focus-visible:not(#main-content) {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
@@ -2004,7 +2035,7 @@ h4, h5, h6 {
 /* Button loading state */
 .btn.is-loading {
     position: relative;
-    color: transparent !important;
+    color: transparent;
 }
 
 .btn.is-loading::after {
@@ -2368,8 +2399,8 @@ h4, h5, h6 {
 }
 
 /* Row selection */
-.gridjs-tr.selected {
-    background: var(--color-primary-light) !important;
+.gridjs-tr.selected td.gridjs-td {
+    background: var(--color-primary-light);
 }
 
 .row-checkbox {
@@ -2452,7 +2483,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-wrapper {
     background: transparent;
     border: none;
-    overflow: visible !important;
+    overflow: visible;
 }
 
 [data-view="card"] .gridjs-thead {
@@ -2461,8 +2492,8 @@ h4, h5, h6 {
 
 [data-view="card"] .gridjs-table {
     display: block;
-    background: transparent !important;
-    overflow: visible !important;
+    background: transparent;
+    overflow: visible;
 }
 
 /* Responsive grid layout for cards */
@@ -2470,8 +2501,8 @@ h4, h5, h6 {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: var(--space-5);
-    background: transparent !important;
-    overflow: visible !important;
+    background: transparent;
+    overflow: visible;
     padding-top: 4px;
 }
 
@@ -2494,18 +2525,18 @@ h4, h5, h6 {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
-/* Card cells - !important needed to override Grid.js CDN borders */
+/* Card cells */
 [data-view="card"] .gridjs-td {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-3) var(--space-4) !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    background: transparent !important;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-color);
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    background: transparent;
     gap: var(--space-3);
     box-sizing: border-box;
     order: 0;
@@ -2513,9 +2544,9 @@ h4, h5, h6 {
 
 /* First cell (Name/Title) - make it stand out */
 [data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%) !important;
-    padding: var(--space-4) !important;
-    border-bottom: 1px solid var(--border-color) !important;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%);
+    padding: var(--space-4);
+    border-bottom: 1px solid var(--border-color);
 }
 
 [data-view="card"] .gridjs-td:first-child > * {
@@ -2560,7 +2591,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label*="tat"] {
     order: 10;
     margin-top: auto;
-    background: var(--color-gray-50) !important;
+    background: var(--color-gray-50);
 }
 
 /* Due date field - move to bottom section */
@@ -2568,7 +2599,7 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label*="ate"],
 [data-view="card"] .gridjs-td[data-label*="échéance"] {
     order: 11;
-    background: var(--color-gray-50) !important;
+    background: var(--color-gray-50);
 }
 
 /* Hide label for hidden columns and action column */
@@ -2584,15 +2615,15 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label*="ction"],
 [data-view="card"] .gridjs-td[data-label*="Actions"],
 [data-view="card"] .gridjs-td:last-child {
-    order: 999 !important;
+    order: 999;
     justify-content: center;
-    padding: var(--space-3) var(--space-4) !important;
-    margin-top: auto !important;
-    background: var(--color-gray-50) !important;
-    border-top: 1px solid var(--border-color) !important;
-    border-bottom: none !important;
-    border-left: none !important;
-    border-right: none !important;
+    padding: var(--space-3) var(--space-4);
+    margin-top: auto;
+    background: var(--color-gray-50);
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
 }
 
 /* Dark mode adjustments for cards */
@@ -2795,7 +2826,7 @@ h4, h5, h6 {
 /* Filter content container - hidden by default, shown when expanded */
 .filter-content {
     display: none;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-4);
     align-items: flex-start;
     padding: var(--space-4);
@@ -2811,7 +2842,7 @@ h4, h5, h6 {
 
 /* Filter section styling */
 .filter-section {
-    flex: 1;
+    width: 100%;
     min-width: 200px;
 }
 
@@ -2825,6 +2856,41 @@ h4, h5, h6 {
     margin-bottom: var(--space-2);
 }
 
+/* Clearable input wrapper */
+.input-clearable {
+    position: relative;
+}
+
+.input-clearable input {
+    padding-right: 2rem;
+}
+
+.input-clear-btn {
+    position: absolute;
+    right: 0.375rem;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 11;  /* Must beat input:focus z-index:10 from accessibility.css */
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    display: none;  /* JS toggles to 'block' when input has text */
+}
+
+.input-clear-btn:hover {
+    color: var(--text-color);
+    background: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+[data-theme="dark"] .input-clear-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
 /* Sort section header with multi-sort toggle */
 .sort-section-header {
     display: flex;
@@ -2836,6 +2902,7 @@ h4, h5, h6 {
 
 .sort-section-header .filter-section-label {
     margin-bottom: 0;
+    flex-shrink: 0;
 }
 
 .multi-sort-toggle {
@@ -3037,7 +3104,7 @@ h4, h5, h6 {
     }
 }
 
-/* Desktop filter panel behavior - side by side layout */
+/* Desktop filter panel behavior - stacked layout */
 @media (min-width: 769px) {
     /* Show toggle button on desktop - panel is collapsible */
     .filter-toggle-btn {
@@ -3050,6 +3117,7 @@ h4, h5, h6 {
         flex-direction: row;
         flex-wrap: wrap;
         align-items: flex-end;
+        gap: var(--space-4);
         position: static;
         box-shadow: none;
         max-height: none;
@@ -3061,19 +3129,32 @@ h4, h5, h6 {
     }
 
     .filter-section {
-        flex: 0 0 auto;
+        flex: 0 1 auto;
         min-width: unset;
-        width: auto;
     }
 
     .filter-section.search-section {
         flex: 1 1 100%;
-        min-width: 200px;
+        width: 100%;
         max-width: 100%;
     }
 
+    /* Sort and view sections only take the space they need */
+    .filter-section.sort-section {
+        flex: 0 0 auto;
+        min-width: auto;
+        width: auto;
+        max-width: fit-content;
+    }
+
+    .filter-section.view-section {
+        flex: 0 0 auto;
+        min-width: auto;
+        width: auto;
+    }
+
     .sort-options {
-        flex-wrap: nowrap;
+        flex-wrap: wrap;
         flex-direction: row;
     }
 
@@ -3091,7 +3172,7 @@ h4, h5, h6 {
 @media (min-width: 769px) and (max-height: 600px) {
     /* Show toggle button for collapsible panel */
     .filter-toggle-btn {
-        display: flex !important;
+        display: flex;
     }
 
     /* Filter content behaves like mobile - collapsible */
@@ -3099,27 +3180,27 @@ h4, h5, h6 {
         position: absolute;
         left: 0;
         right: 0;
-        flex-direction: column !important;
+        flex-direction: column;
         gap: var(--space-3);
         background: var(--surface-card);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         max-height: 70vh;
         overflow-y: auto;
-        display: none !important;
+        display: none;
         z-index: 1001;
     }
 
     .filter-content.expanded {
-        display: flex !important;
+        display: flex;
     }
 
     .filter-section {
-        width: 100% !important;
-        min-width: unset !important;
-        flex: 0 0 auto !important;
+        width: 100%;
+        min-width: unset;
+        flex: 0 0 auto;
     }
 
     .filter-section.search-section {
-        max-width: 100% !important;
+        max-width: 100%;
     }
 }

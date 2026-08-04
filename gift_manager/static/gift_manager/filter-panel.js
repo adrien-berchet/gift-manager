@@ -16,9 +16,10 @@
         const filterToggle = document.getElementById(gridId + '-filter-toggle');
         const filterContent = document.getElementById(gridId + '-filter-content');
         const filterPanel = document.getElementById(gridId + '-filter-panel');
+        const listTools = document.getElementById(gridId + '-list-tools');
+        const controlRoot = listTools || filterPanel || filterContent;
         const searchInput = document.getElementById(gridId + '-search');
         const sortOptionsContainer = document.getElementById(gridId + '-sort-options');
-        const mobileBreakpoint = 768;
 
         if (!filterToggle || !filterContent) {
             console.warn('Filter panel elements not found for grid:', gridId);
@@ -30,22 +31,15 @@
             initStickyDetection(filterPanel);
         }
 
-        // Check if we're on mobile
-        function isMobile() {
-            return window.innerWidth <= mobileBreakpoint;
+        function syncFilterExpanded(isExpanded) {
+            filterContent.classList.toggle('expanded', isExpanded);
+            filterToggle.classList.toggle('active', isExpanded);
+            filterToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
         }
 
         // On mobile: collapsed by default. On desktop: CSS handles visibility
         function setDefaultState() {
-            if (isMobile()) {
-                // Mobile: collapsed by default
-                filterContent.classList.remove('expanded');
-                filterToggle.classList.remove('active');
-            } else {
-                // Desktop: CSS shows content, no need for expanded class
-                filterContent.classList.remove('expanded');
-                filterToggle.classList.remove('active');
-            }
+            syncFilterExpanded(false);
         }
 
         // Set initial state
@@ -60,136 +54,72 @@
 
         // Toggle filter panel
         filterToggle.addEventListener('click', function() {
-            const isExpanded = filterContent.classList.toggle('expanded');
-            filterToggle.classList.toggle('active', isExpanded);
+            syncFilterExpanded(!filterContent.classList.contains('expanded'));
         });
 
-        // Store original data for filtering
-        const originalData = grid.config.data;
-
-        /**
-         * Extract searchable text from a cell value (handles complex objects)
-         */
-        function extractSearchableText(cell) {
-            if (cell === null || cell === undefined) return '';
-
-            // Handle objects with common properties
-            if (typeof cell === 'object') {
-                // Try common text properties
-                if (cell.name) return String(cell.name);
-                if (cell.text) return String(cell.text);
-                if (cell.label) return String(cell.label);
-
-                // For arrays, extract text from each item
-                if (Array.isArray(cell)) {
-                    return cell.map(extractSearchableText).join(' ');
-                }
-
-                // For other objects, try to stringify
-                return JSON.stringify(cell);
-            }
-
-            return String(cell);
+        // Show or hide the clear button based on input value
+        function syncClearButton(input) {
+            var wrapper = input.closest('.input-clearable');
+            if (!wrapper) return;
+            var btn = wrapper.querySelector('.input-clear-btn');
+            if (!btn) return;
+            btn.style.display = input.value.length > 0 ? 'block' : 'none';
         }
 
-        /**
-         * Filter data based on search term
-         */
-        function filterData(data, searchTerm) {
-            if (!searchTerm || searchTerm.trim() === '') {
-                return data;
+        // Hide all clear buttons on init (they start visible since no CSS display:none)
+        controlRoot.querySelectorAll('.input-clear-btn').forEach(function(btn) {
+            btn.style.display = 'none';
+        });
+
+        // Sync on input/keyup/change events (delegated, works for dynamic elements)
+        ['input', 'keyup', 'change'].forEach(function(evt) {
+            controlRoot.addEventListener(evt, function(e) {
+                if (e.target.closest('.input-clearable')) {
+                    syncClearButton(e.target);
+                }
+            });
+        });
+
+        // Sync on focus (catches pre-filled values)
+        controlRoot.addEventListener('focusin', function(e) {
+            if (e.target.closest('.input-clearable')) {
+                syncClearButton(e.target);
             }
+        });
 
-            const term = searchTerm.toLowerCase().trim();
-
-            return data.filter(function(row) {
-                // Search through all cells in the row
-                return row.some(function(cell) {
-                    const cellText = extractSearchableText(cell).toLowerCase();
-                    return cellText.includes(term);
-                });
+        // Sync all clearable inputs after dynamic filters are created
+        function syncAllClearButtons() {
+            controlRoot.querySelectorAll('.input-clearable input').forEach(syncClearButton);
+            // Also hide buttons for newly created wrappers that have no value
+            controlRoot.querySelectorAll('.input-clear-btn').forEach(function(btn) {
+                var wrapper = btn.closest('.input-clearable');
+                if (!wrapper) return;
+                var input = wrapper.querySelector('input');
+                if (!input || input.value.length === 0) {
+                    btn.style.display = 'none';
+                }
             });
         }
+        setTimeout(syncAllClearButtons, 500);
 
-        /**
-         * Show/hide empty state message based on data
-         */
-        function updateEmptyState(hasData, searchValue) {
-            const gridContainer = document.getElementById(gridId);
-            if (!gridContainer) return;
+        // Clear button — mousedown + preventDefault to avoid input blur
+        controlRoot.addEventListener('mousedown', function(e) {
+            var clearBtn = e.target.closest('.input-clear-btn');
+            if (!clearBtn) return;
 
-            // Remove existing empty state
-            let emptyState = gridContainer.querySelector('.grid-empty-state');
-            if (emptyState) {
-                emptyState.remove();
+            e.preventDefault();
+
+            var wrapper = clearBtn.closest('.input-clearable');
+            if (!wrapper) return;
+
+            var input = wrapper.querySelector('input');
+            if (input) {
+                input.value = '';
+                clearBtn.style.display = 'none';
+                input.focus();
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
-
-            // Find Grid.js elements
-            const gridWrapper = gridContainer.querySelector('.gridjs-wrapper');
-            const gridTable = gridContainer.querySelector('.gridjs-table');
-
-            // Show/hide grid table based on data
-            if (gridTable) {
-                gridTable.style.display = hasData ? '' : 'none';
-            }
-
-            // Show empty state if no data
-            if (!hasData) {
-                emptyState = document.createElement('div');
-                emptyState.className = 'grid-empty-state';
-
-                let message, icon;
-                if (searchValue && searchValue.trim() !== '') {
-                    // No search results
-                    icon = 'fa-search';
-                    message = window.gridTranslations?.noRecordsFound || 'No matching records found';
-                } else {
-                    // No data at all
-                    icon = 'fa-inbox';
-                    message = window.gridTranslations?.noData || 'No data available';
-                }
-
-                emptyState.innerHTML = `
-                    <div class="empty-state-content">
-                        <i class="fas ${icon} empty-state-icon"></i>
-                        <p class="empty-state-message">${message}</p>
-                    </div>
-                `;
-
-                // Insert before footer if it exists, otherwise just append
-                const gridFooter = gridContainer.querySelector('.gridjs-footer');
-                if (gridFooter) {
-                    gridFooter.parentNode.insertBefore(emptyState, gridFooter);
-                } else {
-                    gridContainer.appendChild(emptyState);
-                }
-            }
-        }
-
-        // Connect custom search to Grid.js
-        if (searchInput && grid) {
-            let searchTimeout;
-            searchInput.addEventListener('input', function(e) {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    const searchValue = e.target.value;
-                    const filteredData = filterData(originalData, searchValue);
-
-                    // Update grid with filtered data
-                    grid.updateConfig({
-                        data: filteredData
-                    }).forceRender();
-
-                    // Update empty state
-                    updateEmptyState(filteredData.length > 0, searchValue);
-                }, 300);
-            });
-        }
-
-        // Show initial empty state if needed (wait for Grid.js to render)
-        setTimeout(function() {
-            updateEmptyState(originalData.length > 0, '');
-        }, 200);
+        });
 
         /**
          * Update sort button states to reflect Grid.js sort state
@@ -199,7 +129,8 @@
             // Reset all button states first
             container.querySelectorAll('.sort-option').forEach(function(b) {
                 b.classList.remove('active');
-                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort"></i>';
+                b.setAttribute('aria-pressed', 'false');
+                b.querySelector('.sort-direction').innerHTML = '<i class="fas fa-sort" aria-hidden="true"></i>';
             });
 
             // Collect all sorted columns with their order
@@ -232,6 +163,7 @@
                 const matchingBtn = container.querySelector('.sort-option[data-column-index="' + col.idx + '"]');
                 if (matchingBtn) {
                     matchingBtn.classList.add('active');
+                    matchingBtn.setAttribute('aria-pressed', 'true');
 
                     // Show priority number only if multiple columns are sorted
                     const priorityIndicator = sortedColumns.length > 1
@@ -240,8 +172,8 @@
 
                     matchingBtn.querySelector('.sort-direction').innerHTML = priorityIndicator +
                         (col.isAsc
-                            ? '<i class="fas fa-sort-up"></i>'
-                            : '<i class="fas fa-sort-down"></i>');
+                            ? '<i class="fas fa-sort-up" aria-hidden="true"></i>'
+                            : '<i class="fas fa-sort-down" aria-hidden="true"></i>');
                 }
             });
         }
@@ -254,6 +186,7 @@
             multiSortToggle.addEventListener('click', function() {
                 multiSortMode = !multiSortMode;
                 multiSortToggle.classList.toggle('active', multiSortMode);
+                multiSortToggle.setAttribute('aria-pressed', multiSortMode ? 'true' : 'false');
             });
         }
 
@@ -304,8 +237,9 @@
                 btn.className = 'sort-option';
                 btn.dataset.columnIndex = visibleIndex;
                 btn.title = colName + ' (Shift+click or enable Multi mode to add as secondary sort)';
+                btn.setAttribute('aria-pressed', 'false');
                 btn.innerHTML = '<span>' + colName + '</span>' +
-                    '<span class="sort-direction"><i class="fas fa-sort"></i></span>';
+                    '<span class="sort-direction"><i class="fas fa-sort" aria-hidden="true"></i></span>';
 
                 btn.addEventListener('click', function(event) {
                     // Get all Grid.js headers
@@ -553,7 +487,9 @@
      */
     function updateViewButtons(container, activeView) {
         container.querySelectorAll('.view-option').forEach(function(btn) {
-            btn.classList.toggle('active', btn.dataset.view === activeView);
+            const isActive = btn.dataset.view === activeView;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
 

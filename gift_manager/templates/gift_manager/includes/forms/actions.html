@@ -1,0 +1,52 @@
+{% load i18n %}
+
+<div class="{% if form_surface == 'page' %}page-form-actions{% else %}panel-form-actions{% endif %}{% if secondary_submit_actions %} has-secondary-submit-actions{% endif %}">
+  {% if delete_url %}
+  <a href="{{ delete_url }}"
+     class="btn btn-outline-danger form-delete-action"
+     data-action="delete">
+    <i class="fas fa-trash me-1" aria-hidden="true"></i>
+    {% trans "Delete" %}
+  </a>
+  {% endif %}
+
+  {% if form_surface == "page" %}
+  <a href="{{ cancel_url }}" class="btn btn-secondary">
+    <i class="fas fa-times me-1" aria-hidden="true"></i>
+    {% trans "Cancel" %}
+  </a>
+  {% else %}
+  <button type="button"
+          class="btn btn-secondary"
+          data-bs-dismiss="offcanvas"
+          aria-label="{% trans 'Cancel' %}">
+    <i class="fas fa-times me-1" aria-hidden="true"></i>
+    {% trans "Cancel" %}
+  </button>
+  {% endif %}
+
+  {% for submit_action in secondary_submit_actions %}
+  <button type="submit"
+          name="{{ submit_action.name }}"
+          value="{{ submit_action.value }}"
+          class="{{ submit_action.css_class }}"
+          data-loading-text="{% trans 'Saving...' %}"
+          aria-label="{{ submit_action.label }}">
+    <i class="{{ submit_action.icon }} me-1" aria-hidden="true"></i>
+    {{ submit_action.label }}
+  </button>
+  {% endfor %}
+
+  <button type="submit"
+          class="btn btn-primary"
+          data-loading-text="{% trans 'Saving...' %}"
+          data-keyboard-hint="Ctrl+S"
+          title="{% trans 'Save changes' %} (Ctrl+S)"
+          aria-label="{% trans 'Save changes' %}">
+    <i class="fas fa-save me-1" aria-hidden="true"></i>
+    {% trans "Save" %}
+  </button>
+  <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
+    {% trans "Ready to save" %}
+  </span>
+</div>

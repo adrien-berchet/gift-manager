@@ -1,41 +1,31 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
+{% load static %}
+
 {% block title %}Gift Manager - {{ action }} {{ type }}{% endblock %}
 
 {% block content %}
-<h1 class="my-4">{{ action }} {{ type }}</h1>
-<form method="post">
+<div class="container form-page-container">
+  <div class="form-page-header">
+    <h1>{{ action }} {{ type }}</h1>
+  </div>
+
+  <form method="post"
+        id="main-form"
+        class="page-form event-form"
+        data-form-type="event-edit"
+        data-track-changes>
     {% csrf_token %}
-    {{ form.as_p }}
-    <div id="absolute_date_field" style="display: none;">
-        {{ form.absolute_date.label_tag }} {{ form.absolute_date }}
+    <div class="form-fields">
+      {% include "gift_manager/includes/forms/errors.html" %}
+      {% include "gift_manager/includes/forms/event_fields.html" %}
     </div>
-    <div id="recurrence_field" style="display: none;">
-        {{ form.recurrence.label_tag }} {{ form.recurrence }}
-    </div>
-    <button type="submit" class="btn btn-success">{% trans "Save" %}</button>
-    <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
-</form>
+    {% include "gift_manager/includes/forms/actions.html" with form_surface="page" %}
+  </form>
+</div>
+{% endblock %}
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const dateTypeField = document.querySelector('input[name="date_type"]:checked');
-        const absoluteDateField = document.getElementById('absolute_date_field');
-        const recurrenceField = document.getElementById('recurrence_field');
-
-        function toggleDateFields() {
-            if (dateTypeField.value === 'absolute') {
-                absoluteDateField.style.display = 'block';
-                recurrenceField.style.display = 'none';
-            } else if (dateTypeField.value === 'recurrence') {
-                absoluteDateField.style.display = 'none';
-                recurrenceField.style.display = 'block';
-            }
-        }
-
-        dateTypeField.addEventListener('change', toggleDateFields);
-        toggleDateFields();
-    });
-</script>
+{% block extra_js %}
+<script src="{% static 'gift_manager/unsaved-changes.js' %}"></script>
 {% endblock %}

@@ -1,7 +1,18 @@
 {% extends "gift_manager/base.html" %}
 
+{% load permission_tags %}
 {% load i18n %}
 {% load static %}
+{% load custom_filters %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+{% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
 
@@ -10,61 +21,75 @@
 <div class="page-header">
     <h1>{{ translated_type }}</h1>
     <div class="page-header-actions">
-        <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary">
+        <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift" %}
         </a>
     </div>
 </div>
 
-{# Filter panel #}
-{% include "gift_manager/includes/filter_panel.html" with grid_id="gift-grid" %}
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="gift-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
-<div id="gift-grid" class="mt-3"></div>
+<div id="gift-grid" class="list-container"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
     (function () {
+        // Get permission data from template (stored globally for refresh updates)
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
         // Prepare data for Grid.js
+        // Include placeholder (empty string) for checkbox column as first element
         const data = [
             {% for item in data %}
     [
-        "{{ item.name|escapejs }}",
-        "{{ item.comment|default:''|escapejs }}",
+        '', // Checkbox column placeholder - Index 0
+        "{{ item.name|escapejs }}",                                    // Index 1
+        "{{ item.comment|default:''|escapejs }}",                      // Index 2
         {% if item.tags_info %}
-    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}],
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}], // Index 3
     {% else %}
-    [],
+    [],                                                                // Index 3
         {% endif %}
-    "{{ item.gift_id }}",
-        "{% url 'gift_manager:gift_relation_create' item.gift_id %}",
-        "{% url 'gift_manager:gift_detail' item.gift_id %}",
-        "{% url 'gift_manager:gift_edit' item.gift_id %}",
-        "{% url 'gift_manager:gift_delete' item.gift_id %}"
+    "{{ item.gift_id }}",                                              // Index 4
+        "{% url 'gift_manager:gift_relation_create' item.gift_id %}", // Index 5
+        "{% url 'gift_manager:gift_detail' item.gift_id %}",          // Index 6
+        "{% url 'gift_manager:gift_edit' item.gift_id %}",            // Index 7
+        "{% url 'gift_manager:gift_delete' item.gift_id %}"           // Index 8
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
 
-    // Define columns
+    // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
+        GridUtils.createCheckboxColumn(4),
         {
+            id: 'name',
             name: '{{ column_names.name|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
             }
         },
         {
+            id: 'comment',
             name: '{{ column_names.comment|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
             }
         },
         {
+            id: 'tags',
             name: '{{ column_names.tags|escapejs }}',
             formatter: GridUtils.badgeFormatter()
         },
@@ -74,36 +99,53 @@
         { name: 'gift_edit_url', hidden: true },
         { name: 'gift_delete_url', hidden: true },
         {
+            id: 'actions',
             name: '{% trans "Actions"|escapejs %}',
-            width: '180px',
+            width: '360px',
             sort: false,
-            formatter: GridUtils.actionButtonsFormatter({
-                give: (row) => row.cells[4].data,
-                details: (row) => row.cells[5].data,
-                edit: (row) => row.cells[6].data,
-                delete: (row) => row.cells[7].data
-            }, ['give', 'details', 'edit', 'delete'])
+            formatter: PermissionUtils.permissionAwareActionFormatter({
+                give: (row) => row.cells[5].data,
+                details: (row) => row.cells[6].data,
+                edit: (row) => row.cells[7].data,
+                delete: (row) => row.cells[8].data,
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['give', 'details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[4].data
+            }, userPermissions)
         }
     ];
 
-    // Initialize Grid.js
-    const grid = GridUtils.initGrid('gift-grid', columns, data, {
-        pagination: {
-            enabled: true,
-            limit: 10
-        }
-    });
+    // Initialize Grid.js with all features using the standard helper
+    try {
+        const grid = GridUtils.initStandardListGrid({
+            gridId: 'gift-grid',
+            entityType: 'gift',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            sort: {
+                multiColumn: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'name', 2: 'comment' } },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(2)' }  // Name
+                ]
+            },
+            idFieldIndex: 4
+        });
 
-    // Initialize filter panel
-    FilterPanel.init('gift-grid', grid, columns);
-
-    // Trigger initial sort on first column to make Grid.js aware of the sort
-    setTimeout(() => {
-        const statusHeader = document.querySelector('#gift-grid th:nth-child(1)');
-        if (statusHeader) {
-            statusHeader.click();
-        }
-    }, 100);
+} catch (error) {
+        console.error('[GiftList] Error initializing grid:', error);
+    }
     }) ();
 </script>
 {% endblock %}

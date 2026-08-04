@@ -1,0 +1,7 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.name %}
+{% include "gift_manager/includes/forms/field.html" with field=form.comment %}
+{% include "gift_manager/includes/forms/field.html" with field=form.schedule_type radio_group_class="schedule-type-selection" %}
+{% include "gift_manager/includes/forms/field.html" with field=form.date field_id="event-date-field" %}
+{% include "gift_manager/includes/forms/field.html" with field=form.recurrence field_id="recurrence-field" %}

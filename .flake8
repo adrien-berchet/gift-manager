@@ -8,4 +8,5 @@ per-file-ignores =
     GiftManager/settings/__init__.py:F401
     GiftManager/settings/development.py:F401
     GiftManager/settings/production.py:F401
+    GiftManager/settings/build.py:F401
     GiftManager/settings/testing.py:F401

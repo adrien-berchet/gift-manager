@@ -1,0 +1,331 @@
+/* Touch Gestures Styles for Modern UX Interface */
+
+/* ========================================================================
+   Swipeable Elements Base Styles
+   ======================================================================== */
+
+.swipeable-item {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+    touch-action: pan-y; /* Allow vertical scrolling but handle horizontal */
+}
+
+.swipeable-item.touch-tracking {
+    transition: none; /* Disable transitions during touch tracking */
+}
+
+/* ========================================================================
+   Swipe Actions Container
+   ======================================================================== */
+
+.swipe-actions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.swipe-actions-left,
+.swipe-actions-right {
+    display: flex;
+    align-items: center;
+    min-width: 120px;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+}
+
+.swipe-actions-left {
+    justify-content: flex-start;
+    background: linear-gradient(90deg, var(--color-success, #198754), var(--color-info, #0dcaf0));
+    padding-left: var(--space-3, 12px);
+}
+
+.swipe-actions-right {
+    justify-content: flex-end;
+    background: linear-gradient(90deg, var(--color-warning, #ffc107), var(--color-danger, #dc3545));
+    padding-right: var(--space-3, 12px);
+    margin-left: auto;
+    transform: translateX(100%);
+}
+
+/* ========================================================================
+   Swipe Action Buttons
+   ======================================================================== */
+
+.swipe-action-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-primary, #333);
+    font-size: var(--text-lg, 18px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 var(--space-2, 8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.swipe-action-btn:hover,
+.swipe-action-btn:focus {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.swipe-action-btn:active {
+    transform: scale(0.95);
+}
+
+.swipe-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Specific action button colors */
+.swipe-action-delete {
+    background: var(--color-danger, #dc3545);
+    color: white;
+}
+
+.swipe-action-archive {
+    background: var(--color-warning, #ffc107);
+    color: var(--text-primary, #333);
+}
+
+.swipe-action-edit {
+    background: var(--color-info, #0dcaf0);
+    color: white;
+}
+
+.swipe-action-share {
+    background: var(--color-success, #198754);
+    color: white;
+}
+
+/* ========================================================================
+   Swipe Actions Visible State
+   ======================================================================== */
+
+.swipe-actions-visible .swipe-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.swipe-actions-visible .swipe-actions-left {
+    transform: translateX(0);
+}
+
+.swipe-actions-visible .swipe-actions-right {
+    transform: translateX(0);
+}
+
+/* ========================================================================
+   Touch Context Menu
+   ======================================================================== */
+
+.touch-context-menu {
+    position: fixed;
+    background: var(--surface-card, white);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: var(--radius-lg, 12px);
+    box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+    padding: var(--space-2, 8px);
+    z-index: 1060;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.2s ease;
+    min-width: 160px;
+    max-width: 200px;
+}
+
+.touch-context-menu.show {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: var(--space-3, 12px);
+    border: none;
+    background: transparent;
+    color: var(--text-primary, #333);
+    font-size: var(--text-sm, 14px);
+    text-align: left;
+    border-radius: var(--radius-md, 8px);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    min-height: 44px; /* Touch-friendly height */
+}
+
+.context-menu-item:hover,
+.context-menu-item:focus {
+    background: var(--color-primary-light, rgba(13, 110, 253, 0.1));
+}
+
+.context-menu-item i {
+    margin-right: var(--space-2, 8px);
+    width: 16px;
+    text-align: center;
+}
+
+/* ========================================================================
+   Touch Feedback Enhancements
+   ======================================================================== */
+
+/* Enhanced touch feedback for swipeable items */
+.swipeable-item.touch-tracking {
+    background: var(--color-primary-light, rgba(13, 110, 253, 0.05));
+}
+
+/* Haptic feedback simulation with visual cues */
+.swipeable-item.haptic-feedback {
+    animation: haptic-pulse 0.1s ease;
+}
+
+@keyframes haptic-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+/* ========================================================================
+   Mobile-Specific Adjustments
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    /* Larger touch targets on mobile */
+    .swipe-action-btn {
+        width: 56px;
+        height: 56px;
+        font-size: var(--text-xl, 20px);
+    }
+
+    /* Wider swipe areas */
+    .swipe-actions-left,
+    .swipe-actions-right {
+        min-width: 140px;
+    }
+
+    /* Larger context menu items */
+    .context-menu-item {
+        padding: var(--space-4, 16px);
+        font-size: var(--text-base, 16px);
+        min-height: 48px;
+    }
+
+    /* Better visual feedback */
+    .swipeable-item.touch-tracking {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* ========================================================================
+   Accessibility Enhancements
+   ======================================================================== */
+
+/* Focus indicators for keyboard navigation */
+.swipe-action-btn:focus-visible {
+    outline: 3px solid var(--color-primary, #0d6efd);
+    outline-offset: 2px;
+}
+
+.context-menu-item:focus-visible {
+    outline: 2px solid var(--color-primary, #0d6efd);
+    outline-offset: -2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .swipe-action-btn {
+        border: 2px solid currentColor;
+    }
+
+    .touch-context-menu {
+        border: 2px solid var(--text-primary, #333);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .swipeable-item,
+    .swipe-actions-left,
+    .swipe-actions-right,
+    .swipe-action-btn,
+    .touch-context-menu {
+        transition: none;
+    }
+
+    .haptic-feedback {
+        animation: none;
+    }
+}
+
+/* ========================================================================
+   Dark Mode Support
+   ======================================================================== */
+
+[data-theme="dark"] .swipe-action-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary, #f8f9fa);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .touch-context-menu {
+    background: var(--surface-card, #1e293b);
+    border-color: var(--border-color, #475569);
+}
+
+[data-theme="dark"] .context-menu-item {
+    color: var(--text-primary, #f8f9fa);
+}
+
+[data-theme="dark"] .context-menu-item:hover,
+[data-theme="dark"] .context-menu-item:focus {
+    background: var(--color-primary-light, rgba(59, 130, 246, 0.2));
+}
+
+/* ========================================================================
+   Animation Performance Optimizations
+   ======================================================================== */
+
+/* Use GPU acceleration for smooth animations */
+.swipeable-item,
+.swipe-actions,
+.swipe-actions-left,
+.swipe-actions-right,
+.swipe-action-btn {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Optimize for 60fps on mobile */
+@media (max-width: 768px) {
+    .swipeable-item.touch-tracking {
+        will-change: transform;
+    }
+}
+
+/* ========================================================================
+   Print Styles
+   ======================================================================== */
+
+@media print {
+    .swipe-actions,
+    .touch-context-menu {
+        display: none !important;
+    }
+}

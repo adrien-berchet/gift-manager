@@ -1,0 +1,169 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n %}
+
+{% block edit_url %}{% url 'gift_manager:gift_edit' pk=gift.gift_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:gift_delete' pk=gift.gift_id %}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <!-- Basic Information -->
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-gift me-2"></i>{% trans "Basic Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Name" %}</label>
+                    <div class="detail-value">{{ gift.name }}</div>
+                </div>
+            </div>
+            {% if gift.comment %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Comment" %}</label>
+                    <div class="detail-value">{{ gift.comment }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Created" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar me-1 text-muted"></i>
+                        {{ gift.creation_date|date:"M d, Y" }}
+                        <small class="text-muted">{{ gift.creation_date|time:"H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tags -->
+    {% if gift.tags.all %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-tags me-2"></i>{% trans "Tags" %}
+            <span class="badge bg-secondary ms-2">{{ gift.tags.count }}</span>
+        </h6>
+
+        <div class="tags-list">
+            {% for tag in gift.tags.all %}
+            <span class="badge bg-info me-1 mb-1">
+                <i class="fas fa-tag me-1"></i>{{ tag.name }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Gift Plans -->
+    {% if relations %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift Plans" %}
+            <span class="badge bg-secondary ms-2">{{ relations|length }}</span>
+        </h6>
+
+        <div class="relations-list">
+            {% for relation in relations %}
+            <div class="relation-item border rounded p-3 mb-2">
+                <div class="d-flex align-items-start justify-content-between">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if relation.is_group_targeted %}
+                            <i class="fas fa-layer-group me-2 text-primary"></i>
+                            {% else %}
+                            <i class="fas fa-user me-2 text-primary"></i>
+                            {% endif %}
+                            <strong>{{ relation.recipient_name }}</strong>
+                            <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-2">
+                                {{ relation.recipient_type_label }}
+                            </span>
+                            {% if relation.status %}
+                            <span class="badge bg-info ms-2">{{ relation.status }}</span>
+                            {% endif %}
+                        </div>
+                        {% if relation.is_group_targeted %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-layer-group me-1"></i>
+                            {% trans "Gift plan for this group directly." %}
+                        </div>
+                        {% endif %}
+
+                        {% if relation.event %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-calendar-alt me-1"></i>
+                            {% trans "Event:" %} {{ relation.event.name }}
+                        </div>
+                        {% endif %}
+
+                        {% if relation.due_date %}
+                        <div class="text-muted small mb-1">
+                            <i class="fas fa-clock me-1"></i>
+                            {% trans "Due:" %} {{ relation.due_date|date:"M d, Y" }}
+                        </div>
+                        {% endif %}
+
+                        {% if relation.comment %}
+                        <div class="text-muted small">
+                            <i class="fas fa-comment me-1"></i>
+                            {{ relation.comment|truncatechars:100 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="relation-actions d-flex gap-1">
+                        <a href="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}"
+                           class="btn btn-outline-secondary btn-sm"
+                           data-action="detail"
+                           data-detail-url="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}"
+                           title="{% trans 'View gift plan details' %}">
+                            <i class="fas fa-eye" aria-hidden="true"></i>
+                        </a>
+                        <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                           class="btn btn-outline-primary btn-sm"
+                           data-action="edit"
+                           data-edit-url="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
+                           title="{% trans 'Edit gift plan' %}">
+                            <i class="fas fa-edit" aria-hidden="true"></i>
+                        </a>
+                        <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
+                           class="btn btn-outline-danger btn-sm"
+                           data-action="delete"
+                           data-delete-url="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
+                           title="{% trans 'Delete gift plan' %}">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Shared With -->
+    {% if shared_users %}
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
+            <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>
+        </h6>
+
+        <div class="shared-users-list">
+            {% for shared_user in shared_users %}
+            <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-user me-2 text-muted"></i>
+                    <span>{{ shared_user.user.username }}</span>
+                </div>
+                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

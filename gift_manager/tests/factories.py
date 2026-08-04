@@ -64,6 +64,7 @@ class PersonFactory(DjangoModelFactory):
 
     class Meta:
         model = Person
+        skip_postgeneration_save = True
 
     first_name = factory.Faker("first_name")
     family_name = factory.Faker("last_name")
@@ -98,6 +99,7 @@ class PersonGroupFactory(DjangoModelFactory):
 
     class Meta:
         model = PersonGroup
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Group {n}")
 
@@ -120,6 +122,7 @@ class GiftTagFactory(DjangoModelFactory):
 
     class Meta:
         model = GiftTag
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Tag {n}")
     is_public = False
@@ -131,12 +134,26 @@ class GiftTagFactory(DjangoModelFactory):
             return
         self.parent_tags.add(*extracted)
 
+    @factory.post_generation
+    def shared_with(self, create, extracted, **kwargs):
+        """Handle ManyToMany relationship with shared_with users."""
+        if not create or not extracted:
+            return
+        for user in extracted:
+            from gift_manager.models import GiftTagPermission
+            from gift_manager.models import PermissionLevel
+
+            GiftTagPermission.objects.create(
+                user=user, gift_tag=self, permission_type=PermissionLevel.VIEWER
+            )
+
 
 class GiftFactory(DjangoModelFactory):
     """Factory for creating Gift instances."""
 
     class Meta:
         model = Gift
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Gift {n}")
     comment = factory.Faker("sentence")
@@ -167,10 +184,12 @@ class EventFactory(DjangoModelFactory):
 
     class Meta:
         model = Event
+        skip_postgeneration_save = True
 
     name = factory.Sequence(lambda n: f"Event {n}")
     comment = factory.Faker("sentence")
-    usual_date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
+    schedule_type = Event.ScheduleType.RECURRING
+    date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
     recurrence = "yearly"
 
     @factory.post_generation
@@ -202,6 +221,7 @@ class RelationFactory(DjangoModelFactory):
 
     class Meta:
         model = Relation
+        skip_postgeneration_save = True
 
     person = factory.SubFactory(PersonFactory)
     group = None

@@ -1,0 +1,16 @@
+{% if form.recipient %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.recipient %}
+{% endif %}
+{% if form.person %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.person %}
+{% endif %}
+{% if form.group %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.group %}
+{% endif %}
+{% if form.gift %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.gift %}
+{% endif %}
+{% include "gift_manager/includes/forms/field.html" with field=form.comment %}
+{% include "gift_manager/includes/forms/field.html" with field=form.event %}
+{% include "gift_manager/includes/forms/field.html" with field=form.status %}
+{% include "gift_manager/includes/forms/field.html" with field=form.due_date %}

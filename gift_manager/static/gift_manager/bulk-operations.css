@@ -1,0 +1,329 @@
+/**
+ * Bulk Operations Styles
+ * Styles for multi-select functionality and bulk actions toolbar
+ */
+
+/* Bulk Actions Toolbar */
+.bulk-actions-toolbar {
+    background: var(--surface-card, #ffffff);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-3, 12px) var(--space-4, 16px);
+    margin-bottom: var(--space-3, 12px);
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.1));
+    transition: all 0.2s ease;
+}
+
+.bulk-actions-toolbar.bulk-toolbar-visible {
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.bulk-toolbar-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4, 16px);
+}
+
+.bulk-selection-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    color: var(--text-secondary, #6b7280);
+    font-size: var(--text-sm, 14px);
+    font-weight: 500;
+}
+
+.selected-count {
+    color: var(--primary-600, #2563eb);
+    font-weight: 600;
+}
+
+.bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.bulk-action-btn {
+    transition: all 0.2s ease;
+    font-size: var(--text-sm, 14px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+}
+
+.bulk-action-btn:disabled {
+    opacity: 1;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-danger.bulk-action-btn:disabled {
+    background-color: #fecaca;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+
+.btn-success.bulk-action-btn:disabled {
+    background-color: #bbf7d0;
+    border-color: #86efac;
+    color: #166534;
+}
+
+/* Bulk Selection Checkboxes */
+th.gridjs-th.bulk-select-header {
+    width: 50px;
+    text-align: center;
+    padding: var(--space-2, 8px);
+}
+
+td.gridjs-td.bulk-select-cell {
+    width: 50px;
+    text-align: center;
+    padding: var(--space-2, 8px);
+    vertical-align: middle;
+}
+
+.bulk-select-header .form-check,
+.bulk-select-cell .form-check {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+}
+
+.bulk-select-all,
+.bulk-select-item {
+    cursor: pointer;
+    transform: scale(1.1);
+    transition: all 0.2s ease;
+}
+
+.bulk-select-all:hover,
+.bulk-select-item:hover {
+    transform: scale(1.2);
+}
+
+.bulk-select-all:focus,
+.bulk-select-item:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.25);
+}
+
+/* Selected Row Styling - compound selector beats vendor td.gridjs-td */
+.gridjs-tr.bulk-selected td.gridjs-td {
+    background-color: var(--primary-50, #eff6ff);
+}
+
+.gridjs-tr.bulk-selected {
+    border-left: 3px solid var(--primary-500, #3b82f6);
+}
+
+.gridjs-tr.bulk-selected:hover td.gridjs-td {
+    background-color: var(--primary-100, #dbeafe);
+}
+
+/* Dark theme support */
+[data-theme="dark"] .gridjs-tr.bulk-selected td.gridjs-td {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="dark"] .gridjs-tr.bulk-selected {
+    border-left-color: var(--primary-400, #60a5fa);
+}
+
+[data-theme="dark"] .gridjs-tr.bulk-selected:hover td.gridjs-td {
+    background-color: rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .btn-danger.bulk-action-btn:disabled {
+    background-color: #450a0a;
+    border-color: #7f1d1d;
+    color: #6b7280;
+}
+
+[data-theme="dark"] .btn-success.bulk-action-btn:disabled {
+    background-color: #052e16;
+    border-color: #14532d;
+    color: #6b7280;
+}
+
+/* Bulk Delete Modal Progress */
+.bulk-delete-progress {
+    margin-top: var(--space-4, 16px);
+    padding: var(--space-3, 12px);
+    background: var(--surface-secondary, #f8fafc);
+    border-radius: var(--radius-md, 8px);
+    border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.bulk-delete-progress .progress {
+    height: 8px;
+    background-color: var(--surface-tertiary, #e2e8f0);
+    border-radius: var(--radius-full, 9999px);
+    overflow: hidden;
+}
+
+.bulk-delete-progress .progress-bar {
+    background: linear-gradient(90deg, var(--primary-500, #3b82f6), var(--primary-600, #2563eb));
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-weight: 500;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bulk-toolbar-content {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3, 12px);
+    }
+
+    .bulk-selection-info {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .bulk-actions {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .bulk-action-btn {
+        flex: 1;
+        min-width: 120px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bulk-actions-toolbar {
+        padding: var(--space-2, 8px) var(--space-3, 12px);
+    }
+
+    .bulk-action-btn {
+        font-size: var(--text-xs, 12px);
+        padding: var(--space-1, 4px) var(--space-2, 8px);
+        min-width: 100px;
+    }
+
+    th.gridjs-th.bulk-select-header,
+    td.gridjs-td.bulk-select-cell {
+        width: 40px;
+        padding: var(--space-1, 4px);
+    }
+}
+
+/* Grid.js Integration */
+.gridjs-wrapper .bulk-actions-toolbar {
+    margin-bottom: var(--space-3, 12px);
+}
+
+/* Ensure proper spacing with existing grid styles */
+.gridjs-container {
+    margin-top: 0;
+}
+
+/* Hide checkbox column by default */
+.gridjs-table th:first-child,
+.gridjs-table td:first-child {
+    display: none;
+}
+
+/* Table layout remains auto to allow Grid.js to manage column widths naturally */
+/* JavaScript will enforce specific widths for checkbox and Actions columns only */
+
+/* Show checkbox column when in selection mode */
+/* Width is now controlled by JavaScript to preserve exact column widths */
+.selection-mode-active .gridjs-table th:first-child,
+.selection-mode-active .gridjs-table td:first-child {
+    display: table-cell;
+    /* Width properties removed - controlled by JavaScript */
+}
+
+/* Actions column width - now controlled entirely by JavaScript */
+/* This preserves the natural column width when entering selection mode */
+
+/* Flexible columns - widths now controlled by JavaScript */
+/* JavaScript captures and preserves exact widths to maintain layout */
+.selection-mode-active .gridjs-table th:nth-child(2),
+.selection-mode-active .gridjs-table td:nth-child(2),
+.selection-mode-active .gridjs-table th:nth-child(3),
+.selection-mode-active .gridjs-table td:nth-child(3),
+.selection-mode-active .gridjs-table th:nth-child(4),
+.selection-mode-active .gridjs-table td:nth-child(4),
+.selection-mode-active .gridjs-table th:nth-child(5),
+.selection-mode-active .gridjs-table td:nth-child(5) {
+    /* width: auto !important; - removed, controlled by JavaScript */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Animation for checkbox state changes */
+.bulk-select-all:indeterminate {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Hover effects for better UX */
+.bulk-select-header:hover,
+.bulk-select-cell:hover {
+    background-color: var(--surface-hover, #f1f5f9);
+}
+
+[data-theme="dark"] .bulk-select-header:hover,
+[data-theme="dark"] .bulk-select-cell:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Focus states for accessibility */
+.bulk-action-btn:focus {
+    outline: 2px solid var(--primary-500, #3b82f6);
+    outline-offset: 2px;
+}
+
+/* Loading state for bulk actions */
+.bulk-action-btn.loading {
+    position: relative;
+    color: transparent;
+}
+
+.bulk-action-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: translate(-50%, -50%) rotate(360deg);
+    }
+}

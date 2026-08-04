@@ -13,6 +13,7 @@ from django.urls import reverse
 from gift_manager.models import PersonGroup
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.permissions import get_permission
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
@@ -101,6 +102,22 @@ class TestPersonGroupListView:
         assert tree_data[0]["has_children"] is True
         assert tree_data[1]["name"] == "Child"
         assert tree_data[1]["depth"] == 1
+
+    def test_list_view_tree_data_excludes_inaccessible_children(self):
+        """Prefetched child groups are not rendered unless the user can access them."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Private child")
+        child.parent_groups.add(parent)
+
+        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_groups")
+        response = self.client.get(url)
+
+        tree_data = response.context["tree_data"]
+        assert [node["name"] for node in tree_data] == ["Parent"]
+        assert tree_data[0]["has_children"] is False
+        assert response.context["has_hierarchy"] is False
 
     def test_list_view_member_count(self):
         """Test member count is correctly computed."""
@@ -209,16 +226,37 @@ class TestPersonGroupUpdateView:
 
         url = reverse("gift_manager:person_group_edit", kwargs={"pk": other_group.group_id})
 
-        # Viewer can access the form (GET returns 200)
+        # Viewer cannot access the edit form
         response = self.client.get(url)
-        assert response.status_code == 200
+        assert response.status_code == 403
 
-        # But submitting changes should fail or redirect
+        # Submitting changes should fail
         response = self.client.post(url, {"name": "Hacked Name"})
-        # Either redirects without saving, or returns 403
-        assert response.status_code in [302, 403]
+        assert response.status_code == 403
         other_group.refresh_from_db()
         assert other_group.name == "Other Group"  # Name unchanged
+
+    @override_settings(USE_I18N=False)
+    def test_update_view_honors_inherited_editor_permission(self):
+        """Parent group editor permission can explicitly cascade to child edits."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        permission = create_or_update_permission(
+            self.user, parent, permission_level=PermissionLevel.EDITOR
+        )
+        permission.inherit_permissions = True
+        permission.save()
+
+        url = reverse("gift_manager:person_group_edit", kwargs={"pk": child.group_id})
+
+        get_response = self.client.get(url)
+        post_response = self.client.post(url, {"name": "Updated Child"})
+
+        child.refresh_from_db()
+        assert get_response.status_code == 200
+        assert post_response.status_code == 302
+        assert child.name == "Updated Child"
 
 
 @pytest.mark.django_db
@@ -386,7 +424,7 @@ class TestPersonGroupDeleteView:
 
     @override_settings(USE_I18N=False)
     def test_delete_view_shared_group_only_unshares(self):
-        """Test that deleting a shared group only removes sharing."""
+        """Test that deleting a shared group keeps the final owner."""
         other_user = UserFactory(username="otheruser")
         group = PersonGroupFactory(name="Shared Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.OWNER)
@@ -395,10 +433,30 @@ class TestPersonGroupDeleteView:
         url = reverse("gift_manager:person_group_delete", kwargs={"pk": group.group_id})
         response = self.client.post(url)
 
-        assert response.status_code == 302
-        # Group should still exist (shared with other user)
+        assert response.status_code == 403
         group.refresh_from_db()
         assert group.name == "Shared Group"
+        assert get_permission(group, self.user) == PermissionLevel.OWNER
+        assert get_permission(group, other_user, "group") == PermissionLevel.VIEWER
+
+    @override_settings(USE_I18N=False)
+    def test_delete_view_shared_group_unshares_when_another_owner_remains(self):
+        """Test shared group delete removes current user if another owner remains."""
+        other_owner = UserFactory(username="otherowner")
+        viewer = UserFactory(username="viewer")
+        group = PersonGroupFactory(name="Shared Group")
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(other_owner, group, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(viewer, group, permission_level=PermissionLevel.VIEWER)
+
+        url = reverse("gift_manager:person_group_delete", kwargs={"pk": group.group_id})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        group.refresh_from_db()
+        assert get_permission(group, self.user, "group") == PermissionLevel.NONE
+        assert get_permission(group, other_owner, "group") == PermissionLevel.OWNER
+        assert get_permission(group, viewer, "group") == PermissionLevel.VIEWER
 
 
 @pytest.mark.django_db
@@ -1149,7 +1207,7 @@ class TestComplexHierarchies:
         assert response.status_code == 200
 
         # Direct members should only include parent's member
-        direct_members = list(response.context["persons"])
+        direct_members = list(response.context["members"])
         assert len(direct_members) == 1
         assert direct_members[0].first_name == "Parent"
 

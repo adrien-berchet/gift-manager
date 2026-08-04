@@ -16,6 +16,8 @@ If browser installation fails, these tests can be skipped with:
 """
 
 # pylint: disable=redefined-outer-name
+import tempfile
+
 import pytest
 from django.contrib.auth.models import User
 
@@ -56,28 +58,36 @@ def setup_test_user(transactional_db):
     """
     from allauth.account.models import EmailAddress
     from django.db import connection
+    from django.db import transaction
 
-    user = UserFactory(username="testuser", email="testuser@example.com")
-    user.set_password("testpass123")
-    user.save()
+    # Use a transaction to ensure data is committed
+    with transaction.atomic():
+        user = UserFactory(username="testuser", email="testuser@example.com")
+        user.set_password("testpass123")
+        user.save()
 
-    # Create verified email address for allauth
-    # Without this, allauth will redirect to email verification page
-    EmailAddress.objects.create(
-        user=user,
-        email="testuser@example.com",
-        verified=True,
-        primary=True,
-    )
+        # Create verified email address for allauth
+        # Without this, allauth will redirect to email verification page
+        EmailAddress.objects.create(
+            user=user,
+            email="testuser@example.com",
+            verified=True,
+            primary=True,
+        )
 
     # Explicitly commit using database connection
     connection.commit()
 
-    # Debug: verify user exists
+    # Debug: verify user exists and can authenticate
+    from django.contrib.auth import authenticate
+
     user_check = User.objects.filter(username="testuser").exists()
     email_check = EmailAddress.objects.filter(user=user, verified=True).exists()
+    auth_check = authenticate(username="testuser", password="testpass123")
+
     print(f"DEBUG: User 'testuser' exists in database: {user_check}")
     print(f"DEBUG: User has verified email: {email_check}")
+    print(f"DEBUG: User can authenticate: {auth_check is not None}")
 
     return user
 
@@ -160,12 +170,18 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     """Helper to log in a user.
 
     This app uses django-allauth which has different field names than standard Django auth.
+    Rate limiting is disabled in testing settings, so login should work reliably.
     """
     # Navigate to login page
     page.goto(f"{live_server.url}/accounts/login/", wait_until="networkidle")
 
     # Wait for page to load by checking for the login form
     page.wait_for_selector("form", timeout=10000)
+
+    # Check if we're already logged in (redirect to home page)
+    if "/accounts/login/" not in page.url:
+        print(f"DEBUG login_user: Already logged in, current URL: {page.url}")
+        return True
 
     # django-allauth uses 'login' for username field, not 'username'
     # Try allauth field first (#id_login), fallback to standard Django (#id_username)
@@ -174,18 +190,21 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
         login_field.wait_for(state="visible", timeout=5000)
         login_field.fill(username)
     except Exception:
-        # Fallback to standard Django auth field
-        username_field = page.locator("#id_username")
-        username_field.wait_for(state="visible", timeout=5000)
-        username_field.fill(username)
+        try:
+            # Fallback to standard Django auth field
+            username_field = page.locator("#id_username")
+            username_field.wait_for(state="visible", timeout=5000)
+            username_field.fill(username)
+        except Exception:
+            # Try to find any input field that might be the login field
+            all_inputs = page.locator("input[type='text'], input[type='email']").all()
+            if all_inputs:
+                all_inputs[0].fill(username)
 
     # Fill in the password field (same for both allauth and standard Django)
     password_field = page.locator("#id_password")
     password_field.wait_for(state="visible", timeout=5000)
     password_field.fill(password)
-
-    # Take screenshot before submitting
-    page.screenshot(path="debug_before_login.png")
 
     # Submit the form
     submit_button = page.locator('button[type="submit"]')
@@ -194,28 +213,25 @@ def login_user(page: Page, live_server, username="testuser", password="testpass1
     # Wait for page to load
     page.wait_for_load_state("networkidle", timeout=15000)
 
-    # Take screenshot after login attempt
-    page.screenshot(path="debug_after_login.png")
-
-    # Debug: Check if login succeeded or failed
+    # Check if login succeeded
     current_url = page.url
-    print(f"DEBUG login_user: Current URL after login: {current_url}")
+    if "/accounts/login/" not in current_url:
+        print("DEBUG login_user: Login SUCCESS")
+        return True
+    print("DEBUG login_user: Login FAILED - still on login page")
+    # Check for error messages for debugging
+    error_messages = page.locator(
+        ".alert-danger, .errorlist, .invalid-feedback, .alert"
+    ).all_text_contents()
+    if error_messages:
+        print(f"DEBUG login_user: Error messages: {error_messages}")
 
-    if "/accounts/login/" in current_url:
-        # Still on login page - login failed
-        print("DEBUG login_user: Login FAILED - still on login page")
+    # Check for rate limiting (should not happen with our settings)
+    page_content = page.content()
+    if "Too Many Requests" in page_content or "rate limit" in page_content.lower():
+        print("DEBUG login_user: Rate limiting detected - check test settings!")
 
-        # Check for error messages
-        error_messages = page.locator(
-            ".alert-danger, .errorlist, .invalid-feedback"
-        ).all_text_contents()
-        if error_messages:
-            print(f"DEBUG login_user: Error messages: {error_messages}")
-
-        # Check if user exists by trying to query the database through the page
-        print("DEBUG login_user: Taking screenshot of failed login page")
-    else:
-        print("DEBUG login_user: Login appeared to succeed - navigated away from login page")
+    return False
 
 
 @pytest.mark.slow
@@ -236,7 +252,7 @@ class TestPersonGroupTreeView:
         page.goto(f"{live_server.url}/person_groups/", wait_until="networkidle")
 
         # Debug: Check what's on the page
-        page.screenshot(path="debug_page_loaded.png")
+        page.screenshot(path=f"{tempfile.gettempdir()}/debug_page_loaded.png")
 
         # Check if Grid.js table loaded with data
         grid_wrapper = page.locator("#person-group-grid")
@@ -265,7 +281,7 @@ class TestPersonGroupTreeView:
                 "1. Database not using shared-cache mode (check testing.py)\n"
                 "2. Fixtures not using transactional_db\n"
                 "3. Groups created but parent_groups relationship not saved\n"
-                "Screenshot saved to debug_page_loaded.png"
+                f"Screenshot saved to {tempfile.gettempdir()}/debug_page_loaded.png"
             )
 
         # Wait for tree view button to be visible

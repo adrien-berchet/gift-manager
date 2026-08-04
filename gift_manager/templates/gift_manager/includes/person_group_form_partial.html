@@ -1,0 +1,26 @@
+{% load i18n %}
+
+<form method="post"
+      {% if object %}
+      action="{% url 'gift_manager:person_group_edit' object.group_id %}"
+      hx-post="{% url 'gift_manager:person_group_edit' object.group_id %}"
+      {% else %}
+      action="{% url 'gift_manager:person_group_create' %}"
+      hx-post="{% url 'gift_manager:person_group_create' %}"
+      {% endif %}
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form person-group-form"
+      data-form-type="{{ form_type|default:'person_group' }}">
+  {% csrf_token %}
+
+  <div class="form-fields">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/person_group_fields.html" %}
+    {% include "gift_manager/includes/forms/sharing_section.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" %}
+</form>

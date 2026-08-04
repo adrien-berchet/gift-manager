@@ -1,0 +1,17 @@
+{% load i18n %}
+{# Visible list search. Pass grid_id; RealTimeSearch expects the input id to be {{ grid_id }}-search. #}
+
+<div class="list-search-control">
+    <div class="filter-section search-section">
+        <label class="filter-section-label" for="{{ grid_id }}-search">{% trans "Search" %}</label>
+        <div class="input-clearable">
+            <input type="text"
+                   class="form-control filter-search-input"
+                   id="{{ grid_id }}-search"
+                   placeholder="{% trans 'Search...' %}">
+            <button type="button" class="input-clear-btn" aria-label="{% trans 'Clear' %}">
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+</div>

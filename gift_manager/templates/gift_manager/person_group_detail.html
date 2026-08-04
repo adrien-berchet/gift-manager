@@ -1,6 +1,12 @@
-{% extends "gift_manager/base.html" %} {% load custom_filters %} {% load i18n %}
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+{% load i18n %}
+
 {% block title %}Gift Manager - {% trans "Group details" %}{% endblock %}
 {% block content %}
+{% if request.META.HTTP_HX_REQUEST %}
+    {% include "gift_manager/includes/person_group_detail_partial.html" %}
+{% else %}
 <h1 class="my-4">{% trans "Group details" %}</h1>
 <p><strong>{% trans "Name:" %}</strong> {{ group.name }}</p>
 <p>
@@ -98,7 +104,7 @@
       aria-controls="gifts-list"
       aria-selected="false"
     >
-      {% trans "Gifts for this group" %} [{{ gift_count }}]
+      {% trans "Gift Plans for this group" %} [{{ gift_count }}]
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -112,7 +118,7 @@
       aria-controls="nested-gifts-list"
       aria-selected="false"
     >
-      {% trans "All gifts (including members)" %} [{{ nested_gift_count }}]
+      {% trans "All gift plans (including members)" %} [{{ nested_gift_count }}]
     </button>
   </li>
 </ul>
@@ -131,7 +137,7 @@
     >
       {% trans "Add persons" %}
     </a>
-    {% if persons %}
+    {% if members %}
     <div id="persons-grid" class="mt-3"></div>
     {% else %}
     <p class="text-center text-muted">{% trans "No person in this group" %}</p>
@@ -163,13 +169,13 @@
   >
     <p class="text-muted">
       <i class="fas fa-info-circle me-1"></i>
-      {% trans "This view shows all gifts for this group and for all members of this group (including nested groups)." %}
+      {% trans "This view shows gift plans for this group and for all members of this group (including nested groups)." %}
     </p>
     {% if nested_gifts %}
     <div id="nested-gifts-grid" class="mt-3"></div>
     {% else %}
     <p class="text-center text-muted">
-      {% trans "No gifts found for this group or its members" %}
+      {% trans "No gift plans found for this group or its members" %}
     </p>
     {% endif %}
   </div>
@@ -183,15 +189,20 @@
       href="{% url 'gift_manager:person_group_relation_create' group.group_id %}"
       class="btn btn-primary mb-3"
     >
-      {% trans "Offer a gift to this group" %}
+      {% trans "New Gift Plan for this group" %}
     </a>
+    <p class="text-muted small mb-3">
+      <i class="fas fa-info-circle me-1"></i>
+      {% trans "Gift plans in this tab target the group directly, not each member individually." %}
+    </p>
     {% if gifts %}
     <div id="gifts-grid" class="mt-3"></div>
     {% else %}
-    <p class="text-center text-muted">{% trans "No gift for this group" %}</p>
+    <p class="text-center text-muted">{% trans "No gift plans for this group" %}</p>
     {% endif %}
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %} {% load static %}
@@ -201,6 +212,11 @@
 <script>
   (function () {
       const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
+      const relationStatusOptions = [
+          {% for status in relation_statuses %}
+          { value: "{{ status.pk }}", label: "{{ status.status|escapejs }}" }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+      ];
 
       // Tab handling
       const urlParams = new URLSearchParams(window.location.search);
@@ -225,10 +241,10 @@
           history.pushState(null, null, '?tab=nested_gifts');
       });
 
-      {% if persons %}
+      {% if members %}
       // Persons Grid
       const personsData = [
-          {% for person in persons %}
+          {% for person in members %}
   [
       "{{ person.person_id }}",
       "{{ person.first_name|escapejs }}",
@@ -250,7 +266,7 @@
           formatter: (cell, row) => {
               const firstName = row.cells[1].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(`<a href="${personUrl}">${firstName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(personUrl, firstName));
           }
       },
       {
@@ -261,7 +277,7 @@
           formatter: (cell, row) => {
               const familyName = row.cells[2].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(`<a href="${personUrl}">${familyName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(personUrl, familyName));
           }
       },
       { name: 'person_detail_url', hidden: true },
@@ -326,7 +342,7 @@
           formatter: (cell, row) => {
               const firstName = row.cells[1].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(`<a href="${personUrl}">${firstName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(personUrl, firstName));
           }
       },
       {
@@ -337,7 +353,7 @@
           formatter: (cell, row) => {
               const familyName = row.cells[2].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(`<a href="${personUrl}">${familyName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(personUrl, familyName));
           }
       },
       { name: 'person_detail_url', hidden: true },
@@ -408,7 +424,7 @@
           formatter: (cell, row) => {
               const giftName = row.cells[1].data;
               const giftUrl = row.cells[2].data;
-              return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
           }
       },
       { name: 'gift_url', hidden: true },
@@ -422,22 +438,13 @@
           name: "{% trans 'Status' %}",
           formatter: (cell, row) => {
               const statusPk = row.cells[4].data;
-              const statusLabel = row.cells[5].data;
               const relationId = row.cells[6].data;
-              return gridjs.html(`
-                      <form id="status-form-${relationId}" style="display: inline;">
-                          <select class="form-select form-select-sm status-selector"
-                                  name="new_status"
-                                  data-relation-id="${relationId}"
-                                  data-update-url="${updateStatusUrl}">
-                              {% for status in relation_statuses %}
-                              <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                  {{ status.status }}
-                              </option>
-                              {% endfor %}
-                          </select>
-                      </form>
-                  `);
+              return gridjs.html(GridUtils.statusSelectFormHtml({
+                  relationId,
+                  updateUrl: updateStatusUrl,
+                  currentValue: statusPk,
+                  options: relationStatusOptions
+              }));
           }
       },
       { name: 'status_label', hidden: true },
@@ -454,7 +461,7 @@
               const eventName = row.cells[10].data;
               const eventUrl = row.cells[11].data;
               if (eventName && eventUrl) {
-                  return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                  return gridjs.html(GridUtils.linkHtml(eventUrl, eventName));
               }
               return eventName;
           }
@@ -508,46 +515,7 @@
   // Handle status selector changes with event delegation
   document.getElementById('gifts-grid').addEventListener('change', function (e) {
       if (e.target.classList.contains('status-selector')) {
-          const select = e.target;
-          const relationId = select.dataset.relationId;
-          const updateUrl = select.dataset.updateUrl;
-          const newStatus = select.value;
-          const form = select.closest('form');
-
-          // Get CSRF token
-          function getCookie(name) {
-              let cookieValue = null;
-              if (document.cookie && document.cookie !== '') {
-                  const cookies = document.cookie.split(';');
-                  for (let i = 0; i < cookies.length; i++) {
-                      const cookie = cookies[i].trim();
-                      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                          break;
-                      }
-                  }
-              }
-              return cookieValue;
-          }
-
-          // Make POST request
-          fetch(updateUrl, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  'X-CSRFToken': getCookie('csrftoken')
-              },
-              body: `relation_id=${relationId}&new_status=${newStatus}`
-          })
-              .then(response => response.text())
-              .then(html => {
-                  // Replace the form with the server response
-                  form.outerHTML = html;
-              })
-              .catch(error => {
-                  console.error('Error updating status:', error);
-                  alert('Failed to update status. Please try again.');
-              });
+          GridUtils.updateStatusSelect(e.target);
       }
   });
   {% endif %}
@@ -560,17 +528,8 @@
       "{{ relation.gift.gift_id }}",
       "{{ relation.gift.name|escapejs }}",
       "{% url 'gift_manager:gift_detail' relation.gift.gift_id %}",
-      // Recipient info
-      "{% if relation.person %}" +
-          "{{ relation.person.first_name|escapejs }} {{ relation.person.family_name|escapejs }}" +
-      "{% else %}" +
-          "{{ relation.group.name|escapejs }}" +
-      "{% endif %}",
-      "{% if relation.person %}" +
-          "{% url 'gift_manager:person_detail' relation.person.person_id %}" +
-      "{% else %}" +
-          "{% url 'gift_manager:person_group_detail' relation.group.group_id %}" +
-      "{% endif %}",
+      "{{ relation.recipient_name|escapejs }}",
+      "{{ relation.recipient_url|escapejs }}",
       "{{ relation.comment|escapejs }}",
       "{{ relation.status.pk }}",
       "{{ relation.status.status|escapejs }}",
@@ -595,19 +554,19 @@
           formatter: (cell, row) => {
               const giftName = row.cells[1].data;
               const giftUrl = row.cells[2].data;
-              return gridjs.html(`<a href="${giftUrl}">${giftName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(giftUrl, giftName));
           }
       },
       { name: 'gift_url', hidden: true },
       {
-          name: "{% trans 'For' %}",
+          name: "{% trans 'Recipient' %}",
           sort: {
               compare: GridUtils.sortString()
           },
           formatter: (cell, row) => {
               const recipientName = row.cells[3].data;
               const recipientUrl = row.cells[4].data;
-              return gridjs.html(`<a href="${recipientUrl}">${recipientName}</a>`);
+              return gridjs.html(GridUtils.linkHtml(recipientUrl, recipientName));
           }
       },
       { name: 'recipient_url', hidden: true },
@@ -621,22 +580,13 @@
           name: "{% trans 'Status' %}",
             formatter: (cell, row) => {
                 const statusPk = row.cells[6].data;
-                const statusLabel = row.cells[7].data;
                 const relationId = row.cells[11].data;
-                return gridjs.html(`
-                    <form id="status-form-${relationId}" style="display: inline;">
-                        <select class="form-select form-select-sm status-selector"
-                                name="new_status"
-                                data-relation-id="${relationId}"
-                                data-update-url="${updateStatusUrl}">
-                            {% for status in relation_statuses %}
-                            <option value="{{ status.pk }}" ${statusPk == "{{ status.pk }}" ? 'selected' : ''}>
-                                {{ status.status }}
-                            </option>
-                            {% endfor %}
-                        </select>
-                    </form>
-                `);
+                return gridjs.html(GridUtils.statusSelectFormHtml({
+                    relationId,
+                    updateUrl: updateStatusUrl,
+                    currentValue: statusPk,
+                    options: relationStatusOptions
+                }));
             }
       },
       { name: 'status_label', hidden: true },
@@ -649,7 +599,7 @@
               const eventName = row.cells[8].data;
               const eventUrl = row.cells[9].data;
               if (eventName && eventUrl) {
-                  return gridjs.html(`<a href="${eventUrl}">${eventName}</a>`);
+                  return gridjs.html(GridUtils.linkHtml(eventUrl, eventName));
               }
               return eventName;
           }
@@ -716,46 +666,7 @@
   // Handle status selector changes with event delegation for nested gifts
   document.getElementById('nested-gifts-grid').addEventListener('change', function (e) {
       if (e.target.classList.contains('status-selector')) {
-          const select = e.target;
-          const relationId = select.dataset.relationId;
-          const updateUrl = select.dataset.updateUrl;
-          const newStatus = select.value;
-          const form = select.closest('form');
-
-          // Get CSRF token
-          function getCookie(name) {
-              let cookieValue = null;
-              if (document.cookie && document.cookie !== '') {
-                  const cookies = document.cookie.split(';');
-                  for (let i = 0; i < cookies.length; i++) {
-                      const cookie = cookies[i].trim();
-                      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                          break;
-                      }
-                  }
-              }
-              return cookieValue;
-          }
-
-          // Make POST request
-          fetch(updateUrl, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/x-www-form-urlencoded',
-                  'X-CSRFToken': getCookie('csrftoken')
-              },
-              body: `relation_id=${relationId}&new_status=${newStatus}`
-          })
-              .then(response => response.text())
-              .then(html => {
-                  // Replace the form with the server response
-                  form.outerHTML = html;
-              })
-              .catch(error => {
-                  console.error('Error updating status:', error);
-                  alert('Failed to update status. Please try again.');
-              });
+          GridUtils.updateStatusSelect(e.target);
       }
   });
   {% endif %}
@@ -796,10 +707,10 @@
               }
 
               return gridjs.html(`
-                      <span class="badge ${badgeClass}" title="${title}">
-                          <i class="fas ${icon} me-1"></i> ${label}
-                      </span>
-                  `);
+                  <span class="badge ${GridUtils.escapeAttribute(badgeClass)}" title="${GridUtils.escapeAttribute(title)}">
+                      <i class="fas ${GridUtils.escapeAttribute(icon)} me-1"></i> ${GridUtils.escapeHtml(label)}
+                  </span>
+              `);
           }
       }
   ];

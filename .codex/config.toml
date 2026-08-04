@@ -1,0 +1,27 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+web_search = "cached"
+project_doc_max_bytes = 65536
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+[features]
+multi_agent = true
+hooks = true
+
+[agents]
+max_concurrent_threads_per_session = 4
+default_subagent_reasoning_effort = "medium"
+
+[agents.gift_manager_reviewer]
+description = "Review Gift Manager changes for correctness, security, regressions, and missing tests."
+config_file = "./agents/gift_manager_reviewer.toml"
+
+[agents.gift_manager_architect]
+description = "Review larger Gift Manager changes for architecture, boundaries, and maintainability."
+config_file = "./agents/gift_manager_architect.toml"
+
+[agents.gift_manager_test_runner]
+description = "Choose and run targeted Gift Manager verification commands, then summarize risk."
+config_file = "./agents/gift_manager_test_runner.toml"

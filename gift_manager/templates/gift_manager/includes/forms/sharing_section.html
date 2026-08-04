@@ -1,0 +1,87 @@
+{% load i18n %}
+
+{% if show_sharing_section %}
+<details class="form-section form-section--secondary sharing-section mt-4">
+  <summary class="form-section-summary">
+    <span>
+      <i class="fas fa-users me-2" aria-hidden="true"></i>
+      {% trans "Sharing" %}
+    </span>
+    <span class="badge bg-secondary">{% trans "Optional" %}</span>
+  </summary>
+
+  <div class="form-section-body">
+    {% if sharing_mode == "create" %}
+      {% if unshared_friends %}
+      <p class="form-text mb-3">
+        {% trans "Choose who can access this item after it is saved." %}
+      </p>
+      <div class="sharing-controls">
+        {% for friend in unshared_friends %}
+        <div class="sharing-control-row">
+          <label for="share-with-{{ friend.user.id }}" class="sharing-control-user">
+            <i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>
+            {{ friend.user.username }}
+          </label>
+          <select id="share-with-{{ friend.user.id }}"
+                  name="share_with_{{ friend.user.id }}"
+                  class="form-select form-select-sm sharing-permission-select">
+            <option value="" selected>{% trans "Not shared" %}</option>
+            {% for level in permission_levels %}
+            <option value="{{ level.value }}">{{ level.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-warning mb-0">
+        <i class="fas fa-user-friends me-2" aria-hidden="true"></i>
+        {% trans "You do not have any friends to share with yet." %}
+        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+          <i class="fas fa-envelope me-1" aria-hidden="true"></i>
+          {% trans "Send invitation" %}
+        </a>
+      </div>
+      {% endif %}
+    {% elif sharing_mode == "edit" %}
+      {% if friends_list %}
+      <p class="form-text mb-3">
+        {% trans "Choose who can access this item. Changes are applied when you save." %}
+      </p>
+      <div class="sharing-controls">
+        {% for friend in friends_list %}
+        <div class="sharing-control-row">
+          <label for="permission-{{ friend.user.id }}" class="sharing-control-user">
+            <i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>
+            {{ friend.user.username }}
+          </label>
+          <select id="permission-{{ friend.user.id }}"
+                  name="permission_{{ friend.user.id }}"
+                  class="form-select form-select-sm sharing-permission-select">
+            <option value="not_shared" {% if not friend.is_shared %}selected{% endif %}>
+              {% trans "Not shared" %}
+            </option>
+            {% for level in permission_levels %}
+            <option value="{{ level.value }}" {% if friend.is_shared and friend.permission == level.value %}selected{% endif %}>
+              {{ level.label }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-warning mb-0">
+        <i class="fas fa-user-friends me-2" aria-hidden="true"></i>
+        {% trans "You do not have any friends to share with yet." %}
+        <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-sm btn-outline-primary ms-2">
+          <i class="fas fa-envelope me-1" aria-hidden="true"></i>
+          {% trans "Send invitation" %}
+        </a>
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</details>
+{% endif %}

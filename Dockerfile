@@ -5,7 +5,7 @@
 # =============================================================================
 # Base stage - Python dependencies
 # =============================================================================
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -24,7 +24,7 @@ WORKDIR /app
 # =============================================================================
 # Builder stage - Install dependencies
 # =============================================================================
-FROM base as builder
+FROM base AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -36,19 +36,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install Python dependencies
-COPY requirements.txt .
+# Install Python dependencies from the lockfile without installing the local package.
+COPY pyproject.toml uv.lock ./
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
-
-# Install production extras
-COPY pyproject.toml .
-RUN pip install ".[production]" || true
+    pip install uv==0.10.7 && \
+    uv export --quiet --frozen --no-dev --no-emit-project --format requirements.txt --output-file /tmp/requirements.txt && \
+    pip install --require-hashes -r /tmp/requirements.txt
 
 # =============================================================================
 # Development stage
 # =============================================================================
-FROM base as development
+FROM base AS development
 
 # Copy virtual environment from builder
 COPY --from=builder /opt/venv /opt/venv
@@ -73,7 +71,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 # =============================================================================
 # Production stage
 # =============================================================================
-FROM base as production
+FROM base AS production
 
 # Create non-root user for security
 RUN groupadd --gid 1000 appgroup && \
@@ -94,8 +92,7 @@ COPY --chown=appuser:appgroup . .
 RUN mkdir -p /app/staticfiles /app/media /app/logs && \
     chown -R appuser:appgroup /app
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear 2>/dev/null || true
+# Static files are collected during deployment when production secrets are present.
 
 # Switch to non-root user
 USER appuser

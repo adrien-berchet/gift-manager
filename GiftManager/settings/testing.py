@@ -13,11 +13,14 @@ import tempfile
 
 from .base import *  # noqa: F403
 
+# Flag to indicate we're in testing mode
+TESTING = True
+
 # Use a simple secret key for testing
 SECRET_KEY = "testing-secret-key-not-for-production"
 
 # Enable debug for better error messages in tests
-DEBUG = False  # Keep False for realistic testing
+DEBUG = True  # Keep False for realistic testing
 
 ALLOWED_HOSTS = ["*"]
 
@@ -61,6 +64,11 @@ def _get_test_database_config() -> dict:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": temp_db.name,
+            "OPTIONS": {
+                # Enable shared cache for SQLite to allow multiple connections
+                # This is crucial for Playwright tests with live_server
+                "init_command": "PRAGMA cache=shared;",
+            },
             "TEST": {
                 "NAME": temp_db.name,
             },
@@ -93,6 +101,26 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 SECURE_SSL_REDIRECT = False
 
+# Disable allauth rate limits for testing
+# Set very high limits that won't be reached during testing
+ACCOUNT_RATE_LIMITS = {
+    "login": "1000/m",  # 1000 login attempts per minute
+    "login_failed": "1000/m",  # 1000 failed login attempts per minute
+    "signup": "1000/m",
+    "add_email": "1000/m",
+    "confirm_email": "1000/m",
+    "reset_password": "1000/m",
+    "reset_password_from_key": "1000/m",
+    "change_password": "1000/m",
+    "manage_email": "1000/m",
+}
+
+# Disable any other potential rate limiting
+RATELIMIT_ENABLE = False
+
+# Enable email verification for testing authentication flows
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
 # Disable migrations for faster test setup (optional)
 # class DisableMigrations:
 #     def __contains__(self, item):
@@ -101,28 +129,41 @@ SECURE_SSL_REDIRECT = False
 #         return None
 # MIGRATION_MODULES = DisableMigrations()
 
-# Minimal logging during tests
+# Logging during tests - show errors for debugging
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": True,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
     "handlers": {
-        "null": {
-            "class": "logging.NullHandler",
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
     "root": {
-        "handlers": ["null"],
-        "level": "CRITICAL",
+        "handlers": ["console"],
+        "level": "WARNING",
     },
     "loggers": {
         "django": {
-            "handlers": ["null"],
-            "level": "CRITICAL",
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
             "propagate": False,
         },
         "gift_manager": {
-            "handlers": ["null"],
-            "level": "CRITICAL",
+            "handlers": ["console"],
+            "level": "DEBUG",
             "propagate": False,
         },
     },
