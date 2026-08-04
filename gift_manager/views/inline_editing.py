@@ -99,8 +99,12 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
 
             # Update the field
             with transaction.atomic():
-                old_value = getattr(obj, field_name)
-                setattr(obj, field_name, field_value)
+                if field_name == "email_address" and isinstance(obj, Person):
+                    old_value = obj.email or ""
+                    obj.set_email(field_value)
+                else:
+                    old_value = getattr(obj, field_name)
+                    setattr(obj, field_name, field_value)
 
                 try:
                     obj.full_clean()

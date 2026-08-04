@@ -1,17 +1,9 @@
 {% extends "gift_manager/base.html" %}
 
-{% load permission_tags %}
 {% load i18n %}
-{% load static %}
-{% load custom_filters %}
 
 {% block extra_head %}
-<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+{% include "gift_manager/includes/person_grid_assets.html" %}
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -27,13 +19,11 @@
     </div>
 </div>
 
-{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-grid" show_bulk_select=True %}
-
-<!-- Grid.js container -->
-<div id="person-grid" class="list-container"></div>
+{% include "gift_manager/includes/person_management_grid.html" %}
 {% endblock %}
 
 {% block extra_js %}
+{% load static %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
@@ -42,114 +32,5 @@
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
-<script>
-    {% load custom_filters %}
-    (function () {
-        // Get permission data from template (stored globally for refresh updates)
-        window.userPermissions = {{ user_permissions_json|safe }};
-        const userPermissions = window.userPermissions;
-
-        // Prepare data for Grid.js
-        // Include placeholder (empty string) for checkbox column as first element
-        const data = [
-            {% for item in data %}
-    [
-        '', // Checkbox column placeholder
-        "{{ item.first_name|escapejs }}",
-        "{{ item.family_name|escapejs }}",
-        "{{ item.email_address|decode_email|default:''|escapejs }}",
-        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
-    "{{ item.person_id }}",
-        "{% url 'gift_manager:person_relation_create' item.person_id %}",
-        "{% url 'gift_manager:person_detail' item.person_id %}",
-        "{% url 'gift_manager:person_edit' item.person_id %}",
-        "{% url 'gift_manager:person_delete' item.person_id %}"
-            ]{% if not forloop.last %}, {% endif %}
-    {% endfor %}
-            ];
-
-    // Define columns (checkbox column first, managed by Grid.js)
-    const columns = [
-        GridUtils.createCheckboxColumn(5),
-        {
-            id: 'first_name',
-            name: '{{ column_names.first_name|escapejs }}',
-            sort: {
-                compare: GridUtils.sortString()
-            },
-            formatter: (cell) => {
-                return gridjs.html(
-                    `<span class="entity-name">${GridUtils.escapeHtml(cell)}</span>`
-                );
-            }
-        },
-        {
-            id: 'family_name',
-            name: '{{ column_names.family_name|escapejs }}',
-            sort: {
-                compare: GridUtils.sortString()
-            }
-        },
-        { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
-        {
-            id: 'groups',
-            name: '{{ column_names.groups|escapejs }}',
-            formatter: GridUtils.multiLinkFormatter()
-        },
-        { name: 'person_id', hidden: true },
-        { name: 'person_relation_create_url', hidden: true },
-        { name: 'person_detail_url', hidden: true },
-        { name: 'person_edit_url', hidden: true },
-        { name: 'person_delete_url', hidden: true },
-        {
-            id: 'actions',
-            name: '{% trans "Actions"|escapejs %}',
-            width: '360px',
-            sort: false,
-            formatter: PermissionUtils.permissionAwareActionFormatter({
-                give: (row) => row.cells[6].data,
-                details: (row) => row.cells[7].data,
-                edit: (row) => row.cells[8].data,
-                delete: (row) => row.cells[9].data,
-                share: () => "{% url 'gift_manager:share_objects' %}"
-            }, ['give', 'details', 'edit', 'delete', 'share'], {
-                idResolver: (row) => row.cells[5].data  // person_id is at index 5
-            }, userPermissions)
-        }
-    ];
-
-    // Initialize Grid.js with all features using the standard helper
-    try {
-        const grid = GridUtils.initStandardListGrid({
-            gridId: 'person-grid',
-            entityType: 'person',
-            columns: columns,
-            data: data,
-            userPermissions: userPermissions,
-            pagination: {
-                enabled: true
-            },
-            sort: {
-                multiColumn: true
-            },
-            features: {
-                bulkOperations: true,
-                inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } },
-                advancedControls: true,
-                realTimeSearch: true,
-                dynamicFilters: true,
-                dynamicPageSize: true,
-                initialSort: [
-                    { columnSelector: 'th:nth-child(3)' },  // Family Name (column 3)
-                    { columnSelector: 'th:nth-child(2)', shift: true }  // First Name (column 2)
-                ]
-            },
-            idFieldIndex: 5
-        });
-
-} catch (error) {
-        console.error('[PersonList] Error initializing grid:', error);
-    }
-    }) ();
-</script>
+{% include "gift_manager/includes/person_management_grid_script.html" %}
 {% endblock %}

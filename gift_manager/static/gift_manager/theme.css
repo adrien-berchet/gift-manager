@@ -689,6 +689,16 @@
    Base Styles
    ========================================================================== */
 
+html {
+    scrollbar-gutter: stable;
+}
+
+@supports not (scrollbar-gutter: stable) {
+    html {
+        overflow-y: scroll;
+    }
+}
+
 body {
     font-family: var(--font-sans);
     background-color: var(--surface-background);

@@ -29,6 +29,72 @@ from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 
 
+def get_person_grid_column_names():
+    """Return translated column labels for the person management grid."""
+    return {
+        "first_name": gettext("First name"),
+        "family_name": gettext("Family name"),
+        "email_address": gettext("Email address"),
+        "groups": gettext("Groups"),
+    }
+
+
+def get_person_grid_queryset(user, column_names=None):
+    """Return person rows formatted for the shared Grid.js management view."""
+    from django.db import connection
+
+    column_names = column_names or get_person_grid_column_names()
+    value_fields = [field for field in column_names if field != "groups"]
+    base_queryset = (
+        Person.objects.accessible_by(user)
+        .order_by("family_name", "first_name")
+        .values(
+            "person_id",
+            "user_link_id",
+            *value_fields,
+        )
+    )
+
+    if connection.vendor == "postgresql":
+        return base_queryset.annotate(
+            groups_info=JSONBAgg(
+                Func(
+                    Value("id"),
+                    F("groups__group_id"),
+                    Value("name"),
+                    F("groups__name"),
+                    function="jsonb_build_object",
+                ),
+                filter=Q(groups__group_id__isnull=False),
+                distinct=True,
+            ),
+        )
+    return base_queryset.prefetch_related("groups")
+
+
+def populate_person_grid_group_info(data) -> None:
+    """Populate group metadata when the database cannot annotate JSON rows."""
+    items = [item for item in data if isinstance(item, dict)]
+    person_ids = [item.get("person_id") for item in items if not item.get("groups_info")]
+    if not person_ids:
+        return
+
+    groups_by_person = {person_id: [] for person_id in person_ids}
+    for row in (
+        Person.objects.filter(person_id__in=person_ids)
+        .values("person_id", "groups__group_id", "groups__name")
+        .order_by("groups__name")
+    ):
+        group_id = row["groups__group_id"]
+        group_name = row["groups__name"]
+        if group_id and group_name:
+            groups_by_person[row["person_id"]].append({"id": str(group_id), "name": group_name})
+
+    for item in items:
+        if not item.get("groups_info"):
+            item["groups_info"] = groups_by_person.get(item["person_id"], [])
+
+
 class PersonListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
@@ -44,16 +110,11 @@ class PersonListView(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.column_names = {
-            "first_name": gettext("First name"),
-            "family_name": gettext("Family name"),
-            "email_address": gettext("Email address"),
-            "groups": gettext("Groups"),
-        }
+        self.column_names = get_person_grid_column_names()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        self._populate_group_info_fallback(context.get("data", []))
+        populate_person_grid_group_info(context.get("data", []))
         context["unique_groups"] = (
             PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
@@ -65,57 +126,11 @@ class PersonListView(
 
     def _populate_group_info_fallback(self, data) -> None:
         """Populate group metadata when the database cannot annotate JSON rows."""
-        items = [item for item in data if isinstance(item, dict)]
-        person_ids = [item.get("person_id") for item in items if not item.get("groups_info")]
-        if not person_ids:
-            return
-
-        groups_by_person = {person_id: [] for person_id in person_ids}
-        for row in (
-            Person.objects.filter(person_id__in=person_ids)
-            .values("person_id", "groups__group_id", "groups__name")
-            .order_by("groups__name")
-        ):
-            group_id = row["groups__group_id"]
-            group_name = row["groups__name"]
-            if group_id and group_name:
-                groups_by_person[row["person_id"]].append({"id": str(group_id), "name": group_name})
-
-        for item in items:
-            if not item.get("groups_info"):
-                item["groups_info"] = groups_by_person.get(item["person_id"], [])
+        populate_person_grid_group_info(data)
 
     def get_queryset(self):
         """Return Persons for the current user or shared with the user."""
-        from django.db import connection
-
-        base_queryset = (
-            Person.objects.accessible_by(self.request.user)
-            .order_by("family_name", "first_name")
-            .values(
-                "person_id",
-                "user_link_id",
-                *list(set(self.column_names.keys()).difference(["groups"])),
-            )
-        )
-
-        # Use database-specific aggregation
-        if connection.vendor == "postgresql":
-            return base_queryset.annotate(
-                groups_info=JSONBAgg(
-                    Func(
-                        Value("id"),
-                        F("groups__group_id"),
-                        Value("name"),
-                        F("groups__name"),
-                        function="jsonb_build_object",
-                    ),
-                    filter=Q(groups__group_id__isnull=False),
-                    distinct=True,
-                ),
-            )
-        # For SQLite and other databases, use a simpler approach
-        return base_queryset.prefetch_related("groups")
+        return get_person_grid_queryset(self.request.user, self.column_names)
 
     def get_fallback_columns(self):
         """Get column definitions for fallback table."""

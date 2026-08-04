@@ -1,0 +1,96 @@
+{% include "gift_manager/includes/person_grid_assets.html" %}
+
+<style>
+    .tree-view-container {
+        display: none;
+    }
+    .tree-view-container.active {
+        display: block;
+    }
+    .grid-view-container.active {
+        display: block;
+    }
+    .grid-view-container {
+        display: none;
+    }
+
+    .tree-node {
+        padding: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .tree-node:hover {
+        background-color: #f8f9fa;
+    }
+    .tree-node.collapsed .tree-children {
+        display: none;
+    }
+    .tree-node-content {
+        display: flex;
+        align-items: center;
+        flex: 1;
+    }
+    .tree-node-icon {
+        margin-right: 0.5rem;
+        font-size: 0.875rem;
+        color: #6c757d;
+        min-width: 20px;
+        text-align: center;
+    }
+    .tree-node-name {
+        font-weight: 500;
+    }
+    .tree-node-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    .tree-children {
+        margin-left: 0;
+    }
+    .tree-node[data-depth="0"] { padding-left: 0.75rem; }
+    .tree-node[data-depth="1"] { padding-left: 2rem; background-color: #f8f9fa; }
+    .tree-node[data-depth="2"] { padding-left: 3.25rem; background-color: #f1f3f5; }
+    .tree-node[data-depth="3"] { padding-left: 4.5rem; background-color: #e9ecef; }
+    .tree-node[data-depth="4"] { padding-left: 5.75rem; background-color: #dee2e6; }
+
+    .view-toggle-buttons {
+        margin-bottom: 1rem;
+    }
+    .badge-count {
+        font-size: 0.75rem;
+    }
+
+    .tree-node[draggable="true"] {
+        cursor: move;
+    }
+    .tree-node.dragging {
+        opacity: 0.5;
+        background-color: #d1ecf1;
+    }
+    .tree-node.drag-over {
+        border-left: 4px solid #0d6efd;
+        background-color: #e7f3ff;
+    }
+    .tree-node.drop-invalid {
+        border-left: 4px solid #dc3545;
+        background-color: #f8d7da;
+    }
+    .drag-handle {
+        cursor: move;
+        color: #6c757d;
+        margin-right: 0.5rem;
+        padding: 0 0.25rem;
+    }
+    .drag-handle:hover {
+        color: #495057;
+    }
+    .tree-move-btn {
+        white-space: nowrap;
+    }
+</style>

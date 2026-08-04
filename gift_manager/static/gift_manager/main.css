@@ -522,13 +522,6 @@ body.has-fixed-action-bar {
     border-top: 1px solid var(--border-color);
 }
 
-.advanced-list-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-2);
-    margin-bottom: var(--space-3);
-}
-
 .advanced-list-tools .grid-filter-panel {
     position: static;
     z-index: auto;
@@ -538,11 +531,55 @@ body.has-fixed-action-bar {
 }
 
 .advanced-list-tools .filter-toggle-btn {
-    margin-bottom: 0;
+    display: none;
+}
+
+.advanced-list-tools .filter-content,
+.advanced-list-tools .filter-content.expanded {
+    display: grid;
+    position: static;
+    grid-template-columns: auto auto minmax(120px, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    max-height: none;
+    overflow-y: visible;
+    z-index: auto;
+}
+
+.advanced-list-tools .filter-section {
+    min-width: 0;
+}
+
+.advanced-list-tools .filter-selection-section {
+    display: flex;
+    justify-content: flex-end;
+    grid-column: 3;
+    grid-row: 1;
+    align-self: start;
+}
+
+.advanced-list-tools .filters-section {
+    grid-column: 1 / -1;
+    grid-row: 2;
+}
+
+.advanced-list-tools .sort-section {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.advanced-list-tools .view-section {
+    grid-column: 2;
+    grid-row: 1;
 }
 
 .advanced-list-tools .filter-content {
-    margin-top: var(--space-3);
     margin-bottom: 0;
 }
 
@@ -579,6 +616,23 @@ body.has-fixed-action-bar {
    ========================================================================== */
 
 @media (max-width: 768px) {
+    .advanced-list-tools .filter-content,
+    .advanced-list-tools .filter-content.expanded {
+        grid-template-columns: 1fr;
+    }
+
+    .advanced-list-tools .filters-section,
+    .advanced-list-tools .sort-section,
+    .advanced-list-tools .view-section,
+    .advanced-list-tools .filter-selection-section {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .advanced-list-tools .filter-selection-section {
+        justify-content: flex-start;
+    }
+
     .fixed-action-bar .action-buttons {
         flex-direction: column;
         gap: 10px;
@@ -610,7 +664,7 @@ body.has-fixed-action-bar {
         padding: var(--space-3);
     }
 
-    .advanced-list-actions .btn {
+    .advanced-list-tools .filter-selection-section .btn {
         width: 100%;
     }
 

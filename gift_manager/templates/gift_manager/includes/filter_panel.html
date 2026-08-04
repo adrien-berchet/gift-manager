@@ -12,6 +12,16 @@
         <i class="fas fa-chevron-down ms-auto" aria-hidden="true"></i>
     </button>
     <div class="filter-content" id="{{ grid_id }}-filter-content">
+        {% if show_bulk_select %}
+        <div class="filter-section filter-selection-section">
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    id="toggle-selection-{{ grid_id }}"
+                    title="{% trans 'Select multiple items' %}">
+                <i class="fas fa-check-square me-1" aria-hidden="true"></i>{% trans "Select" %}
+            </button>
+        </div>
+        {% endif %}
         {# Sort section #}
         <div class="filter-section sort-section">
             <div class="sort-section-header">

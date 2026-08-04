@@ -1959,23 +1959,16 @@
             { pagination: pagination, sort: sort },
             function () {
                 // Grid ready callback
+                addAdvancedDataAttributes();
+                initializeInlineEditing();
 
                 if (!useAdvancedControls) {
-                    addAdvancedDataAttributes();
-
                     if (bulkOperations) {
                         injectSelectAllCheckbox(gridId);
                     }
-
-                    initializeInlineEditing();
                 }
             },
-            inlineEditing && !useAdvancedControls
-                ? {
-                    entityType: inlineEntityType,
-                    columnMapping: inlineEditing.mapping
-                }
-                : undefined
+            undefined
         );
 
         // Add list update listener
@@ -1985,7 +1978,7 @@
             capitalizedEntity,
             idFieldIndex,
             function () {
-                if (!useAdvancedControls || advancedFeaturesInitialized) {
+                if (inlineEditing || !useAdvancedControls || advancedFeaturesInitialized) {
                     addAdvancedDataAttributes();
                 }
             }
@@ -1994,8 +1987,15 @@
         // Setup grid refresh handler
         setupGridRefreshHandler(gridId, capitalizedEntity, data, idFieldIndex);
 
+        if (inlineEditing) {
+            setTimeout(function () {
+                addAdvancedDataAttributes();
+                initializeInlineEditing();
+            }, 0);
+        }
+
         // Setup inline editing fallback
-        if (inlineEditing && !useAdvancedControls) {
+        if (inlineEditing) {
             setupInlineEditingFallback(gridId, inlineEntityType, inlineEditing.mapping, editState, function () {
                 addAdvancedDataAttributes();
             });

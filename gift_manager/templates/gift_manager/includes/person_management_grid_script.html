@@ -1,0 +1,107 @@
+{% load custom_filters %}
+{% load i18n %}
+
+<script>
+    (function () {
+        window.userPermissions = {{ user_permissions_json|safe }};
+        const userPermissions = window.userPermissions;
+
+        const data = [
+            {% for item in data %}
+    [
+        '',
+        "{{ item.first_name|escapejs }}",
+        "{{ item.family_name|escapejs }}",
+        "{{ item.email_address|decode_email|default:''|escapejs }}",
+        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
+    "{{ item.person_id }}",
+        "{% url 'gift_manager:person_relation_create' item.person_id %}",
+        "{% url 'gift_manager:person_detail' item.person_id %}",
+        "{% url 'gift_manager:person_edit' item.person_id %}",
+        "{% url 'gift_manager:person_delete' item.person_id %}"
+            ]{% if not forloop.last %}, {% endif %}
+    {% endfor %}
+            ];
+
+    const columns = [
+        GridUtils.createCheckboxColumn(5),
+        {
+            id: 'first_name',
+            name: '{{ column_names.first_name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            },
+            formatter: (cell) => {
+                return gridjs.html(
+                    `<span class="entity-name">${GridUtils.escapeHtml(cell)}</span>`
+                );
+            }
+        },
+        {
+            id: 'family_name',
+            name: '{{ column_names.family_name|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            }
+        },
+        { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
+        {
+            id: 'groups',
+            name: '{{ column_names.groups|escapejs }}',
+            formatter: GridUtils.multiLinkFormatter()
+        },
+        { name: 'person_id', hidden: true },
+        { name: 'person_relation_create_url', hidden: true },
+        { name: 'person_detail_url', hidden: true },
+        { name: 'person_edit_url', hidden: true },
+        { name: 'person_delete_url', hidden: true },
+        {
+            id: 'actions',
+            name: '{% trans "Actions"|escapejs %}',
+            width: '360px',
+            sort: false,
+            formatter: PermissionUtils.permissionAwareActionFormatter({
+                give: (row) => row.cells[6].data,
+                details: (row) => row.cells[7].data,
+                edit: (row) => row.cells[8].data,
+                delete: (row) => row.cells[9].data,
+                share: () => "{% url 'gift_manager:share_objects' %}"
+            }, ['give', 'details', 'edit', 'delete', 'share'], {
+                idResolver: (row) => row.cells[5].data
+            }, userPermissions)
+        }
+    ];
+
+    try {
+        GridUtils.initStandardListGrid({
+            gridId: 'person-grid',
+            entityType: 'person',
+            columns: columns,
+            data: data,
+            userPermissions: userPermissions,
+            pagination: {
+                enabled: true
+            },
+            sort: {
+                multiColumn: true
+            },
+            features: {
+                bulkOperations: true,
+                inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } },
+                advancedControls: true,
+                realTimeSearch: true,
+                dynamicFilters: true,
+                dynamicPageSize: true,
+                initialSort: [
+                    { columnSelector: 'th:nth-child(3)' },
+                    { columnSelector: 'th:nth-child(2)', shift: true }
+                ]
+            },
+            idFieldIndex: 5
+        });
+
+} catch (error) {
+        console.error('[PersonList] Error initializing grid:', error);
+    }
+    }) ();
+</script>

@@ -6,11 +6,12 @@ permission-aware UI, initial sort, feature interactions, and mobile viewports.
 
 Templates tested:
 - person_list.html    (bulk ops, inline editing, search, filters, dynamic sizing)
+- recipient_list.html (people/groups modes reuse management grids)
 - event_list.html     (all common features)
 - relation_list.html  (status selector, multi-column sort)
 - person_group_list.html (inline editing, grid/tree views, drag-and-drop)
 - gift_list.html      (bulk operations, tag badges)
-- status_list.html    (minimal features, no bulk ops / inline editing)
+- status_list.html    (minimal grid, no advanced list controls / inline editing)
 """
 
 import os
@@ -188,7 +189,11 @@ FILTER_GRID_PAGES = [
     ("/events/", "event-grid"),
     ("/relations/advanced/", "relation-grid"),
     ("/gifts/", "gift-grid"),
-    ("/relation_statuses/", "status-grid"),
+]
+
+SMOKE_FILTER_GRID_PAGES = [
+    ("/persons/", "person-grid"),
+    ("/relations/advanced/", "relation-grid"),
 ]
 
 FILTER_INTERACTIVE_GRID_PAGES = [
@@ -291,6 +296,26 @@ class TestPersonListGridLoading:
         group_links = page.locator("#person-grid .gridjs-tbody a[href*='person_groups']")
         assert group_links.count() > 0, "Expected group links to be rendered"
 
+    def test_recipients_people_view_reuses_person_grid(
+        self, page: Page, live_server, seed_data_e2e, console_errors
+    ):
+        """Recipients People view renders the person management grid."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/recipients/?view=people")
+        _wait_for_grid(page, "person-grid")
+
+        expect(page.locator("a.btn.active[href*='view=people']")).to_be_visible()
+        expect(page.locator("#person-grid-list-tools")).to_be_visible()
+        _open_advanced_tools(page, "person-grid")
+        expect(page.locator("#person-grid-filter-toggle")).not_to_be_visible()
+        expect(page.locator("#person-grid-filter-content")).to_be_visible()
+        expect(
+            page.locator("#person-grid-filter-content #toggle-selection-person-grid")
+        ).to_be_visible()
+        assert _grid_row_count(page, "person-grid") > 0
+        assert "Mom" in _grid_body_text(page, "person-grid")
+        assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
+
 
 @pytest.mark.frontend
 @pytest.mark.e2e
@@ -385,25 +410,23 @@ class TestPersonListInlineEditing:
     """Inline editing tests for person_list.html."""
 
     def test_double_click_activates_edit(self, page: Page, live_server, seed_data_e2e):
-        """Double-clicking an editable cell activates inline editing."""
+        """Double-clicking an editable cell works before advanced controls are opened."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/persons/")
         _wait_for_grid(page, "person-grid")
-        _open_advanced_tools(page, "person-grid")
 
         cell = page.locator("#person-grid .gridjs-tbody tr:first-child td:nth-child(2)")
         expect(cell).to_be_visible()
+        expect(cell).to_have_class(re.compile(r"\binline-editable\b"))
         original = cell.inner_text().strip()
 
         cell.dblclick()
-        page.wait_for_timeout(500)
 
         inline_input = page.locator(
             "#person-grid .inline-edit-input, #person-grid .inline-editing-active input"
         )
-        if inline_input.count() > 0:
-            expect(inline_input.first).to_have_value(original)
-            page.keyboard.press("Escape")
+        expect(inline_input.first).to_have_value(original)
+        page.keyboard.press("Escape")
 
     def test_escape_cancels_edit(self, page: Page, live_server, seed_data_e2e):
         """Pressing Escape cancels inline editing without saving."""
@@ -474,20 +497,18 @@ class TestPersonListInlineEditing:
                     page.wait_for_timeout(800)
 
     def test_editable_fields_have_cursor_hint(self, page: Page, live_server, seed_data_e2e):
-        """Editable cells have the inline-editable CSS class."""
+        """Editable cells are available without opening advanced controls."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/persons/")
         _wait_for_grid(page, "person-grid")
-        _open_advanced_tools(page, "person-grid")
         page.wait_for_timeout(800)
 
         editable_cells = page.locator("#person-grid .inline-editable")
         # Person template maps columns 1,2,3 (first_name, family_name, email)
         # So at least some cells should be marked editable
-        if editable_cells.count() > 0:
-            assert editable_cells.count() >= 3, (
-                "Expected at least 3 editable cells (first_name, family_name, email)"
-            )
+        assert editable_cells.count() >= 3, (
+            "Expected at least 3 editable cells (first_name, family_name, email)"
+        )
 
 
 @pytest.mark.frontend
@@ -1466,6 +1487,26 @@ class TestPersonGroupListGridLoading:
         assert "Family" in body
         assert "Friends" in body
 
+    def test_recipients_groups_view_reuses_group_grid(
+        self, page: Page, live_server, seed_data_e2e, console_errors
+    ):
+        """Recipients Groups view renders the group management grid."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/recipients/?view=groups")
+        _wait_for_grid(page, "person-group-grid")
+
+        expect(page.locator("a.btn.active[href*='view=groups']")).to_be_visible()
+        expect(page.locator("#person-group-grid-list-tools")).to_be_visible()
+        _open_advanced_tools(page, "person-group-grid")
+        expect(page.locator("#person-group-grid-filter-toggle")).not_to_be_visible()
+        expect(page.locator("#person-group-grid-filter-content")).to_be_visible()
+        expect(
+            page.locator("#person-group-grid-filter-content #toggle-selection-person-group-grid")
+        ).to_be_visible()
+        assert _grid_row_count(page, "person-group-grid") > 0
+        assert "Family" in _grid_body_text(page, "person-group-grid")
+        assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
+
     def test_three_groups_visible(self, page: Page, live_server, seed_data_e2e):
         """Alice sees all 3 seed groups."""
         _login(page, live_server.url)
@@ -1843,7 +1884,7 @@ class TestStatusListGridLoading:
 @pytest.mark.e2e
 @pytest.mark.django_db(transaction=True)
 class TestStatusListMinimalFeatures:
-    """Status list is minimal: no bulk ops, no inline editing."""
+    """Status list is minimal: no advanced controls, no inline editing."""
 
     def test_no_select_button(self, page: Page, live_server, seed_data_e2e):
         """No Select button (no bulk operations)."""
@@ -1852,6 +1893,18 @@ class TestStatusListMinimalFeatures:
         _wait_for_grid(page, "status-grid")
 
         assert page.locator("#toggle-selection-status-grid").count() == 0
+
+    def test_no_advanced_filter_or_search_controls(self, page: Page, live_server, seed_data_e2e):
+        """Statuses are fixed and small, so the page stays as a plain grid."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relation_statuses/")
+        _wait_for_grid(page, "status-grid")
+
+        assert page.locator("#status-grid-list-tools").count() == 0
+        assert page.locator("#status-grid-search").count() == 0
+        assert page.locator("#status-grid-advanced-tools").count() == 0
+        assert page.locator("#status-grid-filter-panel").count() == 0
+        assert page.locator("#status-grid-filter-content").count() == 0
 
     def test_no_inline_editing(self, page: Page, live_server, seed_data_e2e):
         """Double-click does not activate inline editing."""
@@ -1878,22 +1931,6 @@ class TestStatusListMinimalFeatures:
         if action.is_visible():
             html = action.inner_html()
             assert "fa-eye" in html or "btn-info" in html or "detail" in html.lower()
-
-    def test_search_filters_statuses(self, page: Page, live_server, seed_data_e2e):
-        """Search filters status results."""
-        _login(page, live_server.url)
-        page.goto(f"{live_server.url}/relation_statuses/")
-        _wait_for_grid(page, "status-grid")
-        _open_filter_panel(page, "status-grid")
-
-        search = _get_search_input(page, "status-grid")
-        if search.is_visible():
-            search.fill("Idea")
-            page.wait_for_timeout(800)
-            assert _grid_row_count(page, "status-grid") >= 1
-
-            search.clear()
-            page.wait_for_timeout(800)
 
     def test_pagination_present(self, page: Page, live_server, seed_data_e2e):
         """Pagination footer is attached."""
@@ -2128,14 +2165,14 @@ class TestPermissionAwareUI:
 @pytest.mark.e2e
 @pytest.mark.django_db(transaction=True)
 class TestFilterPanel:
-    """Filter panel component tests across list templates."""
+    """Filter panel component tests across filter-enabled list templates."""
 
     @pytest.mark.parametrize(
         "path,grid_id",
-        _matrix(FILTER_GRID_PAGES, SMOKE_LIST_GRID_PAGES),
+        _matrix(FILTER_GRID_PAGES, SMOKE_FILTER_GRID_PAGES),
     )
     def test_filter_panel_present(self, page: Page, live_server, seed_data_e2e, path, grid_id):
-        """Filter panel is present on all list pages."""
+        """Filter panel is present on filter-enabled list pages."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}{path}")
         page.wait_for_load_state("networkidle")
@@ -2152,20 +2189,45 @@ class TestFilterPanel:
         "path,grid_id",
         _matrix(FILTER_INTERACTIVE_GRID_PAGES, [("/persons/", "person-grid")]),
     )
-    def test_filter_toggle_opens_panel(self, page: Page, live_server, seed_data_e2e, path, grid_id):
-        """Clicking the filter toggle button opens the filter content."""
+    def test_advanced_tools_show_filter_content(
+        self, page: Page, live_server, seed_data_e2e, path, grid_id
+    ):
+        """Opening advanced tools directly reveals the filter content."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}{path}")
         _wait_for_grid(page, grid_id)
 
-        toggle = page.locator(f"#{grid_id}-filter-toggle")
-        if toggle.is_visible():
-            toggle.click()
-            page.wait_for_timeout(400)
+        _open_advanced_tools(page, grid_id)
 
-            content = page.locator(f"#{grid_id}-filter-content")
-            if content.count() > 0:
-                expect(content).to_be_visible()
+        toggle = page.locator(f"#{grid_id}-filter-toggle")
+        if toggle.count() > 0:
+            expect(toggle).not_to_be_visible()
+
+        content = page.locator(f"#{grid_id}-filter-content")
+        expect(content).to_be_visible()
+
+        selection_section = content.locator(".filter-selection-section")
+        filters_section = content.locator(".filters-section")
+        sort_section = content.locator(".sort-section")
+        view_section = content.locator(".view-section")
+        if (
+            selection_section.count() > 0
+            and filters_section.count() > 0
+            and sort_section.count() > 0
+            and view_section.count() > 0
+        ):
+            selection_box = selection_section.bounding_box()
+            filters_box = filters_section.bounding_box()
+            sort_box = sort_section.bounding_box()
+            view_box = view_section.bounding_box()
+
+            assert selection_box is not None
+            assert filters_box is not None
+            assert sort_box is not None
+            assert view_box is not None
+            assert selection_box["y"] + selection_box["height"] <= filters_box["y"] + 16
+            assert abs(selection_box["y"] - sort_box["y"]) < 12
+            assert abs(selection_box["y"] - view_box["y"]) < 12
 
     @pytest.mark.parametrize(
         "path,grid_id",

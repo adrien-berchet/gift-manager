@@ -101,6 +101,58 @@ def test_recipient_list_combines_accessible_people_and_groups(client):
     assert "2 child groups" not in content
 
 
+@pytest.mark.django_db
+def test_recipient_people_view_embeds_person_management_grid(client):
+    user = UserFactory()
+    client.force_login(user)
+    person = PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
+    group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+
+    response = client.get(f"{reverse('gift_manager:recipients')}?view=people")
+
+    assert response.status_code == 200
+    assert response.context["recipient_view"] == "people"
+    assert response.context["person_count"] == 1
+    assert response.context["group_count"] == 1
+
+    content = response.content.decode("utf-8")
+    assert '?view=people"' in content
+    assert 'id="person-grid-list-tools"' in content
+    assert 'id="person-grid"' in content
+    assert (
+        "inlineEditing: { mapping: { 1: 'first_name', 2: 'family_name', 3: 'email_address' } }"
+        in content
+    )
+    assert str(person.person_id) in content
+    assert group.name not in content
+    assert "data-recipient-key=" not in content
+
+
+@pytest.mark.django_db
+def test_recipient_groups_view_embeds_group_management_grid(client):
+    user = UserFactory()
+    client.force_login(user)
+    PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
+    group = PersonGroupFactory(name="Orchid Circle", shared_with=[user])
+
+    response = client.get(f"{reverse('gift_manager:recipients')}?view=groups")
+
+    assert response.status_code == 200
+    assert response.context["recipient_view"] == "groups"
+    assert response.context["person_count"] == 1
+    assert response.context["group_count"] == 1
+
+    content = response.content.decode("utf-8")
+    assert '?view=groups"' in content
+    assert 'id="person-group-grid-list-tools"' in content
+    assert 'id="person-group-grid"' in content
+    assert "inlineEditing: { entityType: 'person_group', mapping: inlineEditingMapping }" in content
+    assert str(group.group_id) in content
+    assert group.name in content
+    assert "Ada Lovelace" not in content
+    assert "data-recipient-key=" not in content
+
+
 def assert_recipients_nav_is_active_without_groups_nav(content):
     recipients_url = reverse("gift_manager:recipients")
     groups_url = reverse("gift_manager:person_groups")

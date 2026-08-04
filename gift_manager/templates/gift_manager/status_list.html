@@ -11,17 +11,12 @@
     <h1>{{ translated_type }}</h1>
 </div>
 
-{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="status-grid" %}
-
 <!-- Grid.js container -->
 <div id="status-grid" class="list-container mt-3"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
-<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
-<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 <script>
     {% load custom_filters %}
@@ -73,21 +68,6 @@
 
         // Add list update event listener using GridUtils
         GridUtils.addListUpdateListener(grid, 'Status', statusPkIdx);
-
-        // Initialize visible list controls immediately.
-        if (window.FilterPanel) {
-            FilterPanel.init('status-grid', grid, columns);
-        }
-
-        if (window.RealTimeSearch) {
-            RealTimeSearch.init('status-grid', grid, data);
-        }
-
-        GridUtils.setupAdvancedControls('status-grid', true, function() {
-            if (window.DynamicFilters) {
-                DynamicFilters.init('status-grid', grid, data, columns);
-            }
-        });
 
         // Recalculate page size on window resize
         GridUtils.enableDynamicPageSize(grid);

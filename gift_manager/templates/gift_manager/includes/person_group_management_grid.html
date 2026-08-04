@@ -1,0 +1,95 @@
+{% load i18n %}
+
+{% include "gift_manager/includes/advanced_list_tools.html" with grid_id="person-group-grid" show_bulk_select=True %}
+
+{% if has_hierarchy %}
+<div class="view-toggle-buttons mt-3">
+    <div class="btn-group" role="group" aria-label="{% trans 'View toggle' %}">
+        <button type="button" class="btn btn-outline-primary active" id="grid-view-btn">
+            <i class="fas fa-table me-1"></i>{% trans "Grid View" %}
+        </button>
+        <button type="button" class="btn btn-outline-primary" id="tree-view-btn">
+            <i class="fas fa-sitemap me-1"></i>{% trans "Tree View" %}
+        </button>
+    </div>
+</div>
+{% endif %}
+
+<div class="grid-view-container active mt-3">
+    <div id="person-group-grid" class="list-container"></div>
+</div>
+
+{% if has_hierarchy %}
+<div class="tree-view-container mt-3">
+    <div class="card">
+        <div class="card-body">
+            {% if tree_data %}
+                {% for node in tree_data %}
+                <div class="tree-node"
+                     data-depth="{{ node.depth }}"
+                     data-group-id="{{ node.group_id }}"
+                     data-group-name="{{ node.name }}"
+                     data-has-children="{{ node.has_children|yesno:'true,false' }}"
+                     {% if node.parent_ids %}data-parent-ids="{{ node.parent_ids|join:',' }}"{% endif %}
+                     draggable="true">
+                    <div class="tree-node-content">
+                        <span class="drag-handle" title="{% trans 'Drag to reparent' %}">
+                            <i class="fas fa-grip-vertical"></i>
+                        </span>
+                        {% if node.has_children %}
+                            <span class="tree-node-icon toggle-icon">
+                                <i class="fas fa-chevron-down"></i>
+                            </span>
+                        {% else %}
+                            <span class="tree-node-icon">
+                                <i class="fas fa-circle" style="font-size: 0.35rem;"></i>
+                            </span>
+                        {% endif %}
+                        <span class="tree-node-name">{{ node.name }}</span>
+                        <span class="badge bg-secondary badge-count ms-2">{{ node.member_count }} {% trans "members" %}</span>
+                    </div>
+                    <div class="tree-node-actions">
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary tree-move-btn"
+                                data-bs-toggle="modal"
+                                data-bs-target="#groupMoveModal"
+                                data-group-id="{{ node.group_id }}"
+                                data-group-name="{{ node.name }}"
+                                title="{% trans 'Move group' %}">
+                            <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                        </button>
+                        {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">{% trans "No groups found." %}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="groupMoveModal" tabindex="-1" aria-labelledby="groupMoveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="group-move-form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="groupMoveModalLabel">{% trans "Move group" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="group-move-source-id">
+                    <label for="group-move-parent" class="form-label">{% trans "Parent group" %}</label>
+                    <select id="group-move-parent" class="form-select"></select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" id="group-move-submit">
+                        <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}

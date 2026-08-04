@@ -1,10 +1,15 @@
 {% extends "gift_manager/base.html" %}
 
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}Gift Manager - {% trans "Recipients" %}{% endblock %}
 
 {% block extra_head %}
+{% if recipient_view == "people" %}
+{% include "gift_manager/includes/person_grid_assets.html" %}
+{% elif recipient_view == "groups" %}
+{% include "gift_manager/includes/person_group_grid_assets.html" %}
+{% endif %}
 <style>
   .recipient-toolbar {
     border-bottom: 1px solid var(--bs-border-color);
@@ -91,6 +96,29 @@
   </div>
 </div>
 
+<div class="btn-group mb-3" role="group" aria-label="{% trans 'Recipient view' %}">
+  <a href="{% url 'gift_manager:recipients' %}"
+     class="btn btn-outline-secondary {% if recipient_view == 'all' %}active{% endif %}">
+    {% trans "All" %}
+    <span class="badge text-bg-secondary ms-1">{{ recipient_count }}</span>
+  </a>
+  <a href="{% url 'gift_manager:recipients' %}?view=people"
+     class="btn btn-outline-secondary {% if recipient_view == 'people' %}active{% endif %}">
+    {% trans "People" %}
+    <span class="badge text-bg-secondary ms-1">{{ person_count }}</span>
+  </a>
+  <a href="{% url 'gift_manager:recipients' %}?view=groups"
+     class="btn btn-outline-secondary {% if recipient_view == 'groups' %}active{% endif %}">
+    {% trans "Groups" %}
+    <span class="badge text-bg-secondary ms-1">{{ group_count }}</span>
+  </a>
+</div>
+
+{% if recipient_view == "people" %}
+{% include "gift_manager/includes/person_management_grid.html" with data=person_grid_data column_names=person_column_names user_permissions_json=person_user_permissions_json %}
+{% elif recipient_view == "groups" %}
+{% include "gift_manager/includes/person_group_management_grid.html" with data=person_group_grid_data column_names=person_group_column_names user_permissions_json=person_group_user_permissions_json has_hierarchy=person_group_has_hierarchy tree_data=person_group_tree_data %}
+{% else %}
 <div class="recipient-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div class="d-flex flex-wrap gap-2 align-items-center">
     <input type="search"
@@ -99,20 +127,6 @@
            placeholder="{% trans 'Search recipients' %}"
            aria-label="{% trans 'Search recipients' %}"
            style="max-width: 260px;">
-    <div class="btn-group" role="group" aria-label="{% trans 'Filter recipients' %}">
-      <button type="button" class="btn btn-outline-secondary active" data-recipient-filter="all">
-        {% trans "All" %}
-        <span class="badge text-bg-secondary ms-1">{{ recipient_count }}</span>
-      </button>
-      <button type="button" class="btn btn-outline-secondary" data-recipient-filter="person">
-        {% trans "People" %}
-        <span class="badge text-bg-secondary ms-1">{{ person_count }}</span>
-      </button>
-      <button type="button" class="btn btn-outline-secondary" data-recipient-filter="group">
-        {% trans "Groups" %}
-        <span class="badge text-bg-secondary ms-1">{{ group_count }}</span>
-      </button>
-    </div>
   </div>
   <a href="{% url 'gift_manager:person_group_explorer' %}" class="btn btn-outline-secondary">
     <i class="fas fa-folder-tree me-2"></i>{% trans "Group Explorer" %}
@@ -187,9 +201,31 @@
   <p>{% trans "No recipients yet." %}</p>
 </div>
 {% endif %}
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% if recipient_view == "people" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+{% include "gift_manager/includes/person_management_grid_script.html" with data=person_grid_data column_names=person_column_names user_permissions_json=person_user_permissions_json %}
+{% elif recipient_view == "groups" %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
+<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+{% include "gift_manager/includes/person_group_management_grid_script.html" with data=person_group_grid_data column_names=person_group_column_names user_permissions_json=person_group_user_permissions_json %}
+{% else %}
 <script>
 (function () {
   const rows = Array.from(document.querySelectorAll('.recipient-row'));
@@ -229,4 +265,5 @@
   });
 })();
 </script>
+{% endif %}
 {% endblock %}
