@@ -16,6 +16,7 @@ from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.tests.factories import UserFactory
 
 
@@ -172,6 +173,169 @@ class TestBulkOperationsProperty:
         person.refresh_from_db()
         assert person.user_link == linked_owner
         assert PermissionService.get_permission(person, self.user) == PermissionLevel.NONE
+
+    def test_bulk_update_status_updates_editor_relations_by_public_id(self):
+        """Bulk status updates should update editable gift plans by relation_id."""
+        new_status = RelationStatusFactory(status="Purchased")
+        relations = self.create_entities("relation", 2)
+        relation_ids = [self.get_entity_id("relation", relation) for relation in relations]
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_update_status",
+                    "entity_type": "relation",
+                    "entity_ids": relation_ids,
+                    "new_status": new_status.pk,
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is True
+        assert set(response_data["updated"]) == set(relation_ids)
+
+        for relation in relations:
+            relation.refresh_from_db()
+            assert relation.status == new_status
+
+    def test_bulk_update_status_skips_reader_relations(self):
+        """Reader-shared gift plans should remain unchanged during bulk status updates."""
+        new_status = RelationStatusFactory(status="Given")
+        relation = self.create_entities("relation", 1)[0]
+        original_status = relation.status
+        PermissionService.create_or_update_permission(
+            self.user,
+            relation,
+            permission_level=PermissionLevel.VIEWER,
+        )
+        relation_id = self.get_entity_id("relation", relation)
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_update_status",
+                    "entity_type": "relation",
+                    "entity_ids": [relation_id],
+                    "new_status": new_status.pk,
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is False
+        assert response_data["updated"] == []
+        assert response_data["permission_denied"] == [relation_id]
+        assert "error" in response_data
+
+        relation.refresh_from_db()
+        assert relation.status == original_status
+
+    def test_bulk_update_status_partially_updates_mixed_selection(self):
+        """Bulk status updates should update editable rows and report skipped rows."""
+        new_status = RelationStatusFactory(status="Given")
+        editable_relation = self.create_entities("relation", 1)[0]
+        viewer_relation = self.create_entities("relation", 1)[0]
+        inaccessible_relation = RelationFactory()
+        viewer_original_status = viewer_relation.status
+        inaccessible_original_status = inaccessible_relation.status
+        PermissionService.create_or_update_permission(
+            self.user,
+            viewer_relation,
+            permission_level=PermissionLevel.VIEWER,
+        )
+
+        editable_id = self.get_entity_id("relation", editable_relation)
+        viewer_id = self.get_entity_id("relation", viewer_relation)
+        inaccessible_id = self.get_entity_id("relation", inaccessible_relation)
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_update_status",
+                    "entity_type": "relation",
+                    "entity_ids": [editable_id, viewer_id, inaccessible_id],
+                    "new_status": new_status.pk,
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is True
+        assert response_data["updated"] == [editable_id]
+        assert response_data["permission_denied"] == [viewer_id]
+        assert response_data["failed"][0]["id"] == inaccessible_id
+
+        editable_relation.refresh_from_db()
+        viewer_relation.refresh_from_db()
+        inaccessible_relation.refresh_from_db()
+        assert editable_relation.status == new_status
+        assert viewer_relation.status == viewer_original_status
+        assert inaccessible_relation.status == inaccessible_original_status
+
+    def test_bulk_update_status_rejects_invalid_status(self):
+        """Bulk status updates should reject missing or invalid statuses."""
+        relation = self.create_entities("relation", 1)[0]
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_update_status",
+                    "entity_type": "relation",
+                    "entity_ids": [self.get_entity_id("relation", relation)],
+                    "new_status": "not-a-status",
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 400
+        assert response_data["success"] is False
+        assert "error" in response_data
+
+    def test_bulk_update_status_rejects_non_relation_entities(self):
+        """Bulk status updates should be limited to gift plans."""
+        person = PersonFactory()
+        new_status = RelationStatusFactory(status="Given")
+        PermissionService.create_or_update_permission(
+            self.user,
+            person,
+            permission_level=PermissionLevel.EDITOR,
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_update_status",
+                    "entity_type": "person",
+                    "entity_ids": [self.get_entity_id("person", person)],
+                    "new_status": new_status.pk,
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 400
+        assert response_data["success"] is False
+        assert "error" in response_data
 
     @given(
         entity_type=st.sampled_from(
@@ -372,7 +536,11 @@ class TestBulkOperationsProperty:
                     "Failed bulk operation should provide error message"
                 )
 
-    @given(invalid_action=st.text().filter(lambda x: x not in ["bulk_delete", "bulk_share"]))
+    @given(
+        invalid_action=st.text().filter(
+            lambda x: x not in ["bulk_delete", "bulk_share", "bulk_update_status"]
+        )
+    )
     def test_bulk_operations_invalid_action_property(self, invalid_action):
         """Feature: modern-ux-interface, Property 9: Bulk Operations Support (Error Handling)
 

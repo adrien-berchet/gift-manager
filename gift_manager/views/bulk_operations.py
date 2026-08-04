@@ -6,6 +6,7 @@ from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -23,6 +24,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
 
 logger = logging.getLogger(__name__)
@@ -84,6 +86,13 @@ class BulkOperationView(LoginRequiredMixin, View):
                 return self.handle_bulk_delete(request, entity_type, entity_ids)
             if action == "bulk_share":
                 return self.handle_bulk_share(request, entity_type, entity_ids)
+            if action == "bulk_update_status":
+                return self.handle_bulk_update_status(
+                    request,
+                    entity_type,
+                    entity_ids,
+                    data.get("new_status"),
+                )
             return JsonResponse(
                 {"success": False, "error": _("Unknown action: {}").format(action)}, status=400
             )
@@ -208,6 +217,143 @@ class BulkOperationView(LoginRequiredMixin, View):
                 "message": _("Redirecting to share page..."),
             }
         )
+
+    def handle_bulk_update_status(
+        self,
+        request: HttpRequest,
+        entity_type: str,
+        entity_ids: list[str],
+        new_status: str | int | None,
+    ) -> HttpResponse:
+        """Handle bulk status updates for gift plans."""
+        if entity_type != "relation":
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": _("Bulk status updates are only available for gift plans."),
+                },
+                status=400,
+            )
+
+        try:
+            status_id = int(new_status)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {"success": False, "error": _("Choose a valid status.")},
+                status=400,
+            )
+
+        try:
+            relation_status = RelationStatus.objects.get(pk=status_id)
+        except RelationStatus.DoesNotExist:
+            return JsonResponse(
+                {"success": False, "error": _("Choose a valid status.")},
+                status=400,
+            )
+
+        results = {
+            "success": True,
+            "updated": [],
+            "failed": [],
+            "permission_denied": [],
+        }
+
+        try:
+            with transaction.atomic():
+                for entity_id in entity_ids:
+                    self._handle_bulk_update_status_item(
+                        request,
+                        entity_id,
+                        relation_status,
+                        results,
+                    )
+
+                updated_count = len(results["updated"])
+                failed_count = len(results["failed"])
+                permission_denied_count = len(results["permission_denied"])
+
+                if updated_count > 0:
+                    results["message"] = self._bulk_update_status_success_message(
+                        updated_count,
+                        failed_count,
+                        permission_denied_count,
+                    )
+                else:
+                    results["success"] = False
+                    if permission_denied_count > 0 and failed_count == 0:
+                        results["error"] = ngettext(
+                            "You do not have permission to update %(count)d selected gift plan.",
+                            "You do not have permission to update %(count)d selected gift plans.",
+                            permission_denied_count,
+                        ) % {"count": permission_denied_count}
+                    else:
+                        results["error"] = _("No gift plans could be updated.")
+
+        except Exception as e:
+            logger.exception("Error in bulk status update: %s", e)
+            results["success"] = False
+            results["error"] = _("An error occurred during bulk status update")
+
+        return JsonResponse(results)
+
+    def _handle_bulk_update_status_item(
+        self,
+        request: HttpRequest,
+        entity_id: str,
+        relation_status: RelationStatus,
+        results: dict[str, list],
+    ) -> None:
+        """Update one gift-plan status and record its result."""
+        try:
+            relation = Relation.objects.accessible_by(request.user).get(relation_id=entity_id)
+        except (Relation.DoesNotExist, ValidationError, ValueError):
+            results["failed"].append(
+                {
+                    "id": str(entity_id),
+                    "error": _("Gift plan not found."),
+                }
+            )
+            return
+
+        if (
+            PermissionService.get_effective_permission(relation, request.user)
+            < PermissionLevel.EDITOR
+        ):
+            results["permission_denied"].append(str(entity_id))
+            return
+
+        relation.status = relation_status
+        relation.save(update_fields=["status"])
+        results["updated"].append(str(entity_id))
+
+    def _bulk_update_status_success_message(
+        self,
+        updated_count: int,
+        failed_count: int,
+        permission_denied_count: int,
+    ) -> str:
+        """Build the feedback message for a bulk status update."""
+        message = ngettext(
+            "%(count)d gift plan updated",
+            "%(count)d gift plans updated",
+            updated_count,
+        ) % {"count": updated_count}
+
+        if permission_denied_count > 0:
+            message += ngettext(
+                ", %(count)d skipped (insufficient permissions)",
+                ", %(count)d skipped (insufficient permissions)",
+                permission_denied_count,
+            ) % {"count": permission_denied_count}
+
+        if failed_count > 0:
+            message += ngettext(
+                ", %(count)d failed",
+                ", %(count)d failed",
+                failed_count,
+            ) % {"count": failed_count}
+
+        return message
 
 
 class BulkDeleteConfirmationView(LoginRequiredMixin, TemplateView):

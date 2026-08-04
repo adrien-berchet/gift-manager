@@ -14,6 +14,7 @@
                 selectItem: ".bulk-select-item",
                 bulkToolbar: ".bulk-actions-toolbar",
                 bulkActionBtn: ".bulk-action-btn",
+                bulkStatusSelect: ".bulk-status-select",
                 selectedCount: ".selected-count",
                 gridContainer: ".gridjs-wrapper",
             },
@@ -53,6 +54,9 @@
                 enableSelectAll: true,
                 enableBulkDelete: true,
                 enableBulkShare: true,
+                enableBulkStatus: false,
+                statusOptions: [],
+                bulkStatusLabels: {},
                 ...options,
             };
 
@@ -139,6 +143,7 @@
                             <span class="selected-count">0</span> items selected
                         </div>
                         <div class="bulk-actions">
+                            ${this.getBulkStatusControlsHtml()}
                             ${
                                 this.options.enableBulkDelete
                                     ? `
@@ -169,6 +174,55 @@
 
             // Insert toolbar before the grid
             gridContainer.insertAdjacentHTML("beforebegin", toolbarHtml);
+        },
+
+        getBulkStatusControlsHtml() {
+            if (!this.options.enableBulkStatus || this.state.currentEntityType !== "relation") {
+                return "";
+            }
+
+            const statusOptions = Array.isArray(this.options.statusOptions)
+                ? this.options.statusOptions
+                : [];
+            if (statusOptions.length === 0) {
+                return "";
+            }
+
+            const labels = {
+                status: "Status",
+                chooseStatus: "Choose status",
+                applyStatus: "Apply status",
+                ...this.options.bulkStatusLabels,
+            };
+            const selectId = `bulk-status-select-${this.gridId}`;
+            const optionsHtml = statusOptions
+                .map(
+                    (option) => `
+                        <option value="${this.escapeHtml(option.value)}">
+                            ${this.escapeHtml(option.label)}
+                        </option>
+                    `
+                )
+                .join("");
+
+            return `
+                <div class="bulk-status-action">
+                    <label class="bulk-status-label" for="${this.escapeHtml(selectId)}">
+                        ${this.escapeHtml(labels.status)}
+                    </label>
+                    <select class="form-select form-select-sm bulk-status-select"
+                            id="${this.escapeHtml(selectId)}">
+                        <option value="">${this.escapeHtml(labels.chooseStatus)}</option>
+                        ${optionsHtml}
+                    </select>
+                    <button type="button"
+                            class="btn btn-primary btn-sm quick-action-btn bulk-action-btn"
+                            data-action="bulk-update-status"
+                            disabled>
+                        <i class="fas fa-rotate me-1"></i>${this.escapeHtml(labels.applyStatus)}
+                    </button>
+                </div>
+            `;
         },
 
         /**
@@ -456,6 +510,11 @@
                         this.handleBulkAction(btn.getAttribute("data-action"));
                     }
                 });
+                toolbar.addEventListener("change", (e) => {
+                    if (e.target.matches(this.config.selectors.bulkStatusSelect)) {
+                        this.updateUI();
+                    }
+                });
             }
 
             // Cancel selection mode button (exits selection mode entirely)
@@ -592,9 +651,14 @@
 
             // Update bulk action button states
             const bulkActionBtns = toolbar?.querySelectorAll(this.config.selectors.bulkActionBtn);
+            const statusSelect = toolbar?.querySelector(this.config.selectors.bulkStatusSelect);
+            const hasStatusSelection = Boolean(statusSelect?.value);
             if (bulkActionBtns) {
                 bulkActionBtns.forEach((btn) => {
-                    btn.disabled = selectedCount === 0;
+                    const requiresStatus =
+                        btn.getAttribute("data-action") === "bulk-update-status";
+                    btn.disabled =
+                        selectedCount === 0 || (requiresStatus && !hasStatusSelection);
                 });
             }
         },
@@ -616,6 +680,9 @@
                     break;
                 case "bulk-share":
                     this.handleBulkShare(selectedIds);
+                    break;
+                case "bulk-update-status":
+                    this.handleBulkUpdateStatus(selectedIds);
                     break;
                 default:
                     console.warn(`[BulkOperations] Unknown action: ${action}`);
@@ -854,6 +921,76 @@
             window.location.href = shareUrl;
         },
 
+        async handleBulkUpdateStatus(selectedIds) {
+            const toolbar = document.querySelector(this.config.selectors.bulkToolbar);
+            const statusSelect = toolbar?.querySelector(this.config.selectors.bulkStatusSelect);
+            const labels = {
+                chooseStatus: "Choose a status first.",
+                processing: "Updating...",
+                failure: "Bulk status update failed:",
+                completed: "Bulk status update completed",
+                ...this.options.bulkStatusLabels,
+            };
+            const newStatus = statusSelect?.value;
+
+            if (!newStatus) {
+                this.showNotification(labels.chooseStatus, "warning");
+                this.updateUI();
+                return;
+            }
+
+            const actionBtn = toolbar?.querySelector('[data-action="bulk-update-status"]');
+            const originalButtonHtml = actionBtn?.innerHTML;
+            if (actionBtn) {
+                actionBtn.disabled = true;
+                actionBtn.innerHTML = `<i class="fas fa-spinner fa-spin me-1"></i>${this.escapeHtml(
+                    labels.processing
+                )}`;
+            }
+
+            try {
+                const langPrefix = this.getLanguagePrefix();
+                const response = await fetch(`${langPrefix}/api/bulk-operations/`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": this.getCSRFToken(),
+                        "HX-Request": "true",
+                    },
+                    body: JSON.stringify({
+                        action: "bulk_update_status",
+                        entity_type: this.state.currentEntityType,
+                        entity_ids: selectedIds,
+                        new_status: newStatus,
+                    }),
+                });
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    throw new Error(result.error || labels.failure);
+                }
+
+                const skippedCount =
+                    (result.permission_denied?.length || 0) + (result.failed?.length || 0);
+                const notificationType = skippedCount > 0 ? "warning" : "success";
+
+                this.clearSelection();
+                if (statusSelect) {
+                    statusSelect.value = "";
+                }
+                this.triggerListUpdate();
+                this.showNotification(result.message || labels.completed, notificationType);
+            } catch (error) {
+                console.error("[BulkOperations] Bulk status update error:", error);
+                this.showNotification(`${labels.failure} ${error.message}`, "error");
+            } finally {
+                if (actionBtn && originalButtonHtml) {
+                    actionBtn.innerHTML = originalButtonHtml;
+                }
+                this.updateUI();
+            }
+        },
+
         /**
          * Clear all selections
          */
@@ -966,6 +1103,15 @@
                 document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
                 ""
             );
+        },
+
+        escapeHtml(value) {
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
         },
 
         triggerListUpdate() {

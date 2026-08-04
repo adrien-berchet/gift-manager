@@ -146,6 +146,26 @@ def test_status_updates_use_shared_helper_and_revert_contract():
         assert "full_page_detail=True" in content
 
 
+def test_bulk_relation_status_updates_are_scoped_and_refresh_lists():
+    relation_list = read(TEMPLATE_ROOT / "relation_list.html")
+    bulk_operations = read(STATIC_ROOT / "bulk-operations.js")
+    bulk_styles = read(STATIC_ROOT / "bulk-operations.css")
+
+    assert "enableBulkStatus: true" in relation_list
+    assert "statusOptions: relationStatusOptions" in relation_list
+    assert "bulkStatusLabels" in relation_list
+
+    assert "bulk_update_status" in bulk_operations
+    assert 'this.state.currentEntityType !== "relation"' in bulk_operations
+    assert "handleBulkUpdateStatus(selectedIds)" in bulk_operations
+    assert "this.triggerListUpdate();" in bulk_operations
+    assert "result.permission_denied" in bulk_operations
+    assert "result.failed" in bulk_operations
+
+    assert ".bulk-status-action" in bulk_styles
+    assert ".bulk-status-select" in bulk_styles
+
+
 def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
     content = read(TEMPLATE_ROOT / "share_objects.html")
 

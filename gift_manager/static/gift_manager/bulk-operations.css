@@ -56,6 +56,24 @@
     gap: var(--space-2, 8px);
 }
 
+.bulk-status-action {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+}
+
+.bulk-status-label {
+    color: var(--text-secondary, #6b7280);
+    font-size: var(--text-sm, 14px);
+    font-weight: 500;
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.bulk-status-select {
+    min-width: 160px;
+}
+
 .bulk-action-btn {
     transition: all 0.2s ease;
     font-size: var(--text-sm, 14px);
@@ -79,6 +97,12 @@
     background-color: #bbf7d0;
     border-color: #86efac;
     color: #166534;
+}
+
+.btn-primary.bulk-action-btn:disabled {
+    background-color: #bfdbfe;
+    border-color: #93c5fd;
+    color: #1e40af;
 }
 
 /* Bulk Selection Checkboxes */
@@ -157,6 +181,12 @@ td.gridjs-td.bulk-select-cell {
     color: #6b7280;
 }
 
+[data-theme="dark"] .btn-primary.bulk-action-btn:disabled {
+    background-color: #172554;
+    border-color: #1d4ed8;
+    color: #6b7280;
+}
+
 /* Bulk Delete Modal Progress */
 .bulk-delete-progress {
     margin-top: var(--space-4, 16px);
@@ -199,6 +229,17 @@ td.gridjs-td.bulk-select-cell {
     .bulk-actions {
         justify-content: center;
         flex-wrap: wrap;
+    }
+
+    .bulk-status-action {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .bulk-status-select {
+        flex: 1;
+        min-width: 140px;
     }
 
     .bulk-action-btn {
