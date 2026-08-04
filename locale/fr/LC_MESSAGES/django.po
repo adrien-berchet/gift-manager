@@ -1960,6 +1960,46 @@ msgid "You have unsaved changes. Are you sure you want to close?"
 msgstr ""
 "Vous avez des modifications non enregistrées. Voulez-vous vraiment quitter ?"
 
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:2
+msgid "You have unsaved changes. Are you sure you want to leave this page?"
+msgstr ""
+"Vous avez des modifications non sauvegardées. Voulez-vous vraiment quitter "
+"cette page ?"
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:3
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:10
+msgid "Unsaved changes"
+msgstr "Modifications non sauvegardées"
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:4
+msgid "Your changes have not been saved yet."
+msgstr "Vos modifications n'ont pas encore été sauvegardées."
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:5
+msgid "Save your changes, discard them, or keep editing."
+msgstr ""
+"Enregistrez vos modifications, abandonnez-les ou continuez la modification."
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:6
+msgid "Discard your changes to continue to the new page."
+msgstr "Abandonnez vos modifications pour continuer vers la nouvelle page."
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:8
+msgid "Discard changes"
+msgstr "Abandonner les modifications"
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:9
+msgid "Keep editing"
+msgstr "Continuer la modification"
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:11
+msgid "Unsaved"
+msgstr "Non sauvegardé"
+
+#: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:12
+msgid "This field has been changed"
+msgstr "Ce champ a été modifié"
+
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:96
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:152
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:91

@@ -2,6 +2,9 @@
 
 from pathlib import Path
 
+from django.template.loader import render_to_string
+from django.utils.translation import override
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_ROOT = PROJECT_ROOT / "gift_manager/templates/gift_manager"
 STATIC_ROOT = PROJECT_ROOT / "gift_manager/static/gift_manager"
@@ -55,6 +58,61 @@ def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
     assert 'hx-target="this"' in relation_form
     assert 'hx-swap="outerHTML"' in relation_form
     assert 'hx-target="#offcanvasContent"' not in relation_form
+
+
+def test_unsaved_changes_use_central_panel_safe_flow():
+    unsaved_changes = read(STATIC_ROOT / "unsaved-changes.js")
+    form_initializer = read(STATIC_ROOT / "form-initializer.js")
+    offcanvas = read(TEMPLATE_ROOT / "includes/offcanvas_base.html")
+    translations = read(TEMPLATE_ROOT / "includes/unsaved_changes_translations.html")
+    styles = read(STATIC_ROOT / "css/unsaved-changes.css")
+
+    assert "window.unsavedChangesTranslations" in translations
+    assert "{% trans " in translations
+    assert 'include "gift_manager/includes/unsaved_changes_translations.html"' in offcanvas
+    assert offcanvas.index("unsaved_changes_translations.html") < offcanvas.index(
+        "unsaved-changes.js"
+    )
+    assert "window.unsavedChangesTranslations || {}" in unsaved_changes
+    assert "...translatedMessages" in unsaved_changes
+    assert "function escapeHtml" in unsaved_changes
+    assert "escapeHtml(CONFIG.messages.modalTitle)" in unsaved_changes
+    assert "escapeHtml(CONFIG.messages.statusText)" in unsaved_changes
+    assert "requestSubmit" in unsaved_changes
+    assert ".submit()" not in unsaved_changes
+    assert "confirm(" not in unsaved_changes
+    assert "confirm(" not in form_initializer
+    assert "hide.bs.offcanvas" in unsaved_changes
+    assert "htmx:afterRequest" in unsaved_changes
+    assert "event.detail?.successful" in unsaved_changes
+    assert "clearForm(form);" in unsaved_changes
+    assert "confirmPanelReplacement" in unsaved_changes
+    assert "pendingBaselines" in unsaved_changes
+    assert "checkForChanges(form);" in unsaved_changes
+    assert "event.button !== 0" in unsaved_changes
+    assert "permission-select" in unsaved_changes
+    assert "confirmPanelReplacement(target" in read(TEMPLATE_ROOT / "base.html")
+    assert 'new Event("change", { bubbles: true })' in form_initializer
+
+    assert "unsaved-changes-badge" in styles
+    assert "unsaved-changes-status" in styles
+    assert "field-group-unsaved" in styles
+    assert "save-indicator" not in styles
+    assert "unsaved-actions" not in styles
+    assert "pulse" not in styles
+
+
+def test_unsaved_changes_translations_render_for_french_locale():
+    with override("fr"):
+        rendered = render_to_string("gift_manager/includes/unsaved_changes_translations.html")
+
+    assert "window.unsavedChangesTranslations" in rendered
+    assert "Modifications non sauvegardées" in rendered
+    assert "Abandonner les modifications" in rendered
+    assert "Continuer la modification" in rendered
+    assert "Ce champ a été modifié" in rendered
+    assert "Keep editing" not in rendered
+    assert "Discard changes" not in rendered
 
 
 def test_status_updates_use_shared_helper_and_revert_contract():

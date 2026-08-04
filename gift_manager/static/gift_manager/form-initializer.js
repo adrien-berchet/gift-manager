@@ -100,15 +100,31 @@
             }
         };
 
+        const dispatchChange = (item) => {
+            if (item.tagName === "OPTION") {
+                groupsField.dispatchEvent(new Event("change", { bubbles: true }));
+            } else {
+                item.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        };
+
         // Select All handler
         selectAllBtn.addEventListener("click", function (e) {
             e.preventDefault();
             const items = getCheckboxes();
             items.forEach((item) => {
                 if (item.tagName === "OPTION") {
+                    const wasSelected = item.selected;
                     item.selected = true;
+                    if (!wasSelected) {
+                        dispatchChange(item);
+                    }
                 } else {
+                    const wasChecked = item.checked;
                     item.checked = true;
+                    if (!wasChecked) {
+                        dispatchChange(item);
+                    }
                 }
             });
         });
@@ -119,9 +135,17 @@
             const items = getCheckboxes();
             items.forEach((item) => {
                 if (item.tagName === "OPTION") {
+                    const wasSelected = item.selected;
                     item.selected = false;
+                    if (wasSelected) {
+                        dispatchChange(item);
+                    }
                 } else {
+                    const wasChecked = item.checked;
                     item.checked = false;
+                    if (wasChecked) {
+                        dispatchChange(item);
+                    }
                 }
             });
         });
@@ -212,62 +236,11 @@
 
     /**
      * Unsaved changes warning initializer
-     * Warns users before closing forms with unsaved changes
+     * Registers dynamically loaded forms with the central tracker.
      */
     FormInitializer.register("unsavedChanges", function (form) {
-        let formModified = false;
-
         if (window.UnsavedChanges?.addForm) {
             window.UnsavedChanges.addForm(form);
-        }
-
-        // Track form changes (but not permission selector changes)
-        const handleInput = function (e) {
-            // Don't mark as modified if it's a permission selector
-            if (e.target && e.target.classList.contains("permission-select")) {
-                return;
-            }
-            formModified = true;
-        };
-
-        form.addEventListener("input", handleInput);
-        form.addEventListener("change", handleInput);
-
-        // Reset on form submission (before HTMX processes it)
-        form.addEventListener("submit", function (e) {
-            formModified = false;
-        });
-
-        // Also reset on successful HTMX request
-        form.addEventListener("htmx:afterRequest", function (e) {
-            if (e.detail.successful) {
-                formModified = false;
-            }
-        });
-
-        // Warn before closing if modified
-        const offcanvas = form.closest(".offcanvas");
-        if (offcanvas) {
-            const handleHide = function (e) {
-                if (offcanvas.dataset.skipUnsavedPrompt === "true") {
-                    return;
-                }
-                if (formModified) {
-                    const confirmed = confirm(
-                        "You have unsaved changes. Are you sure you want to close?"
-                    );
-                    if (!confirmed) {
-                        e.preventDefault();
-                    }
-                }
-            };
-
-            offcanvas.addEventListener("hide.bs.offcanvas", handleHide);
-
-            // Clean up on form cleanup
-            form.addEventListener("form:cleanup", function () {
-                offcanvas.removeEventListener("hide.bs.offcanvas", handleHide);
-            });
         }
     });
 
