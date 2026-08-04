@@ -53,7 +53,7 @@ Provides simple table-based listing with basic pagination
                 <thead>
                     <tr>
                         {% for column in fallback_table_data.columns %}
-                            <th>{{ column.label }}</th>
+                            <th data-column-field="{{ column.field }}">{{ column.label }}</th>
                         {% endfor %}
                         <th>{% trans "Actions" %}</th>
                     </tr>
@@ -62,7 +62,9 @@ Provides simple table-based listing with basic pagination
                     {% for row in fallback_table_data.rows %}
                         <tr>
                             {% for column in fallback_table_data.columns %}
-                                <td>{{ row|lookup:column.field|default:"-" }}</td>
+                                <td data-column-field="{{ column.field }}">
+                                    {{ row|lookup:column.field|default:"-" }}
+                                </td>
                             {% endfor %}
                             <td>
                                 <div class="fallback-actions">

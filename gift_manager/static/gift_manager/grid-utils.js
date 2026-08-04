@@ -431,6 +431,8 @@
             // Remove sort controls from columns with sort: false
             // Grid.js doesn't properly respect per-column sort: false
             grid.on('ready', () => {
+                applyColumnDataAttributes(container, columns);
+
                 const visibleColumns = columns.filter(col => !col.hidden);
                 const headerCells = container.querySelectorAll('thead tr th');
                 visibleColumns.forEach((col, index) => {
@@ -443,6 +445,14 @@
             });
 
             grid.render(container);
+
+            new MutationObserver(() => applyColumnDataAttributes(container, columns)).observe(
+                container,
+                {
+                    childList: true,
+                    subtree: true
+                }
+            );
 
             // If the grid has a checkbox column, set up persistent select-all injection
             // Uses MutationObserver to survive Grid.js re-renders (sort, pagination)
@@ -1488,6 +1498,27 @@
             return true;
         }
         return false;
+    }
+
+    /**
+     * Add stable column identifiers to rendered Grid.js cells.
+     * @param {Element} container - The grid container
+     * @param {Array} columns - Original Grid.js column definitions
+     */
+    function applyColumnDataAttributes(container, columns) {
+        if (!container || !Array.isArray(columns)) return;
+
+        const visibleColumns = columns.filter((column) => !column.hidden);
+        const tableRows = container.querySelectorAll('thead tr, tbody tr');
+
+        tableRows.forEach((row) => {
+            Array.from(row.children).forEach((cell, index) => {
+                const column = visibleColumns[index];
+                if (!column || !column.id) return;
+
+                cell.setAttribute('data-column-id', column.id);
+            });
+        });
     }
 
     /**

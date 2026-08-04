@@ -31,6 +31,19 @@ noscript {
     text-align: left;
 }
 
+.fallback-table th[data-column-field="comment"],
+.fallback-table td[data-column-field="comment"] {
+    width: clamp(12rem, 28vw, 26rem);
+    max-width: clamp(12rem, 28vw, 26rem);
+}
+
+.fallback-table td[data-column-field="comment"] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    line-height: 1.45;
+}
+
 .fallback-table th {
     position: sticky;
     top: 0;

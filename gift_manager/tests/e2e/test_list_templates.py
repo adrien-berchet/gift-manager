@@ -1719,6 +1719,50 @@ class TestGiftListGridLoading:
         assert any("name" in h for h in lower_headers), f"Name missing: {headers}"
         assert any("action" in h for h in lower_headers), f"Actions missing: {headers}"
 
+    def test_comment_column_wraps_long_content(self, page: Page, live_server, seed_data_e2e):
+        """Long gift comments wrap instead of widening the list table."""
+        long_comment = "WRAP" + ("abcdefghijklmnopqrstuvwxyz" * 30)
+        gift = Gift.objects.create(name="Wrapping Probe Gift", comment=long_comment)
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            gift,
+            permission_level=PermissionLevel.OWNER,
+        )
+
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/gifts/")
+        _wait_for_grid(page, "gift-grid")
+
+        search = _get_search_input(page, "gift-grid")
+        if search.is_visible():
+            search.fill("Wrapping Probe Gift")
+            page.wait_for_timeout(800)
+
+        comment_cell = page.locator(
+            '#gift-grid .gridjs-td[data-column-id="comment"]',
+            has_text=long_comment[:24],
+        ).first
+        expect(comment_cell).to_be_visible()
+
+        metrics = comment_cell.evaluate(
+            """cell => {
+                const style = window.getComputedStyle(cell);
+                const rect = cell.getBoundingClientRect();
+                return {
+                    whiteSpace: style.whiteSpace,
+                    overflowWrap: style.overflowWrap,
+                    height: rect.height,
+                    clientWidth: cell.clientWidth,
+                    scrollWidth: cell.scrollWidth
+                };
+            }"""
+        )
+
+        assert metrics["whiteSpace"] == "normal"
+        assert metrics["overflowWrap"] == "anywhere"
+        assert metrics["height"] > 60
+        assert metrics["scrollWidth"] <= metrics["clientWidth"] + 1
+
     def test_gift_data_displayed(self, page: Page, live_server, seed_data_e2e):
         """Seed gifts (Smartphone, Novel, Watch, Scarf) appear."""
         _login(page, live_server.url)
