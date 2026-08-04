@@ -506,12 +506,58 @@
     }
 
     .dashboard-action-list--paginated {
+        --dashboard-action-card-height: 15.5rem;
         align-content: start;
+        grid-auto-rows: var(--dashboard-action-card-height);
         overflow: visible;
     }
 
-    .dashboard-action-list--paginated.dashboard-action-list--short-page {
-        grid-auto-rows: auto;
+    .dashboard-action-list--paginated .gift-plan-card {
+        max-height: var(--dashboard-action-card-height);
+    }
+
+    .dashboard-action-list--paginated .gift-plan-card-topline,
+    .dashboard-action-list--paginated .gift-plan-tag-list {
+        flex-wrap: nowrap;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-card-title a {
+        display: block;
+        overflow: hidden;
+        overflow-wrap: normal;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        -webkit-line-clamp: initial;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-card-meta-row a,
+    .dashboard-action-list--paginated .gift-plan-card-meta-row > span:not(.badge):not(.recipient-type-marker) {
+        display: block;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-tag-list {
+        max-height: 1.75rem;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-tag-badge {
+        flex: 0 1 auto;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-note {
+        -webkit-line-clamp: 2;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-card-actions {
+        align-content: flex-end;
+        max-height: 4.75rem;
+        overflow: hidden;
+    }
+
+    .dashboard-action-list--paginated .gift-plan-card-actions .btn {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .dashboard-action-pagination {
@@ -565,6 +611,16 @@
     @media (min-width: 768px) {
         .dashboard-action-group--compact {
             grid-column: span 2;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        .dashboard-action-list--paginated {
+            --dashboard-action-card-height: 17rem;
+        }
+
+        .dashboard-action-list--paginated .gift-plan-note {
+            -webkit-line-clamp: 3;
         }
     }
 
@@ -1067,49 +1123,13 @@
             return Array.from(group.querySelectorAll('[data-dashboard-action-card]'));
         }
 
-        function getColumnCount(list, cards) {
-            const previousHiddenStates = cards.map((card) => card.hidden);
-            cards.forEach((card) => {
-                card.hidden = false;
-            });
-
+        function getColumnCount(list) {
             const styles = window.getComputedStyle(list);
             const columns = styles.gridTemplateColumns
                 .split(' ')
                 .filter((column) => column && column !== 'none').length;
 
-            cards.forEach((card, index) => {
-                card.hidden = previousHiddenStates[index];
-            });
-
             return Math.max(columns || 1, 1);
-        }
-
-        function measureStablePageHeight(list, cards, pageSize, pageCount) {
-            const previousHiddenStates = cards.map((card) => card.hidden);
-            const previousMinHeight = list.style.minHeight;
-            const hadShortPage = list.classList.contains('dashboard-action-list--short-page');
-            let stableHeight = 0;
-
-            list.style.minHeight = '';
-            list.classList.remove('dashboard-action-list--short-page');
-
-            for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
-                const firstVisibleIndex = pageIndex * pageSize;
-                const firstHiddenIndex = firstVisibleIndex + pageSize;
-                cards.forEach((card, index) => {
-                    card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
-                });
-                stableHeight = Math.max(stableHeight, list.getBoundingClientRect().height);
-            }
-
-            cards.forEach((card, index) => {
-                card.hidden = previousHiddenStates[index];
-            });
-            list.style.minHeight = previousMinHeight;
-            list.classList.toggle('dashboard-action-list--short-page', hadShortPage);
-
-            return stableHeight;
         }
 
         function updateGroup(group) {
@@ -1126,7 +1146,7 @@
                 group.dataset.dashboardRowsPerPage || defaultRowsPerPage.toString(),
                 10
             ) || defaultRowsPerPage;
-            const columns = getColumnCount(list, cards);
+            const columns = getColumnCount(list);
             const pageSize = Math.max(columns * rowsPerPage, 1);
             const pageCount = Math.max(Math.ceil(cards.length / pageSize), 1);
             const requestedPage = Number.parseInt(group.dataset.dashboardCurrentPage || '0', 10);
@@ -1137,22 +1157,9 @@
             group.dataset.dashboardCurrentPage = currentPage.toString();
             group.dataset.dashboardPageSize = pageSize.toString();
 
-            list.style.minHeight = '';
-            list.classList.remove('dashboard-action-list--short-page');
-            const stablePageHeight = pageCount > 1
-                ? measureStablePageHeight(list, cards, pageSize, pageCount)
-                : 0;
             cards.forEach((card, index) => {
                 card.hidden = index < firstVisibleIndex || index >= firstHiddenIndex;
             });
-
-            const visibleCount = Math.min(pageSize, Math.max(cards.length - firstVisibleIndex, 0));
-            if (stablePageHeight > 0) {
-                list.style.minHeight = `${Math.ceil(stablePageHeight)}px`;
-            }
-            if (stablePageHeight > 0 && visibleCount < pageSize) {
-                list.classList.add('dashboard-action-list--short-page');
-            }
 
             if (!pagination) return;
 

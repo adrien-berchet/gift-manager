@@ -21,6 +21,7 @@ from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.views import get_user
 from gift_manager.views import home
+from gift_manager.views.common import DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP
 
 
 @pytest.mark.django_db
@@ -173,6 +174,10 @@ class TestHomeDashboard:
 
         content = response.content.decode()
         groups_by_key = {group["key"]: group for group in groups}
+        assert groups_by_key["overdue"]["is_paginated"] is True
+        assert groups_by_key["overdue"]["is_compact"] is True
+        assert groups_by_key["overdue"]["workspace_focus"] == "overdue"
+        assert groups_by_key["overdue"]["display_items"] == groups_by_key["overdue"]["items"]
         assert groups_by_key["upcoming"]["is_paginated"] is True
         assert groups_by_key["upcoming"]["is_compact"] is True
         assert groups_by_key["upcoming"]["workspace_focus"] == "due_soon"
@@ -205,10 +210,13 @@ class TestHomeDashboard:
         assert "?focus=due_soon#gift-plan-group-due_soon" in content
         assert "?focus=needs_details#gift-plan-group-needs_details" in content
         assert "dashboard-action-list--scrollable" not in content
+        assert "dashboard-action-list--short-page" not in content
+        assert "measureStablePageHeight" not in content
         assert "data-dashboard-action-card" in content
         assert "dashboard-action-item" not in content
         assert "data-dashboard-action-paginated" in content
         assert "data-dashboard-pagination" in content
+        assert "?focus=overdue#gift-plan-group-overdue" in content
         assert 'id="dashboard-live"' in content
         assert "data-list-container" in content
         assert 'hx-trigger="refresh"' in content
@@ -220,6 +228,12 @@ class TestHomeDashboard:
         planned = RelationStatusFactory(status="Planned")
 
         for index in range(5):
+            RelationFactory(
+                gift=GiftFactory(name=f"Overdue paginated item {index}"),
+                status=planned,
+                due_date=today - timedelta(days=index + 1),
+                shared_with=[self.user],
+            )
             RelationFactory(
                 gift=GiftFactory(name=f"Due soon paginated item {index}"),
                 status=planned,
@@ -240,12 +254,54 @@ class TestHomeDashboard:
         groups_by_key = {
             group["key"]: group for group in response.context["dashboard_action_groups"]
         }
+        assert len(groups_by_key["overdue"]["display_items"]) == 5
         assert len(groups_by_key["upcoming"]["display_items"]) == 5
         assert len(groups_by_key["incomplete"]["display_items"]) == 5
 
         content = response.content.decode()
+        assert "Overdue paginated item 4" in content
         assert "Due soon paginated item 4" in content
         assert "Needs details paginated item 4" in content
+
+    def test_dashboard_caps_rendered_paginated_cards_per_group(self):
+        today = timezone.localdate()
+        planned = RelationStatusFactory(status="Planned")
+
+        for index in range(DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP + 3):
+            RelationFactory(
+                gift=GiftFactory(name=f"Overdue capped item {index}"),
+                status=planned,
+                due_date=today - timedelta(days=index + 1),
+                shared_with=[self.user],
+            )
+            RelationFactory(
+                gift=GiftFactory(name=f"Due soon capped item {index}"),
+                status=planned,
+                due_date=today + timedelta(days=(index % 7) + 1),
+                shared_with=[self.user],
+            )
+            RelationFactory(
+                gift=GiftFactory(name=f"Needs details capped item {index}"),
+                event=None,
+                status=planned,
+                due_date=None,
+                shared_with=[self.user],
+            )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.status_code == 200
+        groups_by_key = {
+            group["key"]: group for group in response.context["dashboard_action_groups"]
+        }
+        for group_key in ("overdue", "upcoming", "incomplete"):
+            assert len(groups_by_key[group_key]["items"]) == (
+                DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP + 3
+            )
+            assert (
+                len(groups_by_key[group_key]["display_items"])
+                == DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP
+            )
 
     def test_dashboard_cards_expose_editor_quick_actions(self):
         today = timezone.localdate()
