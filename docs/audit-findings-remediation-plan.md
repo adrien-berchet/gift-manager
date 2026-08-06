@@ -1,1056 +1,584 @@
 # Project Audit Findings And Remediation Plan
 
-Date: 2026-07-30
+Original audit date: 2026-07-30
 
-Scope: read-only audit of the Gift Manager Django application, including security,
-authorization, backend logic, frontend UX/UI, accessibility, dependencies, CI/CD,
-deployment, backups, and operational readiness.
+Last relevance review: 2026-08-05
 
-The audit used four focused sub-agent reviews:
+Code baseline reviewed before this document update: `39d5722`
 
-- Security review: authentication, authorization, sharing, secrets, CSRF, XSS, settings.
-- Django/backend review: views, forms, models, permissions, data integrity, tests.
-- Frontend/UX review: Grid.js, HTMX, forms, accessibility, mobile workflows.
-- DevOps review: Docker, Compose, Vercel, CI, dependency scanning, backups, health.
+Scope: Gift Manager Django application, including security, authorization, backend
+logic, frontend UX/UI, accessibility, dependencies, CI/CD, deployment, backups, and
+operational readiness.
 
-Local verification performed:
+## Current Summary
 
-- `pytest -q gift_manager/tests/test_permissions.py gift_manager/tests/views/test_sharing.py gift_manager/tests/test_inline_editing.py`
-  passed with 67 tests.
-- `manage.py check --deploy` with dummy production environment values reported only
-  the expected dummy-secret warning.
-- `pip-audit` found 54 known vulnerabilities across 7 resolved packages.
-- `bandit` reported 12 medium findings, all around `mark_safe()` usage in Grid.js
-  template-tag helpers.
-- Direct `pytest` was used for the targeted test run because `tox run -e py311`,
-  `tox run -e py312`, and `tox run -e lint` all skipped under the local `uv`/tox
-  interpreter specs (`cpython3.11`, `/usr/bin/python3.12`, and `cpython3.10`).
+Most original audit findings have been remediated in the current code, subject to the
+partial items and evidence gaps called out below. The old high-risk authorization and
+Grid.js XSS issues should be treated as historical context rather than active
+production claims.
 
-No source files were changed during the audit. Secret files such as `.env` were not
-read.
+The remaining relevant work is narrower:
 
-## Remediation Status
+- Split delete and leave-access behavior all the way through default UI/request paths.
+- Strengthen runtime/e2e coverage for frontend accessibility and global search behavior.
+- Add deployment-environment evidence for clean production startup, restore drills,
+  outage behavior, and built-image secret scanning.
+- Tighten supply-chain posture for pinned GitHub Actions, digest-pinned container
+  images, and CDN integrity or self-hosting.
+- Add or document coverage around irreversible data-cleanup migrations.
 
-Updated: 2026-07-30
+## Status Legend
 
-Issues 1-28 and Phases 1-5 are implementation-complete in the current working tree.
+- Solved: the original finding is no longer current in code.
+- Partially remediated: meaningful controls exist, but a claim or exit criterion is
+  still incomplete, weakly verified, or only repository-local.
+- Deployment evidence outstanding: repository controls exist, but the result must be
+  proven in the real deployment environment.
+- Historical wording obsolete: the underlying bug is fixed through a newer design, so
+  the old field names or workflow no longer describe the code.
 
-Verification after remediation:
+## Verification From The 2026-08-05 Review
 
-- `pytest gift_manager/tests/test_permissions.py gift_manager/tests/views/test_sharing.py
-  gift_manager/tests/views/test_base.py gift_manager/tests/test_inline_editing.py
-  gift_manager/tests/test_grid_xss_safety.py gift_manager/tests/test_operational_hardening.py
-  gift_manager/tests/test_production_settings.py` passed with 162 tests.
-- Phase 5 targeted regression slice passed with 24 tests:
-  `gift_manager/tests/test_models.py` selected cache/inheritance/relation tests,
-  `gift_manager/tests/forms/test_event_form.py`,
-  `gift_manager/tests/views/test_search.py`,
-  `gift_manager/tests/views/test_person_group_views.py::TestPersonGroupListView::test_list_view_tree_data_excludes_inaccessible_children`,
-  `gift_manager/tests/test_phase5_frontend_contracts.py`, and
-  `gift_manager/tests/test_permission_ui_adaptation_property.py`.
-- Broader Phase 5-adjacent surface checks passed:
-  `gift_manager/tests/views/test_base.py`,
-  `gift_manager/tests/views/test_person_group_views.py`,
-  `gift_manager/tests/views/test_gift_tag_authorization.py`,
-  `gift_manager/tests/views/test_relation.py`,
-  `gift_manager/tests/test_offcanvas_person_form.py`,
-  `gift_manager/tests/test_phase5_frontend_contracts.py`, and
-  `gift_manager/tests/test_permission_ui_adaptation_property.py` passed with 133
-  tests; `gift_manager/tests/test_grid_xss_safety.py` passed with 4 tests and 1
-  skip.
-- `ruff check` passed for the changed Python files.
-- `bash -n build.sh scripts/postgres_backup.sh scripts/postgres_restore.sh
-  scripts/media_backup.sh scripts/pre_migration_snapshot.sh` passed.
-- `python manage.py check --deploy --fail-level WARNING` passed with a dummy
-  production environment.
-- `DJANGO_ENV=testing python manage.py makemigrations --check --dry-run`
-  reported no changes.
-- `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet`
-  passed with required production environment values.
-- `bandit -r gift_manager -x gift_manager/tests --severity-level medium
-  --confidence-level medium` passed.
-- `pip-audit` against the frozen production export reported no known vulnerabilities.
+Sub-agent split:
 
-Operational evidence still needs to be collected in the deployment environment:
+- Authorization/security: sharing, edit guards, permission mutation, inline editing,
+  friend removal, and delete/leave semantics.
+- Backend/data integrity: hierarchy caches, inherited permissions, relation
+  constraints, recurrence, search, gift-tag stats, and backend Phase 5 claims.
+- Frontend/UX: Grid.js XSS, HTMX form/status flows, Bootstrap 5 share page,
+  accessibility contracts, reparenting, and global search.
+- Operations/supply chain: production settings, Compose, CI, dependencies, backups,
+  Docker context, CSP, hosts, and deployment evidence.
 
-- Run a clean-volume production Compose startup with real certificates and secrets.
-- Restore the latest off-host backup into a clean database and record the drill.
-- Scan the built production image for accidental env, key, cert, report, or backup
-  artifacts.
+Local checks run during the review:
 
-## Executive Summary
+```bash
+tox run -e py311 -- gift_manager/tests/views/test_profile.py
+```
 
-The highest-risk issues are authorization failures in sharing and edit flows. Several
-POST endpoints trust client-submitted object IDs, user IDs, or the fact that an object
-is merely viewable. This creates practical paths for users with low privileges to edit
-objects, grant permissions, or share objects they should not control.
+Result: 35 passed.
 
-The next major risk is stored XSS in Grid.js renderers that use `gridjs.html()` with
-unescaped user-controlled names. After that, the most important work is deployment
-hardening: production compose has likely startup blockers, dependency security checks
-are non-blocking, and there is no backup/restore runbook.
+```bash
+bandit -r gift_manager -x gift_manager/tests --severity-level medium --confidence-level medium
+```
 
-Recommended sequencing:
+Result: passed.
 
-1. Fix authorization and sharing mutations.
-2. Fix XSS surfaces and add hostile-input browser tests.
-3. Harden production configuration, dependencies, CI, and backups.
-4. Fix backend logic/data-integrity bugs.
-5. Improve HTMX UX, accessibility, and mobile workflows.
+```bash
+uv export --quiet --frozen --no-dev --no-emit-project --format requirements.txt --output-file /tmp/gift-manager-requirements.txt
+pip-audit --requirement /tmp/gift-manager-requirements.txt --no-deps --disable-pip
+```
 
-## P0: Critical Security Findings
+Result: no known vulnerabilities found.
 
-### 1. Bulk Sharing Trusts Posted Users And Object IDs
+```bash
+python manage.py check --deploy --fail-level WARNING
+```
 
-Severity: critical
+Result: passed with dummy but structurally valid production environment values.
 
-Evidence:
+```bash
+DJANGO_ENV=testing python manage.py makemigrations --check --dry-run
+```
 
-- `ShareObjectsView._get_selected_friends()` accepts any posted user IDs via
-  `User.objects.filter(id__in=friend_ids)` in `gift_manager/views/sharing.py`.
-- Share handlers query objects globally instead of filtering by caller access:
-  `Person.objects.filter(person_id__in=...)`,
-  `PersonGroup.objects.filter(group_id__in=...)`,
-  `Gift.objects.filter(gift_id__in=...)`,
-  `Event.objects.filter(event_id__in=...)`,
-  and `Relation.objects.filter(relation_id__in=...)`.
-- Relation sharing also cascades permissions to related gift, person, group, and
-  event objects.
+Result: no model changes detected. A local database migration-history warning was
+emitted because the default database connection was unavailable.
 
-Risk scenario:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+```
 
-A logged-in user who learns or obtains an object UUID can POST it to `/share/` and
-grant themselves or another account access, potentially at `OWNER` level. UUIDs lower
-guessability, but they do not remove IDOR risk because UUIDs can leak through pages,
-logs, screenshots, emails, browser history, or shared links.
+Result: passed with all required dummy production and nginx environment values.
 
-Plan:
+No source files were changed during the relevance review. Secret files such as
+`.env` were not read.
 
-- Restrict selected recipients to `request.user.profile.friends`.
-- Restrict selected objects to effective objects the caller can share.
-- Require a clear share permission, probably `OWNER` or at least `EDITOR`, for every
-  object being shared.
-- Reject unauthorized submitted IDs rather than silently ignoring them.
-- Prevent granting a permission level higher than the caller's own effective level.
-- Re-check authorization for cascaded relation/group/member sharing.
+## Finding Status
 
-Tests:
+### 1. Bulk Sharing Trusted Posted Users And Object IDs
 
-- Forged non-friend user ID is rejected.
-- Forged private person/gift/event/relation UUID is rejected.
-- Viewer cannot share a viewed object onward.
-- Editor/owner behavior is explicit and covered.
-- Relation cascade cannot grant access to related objects unless the caller can share
-  each related object.
+Status: solved.
 
-### 2. Viewers Can Edit Objects And Self-Elevate
+Original issue: bulk sharing accepted arbitrary posted user IDs and object UUIDs.
 
-Severity: critical
+Current state: recipients are restricted to the caller's friends, posted objects are
+loaded through access-aware querysets, unauthorized IDs reject the operation, sharing
+requires owner-level effective permission, and relation/group cascades re-check each
+related object. Covered by sharing regression tests.
 
-Evidence:
+### 2. Viewers Could Edit Objects And Self-Elevate
 
-- `BaseUpdateView` uses `FilterByUserMixin`, whose queryset is
-  `self.model.objects.accessible_by(self.request.user)`.
-- `BaseUpdateView.form_valid()` saves accessible objects, then calls
-  `PermissionService.create_or_update_permission(... permission_level=EDITOR ...)`
-  for the current user.
-- For models with `user_link`, update also assigns `form.instance.user_link =
-  self.request.user`.
+Status: solved.
 
-Risk scenario:
+Original issue: update views allowed users with viewer access to save objects and gain
+editor permission as a side effect.
 
-If Alice shares a gift with Bob as `VIEWER`, Bob can manually POST to the edit URL,
-change the gift, and become `EDITOR`. For some object types, ownership-like fields may
-also be reassigned as a side effect.
+Current state: update handling enforces effective editor access before edit
+processing, normal updates no longer grant editor permission, and `user_link` is not
+rewritten on update. Covered by viewer/editor/owner update tests.
 
-Plan:
+### 3. Permission Update Endpoints Lacked Actor Authorization
 
-- Add a single server-side edit guard before normal update POST processing.
-- Require `PermissionService.get_permission(obj, request.user) >= EDITOR` for object
-  edits.
-- Do not grant `EDITOR` as a side effect of normal updates.
-- Do not modify `user_link` on update unless there is a specific ownership-transfer
-  workflow.
-- Audit all subclasses of `BaseUpdateView` for custom `get_queryset()` overrides.
+Status: solved.
 
-Tests:
+Original issue: permission mutation endpoints accepted posted target users and levels
+without checking whether the actor could manage the object.
 
-- Viewer GET behavior is intentional: either no edit form or read-only/403.
-- Viewer POST to each update URL returns 403/404 and does not change data.
-- Owner remains owner after edit.
-- Editor can edit but does not unexpectedly gain owner-level access.
+Current state: permission mutation is centralized through owner-only service checks,
+target permission values are validated, non-friend targets are rejected, and
+last-owner protection is enforced across HTMX/AJAX and form paths. Covered by
+permission mutation tests.
 
-### 3. Permission Update Endpoints Lack Actor Authorization
+### 4. Private Gift Tags Were Editable By UUID
 
-Severity: critical
+Status: solved.
 
-Evidence:
+Original issue: `GiftTagUpdateView` used an unrestricted queryset.
 
-- `PermissionUpdateMixin.handle_permission_update()` updates/deletes permissions for
-  a posted `user_id` without checking the requesting user's permission on the object.
-- `EditPermissionMixin._handle_update_permission()`,
-  `_handle_remove_share()`, and `_handle_share_with()` do the same.
-- These paths are reached before normal form handling in edit views.
-
-Risk scenario:
-
-A viewer of a shared object can POST permission fields to grant themselves or another
-user `EDITOR` or `OWNER`, remove another user's access, or otherwise modify sharing.
-
-Plan:
-
-- Centralize share-management authorization in one helper or service method.
-- Require `OWNER` for permission management unless product requirements explicitly
-  allow `EDITOR` to share.
-- Validate target permission values against `PermissionLevel`.
-- Restrict target users to valid friends or approved collaborators.
-- Prevent self-removing the last owner and prevent demoting all owners.
-- Use the same logic for HTMX, AJAX, and non-HTMX paths.
-
-Tests:
-
-- Viewer cannot add, remove, or change permissions.
-- Editor behavior matches the product decision.
-- Owner can add, update, and remove shares.
-- Invalid user ID, invalid permission value, and non-friend target are rejected.
-- Last-owner protection works.
-
-### 4. Private Gift Tags Are Editable By UUID
-
-Severity: high
-
-Evidence:
-
-- `GiftTagUpdateView.get_queryset()` returns
-  `GiftTag.objects.prefetch_related("parent_tags", "child_tags")` instead of
-  filtering through `accessible_by(request.user)`.
-
-Risk scenario:
-
-Any authenticated user who knows another user's private tag UUID can submit the edit
-form and change the tag or its parent relationships.
-
-Plan:
-
-- Change the update queryset to `GiftTag.objects.accessible_by(request.user)`.
-- Apply the same edit-level guard as other update views.
-- Confirm delete/detail querysets use the same effective access model.
-
-Tests:
-
-- Inaccessible private tag UUID returns 404/403.
-- Viewer of a shared tag cannot edit unless granted editor access.
-- Editor can edit only allowed parent tags.
+Current state: gift-tag updates use `GiftTag.objects.accessible_by(request.user)`,
+inherit the base editor guard, and filter parent-tag choices to accessible valid tags.
+Covered by gift-tag authorization tests.
 
 ### 5. Stored XSS Through Grid.js HTML Formatters
 
-Severity: high
+Status: implemented; verification wording corrected.
 
-Evidence:
+Original issue: Grid.js renderers and template helpers inserted user-controlled names
+as HTML.
 
-- `grid-utils.js` returns `gridjs.html()` with interpolated `text`, `item.name`, and
-  `tag.name` in `linkFormatter`, `multiLinkFormatter`, and `badgeFormatter`.
-- Several templates use inline `gridjs.html()` with names from gifts, people, tags,
-  groups, events, and relation comments.
-- `escapejs` in templates protects JavaScript literals, but after parsing the runtime
-  string is still inserted as HTML.
-- Bandit also flagged `mark_safe()` in `gift_manager/templatetags/grid_tags.py`.
+Current state: Grid.js formatting uses centralized escaping helpers, template tags use
+safe JSON plus `format_html`, and no remaining `mark_safe` or `SafeString` usage was
+found under `gift_manager/`.
 
-Risk scenario:
+Verification note: formatter/helper coverage exists, and Bandit passes at
+medium/medium. The previous statement that browser regression tests cover the full
+formatter surface was too strong; list/detail template coverage is mostly static or
+helper-level.
 
-An attacker creates a name such as `<img src=x onerror=...>`, shares it with another
-user, and code executes in the victim's browser when Grid.js renders the list/detail
-cell.
+### 6. Inline Editing Was CSRF-Exempt
 
-Plan:
+Status: solved.
 
-- Add a central `escapeHtml()` helper for Grid.js formatters.
-- Escape dynamic URL attributes and text separately.
-- Prefer Grid.js native escaping for text-only cells.
-- Replace inline `gridjs.html()` snippets with safe shared formatters where possible.
-- Use `json_script` for data bootstrapping instead of manual JavaScript literals where
-  practical.
-- Review `mark_safe()` usages and replace with `format_html`, `json_script`, or
-  clearly safe JSON emission.
+Original issue: inline editing bypassed CSRF checks and started from unrestricted
+querysets.
 
-Tests:
+Current state: no current `csrf_exempt` usage was found under `gift_manager`; inline
+updates require JSON, use access-aware querysets, require effective editor access, and
+the frontend sends the CSRF token. Covered by inline-editing tests.
 
-- Add browser tests with hostile gift/person/tag/group/event names.
-- Assert hostile strings render literally and no script executes.
-- Include formatter-level unit tests for escaping.
+### 7. Removing A Friend Could Revoke The Friend's Own Object Permissions
 
-## P1: High Priority Security And Operations
+Status: solved.
 
-### 6. Inline Editing Is CSRF-Exempt
+Original issue: friend removal could remove the former friend's permission from their
+own object.
 
-Severity: medium/high
+Current state: cleanup considers both users' shared objects and deletes only direct
+non-owner permissions. Owner permissions and third-party shared objects are preserved.
+Covered by friend-removal tests.
 
-Evidence:
+### 8. Production Environment Handling Was Fragile
 
-- `InlineUpdateView.dispatch()` is decorated with `csrf_exempt`.
-- The frontend already sends CSRF tokens in `inline-editing.js`.
-- `get_queryset()` returns `self.model.objects.all()` before permission checking.
+Status: solved for repository controls.
 
-Plan:
+Original issue: production settings could fall back unsafely or accept blank required
+values.
 
-- Remove `csrf_exempt`.
-- Require normal Django CSRF validation and JSON content type.
-- Consider returning 404 for objects outside the editable queryset to reduce UUID
-  enumeration.
+Current state: unknown `DJANGO_ENV` fails closed, blank required env vars are rejected,
+production requires and validates `EMAIL_ENCRYPTION_KEY`, and production Compose uses
+required-variable interpolation for critical values. `manage.py check --deploy
+--fail-level WARNING` passes with valid dummy production values.
 
-Tests:
+### 9. Production Compose Had Startup And Exposure Problems
 
-- Missing/invalid CSRF token is rejected.
-- Viewer receives no update and no data changes.
-- Editor update still succeeds with valid CSRF token.
+Status: partially remediated.
 
-### 7. Removing A Friend Can Revoke The Friend's Own Object Permissions
+Original issue: production Compose exposed internal ports, had DB SSL/static/Redis
+startup mismatches, and lacked clear readiness checks.
 
-Severity: high
+Current state: the original exposure and startup blockers have been addressed in
+code/config: production does not publish `web`, `db`, or `redis` ports, Redis requires
+a password, `collectstatic` is a one-shot service, and nginx SSL directories are
+explicitly mounted. Compose config validates with required production values, but
+runtime proof is still pending.
 
-Evidence:
+Remaining work:
 
-- `RemoveFriendView` queries objects shared with `request.user`, then removes
-  `friend` from those same objects if present.
+- Run a clean-volume production Compose startup with real certificates and secrets.
+- Add or verify DB/cache-aware readiness separate from the static health endpoint.
+- Test login/session behavior during Redis outage and recovery.
 
-Risk scenario:
+### 10. Dependency And CI Security Gates Were Too Weak
 
-If Bob shared Bob's object with Alice, Alice removing Bob as a friend can remove Bob
-from his own object while Alice may retain access.
+Status: partially remediated.
 
-Plan:
+Original issue: dependencies had known vulnerabilities, CI used broad installs, and
+Bandit/pip-audit were non-blocking.
 
-- Separate the two cleanup directions:
-  - remove `request.user` from objects owned/shared by the friend;
-  - remove `friend` only from objects owned/shared by `request.user`.
-- Use through-model permission deletion rather than only many-to-many removal, so
-  permission rows stay consistent.
-- Preserve owner permissions.
+Current state: dependency ranges and `uv.lock` are upgraded, the CI workflow is
+configured to use frozen `uv` installs, and the CI security-scan steps no longer use
+`|| true`. A fresh local `pip-audit` against the frozen production export reported no
+known vulnerabilities on 2026-08-05.
 
-Tests:
+Remaining work:
 
-- Two-user ownership scenario.
-- Mutual sharing scenario.
-- Removing friendship revokes cross-access but never removes an owner from their own
-  object.
+- Decide whether dev tooling such as `django-debug-toolbar`, `uvicorn`, and
+  `werkzeug` should remain in production dependencies.
+- Pin GitHub Actions and container images by digest or document the project's chosen
+  supply-chain policy.
+- Align the CI Bandit threshold with the documented medium/medium posture, or document
+  why CI enforces high/high while local checks use medium/medium.
 
-### 8. Production Environment Handling Is Fragile
+### 11. Build And Release Workflow Could Mutate Production
 
-Severity: high
+Status: solved.
 
-Evidence:
+Original issue: build scripts ran `makemigrations`/`migrate`, and Docker suppressed
+`collectstatic` errors.
 
-- Missing or unknown `DJANGO_ENV` falls back to development settings.
-- `get_env_variable(required=True)` rejects only `None`, not blank strings.
-- Production compose interpolates unset secrets as blank values.
-- `EMAIL_ENCRYPTION_KEY` is optional in base settings but required by migration/runtime
-  encryption code.
-
-Plan:
+Current state: `build.sh` no longer runs migrations, uses build-only settings for
+static collection, Docker no longer suppresses collectstatic failures at build time,
+and production migrations are a controlled release-profile step with runbook support.
 
-- Fail closed for unknown `DJANGO_ENV`.
-- Treat blank required environment variables as missing.
-- Require `EMAIL_ENCRYPTION_KEY` in production settings and deployment manifests.
-- Add startup checks for key format and required production values.
-- Remove import-time `print()` calls or replace them with sanitized logging.
-
-Tests:
+### 12. No Backup Or Restore Mechanism Was Present
 
-- Missing `DJANGO_ENV` in production entrypoints fails explicitly.
-- Blank `DJANGO_SECRET_KEY`, DB vars, and `EMAIL_ENCRYPTION_KEY` fail startup.
-- Valid production env passes `manage.py check --deploy`.
+Status: repository controls present; deployment evidence outstanding.
 
-### 9. Production Compose Has Startup And Exposure Problems
+Original issue: no backup scripts, restore process, or recovery runbook were found.
 
-Severity: high
+Current state: encrypted PostgreSQL and media backup scripts, checksum-verified
+restore, pre-migration snapshots, monitoring/upload hooks, systemd timer templates,
+and a restore runbook are present.
 
-Evidence:
+Remaining work:
 
-- Production DB config defaults `sslmode=require`, but bundled Compose Postgres is a
-  plain internal `postgres:15-alpine` service and `DB_SSLMODE` is not passed.
-- `web` mounts `/app/staticfiles` read-only but runs `collectstatic`.
-- nginx config requires certificate files, but prod compose does not mount an SSL
-  directory.
-- `web` still publishes port 8000 on the host, bypassing nginx.
-- Redis uses `--requirepass ${REDIS_PASSWORD:-}` and Django sessions use cache-backed
-  Redis in production.
+- Restore the latest off-host backup into a clean database and record the drill.
+- Validate operator alert wiring for backup and upload failures.
 
-Plan:
+### 13. Docker Build Context Could Include Local Secrets
 
-- Set `DB_SSLMODE=disable` or `prefer` for the bundled internal DB, or require an
-  external TLS-enabled database.
-- Run `collectstatic` either at image build or in a one-shot writable job, then serve
-  the result read-only.
-- Mount certs explicitly or terminate TLS upstream and simplify nginx accordingly.
-- Replace host `ports` for `web` with internal `expose`, or bind only to loopback.
-- Require `REDIS_PASSWORD` or define a clear unauthenticated internal Redis mode.
-- Add DB/cache-aware readiness checks separate from liveness.
+Status: partially remediated.
 
-Tests:
+Original issue: `.dockerignore` did not cover enough local secret, certificate,
+report, backup, and tool-generated artifacts.
 
-- Clean-volume `docker compose -f docker-compose.yml -f docker-compose.prod.yml up`
-  succeeds.
-- `nginx -t` passes in the production container.
-- External scan cannot reach app port 8000.
-- Login/session behavior is tested during Redis outage and recovery.
+Current state: `.dockerignore` now excludes `.env*`, key/cert material, local tool
+directories, reports, coverage, and backup artifacts.
 
-### 10. Dependency And CI Security Gates Are Too Weak
+Remaining work:
 
-Severity: high
+- Add or run a built-image scan for env, key, cert, report, and backup artifacts.
+- Consider a CI guard that fails if secret-like files appear in image layers.
 
-Evidence:
+### 14. Host, Origin, CDN, And CSP Hardening Was Missing
 
-- A fresh `pip-audit` run against a frozen `uv export` written to `/tmp` found 54
-  known vulnerabilities across 7 resolved packages. The older checked-in
-  `pip-audit-report.json`, if present, was not used as audit evidence.
-- Affected resolved packages:
-  - `click 8.3.1`: 1 vulnerability; fixed by `8.3.3`.
-  - `cryptography 46.0.3`: 6 vulnerabilities; fixed versions include `46.0.5`,
-    `46.0.6`, `46.0.7`, and `48.0.1`.
-  - `django 5.2.9`: 38 vulnerabilities; fixed versions include newer `5.2.x`
-    releases.
-  - `django-allauth 65.13.1`: 2 vulnerabilities; fixed by `65.14.1`.
-  - `python-dotenv 1.2.1`: 1 vulnerability; fixed by `1.2.2`.
-  - `urllib3 2.6.2`: 4 vulnerabilities; fixed versions include `2.6.3` and
-    `2.7.0`.
-  - `werkzeug 3.1.4`: 2 vulnerabilities; fixed versions include `3.1.5` and
-    `3.1.6`.
-- CI installs broad dependency ranges with `pip install -e ".[test]"`.
-- Bandit and pip-audit are run with `|| true`, so findings do not fail CI.
+Status: partially remediated.
 
-Plan:
+Original issue: production allowed broad host/origin patterns, nginx accepted unknown
+hosts, external CDN assets lacked SRI, and no CSP was found.
 
-- Update `uv.lock` to patched dependency versions.
-- Prefer `uv sync --frozen` or equivalent lockfile-based installs in CI.
-- Make dependency and security checks blocking at least for high/critical findings.
-- Decide whether dev-only dependencies such as `django-debug-toolbar`, `werkzeug`, and
-  `uvicorn` belong in production dependencies.
-- Pin GitHub Actions and container base images according to the project's supply-chain
-  policy.
+Current state: production host/origin validation requires exact values, nginx rejects
+unknown hosts, and an enforced CSP is configured.
 
-Tests:
+Remaining work:
 
-- `uv lock` and `uv export --frozen` succeed.
-- `pip-audit` passes or only allows documented exceptions.
-- CI test environment and Docker production install resolve the same versions.
+- Self-host external assets or add SRI attributes.
+- Add CSP report-only/monitoring evidence before or alongside enforced changes.
+- Add observability for CDN integrity failures if CDN assets remain.
 
-### 11. Build And Release Workflow Can Mutate Production
+### 15. Hierarchy Cache Invalidation Missed Removed Parents
 
-Severity: high
+Status: solved.
 
-Evidence:
+Original issue: remove/clear operations could leave stale descendant cache entries.
 
-- `build.sh` runs `makemigrations` and `migrate`.
-- Vercel invokes the build script.
-- `Dockerfile` suppresses `collectstatic` errors with `|| true`.
+Current state: hierarchy change signals now clear cached ancestor/descendant keys for
+both person-group and gift-tag hierarchies after relationship changes. Covered by
+regression tests for removed parent cache behavior.
 
-Plan:
+### 16. Group Permission Inheritance Was Not Consistently Honored
 
-- Remove `makemigrations` from deployment builds.
-- Use `makemigrations --check --dry-run` in CI.
-- Move `migrate` to a controlled release step with pre-migration backup and rollback
-  instructions.
-- Stop suppressing `collectstatic` failures, or skip collectstatic at image build when
-  env is intentionally unavailable.
+Status: implemented; test coverage gap remains.
 
-Tests:
+Original issue: inheritance logic existed but list/detail/form/edit/share/delete paths
+mostly used direct `shared_with` checks.
 
-- Build from a clean checkout is reproducible and does not require database access.
-- Missing migrations fail CI.
-- Migration job can be run and observed separately from app build.
+Current state: inherited/effective group permission is now product behavior and is
+used in the main querysets and permission checks.
 
-### 12. No Backup Or Restore Mechanism Found
+Remaining test gap:
 
-Severity: high
+- Add a dedicated regression that revoking parent permissions removes inherited child
+  access.
 
-Evidence:
+### 17. Relation Recipient Integrity Was Only Form-Level
 
-- Database and media data are stored in Docker volumes.
-- Repository search found no `pg_dump`, `pg_restore`, backup schedule, restore script,
-  or recovery runbook.
+Status: partially remediated.
 
-Plan:
+Original issue: `Relation.person` and `Relation.group` were nullable, and the database
+did not enforce "exactly one recipient".
 
-- Add encrypted off-host PostgreSQL backups.
-- Add media backups if uploads become active.
-- Take pre-migration snapshots.
-- Document restore steps to a fresh environment.
-- Schedule recurring restore drills.
+Current state: the model and migration now enforce exactly one recipient, and tests
+cover valid and invalid rows.
 
-Tests:
+Remaining work:
 
-- Restore latest backup into a clean database.
-- Verify app starts and core workflows work against restored data.
-- Confirm backup monitoring alerts on failures.
+- Add a dedicated migration test or documented migration note for the irreversible
+  cleanup path in migration `0026`, which repairs old invalid data by nulling `group`
+  or deleting rows.
 
-### 13. Docker Build Context May Include Local Secrets
+### 18. Recurrent Event Forms Could Not Persist The Anchor Date
 
-Severity: high
+Status: solved; historical wording obsolete.
 
-Evidence:
+Original issue: older event forms exposed `date_type`, `absolute_date`, and
+`recurrence` without persisting `usual_date`.
 
-- Production image copies the entire build context.
-- `.gitignore` excludes more secret/local artifacts than `.dockerignore`.
-- `.dockerignore` excludes `.env` but not all likely variants such as `.env_prod`,
-  certs, PEM keys, reports, or local assistant/tooling files.
+Current state: the old field contract has been replaced by the newer schedule model:
+events use `schedule_type` plus a single `date`. Form normalization and recurring
+occurrence logic have tests.
 
-Plan:
+Remaining test gap:
 
-- Align `.dockerignore` with secret/local patterns from `.gitignore`.
-- Explicitly ignore `.env*`, `*.pem`, `*.key`, cert directories, local tool config,
-  reports, coverage, and generated docs not needed in the image.
-- Audit built images for accidental env/cert files.
+- Add an end-to-end or view-level regression that a recurring event created through
+  the form appears in upcoming occasions.
 
-Tests:
+### 19. HTMX Search Used Stale Field Names
 
-- Build image and run `find /app` checks for env, key, cert, and report artifacts.
-- CI fails if secret-like files are found in image layers.
+Status: solved.
 
-### 14. Host, Origin, CDN, And CSP Hardening
+Original issue: person and gift search serialized stale group/tag ID field names.
 
-Severity: medium/high
+Current state: HTMX search prefetches related groups/tags and serializes the current
+`group_id` and `tag_id` fields. Covered by search tests.
 
-Evidence:
+### 20. Gift Tag Usage Stats Could Leak Inaccessible Counts
 
-- Production defaults allow broad Vercel host/origin patterns.
-- nginx uses catch-all host handling.
-- External CDN assets are loaded without Subresource Integrity.
-- No Content Security Policy was found.
+Status: solved.
 
-Plan:
+Original issue: gift-tag detail counted all tagged descendant gifts without filtering
+by requester access.
 
-- Use exact production hostnames by default.
-- Reject unknown hosts at nginx.
-- Self-host frontend dependencies or add SRI attributes.
-- Add a Content Security Policy suitable for HTMX/Grid.js/bootstrap usage.
+Current state: gift-tag stats use a user-filtered gift traversal and detail counts pass
+the requester. Covered by gift-tag authorization tests.
 
-Tests:
+### 21. Delete Semantics Were Inconsistent
 
-- Unknown Host header returns a controlled rejection.
-- CSP report-only phase shows no unexpected violations, then enforce.
-- CDN integrity failures are observable.
+Status: partially remediated.
 
-## P2: Backend Logic And Data Integrity
+Original issue: delete handling mixed "delete object" with "remove my access".
 
-### 15. Hierarchy Cache Invalidation Misses Removed Parents
+Current state: viewer protection and an explicit `leave_access` intent exist, and
+tests cover viewer leave-access behavior.
 
-Severity: medium
+Remaining issue:
 
-Evidence:
+- A normal delete POST on an object with other access holders can still remove the
+  requester permission instead of deleting the object. The default delete URL and
+  modal request path do not consistently carry an explicit `leave_access` intent.
 
-- `clear_hierarchy_cache()` recomputes ancestors after relationship changes.
-- `m2m_changed` invalidation runs on `post_add`, `post_remove`, and `post_clear`.
-- On remove/clear, old ancestors may no longer be discoverable from the changed
-  instance, leaving stale descendant cache entries.
+Next action:
 
-Plan:
+- Fully separate destructive delete from leave-access in route names, modal forms,
+  buttons, and backend handling.
 
-- Capture affected parent/child IDs on `pre_remove` and `pre_clear`.
-- Clear stale ancestor/descendant keys after the relationship changes.
-- If exact invalidation is complex, temporarily clear broader hierarchy cache keys.
+### 22. HTMX Validation Errors Could Look Like Successful Saves
 
-Tests:
+Status: solved, with test cleanup recommended.
 
-- Cache descendants, remove a parent, then confirm old parent descendants update.
-- Repeat for gift tag hierarchy.
+Original issue: invalid HTMX forms returned 200 and client handlers treated 200/201 as
+success.
 
-### 16. Group Permission Inheritance Is Not Consistently Honored
+Current state: invalid HTMX form responses return 422, the panel remains open, and
+client handlers focus validation errors instead of firing success behavior.
 
-Severity: medium
+Test cleanup:
 
-Evidence:
-
-- Permission service contains inheritance-oriented logic.
-- Querysets and views generally use direct `.accessible_by()` checks against
-  `shared_with`.
-
-Plan:
-
-- Decide whether inherited group/tag permission is product contract.
-- If yes, implement effective-access query helpers and use them consistently in
-  list/detail/form/edit/share/delete paths.
-- If no, remove or rename inheritance logic to avoid misleading behavior.
-
-Tests:
-
-- Parent group shared to a user causes intended child visibility and edit behavior.
-- Revoking parent permissions removes inherited access.
-
-### 17. Relation Recipient Integrity Is Only Form-Level
-
-Severity: medium
-
-Evidence:
-
-- `Relation.person` and `Relation.group` are both nullable.
-- `Relation.clean()` checks that exactly one is set, but the database does not enforce
-  the invariant.
-
-Plan:
-
-- Add a `CheckConstraint` requiring exactly one of `person` or `group`.
-- Clean or migrate any invalid existing rows before adding the constraint.
-
-Tests:
-
-- ORM/database rejects both-null and both-set rows.
-- Valid person-recipient and group-recipient rows still save.
-
-### 18. Recurrent Event Forms Cannot Persist The Anchor Date
-
-Severity: medium
-
-Evidence:
-
-- `EventForm` exposes `date_type`, `absolute_date`, and `recurrence`, but not
-  `usual_date`.
-- Dashboard recurrence logic returns no upcoming occurrence when `usual_date` is
-  missing.
-
-Plan:
-
-- Add a recurrence anchor date field or map the existing date input cleanly to
-  `usual_date` when `date_type == recurrence`.
-- Clear incompatible date fields based on selected date type.
-- Validate recurrence plus anchor date together.
-
-Tests:
-
-- Yearly/monthly/weekly event created through the form appears in upcoming occasions.
-- Switching between absolute and recurrent date types clears stale fields.
-
-### 19. HTMX Search Uses Stale Field Names
-
-Severity: medium
-
-Evidence:
-
-- Person search serializes `group.person_group_id`.
-- Gift search serializes `tag.gift_tag_id`.
-- Current models expose `group_id` and `tag_id`.
-
-Plan:
-
-- Replace stale field names.
-- Prefetch `groups` and `tags` for the search queryset.
-
-Tests:
-
-- Searching a person with groups does not 500.
-- Searching a gift with tags does not 500.
-
-### 20. Gift Tag Usage Stats Can Leak Inaccessible Counts
-
-Severity: low/medium
-
-Evidence:
-
-- `GiftTag.get_all_gifts()` returns all gifts for a tag and descendants.
-- Gift tag detail counts `self.object.get_all_gifts()` without filtering by
-  `request.user`.
-
-Plan:
-
-- Add a user-aware count/query method.
-- Filter by `Gift.objects.accessible_by(request.user)` before counting.
-
-Tests:
-
-- Shared/public tag stats do not include private inaccessible gifts.
-
-### 21. Delete Semantics Are Inconsistent
-
-Severity: medium
-
-Evidence:
-
-- Bulk delete checks editor-level permissions.
-- Generic delete behavior allows any accessible user to enter delete handling, then
-  either removes their share or deletes when no other users exist.
-
-Plan:
-
-- Split "delete object" from "remove my access" as separate operations.
-- Require owner/editor according to product rules for destructive deletes.
-- Make list/detail button availability match backend enforcement.
-
-Tests:
-
-- Viewer can leave a shared object only through the intended endpoint.
-- Viewer cannot delete the underlying object.
-- Owner/editor delete behavior remains intact.
-
-## P3: Frontend, UX, And Accessibility
-
-### 22. HTMX Validation Errors Can Look Like Successful Saves
-
-Severity: high UX
-
-Evidence:
-
-- `form_invalid()` returns the default 200 response.
-- Client handlers treat 200/201 as success, close the offcanvas, trigger list refresh,
-  and show success feedback.
-
-Plan:
-
-- Return 400 or 422 for invalid HTMX form responses.
-- Keep the offcanvas open.
-- Focus the first error or error summary.
-- Ensure success toasts only come from explicit success events.
-
-Tests:
-
-- Server-side invalid submit keeps panel open.
-- Error is visible and focused.
-- No success toast or list refresh occurs.
+- Some older property tests still allow the old 200 validation response contract. They
+  should be tightened to the current 422 behavior.
 
 ### 23. Duplicate HTMX Success Handling
 
-Severity: medium
+Status: solved in code; runtime assertion still missing.
 
-Evidence:
+Original issue: inline `hx-on`, global HTMX handlers, swaps, and `HX-Trigger` overlapped.
 
-- Inline `hx-on`, global `htmx:afterRequest`, `htmx:afterSwap`, and server
-  `HX-Trigger` all overlap.
+Current state: managed-form success handling is centralized around `HX-Trigger` and a
+single global listener pattern.
 
-Plan:
+Remaining test gap:
 
-- Define one HTMX response contract.
-- Prefer server `HX-Trigger` events plus one global listener.
-- Remove duplicate inline success behaviors.
+- Add a focused runtime test proving one successful save produces exactly one toast and
+  one grid/list refresh.
 
-Tests:
+### 24. Status Update Error Handling Could Render Raw JSON
 
-- One successful save produces exactly one toast and one grid/list refresh.
+Status: solved.
 
-### 24. Status Update Error Handling Can Render Raw JSON
+Original issue: detail/list fetch handlers injected `response.text()` without checking
+error status, and replacement HTML missed required state attributes.
 
-Severity: medium
+Current state: status updates use a shared helper that checks `response.ok`, parses
+JSON errors, restores prior UI value on failure, and preserves `data-current-value` in
+successful replacement HTML. Covered by formatter/status tests.
 
-Evidence:
+### 25. Share Page Used Bootstrap 4 Markup In A Bootstrap 5 App
 
-- Detail-page fetch handlers call `response.text()` and inject the result without
-  checking `response.ok`.
-- The server returns JSON for error statuses.
-- The advanced relation list expects `data-current-value`, but the replacement HTML
-  omits it.
+Status: solved in code; runtime accessibility coverage still light.
 
-Plan:
+Original issue: the share page used Bootstrap 4 form classes and non-button accordion
+headers.
 
-- Add a shared status-update helper.
-- Disable the control while saving.
-- Check `response.ok`, parse JSON errors, revert the selection, and show a toast.
-- Include required data attributes in success replacement HTML.
+Current state: the page uses Bootstrap 5 `form-check`/`badge text-bg-*` classes and
+accessible collapse buttons. Static contract tests cover the markup.
 
-Tests:
+Remaining test gap:
 
-- 403/404/400 responses do not replace cells with JSON.
-- Failed update reverts UI state.
+- Add focused keyboard and mobile tests for expanding sections and activating labels.
 
-### 25. Share Page Uses Bootstrap 4 Markup In A Bootstrap 5 App
+### 26. Advanced Filter Controls Needed Stronger ARIA State
 
-Severity: medium/low
+Status: solved in code; runtime accessibility coverage still light.
 
-Evidence:
+Original issue: expanded/collapsed, multi-sort, active view, and search-label states
+were mostly visual.
 
-- `share_objects.html` uses `custom-control`, `custom-checkbox`,
-  `custom-control-input`, `custom-control-label`, and `badge badge-info`.
-- Accordion headers are clickable `div` elements rather than accessible buttons.
+Current state: templates expose ARIA state and labels, and `filter-panel.js` syncs
+expanded/pressed states. Static contract tests cover the expected attributes.
 
-Plan:
+Remaining test gap:
 
-- Replace with Bootstrap 5 `form-check`, `form-check-input`, `form-check-label`, and
-  `badge text-bg-*` classes.
-- Convert collapsible headers to buttons with keyboard support.
-- Make selected counts and cascade options visually clear.
+- Add runtime Playwright or axe checks for synchronized filter-panel state.
 
-Tests:
+### 27. Group Tree Reparenting Was Drag-Only
 
-- Keyboard can expand/collapse every section.
-- Mobile layout remains usable.
-- Labels activate the intended checkbox.
+Status: solved in code; runtime accessibility coverage still light.
 
-### 26. Advanced Filter Controls Need Stronger ARIA State
+Original issue: group reparenting depended on mouse drag-and-drop.
 
-Severity: medium
+Current state: the tree includes an explicit Move action and modal, with JavaScript
+support for valid targets and non-drag submission. Backend API tests cover the move
+operation.
 
-Evidence:
+Remaining test gap:
 
-- Expanded/collapsed, multi-sort, and active view states are mostly visual.
-- Search label association is weak.
+- Add keyboard-only and mobile/touch workflow tests for the Move/Reparent UI.
 
-Plan:
+### 28. Global Search Had Weak Combobox Semantics And Stale-Result Risk
 
-- Add `aria-expanded`, `aria-controls`, `aria-pressed`, and associated labels.
-- Keep ARIA state synchronized in `filter-panel.js`.
+Status: partially remediated.
 
-Tests:
+Original issue: the global search input relied on placeholder text, selected state was
+mostly CSS-only, and concurrent searches could overwrite newer results.
 
-- Playwright/axe checks for filter panel states.
-- Keyboard-only operation covers expand/collapse and sort toggles.
+Current state: the live modal has combobox/listbox semantics, active-descendant state,
+and stale-response guards using `AbortController` plus request IDs.
 
-### 27. Group Tree Reparenting Is Drag-Only
+Remaining issue:
 
-Severity: medium/low
+- Browser tests for global search appear stale and target old selectors, while current
+  coverage is mostly static contract testing.
 
-Evidence:
+Next action:
 
-- Person group tree reparenting depends on mouse drag-and-drop.
+- Refresh global-search Playwright tests to exercise the live modal, keyboard
+  navigation, active descendant state, and delayed-response handling.
 
-Plan:
+### 29. Invitations Needed Abuse And Recipient Controls
 
-- Add an explicit Move/Reparent action usable by keyboard and touch users.
-- Alternatively implement an accessible tree keyboard interaction model.
+Status: solved.
 
-Tests:
+Original issue: invitation sends lacked obvious rate limiting, normalization, duplicate
+suppression, and recipient binding.
 
-- Keyboard-only move workflow.
-- Mobile/touch move workflow.
+Current state: invitation sends validate and case-normalize recipient emails, reject
+self and existing-friend invitations, reuse an unexpired pending invitation for the
+same sender/recipient, and apply a per-sender cache-backed send limit. Acceptance is
+bound to the invited email: logged-in users must own the invited email, allauth email
+matches must be verified, and same-browser invitation signup stores the token until
+allauth confirms the matching email. Covered by profile/invitation tests.
 
-### 28. Global Search Has Weak Combobox Semantics And Stale-Result Risk
-
-Severity: low/medium
-
-Evidence:
-
-- Search input relies on placeholder text.
-- Selected result state is mostly CSS-only.
-- Concurrent searches are not aborted or sequenced.
-
-Plan:
-
-- Add accessible label and combobox/listbox attributes.
-- Track active descendant state.
-- Use `AbortController` or request IDs so slow responses cannot overwrite newer
-  searches.
-
-Tests:
-
-- Delayed old response does not replace current results.
-- Keyboard navigation announces selected results.
-
-## P4: Account And Invitation Hardening
-
-### 29. Invitations Need Abuse And Recipient Controls
-
-Severity: low/medium
-
-Status: complete. Invitation sends now validate and case-normalize recipient
-emails, reject self- and existing-friend invitations, reuse an existing
-unexpired pending invitation for the same sender/recipient, and apply a
-per-sender cache-backed send limit. Acceptance is bound to the invited email:
-logged-in users must own the invited email, allauth email matches must be
-verified, and invitation signup stores the token until allauth confirms the
-matching invited email.
-
-Evidence:
-
-- Sending invitations has no obvious rate limit, recipient normalization, or duplicate
-  suppression.
-- Accepting an invitation while logged in creates friendship for the current account,
-  not necessarily the invited email address.
-
-Plan:
-
-- Add per-user invitation rate limiting. Done.
-- Normalize recipient email and prevent duplicate active invitations. Done for
-  sequential sends without a schema change.
-- Bind invitation acceptance to the invited email. Done.
-- Complete post-signup/post-verification automatic acceptance. Done for the
-  same-browser invitation signup flow; users can still accept by revisiting the
-  invitation link after authentication.
-
-Tests:
-
-- Duplicate invitations are handled deterministically.
-- Rate limit blocks excessive sends.
-- Forwarded invitation links cannot be accepted by the wrong account.
-- Unverified allauth email rows do not satisfy the invited-email binding.
-- Signup with a pending invitation rejects any email other than the invited email.
-- Confirming the invited email accepts the pending invitation and creates the
-  friendship.
-
-## Cross-Cutting Remediation Plan
+## Phase Status
 
 ### Phase 1: Authorization Lockdown
 
-Goal: remove privilege escalation and unauthorized sharing.
+Status: complete for the original authorization findings.
 
-Status: complete. Implemented central permission mutation checks, hardened sharing and
-edit/delete guards, restricted gift tag updates to accessible objects, closed the
-share-management policy as owner-only, and added viewer/editor/owner regression tests.
-
-Work:
-
-- Create a central permission mutation service for share/edit/delete checks.
-- Fix `ShareObjectsView`.
-- Fix `BaseUpdateView` and subclasses.
-- Fix `PermissionUpdateMixin` and `EditPermissionMixin`.
-- Fix `GiftTagUpdateView` queryset.
-- Add regression tests for viewer/editor/owner behavior.
-
-Exit criteria:
-
-- Viewer cannot edit, delete, or share onward unless explicitly allowed.
-- Owner/editor behavior is consistent across object types.
-- Forged UUID and non-friend POST tests pass.
+Sharing, edit guards, permission mutation, gift-tag update access, inline editing, and
+friend-removal authorization have been remediated and are covered by regression tests.
+Delete/leave semantics are tracked separately under finding 21.
 
 ### Phase 2: XSS And Frontend Safety
 
-Goal: make Grid.js rendering safe by default.
+Status: implementation complete for the identified XSS fixes; verification wording
+corrected.
 
-Status: complete. Grid.js HTML helpers now escape dynamic text/attributes, templates
-route unsafe cell rendering through shared helpers, `mark_safe()`/`SafeString` usage
-was removed from Grid.js template tags, medium+ Bandit warnings are clean, and
-hostile-input Node and Playwright browser regression tests cover the formatters.
-
-Work:
-
-- Add central HTML escaping helpers.
-- Replace unsafe `gridjs.html()` text interpolation.
-- Audit and reduce `mark_safe()`.
-- Add hostile-input Playwright tests.
-
-Exit criteria:
-
-- Hostile names render as text.
-- Bandit warnings are fixed or documented with justification.
-- Browser tests prove no execution from list/detail cells.
+Grid.js escaping and template-tag safety are implemented, and Bandit passes at
+medium/medium. The prior claim that browser regression tests fully prove list/detail
+formatter safety was overstated; current verification is mostly helper-level and
+static-template oriented.
 
 ### Phase 3: Production And Supply Chain Hardening
 
-Goal: make builds, deploys, and runtime operations predictable.
+Status: partially complete.
 
-Status: complete for repository controls. Production Compose no longer exposes the
-web/db/Redis/debug ports, nginx rejects unknown hosts, builds no longer mutate the
-database, dependencies are upgraded and locked, CI uses frozen installs, CSP is
-enforced with pinned transitional CDN assets, and Bandit, pip-audit, migration drift,
-Compose config, and production settings checks are blocking. A real clean-volume
-startup remains deployment-environment evidence.
+Repository controls are much stronger: production settings fail closed, dependencies
+are upgraded and frozen, CI workflows use frozen installs and unsuppressed security
+scan steps, builds no longer run migrations, production Compose no longer exposes
+internal ports, and CSP/host checks exist.
 
-Work:
+Remaining work:
 
-- Update vulnerable dependencies and lockfile.
-- Make pip-audit/Bandit blocking by policy.
-- Switch CI to frozen lockfile installs.
-- Fix production compose DB SSL/static/nginx/Redis/web-port issues.
-- Add CSP/SRI or self-hosted assets.
-- Align `.dockerignore` with secret patterns.
-- Remove migration execution from build.
-
-Exit criteria:
-
-- Clean production compose startup works.
-- CI and Docker use consistent dependency versions.
-- Security scans fail for unacceptable findings.
-- Build does not mutate the database.
+- Prove clean production startup with real secrets/certificates.
+- Add DB/cache-aware readiness and outage/recovery tests.
+- Pin Actions and container images by digest or document the policy.
+- Self-host CDN assets or add SRI.
+- Add built-image secret scanning.
 
 ### Phase 4: Backups And Recovery
 
-Goal: prevent unrecoverable data loss.
+Status: repository controls complete; deployment evidence outstanding.
 
-Status: complete for repository controls. Encrypted PostgreSQL/media backup scripts,
-checksum-verified restore, pre-migration snapshots, monitoring/upload hooks for both
-database and media backups, systemd timer templates, and the restore runbook are
-present. The first real off-host restore drill remains deployment-environment
-evidence.
-
-Work:
-
-- Add encrypted scheduled PostgreSQL backups.
-- Add media backup if media becomes user data.
-- Document restore procedure.
-- Add pre-migration snapshot step.
-- Schedule restore drills.
-
-Exit criteria:
-
-- A fresh environment can be restored from backup.
-- Backup failures alert operators.
-- Migration runbook includes rollback/recovery steps.
+Backup, restore, pre-migration snapshot, monitoring/upload hooks, timer templates, and
+the runbook are present. The first real off-host restore drill and alert validation
+still need to be performed and recorded.
 
 ### Phase 5: Logic, Data Integrity, And UX Polish
 
-Goal: fix correctness issues and reduce user-facing confusion.
+Status: mostly complete, with partial items.
 
-Status: complete in the current working tree. Hierarchy cache invalidation now clears
-stale ancestor/descendant entries after relationship changes, group inherited
-permissions are treated as product behavior for effective access, relation recipients
-are database-constrained, recurrent events persist their anchor date, search/status
-handlers are hardened, gift tag stats are user-filtered, delete-vs-leave semantics
-are explicit, and the Phase 5 frontend accessibility contracts have static coverage.
+Backend correctness fixes are largely in place: hierarchy cache invalidation,
+effective group access, relation recipient constraints, recurrent scheduling, search
+field names, and gift-tag stats are fixed or redesigned.
 
-Work:
+Remaining work:
 
-- Fix hierarchy cache invalidation.
-- Resolve permission inheritance contract.
-- Add `Relation` recipient constraint.
-- Fix recurrent event date form handling.
-- Fix HTMX search stale fields.
-- Fix gift tag stats filtering.
-- Split delete vs leave-access operations.
-- Improve HTMX invalid form responses, status update errors, share page Bootstrap 5
-  markup, ARIA states, accessible reparenting, and global search.
+- Finish the delete-vs-leave split in default UI/request paths.
+- Add migration-safety coverage for relation-recipient cleanup.
+- Add a form-to-upcoming-occasions regression for recurring events.
+- Replace static-only frontend contracts with focused runtime/e2e tests where user
+  behavior matters.
+- Refresh stale global-search browser tests.
 
-Exit criteria:
+## Prioritized Remaining Work
 
-- Model invariants are database-backed.
-- Recurrence and search bugs have regression tests.
-- Core forms no longer show false success.
-- Key workflows are keyboard and mobile accessible.
-
-## Suggested Test Matrix
-
-Backend targeted tests:
-
-- `gift_manager/tests/test_permissions.py`
-- `gift_manager/tests/views/test_sharing.py`
-- `gift_manager/tests/test_inline_editing.py`
-- New tests for update-view viewer denial.
-- New tests for gift tag private edit denial.
-- New tests for relation recipient DB constraint.
-- New tests for recurrent event form/dashboard behavior.
-- New tests for hierarchy cache invalidation.
-
-Frontend/e2e tests:
-
-- Hostile-name XSS rendering.
-- HTMX invalid form stays open.
-- Exactly one toast/refresh per save.
-- Status update error handling.
-- Share page keyboard operation.
-- Filter panel ARIA state.
-- Group reparent keyboard/mobile workflow.
-- Global search stale-response handling.
-
-Operations checks:
-
-- `manage.py check --deploy` with real production-like env.
-- `pip-audit` against frozen requirements.
-- `bandit` with medium+ severity.
-- Clean production Compose startup.
-- `nginx -t`.
-- Backup restore drill.
-- Image secret scan.
+1. Fully separate delete-object and leave-access flows in backend routes, generated
+   URLs, modals, and tests.
+2. Refresh global-search Playwright tests for the current modal and stale-response
+   handling.
+3. Add runtime accessibility tests for share-page keyboard use, filter-panel ARIA
+   state sync, and keyboard/touch group reparenting.
+4. Add a migration-safety regression or explicit operator note for migration `0026`.
+5. Run and record a clean-volume production Compose startup with real certificates and
+   secrets.
+6. Restore the latest off-host backup into a clean database and record the drill.
+7. Add built-image secret scanning.
+8. Tighten supply-chain pinning and CDN integrity according to the project's chosen
+   policy.
 
 ## Closed Product Decisions
 
-- Bulk sharing and permission management require `OWNER`; `EDITOR` users can edit but
-  cannot share onward or mutate object permissions.
-- Person group permission inheritance is a supported product contract when
-  `inherit_permissions=True`; effective access uses the highest direct or inherited
-  permission.
-- Viewers can explicitly leave directly shared objects, but cannot delete the
-  underlying object. Inherited child-group access is removed by changing the inherited
-  parent permission.
-
-## Open Product Decisions
-
-- Will media uploads ever contain private user data?
-
-## Immediate Next Steps
-
-1. Run the deployment-environment evidence checks for Phases 3-4: clean production
-   Compose startup, `nginx -t`, image secret scan, and a fresh restore drill.
-2. Resolve the remaining product decision around private media expectations.
+- Bulk sharing and permission management require `OWNER`.
+- `EDITOR` users can edit objects but cannot share onward or mutate object
+  permissions.
+- Inherited group permission is treated as intended product behavior.
