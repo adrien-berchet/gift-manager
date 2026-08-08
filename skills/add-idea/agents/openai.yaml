@@ -1,0 +1,4 @@
+interface:
+  display_name: "Add Gift Manager Idea"
+  short_description: "Create and index a structured project idea"
+  default_prompt: "Use $add-idea to capture a new Gift Manager improvement idea."

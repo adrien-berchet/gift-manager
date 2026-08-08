@@ -20,6 +20,14 @@ Useful references:
 - Architecture notes: `docs/ai/architecture.md`.
 - Testing notes: `docs/ai/testing.md`.
 
+## Shared Agent Skills
+
+- Canonical cross-agent skills live under `skills/`.
+- When asked to add or document a future improvement idea, read and follow
+  `skills/add-idea/SKILL.md`.
+- Agent-specific discovery entries may link to a canonical skill. Keep the
+  canonical skill as the single source of truth rather than copying it.
+
 ## Working Rules
 
 - Read the relevant code before changing it. Prefer existing local patterns over new abstractions.
