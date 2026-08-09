@@ -50,6 +50,12 @@
             padding-top: 0;
         }
 
+        /* Language selector: show only the language name, no caret */
+        .language-select {
+            background-image: none;
+            padding-right: 0.75rem;
+        }
+
         /* Global Search Modal Styles */
         .search-modal .modal-content {
             background: var(--surface-card);
@@ -484,7 +490,7 @@
                     <li class="nav-item">
                         <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
                             {% csrf_token %}
-                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm" style="width: auto; min-width: 80px;">
+                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm language-select" style="width: auto; min-width: 80px;">
                                 {% get_current_language as LANGUAGE_CODE %}
                                 {% get_available_languages as LANGUAGES %}
                                 {% for lang in LANGUAGES %}
