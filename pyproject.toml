@@ -247,7 +247,6 @@ ignore-variadic-names = true
 "gift_manager/views/inline_editing.py" = ["C901", "F841", "PLC0415", "PLR0911", "PLR0912"]
 "gift_manager/views/person.py" = ["PLC0415"]
 "gift_manager/views/search.py" = ["PERF401"]
-"playwright.config.py" = ["E501"]
 
 [tool.ruff.lint.pylint]
 max-args = 10

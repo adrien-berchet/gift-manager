@@ -76,6 +76,15 @@ a:focus,
     box-shadow: none !important;
 }
 
+/* Bootstrap floating labels (z-index: 2) must stay above their input so the
+   shrunk label remains visible while the field is focused. The focus
+   indicator above still applies via box-shadow/outline; only the stacking
+   order needs to be reset here. */
+.form-floating > .form-control:focus,
+.form-floating > .form-select:focus {
+    z-index: auto;
+}
+
 /* Focus styles for buttons and form controls */
 .btn:focus,
 .form-control:focus,

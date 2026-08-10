@@ -89,7 +89,24 @@
                     </h3>
                     <p>{{ group.description }}</p>
                 </div>
-                <span class="gift-plan-group-count">{{ group.cards|length }}</span>
+                <div class="gift-plan-urgency-heading-actions">
+                    {% if group.recipient_options %}
+                    <div class="gift-plan-group-filter">
+                        <select id="gift-plan-group-{{ group.key }}-recipient-filter"
+                                class="form-select form-select-sm"
+                                data-group-recipient-filter="{{ group.key }}"
+                                data-search-placeholder="{% trans 'Search recipients' %}"
+                                data-empty-label="{% trans 'No matching recipients' %}"
+                                aria-label="{% trans 'Filter by recipient' %}">
+                            <option value="">{% trans "All recipients" %}</option>
+                            {% for option in group.recipient_options %}
+                            <option value="{{ option.key }}">{{ option.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <span class="gift-plan-group-count" data-group-count="{{ group.key }}">{{ group.cards|length }}</span>
+                </div>
             </div>
 
             <div class="gift-plan-card-grid">
@@ -97,6 +114,11 @@
                 {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
                 {% endfor %}
             </div>
+            {% if group.recipient_options %}
+            <p class="gift-plan-group-empty-filtered" data-group-empty-message="{{ group.key }}">
+                {% trans "No gift plans match this recipient." %}
+            </p>
+            {% endif %}
         </section>
         {% endfor %}
     </div>
@@ -131,6 +153,7 @@
 {% block extra_js %}
 {% if show_workspace %}
 <script src="{% static 'gift_manager/js/gift-plan-quick-actions.js' %}"></script>
+<script src="{% static 'gift_manager/js/gift-plan-recipient-filter.js' %}"></script>
 {% endif %}
 {% if show_workspace %}
 <script>
@@ -170,6 +193,9 @@
                         const currentWorkspace = document.querySelector('.gift-plan-workspace');
                         if (nextWorkspace && currentWorkspace) {
                             currentWorkspace.replaceWith(nextWorkspace);
+                            if (window.GiftPlanRecipientFilter) {
+                                window.GiftPlanRecipientFilter.restore(nextWorkspace);
+                            }
                             if (window.htmx) {
                                 window.htmx.process(nextWorkspace);
                             }

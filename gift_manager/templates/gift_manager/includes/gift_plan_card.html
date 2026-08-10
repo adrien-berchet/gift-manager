@@ -1,6 +1,7 @@
 {% load i18n %}
 
 <article class="gift-plan-card gift-plan-card--{{ card.urgency_key }}"
+         data-recipient-key="{{ card.relation.recipient_key }}"
          {% if dashboard_paginated %}data-dashboard-action-card{% endif %}>
     <div class="gift-plan-card-topline">
         <span class="gift-plan-status-badge {{ card.status_class }}">

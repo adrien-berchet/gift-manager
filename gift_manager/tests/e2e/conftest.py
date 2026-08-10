@@ -45,17 +45,21 @@ def seed_data_e2e(transactional_db):
 
 
 @pytest.fixture(scope="session")
-def browser_context_args(browser_context_args):
+def browser_context_args(browser_context_args, browser_name):
     """Configure browser context for e2e tests with modern UX requirements."""
-    return {
+    args = {
         **browser_context_args,
         "viewport": {"width": 1920, "height": 1080},
         "ignore_https_errors": True,
-        "permissions": ["clipboard-read", "clipboard-write"],
         "extra_http_headers": {
             "Accept-Language": "en-US,en;q=0.9",
         },
     }
+    if browser_name == "chromium":
+        # clipboard-read/write are Chromium-only permission names; Firefox and
+        # WebKit reject them with "Unknown permission" at context/page creation.
+        args["permissions"] = ["clipboard-read", "clipboard-write"]
+    return args
 
 
 @pytest.fixture(scope="session")
