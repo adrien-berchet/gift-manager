@@ -2788,8 +2788,8 @@ msgid "All recipients"
 msgstr "Tous les destinataires"
 
 #: gift_manager/templates/gift_manager/relation_list.html
-msgid "No gift ideas match this recipient."
-msgstr "Aucune idée cadeau ne correspond à ce destinataire."
+msgid "No gift plans match this recipient."
+msgstr "Aucun projet de cadeau ne correspond à ce destinataire."
 
 #: gift_manager/templates/gift_manager/relation_list.html
 msgid "No matching recipients"

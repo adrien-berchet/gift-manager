@@ -142,8 +142,8 @@ class TestRelationList:
         assert "Filter by recipient" in content
         assert "All recipients" in content
 
-    def test_non_ideas_group_does_not_render_recipient_filter(self, event_factory):
-        """Only the Ideas section renders the recipient filter control."""
+    def test_non_ideas_group_also_renders_recipient_filter(self, event_factory):
+        """Every urgency section, not just Ideas, offers the recipient filter."""
         planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
         self.relation.status = planned_status
         self.relation.event = event_factory(name="Anniversary")
@@ -158,7 +158,7 @@ class TestRelationList:
             {"key": self.relation.recipient_key, "name": self.relation.recipient_name}
         ]
         content = response.content.decode()
-        assert 'data-group-recipient-filter="due_soon"' not in content
+        assert 'data-group-recipient-filter="due_soon"' in content
 
     def test_workspace_cards_use_prefetched_permissions(self, gift_factory, relation_factory):
         """Workspace cards should not query permissions once per relation."""

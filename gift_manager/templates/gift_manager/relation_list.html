@@ -90,7 +90,7 @@
                     <p>{{ group.description }}</p>
                 </div>
                 <div class="gift-plan-urgency-heading-actions">
-                    {% if group.key == 'ideas' and group.recipient_options %}
+                    {% if group.recipient_options %}
                     <div class="gift-plan-group-filter">
                         <select id="gift-plan-group-{{ group.key }}-recipient-filter"
                                 class="form-select form-select-sm"
@@ -114,9 +114,9 @@
                 {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
                 {% endfor %}
             </div>
-            {% if group.key == 'ideas' and group.recipient_options %}
+            {% if group.recipient_options %}
             <p class="gift-plan-group-empty-filtered" data-group-empty-message="{{ group.key }}">
-                {% trans "No gift ideas match this recipient." %}
+                {% trans "No gift plans match this recipient." %}
             </p>
             {% endif %}
         </section>
