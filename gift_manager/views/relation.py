@@ -414,7 +414,26 @@ class RelationListView(PermissionContextMixin, BaseListView):
             card = self.get_workspace_card(relation, today, event_options)
             groups[card["urgency_key"]]["cards"].append(card)
 
+        for group in groups.values():
+            group["recipient_options"] = self.get_group_recipient_options(group["cards"])
+
         return [groups[key] for key in self.workspace_group_order if groups[key]["cards"]]
+
+    def get_group_recipient_options(self, cards):
+        """Return sorted, de-duplicated recipient filter options for a group's cards."""
+        options_by_key = {}
+        for card in cards:
+            relation = card["relation"]
+            recipient_key = relation.recipient_key
+            if recipient_key and recipient_key not in options_by_key:
+                options_by_key[recipient_key] = relation.recipient_name
+
+        return [
+            {"key": recipient_key, "name": name}
+            for recipient_key, name in sorted(
+                options_by_key.items(), key=lambda item: item[1].lower()
+            )
+        ]
 
     def get_workspace_card(self, relation, today, event_options=None):
         """Return presentation data for a single gift-plan card."""

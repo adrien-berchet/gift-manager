@@ -113,6 +113,53 @@ class TestRelationList:
         assert "gift-plan-urgency-section--due_soon" in content
         assert "gift-plan-urgency-section--ideas" not in content
 
+    def test_ideas_group_exposes_recipient_filter_options(self, person_factory, relation_factory):
+        """The Ideas section offers a recipient filter built from its own cards."""
+        self.relation.due_date = None
+        self.relation.save()
+        other_person = person_factory(first_name="Alice", family_name="Zephyr")
+        other_relation = relation_factory(
+            person=other_person,
+            status=self.relation.status,
+            due_date=None,
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        groups_by_key = {group["key"]: group for group in response.context["workspace_groups"]}
+        ideas_group = groups_by_key["ideas"]
+        assert ideas_group["recipient_options"] == [
+            {"key": other_relation.recipient_key, "name": other_relation.recipient_name},
+            {"key": self.relation.recipient_key, "name": self.relation.recipient_name},
+        ]
+
+        content = response.content.decode()
+        assert 'data-group-recipient-filter="ideas"' in content
+        assert f'data-recipient-key="{self.relation.recipient_key}"' in content
+        assert f'data-recipient-key="{other_relation.recipient_key}"' in content
+        assert "Filter by recipient" in content
+        assert "All recipients" in content
+
+    def test_non_ideas_group_does_not_render_recipient_filter(self, event_factory):
+        """Only the Ideas section renders the recipient filter control."""
+        planned_status, _ = self.relation.status.__class__.objects.get_or_create(status="Planned")
+        self.relation.status = planned_status
+        self.relation.event = event_factory(name="Anniversary")
+        self.relation.due_date = timezone.localdate() + timedelta(days=2)
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        groups_by_key = {group["key"]: group for group in response.context["workspace_groups"]}
+        assert groups_by_key["due_soon"]["recipient_options"] == [
+            {"key": self.relation.recipient_key, "name": self.relation.recipient_name}
+        ]
+        content = response.content.decode()
+        assert 'data-group-recipient-filter="due_soon"' not in content
+
     def test_workspace_cards_use_prefetched_permissions(self, gift_factory, relation_factory):
         """Workspace cards should not query permissions once per relation."""
         editor_relation = relation_factory(

@@ -2660,6 +2660,7 @@ msgstr "Supprimer mon compte"
 
 #: gift_manager/templates/gift_manager/recipient_list.html:74
 #: gift_manager/templates/gift_manager/recipient_list.html:75
+#: gift_manager/templates/gift_manager/relation_list.html
 msgid "Search recipients"
 msgstr "Chercher des destinataires"
 
@@ -2777,6 +2778,22 @@ msgstr "Échéance manquante"
 #: gift_manager/views/relation.py
 msgid "Missing event"
 msgstr "Événement manquant"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+msgid "Filter by recipient"
+msgstr "Filtrer par destinataire"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+msgid "All recipients"
+msgstr "Tous les destinataires"
+
+#: gift_manager/templates/gift_manager/relation_list.html
+msgid "No gift ideas match this recipient."
+msgstr "Aucune idée cadeau ne correspond à ce destinataire."
+
+#: gift_manager/templates/gift_manager/relation_list.html
+msgid "No matching recipients"
+msgstr "Aucun destinataire correspondant"
 
 #: gift_manager/templates/gift_manager/relation_status_detail.html:5
 #: gift_manager/templates/gift_manager/relation_status_detail.html:8

@@ -140,6 +140,114 @@
     color: var(--color-success);
 }
 
+.gift-plan-urgency-heading-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+}
+
+.gift-plan-recipient-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 9rem;
+    max-width: 14rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.gift-plan-recipient-filter-trigger-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gift-plan-recipient-filter-select--enhanced {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.gift-plan-recipient-filter-popover {
+    position: fixed;
+    z-index: 1080;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: min(18rem, calc(100vw - 1rem));
+    padding: 0.625rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-xl);
+}
+
+.gift-plan-recipient-filter-list {
+    display: grid;
+    gap: 0.15rem;
+    max-height: 14rem;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+}
+
+.gift-plan-recipient-filter-option {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 0;
+    border-radius: var(--radius-sm, 0.35rem);
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.gift-plan-recipient-filter-option:hover,
+.gift-plan-recipient-filter-option:focus-visible {
+    background: var(--surface-hover, rgba(99, 102, 241, 0.08));
+    outline: none;
+}
+
+.gift-plan-recipient-filter-option--active {
+    background: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    font-weight: 600;
+}
+
+.gift-plan-recipient-filter-empty {
+    padding: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.gift-plan-group-empty-filtered {
+    display: none;
+    margin: 0.5rem 0 0;
+    padding: 0.625rem 0.75rem;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    text-align: center;
+}
+
 .gift-plan-group-count {
     display: inline-flex;
     align-items: center;
@@ -617,6 +725,20 @@
 
     .gift-plan-summary-strip {
         justify-content: flex-start;
+    }
+
+    .gift-plan-urgency-heading {
+        flex-wrap: wrap;
+    }
+
+    .gift-plan-urgency-heading-actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+
+    .gift-plan-recipient-filter-trigger {
+        flex: 1 1 auto;
+        max-width: none;
     }
 
     .gift-plan-card-grid {
