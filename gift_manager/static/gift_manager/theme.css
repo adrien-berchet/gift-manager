@@ -200,6 +200,7 @@
     --bs-warning-rgb: 217, 119, 6;
     --bs-info-rgb: 2, 132, 199;
     --bs-body-color: #f8fafc;
+    --bs-body-color-rgb: 248, 250, 252;
     --bs-body-bg: #0f172a;
     --bs-secondary-color: #94a3b8;
     --bs-tertiary-color: #cbd5e1;
@@ -374,6 +375,16 @@
 [data-theme="dark"] .form-select option {
     background-color: #1e293b;
     color: #f8fafc;
+}
+
+/* Floating labels mask their overlap with the input border using
+   --bs-body-bg, which is the page background, not the input background.
+   Match it to .form-control's dark background so the shrunk label stays
+   readable instead of showing a mismatched dark box. */
+[data-theme="dark"] .form-floating > .form-control:focus ~ label::after,
+[data-theme="dark"] .form-floating > .form-control:not(:placeholder-shown) ~ label::after,
+[data-theme="dark"] .form-floating > .form-select ~ label::after {
+    background-color: #334155;
 }
 
 [data-theme="dark"] .form-control:focus,
