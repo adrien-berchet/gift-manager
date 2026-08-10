@@ -30,6 +30,7 @@ def _isolated_env() -> dict[str, str]:
         "VERCEL",
         "VERCEL_ENV",
         "VERCEL_URL",
+        "VERCEL_BRANCH_URL",
     ):
         env.pop(key, None)
     env["PYTHON_DOTENV_DISABLED"] = "1"
@@ -219,6 +220,81 @@ def test_vercel_preview_host_is_added_to_hosts_and_csrf_origins():
         "]; "
         "assert settings.CSRF_TRUSTED_ORIGINS == ["
         "'https://example.com', 'https://gift-manager-pr-123-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_branch_url_is_added_alongside_deployment_url():
+    """Reviewers reaching a preview via its stable branch alias should be trusted too."""
+    env = _production_env()
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-abc123-adrien.vercel.app",
+            "VERCEL_BRANCH_URL": "gift-manager-git-my-branch-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'example.com', "
+        "'gift-manager-abc123-adrien.vercel.app', "
+        "'gift-manager-git-my-branch-adrien.vercel.app'"
+        "]; "
+        "assert settings.CSRF_TRUSTED_ORIGINS == ["
+        "'https://example.com', "
+        "'https://gift-manager-abc123-adrien.vercel.app', "
+        "'https://gift-manager-git-my-branch-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_branch_url_is_optional():
+    """Previews should still work when the branch alias variable is absent."""
+    env = _production_env()
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-abc123-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'example.com', 'gift-manager-abc123-adrien.vercel.app'"
+        "]",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_vercel_branch_url_duplicate_of_deployment_url_is_not_repeated():
+    """A branch alias identical to the deployment host should not create duplicates."""
+    env = _production_env()
+    env.update(
+        {
+            "VERCEL": "1",
+            "VERCEL_ENV": "preview",
+            "VERCEL_URL": "gift-manager-abc123-adrien.vercel.app",
+            "VERCEL_BRANCH_URL": "gift-manager-abc123-adrien.vercel.app",
+        }
+    )
+
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "assert settings.ALLOWED_HOSTS == ["
+        "'example.com', 'gift-manager-abc123-adrien.vercel.app'"
         "]",
         env,
     )

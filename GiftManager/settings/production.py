@@ -71,37 +71,50 @@ def validate_csrf_origins(origins: list[str], allowed_hosts: list[str]) -> list[
     return origins
 
 
-def get_vercel_preview_host() -> str | None:
-    """Return Vercel's exact generated preview hostname when available."""
+def get_vercel_preview_hosts() -> list[str]:
+    """Return Vercel's exact generated preview hostnames when available.
+
+    Vercel serves each preview deployment on its own unique deployment host
+    (``VERCEL_URL``) as well as a stable per-branch alias host
+    (``VERCEL_BRANCH_URL``, e.g. the URL linked from PR checks). Both are
+    exact, Vercel-controlled hostnames, so trusting both keeps ALLOWED_HOSTS
+    wildcard-free while covering how reviewers actually reach a preview.
+    """
     if os.environ.get("VERCEL") != "1":
-        return None
+        return []
     if os.environ.get("VERCEL_ENV", "").strip().lower() != "preview":
-        return None
-    host = os.environ.get("VERCEL_URL", "").strip()
-    if not host:
+        return []
+    deployment_host = os.environ.get("VERCEL_URL", "").strip()
+    if not deployment_host:
         msg = (
             "VERCEL_URL must be set for Vercel preview deployments. "
             "Enable Vercel system environment variables for this project."
         )
         raise ImproperlyConfigured(msg)
-    return host
+    branch_host = os.environ.get("VERCEL_BRANCH_URL", "").strip()
+    hosts = [deployment_host]
+    if branch_host and branch_host not in hosts:
+        hosts.append(branch_host)
+    return hosts
 
 
-def include_vercel_preview_host(hosts: list[str], preview_host: str | None) -> list[str]:
-    """Add Vercel's exact preview host without allowing wildcard preview hosts."""
-    if not preview_host or preview_host in hosts:
-        return hosts
-    return [*hosts, preview_host]
+def include_vercel_preview_hosts(hosts: list[str], preview_hosts: list[str]) -> list[str]:
+    """Add Vercel's exact preview hosts without allowing wildcard preview hosts."""
+    result = list(hosts)
+    for preview_host in preview_hosts:
+        if preview_host not in result:
+            result.append(preview_host)
+    return result
 
 
-def include_vercel_preview_origin(origins: list[str], preview_host: str | None) -> list[str]:
-    """Add Vercel's exact preview HTTPS origin for CSRF validation."""
-    if not preview_host:
-        return origins
-    preview_origin = f"https://{preview_host}"
-    if preview_origin in origins:
-        return origins
-    return [*origins, preview_origin]
+def include_vercel_preview_origins(origins: list[str], preview_hosts: list[str]) -> list[str]:
+    """Add Vercel's exact preview HTTPS origins for CSRF validation."""
+    result = list(origins)
+    for preview_host in preview_hosts:
+        preview_origin = f"https://{preview_host}"
+        if preview_origin not in result:
+            result.append(preview_origin)
+    return result
 
 
 # SECURITY: Secret key must be set in production
@@ -111,12 +124,12 @@ SECRET_KEY = get_env_variable("DJANGO_SECRET_KEY", required=True)
 DEBUG = False
 
 # Allowed hosts - configure based on your domain
-VERCEL_PREVIEW_HOST = get_vercel_preview_host()
+VERCEL_PREVIEW_HOSTS = get_vercel_preview_hosts()
 ALLOWED_HOSTS_ENV_CONFIGURED = has_env_value("ALLOWED_HOSTS")
 ALLOWED_HOSTS = validate_allowed_hosts(
-    include_vercel_preview_host(
-        get_csv_env("ALLOWED_HOSTS", required=VERCEL_PREVIEW_HOST is None),
-        VERCEL_PREVIEW_HOST,
+    include_vercel_preview_hosts(
+        get_csv_env("ALLOWED_HOSTS", required=not VERCEL_PREVIEW_HOSTS),
+        VERCEL_PREVIEW_HOSTS,
     )
 )
 
@@ -169,12 +182,12 @@ SESSION_COOKIE_AGE = 1209600  # 2 weeks
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = "Lax"
-CSRF_ENV_REQUIRED = VERCEL_PREVIEW_HOST is None
+CSRF_ENV_REQUIRED = not VERCEL_PREVIEW_HOSTS
 CSRF_ENV_USABLE = CSRF_ENV_REQUIRED or ALLOWED_HOSTS_ENV_CONFIGURED
 CSRF_TRUSTED_ORIGINS = validate_csrf_origins(
-    include_vercel_preview_origin(
+    include_vercel_preview_origins(
         get_csv_env("CSRF_TRUSTED_ORIGINS", required=CSRF_ENV_REQUIRED) if CSRF_ENV_USABLE else [],
-        VERCEL_PREVIEW_HOST,
+        VERCEL_PREVIEW_HOSTS,
     ),
     ALLOWED_HOSTS,
 )
