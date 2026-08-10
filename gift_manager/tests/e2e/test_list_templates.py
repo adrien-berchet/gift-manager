@@ -951,6 +951,34 @@ class TestRelationListGridLoading:
 
         assert _grid_row_count(page, "relation-grid") == 4
 
+    def test_workspace_recipient_filter_hides_enhanced_native_select(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Only the custom recipient filter remains keyboard and accessibility exposed."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/relations/", wait_until="domcontentloaded")
+
+        native_select = page.locator("[data-group-recipient-filter]").first
+        trigger = native_select.locator("xpath=following-sibling::button[1]")
+
+        expect(native_select).to_be_attached()
+        expect(native_select).to_be_hidden()
+        assert native_select.get_attribute("hidden") is not None
+        assert (
+            native_select.evaluate(
+                """select => {
+                select.focus();
+                return document.activeElement === select;
+            }"""
+            )
+            is False
+        )
+
+        expect(trigger).to_be_visible()
+        expect(trigger).to_have_attribute("aria-label", "Filter by recipient")
+        trigger.focus()
+        expect(trigger).to_be_focused()
+
     def test_workspace_refreshes_after_list_update_for_new_no_date_plan(
         self, page: Page, live_server, seed_data_e2e
     ):

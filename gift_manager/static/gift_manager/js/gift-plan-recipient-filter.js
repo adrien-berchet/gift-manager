@@ -193,10 +193,10 @@
     function enhanceSelect(select) {
         if (select.dataset.recipientFilterEnhanced === "true") return;
         select.dataset.recipientFilterEnhanced = "true";
-        select.classList.add("gift-plan-recipient-filter-select--enhanced");
 
         const button = buildTrigger(select);
         select.insertAdjacentElement("afterend", button);
+        select.hidden = true;
     }
 
     function enhance(root) {
