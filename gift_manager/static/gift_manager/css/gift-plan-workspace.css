@@ -154,6 +154,8 @@
     gap: 0.4rem;
     min-width: 9rem;
     max-width: 14rem;
+    padding-right: 0.75rem;
+    background-image: none;
     text-align: left;
     cursor: pointer;
 }
