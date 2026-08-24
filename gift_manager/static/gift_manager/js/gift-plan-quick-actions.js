@@ -4,6 +4,7 @@
     let activeButton = null;
     let activeInput = null;
     let activePicker = null;
+    let activePickerScrollPosition = null;
     let activePlanPanel = null;
     let activePlanPicker = null;
     let isSubmitting = false;
@@ -79,8 +80,8 @@
         activeButton.setAttribute("aria-expanded", "false");
     }
 
-    function rememberScrollPosition() {
-        pendingScrollPosition = {
+    function rememberScrollPosition(scrollPosition) {
+        pendingScrollPosition = scrollPosition || {
             left: window.scrollX,
             top: window.scrollY,
         };
@@ -90,23 +91,25 @@
         }, 3000);
     }
 
+    function scrollToPosition(scrollPosition) {
+        window.scrollTo({
+            left: scrollPosition.left,
+            top: scrollPosition.top,
+            behavior: "instant",
+        });
+    }
+
     function restorePendingScrollPosition() {
         if (!pendingScrollPosition) return;
 
         const scrollPosition = pendingScrollPosition;
+        // Refresh listeners should observe the restored position immediately.
+        scrollToPosition(scrollPosition);
         window.requestAnimationFrame(function () {
-            window.scrollTo(scrollPosition.left, scrollPosition.top);
+            scrollToPosition(scrollPosition);
             window.requestAnimationFrame(function () {
-                window.scrollTo(scrollPosition.left, scrollPosition.top);
+                scrollToPosition(scrollPosition);
             });
-        });
-    }
-
-    function schedulePendingScrollRestore() {
-        if (!pendingScrollPosition) return;
-
-        [0, 80, 250, 600].forEach(function (delay) {
-            window.setTimeout(restorePendingScrollPosition, delay);
         });
     }
 
@@ -144,6 +147,7 @@
         activeButton = null;
         activeInput = null;
         activePicker = null;
+        activePickerScrollPosition = null;
         isSubmitting = false;
     }
 
@@ -201,7 +205,8 @@
 
         isSubmitting = true;
         button.disabled = true;
-        rememberScrollPosition();
+        rememberScrollPosition(activePickerScrollPosition);
+        restorePendingScrollPosition();
 
         fetch(url, {
             method: "POST",
@@ -220,7 +225,6 @@
                 blurActiveElement();
                 closePicker();
                 dispatchHxTriggerEvents(response);
-                schedulePendingScrollRestore();
             })
             .catch((error) => {
                 console.error("Could not update gift plan due date:", error);
@@ -269,7 +273,6 @@
                 blurActiveElement();
                 closePlanningPanel();
                 dispatchHxTriggerEvents(response);
-                schedulePendingScrollRestore();
             })
             .catch((error) => {
                 console.error("Could not plan gift:", error);
@@ -336,6 +339,10 @@
         closePicker();
 
         activeButton = button;
+        activePickerScrollPosition = {
+            left: window.scrollX,
+            top: window.scrollY,
+        };
         activeInput = document.createElement("input");
         activeInput.type = "text";
         activeInput.className = "gift-plan-date-picker-source";

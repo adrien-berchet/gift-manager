@@ -357,8 +357,25 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert '"X-CSRFToken": getCsrfToken(form)' in script
     assert "dispatchHxTriggerEvents(response)" in script
     assert script.index("closePicker();\n                dispatchHxTriggerEvents(response)") > -1
+    assert "activePickerScrollPosition" in script
+    assert "rememberScrollPosition(activePickerScrollPosition)" in script
     assert "rememberScrollPosition()" in script
     assert "finishPendingScrollRestore()" in script
+    assert 'behavior: "instant"' in script
+    restore_start = script.index("function restorePendingScrollPosition()")
+    restore_end = script.index("function finishPendingScrollRestore()", restore_start)
+    restore_body = script[restore_start:restore_end]
+    assert restore_body.index("scrollToPosition(scrollPosition)") < restore_body.index(
+        "window.requestAnimationFrame"
+    )
+    submit_start = script.index("function submitDate(")
+    submit_end = script.index("function buildPlanningRequestBody(", submit_start)
+    submit_body = script[submit_start:submit_end]
+    assert (
+        submit_body.index("rememberScrollPosition(activePickerScrollPosition)")
+        < (submit_body.index("restorePendingScrollPosition()"))
+        < submit_body.index("fetch(url")
+    )
     assert 'document.addEventListener("list:update", closeQuickActionControls)' in script
     assert 'document.body.addEventListener("htmx:afterSwap"' in script
     assert "createPlanningPanel" in script
