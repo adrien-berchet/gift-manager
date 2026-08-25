@@ -199,12 +199,19 @@ def test_comment_columns_wrap_in_list_views():
 
 def test_group_detail_tables_reserve_action_columns_and_refresh_contextual_creates():
     content = read(TEMPLATE_ROOT / "person_group_detail.html")
+    controller = read(STATIC_ROOT / "js/person-group-detail.js")
 
     assert "href=\"{% url 'gift_manager:person_create' %}?group={{ group.group_id }}\"" in content
     assert 'data-action="create"' in content
     assert "data-group-detail-create" in content
-    assert "document.addEventListener('list:update'" in content
-    assert "window.location.reload();" in content
+    assert "data-person-group-detail" in content
+    assert 'data-group-detail-edit-panel-id="editPanel"' in content
+    assert "data-group-detail-tabs" in content
+    assert content.count("data-group-detail-grid") == 4
+    assert "{% static 'gift_manager/js/person-group-detail.js' %}" in content
+    assert "function applyGroupDetailColumnWidths" not in content
+    assert 'document.addEventListener("list:update"' in controller
+    assert "window.location.reload();" in controller
 
     assert "@media (min-width: 577px) and (max-width: 1200px)" in content
     assert "#main-content" in content
@@ -216,22 +223,23 @@ def test_group_detail_tables_reserve_action_columns_and_refresh_contextual_creat
     assert "table-layout: auto" not in content
     assert "--group-detail-actions-width" in content
     assert "table-layout: fixed" in content
-    assert "applyGroupDetailColumnWidths" in content
-    assert "document.createElement('colgroup')" in content
-    assert "document.createElement('col')" in content
-    assert "header.style.removeProperty('width')" in content
-    assert "column.style.width = `${actionWidth}px`" in content
-    assert "const adaptiveColumnWidth" in content
-    assert "column.style.width = adaptiveColumnWidth" in content
-    assert "const minimumAdaptiveColumnWidth = 6 * rootFontSize" in content
-    assert "--group-detail-min-column-width" in content
+    assert "applyGroupDetailColumnWidths" in controller
+    assert 'document.createElement("colgroup")' in controller
+    assert 'document.createElement("col")' in controller
+    assert 'header.style.removeProperty("width")' in controller
+    assert "column.style.width = `${actionWidth}px`" in controller
+    assert "const adaptiveColumnWidth" in controller
+    assert "column.style.width = adaptiveColumnWidth" in controller
+    assert "const minimumAdaptiveColumnWidth = 6 * rootFontSize" in controller
+    assert "--group-detail-min-column-width" in controller
     assert "--group-detail-min-table-width" in content
+    assert "--group-detail-min-table-width" in controller
     assert "min-width: max(" in content
-    assert "measureGroupDetailActionsWidth" in content
-    assert "MutationObserver" in content
-    assert "shown.bs.tab" in content
-    assert "grid:refreshed" in content
-    assert "document.fonts.ready" in content
+    assert "measureGroupDetailActionsWidth" in controller
+    assert "MutationObserver" in controller
+    assert "shown.bs.tab" in controller
+    assert "grid:refreshed" in controller
+    assert "document.fonts.ready" in controller
     assert "max-width: 2.5rem" in content
     assert "max-height: 2.5rem" in content
     assert "padding: 0" in content

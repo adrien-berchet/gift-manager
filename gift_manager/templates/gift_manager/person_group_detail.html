@@ -173,7 +173,7 @@
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <!-- Tabs nav -->
-<ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
+<ul class="nav nav-tabs mb-3" id="groupTab" role="tablist" data-group-detail-tabs>
   <li class="nav-item" role="presentation">
     <button
       class="nav-link active"
@@ -233,7 +233,12 @@
 </ul>
 
 <!-- Tabs content -->
-<div class="tab-content" id="groupTabContent">
+<div
+  class="tab-content"
+  id="groupTabContent"
+  data-person-group-detail
+  data-group-detail-edit-panel-id="editPanel"
+>
   <div
     class="tab-pane fade show active"
     id="persons-list"
@@ -257,7 +262,7 @@
     </a>
     {% endif %}
     {% if members %}
-    <div id="persons-grid" class="mt-3"></div>
+    <div id="persons-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">{% trans "No person in this group" %}</p>
     {% endif %}
@@ -273,7 +278,7 @@
       {% trans "This view shows all members from this group and all nested child groups." %}
     </p>
     {% if nested_members %}
-    <div id="nested-members-grid" class="mt-3"></div>
+    <div id="nested-members-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">
       {% trans "No members in this group or nested groups" %}
@@ -291,7 +296,7 @@
       {% trans "This view shows gift plans for this group and for all members of this group (including nested groups)." %}
     </p>
     {% if nested_gifts %}
-    <div id="nested-gifts-grid" class="mt-3"></div>
+    <div id="nested-gifts-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">
       {% trans "No gift plans found for this group or its members" %}
@@ -317,7 +322,7 @@
       {% trans "Gift plans in this tab target the group directly, not each member individually." %}
     </p>
     {% if relations %}
-    <div id="gifts-grid" class="mt-3"></div>
+    <div id="gifts-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">{% trans "No gift plans for this group" %}</p>
     {% endif %}
@@ -845,151 +850,7 @@
   });
   {% endif %}
 
-  // Keep Actions fixed to the widest rendered button group while the other
-  // columns share the remaining table width.
-  const groupDetailGridIds = [
-      'persons-grid',
-      'nested-members-grid',
-      'gifts-grid',
-      'nested-gifts-grid'
-  ];
-  const pendingActionWidthFrames = new Map();
-
-  function applyGroupDetailColumnWidths(gridContainer, actionColumnIndex, actionWidth) {
-      const table = gridContainer.querySelector('.gridjs-table');
-      const headerCells = table?.querySelectorAll('thead tr:first-child th');
-      if (!table || !headerCells?.length || actionColumnIndex < 0) return;
-
-      let columns = table.querySelector(':scope > colgroup[data-group-detail-columns]');
-      if (!columns || columns.children.length !== headerCells.length) {
-          columns?.remove();
-          columns = document.createElement('colgroup');
-          columns.dataset.groupDetailColumns = '';
-          headerCells.forEach(() => columns.append(document.createElement('col')));
-          table.insertBefore(columns, table.firstChild);
-      }
-
-      headerCells.forEach((header) => header.style.removeProperty('width'));
-      const adaptiveColumnCount = headerCells.length - 1;
-      const rootFontSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-      const minimumAdaptiveColumnWidth = 6 * rootFontSize;
-      const minimumTableWidth = actionWidth
-          + adaptiveColumnCount * minimumAdaptiveColumnWidth;
-      gridContainer.style.setProperty(
-          '--group-detail-min-column-width',
-          `${minimumAdaptiveColumnWidth}px`
-      );
-      gridContainer.style.setProperty(
-          '--group-detail-min-table-width',
-          `${Math.ceil(minimumTableWidth)}px`
-      );
-      const adaptiveColumnWidth = adaptiveColumnCount > 0
-          ? `calc(${100 / adaptiveColumnCount}% - ${actionWidth / adaptiveColumnCount}px)`
-          : '';
-      Array.from(columns.children).forEach((column, index) => {
-          if (index === actionColumnIndex) {
-              column.style.width = `${actionWidth}px`;
-          } else {
-              column.style.width = adaptiveColumnWidth;
-          }
-      });
-  }
-
-  function measureGroupDetailActionsWidth(gridId) {
-      const gridContainer = document.getElementById(gridId);
-      if (!gridContainer) return;
-
-      let measuredWidth = 0;
-      let actionColumnIndex = -1;
-      gridContainer.querySelectorAll('.quick-actions-container').forEach((buttons) => {
-          const cell = buttons.closest('.gridjs-td');
-          if (!cell) return;
-
-          const bounds = buttons.getBoundingClientRect();
-          if (bounds.width <= 0) return;
-
-          actionColumnIndex = cell.cellIndex;
-          const cellStyle = getComputedStyle(cell);
-          const horizontalPadding =
-              parseFloat(cellStyle.paddingLeft) + parseFloat(cellStyle.paddingRight);
-          measuredWidth = Math.max(
-              measuredWidth,
-              Math.max(buttons.scrollWidth, bounds.width) + horizontalPadding
-          );
-      });
-
-      if (measuredWidth > 0 && actionColumnIndex >= 0) {
-          const actionWidth = Math.ceil(measuredWidth);
-          gridContainer.style.setProperty(
-              '--group-detail-actions-width',
-              `${actionWidth}px`
-          );
-          applyGroupDetailColumnWidths(gridContainer, actionColumnIndex, actionWidth);
-      }
-  }
-
-  function scheduleGroupDetailActionsWidth(gridId) {
-      const pendingFrame = pendingActionWidthFrames.get(gridId);
-      if (pendingFrame) cancelAnimationFrame(pendingFrame);
-
-      pendingActionWidthFrames.set(
-          gridId,
-          requestAnimationFrame(() => {
-              pendingActionWidthFrames.delete(gridId);
-              measureGroupDetailActionsWidth(gridId);
-          })
-      );
-  }
-
-  function scheduleAllGroupDetailActionsWidths() {
-      groupDetailGridIds.forEach(scheduleGroupDetailActionsWidth);
-  }
-
-  groupDetailGridIds.forEach((gridId) => {
-      const gridContainer = document.getElementById(gridId);
-      if (!gridContainer) return;
-
-      new MutationObserver(() => scheduleGroupDetailActionsWidth(gridId)).observe(
-          gridContainer,
-          { childList: true, subtree: true }
-      );
-  });
-
-  document.querySelectorAll('#groupTab [data-bs-toggle="tab"]').forEach((tab) => {
-      tab.addEventListener('shown.bs.tab', scheduleAllGroupDetailActionsWidths);
-  });
-  document.addEventListener('grid:refreshed', (event) => {
-      if (groupDetailGridIds.includes(event.detail?.containerId)) {
-          scheduleGroupDetailActionsWidth(event.detail.containerId);
-      }
-  });
-  window.addEventListener('resize', scheduleAllGroupDetailActionsWidths);
-  if (document.fonts?.ready) {
-      document.fonts.ready.then(scheduleAllGroupDetailActionsWidths);
-  }
-  scheduleAllGroupDetailActionsWidths();
-
-  // Contextual creates should refresh this server-rendered detail page after a
-  // successful panel submission so member counts and gift-plan grids stay current.
-  let refreshAfterGroupDetailCreate = false;
-  document.querySelectorAll('[data-group-detail-create]').forEach((button) => {
-      button.addEventListener('click', () => {
-          refreshAfterGroupDetailCreate = true;
-      });
-  });
-
-  const editPanel = document.getElementById('editPanel');
-  if (editPanel) {
-      editPanel.addEventListener('hidden.bs.offcanvas', () => {
-          refreshAfterGroupDetailCreate = false;
-      });
-  }
-
-  document.addEventListener('list:update', () => {
-      if (refreshAfterGroupDetailCreate) {
-          window.location.reload();
-      }
-  });
   }) ();
 </script>
+<script src="{% static 'gift_manager/js/person-group-detail.js' %}"></script>
 {% endblock %}
