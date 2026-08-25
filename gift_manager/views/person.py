@@ -1,6 +1,7 @@
 """Person-related views."""
 
 from django.contrib.postgres.aggregates import JSONBAgg
+from django.core.exceptions import ValidationError
 from django.db.models import F
 from django.db.models import Func
 from django.db.models import Q
@@ -160,6 +161,20 @@ class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreate
     form_css_class = "person-form"
     form_type = "person-edit"
     close_offcanvas = True
+
+    def get_initial(self):
+        initial = super().get_initial()
+        group_id = self.request.GET.get("group")
+        if not group_id:
+            return initial
+
+        try:
+            group = PersonGroup.objects.accessible_by(self.request.user).get(group_id=group_id)
+        except (PersonGroup.DoesNotExist, ValidationError, ValueError):
+            return initial
+
+        initial["groups"] = [group.pk]
+        return initial
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
