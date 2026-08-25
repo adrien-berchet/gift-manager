@@ -108,3 +108,47 @@ class TestPersonGroupDetail:
 
         assert self.relation.gift.name in content
         assert "No gift plans for this group" not in content
+
+    def test_direct_members_deduplicates_owned_person_shared_with_friend(
+        self, person_factory, user_factory
+    ):
+        """A member accessible through multiple permission rows is listed once."""
+        friend = user_factory(username="friend")
+        person = person_factory(user_link=self.user, groups=[self.group])
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(friend, person, permission_level=PermissionLevel.VIEWER)
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        assert list(response.context["members"]) == [person]
+        assert response.context["direct_member_count"] == 1
+
+    def test_contextual_create_links_use_the_edit_panel(self):
+        """Group-scoped creation links must be handled by the shared offcanvas panel."""
+        create_or_update_permission(self.user, self.group, permission_level=PermissionLevel.EDITOR)
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        person_create_url = reverse("gift_manager:person_create")
+        relation_create_url = reverse(
+            "gift_manager:person_group_relation_create",
+            kwargs={"pk": self.group.group_id},
+        )
+
+        assert f'href="{person_create_url}?group={self.group.group_id}"' in content
+        assert "Create new person" in content
+        assert f'href="{relation_create_url}"' in content
+        assert "New Gift Plan for this group" in content
+
+        person_link_start = content.index(f'href="{person_create_url}?group={self.group.group_id}"')
+        person_link_end = content.index("</a>", person_link_start)
+        assert 'data-action="create"' in content[person_link_start:person_link_end]
+
+        relation_link_start = content.index(f'href="{relation_create_url}"')
+        relation_link_end = content.index("</a>", relation_link_start)
+        assert 'data-action="create"' in content[relation_link_start:relation_link_end]

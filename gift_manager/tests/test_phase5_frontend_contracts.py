@@ -197,6 +197,73 @@ def test_comment_columns_wrap_in_list_views():
     assert "overflow-wrap: anywhere;" in fallback_styles
 
 
+def test_group_detail_tables_reserve_action_columns_and_refresh_contextual_creates():
+    content = read(TEMPLATE_ROOT / "person_group_detail.html")
+    controller = read(STATIC_ROOT / "js/person-group-detail.js")
+
+    assert "href=\"{% url 'gift_manager:person_create' %}?group={{ group.group_id }}\"" in content
+    assert 'data-action="create"' in content
+    assert "data-group-detail-create" in content
+    assert "data-person-group-detail" in content
+    assert 'data-group-detail-edit-panel-id="editPanel"' in content
+    assert "data-group-detail-tabs" in content
+    assert content.count("data-group-detail-grid") == 4
+    assert "{% static 'gift_manager/js/person-group-detail.js' %}" in content
+    assert "function applyGroupDetailColumnWidths" not in content
+    assert 'document.addEventListener("list:update"' in controller
+    assert "window.location.reload();" in controller
+
+    assert "@media (min-width: 577px) and (max-width: 1200px)" in content
+    assert "#main-content" in content
+    assert "max-width: none" in content
+    assert "clamp(var(--space-3, 0.75rem), 2vw, var(--space-6, 1.5rem))" in content
+
+    assert content.count("id: 'actions'") == 4
+    assert "width: 'var(--group-detail-actions-width, 1%)'" not in content
+    assert "table-layout: auto" not in content
+    assert "--group-detail-actions-width" in content
+    assert "table-layout: fixed" in content
+    assert "applyGroupDetailColumnWidths" in controller
+    assert 'document.createElement("colgroup")' in controller
+    assert 'document.createElement("col")' in controller
+    assert 'header.style.removeProperty("width")' in controller
+    assert "column.style.width = `${actionWidth}px`" in controller
+    assert "const adaptiveColumnWidth" in controller
+    assert "column.style.width = adaptiveColumnWidth" in controller
+    assert "const minimumAdaptiveColumnWidth = 6 * rootFontSize" in controller
+    assert "--group-detail-min-column-width" in controller
+    assert "--group-detail-min-table-width" in content
+    assert "--group-detail-min-table-width" in controller
+    assert "min-width: max(" in content
+    assert "measureGroupDetailActionsWidth" in controller
+    assert "MutationObserver" in controller
+    assert "shown.bs.tab" in controller
+    assert "grid:refreshed" in controller
+    assert "document.fonts.ready" in controller
+    assert "max-width: 2.5rem" in content
+    assert "max-height: 2.5rem" in content
+    assert "padding: 0" in content
+    assert "font-size: var(--text-sm)" in content
+    assert "@media (max-width: 991.98px)" in content
+    assert "@media (max-width: 767.98px)" in content
+    assert "@media (max-width: 576px)" in content
+    assert "#shares-grid .gridjs-td[data-label]::before" in content
+    assert "#groupTabContent .gridjs-td[data-label]::before" in content
+    assert "display: none" in content
+    assert "content: none" in content
+    assert "var(--group-detail-actions-width, 14rem)" in content
+    assert "position: sticky" not in content
+    assert "padding-right: var(--space-1, 0.25rem)" in content
+    assert "padding-left: var(--space-1, 0.25rem)" in content
+    assert "margin-right: auto" in content
+    assert "margin-left: auto" in content
+    assert "opacity: 1" in content
+    assert "width: '18%'" not in content
+    assert "width: '17%'" not in content
+    assert "width: '150px'" not in content
+    assert "width: '180px'" not in content
+
+
 def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
     content = read(TEMPLATE_ROOT / "share_objects.html")
 

@@ -3,6 +3,115 @@
 {% load i18n %}
 
 {% block title %}Gift Manager - {% trans "Group details" %}{% endblock %}
+{% block extra_head %}
+<style>
+  @media (min-width: 577px) and (max-width: 1200px) {
+    #main-content {
+      max-width: none;
+      padding-right: clamp(var(--space-3, 0.75rem), 2vw, var(--space-6, 1.5rem));
+      padding-left: clamp(var(--space-3, 0.75rem), 2vw, var(--space-6, 1.5rem));
+    }
+  }
+
+  /* Let non-Action columns share the space left by the fixed Actions column. */
+  #gifts-grid [data-column-id="comment"],
+  #nested-gifts-grid [data-column-id="comment"] {
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  #persons-grid .gridjs-table,
+  #nested-members-grid .gridjs-table,
+  #gifts-grid .gridjs-table,
+  #nested-gifts-grid .gridjs-table {
+    width: 100%;
+    min-width: var(--group-detail-min-table-width, 100%);
+    table-layout: fixed;
+  }
+
+  #persons-grid [data-column-id="actions"],
+  #nested-members-grid [data-column-id="actions"],
+  #gifts-grid [data-column-id="actions"],
+  #nested-gifts-grid [data-column-id="actions"] {
+    white-space: nowrap;
+    box-sizing: border-box;
+  }
+
+  #groupTabContent .gridjs-th:not([data-column-id="actions"]),
+  #groupTabContent .gridjs-td:not([data-column-id="actions"]) {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  #groupTabContent .gridjs-td:not([data-column-id="actions"]) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+
+  #groupTabContent .gridjs-td:not([data-column-id="actions"]) a {
+    overflow-wrap: anywhere;
+  }
+
+  #groupTabContent .gridjs-th[data-column-id="actions"],
+  #groupTabContent .gridjs-td[data-column-id="actions"] {
+    padding-right: var(--space-1, 0.25rem);
+    padding-left: var(--space-1, 0.25rem);
+  }
+
+  #groupTabContent .gridjs-td[data-column-id="actions"] .quick-actions-container {
+    margin-right: auto;
+    margin-left: auto;
+    opacity: 1;
+  }
+
+  #groupTabContent .gridjs-td[data-column-id="actions"] .quick-action-btn {
+    transition-property: background-color, border-color, color, box-shadow, transform, opacity;
+  }
+
+  @media (max-width: 991.98px) {
+    #groupTabContent .gridjs-td[data-column-id="actions"] .quick-action-btn {
+      width: 2.5rem;
+      min-width: 2.5rem;
+      max-width: 2.5rem;
+      height: 2.5rem;
+      min-height: 2.5rem;
+      max-height: 2.5rem;
+      padding: 0;
+      font-size: var(--text-sm);
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    #persons-grid .gridjs-table,
+    #nested-members-grid .gridjs-table,
+    #gifts-grid .gridjs-table,
+    #nested-gifts-grid .gridjs-table {
+      width: calc(
+        100% + var(--group-detail-actions-width, 14rem) + var(--space-8, 2rem)
+      );
+      min-width: max(
+        calc(
+          100% + var(--group-detail-actions-width, 14rem) + var(--space-8, 2rem)
+        ),
+        var(--group-detail-min-table-width, 0px)
+      );
+      max-width: none;
+    }
+  }
+
+  @media (max-width: 576px) {
+    #shares-grid .gridjs-td[data-label]::before,
+    #groupTabContent .gridjs-td[data-label]::before {
+      display: none;
+      content: none;
+    }
+  }
+</style>
+{% endblock %}
 {% block content %}
 {% if request.META.HTTP_HX_REQUEST %}
     {% include "gift_manager/includes/person_group_detail_partial.html" %}
@@ -64,7 +173,7 @@
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
 <!-- Tabs nav -->
-<ul class="nav nav-tabs mb-3" id="groupTab" role="tablist">
+<ul class="nav nav-tabs mb-3" id="groupTab" role="tablist" data-group-detail-tabs>
   <li class="nav-item" role="presentation">
     <button
       class="nav-link active"
@@ -124,7 +233,12 @@
 </ul>
 
 <!-- Tabs content -->
-<div class="tab-content" id="groupTabContent">
+<div
+  class="tab-content"
+  id="groupTabContent"
+  data-person-group-detail
+  data-group-detail-edit-panel-id="editPanel"
+>
   <div
     class="tab-pane fade show active"
     id="persons-list"
@@ -137,8 +251,18 @@
     >
       {% trans "Add persons" %}
     </a>
+    {% if is_editor %}
+    <a
+      href="{% url 'gift_manager:person_create' %}?group={{ group.group_id }}"
+      class="btn btn-outline-primary mb-3"
+      data-action="create"
+      data-group-detail-create
+    >
+      <i class="fas fa-user-plus me-1"></i>{% trans "Create new person" %}
+    </a>
+    {% endif %}
     {% if members %}
-    <div id="persons-grid" class="mt-3"></div>
+    <div id="persons-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">{% trans "No person in this group" %}</p>
     {% endif %}
@@ -154,7 +278,7 @@
       {% trans "This view shows all members from this group and all nested child groups." %}
     </p>
     {% if nested_members %}
-    <div id="nested-members-grid" class="mt-3"></div>
+    <div id="nested-members-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">
       {% trans "No members in this group or nested groups" %}
@@ -172,7 +296,7 @@
       {% trans "This view shows gift plans for this group and for all members of this group (including nested groups)." %}
     </p>
     {% if nested_gifts %}
-    <div id="nested-gifts-grid" class="mt-3"></div>
+    <div id="nested-gifts-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">
       {% trans "No gift plans found for this group or its members" %}
@@ -188,6 +312,8 @@
     <a
       href="{% url 'gift_manager:person_group_relation_create' group.group_id %}"
       class="btn btn-primary mb-3"
+      data-action="create"
+      data-group-detail-create
     >
       {% trans "New Gift Plan for this group" %}
     </a>
@@ -196,7 +322,7 @@
       {% trans "Gift plans in this tab target the group directly, not each member individually." %}
     </p>
     {% if relations %}
-    <div id="gifts-grid" class="mt-3"></div>
+    <div id="gifts-grid" class="mt-3" data-group-detail-grid></div>
     {% else %}
     <p class="text-center text-muted">{% trans "No gift plans for this group" %}</p>
     {% endif %}
@@ -284,8 +410,8 @@
       { name: 'person_edit_url', hidden: true },
       { name: 'person_delete_url', hidden: true },
       {
+          id: 'actions',
           name: "{% trans 'Actions' %}",
-          width: '150px',
           sort: false,
           formatter: GridUtils.actionButtonsFormatter({
               details: (row) => row.cells[3].data,
@@ -359,8 +485,8 @@
       { name: 'person_detail_url', hidden: true },
       { name: 'person_edit_url', hidden: true },
       {
+          id: 'actions',
           name: "{% trans 'Actions' %}",
-          width: '150px',
           sort: false,
           formatter: GridUtils.actionButtonsFormatter({
               details: (row) => row.cells[3].data,
@@ -476,8 +602,8 @@
           formatter: GridUtils.dateObjectFormatter
       },
       {
+          id: 'actions',
           name: "{% trans 'Actions' %}",
-          width: '180px',
           sort: false,
           formatter: GridUtils.actionButtonsFormatter(
               {
@@ -619,8 +745,8 @@
       { name: 'relation_edit_url', hidden: true },
       { name: 'relation_delete_url', hidden: true },
       {
+          id: 'actions',
           name: "{% trans 'Actions' %}",
-          width: '180px',
           sort: false,
           formatter: GridUtils.actionButtonsFormatter(
               {
@@ -723,6 +849,8 @@
       sort: false
   });
   {% endif %}
+
   }) ();
 </script>
+<script src="{% static 'gift_manager/js/person-group-detail.js' %}"></script>
 {% endblock %}

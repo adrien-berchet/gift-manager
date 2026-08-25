@@ -87,7 +87,7 @@ class PersonQuerySet(UserPermissionQuerySet):
 
     def accessible_by(self, user):
         """Return all persons accessible by a user (user_link or shared_with)."""
-        return self.filter(Q(user_link=user) | Q(shared_with=user))
+        return self.filter(Q(user_link=user) | Q(shared_with=user)).distinct()
 
     def with_groups_annotated(self):
         """Return persons with groups information annotated for Grid.js."""

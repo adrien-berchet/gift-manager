@@ -151,6 +151,52 @@ class TestOffcanvasPersonForm:
         assert_text_in_rendered("hx-post=", content)
         assert_text_in_rendered('data-form-type="person-edit"', content)
 
+    def test_person_create_form_preselects_accessible_context_group(self, client_logged_in, groups):
+        """The group detail shortcut initializes the new person's groups field."""
+        group = groups[1]
+        url = reverse("gift_manager:person_create")
+
+        response = client_logged_in.get(
+            url,
+            {"group": group.group_id},
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        selected_groups = response.context["form"]["groups"].value() or []
+        assert set(map(str, selected_groups)) == {str(group.pk)}
+
+    @pytest.mark.parametrize("group_parameter", ["not-a-uuid", "", "42"])
+    def test_person_create_form_ignores_malformed_context_group(
+        self, client_logged_in, group_parameter
+    ):
+        """Bad group query parameters must neither fail nor select a group."""
+        url = reverse("gift_manager:person_create")
+
+        response = client_logged_in.get(
+            url,
+            {"group": group_parameter},
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assert not (response.context["form"]["groups"].value() or [])
+
+    def test_person_create_form_ignores_inaccessible_context_group(self, client_logged_in):
+        """A group outside the user's accessible queryset cannot be preselected."""
+        inaccessible_group = PersonGroup.objects.create(name="Private group")
+        url = reverse("gift_manager:person_create")
+
+        response = client_logged_in.get(
+            url,
+            {"group": inaccessible_group.group_id},
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assert not (response.context["form"]["groups"].value() or [])
+        assert f'value="{inaccessible_group.pk}"' not in response.content.decode()
+
     def test_form_has_data_form_type_attribute(self, client_logged_in, person):
         """Test that form has data-form-type attribute for FormInitializer."""
         url = reverse("gift_manager:person_edit", kwargs={"pk": person.person_id})
