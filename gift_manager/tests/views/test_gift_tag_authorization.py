@@ -205,6 +205,28 @@ def test_gift_tag_detail_usage_stats_exclude_inaccessible_descendant_gifts(
 
 @pytest.mark.django_db
 @override_settings(USE_I18N=False)
+def test_gift_tag_detail_deduplicates_public_parent_with_multiple_permissions(
+    authenticated_client,
+    user,
+):
+    """A public parent tag must appear once regardless of its permission rows."""
+    friend = UserFactory(username="friend", email="friend@example.com")
+    parent_tag = GiftTag.objects.create(name="Public Parent", is_public=True)
+    child_tag = GiftTag.objects.create(name="Public Child", is_public=True)
+    child_tag.parent_tags.add(parent_tag)
+    create_or_update_permission(user, parent_tag, permission_level=PermissionLevel.OWNER)
+    create_or_update_permission(friend, parent_tag, permission_level=PermissionLevel.VIEWER)
+
+    response = authenticated_client.get(
+        reverse("gift_manager:gift_tag_detail", kwargs={"pk": child_tag.tag_id})
+    )
+
+    assert response.status_code == 200
+    assert list(response.context["parent_tags"]) == [parent_tag]
+
+
+@pytest.mark.django_db
+@override_settings(USE_I18N=False)
 def test_gift_tag_create_rejects_forged_private_parent_tag_choice(authenticated_client):
     """Tag forms must reject private parent tag IDs outside the filtered queryset."""
     private_parent = GiftTag.objects.create(name="Secret Parent")
@@ -265,6 +287,32 @@ def test_explorer_does_not_store_or_render_private_from_tag(authenticated_client
         "tag_navigation_history",
         {},
     )
+
+
+@pytest.mark.django_db
+@override_settings(USE_I18N=False)
+def test_explorer_deduplicates_public_related_tags_with_multiple_permissions(
+    authenticated_client,
+    user,
+):
+    """Public parent and child tags must each appear once in explorer context."""
+    friend = UserFactory(username="friend", email="friend@example.com")
+    parent_tag = GiftTag.objects.create(name="Public Parent", is_public=True)
+    selected_tag = GiftTag.objects.create(name="Public Selected", is_public=True)
+    child_tag = GiftTag.objects.create(name="Public Child", is_public=True)
+    selected_tag.parent_tags.add(parent_tag)
+    child_tag.parent_tags.add(selected_tag)
+    for related_tag in (parent_tag, child_tag):
+        create_or_update_permission(user, related_tag, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(friend, related_tag, permission_level=PermissionLevel.VIEWER)
+
+    response = authenticated_client.get(
+        reverse("gift_manager:gift_tag_explorer_with_tag", kwargs={"pk": selected_tag.tag_id})
+    )
+
+    assert response.status_code == 200
+    assert list(response.context["parent_tags"]) == [parent_tag]
+    assert list(response.context["child_tags"]) == [child_tag]
 
 
 @pytest.mark.django_db

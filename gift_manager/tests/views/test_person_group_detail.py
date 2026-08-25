@@ -109,6 +109,22 @@ class TestPersonGroupDetail:
         assert self.relation.gift.name in content
         assert "No gift plans for this group" not in content
 
+    def test_direct_members_deduplicates_owned_person_shared_with_friend(
+        self, person_factory, user_factory
+    ):
+        """A member accessible through multiple permission rows is listed once."""
+        friend = user_factory(username="friend")
+        person = person_factory(user_link=self.user, groups=[self.group])
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(friend, person, permission_level=PermissionLevel.VIEWER)
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+
+        response = self.client.get(url)
+
+        assert response.status_code == 200
+        assert list(response.context["members"]) == [person]
+        assert response.context["direct_member_count"] == 1
+
     def test_contextual_create_links_use_the_edit_panel(self):
         """Group-scoped creation links must be handled by the shared offcanvas panel."""
         create_or_update_permission(self.user, self.group, permission_level=PermissionLevel.EDITOR)

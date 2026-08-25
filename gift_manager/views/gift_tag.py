@@ -117,13 +117,17 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
 
                 # Rest of your existing code...
                 # Get parent tags, child tags, gifts, etc.
-                context["parent_tags"] = selected_tag.parent_tags.filter(
-                    Q(is_public=True) | Q(shared_with=request.user)
-                ).order_by("name")
+                context["parent_tags"] = (
+                    GiftTag.objects.accessible_by(request.user)
+                    .filter(child_tags=selected_tag)
+                    .order_by("name")
+                )
 
-                context["child_tags"] = selected_tag.child_tags.filter(
-                    Q(is_public=True) | Q(shared_with=request.user)
-                ).order_by("name")
+                context["child_tags"] = (
+                    GiftTag.objects.accessible_by(request.user)
+                    .filter(parent_tags=selected_tag)
+                    .order_by("name")
+                )
 
                 # Get the gifts associated with the selected tag
                 accessible_tag_ids = set(
@@ -269,9 +273,11 @@ class GiftTagDetailView(BaseDetailView):
         context["gifts"] = (
             Gift.objects.accessible_by(self.request.user).filter(tags=self.object).order_by("name")
         )
-        context["parent_tags"] = self.object.parent_tags.filter(
-            Q(is_public=True) | Q(shared_with=self.request.user)
-        ).order_by("name")
+        context["parent_tags"] = (
+            GiftTag.objects.accessible_by(self.request.user)
+            .filter(child_tags=self.object)
+            .order_by("name")
+        )
         context["child_tags"] = (
             GiftTag.objects.accessible_by(self.request.user)
             .filter(parent_tags=self.object)
