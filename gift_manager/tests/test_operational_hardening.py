@@ -20,12 +20,27 @@ def test_build_script_does_not_mutate_database_state():
 def test_ci_security_scans_are_blocking_and_locked():
     """Security jobs should fail CI on high-severity findings or vulnerable deps."""
     ci = (PROJECT_ROOT / ".github/workflows/ci.yml").read_text()
+    pre_commit = (PROJECT_ROOT / ".pre-commit-config.yaml").read_text()
+    audit_script = (PROJECT_ROOT / "scripts/audit_dependencies.sh").read_text()
 
-    assert "uv sync --frozen --extra test" in ci
-    assert "uv run --frozen bandit" in ci
+    assert "uv sync --locked --extra test" in ci
+    assert "uv run --locked --extra test bandit" in ci
     assert "--severity-level high" in ci
-    assert "uv run --frozen pip-audit" in ci
-    assert "--no-deps --disable-pip" in ci
+    assert "scripts/audit_dependencies.sh" in ci
+    assert "--output pip-audit-report.json" in ci
+    assert "--format json" in ci
+    assert "id: pip-audit-production" in pre_commit
+    assert "entry: scripts/audit_dependencies.sh" in pre_commit
+    assert "pass_filenames: false" in pre_commit
+    assert "always_run: true" in pre_commit
+    assert "stages: [pre-push]" in pre_commit
+    assert "uv lock --check" in audit_script
+    assert "uv export" in audit_script
+    assert "--locked" in audit_script
+    assert "uv run --locked --extra test pip-audit" in audit_script
+    assert "--no-deps" in audit_script
+    assert "--disable-pip" in audit_script
+    assert '"$@"' in audit_script
     assert "makemigrations --check --dry-run" in ci
     assert "python manage.py check --deploy --fail-level WARNING" in ci
     assert "uqevclFMYjSZMFLOrZFDGwiIjQHKTUKDb7S6uFRumpQ=" in ci
@@ -150,6 +165,7 @@ def test_backup_schedule_templates_are_present():
 def test_backup_scripts_are_parseable_bash():
     """Shell scripts should pass bash syntax checks."""
     scripts = [
+        PROJECT_ROOT / "scripts/audit_dependencies.sh",
         PROJECT_ROOT / "scripts/postgres_backup.sh",
         PROJECT_ROOT / "scripts/postgres_restore.sh",
         PROJECT_ROOT / "scripts/media_backup.sh",
