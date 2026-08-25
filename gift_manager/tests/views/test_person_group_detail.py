@@ -91,3 +91,20 @@ class TestPersonGroupDetail:
         # So for reproduction (to fail), we assert the correct behavior:
         assert "Relation Comment" in content
         assert "Gift Comment" not in content
+
+    def test_gift_plans_tab_lists_relations(self, client):
+        """The "Gift Plans for this group" tab must render the gifts, not just the count.
+
+        Regression test: the tab content and Grid.js data used to reference a
+        `gifts` template variable that the view never set (it only populated
+        `relations`), so the list stayed empty while the count badge, which
+        does use `relations`, was correct.
+        """
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        assert self.relation.gift.name in content
+        assert "No gift plans for this group" not in content

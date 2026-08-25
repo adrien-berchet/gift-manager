@@ -372,8 +372,13 @@ class TestMobileDeviceInteractions(BaseE2ETest):
             assert focused_styles is not None, "Should have computed styles for focused element"
 
     @pytest.mark.slow
-    def test_mobile_performance(self, page: Page, live_server, test_user, sample_persons):
+    def test_mobile_performance(
+        self, page: Page, live_server, test_user, sample_persons, browser_name: str
+    ):
         """Test performance characteristics on mobile devices."""
+        if browser_name != "chromium":
+            pytest.skip("CDP CPU throttling is only supported by Chromium")
+
         # Set mobile viewport with slower CPU simulation
         page.set_viewport_size({"width": 375, "height": 667})
 
@@ -446,8 +451,13 @@ class TestMobileDeviceInteractions(BaseE2ETest):
         expect(first_name_field).to_be_visible()
         expect(first_name_field).to_be_editable()
 
-    def test_mobile_network_conditions(self, page: Page, live_server, test_user, sample_persons):
+    def test_mobile_network_conditions(
+        self, page: Page, live_server, test_user, sample_persons, browser_name: str
+    ):
         """Test behavior under mobile network conditions."""
+        if browser_name != "chromium":
+            pytest.skip("CDP network emulation is only supported by Chromium")
+
         # Set mobile viewport
         page.set_viewport_size({"width": 375, "height": 667})
 

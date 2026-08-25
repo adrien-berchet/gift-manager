@@ -1386,7 +1386,15 @@ class TestRelationListGridLoading:
         picker.locator(
             ".flatpickr-day:not(.prevMonthDay):not(.nextMonthDay):not(.flatpickr-disabled)"
         ).first.click()
+        after_selection_scroll = page.evaluate("window.scrollY")
+        assert abs(after_selection_scroll - before_scroll) <= 24
+
         page.wait_for_function("window.__giftPlanWorkspaceRefreshed === true", timeout=5_000)
+        page.wait_for_function(
+            "expectedScroll => Math.abs(window.scrollY - expectedScroll) <= 24",
+            arg=before_scroll,
+            timeout=1_500,
+        )
         after_scroll = page.evaluate("window.scrollY")
 
         relation.refresh_from_db()

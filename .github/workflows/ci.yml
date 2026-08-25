@@ -119,17 +119,18 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install uv==0.10.7
-          uv sync --frozen --extra test
+          uv sync --locked --extra test
 
       - name: Run Bandit security linter
         run: >
-          uv run --frozen bandit -r gift_manager -x gift_manager/tests
+          uv run --locked --extra test bandit -r gift_manager -x gift_manager/tests
           --severity-level high --confidence-level high -f json -o bandit-report.json
 
       - name: Run pip-audit
-        run: |
-          uv export --quiet --frozen --no-dev --no-emit-project --format requirements.txt --output-file /tmp/gift-manager-requirements.txt
-          uv run --frozen pip-audit --requirement /tmp/gift-manager-requirements.txt --no-deps --disable-pip --output pip-audit-report.json --format json
+        run: >
+          scripts/audit_dependencies.sh
+          --output pip-audit-report.json
+          --format json
 
       - name: Upload security reports
         uses: actions/upload-artifact@v4
