@@ -563,15 +563,12 @@ class TestPersonListSearch:
         _open_filter_panel(page, "person-grid")
 
         search_input = _get_search_input(page, "person-grid")
-        if search_input.is_visible():
-            search_input.fill("ZZZZNONEXISTENT999")
-            page.wait_for_timeout(800)
+        expect(search_input).to_be_visible()
+        search_input.fill("ZZZZNONEXISTENT999")
 
-            not_found = page.locator("#person-grid .gridjs-notfound")
-            if not_found.count() > 0:
-                expect(not_found).to_be_visible()
-            else:
-                assert _grid_row_count(page, "person-grid") == 0
+        empty_message = page.locator("#person-grid .grid-empty-state .empty-state-message")
+        expect(empty_message).to_be_visible()
+        expect(empty_message).to_contain_text("No results")
 
     def test_search_across_multiple_columns(self, page: Page, live_server, seed_data_e2e):
         """Search works across first name and family name columns."""
