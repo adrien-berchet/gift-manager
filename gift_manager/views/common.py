@@ -10,24 +10,21 @@ from django.db.models import Model
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
-from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
-from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
-from gift_manager.gift_plan_actions import gift_plan_has_contextual_edit_action
+from gift_manager.gift_plan_actions import gift_plan_requires_planning_fields
+from gift_manager.gift_plan_cards import build_gift_plan_card
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
-from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
-from gift_manager.statuses import relation_status_slug
 
 # Type definitions for clarity
 ModelType: TypeAlias = type[Model]
@@ -40,49 +37,10 @@ DASHBOARD_COMPACT_ACTION_GROUPS = frozenset(("overdue", "upcoming", "incomplete"
 DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP = 24
 
 
-def _gift_plan_status_class(status) -> str:
-    """Return the shared gift-plan status CSS class."""
-    return f"gift-plan-status--{relation_status_slug(status)}"
-
-
-def _is_completed_status(status) -> bool:
-    """Return whether a gift-plan status is considered completed."""
-    return is_terminal_status(status)
-
-
-def _gift_plan_requires_planning_fields(relation: Relation) -> bool:
-    """Return whether a gift plan expects concrete planning details."""
-    return not is_idea_status(relation.status) and not _is_completed_status(relation.status)
-
-
-def _gift_plan_has_missing_event(relation: Relation) -> bool:
-    """Return whether an active gift plan is missing its event."""
-    return _gift_plan_requires_planning_fields(relation) and relation.event_id is None
-
-
-def _dashboard_quick_action_urgency_key(
-    relation: Relation,
-    urgency_key: str,
-    today: date,
-) -> str:
-    """Return the urgency key used to choose dashboard quick actions."""
-    if (
-        urgency_key == "due_soon"
-        and relation.due_date
-        and relation.due_date > today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
-    ):
-        if _gift_plan_requires_planning_fields(relation) and relation.event_id is None:
-            return "needs_details"
-        return "later"
-    return urgency_key
-
-
 def _build_dashboard_action_item(
     relation: Relation,
     action_key: str,
     user,
-    *,
-    today: date,
 ) -> dict:
     """Return presentation data for a dashboard gift-plan action."""
     urgency_key = {
@@ -90,32 +48,8 @@ def _build_dashboard_action_item(
         "incomplete": "needs_details",
         "stale": "later",
     }.get(action_key, action_key)
-    quick_action_urgency_key = _dashboard_quick_action_urgency_key(relation, urgency_key, today)
     permission = PermissionService.get_permission(relation, user)
-    can_edit = permission >= PermissionLevel.EDITOR
-    quick_actions = build_gift_plan_quick_actions(
-        relation,
-        quick_action_urgency_key,
-        can_edit=can_edit,
-    )
-    has_missing_event = _gift_plan_has_missing_event(relation)
-    return {
-        "relation": relation,
-        "action_key": action_key,
-        "urgency_key": urgency_key,
-        "status_class": _gift_plan_status_class(relation.status),
-        "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
-        "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
-        "quick_action_url": reverse(
-            "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
-        ),
-        "quick_actions": quick_actions,
-        "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
-        "event_options": [],
-        "has_missing_event": has_missing_event,
-        "missing_event_label": gettext("Missing event") if has_missing_event else "",
-        "can_edit": can_edit,
-    }
+    return build_gift_plan_card(relation, urgency_key=urgency_key, permission=permission)
 
 
 def _build_gift_plan_action_groups(
@@ -156,7 +90,7 @@ def _build_gift_plan_action_groups(
     }
 
     for relation in relations:
-        if _is_completed_status(relation.status):
+        if is_terminal_status(relation.status):
             continue
 
         if relation.due_date and relation.due_date < today:
@@ -165,7 +99,7 @@ def _build_gift_plan_action_groups(
             group_key = "upcoming"
         elif relation.due_date is None and is_idea_status(relation.status):
             continue
-        elif _gift_plan_requires_planning_fields(relation) and (
+        elif gift_plan_requires_planning_fields(relation) and (
             relation.due_date is None or relation.event_id is None
         ):
             group_key = "incomplete"
@@ -174,9 +108,7 @@ def _build_gift_plan_action_groups(
         else:
             continue
 
-        groups[group_key]["items"].append(
-            _build_dashboard_action_item(relation, group_key, user, today=today)
-        )
+        groups[group_key]["items"].append(_build_dashboard_action_item(relation, group_key, user))
 
     group_order = ("overdue", "upcoming", "incomplete", "stale")
     action_groups = [groups[key] for key in group_order if groups[key]["items"]]

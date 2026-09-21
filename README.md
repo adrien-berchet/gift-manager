@@ -19,6 +19,25 @@ docker compose up
 docker compose exec web python manage.py migrate
 ```
 
+### Seed Local Development Data
+
+After running migrations, populate the local development database with sample data:
+
+```bash
+python manage.py seed_data
+```
+
+For Docker-based development:
+
+```bash
+docker compose exec web python manage.py seed_data
+```
+
+The command refuses to run if seed users, people, or gifts already exist. To reset
+and reseed, add `--flush`; this deletes all Gift Manager data and non-superuser
+accounts while preserving superuser accounts. Use it only on a disposable local
+development database.
+
 ## Verification
 
 ```bash

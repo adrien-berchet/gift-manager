@@ -35,7 +35,10 @@ from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
 from gift_manager.gift_plan_actions import ACTION_STATUS_SLUGS
 from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
-from gift_manager.gift_plan_actions import gift_plan_has_contextual_edit_action
+from gift_manager.gift_plan_actions import gift_plan_has_missing_event
+from gift_manager.gift_plan_actions import gift_plan_requires_planning_fields
+from gift_manager.gift_plan_cards import build_gift_plan_card
+from gift_manager.gift_plan_cards import gift_plan_status_class
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
@@ -56,20 +59,10 @@ from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import HTMXResponseMixin
 
 
-def gift_plan_status_class(status) -> str:
-    """Return the shared CSS status class for a gift plan status."""
-    return f"gift-plan-status--{relation_status_slug(status)}"
-
-
-def is_completed_status(status) -> bool:
-    """Return whether a status should be treated as completed in workspace grouping."""
-    return is_terminal_status(status)
-
-
 def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
     """Return the urgency bucket for a gift plan."""
     today = today or timezone.localdate()
-    if is_completed_status(relation.status):
+    if is_terminal_status(relation.status):
         urgency_key = "completed"
     elif relation.due_date is None:
         urgency_key = "ideas" if is_idea_status(relation.status) else "needs_details"
@@ -87,16 +80,6 @@ def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
 def gift_plan_has_missing_due_date(relation) -> bool:
     """Return whether an active gift plan is missing a due date."""
     return gift_plan_requires_planning_fields(relation) and relation.due_date is None
-
-
-def gift_plan_has_missing_event(relation) -> bool:
-    """Return whether an active gift plan is missing an event."""
-    return gift_plan_requires_planning_fields(relation) and relation.event_id is None
-
-
-def gift_plan_requires_planning_fields(relation) -> bool:
-    """Return whether a gift plan status expects concrete planning details."""
-    return not is_idea_status(relation.status) and not is_completed_status(relation.status)
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -443,32 +426,12 @@ class RelationListView(PermissionContextMixin, BaseListView):
             window_days=self.workspace_window_days,
         )
         permission = self.get_workspace_card_permission(relation)
-        can_edit = permission >= PermissionLevel.EDITOR
-        quick_actions = build_gift_plan_quick_actions(relation, urgency_key, can_edit=can_edit)
-        has_planning_action = any(action["kind"] == "planning" for action in quick_actions)
-        has_missing_event = gift_plan_has_missing_event(relation)
-        return {
-            "relation": relation,
-            "urgency_key": urgency_key,
-            "status_class": gift_plan_status_class(relation.status),
-            "detail_url": reverse(
-                "gift_manager:relation_detail", kwargs={"pk": relation.relation_id}
-            ),
-            "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
-            "delete_url": reverse(
-                "gift_manager:relation_delete", kwargs={"pk": relation.relation_id}
-            ),
-            "quick_action_url": reverse(
-                "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
-            ),
-            "quick_actions": quick_actions,
-            "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
-            "event_options": event_options if has_planning_action else [],
-            "has_missing_event": has_missing_event,
-            "missing_event_label": gettext("Missing event") if has_missing_event else "",
-            "can_edit": can_edit,
-            "can_delete": permission >= PermissionLevel.OWNER,
-        }
+        return build_gift_plan_card(
+            relation,
+            urgency_key=urgency_key,
+            permission=permission,
+            event_options=event_options,
+        )
 
     def get_workspace_card_permission(self, relation) -> int:
         """Return the current user's permission using workspace prefetch data."""

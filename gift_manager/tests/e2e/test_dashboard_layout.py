@@ -5,9 +5,13 @@ from datetime import timedelta
 import pytest
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.translation import gettext
+from django.utils.translation import override
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import RelationFactory
 
@@ -108,7 +112,7 @@ def assert_skip_link_focus_target_is_visible(page: Page):
 def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
     """Return rendered pagination metrics for a dashboard action group."""
     group = page.locator(f".dashboard-action-group--{group_key}").first
-    list_grid = group.locator(".dashboard-action-list--paginated").first
+    list_grid = group.locator(".gift-plan-card-grid--paginated").first
 
     expect(group).to_be_visible()
     expect(list_grid).to_be_visible()
@@ -116,7 +120,7 @@ def get_paginated_layout_metrics(page: Page, group_key: str) -> dict:
     return list_grid.evaluate(
         """list => {
             const group = list.closest('[data-dashboard-action-paginated]');
-            const cards = Array.from(list.querySelectorAll('[data-dashboard-action-card]'));
+            const cards = Array.from(list.querySelectorAll('.gift-plan-card'));
             const visibleCards = cards.filter((card) => !card.hidden);
             const pagination = group.querySelector('[data-dashboard-pagination]');
             const styles = getComputedStyle(list);
@@ -438,7 +442,7 @@ class TestDashboardLayout:
 
             page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
             dashboard_grid = page.locator(
-                ".dashboard-action-group--incomplete .dashboard-action-list--paginated"
+                ".dashboard-action-group--incomplete .gift-plan-card-grid--paginated"
             ).first
             expect(dashboard_grid).to_be_visible()
             dashboard_columns = get_grid_column_count(dashboard_grid)
@@ -452,6 +456,161 @@ class TestDashboardLayout:
 
             assert dashboard_columns == 1
             assert workspace_columns == 1
+
+    @pytest.mark.django_db(transaction=True)
+    @pytest.mark.parametrize("viewport_width", [1280, 390], ids=["desktop", "mobile"])
+    @pytest.mark.parametrize(
+        ("group_key", "due_in_days"),
+        [("overdue", -1), ("upcoming", 1)],
+        ids=["overdue", "due_soon"],
+    )
+    def test_status_actions_update_in_place(
+        self, page: Page, live_server, seed_data_e2e, viewport_width, group_key, due_in_days
+    ):
+        """Status actions should refresh the dashboard without losing its live content."""
+        page.set_viewport_size({"width": viewport_width, "height": 900})
+        relation = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(name="Dashboard Inline Purchase"),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate() + timedelta(days=due_in_days),
+            comment="Ready to purchase",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice,
+            relation,
+            permission_level=PermissionLevel.OWNER,
+        )
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+        page.wait_for_function("typeof window.htmx?.process === 'function'")
+        page.wait_for_function("!!window.LoadingStates?.manager")
+        page.evaluate("window.__dashboardDocument = document")
+        dashboard_url = page.url
+        dashboard = page.locator("#dashboard-live")
+        group = dashboard.locator(f".dashboard-action-group--{group_key}")
+        card = group.locator(".gift-plan-card", has_text="Dashboard Inline Purchase")
+        count = int(group.locator(".dashboard-action-count").inner_text())
+
+        card.evaluate("card => card.scrollIntoView({block: 'center', behavior: 'instant'})")
+        card.locator("[data-action='quick-purchased']").click()
+
+        expect(card.locator(".gift-plan-status-badge")).to_have_text("Purchased")
+        expect(card.locator("[data-action='quick-purchased']")).to_have_count(0)
+        expect(group.locator(".dashboard-action-count")).to_have_text(str(count))
+        expect(dashboard.locator(".loading-skeleton")).to_have_count(0)
+        assert page.url == dashboard_url
+        assert page.evaluate("window.__dashboardDocument === document")
+        relation.refresh_from_db()
+        assert relation.status == seed_data_e2e.statuses["purchased"]
+
+        # The refreshed card must still support another action through real HTMX.
+        card.evaluate("card => card.scrollIntoView({block: 'center', behavior: 'instant'})")
+        card.locator("[data-action='quick-given']").click()
+
+        expect(card).to_have_count(0)
+        if count > 1:
+            expect(group.locator(".dashboard-action-count")).to_have_text(str(count - 1))
+        else:
+            expect(group).to_have_count(0)
+        expect(dashboard.locator(".loading-skeleton")).to_have_count(0)
+        assert page.url == dashboard_url
+        assert page.evaluate("window.__dashboardDocument === document")
+        relation.refresh_from_db()
+        assert relation.status == seed_data_e2e.statuses["given"]
+
+    @pytest.mark.django_db(transaction=True)
+    def test_dashboard_and_workspace_use_the_same_card_width(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Card width should stay consistent across the two gift-plan surfaces."""
+        relation = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(name="Consistent card width gift"),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate() + timedelta(days=1),
+            comment="Ready to purchase",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice, relation, permission_level=PermissionLevel.OWNER
+        )
+        login(page, live_server.url)
+        widths = {}
+        viewport_widths = (1440, 1280, 1200, 1024, 800, 390, 320)
+        for page_name in ("home", "relations"):
+            page.goto(
+                f"{live_server.url}{reverse(f'gift_manager:{page_name}')}", wait_until="networkidle"
+            )
+            card = page.locator(".gift-plan-card", has_text="Consistent card width gift")
+            for viewport_width in viewport_widths:
+                page.set_viewport_size({"width": viewport_width, "height": 900})
+                expect(card).to_be_visible()
+                widths[page_name, viewport_width] = card.evaluate(
+                    "card => card.getBoundingClientRect().width"
+                )
+
+        for viewport_width in viewport_widths:
+            assert abs(widths["home", viewport_width] - widths["relations", viewport_width]) <= 1, (
+                widths
+            )
+
+    @pytest.mark.django_db(transaction=True)
+    @pytest.mark.parametrize("page_name", ["home", "relations"])
+    @pytest.mark.parametrize("language", ["en", "fr"])
+    def test_card_status_and_utility_actions_share_one_row(
+        self, page: Page, live_server, seed_data_e2e, page_name, language
+    ):
+        """Keep labeled status actions and accessible utility icons on one unclipped row."""
+        relation = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(name="Single row action gift"),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate() + timedelta(days=1),
+            comment="Ready to purchase",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice, relation, permission_level=PermissionLevel.OWNER
+        )
+        login(page, live_server.url)
+        with override(language):
+            url = reverse(f"gift_manager:{page_name}")
+            detail_label = gettext("Details")
+            edit_label = gettext("Edit")
+        page.goto(f"{live_server.url}{url}", wait_until="networkidle")
+        card = page.locator(".gift-plan-card", has_text="Single row action gift")
+
+        for width in (1280, 1024, 390, 320):
+            page.set_viewport_size({"width": width, "height": 900})
+            expect(card).to_be_visible()
+            actions = card.locator(".gift-plan-card-actions")
+            expect(actions.locator(".btn")).to_have_count(4)
+            expect(actions.get_by_role("link", name=detail_label, exact=True)).to_be_visible()
+            expect(actions.get_by_role("link", name=edit_label, exact=True)).to_be_visible()
+            page.wait_for_function(
+                """() => {
+                    const card = [...document.querySelectorAll('.gift-plan-card')].find(
+                        el => el.textContent.includes('Single row action gift')
+                    );
+                    const row = card.querySelector('.gift-plan-card-actions');
+                    const rowRect = row.getBoundingClientRect();
+                    const cardRect = card.getBoundingClientRect();
+                    const buttons = [...row.querySelectorAll('.btn')];
+                    const firstRect = buttons[0].getBoundingClientRect();
+                    return row.scrollWidth <= row.clientWidth + 1 && buttons.every(button => {
+                        const rect = button.getBoundingClientRect();
+                        return Math.abs(rect.top - firstRect.top) <= 1
+                            && rect.width >= 24 && rect.height >= 24
+                            && rect.left >= rowRect.left - 1 && rect.right <= rowRect.right + 1
+                            && rect.top >= rowRect.top - 1 && rect.bottom <= rowRect.bottom + 1
+                            && rect.bottom <= cardRect.bottom - 1
+                            && button.scrollWidth <= button.clientWidth + 1;
+                    });
+                }""",
+                timeout=5000,
+            )
 
     @pytest.mark.django_db(transaction=True)
     def test_dashboard_refreshes_after_list_update_for_new_gift_plan(
@@ -545,7 +704,7 @@ class TestDashboardLayout:
         page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
 
         list_grid = page.locator(".dashboard-action-group--incomplete .dashboard-action-list").first
-        cards = list_grid.locator("[data-dashboard-action-card].gift-plan-card--needs_details")
+        cards = list_grid.locator(".gift-plan-card--needs_details")
         card = cards.first
         topline = card.locator(".gift-plan-card-topline")
         title = card.locator(".gift-plan-card-title")
