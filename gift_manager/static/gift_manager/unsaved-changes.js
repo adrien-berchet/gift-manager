@@ -740,16 +740,24 @@
     }
 
     function snapshotForm(form) {
-        const formData = new FormData(form);
+        // FormData omits controls temporarily disabled while an HTMX save is in flight.
+        // Read their values directly so a successful save keeps a complete baseline.
         const snapshot = new Map();
 
         getTrackableFields(form).forEach((field) => {
-            if (!field.name || snapshot.has(field.name)) {
+            if (!field.name) {
                 return;
             }
 
-            const values = formData.getAll(field.name).map(normalizeValue).sort();
-            snapshot.set(field.name, values);
+            if (!snapshot.has(field.name)) {
+                snapshot.set(field.name, []);
+            }
+
+            snapshot.get(field.name).push(...getFieldSnapshotValues(field));
+        });
+
+        snapshot.forEach((values) => {
+            values.sort();
         });
 
         return snapshot;
@@ -774,8 +782,30 @@
             field &&
             field.matches?.(CONFIG.selectors.trackableFields) &&
             !field.matches(CONFIG.selectors.excludeFields) &&
-            !field.disabled
+            !isEffectivelyDisabled(field)
         );
+    }
+
+    function isEffectivelyDisabled(field) {
+        // LoadingStateManager records whether each control was disabled before saving.
+        return field.disabled && field.dataset.originalDisabled !== "false";
+    }
+
+    function getFieldSnapshotValues(field) {
+        if (field.type === "checkbox" || field.type === "radio") {
+            return field.checked ? [normalizeValue(field.value)] : [];
+        }
+
+        if (field.tagName === "SELECT" && field.multiple) {
+            return Array.from(field.selectedOptions).map((option) => normalizeValue(option.value));
+        }
+
+        if (field.type === "file") {
+            // FormData creates a new, timestamped File even for an empty upload control.
+            return Array.from(field.files || []).map(normalizeValue);
+        }
+
+        return [normalizeValue(field.value)];
     }
 
     function normalizeValue(value) {
