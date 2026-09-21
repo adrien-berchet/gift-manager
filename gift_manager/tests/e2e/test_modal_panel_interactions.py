@@ -6,6 +6,7 @@ animations, keyboard navigation, and accessibility features.
 
 import re
 
+import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
@@ -302,6 +303,34 @@ class TestPanelFormValidation(BaseE2ETest):
 
 class TestUnsavedChangesProtection(BaseE2ETest):
     """Test unsaved changes protection in panels."""
+
+    @pytest.mark.parametrize(
+        "viewport", [{"width": 1280, "height": 800}, {"width": 390, "height": 844}]
+    )
+    def test_navigation_after_saving_does_not_warn(
+        self, page: Page, live_server, test_user, sample_persons, viewport
+    ):
+        """A saved, closed panel must not leave a stale dirty form behind."""
+        page.set_viewport_size(viewport)
+        self.login_as_user(page, live_server, test_user)
+        self.navigate_to_entity_list(page, live_server, "persons")
+        self.click_quick_action(page, 0, "edit")
+        self.wait_for_panel(page)
+
+        panel = page.locator("#editPanel")
+        page.clock.install()
+        panel.locator("[name='first_name']").fill("Saved Name")
+        panel.locator("button[type='submit'].btn-primary").click()
+        expect(panel).not_to_be_visible()
+        expect(page.locator(".gridjs-table")).to_contain_text("Saved Name")
+
+        # Let the loading manager restore temporarily disabled form controls.
+        page.clock.fast_forward(31000)
+        home_link = page.locator("a.navbar-brand")
+        home_url = home_link.get_attribute("href")
+        home_link.click()
+        expect(page).to_have_url(f"{live_server.url}{home_url}")
+        expect(page.locator("#unsaved-changes-modal")).not_to_be_visible()
 
     def test_unsaved_changes_warning(self, page: Page, live_server, test_user, sample_persons):
         """Test that unsaved changes trigger the custom warning when closing panel."""
