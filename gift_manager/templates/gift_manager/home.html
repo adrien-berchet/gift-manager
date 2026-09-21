@@ -505,61 +505,6 @@
         font-weight: 700;
     }
 
-    .dashboard-action-list--paginated {
-        --dashboard-action-card-height: 15.5rem;
-        align-content: start;
-        grid-auto-rows: var(--dashboard-action-card-height);
-        overflow: visible;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card {
-        max-height: var(--dashboard-action-card-height);
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card-topline,
-    .dashboard-action-list--paginated .gift-plan-tag-list {
-        flex-wrap: nowrap;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card-title a {
-        display: block;
-        overflow: hidden;
-        overflow-wrap: normal;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        -webkit-line-clamp: initial;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card-meta-row a,
-    .dashboard-action-list--paginated .gift-plan-card-meta-row > span:not(.badge):not(.recipient-type-marker) {
-        display: block;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-tag-list {
-        max-height: 1.75rem;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-tag-badge {
-        flex: 0 1 auto;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-note {
-        -webkit-line-clamp: 2;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card-actions {
-        align-content: flex-end;
-        max-height: 4.75rem;
-        overflow: hidden;
-    }
-
-    .dashboard-action-list--paginated .gift-plan-card-actions .btn {
-        max-width: 100%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
     .dashboard-action-pagination {
         display: flex;
         align-items: center;
@@ -611,16 +556,6 @@
     @media (min-width: 768px) {
         .dashboard-action-group--compact {
             grid-column: span 2;
-        }
-    }
-
-    @media (max-width: 575.98px) {
-        .dashboard-action-list--paginated {
-            --dashboard-action-card-height: 17rem;
-        }
-
-        .dashboard-action-list--paginated .gift-plan-note {
-            -webkit-line-clamp: 3;
         }
     }
 
@@ -971,10 +906,10 @@
                         <span class="dashboard-action-count">{{ group.items|length }}</span>
                     </div>
                 </div>
-                <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} dashboard-action-list--paginated{% endif %}"
+                <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} gift-plan-card-grid--paginated{% endif %}"
                      {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
                     {% for card in group.display_items %}
-                    {% include "gift_manager/includes/gift_plan_card.html" with card=card dashboard_paginated=group.is_paginated %}
+                    {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
                     {% endfor %}
                 </div>
                 {% if group.is_paginated %}
@@ -1120,7 +1055,7 @@
         let resizeTimer = null;
 
         function getCards(group) {
-            return Array.from(group.querySelectorAll('[data-dashboard-action-card]'));
+            return Array.from(group.querySelectorAll('.gift-plan-card'));
         }
 
         function getColumnCount(list) {

@@ -134,13 +134,17 @@ class TestRelationQuickAction:
         self.relation.save(update_fields=["status", "event", "due_date"])
 
     @override_settings(USE_I18N=False)
-    def test_status_quick_action_updates_relation_and_refreshes_cards(self):
+    @pytest.mark.parametrize("due_in_days", [-1, 2], ids=["overdue", "due_soon"])
+    @pytest.mark.parametrize("action", ["given", "purchased"])
+    def test_status_quick_action_updates_relation_and_refreshes_cards(self, due_in_days, action):
+        self.relation.due_date = timezone.localdate() + timedelta(days=due_in_days)
+        self.relation.save(update_fields=["due_date"])
         url = reverse(
             "gift_manager:relation_quick_action", kwargs={"pk": self.relation.relation_id}
         )
         response = self.client.post(
             url,
-            {"action": "given"},
+            {"action": action},
             HTTP_HX_REQUEST="true",
         )
 
@@ -151,7 +155,7 @@ class TestRelationQuickAction:
         assert triggers["showNotification"]["type"] == "success"
 
         self.relation.refresh_from_db()
-        assert relation_status_slug(self.relation.status) == "given"
+        assert relation_status_slug(self.relation.status) == action
 
     @override_settings(USE_I18N=False)
     def test_set_date_quick_action_updates_due_date(self):

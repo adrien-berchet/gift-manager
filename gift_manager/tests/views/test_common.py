@@ -75,6 +75,48 @@ class TestHomeDashboard:
         self.user = user
         self.client.force_login(user)
 
+    @pytest.mark.parametrize(
+        "permission", [PermissionLevel.VIEWER, PermissionLevel.EDITOR, PermissionLevel.OWNER]
+    )
+    @pytest.mark.parametrize(
+        ("due_in_days", "has_event"),
+        [(-1, True), (2, True), (None, False)],
+        ids=["overdue", "due_soon", "needs_details"],
+    )
+    def test_dashboard_and_workspace_share_card_presentation(
+        self, permission, due_in_days, has_event
+    ):
+        """Both pages should present the same plan and respect the same edit permission."""
+        relation = RelationFactory(
+            status=RelationStatusFactory(status="Planned"),
+            event=EventFactory() if has_event else None,
+            due_date=(
+                timezone.localdate() + timedelta(days=due_in_days)
+                if due_in_days is not None
+                else None
+            ),
+        )
+        create_or_update_permission(self.user, relation, permission_level=permission)
+
+        dashboard = self.client.get(reverse("gift_manager:home"))
+        workspace = self.client.get(reverse("gift_manager:relations"))
+        assert dashboard.status_code == workspace.status_code == 200
+        dashboard_card = next(
+            card
+            for group in dashboard.context["dashboard_action_groups"]
+            for card in group["items"]
+            if card["relation"] == relation
+        )
+        workspace_card = next(
+            card
+            for group in workspace.context["workspace_groups"]
+            for card in group["cards"]
+            if card["relation"] == relation
+        )
+
+        assert dashboard_card == workspace_card
+        assert dashboard_card["can_edit"] is (permission >= PermissionLevel.EDITOR)
+
     def test_dashboard_prioritizes_action_groups_and_filters_private_plans(self):
         today = timezone.localdate()
         idea = RelationStatusFactory(status="Idea")
@@ -203,7 +245,7 @@ class TestHomeDashboard:
         assert "recipient-type-marker" in content
         assert "recipient-type-badge" not in content
         assert (
-            "dashboard-action-list gift-plan-card-grid dashboard-action-list--paginated"
+            "dashboard-action-list gift-plan-card-grid gift-plan-card-grid--paginated"
         ) in content
         assert "dashboard-action-group--compact" in content
         assert 'data-dashboard-rows-per-page="1"' in content
@@ -212,7 +254,7 @@ class TestHomeDashboard:
         assert "dashboard-action-list--scrollable" not in content
         assert "dashboard-action-list--short-page" not in content
         assert "measureStablePageHeight" not in content
-        assert "data-dashboard-action-card" in content
+        assert "gift-plan-card-grid--paginated" in content
         assert "dashboard-action-item" not in content
         assert "data-dashboard-action-paginated" in content
         assert "data-dashboard-pagination" in content
@@ -378,7 +420,7 @@ class TestHomeDashboard:
         assert [
             action["name"]
             for action in cards_by_gift_name["Dashboard overdue action"]["quick_actions"]
-        ] == ["given"]
+        ] == ["given", "purchased"]
         assert [
             action["name"]
             for action in cards_by_gift_name["Dashboard soon action"]["quick_actions"]

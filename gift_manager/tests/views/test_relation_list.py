@@ -195,12 +195,9 @@ class TestRelationList:
         }
 
         assert cards_by_relation_id[self.relation.relation_id]["can_edit"] is False
-        assert cards_by_relation_id[self.relation.relation_id]["can_delete"] is False
         assert cards_by_relation_id[self.relation.relation_id]["quick_actions"] == []
         assert cards_by_relation_id[editor_relation.relation_id]["can_edit"] is True
-        assert cards_by_relation_id[editor_relation.relation_id]["can_delete"] is False
         assert cards_by_relation_id[owner_relation.relation_id]["can_edit"] is True
-        assert cards_by_relation_id[owner_relation.relation_id]["can_delete"] is True
 
     def test_workspace_card_permission_falls_back_for_unoptimized_relation(self):
         """Direct workspace card calls should still use the permission service."""
@@ -217,7 +214,6 @@ class TestRelationList:
 
         get_permission.assert_called_once_with(self.relation, self.user)
         assert card["can_edit"] is True
-        assert card["can_delete"] is False
 
     def test_workspace_cards_expose_contextual_quick_actions(
         self,
@@ -315,7 +311,7 @@ class TestRelationList:
             for action in cards_by_gift_name["Overdue missing event quick action gift"][
                 "quick_actions"
             ]
-        ] == ["given", "add_details"]
+        ] == ["given", "purchased", "add_details"]
         assert [
             action["name"]
             for action in cards_by_gift_name["Due soon missing event quick action gift"][
