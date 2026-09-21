@@ -80,17 +80,18 @@ class TestKeyboardAccessibility(BaseE2ETest):
         panel = page.locator("#editPanel")
         expect(panel).to_be_visible()
 
-        # Test focus management - focus should move to first form field
+        # Opening the panel keeps focus on Close to avoid scrolling or opening a keyboard.
         first_name_field = panel.locator("[name='first_name']")
-        if first_name_field.count() > 0:
-            expect(first_name_field).to_be_focused()
+        expect(first_name_field).to_be_visible()
+        expect(panel.locator(".btn-close")).to_be_focused()
 
-            # Test Tab navigation through form fields
-            page.keyboard.press("Tab")
+        # Tab enters the loaded form and then moves through its fields.
+        page.keyboard.press("Tab")
+        expect(first_name_field).to_be_focused()
+        page.keyboard.press("Tab")
 
-            family_name_field = panel.locator("[name='family_name']")
-            if family_name_field.count() > 0:
-                expect(family_name_field).to_be_focused()
+        family_name_field = panel.locator("[name='family_name']")
+        expect(family_name_field).to_be_focused()
 
         # Test Escape key closes panel
         page.keyboard.press("Escape")
