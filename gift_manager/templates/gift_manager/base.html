@@ -66,6 +66,10 @@
             height: 40px;
         }
 
+        .navbar-utilities {
+            align-items: center;
+        }
+
         /* Global Search Modal Styles */
         .search-modal .modal-content {
             background: var(--surface-card);
@@ -287,6 +291,7 @@
                 box-shadow: var(--shadow-lg);
                 border: 1px solid var(--border-color);
                 max-height: calc(100vh - 70px);
+                max-height: calc(100dvh - 88px);
                 overflow-y: auto;
             }
 
@@ -310,13 +315,30 @@
                 display: none;
             }
 
-            .navbar .d-flex.align-items-center {
-                flex-direction: column;
+            .navbar-utilities {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
                 align-items: stretch;
+                margin-top: var(--space-3);
+                padding-top: var(--space-3);
+                border-top: 1px solid var(--border-color);
             }
 
-            .navbar .d-flex.align-items-center > * {
-                margin: var(--space-2) 0;
+            .navbar-utilities > .nav-item:last-child {
+                grid-column: 1 / -1;
+            }
+
+            .navbar-utilities .nav-link,
+            .navbar-utilities .theme-toggle,
+            .navbar-utilities .language-select {
+                width: 100%;
+                min-height: 44px;
+                justify-content: center;
+                margin: 0;
+            }
+
+            .navbar-utilities .language-select {
+                font-size: 16px;
             }
 
             .search-trigger {
@@ -461,13 +483,13 @@
                     </li>
                 </ul>
                 {% endif %}
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 d-flex align-items-center gap-2">
+                <ul class="navbar-nav navbar-utilities ms-auto mb-2 mb-lg-0 gap-2">
                     {% if user.is_authenticated %}
                     <!-- Search Button -->
                     <li class="nav-item">
                         <button class="search-trigger" data-bs-toggle="modal" data-bs-target="#searchModal" title="{% trans 'Search' %} (Ctrl+K)">
                             <i class="fas fa-search"></i>
-                            <span class="d-none d-lg-inline">{% trans "Search" %}</span>
+                            <span>{% trans "Search" %}</span>
                             <kbd class="d-none d-lg-inline">Ctrl+K</kbd>
                         </button>
                     </li>
@@ -500,7 +522,7 @@
                     <li class="nav-item">
                         <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
                             {% csrf_token %}
-                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm language-select" style="width: auto; min-width: 80px;">
+                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm language-select">
                                 {% get_current_language as LANGUAGE_CODE %}
                                 {% get_available_languages as LANGUAGES %}
                                 {% for lang in LANGUAGES %}
@@ -1283,7 +1305,8 @@
             document.body.addEventListener('htmx:afterSwap', function(e) {
                 const xhr = e.detail.xhr;
                 if (xhr && (xhr.status === 400 || xhr.status === 422) && isManagedForm(e.detail.elt)) {
-                    focusFirstFormError(e.detail.target);
+                    // outerHTML swaps leave target pointing at the detached old form.
+                    focusFirstFormError(e.detail.elt);
                 }
             });
 

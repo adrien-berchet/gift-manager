@@ -15,6 +15,7 @@
 
         init: function() {
             this.detectDevice();
+            this.updateEditPanelViewport();
             this.setupEventListeners();
             this.handleInitialState();
         },
@@ -34,6 +35,14 @@
         },
 
         setupEventListeners: function() {
+            // The visual viewport shrinks for the keyboard even when 100dvh does not.
+            const updateEditPanelViewport = () => this.updateEditPanelViewport();
+            window.addEventListener('resize', updateEditPanelViewport);
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', updateEditPanelViewport);
+                window.visualViewport.addEventListener('scroll', updateEditPanelViewport);
+            }
+
             // Window resize handler
             let resizeTimeout;
             window.addEventListener('resize', () => {
@@ -58,6 +67,24 @@
             // Modal and offcanvas event listeners
             this.setupModalHandlers();
             this.setupOffcanvasHandlers();
+        },
+
+        updateEditPanelViewport: function() {
+            const panel = document.getElementById('editPanel');
+            if (!panel) return;
+
+            if (window.innerWidth > 768) {
+                panel.style.removeProperty('--edit-panel-height');
+                panel.style.removeProperty('--edit-panel-top');
+                return;
+            }
+
+            const viewport = window.visualViewport;
+            // Let pinch zoom magnify the panel without reflowing its contents.
+            if (viewport && Math.abs(viewport.scale - 1) > 0.01) return;
+
+            panel.style.setProperty('--edit-panel-height', `${viewport ? viewport.height : window.innerHeight}px`);
+            panel.style.setProperty('--edit-panel-top', `${viewport ? viewport.offsetTop : 0}px`);
         },
 
         setupKeyboardDetection: function() {
@@ -216,13 +243,7 @@
                 offcanvas.classList.add('keyboard-visible');
             }
 
-            // Focus management
-            setTimeout(() => {
-                const firstFocusable = offcanvas.querySelector('input, select, textarea, button:not(.btn-close)');
-                if (firstFocusable) {
-                    firstFocusable.focus();
-                }
-            }, 100);
+            // AccessibilityManager handles initial focus after the panel is shown.
         },
 
         handleOffcanvasHide: function(offcanvas) {

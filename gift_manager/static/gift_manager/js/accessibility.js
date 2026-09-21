@@ -205,6 +205,13 @@ class AccessibilityManager {
      * Set initial focus when modal/offcanvas is shown
      */
     setInitialFocus(container) {
+        // Open the edit panel without scrolling its form or summoning a keyboard.
+        if (container.id === 'editPanel') {
+            const focusTarget = container.querySelector('.btn-close') || container;
+            focusTarget.focus({ preventScroll: true });
+            return;
+        }
+
         // Priority order for initial focus:
         // 1. Element with autofocus attribute
         // 2. First form input

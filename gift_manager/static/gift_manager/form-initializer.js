@@ -303,6 +303,9 @@
      * Auto-focuses the first form field
      */
     FormInitializer.register("autoFocus", function (form) {
+        // AccessibilityManager owns initial focus for the edit panel.
+        if (form.closest("#editPanel")) return;
+
         const firstField = form.querySelector('input:not([type="hidden"]), select, textarea');
         if (firstField) {
             // Use setTimeout to ensure the offcanvas animation is complete
