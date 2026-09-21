@@ -137,16 +137,6 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupFocusManagement(panel) {
         if (!panel) return;
 
-        panel.addEventListener('shown.bs.offcanvas', function() {
-            // Focus first focusable element or close button
-            const firstFocusable = panel.querySelector('input, select, textarea, button:not(.btn-close)');
-            if (firstFocusable) {
-                firstFocusable.focus();
-            } else {
-                panel.querySelector('.btn-close').focus();
-            }
-        });
-
         // Trap focus within panel
         panel.addEventListener('keydown', function(e) {
             if (e.key === 'Tab') {
