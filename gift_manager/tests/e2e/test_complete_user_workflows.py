@@ -543,6 +543,9 @@ class TestCompleteUserWorkflows(BaseE2ETest):
 
         # Step 2: Test keyboard navigation within panel
         first_name_field = panel.locator("[name='first_name']")
+        expect(first_name_field).to_be_visible()
+        expect(panel.locator(".btn-close")).to_be_focused()
+        page.keyboard.press("Tab")
         expect(first_name_field).to_be_focused()
 
         # Navigate through form fields
@@ -552,11 +555,14 @@ class TestCompleteUserWorkflows(BaseE2ETest):
 
         # Step 3: Test form submission via keyboard
         family_name_field.fill("Accessibility Test")
-        page.keyboard.press("Tab")  # Move to submit button
+        submit_button = panel.locator('.panel-form-actions button[type="submit"].btn-primary')
+        submit_button.focus()
+        expect(submit_button).to_be_focused()
         page.keyboard.press("Enter")  # Submit form
 
         self.wait_for_ajax_complete(page)
         self.wait_for_panel_close(page)
+        expect(self.get_list_items(page).filter(has_text="Accessibility Test")).to_be_visible()
 
         # Step 4: Test modal accessibility
         delete_button = self.get_list_items(page).first.locator("[data-action='delete']").first
