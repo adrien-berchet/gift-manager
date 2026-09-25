@@ -260,7 +260,6 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
 
         super().__init__(*args, **kwargs)
         self.user = user
-        self.fields["name"].required = False
 
         if user:
             # Show only groups the user can edit: linking a group changes who can access it

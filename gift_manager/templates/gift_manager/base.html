@@ -830,7 +830,7 @@
                 searchController = new AbortController();
 
                 try {
-                    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`, {
+                    const response = await fetch(`{% url 'gift_manager:global_search' %}?q=${encodeURIComponent(query)}`, {
                         signal: searchController.signal,
                         headers: {
                             'Accept': 'application/json'
