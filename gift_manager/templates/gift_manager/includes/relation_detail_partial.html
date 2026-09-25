@@ -184,16 +184,18 @@
             </div>
             {% endif %}
 
-            {% if object.gift.tags.all %}
+            {% with tags=object.gift|visible_tags:request.user %}
+            {% if tags %}
             <div class="gift-tags">
                 <small class="text-muted">{% trans "Tags:" %}</small>
-                {% for tag in object.gift.tags.all %}
+                {% for tag in tags %}
                 <span class="gift-plan-tag-badge">
                     <i class="fas fa-tag me-1"></i>{{ tag.name }}
                 </span>
                 {% endfor %}
             </div>
             {% endif %}
+            {% endwith %}
         </div>
     </div>
     {% endif %}

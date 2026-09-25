@@ -72,9 +72,11 @@ class GiftListView(
         if not gift_ids:
             return
 
+        accessible_tag_ids = GiftTag.objects.accessible_by(self.request.user).values("pk")
         tags_by_gift = {gift_id: [] for gift_id in gift_ids}
         for row in (
             Gift.objects.filter(gift_id__in=gift_ids)
+            .filter(tags__pk__in=accessible_tag_ids)
             .values("gift_id", "tags__tag_id", "tags__name")
             .order_by("tags__name")
         ):
@@ -104,7 +106,10 @@ class GiftListView(
                         F("tags__name"),
                         function="jsonb_build_object",
                     ),
-                    filter=Q(tags__tag_id__isnull=False),
+                    filter=Q(
+                        tags__tag_id__isnull=False,
+                        tags__pk__in=GiftTag.objects.accessible_by(self.request.user).values("pk"),
+                    ),
                     distinct=True,
                 ),
             ).values("gift_id", "name", "comment", "tags_info")

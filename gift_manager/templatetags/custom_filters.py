@@ -1,6 +1,7 @@
 from django import template
 
 from gift_manager.email_encoding import decode_email as _decode_email
+from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.statuses import relation_status_slug
 
 register = template.Library()
@@ -98,3 +99,15 @@ def rating_stars(rating):
         "rating": rating,
         "stars": [(value, value <= rating) for value in reversed(RATING_VALUES)],
     }
+
+
+@register.filter
+def visible_tags(gift, user):
+    """Return the tags of a gift that the user is allowed to see."""
+    return VisibleMetadata.for_user(user).tags(gift)
+
+
+@register.filter
+def visible_groups(person, user):
+    """Return the groups of a person that the user is allowed to see."""
+    return VisibleMetadata.for_user(user).groups(person)

@@ -91,9 +91,10 @@
         {% endif %}
     </div>
 
-    {% if card.relation.gift.tags.all %}
+    {% with tags=card.relation.gift|visible_tags:request.user %}
+    {% if tags %}
     <div class="gift-plan-tag-list">
-        {% for tag in card.relation.gift.tags.all %}
+        {% for tag in tags %}
         <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}"
            class="gift-plan-tag-badge">
             <i class="fas fa-tag" aria-hidden="true"></i>{{ tag.name }}
@@ -101,6 +102,7 @@
         {% endfor %}
     </div>
     {% endif %}
+    {% endwith %}
 
     {% if card.relation.comment %}
     <p class="gift-plan-note">{{ card.relation.comment|truncatechars:160 }}</p>

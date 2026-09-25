@@ -431,7 +431,7 @@ class TestRemovePersonFromGroup:
     def test_remove_person_editor_can_remove(self):
         """Test that editor can remove person from group."""
         create_or_update_permission(self.user, self.group, permission_level=PermissionLevel.EDITOR)
-        create_or_update_permission(self.user, self.person, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, self.person, permission_level=PermissionLevel.EDITOR)
 
         url = reverse(
             "gift_manager:remove_person_group_person",
@@ -689,7 +689,7 @@ class TestReparentGroupAPI:
         group = PersonGroupFactory(name="Child Group")
         parent = PersonGroupFactory(name="Parent Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
-        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.EDITOR)
 
         url = reverse("gift_manager:api_reparent_group")
         response = self._post_json(
@@ -715,8 +715,8 @@ class TestReparentGroupAPI:
         group.parent_groups.add(parent1)
 
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
-        create_or_update_permission(self.user, parent1, permission_level=PermissionLevel.VIEWER)
-        create_or_update_permission(self.user, parent2, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, parent1, permission_level=PermissionLevel.EDITOR)
+        create_or_update_permission(self.user, parent2, permission_level=PermissionLevel.EDITOR)
 
         url = reverse("gift_manager:api_reparent_group")
         response = self._post_json(
@@ -740,7 +740,7 @@ class TestReparentGroupAPI:
         group.parent_groups.add(parent)
 
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
-        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, parent, permission_level=PermissionLevel.EDITOR)
 
         url = reverse("gift_manager:api_reparent_group")
         response = self._post_json(
@@ -1100,7 +1100,7 @@ class TestComplexHierarchies:
         level4.parent_groups.add(level3)
 
         self._grant_editor(level4)
-        self._grant_access(level1, level2, level3)
+        self._grant_editor(level1, level2, level3)
 
         # Move level4 to be a direct child of level1 (skip levels 2 and 3)
         url = reverse("gift_manager:api_reparent_group")
@@ -1130,7 +1130,7 @@ class TestComplexHierarchies:
         child.parent_groups.add(parent1)
 
         self._grant_editor(child)
-        self._grant_access(parent1, parent2)
+        self._grant_editor(parent1, parent2)
 
         # Add parent2 as additional parent
         url = reverse("gift_manager:api_reparent_group")
@@ -1162,7 +1162,7 @@ class TestComplexHierarchies:
         child.parent_groups.add(parent1, parent2, parent3)
 
         self._grant_editor(child)
-        self._grant_access(parent1, parent2, parent3)
+        self._grant_editor(parent1, parent2, parent3)
 
         # Remove parent2
         url = reverse("gift_manager:api_reparent_group")

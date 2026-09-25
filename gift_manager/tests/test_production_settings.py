@@ -507,6 +507,26 @@ def test_explicit_production_settings_module_imports_without_django_env():
     assert result.returncode == 0, result.stderr
 
 
+def test_production_redis_cache_backend_accepts_configured_options():
+    """The Redis cache backend must support the OPTIONS it is configured with."""
+    env = _production_env()
+    env["DJANGO_SETTINGS_MODULE"] = "GiftManager.settings.production"
+    env["REDIS_URL"] = "redis://localhost:6379/1"
+
+    result = _run_python(
+        "import django; django.setup(); "
+        "from django.conf import settings; "
+        "from django.core.cache import caches; "
+        "cache = caches['default']; "
+        "assert type(cache).__module__.startswith('django_redis'), type(cache); "
+        "assert settings.SESSION_ENGINE == 'django.contrib.sessions.backends.cache'; "
+        "assert settings.SESSION_CACHE_ALIAS == 'default'",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_production_compose_requires_critical_environment_values():
     """Production Compose should fail before interpolating blank secrets."""
     compose = (PROJECT_ROOT / "docker-compose.prod.yml").read_text()

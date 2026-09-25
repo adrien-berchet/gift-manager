@@ -1,10 +1,16 @@
+from collections.abc import Iterator
+
 from django import forms
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.db.models import Q
+from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy
 
 from .email_encoding import decode_email
 from .email_encoding import encode_email
+from .group_hierarchy_service import GroupHierarchyService
 from .models import Event
 from .models import Gift
 from .models import GiftTag
@@ -96,14 +102,20 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             "invalid": gettext_lazy("Enter a valid email address."),
         },
     )
+    # Declared (not a Meta field) so ModelForm does not blindly .set() memberships:
+    # they are saved through GroupHierarchyService, which checks group authority.
+    groups = forms.ModelMultipleChoiceField(
+        queryset=PersonGroup.objects.none(),
+        required=False,
+        label=gettext_lazy("Groups"),
+    )
 
     class Meta:
         model = Person
-        fields = ["first_name", "family_name", "email_address", "groups"]
+        fields = ["first_name", "family_name", "email_address"]
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
-            "groups": gettext_lazy("Groups"),
         }
         widgets = {
             "first_name": forms.TextInput(attrs={"rows": 1}),
@@ -119,11 +131,45 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        self.fields["groups"].required = False
+        self.user = None
+        if user is not None:
+            self.set_user(user)
         # Decode the email address for display in the form
         if self.instance and self.instance.pk:
             self.initial["email_address"] = decode_email(self.instance.email_address)
+            self.initial.setdefault("groups", list(self.instance.groups.all()))
+
+    def set_user(self, user) -> None:
+        """Bind the acting user: only groups they can edit are offered as choices."""
+        self.user = user
+        self.fields["groups"].queryset = _editable_by(
+            PersonGroup.objects.accessible_by(user), user
+        ).order_by("name")
+
+    def _group_changes(self) -> tuple[set, set]:
+        """Return (add, remove) groups; groups not offered as choices are left untouched."""
+        selected = set(self.cleaned_data.get("groups", []))
+        offered = set(self.fields["groups"].queryset)
+        current = set(self.instance.groups.all()) if self.instance.pk else set()
+        return selected - current, (current & offered) - selected
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.user is not None and not self.errors:
+            add, remove = self._group_changes()
+            try:
+                GroupHierarchyService.check_person_group_changes(
+                    self.user,
+                    self.instance,
+                    add=add,
+                    remove=remove,
+                    person_is_new=self.instance.pk is None,
+                )
+            except PermissionDenied as error:
+                self.add_error("groups", str(error))
+        return cleaned_data
 
     def save(self, *, commit=True):  # pylint: disable=arguments-differ
         instance = super().save(commit=False)
@@ -131,9 +177,29 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         email = self.cleaned_data.get("email_address")
         instance.email_address = encode_email(email)
         if commit:
-            instance.save()
-            self._save_m2m()
+            is_new = instance.pk is None
+            with transaction.atomic():
+                instance.save()
+                if self.user is not None:
+                    add, remove = self._group_changes()
+                    GroupHierarchyService.change_person_groups(
+                        self.user, instance, add=add, remove=remove, person_is_new=is_new
+                    )
         return instance
+
+
+def _denial(check, user, group, add, remove, group_is_new) -> str | None:
+    """Return the denial message if check rejects the changes, else None."""
+    try:
+        check(user, group, add=add, remove=remove, group_is_new=group_is_new)
+    except PermissionDenied as error:
+        return str(error)
+    return None
+
+
+def _editable_by(queryset, user) -> QuerySet:
+    """Restrict a queryset to the objects the user can edit."""
+    return queryset.filter(pk__in=GroupHierarchyService.editable_pks(user, queryset))
 
 
 class PersonGroupForm(BaseFormMixin, forms.ModelForm):
@@ -178,7 +244,9 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
 
     class Meta:
         model = PersonGroup
-        fields = ["name", "parent_groups", "child_groups", "persons"]
+        # Links are declared above and saved by GroupHierarchyService, not by
+        # ModelForm's unconditional many-to-many .set()
+        fields = ["name"]
         labels = {
             "name": gettext_lazy("Name"),
         }
@@ -191,12 +259,13 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         user = kwargs.pop("user", None)
 
         super().__init__(*args, **kwargs)
+        self.user = user
         self.fields["name"].required = False
 
         if user:
-            # Show only groups accessible by the user
-            available_groups = PersonGroup.objects.accessible_by(user)
-            available_child_groups = PersonGroup.objects.accessible_by(user)
+            # Show only groups the user can edit: linking a group changes who can access it
+            available_groups = _editable_by(PersonGroup.objects.accessible_by(user), user)
+            available_child_groups = _editable_by(PersonGroup.objects.accessible_by(user), user)
 
             # If editing an existing group, exclude self and descendants to prevent cycles
             # for parent_groups field
@@ -222,9 +291,9 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
                 self.fields["child_groups"].initial = self.instance.child_groups.all()
 
             # Show only persons accessible by the user
-            self.fields["persons"].queryset = Person.objects.accessible_by(user).order_by(
-                "family_name", "first_name"
-            )
+            self.fields["persons"].queryset = _editable_by(
+                Person.objects.accessible_by(user), user
+            ).order_by("family_name", "first_name")
 
             # Set initial value if editing
             if self.instance and self.instance.pk:
@@ -232,22 +301,65 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
 
     def save(self, *, commit=True):  # pylint: disable=arguments-differ
         """Save the group and update the many-to-many relationships."""
-        instance = super().save(commit=commit)
-
-        if commit:
-            # Update parent_groups relationship
-            if "parent_groups" in self.cleaned_data:
-                instance.parent_groups.set(self.cleaned_data["parent_groups"])
-
-            # Update child_groups relationship
-            if "child_groups" in self.cleaned_data:
-                instance.child_groups.set(self.cleaned_data["child_groups"])
-
-            # Update persons relationship
-            if "persons" in self.cleaned_data:
-                instance.person_set.set(self.cleaned_data["persons"])
+        is_new = self.instance.pk is None
+        with transaction.atomic():
+            instance = super().save(commit=commit)
+            if commit and self.user:
+                self._save_relationships(instance, is_new=is_new)
 
         return instance
+
+    def _relationship_changes(self, instance, *, is_new) -> Iterator[tuple]:
+        """Yield (field, check, change, add, remove) for each submitted link field.
+
+        Only links whose other end was offered as a choice are touched, so links
+        to objects the user cannot edit survive the save.
+        """
+        for field, related_name, check, change in (
+            (
+                "parent_groups",
+                "parent_groups",
+                GroupHierarchyService.check_parent_changes,
+                GroupHierarchyService.change_parents,
+            ),
+            (
+                "child_groups",
+                "child_groups",
+                GroupHierarchyService.check_child_changes,
+                GroupHierarchyService.change_children,
+            ),
+            (
+                "persons",
+                "person_set",
+                GroupHierarchyService.check_member_changes,
+                GroupHierarchyService.change_members,
+            ),
+        ):
+            if field not in self.cleaned_data:
+                continue
+            selected = set(self.cleaned_data[field])
+            offered = set(self.fields[field].queryset)
+            current = set() if is_new else set(getattr(instance, related_name).all())
+            yield field, check, change, selected - current, (current & offered) - selected
+
+    def _check_relationship_permissions(self) -> None:
+        """Report unauthorized link changes as form errors instead of failing on save."""
+        if not self.user or self.errors:
+            return
+        is_new = self.instance.pk is None
+        for field, check, _change, add, remove in self._relationship_changes(
+            self.instance, is_new=is_new
+        ):
+            error = _denial(check, self.user, self.instance, add, remove, is_new)
+            if error:
+                self.add_error(field, error)
+
+    def _save_relationships(self, instance, *, is_new) -> None:
+        """Apply the submitted links through the authorization-aware service."""
+        for _field, _check, change, add, remove in self._relationship_changes(
+            instance, is_new=is_new
+        ):
+            change(self.user, instance, add=add, remove=remove, group_is_new=is_new)
 
     def clean_parent_groups(self):
         """Validate that adding parent groups won't create a cycle."""
@@ -271,6 +383,7 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        self._check_relationship_permissions()
         parent_groups = cleaned_data.get("parent_groups", [])
         child_groups = cleaned_data.get("child_groups", [])
 
@@ -360,21 +473,20 @@ class PersonGroupAddMultiplePersonsForm(forms.Form):
         user = kwargs.pop("user", None)  # Get the user from the kwargs
         group = kwargs.pop("group", None)  # Get the group from the kwargs
         super().__init__(*args, **kwargs)
-        # Filter the persons accessible to this user
+        self.user = user
+        # Filter the persons the user can edit
         if user:
             query = Q(shared_with=user)
             # Filter the persons not in the group if a group is given
             if group:
                 query &= ~Q(groups=group)
-            self.fields["persons"].queryset = Person.objects.filter(query).order_by(
-                "family_name", "first_name"
-            )
+            self.fields["persons"].queryset = _editable_by(
+                Person.objects.filter(query), user
+            ).order_by("family_name", "first_name")
 
     def save(self, group: PersonGroup):
         """Add all selected persons to the group."""
-        for i in self.cleaned_data["persons"]:
-            i.groups.add(group)
-            i.save()
+        GroupHierarchyService.change_members(self.user, group, add=self.cleaned_data["persons"])
 
 
 class PersonGroupAddMultipleChildGroupsForm(forms.Form):
@@ -389,10 +501,12 @@ class PersonGroupAddMultipleChildGroupsForm(forms.Form):
         user = kwargs.pop("user", None)
         parent_group = kwargs.pop("group", None)
         super().__init__(*args, **kwargs)
+        self.user = user
+        self.parent_group = parent_group
 
         if user and parent_group:
             # Get all accessible groups
-            available_groups = PersonGroup.objects.accessible_by(user)
+            available_groups = _editable_by(PersonGroup.objects.accessible_by(user), user)
 
             # Exclude groups that would create cycles:
             # 1. The parent group itself
@@ -410,10 +524,23 @@ class PersonGroupAddMultipleChildGroupsForm(forms.Form):
 
             self.fields["child_groups"].queryset = available_groups.order_by("name")
 
+    def clean(self):
+        cleaned_data = super().clean()
+        children = cleaned_data.get("child_groups")
+        if self.user and self.parent_group and children:
+            try:
+                GroupHierarchyService.check_child_changes(
+                    self.user, self.parent_group, add=children
+                )
+            except PermissionDenied as error:
+                self.add_error("child_groups", str(error))
+        return cleaned_data
+
     def save(self, parent_group: PersonGroup):
         """Add all selected groups as children of the parent group."""
-        for child in self.cleaned_data["child_groups"]:
-            parent_group.child_groups.add(child)
+        GroupHierarchyService.change_children(
+            self.user, parent_group, add=self.cleaned_data["child_groups"]
+        )
         parent_group.save()
 
 

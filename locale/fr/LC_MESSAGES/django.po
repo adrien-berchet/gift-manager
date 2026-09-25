@@ -3136,6 +3136,20 @@ msgstr "Vous n'avez pas la permission d'éditer ce groupe"
 msgid "Person removed from group"
 msgstr "Personne supprimée du groupe"
 
+#: gift_manager/group_hierarchy_service.py:40
+#, python-format
+msgid "You do not have permission to edit '%(name)s'."
+msgstr "Vous n'avez pas la permission d'éditer « %(name)s »."
+
+#: gift_manager/group_hierarchy_service.py:65
+#, python-format
+msgid ""
+"Attaching '%(child)s' under '%(parent)s' would share it with other users; "
+"only an owner can do this."
+msgstr ""
+"Rattacher « %(child)s » sous « %(parent)s » le partagerait avec d'autres "
+"utilisateurs ; seul un propriétaire peut le faire."
+
 #: gift_manager/views/person_group.py:348
 msgid "Edit group"
 msgstr "Éditer le groupe"

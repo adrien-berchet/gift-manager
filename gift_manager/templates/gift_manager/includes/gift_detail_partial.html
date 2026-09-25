@@ -1,5 +1,5 @@
 {% extends "gift_manager/includes/detail_partial.html" %}
-{% load i18n %}
+{% load i18n custom_filters %}
 
 {% block edit_url %}{% url 'gift_manager:gift_edit' pk=gift.gift_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:gift_delete' pk=gift.gift_id %}{% endblock %}
@@ -41,15 +41,16 @@
     </div>
 
     <!-- Tags -->
-    {% if gift.tags.all %}
+    {% with tags=gift|visible_tags:request.user %}
+    {% if tags %}
     <div class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">
             <i class="fas fa-tags me-2"></i>{% trans "Tags" %}
-            <span class="badge bg-secondary ms-2">{{ gift.tags.count }}</span>
+            <span class="badge bg-secondary ms-2">{{ tags|length }}</span>
         </h6>
 
         <div class="tags-list">
-            {% for tag in gift.tags.all %}
+            {% for tag in tags %}
             <span class="badge bg-info me-1 mb-1">
                 <i class="fas fa-tag me-1"></i>{{ tag.name }}
             </span>
@@ -57,6 +58,7 @@
         </div>
     </div>
     {% endif %}
+    {% endwith %}
 
     <!-- Gift Plans -->
     {% if relations %}

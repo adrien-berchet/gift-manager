@@ -92,12 +92,20 @@ class PersonQuerySet(UserPermissionQuerySet):
         """Return all persons accessible by a user (user_link or shared_with)."""
         return self.filter(Q(user_link=user) | Q(shared_with=user)).distinct()
 
-    def with_groups_annotated(self):
-        """Return persons with groups information annotated for Grid.js."""
+    def with_groups_annotated(self, user=None):
+        """Return persons with groups information annotated for Grid.js.
+
+        When a user is given, only the groups that user can access are included.
+        """
         from django.db import connection
 
         # Use database-specific aggregation
         if connection.vendor == "postgresql":
+            group_filter = Q(groups__group_id__isnull=False)
+            if user is not None:
+                group_filter &= Q(
+                    groups__pk__in=PersonGroup.objects.accessible_by(user).values("pk")
+                )
             return self.annotate(
                 groups_info=JSONBAgg(
                     Func(
@@ -107,7 +115,7 @@ class PersonQuerySet(UserPermissionQuerySet):
                         F("groups__name"),
                         function="jsonb_build_object",
                     ),
-                    filter=Q(groups__group_id__isnull=False),
+                    filter=group_filter,
                     distinct=True,
                 )
             )
@@ -131,9 +139,9 @@ class PersonManager(models.Manager):
         """Return all persons accessible by a user (user_link or shared_with)."""
         return self.get_queryset().accessible_by(user)
 
-    def with_groups_annotated(self):
+    def with_groups_annotated(self, user=None):
         """Return persons with groups information annotated for Grid.js."""
-        return self.get_queryset().with_groups_annotated()
+        return self.get_queryset().with_groups_annotated(user)
 
     def with_complete_name(self):
         """Return persons with complete_name annotation (family_name + first_name)."""
@@ -143,7 +151,7 @@ class PersonManager(models.Manager):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
             self.accessible_by(user)
-            .with_groups_annotated()
+            .with_groups_annotated(user)
             .values("person_id", "first_name", "family_name", "email_address", "groups_info")
         )
 
@@ -151,12 +159,18 @@ class PersonManager(models.Manager):
 class GiftQuerySet(UserPermissionQuerySet):
     """QuerySet for Gift model with additional query methods."""
 
-    def with_tags_annotated(self):
-        """Return gifts with tags information annotated for Grid.js."""
+    def with_tags_annotated(self, user=None):
+        """Return gifts with tags information annotated for Grid.js.
+
+        When a user is given, only the tags that user can access are included.
+        """
         from django.db import connection
 
         # Use database-specific aggregation
         if connection.vendor == "postgresql":
+            tag_filter = Q(tags__tag_id__isnull=False)
+            if user is not None:
+                tag_filter &= Q(tags__pk__in=GiftTag.objects.accessible_by(user).values("pk"))
             return self.annotate(
                 tags_info=JSONBAgg(
                     Func(
@@ -166,7 +180,7 @@ class GiftQuerySet(UserPermissionQuerySet):
                         F("tags__name"),
                         function="jsonb_build_object",
                     ),
-                    filter=Q(tags__tag_id__isnull=False),
+                    filter=tag_filter,
                     distinct=True,
                 )
             )
@@ -184,15 +198,15 @@ class GiftManager(models.Manager):
         """Return all objects accessible by a user (shared with the user)."""
         return self.get_queryset().accessible_by(user)
 
-    def with_tags_annotated(self):
+    def with_tags_annotated(self, user=None):
         """Return gifts with tags information annotated for Grid.js."""
-        return self.get_queryset().with_tags_annotated()
+        return self.get_queryset().with_tags_annotated(user)
 
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
             self.accessible_by(user)
-            .with_tags_annotated()
+            .with_tags_annotated(user)
             .values("gift_id", "name", "comment", "tags_info")
         )
 

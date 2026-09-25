@@ -142,7 +142,7 @@
                 </div>
             </div>
 
-            {% include "gift_manager/includes/relation_cards_partial.html" with relations=relations person=person is_editor=is_editor only %}
+            {% include "gift_manager/includes/relation_cards_partial.html" with relations=relations person=person is_editor=is_editor viewer=request.user only %}
         </div>
 
         {% include "gift_manager/includes/reaction_history_partial.html" with given_reactions=given_reactions abandoned_reactions=abandoned_reactions only %}

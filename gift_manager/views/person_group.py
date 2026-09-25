@@ -5,6 +5,7 @@ import json
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Prefetch
@@ -23,6 +24,7 @@ from django.views.decorators.http import require_POST
 from gift_manager.forms import PersonGroupAddMultipleChildGroupsForm
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
+from gift_manager.group_hierarchy_service import GroupHierarchyService
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Person
@@ -313,8 +315,12 @@ def remove_person_from_group(request, pk, person_id):
         if not _check_editor_permission(request, group):
             return redirect("gift_manager:person_group_detail", pk=pk)
 
-        person = get_object_or_404(Person, person_id=person_id)
-        person.groups.remove(group)
+        person = get_object_or_404(Person.objects.accessible_by(request.user), person_id=person_id)
+        try:
+            GroupHierarchyService.change_members(request.user, group, remove=[person])
+        except PermissionDenied as error:
+            messages.error(request, str(error))
+            return redirect("gift_manager:person_group_detail", pk=pk)
         messages.success(request, _("Person removed from group"))
         return redirect("gift_manager:person_group_detail", pk=pk)
 
@@ -665,17 +671,25 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
         with transaction.atomic():
             if action == "set":
                 # Replace all parents
-                group.parent_groups.set(parent_groups)
+                # Parents the user cannot edit were never offered: keep them
+                current = set(group.parent_groups.all())
+                selected = set(parent_groups)
+                removable = current - selected
+                editable_pks = GroupHierarchyService.editable_pks(request.user, removable)
+                GroupHierarchyService.change_parents(
+                    request.user,
+                    group,
+                    add=selected - current,
+                    remove={parent for parent in removable if parent.pk in editable_pks},
+                )
                 message = gettext("Group parents updated successfully")
             elif action == "add":
                 # Add new parents
-                for parent_group in parent_groups:
-                    group.parent_groups.add(parent_group)
+                GroupHierarchyService.change_parents(request.user, group, add=parent_groups)
                 message = gettext("Parents added successfully")
             elif action == "remove":
                 # Remove parents
-                for parent_group in parent_groups:
-                    group.parent_groups.remove(parent_group)
+                GroupHierarchyService.change_parents(request.user, group, remove=parent_groups)
                 message = gettext("Parents removed successfully")
             else:
                 message = gettext("Invalid action")
@@ -689,6 +703,8 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
             }
         )
 
+    except PermissionDenied as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=403)
     except ValidationError as e:
         return JsonResponse(
             {
