@@ -339,8 +339,7 @@ body.has-fixed-action-bar {
     color: var(--color-gray-700);
 }
 
-.gift-plan-status--planned,
-.gift-plan-status--ordered {
+.gift-plan-status--planned {
     background-color: var(--color-primary-light);
     border-color: rgba(99, 102, 241, 0.35);
     color: var(--color-primary-hover);
@@ -352,23 +351,13 @@ body.has-fixed-action-bar {
     color: var(--color-info-hover);
 }
 
-.gift-plan-status--wrapped {
-    background-color: var(--color-warning-light);
-    border-color: rgba(245, 158, 11, 0.4);
-    color: var(--color-warning-hover);
-}
-
-.gift-plan-status--abandoned,
-.gift-plan-status--abandonne {
+.gift-plan-status--abandoned {
     background-color: var(--color-danger-light);
     border-color: rgba(239, 68, 68, 0.35);
     color: var(--color-danger-hover);
 }
 
-.gift-plan-status--given,
-.gift-plan-status--received,
-.gift-plan-status--done,
-.gift-plan-status--completed {
+.gift-plan-status--given {
     background-color: var(--color-success-light);
     border-color: rgba(16, 185, 129, 0.35);
     color: var(--color-success-hover);

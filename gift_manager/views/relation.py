@@ -834,18 +834,22 @@ def relation_quick_action(request, pk):
 
 
 def _reaction_form_response(request, relation, form, *, status=200) -> HttpResponse:
-    """Render the reaction form partial for a rateable gift plan."""
-    is_abandoned = is_abandoned_status(relation.status)
+    """Render the reaction form: a fragment for HTMX requests, a full page otherwise."""
+    is_htmx = request.headers.get("HX-Request") == "true"
     return render(
         request,
-        "gift_manager/includes/relation_reaction_partial.html",
+        "gift_manager/includes/relation_reaction_partial.html"
+        if is_htmx
+        else "gift_manager/relation_reaction.html",
         {
             "relation": relation,
             "form": form,
-            "is_abandoned": is_abandoned,
+            "is_abandoned": is_abandoned_status(relation.status),
             "form_action_url": reverse(
                 "gift_manager:relation_reaction", kwargs={"pk": relation.relation_id}
             ),
+            "cancel_url": relation.get_absolute_url(),
+            "full_page": not is_htmx,
             "form_type": "relation-reaction",
         },
         status=status,

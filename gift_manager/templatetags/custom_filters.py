@@ -40,25 +40,17 @@ def decode_email(value):
 _STATUS_BADGE_MAP = {
     "idea": "bg-secondary",
     "planned": "bg-primary",
-    "ordered": "bg-primary",
     "purchased": "bg-info text-dark",
-    "wrapped": "bg-warning text-dark",
     "abandoned": "bg-dark",
-    "abandonne": "bg-dark",
     "given": "bg-success",
-    "received": "bg-success",
 }
 
 _STATUS_BORDER_MAP = {
     "idea": "border-status-secondary",
     "planned": "border-status-primary",
-    "ordered": "border-status-primary",
     "purchased": "border-status-info",
-    "wrapped": "border-status-warning",
     "abandoned": "border-status-secondary",
-    "abandonne": "border-status-secondary",
     "given": "border-status-success",
-    "received": "border-status-success",
 }
 
 

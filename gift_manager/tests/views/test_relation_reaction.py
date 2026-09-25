@@ -50,6 +50,54 @@ class TestRelationReactionView:
         assert 'name="reaction_note"' in content
         assert 'data-form-type="relation-reaction"' in content
 
+    def test_htmx_get_returns_a_fragment(self):
+        relation = self.make_relation("Given")
+
+        response = self.client.get(_reaction_url(relation), HTTP_HX_REQUEST="true")
+
+        content = response.content.decode()
+        assert "<html" not in content
+        assert 'id="relation-reaction-form"' in content
+
+    def test_plain_get_returns_a_full_page(self):
+        relation = self.make_relation("Given", reaction_rating=4, reaction_note="Nice")
+
+        response = self.client.get(_reaction_url(relation))
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "<html" in content
+        assert 'id="relation-reaction-form"' in content
+        assert "Their reaction" in content
+        assert "Nice" in content
+        # The form has no offcanvas-only controls: a cancel link back to the plan instead.
+        form_html = content.split('id="relation-reaction-form"', 1)[1].split("</form>")[0]
+        assert "Skip" not in form_html
+        assert "hx-post" not in form_html
+        assert f'href="{relation.get_absolute_url()}"' in form_html
+
+    def test_plain_post_saves_and_redirects_to_the_plan(self):
+        relation = self.make_relation("Given")
+
+        response = self.client.post(
+            _reaction_url(relation), {"reaction_rating": "5", "reaction_note": "Great"}
+        )
+
+        assert response.status_code == 302
+        assert response["Location"] == relation.get_absolute_url()
+        relation.refresh_from_db()
+        assert relation.reaction_rating == 5
+
+    def test_plain_post_with_invalid_rating_rerenders_the_full_page(self):
+        relation = self.make_relation("Given")
+
+        response = self.client.post(_reaction_url(relation), {"reaction_rating": "9"})
+
+        assert response.status_code == 422
+        assert "<html" in response.content.decode()
+        relation.refresh_from_db()
+        assert relation.reaction_rating is None
+
     def test_get_abandoned_relation_uses_estimate_wording(self):
         relation = self.make_relation("Abandoned")
 
@@ -66,8 +114,10 @@ class TestRelationReactionView:
 
         assert response.status_code == 200
 
-    @pytest.mark.parametrize("status_name", ["Idea", "Planned", "Purchased"])
-    def test_non_terminal_relation_is_rejected(self, status_name):
+    @pytest.mark.parametrize(
+        "status_name", ["Idea", "Planned", "Purchased", "Received", "Done", "Completed"]
+    )
+    def test_non_rateable_relation_is_rejected(self, status_name):
         relation = self.make_relation(status_name)
 
         get_response = self.client.get(_reaction_url(relation), HTTP_HX_REQUEST="true")

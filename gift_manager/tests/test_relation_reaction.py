@@ -9,6 +9,7 @@ from django.utils import timezone
 from gift_manager.models import RelationStatus
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_terminal_status
 from gift_manager.tests.factories import RelationFactory
 
 
@@ -25,10 +26,19 @@ def _status(name: str) -> RelationStatus:
         ("Idea", False),
         ("Planned", False),
         ("Purchased", False),
+        # Given and Abandoned are the only terminal (and rateable) statuses.
+        ("Received", False),
+        ("Done", False),
+        ("Completed", False),
     ],
 )
 def test_can_rate_status(name, expected):
     assert can_rate_status(RelationStatus(status=name, status_en=name)) is expected
+
+
+@pytest.mark.parametrize("name", ["Received", "Done", "Completed"])
+def test_legacy_slugs_are_not_terminal(name):
+    assert is_terminal_status(RelationStatus(status=name, status_en=name)) is False
 
 
 def test_is_abandoned_status():

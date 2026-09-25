@@ -3,12 +3,14 @@
 <form method="post"
       id="relation-reaction-form"
       action="{{ form_action_url }}"
+      {% if not full_page %}
       hx-post="{{ form_action_url }}"
       hx-trigger="submit"
       hx-target="this"
       hx-swap="outerHTML"
       hx-indicator="#offcanvasLoading"
-      class="offcanvas-form relation-reaction-form"
+      {% endif %}
+      class="{% if full_page %}page-form{% else %}offcanvas-form{% endif %} relation-reaction-form"
       data-form-type="{{ form_type }}">
   {% csrf_token %}
 
@@ -25,13 +27,19 @@
     {% include "gift_manager/includes/forms/field.html" with field=form.reaction_note %}
   </div>
 
-  <div class="panel-form-actions">
+  <div class="{% if full_page %}page-form-actions{% else %}panel-form-actions{% endif %}">
+    {% if full_page %}
+    <a href="{{ cancel_url }}" class="btn btn-secondary">
+      <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Cancel" %}
+    </a>
+    {% else %}
     <button type="button"
             class="btn btn-secondary"
             data-bs-dismiss="offcanvas"
             aria-label="{% trans 'Skip' %}">
       <i class="fas fa-forward me-1" aria-hidden="true"></i>{% trans "Skip" %}
     </button>
+    {% endif %}
     <button type="submit"
             class="btn btn-primary"
             data-loading-text="{% trans 'Saving...' %}">

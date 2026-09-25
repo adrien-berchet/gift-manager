@@ -24,6 +24,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.services import PermissionService
+from gift_manager.statuses import GIVEN_STATUS_SLUGS
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
@@ -60,7 +61,8 @@ def _build_dashboard_action_item(
 
 def _awaits_reaction(relation: Relation, *, today: date) -> bool:
     """Return whether a recently given, unrated gift plan is waiting for a reaction."""
-    if relation_status_slug(relation.status) != "given" or relation.reaction_rating is not None:
+    is_given = relation_status_slug(relation.status) in GIVEN_STATUS_SLUGS
+    if not is_given or relation.reaction_rating is not None:
         return False
 
     given_on = (
