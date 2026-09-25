@@ -11,6 +11,7 @@ from .models import GiftTag
 from .models import Person
 from .models import PersonGroup
 from .models import Relation
+from .statuses import can_rate_status
 
 
 class BaseFormMixin:
@@ -666,6 +667,59 @@ class EventForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
+REACTION_RATING_CHOICES = [(rating, str(rating)) for rating in range(1, 6)]
+REACTION_FIELD_NAMES = ("reaction_rating", "reaction_note")
+REACTION_NOTE_MAX_LENGTH = 1000
+
+
+def build_reaction_rating_field() -> forms.TypedChoiceField:
+    """Return the optional 1-5 rating field shared by the reaction forms."""
+    return forms.TypedChoiceField(
+        label=gettext_lazy("Rating"),
+        choices=REACTION_RATING_CHOICES,
+        coerce=int,
+        empty_value=None,
+        required=False,
+        widget=forms.RadioSelect,
+    )
+
+
+def build_reaction_note_field() -> forms.CharField:
+    """Return the optional reaction note field shared by the reaction forms."""
+    return forms.CharField(
+        label=gettext_lazy("Note"),
+        required=False,
+        max_length=REACTION_NOTE_MAX_LENGTH,
+        widget=forms.Textarea(attrs={"rows": 3}),
+    )
+
+
+def _reaction_field_omitted(form, name: str) -> bool:
+    """Return whether a reaction field was left out of the submitted data."""
+    return form.fields[name].widget.value_omitted_from_data(
+        form.data, form.files, form.add_prefix(name)
+    )
+
+
+class RelationReactionForm(BaseFormMixin, forms.ModelForm):
+    """Rate how a recipient reacted to (or would have liked) a gift plan."""
+
+    reaction_rating = build_reaction_rating_field()
+    reaction_note = build_reaction_note_field()
+
+    class Meta:
+        model = Relation
+        fields = list(REACTION_FIELD_NAMES)
+
+    def clean(self):
+        """Leave stored values untouched for fields the client did not submit."""
+        cleaned_data = super().clean()
+        for name in REACTION_FIELD_NAMES:
+            if _reaction_field_omitted(self, name):
+                cleaned_data.pop(name, None)
+        return cleaned_data
+
+
 class RelationForm(BaseFormMixin, forms.ModelForm):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
@@ -673,6 +727,8 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
         widget=forms.Select(attrs={"class": "form-select"}),
         help_text=gettext_lazy("Choose the person or group this gift plan is for."),
     )
+    reaction_rating = build_reaction_rating_field()
+    reaction_note = build_reaction_note_field()
 
     class Meta:
         model = Relation
@@ -683,6 +739,7 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
             "event",
             "status",
             "due_date",
+            *REACTION_FIELD_NAMES,
         ]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
@@ -708,6 +765,17 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
         )
         if self.instance and self.instance.pk:
             self.initial["recipient"] = self.instance.recipient_key
+        self.rateable_status_ids = {
+            str(status.pk) for status in self.fields["status"].queryset if can_rate_status(status)
+        }
+        self.fields["status"].widget.attrs["data-rateable-statuses"] = ",".join(
+            sorted(self.rateable_status_ids)
+        )
+
+    @property
+    def reaction_section_visible(self) -> bool:
+        """Return whether the current status can carry a reaction rating."""
+        return str(self["status"].value()) in self.rateable_status_ids
 
     def clean(self):
         """Validate and map the typed recipient choice to person/group fields."""
@@ -717,4 +785,12 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
         except forms.ValidationError as exc:
             self.add_error("recipient", exc)
 
+        self._discard_inapplicable_reaction(cleaned_data)
         return cleaned_data
+
+    def _discard_inapplicable_reaction(self, cleaned_data) -> None:
+        """Leave the stored reaction untouched unless it applies to the submitted status."""
+        rating_applies = can_rate_status(cleaned_data.get("status"))
+        for name in REACTION_FIELD_NAMES:
+            if not rating_applies or _reaction_field_omitted(self, name):
+                cleaned_data.pop(name, None)

@@ -1,0 +1,14 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Reaction" %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header">
+    <h1>{% trans "Reaction" %}</h1>
+  </div>
+
+  {% include "gift_manager/includes/relation_reaction_partial.html" %}
+</div>
+{% endblock %}

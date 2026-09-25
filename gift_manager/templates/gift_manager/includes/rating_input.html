@@ -1,0 +1,29 @@
+{% load i18n %}
+<fieldset class="rating-input{% if field.errors %} has-errors{% endif %}">
+  <legend class="rating-input-legend">{{ field.label }}</legend>
+  <div class="rating-input-stars">
+    {% for value in values %}
+    <input type="radio"
+           class="rating-input-radio"
+           name="{{ field.html_name }}"
+           id="{{ field.auto_id }}_{{ value }}"
+           value="{{ value }}"{% if current == value|stringformat:"s" %} checked{% endif %}>
+    <label class="rating-input-star" for="{{ field.auto_id }}_{{ value }}" title="{% blocktrans %}{{ value }} out of 5{% endblocktrans %}">
+      <i class="fas fa-star" aria-hidden="true"></i>
+      <span class="visually-hidden">{% blocktrans %}{{ value }} out of 5{% endblocktrans %}</span>
+    </label>
+    {% endfor %}
+  </div>
+  <label class="rating-input-clear" for="{{ field.auto_id }}_none">
+    <input type="radio"
+           name="{{ field.html_name }}"
+           id="{{ field.auto_id }}_none"
+           value=""{% if not current %} checked{% endif %}>
+    {% trans "No rating" %}
+  </label>
+  {% if field.errors %}
+  <div class="invalid-feedback d-block">
+    {% for error in field.errors %}<div>{{ error }}</div>{% endfor %}
+  </div>
+  {% endif %}
+</fieldset>

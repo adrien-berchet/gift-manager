@@ -698,6 +698,7 @@
     <script src="{% static 'gift_manager/js/accessibility.js' %}"></script>
     <!-- Form Initializer -->
     <script src="{% static 'gift_manager/form-initializer.js' %}"></script>
+    <script src="{% static 'gift_manager/js/reaction-fields.js' %}"></script>
 
     <!-- Configure HTMX to include CSRF token in headers -->
     <script>
@@ -1520,6 +1521,14 @@
                     showOffcanvasError(errorMessage, target);
                 });
             }
+
+            // Ask for a reaction rating right after a gift plan is marked given or abandoned
+            document.addEventListener('reaction:prompt', function(e) {
+                const promptUrl = e.detail && e.detail.url;
+                if (promptUrl) {
+                    loadFormInPanel(promptUrl, 'editPanel');
+                }
+            });
 
             // Handle edit/create buttons
             document.addEventListener('click', function(e) {

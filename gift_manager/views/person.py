@@ -23,6 +23,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.statuses import is_abandoned_status
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -240,12 +241,22 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         context["ancestor_groups"] = sorted(ancestor_groups_only, key=lambda g: g.name)
 
         # Query relations for person directly and all related groups (including ancestors)
-        context["relations"] = (
+        relations = list(
             Relation.objects.accessible_by(self.request.user)
             .filter(Q(person=self.object) | Q(group__in=all_groups_with_ancestors))
             .select_related("status", "gift", "event", "person", "group")
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
+        )
+        context["relations"] = relations
+        rated_relations = [relation for relation in relations if relation.has_visible_reaction]
+        context["given_reactions"] = sorted(
+            (r for r in rated_relations if not is_abandoned_status(r.status)),
+            key=lambda r: (-r.reaction_rating, r.gift.name),
+        )
+        context["abandoned_reactions"] = sorted(
+            (r for r in rated_relations if is_abandoned_status(r.status)),
+            key=lambda r: (r.reaction_rating, r.gift.name),
         )
         context["relation_statuses"] = RelationStatus.objects.all()
 

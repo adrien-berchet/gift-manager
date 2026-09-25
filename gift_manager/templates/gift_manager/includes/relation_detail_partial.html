@@ -1,5 +1,5 @@
 {% extends "gift_manager/includes/detail_partial.html" %}
-{% load i18n %}
+{% load i18n custom_filters %}
 
 {% block edit_url %}{% url 'gift_manager:relation_edit' pk=object.relation_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:relation_delete' pk=object.relation_id %}{% endblock %}
@@ -80,6 +80,19 @@
                             <i class="fas fa-calendar-plus" aria-hidden="true"></i>
                             {% trans "No date" %}
                         </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.has_visible_reaction %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">
+                        {% if is_abandoned %}{% trans "How much they would have liked it" %}{% else %}{% trans "Their reaction" %}{% endif %}
+                    </label>
+                    <div class="detail-value">
+                        {% rating_stars object.reaction_rating %}
+                        {% if object.reaction_note %}<div class="mt-1">{{ object.reaction_note }}</div>{% endif %}
                     </div>
                 </div>
             </div>

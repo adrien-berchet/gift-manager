@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n custom_filters %}
 
 <article class="gift-plan-card gift-plan-card--{{ card.urgency_key }}"
          data-recipient-key="{{ card.relation.recipient_key }}">
@@ -52,6 +52,26 @@
             <span>{{ card.relation.recipient_name }}</span>
             {% endif %}
         </div>
+
+        {% if card.can_rate_inline %}
+        <div class="gift-plan-card-meta-row gift-plan-card-reaction">
+            {% include "gift_manager/includes/rating_inline.html" with card=card %}
+        </div>
+        {% elif card.relation.has_visible_reaction %}
+        <div class="gift-plan-card-meta-row gift-plan-card-reaction">
+            {% rating_stars card.relation.reaction_rating %}
+            {% if card.can_edit_reaction %}
+            <a href="{{ card.reaction_url }}"
+               class="gift-plan-reaction-edit"
+               data-action="edit"
+               data-edit-url="{{ card.reaction_url }}"
+               aria-label="{% trans 'Edit reaction' %}"
+               title="{% trans 'Edit reaction' %}">
+                <i class="fas fa-pen" aria-hidden="true"></i>
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
 
         {% if card.relation.event %}
         <div class="gift-plan-card-meta-row">

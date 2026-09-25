@@ -1,0 +1,31 @@
+{% load i18n %}
+{% comment %}
+  One-click rating shown on unrated given/abandoned gift-plan cards.
+  Required context: card (from build_gift_plan_card).
+{% endcomment %}
+<form class="rating-inline-form"
+      data-rating-inline
+      hx-post="{{ card.reaction_url }}"
+      hx-trigger="change"
+      hx-target="this"
+      hx-swap="none">
+  {% csrf_token %}
+  <input type="hidden" name="inline" value="1">
+  <fieldset class="rating-input rating-inline">
+    <legend class="visually-hidden">{% if card.reaction_is_estimate %}{% trans "How much would they have liked it?" %}{% else %}{% trans "Their reaction" %}{% endif %}</legend>
+    <div class="rating-input-stars"
+         title="{% if card.reaction_is_estimate %}{% trans 'How much would they have liked it?' %}{% else %}{% trans 'Rate their reaction' %}{% endif %}">
+      {% for value in "54321" %}
+      <input type="radio"
+             class="rating-input-radio"
+             name="reaction_rating"
+             id="rating-{{ card.relation.relation_id }}-{{ value }}"
+             value="{{ value }}">
+      <label class="rating-input-star" for="rating-{{ card.relation.relation_id }}-{{ value }}">
+        <i class="far fa-star" aria-hidden="true"></i>
+        <span class="visually-hidden">{% blocktrans %}{{ value }} out of 5{% endblocktrans %}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+</form>

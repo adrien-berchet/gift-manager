@@ -1,0 +1,4 @@
+{% load i18n %}
+<span class="rating-stars" role="img" aria-label="{% blocktrans %}{{ rating }} out of 5{% endblocktrans %}">
+  {% for value, filled in stars %}<i class="fa-star {% if filled %}fas rating-stars-filled{% else %}far{% endif %}" aria-hidden="true"></i>{% endfor %}
+</span>

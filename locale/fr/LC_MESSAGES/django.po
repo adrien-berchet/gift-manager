@@ -3268,6 +3268,68 @@ msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
 
+msgid "Awaiting reaction"
+msgstr "En attente de réaction"
+
+msgid "Rate"
+msgstr "Noter"
+
+msgid "Their reaction"
+msgstr "Sa réaction"
+
+msgid "How much would they have liked it?"
+msgstr "Dans quelle mesure l'aurait-il ou elle apprécié ?"
+
+msgid "How much they would have liked it"
+msgstr "Dans quelle mesure il ou elle l'aurait apprécié"
+
+msgid "Reaction"
+msgstr "Réaction"
+
+msgid "Rating"
+msgstr "Note"
+
+msgid "Note"
+msgstr "Commentaire"
+
+msgid "No rating"
+msgstr "Aucune note"
+
+msgid "Skip"
+msgstr "Passer"
+
+msgid "Gifts given"
+msgstr "Cadeaux offerts"
+
+msgid "Abandoned ideas"
+msgstr "Idées abandonnées"
+
+msgid "Reaction saved."
+msgstr "Réaction enregistrée."
+
+msgid "Choose a rating from 1 to 5."
+msgstr "Choisissez une note de 1 à 5."
+
+msgid "Only given or abandoned gift plans can be rated."
+msgstr "Seuls les projets de cadeaux offerts ou abandonnés peuvent être notés."
+
+#, python-format
+msgid "%(value)s out of 5"
+msgstr "%(value)s sur 5"
+
+#, python-format
+msgid "%(rating)s out of 5"
+msgstr "%(rating)s sur 5"
+
+msgid "Rate their reaction"
+msgstr "Noter sa réaction"
+
+msgid "Edit reaction"
+msgstr "Modifier la réaction"
+
+msgid "This gift plan is already rated. Edit its reaction instead."
+msgstr "Ce projet de cadeau est déjà noté. Modifiez plutôt sa réaction."
+
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""
 #~ "Soit une personne, soit un groupe doit être sélectionné, mais pas les "

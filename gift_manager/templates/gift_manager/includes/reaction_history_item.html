@@ -1,0 +1,19 @@
+{% load i18n custom_filters %}
+<li class="reaction-history-item border rounded p-2 mb-2">
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <a href="{% url 'gift_manager:relation_detail' relation.relation_id %}"
+           class="fw-semibold"
+           data-action="detail"
+           data-detail-url="{% url 'gift_manager:relation_detail' relation.relation_id %}">{{ relation.gift.name }}</a>
+        {% rating_stars relation.reaction_rating %}
+        {% if relation.group %}
+        <span class="badge recipient-type-badge recipient-type-badge--group"
+              title="{% trans 'Gift plan for this group directly' %}">
+            <i class="fas fa-layer-group me-1" aria-hidden="true"></i>{{ relation.group.name }}
+        </span>
+        {% endif %}
+    </div>
+    {% if relation.reaction_note %}
+    <p class="text-muted small mb-0 mt-1">{{ relation.reaction_note }}</p>
+    {% endif %}
+</li>

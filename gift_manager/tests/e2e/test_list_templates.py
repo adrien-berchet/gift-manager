@@ -1451,6 +1451,9 @@ class TestRelationListStatusSelector:
         if new_value:
             with page.expect_response(lambda r: "relation_status_update" in r.url, timeout=5000):
                 selector.select_option(new_value)
+            # Let follow-up requests finish so none is still running on the live server
+            # while the transactional test database is flushed (deadlock on teardown).
+            page.wait_for_load_state("networkidle")
 
     def test_gift_links_navigate(self, page: Page, live_server, seed_data_e2e):
         """Gift name links point to gift detail pages."""

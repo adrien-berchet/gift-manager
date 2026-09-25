@@ -19,6 +19,8 @@ from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -26,6 +28,7 @@ from django.utils.html import conditional_escape
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext_noop
+from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
@@ -33,6 +36,7 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.forms import RelationReactionForm
 from gift_manager.gift_plan_actions import ACTION_STATUS_SLUGS
 from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
 from gift_manager.gift_plan_actions import gift_plan_has_missing_event
@@ -48,6 +52,8 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
+from gift_manager.statuses import can_rate_status
+from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
@@ -661,6 +667,7 @@ class RelationDetailView(BaseDetailView):
         context = super().get_context_data(**kwargs)
         context["gift_plan_status_class"] = gift_plan_status_class(self.object.status)
         context["gift_plan_urgency_key"] = gift_plan_urgency_key(self.object)
+        context["is_abandoned"] = is_abandoned_status(self.object.status)
 
         # Add action buttons
         is_editor = context["is_editor"]
@@ -702,7 +709,7 @@ def _get_relation_status_by_slug(status_slug: str) -> RelationStatus:
     raise RelationStatus.DoesNotExist
 
 
-def _relation_quick_action_response(message: str) -> HttpResponse:
+def _relation_quick_action_response(message: str, *extra_events) -> HttpResponse:
     """Return a no-swap HTMX response that refreshes card lists."""
     response = HttpResponse("")
     response["HX-Reswap"] = "none"
@@ -710,6 +717,7 @@ def _relation_quick_action_response(message: str) -> HttpResponse:
         [
             "list:update",
             {"showNotification": {"message": message, "type": "success"}},
+            *extra_events,
         ]
     )
     return response
@@ -792,6 +800,9 @@ def _apply_relation_quick_action(relation, user, action: str, post_data) -> str:
     return messages[action]
 
 
+REACTION_PROMPT_ACTIONS = {"given", "abandoned"}
+
+
 @login_required
 @require_POST
 def relation_quick_action(request, pk):
@@ -816,7 +827,86 @@ def relation_quick_action(request, pk):
             {"error": gettext("Required relation status is not configured.")},
             status=400,
         )
+    if action in REACTION_PROMPT_ACTIONS:
+        prompt_url = reverse("gift_manager:relation_reaction", kwargs={"pk": relation.relation_id})
+        return _relation_quick_action_response(message, {"reaction:prompt": {"url": prompt_url}})
     return _relation_quick_action_response(message)
+
+
+def _reaction_form_response(request, relation, form, *, status=200) -> HttpResponse:
+    """Render the reaction form: a fragment for HTMX requests, a full page otherwise."""
+    is_htmx = request.headers.get("HX-Request") == "true"
+    return render(
+        request,
+        "gift_manager/includes/relation_reaction_partial.html"
+        if is_htmx
+        else "gift_manager/relation_reaction.html",
+        {
+            "relation": relation,
+            "form": form,
+            "is_abandoned": is_abandoned_status(relation.status),
+            "form_action_url": reverse(
+                "gift_manager:relation_reaction", kwargs={"pk": relation.relation_id}
+            ),
+            "cancel_url": relation.get_absolute_url(),
+            "full_page": not is_htmx,
+            "form_type": "relation-reaction",
+        },
+        status=status,
+    )
+
+
+def _reaction_guard_response(user, relation) -> JsonResponse | None:
+    """Return an error response when the user cannot rate the gift plan."""
+    if PermissionService.get_effective_permission(relation, user) < PermissionLevel.EDITOR:
+        return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
+    if not can_rate_status(relation.status):
+        return JsonResponse(
+            {"error": gettext("Only given or abandoned gift plans can be rated.")},
+            status=400,
+        )
+    return None
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def relation_reaction(request, pk):
+    """Show or save the reaction rating of a given or abandoned gift plan."""
+    relation = get_object_or_404(Relation.objects.accessible_by(request.user), relation_id=pk)
+    guard_response = _reaction_guard_response(request.user, relation)
+    if guard_response is not None:
+        return guard_response
+
+    if request.method == "GET":
+        return _reaction_form_response(request, relation, RelationReactionForm(instance=relation))
+
+    is_inline = request.POST.get("inline") == "1"
+    if is_inline and relation.reaction_rating is not None:
+        return JsonResponse(
+            {"error": gettext("This gift plan is already rated. Edit its reaction instead.")},
+            status=409,
+        )
+
+    form = RelationReactionForm(request.POST, instance=relation)
+    if not form.is_valid():
+        response = _reaction_form_response(request, relation, form, status=422)
+        response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
+            [
+                {
+                    "showNotification": {
+                        "message": gettext("Choose a rating from 1 to 5."),
+                        "type": "error",
+                    }
+                }
+            ]
+        )
+        return response
+
+    form.save()
+    if request.headers.get("HX-Request") != "true":
+        return redirect(relation.get_absolute_url())
+    extra_events = () if is_inline else ("offcanvas:close",)
+    return _relation_quick_action_response(gettext("Reaction saved."), *extra_events)
 
 
 @login_required

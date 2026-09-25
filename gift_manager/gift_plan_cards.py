@@ -11,6 +11,8 @@ from gift_manager.gift_plan_actions import gift_plan_has_missing_event
 from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
+from gift_manager.statuses import can_rate_status
+from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import relation_status_slug
 
 
@@ -44,10 +46,18 @@ def build_gift_plan_card(
         "quick_action_url": reverse(
             "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
         ),
+        "reaction_url": reverse(
+            "gift_manager:relation_reaction", kwargs={"pk": relation.relation_id}
+        ),
         "quick_actions": quick_actions,
         "has_contextual_edit_action": gift_plan_has_contextual_edit_action(quick_actions),
         "event_options": event_options if has_planning_action and event_options is not None else [],
         "has_missing_event": has_missing_event,
         "missing_event_label": gettext("Missing event") if has_missing_event else "",
         "can_edit": can_edit,
+        "can_rate_inline": can_edit
+        and can_rate_status(relation.status)
+        and relation.reaction_rating is None,
+        "can_edit_reaction": can_edit and relation.has_visible_reaction,
+        "reaction_is_estimate": is_abandoned_status(relation.status),
     }
