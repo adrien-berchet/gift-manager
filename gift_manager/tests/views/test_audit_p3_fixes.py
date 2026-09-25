@@ -112,3 +112,81 @@ def test_base_template_fetches_the_localized_search_endpoint(client, searcher):
 
     assert f"fetch(`{reverse('gift_manager:global_search')}?q=" in response.content.decode()
     assert "fetch(`/api/search/" not in response.content.decode()
+
+
+class TestSharePagePreselection:
+    """GM-AUD-014: the bulk-share redirect must preselect the chosen objects."""
+
+    @pytest.fixture
+    def owner(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        return user
+
+    def _share_page(self, client, **params):
+        return client.get(reverse("gift_manager:share_objects"), params)
+
+    def test_bulk_share_redirect_is_localized(self, client, owner):
+        gift = GiftFactory(shared_with=[owner])
+        create_or_update_permission(owner, gift, permission_level=PermissionLevel.OWNER)
+        client.force_login(owner)
+
+        response = client.post(
+            reverse("gift_manager:bulk_operations"),
+            json.dumps(
+                {"action": "bulk_share", "entity_type": "gift", "entity_ids": [str(gift.gift_id)]}
+            ),
+            content_type="application/json",
+        )
+
+        assert response.json()["redirect_url"].startswith(reverse("gift_manager:share_objects"))
+
+    @pytest.mark.parametrize(
+        ("entity_type", "factory", "id_field", "field_name"),
+        [
+            ("gift", GiftFactory, "gift_id", "gifts"),
+            ("person", PersonFactory, "person_id", "persons"),
+            ("persongroup", PersonGroupFactory, "group_id", "person_groups"),
+            ("event", EventFactory, "event_id", "events"),
+        ],
+    )
+    def test_selected_objects_are_preselected(
+        self, client, owner, entity_type, factory, id_field, field_name
+    ):
+        chosen, other = factory(shared_with=[owner]), factory(shared_with=[owner])
+
+        response = self._share_page(
+            client, entity_type=entity_type, ids=str(getattr(chosen, id_field))
+        )
+
+        assert response.context["preselected"][field_name] == [str(getattr(chosen, id_field))]
+        content = response.content.decode()
+        assert f'value="{getattr(chosen, id_field)}"' in content
+        assert content.count("checked") >= 1
+        assert str(getattr(other, id_field)) not in response.context["preselected"][field_name]
+
+    def test_forged_and_malformed_ids_are_ignored(self, client, owner):
+        mine = GiftFactory(shared_with=[owner])
+        someone_elses = GiftFactory()
+
+        response = self._share_page(
+            client,
+            entity_type="gift",
+            ids=f"{mine.gift_id},{someone_elses.gift_id},not-a-uuid,,",
+        )
+
+        assert response.status_code == 200
+        assert response.context["preselected"]["gifts"] == [str(mine.gift_id)]
+
+    def test_unknown_entity_type_preselects_nothing(self, client, owner):
+        gift = GiftFactory(shared_with=[owner])
+
+        response = self._share_page(client, entity_type="nonsense", ids=str(gift.gift_id))
+
+        assert response.status_code == 200
+        assert not any(response.context["preselected"].values())
+
+    def test_page_without_parameters_preselects_nothing(self, client, owner):
+        response = self._share_page(client)
+
+        assert not any(response.context["preselected"].values())

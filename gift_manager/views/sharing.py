@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Sequence
 from copy import deepcopy
+from uuid import UUID
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -27,13 +28,14 @@ from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.services import PermissionService
+from gift_manager.sharing_service import INSUFFICIENT_SHARE_PERMISSION_ERROR
+from gift_manager.sharing_service import PERMISSION_ESCALATION_ERROR
+from gift_manager.sharing_service import SharingService
 
 logger = logging.getLogger(__name__)
 
 NON_FRIEND_SHARE_ERROR = "Objects can only be shared with friends."
 UNSHAREABLE_OBJECT_ERROR = "One or more selected objects cannot be shared."
-INSUFFICIENT_SHARE_PERMISSION_ERROR = "You do not have permission to share this object."
-PERMISSION_ESCALATION_ERROR = "You cannot grant a higher permission than your own."
 
 
 class ShareObjectsView(LoginRequiredMixin, View):
@@ -84,6 +86,14 @@ class ShareObjectsView(LoginRequiredMixin, View):
         )
 
         context = {
+            "preselected": self._get_preselection(
+                request,
+                persons=persons,
+                person_groups=person_groups,
+                gifts=gifts,
+                events=events,
+                relations=relations,
+            ),
             "friends": friends,
             "persons": persons,
             "person_groups": person_groups,
@@ -94,6 +104,50 @@ class ShareObjectsView(LoginRequiredMixin, View):
         }
 
         return render(request, self.template_name, context)
+
+    # entity_type values sent by the bulk "share" action -> (context key, UUID field)
+    PRESELECTION_TARGETS = {
+        "person": ("persons", "person_id"),
+        "persongroup": ("person_groups", "group_id"),
+        "gift": ("gifts", "gift_id"),
+        "event": ("events", "event_id"),
+        "relation": ("relations", "relation_id"),
+    }
+
+    @staticmethod
+    def _parse_uuid(raw_id: str) -> str | None:
+        """Return the canonical form of a UUID string, or None when malformed."""
+        try:
+            return str(UUID(raw_id.strip()))
+        except ValueError:
+            return None
+
+    def _get_preselection(self, request, **querysets) -> dict[str, list[str]]:
+        """Return the UUIDs from ?entity_type=&ids= that the user can actually share.
+
+        Ids are only kept when they belong to the accessible objects listed on the
+        page, so forged, unknown or malformed ids are ignored.
+        """
+        preselected = {
+            key: [] for key in ("persons", "person_groups", "gifts", "events", "relations")
+        }
+        target = self.PRESELECTION_TARGETS.get(request.GET.get("entity_type", ""))
+        if target is None:
+            return preselected
+
+        requested = {
+            parsed
+            for raw_id in request.GET.get("ids", "").split(",")
+            if (parsed := self._parse_uuid(raw_id)) is not None
+        }
+
+        key, id_field = target
+        preselected[key] = [
+            str(getattr(obj, id_field))
+            for obj in querysets[key]
+            if str(getattr(obj, id_field)) in requested
+        ]
+        return preselected
 
     def post(self, request):  # noqa: C901, PLR0911
         """Process sharing of selected objects."""
@@ -467,37 +521,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for friend in friends:
             for relation in relations:
-                with transaction.atomic():
-                    # Share the relation itself
-                    self._share_object_with_friend(friend, relation, permission_level)
-
-                    # Share the associated gift
-                    if relation.gift:
-                        self._validate_share_permission(
-                            actor, relation.gift, permission_level, "gifts"
-                        )
-                        self._share_object_with_friend(friend, relation.gift, permission_level)
-
-                    # Share the associated person
-                    if relation.person:
-                        self._validate_share_permission(
-                            actor, relation.person, permission_level, "persons"
-                        )
-                        self._share_object_with_friend(friend, relation.person, permission_level)
-
-                    # Share the associated group
-                    if relation.group:
-                        self._validate_share_permission(
-                            actor, relation.group, permission_level, "person groups"
-                        )
-                        self._share_object_with_friend(friend, relation.group, permission_level)
-
-                    # Share the associated event
-                    if relation.event:
-                        self._validate_share_permission(
-                            actor, relation.event, permission_level, "events"
-                        )
-                        self._share_object_with_friend(friend, relation.event, permission_level)
+                SharingService.grant(actor, relation, friend, permission_level)
 
         return len(relations)
 

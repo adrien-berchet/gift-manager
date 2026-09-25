@@ -305,6 +305,11 @@ class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     friends = models.ManyToManyField("self", symmetrical=True, blank=True)
 
+    # Set when the user deactivates their own account. Only such accounts may reactivate
+    # themselves with their password; any other inactive account (e.g. disabled by an
+    # administrator) needs an administrator to reactivate it.
+    self_deactivated_at = models.DateTimeField(null=True, blank=True, editable=False)
+
     # View preferences for list pages
     default_view_desktop = models.CharField(
         max_length=10,

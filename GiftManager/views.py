@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.generic import View
 
@@ -21,6 +22,12 @@ from gift_manager.models import Relation
 from gift_manager.views.profile import get_request_pending_invitation
 from gift_manager.views.profile import invitation_matches_email
 from gift_manager.views.profile import store_pending_invitation_token
+
+
+def is_self_deactivated(user) -> bool:
+    """Return whether the user deactivated their own account."""
+    profile = getattr(user, "profile", None)
+    return profile is not None and profile.self_deactivated_at is not None
 
 
 class CustomAuthenticationForm(AllAuthLoginForm):
@@ -45,6 +52,13 @@ class CustomLoginView(LoginView):
     def form_valid(self, form):
         user = form.user
         if not user.is_active:
+            if not is_self_deactivated(user):
+                # Disabled by an administrator: a password must not restore the account
+                messages.error(
+                    self.request,
+                    gettext("This account is disabled. Please contact an administrator."),
+                )
+                return redirect("account_login")
             # Redirect to the account reactivation page
             self.request.session["inactive_user_id"] = user.pk
             return redirect("reactivate_account")
@@ -97,7 +111,10 @@ class UserAccountDeactivateView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         user = request.user
 
-        # Deactivate the user account
+        # Deactivate the user account, remembering that the user chose to
+        profile = user.profile
+        profile.self_deactivated_at = timezone.now()
+        profile.save()
         user.is_active = False
         user.save()
 
@@ -154,7 +171,17 @@ class UserAccountReactivateView(View):
             messages.error(request, gettext("This user does not exist."))
             return redirect("account_login")
 
+        if not is_self_deactivated(user):
+            messages.error(
+                request, gettext("This account is disabled. Please contact an administrator.")
+            )
+            del request.session["inactive_user_id"]
+            return redirect("account_login")
+
         # Activate the user account
+        profile = user.profile
+        profile.self_deactivated_at = None
+        profile.save()
         user.is_active = True
         user.save()
         messages.success(request, gettext("Your account has been successfully reactivated."))

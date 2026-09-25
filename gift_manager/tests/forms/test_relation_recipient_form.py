@@ -31,7 +31,7 @@ def relation_form_data(*, recipient, gift, status, **overrides):
 def test_relation_form_maps_person_recipient_to_person_field():
     user = UserFactory()
     person = PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
-    gift = GiftFactory()
+    gift = GiftFactory(shared_with=[user])
     status = RelationStatusFactory(status="Idea")
 
     form = RelationForm(
@@ -52,7 +52,7 @@ def test_relation_form_maps_person_recipient_to_person_field():
 def test_relation_form_maps_group_recipient_to_group_field():
     user = UserFactory()
     group = PersonGroupFactory(name="Family", shared_with=[user])
-    gift = GiftFactory()
+    gift = GiftFactory(shared_with=[user])
     status = RelationStatusFactory(status="Idea")
 
     form = RelationForm(
@@ -122,7 +122,7 @@ def test_gift_relation_create_rejects_inaccessible_url_gift(client):
 def test_relation_form_rejects_inaccessible_recipient():
     user = UserFactory()
     private_person = PersonFactory(first_name="Private", family_name="Person")
-    gift = GiftFactory()
+    gift = GiftFactory(shared_with=[user])
     status = RelationStatusFactory(status="Idea")
 
     form = RelationForm(

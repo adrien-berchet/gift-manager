@@ -92,7 +92,8 @@ class PersonSearchView(HTMXListSearchView):
     """HTMX search view for persons."""
 
     model = Person
-    search_fields = ["first_name", "family_name", "email_address"]
+    # Emails are stored encrypted, so they cannot be matched by substring in the database
+    search_fields = ["first_name", "family_name"]
 
     def get_queryset(self):
         """Get persons with groups prefetched for result serialization."""
@@ -113,7 +114,7 @@ class PersonSearchView(HTMXListSearchView):
                     "person_id": str(person.person_id),
                     "first_name": person.first_name,
                     "family_name": person.family_name,
-                    "email_address": person.email_address or "",
+                    "email_address": person.email or "",
                     "groups_info": groups_info,
                 }
             )

@@ -46,6 +46,10 @@ msgstr "Cet utilisateur n'existe pas."
 msgid "Your account has been successfully reactivated."
 msgstr "Votre compte a été réactivé avec succès."
 
+#: GiftManager/views.py:66 GiftManager/views.py:169
+msgid "This account is disabled. Please contact an administrator."
+msgstr "Ce compte est désactivé. Veuillez contacter un administrateur."
+
 #: gift_manager/forms.py:38
 msgid "Select a recipient"
 msgstr "Sélectionner un destinataire"

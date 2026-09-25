@@ -12,6 +12,8 @@ from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
+from django.urls import reverse
+from django.utils.http import urlencode
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
 from django.views import View
@@ -206,9 +208,9 @@ class BulkOperationView(LoginRequiredMixin, View):
         self, request: HttpRequest, entity_type: str, entity_ids: list[str]
     ) -> HttpResponse:
         """Handle bulk share operation."""
-        # For now, return the share URL with selected IDs
-        # This will be handled by the frontend to redirect to the share page
-        share_url = f"/share/?entity_type={entity_type}&ids={','.join(entity_ids)}"
+        # The share page preselects these objects (limited to what the user can access)
+        query = urlencode({"entity_type": entity_type, "ids": ",".join(entity_ids)})
+        share_url = f"{reverse('gift_manager:share_objects')}?{query}"
 
         return JsonResponse(
             {

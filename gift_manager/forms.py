@@ -197,6 +197,13 @@ def _denial(check, user, group, add, remove, group_is_new) -> str | None:
     return None
 
 
+def _accessible_or_none(model, user) -> QuerySet:
+    """Return the model's objects the user can access, or nothing without an authenticated user."""
+    if user is None or not user.is_authenticated:
+        return model.objects.none()
+    return model.objects.accessible_by(user)
+
+
 def _editable_by(queryset, user) -> QuerySet:
     """Restrict a queryset to the objects the user can edit."""
     return queryset.filter(pk__in=GroupHierarchyService.editable_pks(user, queryset))
@@ -563,7 +570,8 @@ class PersonRelationForm(BaseFormMixin, forms.ModelForm):
         self.person_id = kwargs.pop("person_id", None)
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        self.fields["event"].queryset = Event.objects.all()
+        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
+        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
 
     def clean(self):
@@ -608,7 +616,8 @@ class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
         self.group_id = kwargs.pop("group_id", None)
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        self.fields["event"].queryset = Event.objects.all()
+        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
+        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
 
     def clean(self):
@@ -720,7 +729,7 @@ class GiftRelationForm(BaseFormMixin, forms.ModelForm):
         self.fields["recipient"].choices = build_recipient_choices(self.user)
         if self.instance and self.instance.pk:
             self.initial["recipient"] = self.instance.recipient_key
-        self.fields["event"].queryset = Event.objects.all()
+        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
 
     def clean(self):
@@ -901,6 +910,8 @@ class RelationForm(BaseFormMixin, forms.ModelForm):
             include_persons=not hide_person,
             include_groups=not hide_group,
         )
+        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
+        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         if self.instance and self.instance.pk:
             self.initial["recipient"] = self.instance.recipient_key
         self.rateable_status_ids = {

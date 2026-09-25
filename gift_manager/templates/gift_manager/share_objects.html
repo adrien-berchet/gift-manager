@@ -121,7 +121,7 @@
                             {% for person in persons %}
                                 <div class="mb-2">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input person-checkbox" name="persons" value="{{ person.person_id }}" id="person-{{ person.person_id }}">
+                                        <input type="checkbox" class="form-check-input person-checkbox" name="persons" value="{{ person.person_id }}" id="person-{{ person.person_id }}"{% if person.person_id|stringformat:"s" in preselected.persons %} checked{% endif %}>
                                         <label class="form-check-label" for="person-{{ person.person_id }}">{{ person }}</label>
                                     </div>
                                 </div>
@@ -156,7 +156,7 @@
                             {% for group in person_groups %}
                                 <div class="mb-2">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input group-checkbox" name="person_groups" value="{{ group.group_id }}" id="group-{{ group.group_id }}">
+                                        <input type="checkbox" class="form-check-input group-checkbox" name="person_groups" value="{{ group.group_id }}" id="group-{{ group.group_id }}"{% if group.group_id|stringformat:"s" in preselected.person_groups %} checked{% endif %}>
                                         <label class="form-check-label" for="group-{{ group.group_id }}">{{ group.name }}</label>
                                     </div>
                                 </div>
@@ -191,7 +191,7 @@
                             {% for gift in gifts %}
                                 <div class="mb-2">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input gift-checkbox" name="gifts" value="{{ gift.gift_id }}" id="gift-{{ gift.gift_id }}">
+                                        <input type="checkbox" class="form-check-input gift-checkbox" name="gifts" value="{{ gift.gift_id }}" id="gift-{{ gift.gift_id }}"{% if gift.gift_id|stringformat:"s" in preselected.gifts %} checked{% endif %}>
                                         <label class="form-check-label" for="gift-{{ gift.gift_id }}">{{ gift.name }}</label>
                                     </div>
                                 </div>
@@ -226,7 +226,7 @@
                             {% for event in events %}
                                 <div class="mb-2">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input event-checkbox" name="events" value="{{ event.event_id }}" id="event-{{ event.event_id }}">
+                                        <input type="checkbox" class="form-check-input event-checkbox" name="events" value="{{ event.event_id }}" id="event-{{ event.event_id }}"{% if event.event_id|stringformat:"s" in preselected.events %} checked{% endif %}>
                                         <label class="form-check-label" for="event-{{ event.event_id }}">{{ event.name }}</label>
                                     </div>
                                 </div>
@@ -261,7 +261,7 @@
                             {% for relation in relations %}
                                 <div class="mb-2">
                                     <div class="form-check">
-                                        <input type="checkbox" class="form-check-input relation-checkbox" name="relations" value="{{ relation.relation_id }}" id="relation-{{ relation.relation_id }}">
+                                        <input type="checkbox" class="form-check-input relation-checkbox" name="relations" value="{{ relation.relation_id }}" id="relation-{{ relation.relation_id }}"{% if relation.relation_id|stringformat:"s" in preselected.relations %} checked{% endif %}>
                                         <label class="form-check-label" for="relation-{{ relation.relation_id }}">
                                             {{ relation.recipient_name }} - {{ relation.gift }}
                                             <span class="badge recipient-type-badge recipient-type-badge--{{ relation.recipient_type }} ms-1">

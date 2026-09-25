@@ -27,6 +27,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Profile
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.services import PermissionService
+from gift_manager.sharing_service import SharingService
 from gift_manager.views.common import get_user
 
 logger = logging.getLogger(__name__)
@@ -302,10 +303,8 @@ class CreatePermissionMixin:
                 if user_id not in friend_user_ids:
                     raise PermissionDenied(gettext("Objects can only be shared with friends."))
 
-                # Create or update the permission for this user
-                PermissionService.create_or_update_permission(
-                    user, self.object, permission_level=permission
-                )
+                # Create or update the permission for this user (cascading to related objects)
+                SharingService.grant(self.request.user, self.object, user, permission)
 
         return response
 
@@ -457,8 +456,9 @@ class EditPermissionMixin:
 
     def form_valid(self, form):
         """Persist permission selectors submitted with the main edit form."""
-        response = super().form_valid(form)
-        self._process_main_form_permission_fields()
+        with transaction.atomic():
+            response = super().form_valid(form)
+            self._process_main_form_permission_fields()
         return response
 
     def _process_main_form_permission_fields(self) -> None:
@@ -497,11 +497,7 @@ class EditPermissionMixin:
                         user,
                         permission_level,
                     )
-                    PermissionService.create_or_update_permission(
-                        user,
-                        self.object,
-                        permission_level=permission_level,
-                    )
+                    SharingService.grant(self.request.user, self.object, user, permission_level)
             except PermissionDenied:
                 raise
             except User.DoesNotExist:
@@ -568,9 +564,7 @@ class EditPermissionMixin:
                 user,
                 new_permission,
             )
-            PermissionService.create_or_update_permission(
-                user, self.object, permission_level=new_permission
-            )
+            SharingService.grant(request.user, self.object, user, new_permission)
 
             permission_label = PermissionLevel.get_label(new_permission)
             message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
@@ -661,9 +655,7 @@ class EditPermissionMixin:
                 user,
                 permission,
             )
-            PermissionService.create_or_update_permission(
-                user, self.object, permission_level=permission
-            )
+            SharingService.grant(request.user, self.object, user, permission)
 
             message = gettext("Object shared with '{username}' successfully").format(
                 username=username
