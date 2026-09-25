@@ -548,6 +548,23 @@ def test_production_compose_requires_critical_environment_values():
     assert "static_volume:/app/staticfiles\n" in compose
 
 
+def test_development_compose_publishes_ports_on_loopback_only():
+    """GM-AUD-015: dev Postgres, Redis, web and debugger must not be reachable from the LAN."""
+    import yaml
+
+    services = yaml.safe_load((PROJECT_ROOT / "docker-compose.yml").read_text())["services"]
+    published = {
+        name: service["ports"] for name, service in services.items() if service.get("ports")
+    }
+
+    assert set(published) == {"db", "redis", "web"}
+    for name, ports in published.items():
+        for port in ports:
+            assert (str(port).startswith("${") and "127.0.0.1}:" in str(port)) or str(
+                port
+            ).startswith("127.0.0.1:"), f"{name} publishes {port} on every interface"
+
+
 def test_production_compose_keeps_web_internal_and_migrations_explicit():
     """Production web startup should not publish dev ports or mutate the schema."""
     compose = (PROJECT_ROOT / "docker-compose.prod.yml").read_text()

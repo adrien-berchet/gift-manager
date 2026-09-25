@@ -227,9 +227,10 @@ class SharedUsersMixin:
         context = super().get_context_data(**kwargs)
 
         # Get the users with whom this object is shared, with their permissions
+        permissions = PermissionService.get_permission_map(self.object)
         shared_users = []
         for user in self.object.shared_with.exclude(id=self.request.user.id).order_by("username"):
-            permission = PermissionService.get_permission(self.object, user)
+            permission = permissions.get(user.id, PermissionLevel.NONE)
             permission_label = PermissionLevel.get_label(permission)
             shared_users.append(
                 {"user": user, "permission": permission, "permission_label": permission_label}
@@ -408,15 +409,15 @@ class EditPermissionMixin:
 
         # Prepare the lists for the shared users and unshared friends
         friends_list = []
-        all_shared_with = self.object.shared_with.all()
+        permissions = PermissionService.get_permission_map(self.object)
 
         # Process all friends and determine their sharing status
         for friend in friend_users:
             # Check if the friend is already shared with
-            is_shared = friend in all_shared_with
+            is_shared = friend.id in permissions
 
             if is_shared:
-                permission = PermissionService.get_permission(self.object, friend)
+                permission = permissions[friend.id]
                 permission_label = PermissionLevel.get_label(permission)
 
                 friends_list.append(
@@ -458,7 +459,8 @@ class EditPermissionMixin:
         """Persist permission selectors submitted with the main edit form."""
         with transaction.atomic():
             response = super().form_valid(form)
-            self._process_main_form_permission_fields()
+            with PermissionService.locked_for_permission_change(self.object):
+                self._process_main_form_permission_fields()
         return response
 
     def _process_main_form_permission_fields(self) -> None:
@@ -558,13 +560,14 @@ class EditPermissionMixin:
 
             # Update the permission
             new_permission = int(permission_value)
-            PermissionService.assert_can_manage_permission(
-                request.user,
-                self.object,
-                user,
-                new_permission,
-            )
-            SharingService.grant(request.user, self.object, user, new_permission)
+            with PermissionService.locked_for_permission_change(self.object):
+                PermissionService.assert_can_manage_permission(
+                    request.user,
+                    self.object,
+                    user,
+                    new_permission,
+                )
+                SharingService.grant(request.user, self.object, user, new_permission)
 
             permission_label = PermissionLevel.get_label(new_permission)
             message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
@@ -605,13 +608,14 @@ class EditPermissionMixin:
             user, username = get_user(request.POST.get("user_id"))
 
             # Remove the permission
-            PermissionService.assert_can_manage_permission(
-                request.user,
-                self.object,
-                user,
-                None,
-            )
-            PermissionService.delete_permission(user, self.object)
+            with PermissionService.locked_for_permission_change(self.object):
+                PermissionService.assert_can_manage_permission(
+                    request.user,
+                    self.object,
+                    user,
+                    None,
+                )
+                PermissionService.delete_permission(user, self.object)
 
             message = gettext("Sharing with '{username}' removed successfully").format(
                 username=username
@@ -649,13 +653,14 @@ class EditPermissionMixin:
             user, username = get_user(request.POST.get("user_id"))
 
             # Create or update the permission
-            PermissionService.assert_can_manage_permission(
-                request.user,
-                self.object,
-                user,
-                permission,
-            )
-            SharingService.grant(request.user, self.object, user, permission)
+            with PermissionService.locked_for_permission_change(self.object):
+                PermissionService.assert_can_manage_permission(
+                    request.user,
+                    self.object,
+                    user,
+                    permission,
+                )
+                SharingService.grant(request.user, self.object, user, permission)
 
             message = gettext("Object shared with '{username}' successfully").format(
                 username=username
@@ -812,6 +817,9 @@ class DeleteSharedMixin:
         """
         with transaction.atomic():
             self.object = self.get_object()
+            # Leaving or deleting can remove the last owner's access: serialize with other
+            # permission changes (the row lock is held until the transaction ends)
+            PermissionService.lock_object(self.object)
             success_url = self.get_success_url()
 
             if self.is_leave_access_request():

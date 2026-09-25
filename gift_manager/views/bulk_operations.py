@@ -197,6 +197,7 @@ class BulkOperationView(LoginRequiredMixin, View):
             return "permission_denied"
 
         if PermissionService.has_other_access_holder(obj, request.user):
+            PermissionService.lock_object(obj)
             PermissionService.assert_can_leave_object(request.user, obj)
             PermissionService.delete_permission(request.user, obj)
             return "shared_removed"

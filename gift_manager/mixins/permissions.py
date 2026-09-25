@@ -11,6 +11,7 @@ from django.http import JsonResponse
 
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
+from gift_manager.sharing_service import SharingService
 
 logger = logging.getLogger(__name__)
 
@@ -429,30 +430,30 @@ class PermissionUpdateMixin:
             # Get the friend user
             friend = User.objects.get(id=user_id)
 
-            # Update or remove permission
-            if permission == "not_shared":
-                PermissionService.assert_can_manage_permission(
-                    request.user,
-                    self.object,
-                    friend,
-                    None,
-                )
-                PermissionService.delete_permission(friend, self.object)
-                logger.info(f"Removed permission for user {friend.username} on {self.object}")
-            else:
-                permission_level = int(permission)
-                PermissionService.assert_can_manage_permission(
-                    request.user,
-                    self.object,
-                    friend,
-                    permission_level,
-                )
-                PermissionService.create_or_update_permission(
-                    friend, self.object, permission_level=permission_level
-                )
-                logger.info(
-                    f"Updated permission to {permission} for user {friend.username} on {self.object}"
-                )
+            # Update or remove permission, serialized with other changes on this object
+            with PermissionService.locked_for_permission_change(self.object):
+                if permission == "not_shared":
+                    PermissionService.assert_can_manage_permission(
+                        request.user,
+                        self.object,
+                        friend,
+                        None,
+                    )
+                    PermissionService.delete_permission(friend, self.object)
+                    logger.info(f"Removed permission for user {friend.username} on {self.object}")
+                else:
+                    permission_level = int(permission)
+                    PermissionService.assert_can_manage_permission(
+                        request.user,
+                        self.object,
+                        friend,
+                        permission_level,
+                    )
+                    SharingService.grant(request.user, self.object, friend, permission_level)
+                    logger.info(
+                        f"Updated permission to {permission} for user {friend.username} "
+                        f"on {self.object}"
+                    )
 
             return self._permission_update_success_response(request)
 
