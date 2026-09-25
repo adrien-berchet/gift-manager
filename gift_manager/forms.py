@@ -656,6 +656,18 @@ class GiftForm(BaseFormMixin, forms.ModelForm):
             },
         }
 
+    def _save_m2m(self) -> None:
+        """Save tags without dropping the ones the user was never offered.
+
+        Views restrict the ``tags`` choices to the tags the user can access; the
+        gift's other tags belong to other users and must survive the edit.
+        """
+        offered = set(self.fields["tags"].queryset)
+        hidden = (set(self.instance.tags.all()) - offered) if self.instance.pk else set()
+        super()._save_m2m()
+        if hidden:
+            self.instance.tags.add(*hidden)
+
 
 class GiftTagForm(BaseFormMixin, forms.ModelForm):
     class Meta:

@@ -41,7 +41,7 @@
     </div>
 
     <!-- Tags -->
-    {% with tags=gift|visible_tags:request.user %}
+    {% with tags=gift|visible_tags:request %}
     {% if tags %}
     <div class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">

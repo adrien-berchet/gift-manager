@@ -233,3 +233,54 @@ class TestPersonGroups:
         GroupHierarchyService.change_person_groups(actor, person, add=[group], person_is_new=True)
 
         assert person.groups.filter(pk=group.pk).exists()
+
+
+class TestEditablePksIsBulk:
+    def test_query_count_does_not_grow_with_group_count(self, actor, django_assert_max_num_queries):
+        groups = [PersonGroupFactory() for _ in range(25)]
+        for group in groups:
+            _grant(actor, group, PermissionLevel.EDITOR)
+
+        with django_assert_max_num_queries(8):
+            pks = GroupHierarchyService.editable_pks(actor, groups)
+
+        assert pks == {g.pk for g in groups}
+
+    def test_query_count_does_not_grow_with_person_count(
+        self, actor, django_assert_max_num_queries
+    ):
+        persons = [PersonFactory() for _ in range(25)]
+        for person in persons[:10]:
+            _grant(actor, person, PermissionLevel.EDITOR)
+
+        with django_assert_max_num_queries(4):
+            pks = GroupHierarchyService.editable_pks(actor, persons)
+
+        assert pks == {p.pk for p in persons[:10]}
+
+    def test_inherited_editor_and_user_link_owner_count_as_editable(self, actor):
+        parent, child, unrelated = (PersonGroupFactory() for _ in range(3))
+        child.parent_groups.add(parent)
+        _grant(actor, parent, PermissionLevel.EDITOR, inherit=True)
+        own_person, other_person = PersonFactory(user_link=actor), PersonFactory()
+
+        assert GroupHierarchyService.editable_pks(actor, [parent, child, unrelated]) == {
+            parent.pk,
+            child.pk,
+        }
+        assert GroupHierarchyService.editable_pks(actor, [own_person, other_person]) == {
+            own_person.pk
+        }
+
+    def test_viewer_inherited_grant_is_not_editable(self, actor):
+        parent, child = PersonGroupFactory(), PersonGroupFactory()
+        child.parent_groups.add(parent)
+        _grant(actor, parent, PermissionLevel.VIEWER, inherit=True)
+
+        assert GroupHierarchyService.editable_pks(actor, [parent, child]) == set()
+
+    def test_superuser_can_edit_everything(self):
+        admin = UserFactory(is_superuser=True)
+        groups = [PersonGroupFactory(), PersonGroupFactory()]
+
+        assert GroupHierarchyService.editable_pks(admin, groups) == {g.pk for g in groups}

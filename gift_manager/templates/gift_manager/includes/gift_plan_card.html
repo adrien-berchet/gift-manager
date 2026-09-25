@@ -91,7 +91,7 @@
         {% endif %}
     </div>
 
-    {% with tags=card.relation.gift|visible_tags:request.user %}
+    {% with tags=card.relation.gift|visible_tags:request %}
     {% if tags %}
     <div class="gift-plan-tag-list">
         {% for tag in tags %}

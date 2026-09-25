@@ -222,7 +222,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        visible_group_ids = VisibleMetadata.for_user(self.request.user).group_ids
+        visible_group_ids = VisibleMetadata.for_request(self.request).group_ids
 
         # Get all groups this person belongs to
         person_groups = list(self.object.groups.all())

@@ -27,8 +27,49 @@ class GroupHierarchyService:
 
     @classmethod
     def editable_pks(cls, actor, objs: Iterable) -> set[int]:
-        """Return the primary keys of the objects the actor can edit."""
-        return {obj.pk for obj in objs if cls._level(obj, actor) >= PermissionLevel.EDITOR}
+        """Return the primary keys of the objects the actor can edit.
+
+        Resolved with a constant number of queries, whatever the number of objects.
+        """
+        objs = list(objs)
+        if not objs:
+            return set()
+        if actor.is_superuser:
+            return {obj.pk for obj in objs}
+        if all(isinstance(obj, PersonGroup) for obj in objs):
+            return cls._editable_group_pks(actor, objs)
+        if any(isinstance(obj, PersonGroup) for obj in objs):
+            return {obj.pk for obj in objs if cls._level(obj, actor) >= PermissionLevel.EDITOR}
+        return cls._editable_object_pks(actor, objs)
+
+    @staticmethod
+    def _editable_group_pks(actor, groups: list[PersonGroup]) -> set[int]:
+        pks = {group.pk for group in groups}
+        grants = PersonGroupPermission.objects.filter(
+            user=actor, permission_type__gte=PermissionLevel.EDITOR
+        ).select_related("group")
+        editable = set()
+        for grant in grants:
+            if grant.group_id in pks:
+                editable.add(grant.group_id)
+            if grant.inherit_permissions:
+                editable.update(d.pk for d in grant.group.get_descendants() if d.pk in pks)
+        return editable
+
+    @classmethod
+    def _editable_object_pks(cls, actor, objs: list) -> set[int]:
+        """Editable objects with a permission model (persons, ...), owner via user_link."""
+        model = PermissionService.get_permission_model(objs[0])
+        attr = PermissionService._get_permission_object_attr(objs[0], model)  # noqa: SLF001
+        editable = set(
+            model.objects.filter(
+                user=actor,
+                permission_type__gte=PermissionLevel.EDITOR,
+                **{f"{attr}__in": objs},
+            ).values_list(f"{attr}_id", flat=True)
+        )
+        editable.update(obj.pk for obj in objs if getattr(obj, "user_link_id", None) == actor.id)
+        return editable
 
     @classmethod
     def _assert_can_edit(cls, actor, obj, *, is_new: bool = False) -> None:

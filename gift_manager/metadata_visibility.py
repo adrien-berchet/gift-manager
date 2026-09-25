@@ -12,7 +12,7 @@ from gift_manager.models import PersonGroup
 class VisibleMetadata:
     """Tags and groups visible to one user, resolved with one query each.
 
-    Instances are cached on the user object, which lives for a single request.
+    Instances are cached on the request (see ``for_request``).
     """
 
     def __init__(self, user):
@@ -21,12 +21,12 @@ class VisibleMetadata:
         self._group_ids = None
 
     @classmethod
-    def for_user(cls, user) -> "VisibleMetadata":
-        """Return the per-request instance for user."""
-        cached = getattr(user, "_visible_metadata", None)
+    def for_request(cls, request) -> "VisibleMetadata":
+        """Return the instance cached on this request, so results never outlive it."""
+        cached = getattr(request, "_visible_metadata", None)
         if cached is None:
-            cached = cls(user)
-            user._visible_metadata = cached  # noqa: SLF001
+            cached = cls(request.user)
+            request._visible_metadata = cached  # noqa: SLF001
         return cached
 
     @property

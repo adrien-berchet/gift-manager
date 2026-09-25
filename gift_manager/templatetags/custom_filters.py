@@ -102,12 +102,12 @@ def rating_stars(rating):
 
 
 @register.filter
-def visible_tags(gift, user):
-    """Return the tags of a gift that the user is allowed to see."""
-    return VisibleMetadata.for_user(user).tags(gift)
+def visible_tags(gift, request):
+    """Return the tags of a gift that the requesting user is allowed to see."""
+    return VisibleMetadata.for_request(request).tags(gift)
 
 
 @register.filter
-def visible_groups(person, user):
-    """Return the groups of a person that the user is allowed to see."""
-    return VisibleMetadata.for_user(user).groups(person)
+def visible_groups(person, request):
+    """Return the groups of a person that the requesting user is allowed to see."""
+    return VisibleMetadata.for_request(request).groups(person)

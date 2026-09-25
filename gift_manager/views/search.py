@@ -105,7 +105,7 @@ class PersonSearchView(HTMXListSearchView):
             # Get groups info
             groups_info = [
                 {"id": str(group.group_id), "name": group.name}
-                for group in VisibleMetadata.for_user(self.request.user).groups(person)
+                for group in VisibleMetadata.for_request(self.request).groups(person)
             ]
 
             data.append(
@@ -138,7 +138,7 @@ class GiftSearchView(HTMXListSearchView):
             # Get tags info
             tags_info = [
                 {"id": str(tag.tag_id), "name": tag.name}
-                for tag in VisibleMetadata.for_user(self.request.user).tags(gift)
+                for tag in VisibleMetadata.for_request(self.request).tags(gift)
             ]
 
             data.append(

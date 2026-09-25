@@ -184,7 +184,7 @@
             </div>
             {% endif %}
 
-            {% with tags=object.gift|visible_tags:request.user %}
+            {% with tags=object.gift|visible_tags:request %}
             {% if tags %}
             <div class="gift-tags">
                 <small class="text-muted">{% trans "Tags:" %}</small>

@@ -152,3 +152,53 @@ def test_tag_explorer_hides_private_sibling_tags(client, viewer, gift):
     )
 
     _assert_only_visible_tag(response)
+
+
+def test_gift_form_keeps_tags_the_user_cannot_see(viewer, gift):
+    from gift_manager.forms import GiftForm
+    from gift_manager.models import GiftTag
+
+    visible = gift.tags.get(name=VISIBLE_TAG)
+    hidden = gift.tags.get(name=PRIVATE_TAG)
+    form = GiftForm(
+        data={"name": gift.name, "comment": "", "tags": [visible.pk]},
+        instance=gift,
+    )
+    form.fields["tags"].queryset = GiftTag.objects.accessible_by(viewer)
+
+    assert form.is_valid(), form.errors
+    form.save()
+
+    assert set(gift.tags.all()) == {visible, hidden}
+
+
+def test_gift_form_still_removes_visible_tags(viewer, gift):
+    from gift_manager.forms import GiftForm
+    from gift_manager.models import GiftTag
+
+    hidden = gift.tags.get(name=PRIVATE_TAG)
+    form = GiftForm(data={"name": gift.name, "comment": "", "tags": []}, instance=gift)
+    form.fields["tags"].queryset = GiftTag.objects.accessible_by(viewer)
+
+    assert form.is_valid(), form.errors
+    form.save()
+
+    assert set(gift.tags.all()) == {hidden}
+
+
+def test_visible_metadata_is_not_shared_between_requests(viewer):
+    from django.test import RequestFactory
+
+    from gift_manager.metadata_visibility import VisibleMetadata
+
+    tag = GiftTagFactory(name="LateTag", shared_with=[UserFactory()])
+    first, second = RequestFactory().get("/"), RequestFactory().get("/")
+    first.user = second.user = viewer
+
+    assert tag.pk not in VisibleMetadata.for_request(first).tag_ids
+    from gift_manager.permissions import create_or_update_permission
+
+    create_or_update_permission(viewer, tag)
+
+    assert tag.pk in VisibleMetadata.for_request(second).tag_ids
+    assert VisibleMetadata.for_request(first) is VisibleMetadata.for_request(first)
