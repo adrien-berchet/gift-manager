@@ -53,6 +53,9 @@
                         {% if relation.status %}
                         <span class="badge {{ relation.status|status_badge_class }}">{{ relation.status }}</span>
                         {% endif %}
+                        {% if relation.has_visible_reaction %}
+                        {% rating_stars relation.reaction_rating %}
+                        {% endif %}
                         {% if relation.group %}
                         <span class="badge recipient-type-badge recipient-type-badge--group"
                               style="font-size:0.7rem;"

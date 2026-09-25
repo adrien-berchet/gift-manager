@@ -299,6 +299,8 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gift=scarf,
         event=christmas,
         status=statuses["given"],
+        reaction_rating=5,
+        reaction_note="Everyone loved it.",
     )
 
     relations: list[Relation] = [relation_0, relation_1, relation_2, relation_3]

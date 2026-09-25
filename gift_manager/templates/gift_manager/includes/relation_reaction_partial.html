@@ -1,0 +1,41 @@
+{% load i18n custom_filters %}
+
+<form method="post"
+      id="relation-reaction-form"
+      action="{{ form_action_url }}"
+      hx-post="{{ form_action_url }}"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form relation-reaction-form"
+      data-form-type="{{ form_type }}">
+  {% csrf_token %}
+
+  <div class="form-fields">
+    <h2 class="h5 mb-1">{{ relation.gift }}</h2>
+    <p class="text-muted mb-3">{{ relation.recipient_name }}</p>
+
+    <p class="fw-semibold mb-2">
+      {% if is_abandoned %}{% trans "How much would they have liked it?" %}{% else %}{% trans "Their reaction" %}{% endif %}
+    </p>
+
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% rating_input form.reaction_rating %}
+    {% include "gift_manager/includes/forms/field.html" with field=form.reaction_note %}
+  </div>
+
+  <div class="panel-form-actions">
+    <button type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Skip' %}">
+      <i class="fas fa-forward me-1" aria-hidden="true"></i>{% trans "Skip" %}
+    </button>
+    <button type="submit"
+            class="btn btn-primary"
+            data-loading-text="{% trans 'Saving...' %}">
+      <i class="fas fa-save me-1" aria-hidden="true"></i>{% trans "Save" %}
+    </button>
+  </div>
+</form>

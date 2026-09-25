@@ -82,3 +82,27 @@ def status_border_class(status):
 def gift_plan_status_class(status):
     """Map a RelationStatus to the shared gift-plan status badge class."""
     return f"gift-plan-status--{relation_status_slug(status)}"
+
+
+RATING_VALUES = (5, 4, 3, 2, 1)
+
+
+@register.inclusion_tag("gift_manager/includes/rating_input.html")
+def rating_input(field):
+    """Render a 1-5 star radio input for a bound rating field."""
+    current = field.value()
+    return {
+        "field": field,
+        "values": RATING_VALUES,
+        "current": str(current) if current not in (None, "") else "",
+    }
+
+
+@register.inclusion_tag("gift_manager/includes/rating_stars.html")
+def rating_stars(rating):
+    """Render a read-only 1-5 star rating."""
+    rating = rating or 0
+    return {
+        "rating": rating,
+        "stars": [(value, value <= rating) for value in reversed(RATING_VALUES)],
+    }

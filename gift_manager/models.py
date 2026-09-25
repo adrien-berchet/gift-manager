@@ -9,6 +9,8 @@ from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F
 from django.db.models import Func
@@ -29,6 +31,7 @@ from django.utils.translation import gettext_lazy
 
 from .email_encoding import decode_email
 from .email_encoding import encode_email
+from .statuses import can_rate_status
 
 _PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
 _PERMISSION_LABEL_DICT = {
@@ -1221,6 +1224,9 @@ class RelationStatus(models.Model):
         return status.pk
 
 
+_STATUS_NOT_LOADED = object()
+
+
 class Relation(models.Model):
     """Model for a relation between a person and a gift."""
 
@@ -1243,6 +1249,13 @@ class Relation(models.Model):
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
+    status_changed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    reaction_rating = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    reaction_note = models.TextField(null=True, blank=True)
     shared_with = models.ManyToManyField(
         User, through="RelationPermission", related_name="shared_relations"
     )
@@ -1260,7 +1273,12 @@ class Relation(models.Model):
                     | Q(person__isnull=True, group__isnull=False)
                 ),
                 name="relation_exactly_one_recipient",
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(reaction_rating__isnull=True)
+                | Q(reaction_rating__gte=1, reaction_rating__lte=5),
+                name="relation_reaction_rating_range",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -1272,7 +1290,13 @@ class Relation(models.Model):
         Note: Validation is handled at the form level to avoid recursion issues
         when updating existing instances.
         """
+        if self._status_has_changed():
+            self.status_changed_at = timezone.now()
+            update_fields = kwargs.get("update_fields")
+            if update_fields is not None:
+                kwargs["update_fields"] = {*update_fields, "status_changed_at"}
         super().save(*args, **kwargs)
+        self._loaded_status_id = self.status_id
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
@@ -1287,6 +1311,33 @@ class Relation(models.Model):
             raise ValidationError(
                 gettext_lazy("Choose exactly one recipient: a person or a group.")
             )
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Remember the loaded status so ``save`` can detect status changes."""
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_status_id = instance.__dict__.get(  # noqa: SLF001
+            "status_id", _STATUS_NOT_LOADED
+        )
+        return instance
+
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None):
+        """Re-sync the remembered status when the status is reloaded."""
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+        if fields is None or {"status", "status_id"} & set(fields):
+            self._loaded_status_id = self.__dict__.get("status_id", _STATUS_NOT_LOADED)
+
+    def _status_has_changed(self) -> bool:
+        """Return whether the status differs from the value loaded from the database."""
+        if self._state.adding:
+            return self.status_changed_at is None
+        loaded_status_id = getattr(self, "_loaded_status_id", _STATUS_NOT_LOADED)
+        return loaded_status_id is not _STATUS_NOT_LOADED and loaded_status_id != self.status_id
+
+    @property
+    def has_visible_reaction(self) -> bool:
+        """Return whether a reaction rating exists and applies to the current status."""
+        return self.reaction_rating is not None and can_rate_status(self.status)
 
     @property
     def recipient(self) -> Person | PersonGroup | None:
