@@ -19,6 +19,13 @@ tox run -e e2e-mobile
 tox run -e py311-playwright
 ```
 
+The browser tox environments download the browsers but do not install the operating-system
+libraries they need (that step uses `sudo`). On a new machine, install them once:
+
+```bash
+sudo "$(uv run which playwright)" install-deps
+```
+
 ## Direct Django Checks
 
 ```bash

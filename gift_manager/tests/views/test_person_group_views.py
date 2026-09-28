@@ -411,10 +411,19 @@ class TestRemovePersonFromGroup:
         self.person.groups.add(self.group)
 
     @override_settings(USE_I18N=False)
-    def test_remove_person_requires_editor_permission(self):
-        """Test that viewer cannot remove person from group."""
-        create_or_update_permission(self.user, self.group, permission_level=PermissionLevel.VIEWER)
-        create_or_update_permission(self.user, self.person, permission_level=PermissionLevel.VIEWER)
+    @pytest.mark.parametrize(
+        ("group_level", "person_level"),
+        [
+            (PermissionLevel.VIEWER, PermissionLevel.VIEWER),
+            (PermissionLevel.VIEWER, PermissionLevel.EDITOR),
+            (PermissionLevel.EDITOR, PermissionLevel.VIEWER),
+        ],
+        ids=["viewer-both", "viewer-group", "viewer-person"],
+    )
+    def test_remove_person_requires_editor_permission(self, group_level, person_level):
+        """Test that editor permission is required on both the group and the person."""
+        create_or_update_permission(self.user, self.group, permission_level=group_level)
+        create_or_update_permission(self.user, self.person, permission_level=person_level)
 
         url = reverse(
             "gift_manager:remove_person_group_person",

@@ -236,7 +236,14 @@ class TestMobileResponsivenessPlaywright:
         viewport_width=st.integers(min_value=320, max_value=768),
         viewport_height=st.integers(min_value=568, max_value=1024),
     )
-    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            # pytest creates a new test instance per browser parametrization, which
+            # Hypothesis reports as "multiple executors"; each browser is an independent run.
+            HealthCheck.differing_executors,
+        ]
+    )
     def test_modal_mobile_behavior_e2e_property(
         self, page: Page, live_server, viewport_width, viewport_height
     ):
@@ -297,7 +304,14 @@ class TestMobileResponsivenessPlaywright:
         viewport_width=st.integers(min_value=320, max_value=768),
         viewport_height=st.integers(min_value=568, max_value=1024),
     )
-    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            # pytest creates a new test instance per browser parametrization, which
+            # Hypothesis reports as "multiple executors"; each browser is an independent run.
+            HealthCheck.differing_executors,
+        ]
+    )
     def test_offcanvas_mobile_behavior_e2e_property(
         self, page: Page, live_server, viewport_width, viewport_height
     ):
@@ -355,7 +369,14 @@ class TestMobileResponsivenessPlaywright:
         swipe_distance=st.integers(min_value=50, max_value=200),
         swipe_direction=st.sampled_from(["left", "right"]),
     )
-    @settings(suppress_health_check=[HealthCheck.function_scoped_fixture])
+    @settings(
+        suppress_health_check=[
+            HealthCheck.function_scoped_fixture,
+            # pytest creates a new test instance per browser parametrization, which
+            # Hypothesis reports as "multiple executors"; each browser is an independent run.
+            HealthCheck.differing_executors,
+        ]
+    )
     def test_touch_gestures_property(
         self, page: Page, live_server, swipe_distance, swipe_direction
     ):
