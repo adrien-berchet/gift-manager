@@ -105,3 +105,43 @@ def test_admin_disabling_a_previously_self_deactivated_user_is_not_reactivatable
     _login(fresh)
 
     assert "inactive_user_id" not in fresh.session
+
+
+def test_admin_reactivation_clears_self_deactivation_flag():
+    """Reactivating outside the reactivation view (e.g. Django admin) must clear the flag too."""
+    _client, user = _self_deactivate()
+
+    user.is_active = True
+    user.save()
+
+    user.refresh_from_db()
+    assert user.profile.self_deactivated_at is None
+
+
+def test_admin_disable_after_admin_reactivation_is_not_reactivatable():
+    """Self-deactivate, admin reactivate, admin disable: the password must not restore it."""
+    _client, user = _self_deactivate()
+    user.is_active = True
+    user.save()
+    user.refresh_from_db()
+    user.is_active = False
+    user.save()
+
+    client = Client()
+    _login(client)
+    client.post(reverse("reactivate_account"))
+
+    assert "inactive_user_id" not in client.session
+    user.refresh_from_db()
+    assert user.is_active is False
+
+
+def test_saving_a_self_deactivated_user_keeps_the_flag():
+    """Unrelated saves of an inactive account (e.g. last_login) must not lock the user out."""
+    _client, user = _self_deactivate()
+
+    user.first_name = "Renamed"
+    user.save()
+
+    user.refresh_from_db()
+    assert user.profile.self_deactivated_at is not None

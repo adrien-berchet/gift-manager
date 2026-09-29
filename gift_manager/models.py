@@ -352,6 +352,9 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile(sender, instance, **kwargs):
     if hasattr(instance, "profile"):
+        if instance.is_active and instance.profile.self_deactivated_at is not None:
+            # Reactivated by any path (e.g. the admin): a later deactivation is not the user's own
+            instance.profile.self_deactivated_at = None
         instance.profile.save()
     else:  # pragma: no branch
         Profile.objects.create(user=instance)
