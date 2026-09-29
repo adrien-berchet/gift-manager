@@ -461,6 +461,25 @@ def test_production_settings_define_content_security_policy():
     assert result.returncode == 0, result.stderr
 
 
+def test_production_database_is_safe_behind_transaction_pooler():
+    """Production DB traffic goes through PgBouncer in transaction mode (Vercel + pooler host).
+
+    Server-side cursors break there (DECLARE and FETCH can land on different backends:
+    'portal ... does not exist'), and persistent connections can go stale while the
+    serverless instance is frozen, so reuse must be health-checked.
+    """
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "db = settings.DATABASES['default']; "
+        "assert db['DISABLE_SERVER_SIDE_CURSORS'] is True, db; "
+        "assert db['CONN_MAX_AGE'] > 0, db; "
+        "assert db['CONN_HEALTH_CHECKS'] is True, db",
+        _production_env(),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_explicit_testing_settings_module_imports_without_django_env():
     """Explicit settings modules should not require package-level DJANGO_ENV dispatch."""
     env = _isolated_env()
