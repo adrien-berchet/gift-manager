@@ -915,8 +915,9 @@ class DeleteConfirmationMixin:
         details = []
 
         # Add common details based on object attributes
-        if hasattr(self.object, "email_address") and self.object.email_address:
-            details.append(f"Email: {self.object.email_address}")
+        # Person emails are stored encrypted: only ever display the decoded value.
+        if hasattr(self.object, "email_address") and (email := self.object.email):
+            details.append(gettext("Email: {email}").format(email=email))
 
         if hasattr(self.object, "created_at") and self.object.created_at:
             details.append(f"Created: {self.object.created_at.strftime('%Y-%m-%d')}")

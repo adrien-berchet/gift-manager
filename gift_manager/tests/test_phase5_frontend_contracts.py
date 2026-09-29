@@ -211,7 +211,10 @@ def test_group_detail_tables_reserve_action_columns_and_refresh_contextual_creat
     assert "{% static 'gift_manager/js/person-group-detail.js' %}" in content
     assert "function applyGroupDetailColumnWidths" not in content
     assert 'document.addEventListener("list:update"' in controller
-    assert "window.location.reload();" in controller
+    # Changes refresh the tabs section in place (reloading only if that refresh fails)
+    assert "data-group-detail-section" in content
+    assert 'SECTION_SELECTOR = "[data-group-detail-section]"' in controller
+    assert "section.replaceWith(newSection)" in controller
 
     assert "@media (min-width: 577px) and (max-width: 1200px)" in content
     assert "#main-content" in content

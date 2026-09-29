@@ -821,7 +821,7 @@ class TestReparentGroupAPI:
         assert response.status_code == 404
 
     def test_reparent_no_access_to_parent(self):
-        """Test reparent requires access to parent groups."""
+        """Test an inaccessible parent is reported like an unknown one (404, no name)."""
         group = PersonGroupFactory(name="Child Group")
         private_parent = PersonGroupFactory(name="Private Parent")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.EDITOR)
@@ -837,7 +837,8 @@ class TestReparentGroupAPI:
             },
         )
 
-        assert response.status_code == 403
+        assert response.status_code == 404
+        assert "Private Parent" not in response.content.decode()
 
     def test_reparent_requires_login(self):
         """Test reparent requires authentication."""

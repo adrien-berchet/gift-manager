@@ -3348,6 +3348,59 @@ msgstr "Modifier la réaction"
 msgid "This gift plan is already rated. Edit its reaction instead."
 msgstr "Ce projet de cadeau est déjà noté. Modifiez plutôt sa réaction."
 
+#: gift_manager/views/base.py
+#, python-brace-format
+msgid "Email: {email}"
+msgstr "Email : {email}"
+
+#: gift_manager/views/sharing.py
+#, python-format
+msgid ""
+"%(count)d existing permission was already at or above the selected level and "
+"was kept."
+msgid_plural ""
+"%(count)d existing permissions were already at or above the selected level "
+"and were kept."
+msgstr[0] ""
+"%(count)d permission existante était déjà au niveau choisi ou au-dessus et a "
+"été conservée."
+msgstr[1] ""
+"%(count)d permissions existantes étaient déjà au niveau choisi ou au-dessus et "
+"ont été conservées."
+
+#: gift_manager/sharing_service.py
+msgid ""
+"This gift plan is shared with people who cannot see this choice, and you are "
+"not allowed to share it with them."
+msgstr ""
+"Ce projet de cadeau est partagé avec des personnes qui ne peuvent pas voir ce "
+"choix, et vous n'êtes pas autorisé à le partager avec elles."
+
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+msgid "Remove from group"
+msgstr "Retirer du groupe"
+
+#: gift_manager/templates/gift_manager/includes/person_group_remove_person_confirmation.html
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+#, python-format
+msgid "Remove %(person)s from the group %(group)s?"
+msgstr "Retirer %(person)s du groupe %(group)s ?"
+
+#: gift_manager/templates/gift_manager/includes/person_group_remove_person_confirmation.html
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+msgid "The person is not deleted: only their membership in this group is removed."
+msgstr ""
+"La personne n'est pas supprimée : seule son appartenance à ce groupe est "
+"retirée."
+
+#: gift_manager/views/person_group.py
+msgid "Invalid group identifier"
+msgstr "Identifiant de groupe invalide"
+
+#: gift_manager/views/person_group.py
+msgid "Invalid parent group identifier"
+msgstr "Identifiant de groupe parent invalide"
+
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""
 #~ "Soit une personne, soit un groupe doit être sélectionné, mais pas les "

@@ -11,6 +11,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
@@ -150,6 +151,13 @@ class PersonListView(
             {"field": "email_address", "label": _("Email"), "type": "text"},
             {"field": "created_at", "label": _("Created"), "type": "date"},
         ]
+
+    def get_fallback_field_value(self, obj, field_name: str) -> object:
+        """Return fallback cell values, decoding the stored (encrypted) email."""
+        value = super().get_fallback_field_value(obj, field_name)
+        if field_name == "email_address":
+            return decode_email(value) or ""
+        return value
 
 
 class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):

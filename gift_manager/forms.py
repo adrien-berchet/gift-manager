@@ -17,6 +17,8 @@ from .models import GiftTag
 from .models import Person
 from .models import PersonGroup
 from .models import Relation
+from .sharing_service import RelationExposureDenied
+from .sharing_service import SharingService
 from .statuses import can_rate_status
 
 
@@ -550,7 +552,53 @@ class PersonGroupAddMultipleChildGroupsForm(forms.Form):
         parent_group.save()
 
 
-class PersonRelationForm(BaseFormMixin, forms.ModelForm):
+class RelationReassignmentMixin:
+    """Refuse edits that would show a shared relation's new objects to its audience.
+
+    Other users with access to an existing relation see its gift, recipient and event,
+    so changing them goes through the same checks and cascade as sharing (GM-AUD-004).
+    Must precede the ModelForm in the bases; subclasses set ``self.user`` before
+    calling ``super().__init__``.
+    """
+
+    # Form field reporting a change of each relation attribute (a non-field error if absent)
+    reassignment_error_fields = {
+        "gift": "gift",
+        "person": "recipient",
+        "group": "recipient",
+        "event": "event",
+    }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.previous_related_ids = (
+            SharingService.relation_related_ids(self.instance) if self.instance.pk else None
+        )
+
+    def _post_clean(self) -> None:
+        # The instance only carries every submitted value once the ModelForm built it
+        super()._post_clean()
+        if self.previous_related_ids is None or self.errors:
+            return
+        try:
+            SharingService.relation_reassignment_grants(
+                self.user, self.instance, self.previous_related_ids
+            )
+        except RelationExposureDenied as exc:
+            field = self.reassignment_error_fields.get(exc.attribute)
+            self.add_error(field if field in self.fields else None, exc.message)
+
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
+        if not commit or self.previous_related_ids is None:
+            return super().save(commit=commit)
+        with transaction.atomic():
+            SharingService.cascade_relation_reassignment(
+                self.user, self.instance, self.previous_related_ids
+            )
+            return super().save(commit=commit)
+
+
+class PersonRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["gift", "comment", "event", "status", "due_date"]
@@ -596,7 +644,7 @@ class PersonRelationForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class PersonGroupRelationForm(BaseFormMixin, forms.ModelForm):
+class PersonGroupRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Relation
         fields = ["gift", "comment", "event", "status", "due_date"]
@@ -700,7 +748,7 @@ class GiftTagForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class GiftRelationForm(BaseFormMixin, forms.ModelForm):
+class GiftRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,
@@ -867,7 +915,7 @@ class RelationReactionForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class RelationForm(BaseFormMixin, forms.ModelForm):
+class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,

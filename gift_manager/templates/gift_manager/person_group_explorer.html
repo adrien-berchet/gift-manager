@@ -75,7 +75,7 @@
                                 <span class="explorer-item-main">
                                     <span class="explorer-item-title">{{ group.name }}</span>
                                 </span>
-                                {% with member_count=group.person_set.count %}
+                                {% with member_count=group.accessible_members|length %}
                                 <span class="explorer-count-pill">
                                     {% blocktrans count count=member_count %}{{ count }} member{% plural %}{{ count }} members{% endblocktrans %}
                                 </span>
@@ -109,7 +109,7 @@
                                 <span class="explorer-item-main">
                                     <span class="explorer-item-title">{{ group.name }}</span>
                                 </span>
-                                {% with member_count=group.person_set.count %}
+                                {% with member_count=group.accessible_members|length %}
                                 <span class="explorer-count-pill">
                                     {% blocktrans count count=member_count %}{{ count }} member{% plural %}{{ count }} members{% endblocktrans %}
                                 </span>
@@ -157,7 +157,7 @@
                                 <span class="explorer-item-main">
                                     <span class="explorer-item-title">{{ group.name }}</span>
                                 </span>
-                                {% with member_count=group.person_set.count %}
+                                {% with member_count=group.accessible_members|length %}
                                 <span class="explorer-count-pill explorer-count-pill--secondary">
                                     {% blocktrans count count=member_count %}{{ count }} member{% plural %}{{ count }} members{% endblocktrans %}
                                 </span>

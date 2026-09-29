@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Case
 from django.db.models import CharField
 from django.db.models import Prefetch
@@ -52,6 +53,8 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionService
+from gift_manager.sharing_service import RelationExposureDenied
+from gift_manager.sharing_service import SharingService
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_idea_status
@@ -761,10 +764,14 @@ def _set_relation_quick_action_plan(
     except (Event.DoesNotExist, ValidationError, ValueError) as exc:
         raise ValueError from exc
 
+    previous_related_ids = SharingService.relation_related_ids(relation)
     relation.status = _get_relation_status_by_slug("planned")
     relation.event = event
     relation.due_date = due_date
-    relation.save(update_fields=["status", "event", "due_date"])
+    with transaction.atomic():
+        # The new event is shown to everyone the gift plan is shared with
+        SharingService.cascade_relation_reassignment(user, relation, previous_related_ids)
+        relation.save(update_fields=["status", "event", "due_date"])
 
 
 def _apply_relation_quick_action(relation, user, action: str, post_data) -> str:
@@ -780,6 +787,8 @@ def _apply_relation_quick_action(relation, user, action: str, post_data) -> str:
         except ValueError as exc:
             msg = gettext("Choose a valid event and due date.")
             raise ValueError(msg) from exc
+        except RelationExposureDenied as exc:
+            raise ValueError(str(exc.message)) from exc
         return gettext("Gift plan marked as planned.")
 
     if action == "set_date":
