@@ -15,6 +15,7 @@ from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.services import GLOBAL_OBJECT_REMOVAL_ERROR
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -126,8 +127,12 @@ class EventDetailView(BaseDetailView):
                 "type": "delete",
                 "url": reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
                 "label": _("Delete event"),
-                "enabled": True,
-                "tooltip": _(
+                # A global event (Birthday) is visible to everyone: regular users cannot
+                # delete it, and there is no access of theirs to remove
+                "enabled": is_editor or not self.object.is_global,
+                "tooltip": GLOBAL_OBJECT_REMOVAL_ERROR
+                if self.object.is_global and not is_editor
+                else _(
                     "You do not have permission to delete this object so it will only be "
                     "unshared with you"
                 )

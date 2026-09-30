@@ -1,5 +1,6 @@
 """Relation-related views."""
 
+import uuid
 from datetime import date
 from datetime import timedelta
 from urllib.parse import urlencode
@@ -33,6 +34,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
+from gift_manager.birthdays import BIRTHDAY_FOR_PARAM
 from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
@@ -49,6 +51,7 @@ from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
@@ -584,6 +587,30 @@ class RelationCreateView(BaseCreateView):
     form_fields_template = "gift_manager/includes/forms/relation_fields.html"
     form_css_class = "relation-form"
     form_type = "relation"
+
+    def get_initial(self):
+        initial = super().get_initial()
+        initial.update(self._birthday_initial())
+        return initial
+
+    def _birthday_initial(self) -> dict:
+        """Pre-fill recipient, Birthday event and due date for a person's next birthday.
+
+        The occasion is computed from the person's birthday: no event is created for it.
+        Unknown, invalid or inaccessible people are ignored, like any other bad query value.
+        """
+        try:
+            person_id = uuid.UUID(self.request.GET.get(BIRTHDAY_FOR_PARAM, ""))
+        except ValueError:
+            return {}
+        person = Person.objects.accessible_by(self.request.user).filter(person_id=person_id).first()
+        if person is None or not person.has_birthday:
+            return {}
+        return {
+            "recipient": f"person:{person.person_id}",
+            "event": Event.objects.get_birthday_event().pk,
+            "due_date": person.next_birthday(),
+        }
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()

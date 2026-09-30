@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
+from gift_manager.birthdays import build_upcoming_birthdays
 from gift_manager.gift_plan_actions import gift_plan_requires_planning_fields
 from gift_manager.gift_plan_cards import build_gift_plan_card
 from gift_manager.models import Event
@@ -241,6 +242,8 @@ def home(request):
             action_groups,
             unassigned_gift_count,
         )
+
+        context["upcoming_birthdays"] = build_upcoming_birthdays(user, today)
 
         # Recent gifts (last 5)
         context["recent_gifts"] = Gift.objects.accessible_by(user).order_by("-creation_date")[:5]

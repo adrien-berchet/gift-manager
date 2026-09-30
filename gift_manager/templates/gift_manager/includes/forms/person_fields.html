@@ -3,5 +3,13 @@
 {% include "gift_manager/includes/forms/field.html" with field=form.first_name %}
 {% include "gift_manager/includes/forms/field.html" with field=form.family_name %}
 {% include "gift_manager/includes/forms/field.html" with field=form.email_address %}
+<fieldset class="mb-3">
+  <legend class="form-label fs-6">{% trans "Birthday" %}</legend>
+  <div class="row g-2">
+    <div class="col-4">{% include "gift_manager/includes/forms/field.html" with field=form.birthday_day %}</div>
+    <div class="col-8">{% include "gift_manager/includes/forms/field.html" with field=form.birthday_month %}</div>
+    <div class="col-12">{% include "gift_manager/includes/forms/field.html" with field=form.birthday_year %}</div>
+  </div>
+</fieldset>
 {% trans "Search groups..." as groups_search_placeholder %}
 {% include "gift_manager/includes/forms/field.html" with field=form.groups searchable=True search_placeholder=groups_search_placeholder select_all_action="select-all-groups" clear_all_action="clear-all-groups" %}

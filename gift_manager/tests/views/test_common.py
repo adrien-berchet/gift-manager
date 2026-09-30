@@ -649,7 +649,10 @@ class TestGlobalSearchView:
         assert response.status_code == 200
         data = response.json()
 
-        event_results = [r for r in data["results"] if r["type"] == "event"]
+        # The global Birthday event also matches "birthday" and is visible to every user
+        event_results = [
+            r for r in data["results"] if r["type"] == "event" and r["title"] == "Birthday Party"
+        ]
         assert len(event_results) == 1
         assert event_results[0]["title"] == "Birthday Party"
         assert event_results[0]["icon"] == "fa-calendar-alt"

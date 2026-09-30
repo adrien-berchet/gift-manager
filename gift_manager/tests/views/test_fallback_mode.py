@@ -67,10 +67,16 @@ def test_fallback_list_actions_use_public_uuids(client, url_name, factory, detai
 
     response = client.get(reverse(f"gift_manager:{url_name}"), {"no_js": "1"})
 
-    (row,) = response.context["fallback_table_data"]["rows"]
     kwargs = {"pk": getattr(obj, uuid_field)}
+    detail_url = reverse(f"gift_manager:{detail_name}_detail", kwargs=kwargs)
+    # Pick the row by its detail URL: the global Birthday event is listed for everyone
+    (row,) = [
+        row
+        for row in response.context["fallback_table_data"]["rows"]
+        if row["actions"][0]["url"] == detail_url
+    ]
     assert [action["url"] for action in row["actions"]] == [
-        reverse(f"gift_manager:{detail_name}_detail", kwargs=kwargs),
+        detail_url,
         reverse(f"gift_manager:{detail_name}_edit", kwargs=kwargs) + "?no_js=1",
         reverse(f"gift_manager:{detail_name}_delete", kwargs=kwargs) + "?no_js=1",
     ]

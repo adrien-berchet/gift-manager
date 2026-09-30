@@ -860,12 +860,12 @@ class TestEventListGridLoading:
         assert "Repeats yearly from" in body
 
     def test_three_events_visible(self, page: Page, live_server, seed_data_e2e):
-        """Alice sees all 3 seed events."""
+        """Alice sees the 3 seed events plus the global Birthday event."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/events/")
         _wait_for_grid(page, "event-grid")
 
-        assert _grid_row_count(page, "event-grid") == 3
+        assert _grid_row_count(page, "event-grid") == 4
 
     def test_pagination_present(self, page: Page, live_server, seed_data_e2e):
         """Pagination footer is attached."""
@@ -924,18 +924,18 @@ class TestEventListFeatures:
                 page.keyboard.press("Escape")
 
     def test_initial_sort_by_name(self, page: Page, live_server, seed_data_e2e):
-        """Initial sort by Name applies; Christmas < Graduation < Mom Birthday."""
+        """Initial sort by Name applies; Birthday < Christmas < Graduation < Mom Birthday."""
         _login(page, live_server.url)
         page.goto(f"{live_server.url}/events/")
         _wait_for_grid(page, "event-grid")
         page.wait_for_timeout(600)
 
         rows = page.locator("#event-grid .gridjs-tbody tr")
-        if rows.count() >= 3:
-            first = rows.nth(0).inner_text()
+        if rows.count() >= 4:
             second = rows.nth(1).inner_text()
-            assert "Christmas" in first, f"Expected Christmas first, got: {first}"
-            assert "Graduation" in second, f"Expected Graduation second, got: {second}"
+            third = rows.nth(2).inner_text()
+            assert "Christmas" in second, f"Expected Christmas second, got: {second}"
+            assert "Graduation" in third, f"Expected Graduation third, got: {third}"
 
     def test_search_filters_events(self, page: Page, live_server, seed_data_e2e):
         """Search filters event results."""
@@ -954,24 +954,25 @@ class TestEventListFeatures:
             page.wait_for_timeout(800)
 
     def test_bob_sees_limited_events(self, page: Page, live_server, seed_data_e2e):
-        """Bob only sees events he has permissions on (Christmas, Graduation).
+        """Bob only sees events he has permissions on, plus the global Birthday event.
 
-        Bob has VIEWER on Christmas and EDITOR on Graduation, so exactly 2 events.
+        Bob has VIEWER on Christmas and EDITOR on Graduation, and no access to Mom Birthday,
+        so he sees exactly 3 events (Christmas, Graduation and the global Birthday event).
         """
         _login(page, live_server.url, "bob", "bob_password")
         page.goto(f"{live_server.url}/events/")
         _wait_for_grid(page, "event-grid")
 
         count = _grid_row_count(page, "event-grid")
-        # Bob should see fewer events than Alice (who sees 3)
-        assert count <= 3, f"Bob should see fewer events than Alice, got {count}"
-        assert count >= 1, f"Bob should see at least 1 event, got {count}"
+        # Bob should see fewer events than Alice (who sees 4)
+        assert count == 3, f"Bob should see exactly 3 events, got {count}"
 
-        # Verify Bob can see specific events he has permissions on
+        # Verify Bob can see specific events he has permissions on, and not the others
         body = _grid_body_text(page, "event-grid")
-        assert "Christmas" in body or "Graduation" in body, (
-            f"Bob should see Christmas or Graduation, got: {body}"
+        assert "Christmas" in body and "Graduation" in body, (
+            f"Bob should see Christmas and Graduation, got: {body}"
         )
+        assert "Mom Birthday" not in body, f"Bob must not see Mom Birthday, got: {body}"
 
 
 # ===========================================================================

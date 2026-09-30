@@ -4012,3 +4012,48 @@ msgstr[1] "%(count)s cadeaux"
 #~ msgid_plural "You are about to delete %(count)s giftings."
 #~ msgstr[0] "Vous êtes sur le point de supprimer une remise."
 #~ msgstr[1] "Vous êtes sur le point de supprimer %(count)s remises."
+
+msgid "Birthday"
+msgstr "Anniversaire"
+
+msgid "Day"
+msgstr "Jour"
+
+msgid "Month"
+msgstr "Mois"
+
+msgid "Year (optional)"
+msgstr "Année (facultatif)"
+
+msgid "Enter a day and a month for the birthday."
+msgstr "Saisissez un jour et un mois pour l'anniversaire."
+
+msgid "Enter both the day and the month."
+msgstr "Saisissez à la fois le jour et le mois."
+
+msgid "Enter a valid date."
+msgstr "Saisissez une date valide."
+
+msgid "Enter a year that is not in the future."
+msgstr "Saisissez une année qui n'est pas dans le futur."
+
+msgid "Upcoming birthdays"
+msgstr "Anniversaires à venir"
+
+msgid "Today"
+msgstr "Aujourd'hui"
+
+msgid "Tomorrow"
+msgstr "Demain"
+
+msgid "In %(days)s days"
+msgstr "Dans %(days)s jours"
+
+msgid "Gift plan in progress"
+msgstr "Projet de cadeau en cours"
+
+msgid "No gift plan yet"
+msgstr "Aucun projet de cadeau pour le moment"
+
+msgid "This object is available to everyone and cannot be removed."
+msgstr "Cet élément est disponible pour tout le monde et ne peut pas être supprimé."

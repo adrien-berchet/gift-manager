@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.db.models import QuerySet
+from django.utils.dates import MONTHS
 from django.utils.translation import gettext_lazy
 
 from .email_encoding import decode_email
@@ -114,14 +115,34 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
 
     class Meta:
         model = Person
-        fields = ["first_name", "family_name", "email_address"]
+        fields = [
+            "first_name",
+            "family_name",
+            "email_address",
+            "birthday_day",
+            "birthday_month",
+            "birthday_year",
+        ]
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
+            "birthday_day": gettext_lazy("Day"),
+            "birthday_month": gettext_lazy("Month"),
+            "birthday_year": gettext_lazy("Year (optional)"),
         }
         widgets = {
             "first_name": forms.TextInput(attrs={"rows": 1}),
             "family_name": forms.TextInput(attrs={"rows": 1}),
+            "birthday_day": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 31, "inputmode": "numeric"}
+            ),
+            "birthday_month": forms.Select(
+                attrs={"class": "form-select"},
+                choices=[("", "—"), *MONTHS.items()],
+            ),
+            "birthday_year": forms.NumberInput(
+                attrs={"class": "form-control", "min": 1, "max": 9999, "inputmode": "numeric"}
+            ),
         }
         error_messages = {
             "first_name": {
@@ -604,7 +625,8 @@ class PersonRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelFo
         fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            # ISO format: an <input type="date"> ignores values in the locale's format
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),
@@ -650,7 +672,8 @@ class PersonGroupRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.Mo
         fields = ["gift", "comment", "event", "status", "due_date"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            # ISO format: an <input type="date"> ignores values in the locale's format
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),
@@ -760,7 +783,8 @@ class GiftRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
         model = Relation
         fields = ["recipient", "comment", "event", "status", "due_date"]
         widgets = {
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            # ISO format: an <input type="date"> ignores values in the locale's format
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "comment": forms.Textarea(attrs={"rows": 3}),
         }
         labels = {
@@ -938,7 +962,8 @@ class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
         ]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
-            "due_date": forms.DateInput(attrs={"type": "date"}),
+            # ISO format: an <input type="date"> ignores values in the locale's format
+            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),

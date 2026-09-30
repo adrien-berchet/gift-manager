@@ -55,6 +55,18 @@ class SharingService:
         return {name: getattr(relation, f"{name}_id") for name in RELATION_CASCADE_ATTRIBUTES}
 
     @staticmethod
+    def needs_cascade_grant(related, user, permission_level: int) -> bool:
+        """Return whether sharing at permission_level must also raise user's access to related.
+
+        A global object (the Birthday event) is visible to everyone and cannot be shared
+        by regular users, so it never needs a grant: the relation only has to display it.
+        """
+        effective = PermissionService.get_effective_permission(related, user)
+        if getattr(related, "is_global", False):
+            return effective < PermissionLevel.VIEWER
+        return effective < permission_level
+
+    @staticmethod
     def assert_can_share(actor, obj, permission_level: int) -> None:
         """Require owner-level authority on obj and forbid granting more than the actor holds."""
         actor_permission = PermissionService.get_effective_permission(obj, actor)
@@ -78,7 +90,7 @@ class SharingService:
             expanded = [
                 related
                 for related in cls.related_objects(obj)
-                if PermissionService.get_effective_permission(related, user) < permission_level
+                if cls.needs_cascade_grant(related, user, permission_level)
             ]
             for related in expanded:
                 cls.assert_can_share(actor, related, permission_level)
@@ -121,7 +133,7 @@ class SharingService:
         for name, related in changed:
             for user_id, level in audience.items():
                 user = users[user_id]
-                if PermissionService.get_effective_permission(related, user) >= level:
+                if not cls.needs_cascade_grant(related, user, level):
                     continue
                 try:
                     cls.assert_can_share(actor, related, level)
