@@ -1816,7 +1816,7 @@ msgstr "Une erreur s'est produite lors de la suppression de l'objet"
 
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:25
 msgid "Back"
-msgstr ""
+msgstr "Retour"
 
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:49
 msgid "View full page"
@@ -3450,6 +3450,440 @@ msgstr "Créé le : {date}"
 #, python-brace-format
 msgid "Schedule: {schedule}"
 msgstr "Planification : {schedule}"
+
+msgid "Apply status"
+msgstr "Appliquer le statut"
+
+msgid "Bulk status update completed"
+msgstr "Mise à jour groupée des statuts terminée"
+
+msgid "Bulk status update failed:"
+msgstr "Échec de la mise à jour groupée des statuts :"
+
+msgid "Child tags"
+msgstr "Tags enfants"
+
+msgid "Choose a group"
+msgstr "Choisir un groupe"
+
+msgid "Choose event"
+msgstr "Choisir un événement"
+
+msgid "Choose friends, set a permission level, then select the items to share."
+msgstr "Choisissez des amis, définissez un niveau de permission, puis sélectionnez les éléments à partager."
+
+msgid "Choose status"
+msgstr "Choisir un statut"
+
+msgid "Choose who can access this item after it is saved."
+msgstr "Choisissez qui pourra accéder à cet élément après son enregistrement."
+
+msgid "Choose who can access this item. Changes are applied when you save."
+msgstr "Choisissez qui peut accéder à cet élément. Les modifications sont appliquées à l'enregistrement."
+
+msgid "Clear all"
+msgstr "Tout effacer"
+
+msgid "Create a gift or update an existing gift to use this tag."
+msgstr "Créez un cadeau ou modifiez un cadeau existant pour utiliser ce tag."
+
+msgid "Create a gift plan"
+msgstr "Créer un projet de cadeau"
+
+msgid "Create a group to start organizing recipients."
+msgstr "Créez un groupe pour commencer à organiser vos destinataires."
+
+msgid "Create a tag to start organizing gifts."
+msgstr "Créez un tag pour commencer à organiser vos cadeaux."
+
+msgid "Create gift"
+msgstr "Créer un cadeau"
+
+msgid "Create group"
+msgstr "Créer un groupe"
+
+msgid "Create tag"
+msgstr "Créer un tag"
+
+msgid "Dashboard"
+msgstr "Tableau de bord"
+
+msgid "Dashboard summary"
+msgstr "Résumé du tableau de bord"
+
+msgid "Date:"
+msgstr "Date :"
+
+msgid "Due soon"
+msgstr "Échéance proche"
+
+msgid "Every accessible gift currently has at least one tag."
+msgstr "Tous les cadeaux accessibles ont actuellement au moins un tag."
+
+msgid "Filters & Sort"
+msgstr "Filtres et tri"
+
+msgid "Filters, view, and selection"
+msgstr "Filtres, affichage et sélection"
+
+msgid "Gift plan summary"
+msgstr "Résumé des projets de cadeaux"
+
+msgid "Group explorer path"
+msgstr "Chemin de l'explorateur de groupes"
+
+msgid "Group navigation"
+msgstr "Navigation des groupes"
+
+msgid "Library"
+msgstr "Bibliothèque"
+
+msgid "More"
+msgstr "Plus"
+
+msgid "Move group"
+msgstr "Déplacer le groupe"
+
+msgid "Needs attention"
+msgstr "À traiter"
+
+msgid "Next actions"
+msgstr "Prochaines actions"
+
+msgid "Next page"
+msgstr "Page suivante"
+
+msgid "No child groups yet"
+msgstr "Aucun groupe enfant pour l'instant"
+
+msgid "No child tags yet"
+msgstr "Aucun tag enfant pour l'instant"
+
+msgid "No comment"
+msgstr "Aucun commentaire"
+
+msgid "No date"
+msgstr "Sans date"
+
+msgid "No direct members yet"
+msgstr "Aucun membre direct pour l'instant"
+
+msgid "No email address"
+msgstr "Aucune adresse email"
+
+msgid "No gift plans need attention."
+msgstr "Aucun projet de cadeau ne demande votre attention."
+
+msgid "No gift plans yet."
+msgstr "Aucun projet de cadeau pour l'instant."
+
+msgid "No gifts found with this tag"
+msgstr "Aucun cadeau trouvé avec ce tag"
+
+msgid "No groups yet"
+msgstr "Aucun groupe pour l'instant"
+
+msgid "No notes yet."
+msgstr "Aucune note pour l'instant."
+
+msgid "No tags yet"
+msgstr "Aucun tag pour l'instant"
+
+msgid "No untagged gifts"
+msgstr "Aucun cadeau sans tag"
+
+msgid "Open the group details to manage membership."
+msgstr "Ouvrez les détails du groupe pour gérer ses membres."
+
+msgid "Open workspace"
+msgstr "Ouvrir l'espace de travail"
+
+msgid "Optional"
+msgstr "Facultatif"
+
+msgid "Overdue"
+msgstr "En retard"
+
+msgid "Parent group"
+msgstr "Groupe parent"
+
+msgid "Please correct the errors below."
+msgstr "Veuillez corriger les erreurs ci-dessous."
+
+msgid "Previous page"
+msgstr "Page précédente"
+
+msgid "Ready to save"
+msgstr "Prêt à sauvegarder"
+
+msgid "Recipient view"
+msgstr "Vue des destinataires"
+
+msgid "Root group"
+msgstr "Groupe racine"
+
+msgid "Search child groups..."
+msgstr "Rechercher des groupes enfants..."
+
+msgid "Search gifts, recipients, events"
+msgstr "Rechercher des cadeaux, destinataires, événements"
+
+msgid "Search groups..."
+msgstr "Rechercher des groupes..."
+
+msgid "Search members..."
+msgstr "Rechercher des membres..."
+
+msgid "Search parent groups..."
+msgstr "Rechercher des groupes parents..."
+
+msgid "Search parent tags..."
+msgstr "Rechercher des tags parents..."
+
+msgid "Search results"
+msgstr "Résultats de recherche"
+
+msgid "Search tags..."
+msgstr "Rechercher des tags..."
+
+msgid "Select a group from the hierarchy to view its direct members."
+msgstr "Sélectionnez un groupe dans la hiérarchie pour voir ses membres directs."
+
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+msgid "Select all rows"
+msgstr "Sélectionner toutes les lignes"
+
+msgid "Select row"
+msgstr "Sélectionner la ligne"
+
+msgid "Selection controls"
+msgstr "Contrôles de sélection"
+
+msgid "Sharing"
+msgstr "Partage"
+
+msgid "Show all gift plans"
+msgstr "Afficher tous les projets de cadeaux"
+
+msgid "Skip to navigation"
+msgstr "Aller à la navigation"
+
+msgid "Tag Explorer"
+msgstr "Explorateur de tags"
+
+msgid "Tag details"
+msgstr "Détails du tag"
+
+msgid "Tag explorer path"
+msgstr "Chemin de l'explorateur de tags"
+
+msgid "Tag navigation"
+msgstr "Navigation des tags"
+
+msgid "This group does not have any child groups."
+msgstr "Ce groupe n'a aucun groupe enfant."
+
+msgid "This tag does not have any child tags."
+msgstr "Ce tag n'a aucun tag enfant."
+
+msgid "Total"
+msgstr "Total"
+
+msgid "Unassigned gifts"
+msgstr "Cadeaux non attribués"
+
+msgid "Untagged gifts"
+msgstr "Cadeaux sans tag"
+
+msgid "Updating..."
+msgstr "Mise à jour..."
+
+msgid "View recipients"
+msgstr "Voir les destinataires"
+
+msgid "View toggle"
+msgstr "Changer d'affichage"
+
+msgid "You do not have any friends to share with yet."
+msgstr "Vous n'avez pas encore d'amis avec qui partager."
+
+msgid "You do not have permission to edit this gift plan"
+msgstr "Vous n'avez pas la permission de modifier ce projet de cadeau"
+
+msgid "required"
+msgstr "obligatoire"
+
+msgid "Abandon"
+msgstr "Abandonner"
+
+msgid "Add details"
+msgstr "Ajouter des détails"
+
+msgid "Already given or finished"
+msgstr "Déjà offert ou terminé"
+
+msgid "An error occurred during bulk status update"
+msgstr "Une erreur s'est produite lors de la mise à jour groupée des statuts"
+
+msgid "At least one owner is required."
+msgstr "Au moins un propriétaire est requis."
+
+msgid "Bulk status updates are only available for gift plans."
+msgstr "Les mises à jour groupées de statut ne sont disponibles que pour les projets de cadeaux."
+
+msgid "Choose a date."
+msgstr "Choisissez une date."
+
+msgid "Choose a recurrence."
+msgstr "Choisissez une récurrence."
+
+msgid "Choose a valid due date."
+msgstr "Choisissez une échéance valide."
+
+msgid "Choose a valid event and due date."
+msgstr "Choisissez un événement et une échéance valides."
+
+msgid "Choose a valid schedule."
+msgstr "Choisissez une planification valide."
+
+msgid "Choose a valid status."
+msgstr "Choisissez un statut valide."
+
+msgid "Completed"
+msgstr "Terminé"
+
+msgid "Due after the next 7 days"
+msgstr "Échéance au-delà des 7 prochains jours"
+
+msgid "Due before today"
+msgstr "Échéance dépassée"
+
+msgid "Due date updated."
+msgstr "Échéance mise à jour."
+
+msgid "Due in the next 7 days"
+msgstr "Échéance dans les 7 prochains jours"
+
+msgid "Gift plan abandoned."
+msgstr "Projet de cadeau abandonné."
+
+msgid "Gift plan marked as given."
+msgstr "Projet de cadeau marqué comme offert."
+
+msgid "Gift plan marked as planned."
+msgstr "Projet de cadeau marqué comme planifié."
+
+msgid "Gift plan marked as purchased."
+msgstr "Projet de cadeau marqué comme acheté."
+
+msgid "Gift plan not found."
+msgstr "Projet de cadeau introuvable."
+
+msgid "Given"
+msgstr "Offert"
+
+msgid "Invalid friend selection."
+msgstr "Sélection d'amis invalide."
+
+msgid "Invalid object selection."
+msgstr "Sélection d'éléments invalide."
+
+msgid "Invitation from"
+msgstr "Invitation de"
+
+msgid "Later"
+msgstr "Plus tard"
+
+msgid "Leave the date empty for unscheduled events."
+msgstr "Laissez la date vide pour les événements sans planification."
+
+msgid "Leave the recurrence empty for unscheduled events."
+msgstr "Laissez la récurrence vide pour les événements sans planification."
+
+msgid "No gift plans could be updated."
+msgstr "Aucun projet de cadeau n'a pu être mis à jour."
+
+msgid "Objects can only be shared with friends."
+msgstr "Les éléments ne peuvent être partagés qu'avec des amis."
+
+msgid "One-time events cannot have a recurrence."
+msgstr "Les événements ponctuels ne peuvent pas avoir de récurrence."
+
+msgid "Plan"
+msgstr "Planifier"
+
+msgid "Profile of"
+msgstr "Profil de"
+
+msgid "Purchased"
+msgstr "Acheté"
+
+msgid "Required relation status is not configured."
+msgstr "Le statut de projet de cadeau requis n'est pas configuré."
+
+msgid "Schedule type"
+msgstr "Type de planification"
+
+msgid "Set date"
+msgstr "Définir une date"
+
+msgid "Stale"
+msgstr "Inactif"
+
+msgid "This group access is inherited from a parent group."
+msgstr "Cet accès au groupe est hérité d'un groupe parent."
+
+msgid "This invitation can only be accepted by the invited email address."
+msgstr "Cette invitation ne peut être acceptée que par l'adresse email invitée."
+
+msgid "This quick action is not available for this gift plan."
+msgstr "Cette action rapide n'est pas disponible pour ce projet de cadeau."
+
+msgid "To accept the invitation, click on the following link:"
+msgstr "Pour accepter l'invitation, cliquez sur le lien suivant :"
+
+msgid "Use the leave access action to remove your own access."
+msgstr "Utilisez l'action « Quitter » pour retirer votre propre accès."
+
+msgid "You are already friends with this user."
+msgstr "Vous êtes déjà ami avec cet utilisateur."
+
+msgid "You cannot edit this gift plan."
+msgstr "Vous ne pouvez pas modifier ce projet de cadeau."
+
+msgid "You cannot send an invitation to yourself."
+msgstr "Vous ne pouvez pas vous envoyer une invitation."
+
+msgid "You do not have access to this object."
+msgstr "Vous n'avez pas accès à cet élément."
+
+msgid "You do not have permission to delete this object."
+msgstr "Vous n'avez pas la permission de supprimer cet élément."
+
+msgid "You do not have permission to edit this object."
+msgstr "Vous n'avez pas la permission de modifier cet élément."
+
+msgid "You do not have permission to manage sharing for this object."
+msgstr "Vous n'avez pas la permission de gérer le partage de cet élément."
+
+msgid "You have sent too many invitations recently. Please try again later."
+msgstr "Vous avez envoyé trop d'invitations récemment. Veuillez réessayer plus tard."
+
+#, python-format
+msgid "Gifts tagged as \"%(tag_name)s\""
+msgstr "Cadeaux avec le tag « %(tag_name)s »"
+
+#, python-format
+msgid "Members in \"%(group_name)s\""
+msgstr "Membres de « %(group_name)s »"
+
+#, python-format
+msgid "%(count)s gift"
+msgid_plural "%(count)s gifts"
+msgstr[0] "%(count)s cadeau"
+msgstr[1] "%(count)s cadeaux"
 
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""

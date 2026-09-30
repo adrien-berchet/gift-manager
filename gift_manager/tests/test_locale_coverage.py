@@ -1,5 +1,6 @@
 """Guards against user-facing text and formats that bypass the French translation."""
 
+import ast
 import re
 from pathlib import Path
 
@@ -84,3 +85,55 @@ def test_allauth_layout_sets_language_attribute():
     with override("fr"):
         html = render_to_string("allauth/layouts/base.html", {})
     assert '<html lang="fr"' in html
+
+
+def _catalog_entries():
+    """Msgid -> True for every French catalog entry that has a translation."""
+    return {msgid for msgid, msgstr in trans_real.translation("fr")._catalog.items() if msgstr}
+
+
+def test_every_template_and_python_string_has_a_french_translation():
+    """Catch strings added without updating locale/fr (they would silently render in English)."""
+    translated = _catalog_entries()
+    trans_tag = re.compile(r"""\{%\s*trans\s+(?:"([^"]*)"|'([^']*)')""")
+    used = {}
+    for path in TEMPLATE_ROOT.rglob("*.html"):
+        for match in trans_tag.finditer(path.read_text(encoding="utf-8")):
+            msgid = match.group(1) if match.group(1) is not None else match.group(2)
+            if msgid:
+                used.setdefault(msgid, path.relative_to(PROJECT_ROOT).as_posix())
+
+    package = PROJECT_ROOT / "gift_manager"
+    for path in package.rglob("*.py"):
+        if {"tests", "migrations"} & set(path.parts):
+            continue
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call) or not node.args:
+                continue
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+            first = node.args[0]
+            if (
+                name in {"gettext", "gettext_lazy", "_"}
+                and isinstance(first, ast.Constant)
+                and isinstance(first.value, str)
+            ):
+                used.setdefault(
+                    first.value, f"{path.relative_to(PROJECT_ROOT).as_posix()}:{node.lineno}"
+                )
+
+    missing = sorted(
+        f"{where}: {msgid}" for msgid, where in used.items() if msgid not in translated
+    )
+    assert missing == [], "Add these strings to locale/fr/LC_MESSAGES/django.po and compile it"
+
+
+@pytest.mark.django_db
+def test_dashboard_renders_in_french(client, user):
+    client.force_login(user)
+    french = client.get("/fr/").content.decode()
+
+    for expected in ("Prochaines actions", "Bibliothèque", "Tableau de bord"):
+        assert expected in french
+    for english in ("Next actions", ">Library<", "Dashboard summary"):
+        assert english not in french
