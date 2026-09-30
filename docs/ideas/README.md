@@ -53,6 +53,23 @@ status and notes to reflect the move.
 | ID | Idea | Status | Area | Notes |
 | --- | --- | --- | --- | --- |
 | 0001 | Gift Plan Suggestions For A Recipient | Proposed | Gift Plans | Catalogue scoring plus AI new-gift ideas per recipient, with persisted dismissals. |
+| 0002 | Person Birthdays And Personal Occasions | Proposed | Recipients | Birthday on people, dashboard section and one-click plan creation. |
+| 0003 | Reminders And Calendar Feed | Proposed | Notifications | Opt-in digest email via management command plus private .ics feed. |
+| 0004 | Richer Gift Details (Link, Price, Image) | Proposed | Gifts | Optional URL, price and image on gifts, with budget totals. |
+| 0005 | Recipient Gift History And Repeat-Gift Warning | Proposed | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. |
+| 0006 | Recipient Notes And Interests | Proposed | Recipients | Notes and interest tags on people, matched against gift tags. |
+| 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
+| 0008 | Duplicate And Repeat Gift Plans | Proposed | Gift Plans | Duplicate action and "plan again" for recurring events. |
+| 0009 | Close Translation And Locale Gaps | Proposed | i18n | Hardcoded date formats, JS strings and lang attribute. |
+| 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |
+| 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |
+| 0012 | Global Search Improvements | Proposed | Search | Gift plans in results, recent items, create-on-no-result. |
+| 0013 | Dashboard Polish | Proposed | Dashboard | Better empty state, clickable counts, unused data cleanup. |
+| 0014 | Installable PWA Or Removal Of Dead Offline Code | Proposed | Platform | Decide between a real PWA and deleting unused offline scripts. |
+| 0015 | Mobile Bottom Navigation Bar | Proposed | Navigation | Bottom tab bar with quick-create action on small screens. |
+| 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
+| 0017 | Extract Inline Scripts And Styles From The Base Template | Proposed | Frontend | Move inline code from base.html to static files and dedupe. |
+| 0018 | Unify Delete Confirmation | Proposed | Frontend | One confirmation path instead of modal plus native confirm(). |
 
 ## Working With Ideas
 
