@@ -3401,6 +3401,56 @@ msgstr "Identifiant de groupe invalide"
 msgid "Invalid parent group identifier"
 msgstr "Identifiant de groupe parent invalide"
 
+msgid "Deleting..."
+msgstr "Suppression..."
+
+msgid "Submitting..."
+msgstr "Envoi..."
+
+msgid "A server error occurred. Please try again."
+msgstr "Une erreur serveur s'est produite. Veuillez réessayer."
+
+msgid "Error loading form. Please try again."
+msgstr "Erreur lors du chargement du formulaire. Veuillez réessayer."
+
+msgid "Failed to load edit form. Please try again."
+msgstr "Le chargement du formulaire de modification a échoué. Veuillez réessayer."
+
+msgid "Error updating permission. Please try again."
+msgstr "Erreur lors de la mise à jour de la permission. Veuillez réessayer."
+
+msgid "Error loading confirmation dialog"
+msgstr "Erreur lors du chargement de la fenêtre de confirmation"
+
+msgid "This field is required"
+msgstr "Ce champ est obligatoire"
+
+msgid "Please enter a valid email address"
+msgstr "Veuillez saisir une adresse email valide"
+
+msgid "Minimum {0} characters required"
+msgstr "Minimum {0} caractères requis"
+
+msgid "Maximum {0} characters allowed"
+msgstr "Maximum {0} caractères autorisés"
+
+msgid "Please enter a valid date"
+msgstr "Veuillez saisir une date valide"
+
+msgid "Keyboard Shortcuts"
+msgstr "Raccourcis clavier"
+
+msgid "Toggle dark mode"
+msgstr "Basculer le mode sombre"
+
+#, python-brace-format
+msgid "Created: {date}"
+msgstr "Créé le : {date}"
+
+#, python-brace-format
+msgid "Schedule: {schedule}"
+msgstr "Planification : {schedule}"
+
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""
 #~ "Soit une personne, soit un groupe doit être sélectionné, mais pas les "

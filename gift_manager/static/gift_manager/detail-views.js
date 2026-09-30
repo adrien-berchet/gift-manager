@@ -4,6 +4,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Server-rendered label (window.GiftManager.i18n) with an English fallback
+    function i18n(key, fallback) {
+        return (window.GiftManager && window.GiftManager.i18n && window.GiftManager.i18n[key]) || fallback;
+    }
+
     // Handle detail view buttons
     document.addEventListener('click', function(e) {
         const detailButton = e.target.closest('[data-action="detail"]');
@@ -45,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hideOffcanvasLoading('detailPanel');
         }).catch(function(error) {
             console.error('Failed to load detail view:', error);
-            showOffcanvasError('Failed to load details. Please try again.', 'detailPanel');
+            showOffcanvasError(i18n('loadDetailsFailed', 'Failed to load details. Please try again.'), 'detailPanel');
         });
     }
 
@@ -107,7 +112,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hideOffcanvasLoading('editPanel');
         }).catch(function(error) {
             console.error('Failed to load edit form:', error);
-            showOffcanvasError('Failed to load edit form. Please try again.', 'editPanel');
+            showOffcanvasError(i18n('loadEditFormFailed', 'Failed to load edit form. Please try again.'), 'editPanel');
         });
     }
 

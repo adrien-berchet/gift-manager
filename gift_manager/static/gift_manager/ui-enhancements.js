@@ -206,7 +206,7 @@
     // =========================================================================
 
     function showLoading(element, options = {}) {
-        const { text = 'Loading...', overlay = true } = options;
+        const { text = getTranslation('loading', 'Loading...'), overlay = true } = options;
 
         if (!element) return;
 

@@ -108,7 +108,7 @@
                             <i class="${iconClass} me-2"></i>
                             ${escapeNotificationHtml(message)}
                         </div>
-                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="${escapeNotificationHtml(i18n.close)}"></button>
                     </div>
                 </div>
             `;
@@ -239,15 +239,15 @@
                 focusFirstFormError(target);
             } else if (xhr.status === 403) {
                 // Permission denied
-                showNotification('You do not have permission to perform this action', 'error');
+                showNotification(i18n.permissionDenied, 'error');
 
             } else if (xhr.status >= 500) {
                 // Server error
-                showNotification('A server error occurred. Please try again.', 'error');
+                showNotification(i18n.serverError, 'error');
 
             } else {
                 // Other error
-                showNotification('An error occurred. Please try again.', 'error');
+                showNotification(i18n.genericError, 'error');
             }
         };
 
@@ -278,7 +278,7 @@
             if (isFormSubmission) {
                 if (xhr.status >= 500) {
                     // Server error
-                    showNotification('A server error occurred. Please try again.', 'error');
+                    showNotification(i18n.serverError, 'error');
                 } else if (e.detail.successful) {
                     dispatchManagedFormTriggerFallback(xhr);
                 }
@@ -303,7 +303,7 @@
             if (trigger.tagName === 'BUTTON') {
                 trigger.disabled = true;
                 const originalText = trigger.innerHTML;
-                trigger.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + (trigger.dataset.loadingText || 'Loading...');
+                trigger.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + (trigger.dataset.loadingText || i18n.loading);
                 trigger.dataset.originalText = originalText;
             }
         });
@@ -556,8 +556,8 @@
             .catch(error => {
                 console.error('Error loading form:', error);
                 const errorMessage = error.message.includes('403')
-                    ? 'You do not have permission to perform this action.'
-                    : 'Error loading form. Please try again.';
+                    ? i18n.permissionDenied
+                    : i18n.loadFormFailed;
                 showOffcanvasError(errorMessage, target);
             });
         }
@@ -628,8 +628,8 @@
                     .catch(error => {
                         console.error('Error loading details:', error);
                         const errorMessage = error.message.includes('403')
-                            ? 'You do not have permission to perform this action.'
-                            : 'Error loading details. Please try again.';
+                            ? i18n.permissionDenied
+                            : i18n.loadDetailsFailed;
                         showOffcanvasError(errorMessage, 'detailPanel');
                     });
                 }
@@ -645,7 +645,7 @@
                 content.innerHTML = `
                     <div class="loading-state">
                         <div class="loading-spinner"></div>
-                        <p class="mt-3 text-muted">Loading...</p>
+                        <p class="mt-3 text-muted">${escapeNotificationHtml(i18n.loading)}</p>
                     </div>
                 `;
             }

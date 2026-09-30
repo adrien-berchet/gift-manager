@@ -2,7 +2,25 @@
 
 ## Status
 
-Proposed
+Implemented
+
+`GiftManager.confirmDelete` in `static/gift_manager/js/app-shell.js` is now the
+single delete-confirmation flow (load, confirm-button wiring, error handling,
+reset). `detail-views.js` and `touch-gestures.js` delegate to it. Confirmation
+partials declare their title and button label with `data-confirm-title` /
+`data-confirm-label`. Findings during implementation:
+
+- The inline script in `delete_confirmation_modal.html` never ran (scripts
+  injected through `innerHTML` do not execute, and `DOMContentLoaded` had
+  already fired); it was removed and two tests that only passed because of it
+  were corrected.
+- The swipe-to-delete path opened the modal without wiring the confirm button,
+  and delete clicks inside the detail panel were handled twice.
+- The native `confirm()` in `person_group_management_grid_script.html` confirms
+  a drag-and-drop *move*, not a deletion, so it stays. The fallback-mode
+  `confirm()` calls also stay (no-JavaScript path). A contract test now limits
+  native `confirm()` to those files.
+- Bulk deletion keeps its own modal (`bulk-operations.js`).
 
 ## Summary
 

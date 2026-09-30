@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
 {% load i18n %}
 {% load static %}
+{% get_current_language as LANGUAGE_CODE %}
+<html lang="{{ LANGUAGE_CODE }}">
 
 <head>
     <meta charset="UTF-8">
@@ -73,7 +74,7 @@
     <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
-                <img src="{% static 'gift_manager/images/gift.png' %}" alt="Gift" height="28">
+                <img src="{% static 'gift_manager/images/gift.png' %}" alt="{% trans 'Gift' %}" height="28">
                 Gift Manager
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -152,7 +153,7 @@
                     {% endif %}
                     <!-- Theme Toggle -->
                     <li class="nav-item">
-                        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">
+                        <button class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Toggle dark mode' %}" title="{% trans 'Toggle dark mode' %}">
                             <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                             </svg>
@@ -328,10 +329,6 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/fr.js"></script>
     {% endif %}
     <!-- Shared page configuration and user view preferences, consumed by static scripts -->
-    {% trans "Gifts" as t_gifts %}{% trans "Recipients" as t_recipients %}{% trans "Events" as t_events %}{% trans "Tags" as t_tags %}
-    {% trans "No results found for" as t_no_results %}{% trans "An error occurred while searching." as t_search_error %}{% trans "Confirm" as t_confirm %}
-    {% trans "Deleting..." as t_deleting %}
-    {% trans "You do not have permission to delete this item" as t_delete_forbidden %}{% trans "An error occurred while deleting the item" as t_delete_failed %}{% trans "Error loading confirmation dialog" as t_confirmation_load_failed %}
     <script>
         window.GiftManager = {
             isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
@@ -339,18 +336,43 @@
                 {% if user.is_authenticated %}globalSearch: '{% url "gift_manager:global_search" %}'{% endif %}
             },
             i18n: {
-                gifts: '{{ t_gifts|escapejs }}',
-                recipients: '{{ t_recipients|escapejs }}',
-                events: '{{ t_events|escapejs }}',
-                tags: '{{ t_tags|escapejs }}',
-                noResultsFor: '{{ t_no_results|escapejs }}',
-                searchError: '{{ t_search_error|escapejs }}',
-                confirm: '{{ t_confirm|escapejs }}',
-                deleting: '{{ t_deleting|escapejs }}',
-                deleteForbidden: '{{ t_delete_forbidden|escapejs }}',
-                deleteFailed: '{{ t_delete_failed|escapejs }}',
-                confirmationLoadFailed: '{{ t_confirmation_load_failed|escapejs }}'
+                gifts: '{% trans "Gifts" as t %}{{ t|escapejs }}',
+                recipients: '{% trans "Recipients" as t %}{{ t|escapejs }}',
+                events: '{% trans "Events" as t %}{{ t|escapejs }}',
+                tags: '{% trans "Tags" as t %}{{ t|escapejs }}',
+                noResultsFor: '{% trans "No results found for" as t %}{{ t|escapejs }}',
+                searchError: '{% trans "An error occurred while searching." as t %}{{ t|escapejs }}',
+                confirm: '{% trans "Confirm" as t %}{{ t|escapejs }}',
+                close: '{% trans "Close" as t %}{{ t|escapejs }}',
+                loading: '{% trans "Loading..." as t %}{{ t|escapejs }}',
+                saving: '{% trans "Saving..." as t %}{{ t|escapejs }}',
+                deleting: '{% trans "Deleting..." as t %}{{ t|escapejs }}',
+                submitting: '{% trans "Submitting..." as t %}{{ t|escapejs }}',
+                processing: '{% trans "Processing..." as t %}{{ t|escapejs }}',
+                permissionDenied: '{% trans "You do not have permission to perform this action." as t %}{{ t|escapejs }}',
+                serverError: '{% trans "A server error occurred. Please try again." as t %}{{ t|escapejs }}',
+                genericError: '{% trans "An error occurred. Please try again." as t %}{{ t|escapejs }}',
+                loadFormFailed: '{% trans "Error loading form. Please try again." as t %}{{ t|escapejs }}',
+                loadDetailsFailed: '{% trans "Failed to load details. Please try again." as t %}{{ t|escapejs }}',
+                loadEditFormFailed: '{% trans "Failed to load edit form. Please try again." as t %}{{ t|escapejs }}',
+                permissionUpdateFailed: '{% trans "Error updating permission. Please try again." as t %}{{ t|escapejs }}',
+                deleteForbidden: '{% trans "You do not have permission to delete this item" as t %}{{ t|escapejs }}',
+                deleteFailed: '{% trans "An error occurred while deleting the item" as t %}{{ t|escapejs }}',
+                confirmationLoadFailed: '{% trans "Error loading confirmation dialog" as t %}{{ t|escapejs }}'
             }
+        };
+        window.uiTranslations = {
+            fieldRequired: '{% trans "This field is required" as t %}{{ t|escapejs }}',
+            invalidEmail: '{% trans "Please enter a valid email address" as t %}{{ t|escapejs }}',
+            minLength: '{% trans "Minimum {0} characters required" as t %}{{ t|escapejs }}',
+            maxLength: '{% trans "Maximum {0} characters allowed" as t %}{{ t|escapejs }}',
+            invalidDate: '{% trans "Please enter a valid date" as t %}{{ t|escapejs }}',
+            loading: '{% trans "Loading..." as t %}{{ t|escapejs }}',
+            listView: '{% trans "List view" as t %}{{ t|escapejs }}',
+            list: '{% trans "List" as t %}{{ t|escapejs }}',
+            cardView: '{% trans "Card view" as t %}{{ t|escapejs }}',
+            cards: '{% trans "Cards" as t %}{{ t|escapejs }}',
+            keyboardShortcuts: '{% trans "Keyboard Shortcuts" as t %}{{ t|escapejs }}'
         };
         window.userViewPreferences = {
             {% if user.is_authenticated and user.profile %}

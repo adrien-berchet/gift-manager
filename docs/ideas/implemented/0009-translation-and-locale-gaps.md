@@ -2,7 +2,25 @@
 
 ## Status
 
-Proposed
+Implemented
+
+- Dates use `DATE_FORMAT` in all templates; `test_locale_coverage.py` fails on
+  any new hardcoded `|date:"..."` format.
+- `<html lang>` follows the active language in `base.html` and the allauth
+  layout.
+- JavaScript labels come from `window.GiftManager.i18n` and
+  `window.uiTranslations` (previously never defined, so validation and view
+  toggle labels were always English) rendered in `base.html`.
+- 16 new French entries added to `locale/fr`; a test checks every msgid passed
+  to the scripts has a catalog entry.
+- `alt="Gift"`, the theme toggle label, the login button and the delete
+  confirmation `Created:` / `Schedule:` lines are translated.
+
+Not covered: strings in `touch-gestures.js` (swipe action titles and toasts),
+Grid.js column labels, and the 37 pre-existing untranslated `django.po` entries.
+Note: `xgettext`/`msgfmt` were not available, so entries were added to the
+`.po` by hand and the `.mo` compiled with `polib`; running `makemessages` and
+`compilemessages` in a normal environment is still recommended.
 
 ## Summary
 

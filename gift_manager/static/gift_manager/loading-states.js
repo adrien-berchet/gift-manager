@@ -11,15 +11,20 @@
     // Configuration
     // =========================================================================
 
+    // Labels come from the server-rendered window.GiftManager.i18n (English fallback)
+    function i18nText(key, fallback) {
+        return (window.GiftManager && window.GiftManager.i18n && window.GiftManager.i18n[key]) || fallback;
+    }
+
     const config = {
         minLoadingDuration: 300, // Minimum time to show loading state
         skeletonCount: 3,        // Default number of skeleton items
         loadingText: {
-            default: 'Loading...',
-            saving: 'Saving...',
-            deleting: 'Deleting...',
-            submitting: 'Submitting...',
-            processing: 'Processing...'
+            default: i18nText('loading', 'Loading...'),
+            saving: i18nText('saving', 'Saving...'),
+            deleting: i18nText('deleting', 'Deleting...'),
+            submitting: i18nText('submitting', 'Submitting...'),
+            processing: i18nText('processing', 'Processing...')
         }
     };
 

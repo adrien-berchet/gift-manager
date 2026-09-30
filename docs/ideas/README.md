@@ -60,7 +60,7 @@ status and notes to reflect the move.
 | 0006 | Recipient Notes And Interests | Proposed | Recipients | Notes and interest tags on people, matched against gift tags. |
 | 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
 | 0008 | Duplicate And Repeat Gift Plans | Proposed | Gift Plans | Duplicate action and "plan again" for recurring events. |
-| 0009 | Close Translation And Locale Gaps | Proposed | i18n | Hardcoded date formats, JS strings and lang attribute. |
+| 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
 | 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |
 | 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |
 | 0012 | Global Search Improvements | Proposed | Search | Gift plans in results, recent items, create-on-no-result. |
@@ -69,7 +69,7 @@ status and notes to reflect the move.
 | 0015 | Mobile Bottom Navigation Bar | Proposed | Navigation | Bottom tab bar with quick-create action on small screens. |
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
 | 0017 | Extract Inline Scripts And Styles From The Base Template | Implemented | Frontend | base.html inline code moved to static files; moved to `implemented/`. |
-| 0018 | Unify Delete Confirmation | Proposed | Frontend | One confirmation path instead of modal plus native confirm(). |
+| 0018 | Unify Delete Confirmation | Implemented | Frontend | Single shared delete flow; moved to `implemented/`. |
 
 ## Working With Ideas
 
