@@ -52,6 +52,7 @@ status and notes to reflect the move.
 
 | ID | Idea | Status | Area | Notes |
 | --- | --- | --- | --- | --- |
+| 0001 | Gift Plan Suggestions For A Recipient | Proposed | Gift Plans | Catalogue scoring plus AI new-gift ideas per recipient, with persisted dismissals. |
 
 ## Working With Ideas
 
