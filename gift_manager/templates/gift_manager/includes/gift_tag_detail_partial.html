@@ -40,7 +40,7 @@
                     <label class="detail-label">{% trans "Created" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-calendar me-1 text-muted"></i>
-                        {{ object.creation_date|date:"M d, Y" }}
+                        {{ object.creation_date|date:"DATE_FORMAT" }}
                         <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
                     </div>
                 </div>

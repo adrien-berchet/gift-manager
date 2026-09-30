@@ -97,7 +97,7 @@
                         {% if relation.due_date %}
                         <span>
                             <i class="fas fa-clock me-1" aria-hidden="true"></i>
-                            {% trans "Due:" %} {{ relation.due_date|date:"M d, Y" }}
+                            {% trans "Due:" %} {{ relation.due_date|date:"DATE_FORMAT" }}
                         </span>
                         {% endif %}
                     </div>

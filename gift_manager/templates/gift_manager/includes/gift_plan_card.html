@@ -9,7 +9,7 @@
         {% if card.relation.due_date %}
         <span class="gift-plan-due-badge gift-plan-due-badge--{{ card.urgency_key }}">
             <i class="fas fa-calendar-day" aria-hidden="true"></i>
-            {{ card.relation.due_date|date:"M d, Y" }}
+            {{ card.relation.due_date|date:"DATE_FORMAT" }}
         </span>
         {% else %}
         <span class="gift-plan-due-badge gift-plan-due-badge--no_date">

@@ -66,7 +66,7 @@
                     <div class="detail-value">
                         <span class="gift-plan-due-badge gift-plan-due-badge--{{ gift_plan_urgency_key }}">
                             <i class="fas fa-calendar-day" aria-hidden="true"></i>
-                            {{ object.due_date|date:"M d, Y" }}
+                            {{ object.due_date|date:"DATE_FORMAT" }}
                         </span>
                     </div>
                 </div>
@@ -110,7 +110,7 @@
                     <label class="detail-label">{% trans "Created" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-calendar me-1 text-muted"></i>
-                        {{ object.creation_date|date:"M d, Y" }}
+                        {{ object.creation_date|date:"DATE_FORMAT" }}
                         <small class="text-muted">{{ object.creation_date|time:"H:i" }}</small>
                     </div>
                 </div>
@@ -148,7 +148,7 @@
             {% if object.event.is_scheduled %}
             <div class="text-muted small mb-1">
                 <i class="fas fa-calendar-check me-1"></i>
-                {% trans "Date:" %} {{ object.event.date|date:"M d, Y" }}
+                {% trans "Date:" %} {{ object.event.date|date:"DATE_FORMAT" }}
             </div>
             {% endif %}
 
