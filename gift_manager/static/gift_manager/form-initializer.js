@@ -407,7 +407,8 @@
                         // Show notification
                         if (window.showNotification) {
                             window.showNotification(
-                                "Error updating permission. Please try again.",
+                                (window.GiftManager?.i18n?.permissionUpdateFailed) ||
+                                    "Error updating permission. Please try again.",
                                 "error"
                             );
                         }

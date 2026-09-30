@@ -52,8 +52,8 @@ Acceptance checks:
 Phase 0 stabilization notes:
 
 - Removed the hidden `DEBUG_FORCE_OFFLINE` localStorage override from offline
-  helpers. Offline behavior now relies on browser and network connectivity
-  checks.
+  helpers. The unused offline helpers themselves were later deleted (idea
+  0014).
 - Gift sharing controls now use the existing HTMX permission-update form pattern.
 - Person-group bulk checkboxes now submit `group_id` values, and inline editing
   targets the visible group-name cell.

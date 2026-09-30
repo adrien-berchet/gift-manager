@@ -32,7 +32,7 @@
                     <label class="detail-label">{% trans "Created" %}</label>
                     <div class="detail-value">
                         <i class="fas fa-calendar me-1 text-muted"></i>
-                        {{ gift.creation_date|date:"M d, Y" }}
+                        {{ gift.creation_date|date:"DATE_FORMAT" }}
                         <small class="text-muted">{{ gift.creation_date|time:"H:i" }}</small>
                     </div>
                 </div>
@@ -104,7 +104,7 @@
                         {% if relation.due_date %}
                         <div class="text-muted small mb-1">
                             <i class="fas fa-clock me-1"></i>
-                            {% trans "Due:" %} {{ relation.due_date|date:"M d, Y" }}
+                            {% trans "Due:" %} {{ relation.due_date|date:"DATE_FORMAT" }}
                         </div>
                         {% endif %}
 

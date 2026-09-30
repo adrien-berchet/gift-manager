@@ -920,10 +920,13 @@ class DeleteConfirmationMixin:
             details.append(gettext("Email: {email}").format(email=email))
 
         if hasattr(self.object, "created_at") and self.object.created_at:
-            details.append(f"Created: {self.object.created_at.strftime('%Y-%m-%d')}")
+            details.append(
+                gettext("Created: {date}").format(date=self.object.created_at.strftime("%Y-%m-%d"))
+            )
 
         if hasattr(self.object, "date_summary") and getattr(self.object, "is_scheduled", False):
-            details.append(f"Schedule: {self.object.date_summary}")
+            schedule = self.object.date_summary
+            details.append(gettext("Schedule: {schedule}").format(schedule=schedule))
 
         if hasattr(self.object, "price") and self.object.price:
             details.append(f"Price: ${self.object.price}")
