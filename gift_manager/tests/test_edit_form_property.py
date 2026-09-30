@@ -4,6 +4,8 @@ import pytest
 from django.test import Client
 from django.test import override_settings
 from django.urls import reverse
+from django.utils.html import escape
+from hypothesis import example
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -127,6 +129,19 @@ class TestEditFormDisplayProperty:
         }
         return field_mappings.get(entity_type.lower(), [])
 
+    # Characters that HTML rendering escapes must not break the data population checks
+    @example(
+        entity_type="person",
+        entity_data={
+            "first_name": '.WU-"Bm;zMk',
+            "family_name": '.WU-"Bm;zMk',
+            "comment": '.WU-"Bm;zMk',
+        },
+    )
+    @example(entity_type="person", entity_data={"first_name": "O'Brien & <Sons>"})
+    @example(entity_type="gift", entity_data={"name": 'Say "hi" & <wave>'})
+    @example(entity_type="event", entity_data={"name": 'Mother\'s Day "<3"'})
+    @example(entity_type="persongroup", entity_data={"name": "Smith & O'Neil <family>"})
     @given(
         entity_type=st.sampled_from(
             ["person", "gift", "event", "relation", "persongroup", "gifttag"]
@@ -270,19 +285,13 @@ class TestEditFormDisplayProperty:
         # Verify entity data is still populated in HTMX response
         entity_str = str(entity)
         if entity_str.strip():  # Only check if entity has a meaningful string representation
-            import html
-
-            # Check for both raw and HTML-escaped versions of the entity data
-            escaped_entity_str = html.escape(entity_str)
-            # At least some representation of the entity should be in the form
-            has_entity_data = (
-                entity_str in htmx_content
-                or escaped_entity_str in htmx_content
-                or any(
-                    str(getattr(entity, field, "")) in htmx_content
-                    for field in expected_fields
-                    if hasattr(entity, field) and getattr(entity, field)
-                )
+            # Templates HTML-escape values (" -> &quot;, ' -> &#x27;, & -> &amp;), so the
+            # rendered form must be compared against the escaped text, never the raw value.
+            # At least some representation of the entity should be in the form.
+            has_entity_data = escape(entity_str) in htmx_content or any(
+                escape(str(getattr(entity, field))) in htmx_content
+                for field in expected_fields
+                if hasattr(entity, field) and getattr(entity, field)
             )
 
             assert has_entity_data, f"Entity data not found in HTMX form for {entity_type}"
