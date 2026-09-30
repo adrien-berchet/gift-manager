@@ -1,6 +1,7 @@
 """Tests for delete confirmation modal functionality."""
 
 import pytest
+from django.template.loader import render_to_string
 from django.test import Client
 from django.test import override_settings
 from django.urls import reverse
@@ -161,22 +162,19 @@ class TestDeleteConfirmationModal:
         # Note: HTMX handling is done via JavaScript in base template, not form attributes
 
     @override_settings(USE_I18N=False)
-    def test_delete_confirmation_modal_button_reset_script(self):
-        """Test that delete confirmation modal includes button state reset functionality."""
+    def test_delete_confirmation_modal_declares_labels_without_inline_script(self):
+        """The partial names its title/button; behaviour lives in app-shell.js."""
         url = reverse("gift_manager:person_delete", kwargs={"pk": self.person.person_id})
 
         response = self.client.get(url, HTTP_HX_REQUEST="true")
         content = response.content.decode()
 
-        # Check that the modal includes JavaScript for button state reset
-        assert "resetDeleteButtonStates" in content
-        assert "GridUtils.resetDeleteButtonStates" in content
-        assert "list:update" in content
-        assert "hidden.bs.modal" in content
-
-        # Check that the script handles modal events properly
-        assert "confirmBtn.disabled = false" in content
-        assert "confirmBtn.textContent" in content
+        # Scripts injected through innerHTML never run after page load, so the partial
+        # must not rely on any; the shared flow reads these data attributes instead.
+        assert "<script" not in content
+        assert 'data-confirm-title="Confirm Deletion"' in content
+        assert 'data-confirm-label="Delete"' in content
+        assert 'id="deleteForm"' in content
 
 
 @pytest.mark.django_db
@@ -330,10 +328,10 @@ class TestDeleteConfirmationDisplayProperty:
         # Should contain CSRF token for security
         assert "csrfmiddlewaretoken" in content, f"CSRF token missing for {entity_type}"
 
-        # Should contain proper action buttons (Delete and Cancel)
-        assert "cancel" in content.lower() or "close" in content.lower(), (
-            f"Cancel button missing for {entity_type}"
-        )
+        # Cancel/Confirm buttons live in the shared modal shell (modal_base.html);
+        # the partial only declares how the confirm action is labelled.
+        assert 'data-confirm-label="' in content, f"Confirm label missing for {entity_type}"
+        assert "data-confirm-title=" in content, f"Confirm title missing for {entity_type}"
 
         # Should contain the delete URL as form action
         assert delete_url in content, f"Delete URL not found in form action for {entity_type}"
@@ -531,16 +529,14 @@ class TestDeleteConfirmationDisplayProperty:
         # Test 3: Verify that the modal content includes proper cancellation options
         content = response.content.decode()
 
-        # Should contain cancel/close buttons or mechanisms
-        has_cancel_button = (
-            "cancel" in content.lower()
-            or "close" in content.lower()
-            or "btn-close" in content
-            or "data-bs-dismiss" in content
+        # The partial is rendered inside the shared confirm modal, which owns the
+        # cancel/close controls.
+        modal_shell = render_to_string("gift_manager/includes/modal_base.html")
+        assert 'data-bs-dismiss="modal"' in modal_shell, (
+            f"Confirm modal should have cancel/close mechanism for {entity_type}"
         )
-
-        assert has_cancel_button, (
-            f"Delete confirmation modal should have cancel/close mechanism for {entity_type}"
+        assert "data-confirm-label=" in content, (
+            f"Delete confirmation should declare its action label for {entity_type}"
         )
 
         # Test 4: Verify fallback behavior for non-HTMX requests

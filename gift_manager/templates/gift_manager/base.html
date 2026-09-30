@@ -330,6 +330,8 @@
     <!-- Shared page configuration and user view preferences, consumed by static scripts -->
     {% trans "Gifts" as t_gifts %}{% trans "Recipients" as t_recipients %}{% trans "Events" as t_events %}{% trans "Tags" as t_tags %}
     {% trans "No results found for" as t_no_results %}{% trans "An error occurred while searching." as t_search_error %}{% trans "Confirm" as t_confirm %}
+    {% trans "Deleting..." as t_deleting %}
+    {% trans "You do not have permission to delete this item" as t_delete_forbidden %}{% trans "An error occurred while deleting the item" as t_delete_failed %}{% trans "Error loading confirmation dialog" as t_confirmation_load_failed %}
     <script>
         window.GiftManager = {
             isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
@@ -343,7 +345,11 @@
                 tags: '{{ t_tags|escapejs }}',
                 noResultsFor: '{{ t_no_results|escapejs }}',
                 searchError: '{{ t_search_error|escapejs }}',
-                confirm: '{{ t_confirm|escapejs }}'
+                confirm: '{{ t_confirm|escapejs }}',
+                deleting: '{{ t_deleting|escapejs }}',
+                deleteForbidden: '{{ t_delete_forbidden|escapejs }}',
+                deleteFailed: '{{ t_delete_failed|escapejs }}',
+                confirmationLoadFailed: '{{ t_confirmation_load_failed|escapejs }}'
             }
         };
         window.userViewPreferences = {

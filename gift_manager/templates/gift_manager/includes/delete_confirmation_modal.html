@@ -2,7 +2,9 @@
 <!-- Reusable Delete Confirmation Modal Content Template -->
 <!-- This template is designed to be loaded dynamically via HTMX -->
 
-<div class="d-flex align-items-start mb-4">
+<div class="d-flex align-items-start mb-4"
+     data-confirm-title="{% trans 'Confirm Deletion' %}"
+     data-confirm-label="{% trans 'Delete' %}">
   <div class="text-danger me-3 flex-shrink-0">
     <i class="fas fa-exclamation-triangle fa-2x"></i>
   </div>
@@ -90,96 +92,3 @@
     {% endfor %}
   {% endif %}
 </form>
-
-<!-- Update modal footer buttons with proper actions -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Update modal title
-    const modalTitle = document.getElementById('confirmModalLabel');
-    if (modalTitle) {
-        modalTitle.textContent = '{% trans "Confirm Deletion" %}';
-    }
-
-    // Update confirm button appearance
-    const confirmBtn = document.getElementById('confirmAction');
-    if (confirmBtn) {
-        confirmBtn.textContent = '{% trans "Delete" %}';
-        confirmBtn.className = 'btn btn-danger';
-    }
-
-    // Handle HX-Trigger events from successful deletion
-    document.body.addEventListener('list:update', function() {
-
-        // Reset button state before closing modal
-        const confirmBtn = document.getElementById('confirmAction');
-        if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = '{% trans "Delete" %}';
-            confirmBtn.innerHTML = '{% trans "Delete" %}'; // Reset innerHTML too in case it has spinner
-        }
-
-        // Reset all delete button states in the grid
-        if (window.GridUtils && window.GridUtils.resetDeleteButtonStates) {
-            setTimeout(function() {
-                window.GridUtils.resetDeleteButtonStates();
-            }, 100);
-        }
-
-        // Close modal on successful deletion
-        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
-        if (modal) {
-            modal.hide();
-        }
-    });
-
-    // Handle showNotification trigger
-    document.body.addEventListener('showNotification', function(e) {
-                if (window.showNotification && e.detail) {
-            window.showNotification(e.detail.message, e.detail.type);
-        }
-    });
-
-    // Handle HTMX errors (for cases where HX-Trigger is not sent)
-    document.body.addEventListener('htmx:responseError', function(e) {
-                // Check if this is our delete request
-        if (e.detail.requestConfig && e.detail.requestConfig.url &&
-            e.detail.requestConfig.url.includes('/delete/')) {
-            // Re-enable button
-            const confirmBtn = document.getElementById('confirmAction');
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = '{% trans "Delete" %}';
-            }
-
-            // Show error notification
-            if (window.showNotification) {
-                const errorMsg = e.detail.xhr.status === 403
-                    ? '{% trans "You do not have permission to delete this item" %}'
-                    : '{% trans "An error occurred while deleting the item" %}';
-                window.showNotification(errorMsg, 'error');
-            }
-        }
-    });
-
-    // Reset button state when modal is hidden (for next use)
-    const confirmModal = document.getElementById('confirmModal');
-    if (confirmModal) {
-        confirmModal.addEventListener('hidden.bs.modal', function() {
-                        const confirmBtn = document.getElementById('confirmAction');
-            if (confirmBtn) {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = '{% trans "Delete" %}';
-                confirmBtn.innerHTML = '{% trans "Delete" %}';
-                confirmBtn.className = 'btn btn-danger'; // Reset class too
-            }
-
-            // Also reset all delete button states in the grid
-            if (window.GridUtils && window.GridUtils.resetDeleteButtonStates) {
-                setTimeout(function() {
-                    window.GridUtils.resetDeleteButtonStates();
-                }, 50);
-            }
-        });
-    }
-});
-</script>

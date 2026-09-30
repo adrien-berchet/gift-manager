@@ -430,27 +430,13 @@
         },
 
         handleDeleteAction: function (url, element) {
-            // Show confirmation modal
-            if (url) {
-                fetch(url, {
-                    headers: {
-                        "HX-Request": "true",
-                        "X-CSRFToken": this.getCsrfToken(),
-                    },
-                })
-                    .then((response) => response.text())
-                    .then((html) => {
-                        document.getElementById("modalBody").innerHTML = html;
-                        const modal = new bootstrap.Modal(document.getElementById("confirmModal"));
-                        modal.show();
-                        this.hideSwipeActions(element);
-                    })
-                    .catch((error) => {
-                        console.error("Error loading delete confirmation:", error);
-                        this.showNotification("Error loading confirmation", "error");
-                        this.hideSwipeActions(element);
-                    });
+            // Shared confirmation flow (app-shell.js); it reports its own errors
+            const confirmDelete = window.GiftManager && window.GiftManager.confirmDelete;
+            if (!url || !confirmDelete) {
+                this.hideSwipeActions(element);
+                return;
             }
+            confirmDelete(url, element).then(() => this.hideSwipeActions(element));
         },
 
         handleArchiveAction: function (url, element) {

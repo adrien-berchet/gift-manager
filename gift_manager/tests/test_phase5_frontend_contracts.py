@@ -1,5 +1,6 @@
 """Static frontend contract tests for Phase 5 UX fixes."""
 
+import re
 from pathlib import Path
 
 from django.template.loader import render_to_string
@@ -525,3 +526,41 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert "color: var(--color-danger-hover)" in missing_badge_styles
     assert "rgba(239, 68, 68, 0.35)" in missing_badge_styles
     assert "var(--color-danger)" in missing_row_marker_styles
+
+
+def test_delete_confirmation_uses_a_single_shared_flow():
+    shell = read(STATIC_ROOT / "js/app-shell.js")
+    touch = read(STATIC_ROOT / "js/touch-gestures.js")
+    detail = read(STATIC_ROOT / "detail-views.js")
+
+    # One implementation owns loading, wiring, errors and reset
+    assert "window.GiftManager.confirmDelete" in shell
+    assert "GridUtils.resetDeleteButtonStates" in shell
+    assert "hidden.bs.modal" in shell
+    assert "htmx:responseError" in shell
+    assert "data-confirm-title" in shell
+
+    # Other entry points delegate instead of re-implementing it
+    assert "GiftManager.confirmDelete" in touch
+    assert "modalBody" not in touch
+    assert "handleDeleteFromDetail" not in detail
+    assert "confirmModal" not in detail
+
+
+def test_native_confirm_dialogs_are_limited_to_fallback_and_group_move():
+    allowed = {
+        "templates/gift_manager/fallback/includes/fallback_actions.html",
+        "templates/gift_manager/fallback/base_fallback.html",
+        # Confirms a drag-and-drop move, not a deletion
+        "templates/gift_manager/includes/person_group_management_grid_script.html",
+    }
+    root = PROJECT_ROOT / "gift_manager"
+    offenders = []
+    for path in [*root.glob("templates/**/*.html"), *root.glob("static/**/*.js")]:
+        rel = path.relative_to(root).as_posix()
+        if rel in allowed:
+            continue
+        text = read(path)
+        if re.search(r"(?<![\w.])confirm\(", text) or "window.confirm(" in text:
+            offenders.append(rel)
+    assert offenders == []

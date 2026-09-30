@@ -325,102 +325,157 @@
         // Re-initialize tooltips after HTMX updates
         document.body.addEventListener('htmx:afterSwap', initializeTooltips);
 
-        // Handle delete confirmation
-        let lastConfirmModalTrigger = null;
+        // Delete confirmation: the single code path used by buttons, grids, the
+        // detail panel and swipe actions (via GiftManager.confirmDelete).
+        const deleteConfirmation = (function() {
+            const modalEl = document.getElementById('confirmModal');
+            const titleEl = document.getElementById('confirmModalLabel');
+            const defaultTitle = titleEl ? titleEl.textContent : '';
+            let lastTrigger = null;
+            let deleteInFlight = false;
+            let actionLabel = i18n.confirm;
 
-        document.addEventListener('click', function(e) {
-            if (e.target.matches('[data-action="delete"]') || e.target.closest('[data-action="delete"]')) {
-                e.preventDefault();
-                const button = e.target.matches('[data-action="delete"]') ? e.target : e.target.closest('[data-action="delete"]');
-                lastConfirmModalTrigger = button;
-                const deleteUrl = button.getAttribute('href') || button.dataset.deleteUrl;
+            function confirmButton() {
+                return document.getElementById('confirmAction');
+            }
 
-                if (deleteUrl) {
-                    // Load delete confirmation content
-                    fetch(deleteUrl, {
-                        headers: {
-                            'HX-Request': 'true',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    })
-                    .then(response => response.text())
-                    .then(html => {
-                        document.getElementById('modalBody').innerHTML = html;
-                        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-                        modal.show();
+            function setButtonLabel(btn, label) {
+                btn.disabled = false;
+                btn.textContent = label;
+                btn.className = 'btn btn-danger';
+            }
 
-                        // Set up confirm button
-                        const confirmBtn = document.getElementById('confirmAction');
-                        if (confirmBtn) {
-                            confirmBtn.onclick = function(e) {
-                                e.preventDefault();
-
-                                // Disable button and show loading state
-                                confirmBtn.disabled = true;
-                                const originalText = confirmBtn.textContent;
-                                confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
-
-                                const form = document.getElementById('deleteForm');
-                                if (form) {
-
-                                    // Check if HTMX is available
-                                    if (typeof htmx === 'undefined') {
-                                        console.error('HTMX is not loaded');
-                                        // Fallback to regular form submission
-                                        form.submit();
-                                        return;
-                                    }
-
-                                    // Submit form via HTMX
-
-                                    // Get form data
-                                    const formData = new FormData(form);
-
-                                    htmx.ajax('POST', form.action, {
-                                        values: formData,
-                                        swap: 'none',
-                                        headers: {
-                                            'HX-Request': 'true'
-                                        }
-                                    }).then(function() {
-                                                                                }).catch(function(error) {
-                                        console.error('HTMX request failed:', error);
-                                        // Re-enable button on error
-                                        confirmBtn.disabled = false;
-                                        confirmBtn.innerHTML = originalText;
-                                    });
-                                } else {
-                                    console.error('Delete form not found');
-                                    confirmBtn.disabled = false;
-                                    confirmBtn.innerHTML = originalText;
-                                }
-                            };
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error loading delete confirmation:', error);
-                        showNotification('Error loading confirmation dialog', 'error');
-                    });
+            function resetModal() {
+                deleteInFlight = false;
+                const btn = confirmButton();
+                if (btn) {
+                    setButtonLabel(btn, i18n.confirm);
+                }
+                if (titleEl) {
+                    titleEl.textContent = defaultTitle;
+                }
+                if (window.GridUtils && window.GridUtils.resetDeleteButtonStates) {
+                    window.GridUtils.resetDeleteButtonStates();
                 }
             }
-        });
 
-        // Reset confirm modal button state when modal is hidden
-        const confirmModal = document.getElementById('confirmModal');
-        if (confirmModal) {
-            confirmModal.addEventListener('hidden.bs.modal', function() {
-                const confirmBtn = document.getElementById('confirmAction');
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = i18n.confirm;
-                    confirmBtn.className = 'btn btn-danger';
+            function hideDetailPanel(trigger) {
+                const detailPanel = document.getElementById('detailPanel');
+                if (detailPanel && trigger && detailPanel.contains(trigger)) {
+                    const detailModal = bootstrap.Modal.getInstance(detailPanel);
+                    if (detailModal) detailModal.hide();
                 }
-                if (lastConfirmModalTrigger?.isConnected) {
-                    lastConfirmModalTrigger.focus({ preventScroll: true });
+            }
+
+            function failWith(status) {
+                deleteInFlight = false;
+                const btn = confirmButton();
+                if (btn) {
+                    setButtonLabel(btn, actionLabel);
                 }
-                lastConfirmModalTrigger = null;
+                showNotification(status === 403 ? i18n.deleteForbidden : i18n.deleteFailed, 'error');
+            }
+
+            function submitDelete(btn) {
+                const form = document.getElementById('deleteForm');
+                if (!form) {
+                    console.error('Delete form not found');
+                    failWith(0);
+                    return;
+                }
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + i18n.deleting;
+                if (typeof htmx === 'undefined') {
+                    form.submit();
+                    return;
+                }
+                deleteInFlight = true;
+                htmx.ajax('POST', form.action, {
+                    values: new FormData(form),
+                    swap: 'none',
+                    headers: { 'HX-Request': 'true' }
+                }).catch(function(error) {
+                    console.error('HTMX request failed:', error);
+                    failWith(0);
+                });
+            }
+
+            // Failed delete requests re-enable the button instead of leaving a spinner.
+            ['htmx:responseError', 'htmx:sendError'].forEach(function(eventName) {
+                document.body.addEventListener(eventName, function(e) {
+                    if (deleteInFlight) failWith(e.detail.xhr ? e.detail.xhr.status : 0);
+                });
             });
-        }
+
+            if (modalEl) {
+                modalEl.addEventListener('hidden.bs.modal', function() {
+                    resetModal();
+                    if (lastTrigger && lastTrigger.isConnected) {
+                        lastTrigger.focus({ preventScroll: true });
+                    }
+                    lastTrigger = null;
+                });
+            }
+
+            /**
+             * Load the delete confirmation for `url` into the shared confirm modal.
+             * Always resolves; failures are reported with a toast.
+             */
+            function open(url, trigger) {
+                if (!url) return Promise.resolve();
+                lastTrigger = trigger || null;
+                hideDetailPanel(trigger);
+                return fetch(url, {
+                    headers: {
+                        'HX-Request': 'true',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) {
+                        const error = new Error('HTTP ' + response.status);
+                        error.status = response.status;
+                        throw error;
+                    }
+                    return response.text();
+                })
+                .then(function(html) {
+                    const body = document.getElementById('modalBody');
+                    body.innerHTML = html;
+                    // Each confirmation partial may name its own title and action button.
+                    const meta = body.querySelector('[data-confirm-title], [data-confirm-label]');
+                    actionLabel = (meta && meta.dataset.confirmLabel) || i18n.confirm;
+                    if (titleEl) titleEl.textContent = (meta && meta.dataset.confirmTitle) || defaultTitle;
+                    const btn = confirmButton();
+                    if (btn) {
+                        setButtonLabel(btn, actionLabel);
+                        btn.onclick = function(e) {
+                            e.preventDefault();
+                            submitDelete(btn);
+                        };
+                    }
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                })
+                .catch(function(error) {
+                    console.error('Error loading delete confirmation:', error);
+                    showNotification(
+                        error.status === 403 ? i18n.deleteForbidden : i18n.confirmationLoadFailed,
+                        'error'
+                    );
+                });
+            }
+
+            return { open: open };
+        })();
+        window.GiftManager = window.GiftManager || {};
+        window.GiftManager.confirmDelete = deleteConfirmation.open;
+
+        document.addEventListener('click', function(e) {
+            const button = e.target.closest('[data-action="delete"]');
+            if (!button) return;
+            e.preventDefault();
+            deleteConfirmation.open(button.getAttribute('href') || button.dataset.deleteUrl, button);
+        });
 
         // Clean up stale offcanvas state after fully hidden (only if Bootstrap missed cleanup)
         document.querySelectorAll('.offcanvas').forEach(function(offcanvasEl) {
