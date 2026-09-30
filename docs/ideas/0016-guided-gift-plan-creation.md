@@ -44,7 +44,7 @@ the form.
   `templates/gift_manager/includes/relation_form_partial.html`,
   `includes/forms/relation_fields.html`.
 - Create views: `gift_manager/views/relation.py`.
-- Offcanvas loading and form initialisation: `base.html` and
+- Offcanvas loading and form initialisation: `static/gift_manager/js/app-shell.js` and
   `static/gift_manager/form-initializer.js`; unsaved-changes handling in
   `unsaved-changes.js`.
 - Must work without JavaScript as a multi-page fallback where practical.

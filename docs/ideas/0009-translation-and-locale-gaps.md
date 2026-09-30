@@ -19,9 +19,11 @@ translated:
   `includes/gift_plan_card.html`, `includes/event_detail_partial.html`).
 - JavaScript strings such as `'Deleting...'`, `'Loading...'`,
   `'You do not have permission to perform this action'` and
-  `'Error loading form. Please try again.'` in `templates/gift_manager/base.html`,
-  `static/gift_manager/loading-states.js`, `ui-enhancements.js`,
-  `notifications.js` and `form-initializer.js`.
+  `'Error loading form. Please try again.'` in
+  `static/gift_manager/js/app-shell.js`,
+  `static/gift_manager/loading-states.js`, `ui-enhancements.js` and
+  `form-initializer.js`. Labels can be passed from `base.html` through the
+  `window.GiftManager.i18n` object.
 - `<html lang="en">` is hardcoded in `base.html`, which hurts screen readers and
   browser translation.
 - Untranslated attributes: `alt="Gift"`, `aria-label="Toggle dark mode"`, the

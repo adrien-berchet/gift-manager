@@ -22,7 +22,7 @@ def css_block(styles: str, selector: str) -> str:
 
 
 def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
-    base = read(TEMPLATE_ROOT / "base.html")
+    base = read(STATIC_ROOT / "js/app-shell.js")
     offcanvas = read(TEMPLATE_ROOT / "includes/offcanvas_base.html")
     partials = [
         TEMPLATE_ROOT / "includes/form_partial.html",
@@ -91,7 +91,7 @@ def test_unsaved_changes_use_central_panel_safe_flow():
     assert "checkForChanges(form);" in unsaved_changes
     assert "event.button !== 0" in unsaved_changes
     assert "permission-select" in unsaved_changes
-    assert "confirmPanelReplacement(target" in read(TEMPLATE_ROOT / "base.html")
+    assert "confirmPanelReplacement(target" in read(STATIC_ROOT / "js/app-shell.js")
     assert 'new Event("change", { bubbles: true })' in form_initializer
 
     assert "unsaved-changes-badge" in styles
@@ -385,15 +385,30 @@ def test_group_tree_has_keyboard_and_touch_move_workflow():
 
 def test_global_search_combobox_and_stale_response_contract():
     content = read(TEMPLATE_ROOT / "base.html")
+    script = read(STATIC_ROOT / "js/global-search.js")
 
     assert 'role="combobox"' in content
     assert 'role="listbox"' in content
     assert 'aria-activedescendant=""' in content
-    assert "new AbortController()" in content
-    assert "searchRequestId" in content
-    assert "requestId !== searchRequestId" in content
-    assert "safeIconClass" in content
-    assert "safeSearchUrl" in content
+    assert "new AbortController()" in script
+    assert "searchRequestId" in script
+    assert "requestId !== searchRequestId" in script
+    assert "safeIconClass" in script
+    assert "safeSearchUrl" in script
+
+
+def test_base_template_delegates_behaviour_to_static_scripts():
+    content = read(TEMPLATE_ROOT / "base.html")
+
+    for script in ("app-bootstrap", "theme-toggle", "global-search", "app-shell"):
+        assert f"{{% static 'gift_manager/js/{script}.js' %}}" in content
+        assert (STATIC_ROOT / f"js/{script}.js").exists()
+    assert "{% static 'gift_manager/css/base-layout.css' %}" in content
+    assert "window.GiftManager = {" in content
+    # Only small bootstrap snippets may stay inline; the behaviour lives in static files.
+    assert "function getCookie" not in content
+    assert "window.showNotification" not in content
+    assert content.count("<script>") <= 3
 
 
 def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contract():

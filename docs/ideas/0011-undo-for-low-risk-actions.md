@@ -24,9 +24,8 @@ reversible changes.
 
 ## Possible Scope
 
-- Extend `window.showNotification` (in `templates/gift_manager/base.html` and
-  `static/gift_manager/notifications.js`) with an optional action button and
-  longer timeout.
+- Extend `window.showNotification` (in `static/gift_manager/js/app-shell.js`)
+  with an optional action button and longer timeout.
 - Undo for quick status changes on cards and for "Abandon".
 - A server endpoint or HTMX pattern that restores the previous value,
   including `status_changed_at`.
@@ -41,8 +40,9 @@ reversible changes.
 - Quick actions: `gift_manager/gift_plan_actions.py`,
   `static/gift_manager/js/gift-plan-quick-actions.js`, view
   `relation_quick_action` in `gift_manager/views/relation.py`.
-- There are two notification implementations (inline in `base.html` and
-  `notifications.js`); consolidate before extending.
+- `showNotification` in `app-shell.js` is the only toast implementation (the
+  unused `notifications.js` was removed with idea 0017); toast styling lives in
+  `static/gift_manager/css/notifications.css`.
 - The reaction prompt that opens after marking a plan given must still work.
 - Undo must re-check permissions server side.
 

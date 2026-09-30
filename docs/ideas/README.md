@@ -68,7 +68,7 @@ status and notes to reflect the move.
 | 0014 | Installable PWA Or Removal Of Dead Offline Code | Implemented | Platform | Dead offline scripts removed; moved to `implemented/`. A real PWA would be a new idea. |
 | 0015 | Mobile Bottom Navigation Bar | Proposed | Navigation | Bottom tab bar with quick-create action on small screens. |
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
-| 0017 | Extract Inline Scripts And Styles From The Base Template | Proposed | Frontend | Move inline code from base.html to static files and dedupe. |
+| 0017 | Extract Inline Scripts And Styles From The Base Template | Implemented | Frontend | base.html inline code moved to static files; moved to `implemented/`. |
 | 0018 | Unify Delete Confirmation | Proposed | Frontend | One confirmation path instead of modal plus native confirm(). |
 
 ## Working With Ideas

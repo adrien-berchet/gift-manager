@@ -38,8 +38,9 @@ instead of the user's recent work, and a search with no results is a dead end.
 ## Implementation Notes For AI Agent
 
 - Endpoint and result schema: `global_search` in
-  `gift_manager/views/common.py`; modal markup and JavaScript in
-  `templates/gift_manager/base.html`.
+  `gift_manager/views/common.py`; modal markup in
+  `templates/gift_manager/base.html` and behaviour in
+  `static/gift_manager/js/global-search.js`.
 - Results must respect `accessible_by(user)`.
 - Keep URL and icon sanitisation (`safeSearchUrl`, `safeIconClass`).
 - Create shortcuts use the existing `data-action="create"` offcanvas pattern;

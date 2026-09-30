@@ -38,9 +38,11 @@ used on a phone while shopping, where thumb-reachable navigation matters.
 
 ## Implementation Notes For AI Agent
 
-- Navbar markup and inline styles: `gift_manager/templates/gift_manager/base.html`;
-  mobile styles: `static/gift_manager/css/mobile-responsive.css`.
-- The body padding script (`adjustBodyPadding`) only accounts for the top bar;
+- Navbar markup: `gift_manager/templates/gift_manager/base.html`; navbar and
+  search styles: `static/gift_manager/css/base-layout.css`; mobile styles:
+  `static/gift_manager/css/mobile-responsive.css`.
+- The body padding script (`adjustBodyPadding` in
+  `static/gift_manager/js/app-shell.js`) only accounts for the top bar;
   add bottom padding so content is not hidden.
 - Offcanvas panels and toasts must not be covered by the bar.
 - Keep active-state logic consistent with the `resolver_match.url_name` checks.

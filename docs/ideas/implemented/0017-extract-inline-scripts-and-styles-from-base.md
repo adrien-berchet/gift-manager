@@ -2,7 +2,19 @@
 
 ## Status
 
-Proposed
+Implemented
+
+`base.html` went from 1,656 to about 390 lines. Extracted to static files:
+`css/base-layout.css`, `js/app-bootstrap.js` (shared `getCookie`, HTMX CSRF
+header, view-preference reset), `js/theme-toggle.js`, `js/global-search.js` and
+`js/app-shell.js` (navbar offset, offcanvas/modal, toasts, HTMX form handling,
+delete flow). Server-side values (search URL, translated labels) are passed
+through a small `window.GiftManager` config emitted by `base.html`. The
+duplicated `getCookie` and `window.userViewPreferences` definitions were
+removed. The unused `notifications.js` and `htmx-grid-bridge.js` were deleted.
+Still open from this idea: the inline `showNotification` in `app-shell.js` is
+the only toast implementation, but `grid-utils.js` (about 2,100 lines) and
+`theme.css` were left untouched.
 
 ## Summary
 

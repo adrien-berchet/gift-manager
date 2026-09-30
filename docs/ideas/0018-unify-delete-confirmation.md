@@ -13,7 +13,7 @@ the app, instead of the current mix of modal and native `confirm()` dialogs.
 
 Deletion is implemented several ways:
 
-- The HTMX-loaded confirmation modal in `templates/gift_manager/base.html`
+- The HTMX-loaded confirmation modal in `static/gift_manager/js/app-shell.js`
   (`[data-action="delete"]`).
 - Native `confirm()` in
   `templates/gift_manager/fallback/includes/fallback_actions.html`,
