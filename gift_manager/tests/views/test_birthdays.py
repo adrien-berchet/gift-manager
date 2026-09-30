@@ -1,5 +1,6 @@
 """Views for person birthdays: forms, detail page, dashboard section and plan shortcut."""
 
+import re
 from datetime import timedelta
 
 import pytest
@@ -123,8 +124,9 @@ class TestPersonForms:
             assert 'name="birthday_day"' in content
             assert 'name="birthday_month"' in content
             assert 'name="birthday_year"' in content
-            assert 'value="14"' in content
-            assert 'value="1990"' in content
+            assert '<option value="14" selected>' in content
+            assert '<option value="7" selected>' in content
+            assert '<option value="1990" selected>' in content
 
     def test_viewer_cannot_edit_the_birthday(self, client_user, user):
         person = PersonFactory(birthday_day=1, birthday_month=1)
@@ -425,3 +427,116 @@ class TestGlobalBirthdayEventAccess:
         )
 
         assert response.context["preselected"]["events"] == []
+
+
+class TestBirthdaySelectors:
+    """The birthday is three selects on one row, ordered like dates in the active locale."""
+
+    @staticmethod
+    def _select_names(html):
+        return re.findall(r'<select name="(birthday_\w+)"', html)
+
+    def test_three_selects_share_one_row(self, client_user):
+        html = client_user.get(reverse("gift_manager:person_create")).content.decode()
+
+        fieldset = html[html.index("<fieldset") : html.index("</fieldset>")]
+        assert len(re.findall(r'<div class="birthday-row">', fieldset)) == 1
+        assert len(self._select_names(fieldset)) == 3
+        assert 'type="number"' not in fieldset
+
+    def test_day_first_in_french_month_first_in_english(self, user):
+        from gift_manager.forms import PersonForm
+
+        with translation.override("fr"):
+            assert [f.name for f in PersonForm().birthday_fields] == [
+                "birthday_day",
+                "birthday_month",
+                "birthday_year",
+            ]
+        with translation.override("en"):
+            assert [f.name for f in PersonForm().birthday_fields] == [
+                "birthday_month",
+                "birthday_day",
+                "birthday_year",
+            ]
+
+    def test_empty_birthday_selects_the_placeholders(self, user):
+        from gift_manager.forms import PersonForm
+
+        html = str(PersonForm()["birthday_day"])
+
+        assert '<option value="" selected>Day</option>' in html
+        assert '<option value="31">31</option>' in html
+        assert '<option value="32">' not in html
+
+    def test_year_select_shows_a_short_placeholder_and_keeps_the_optional_label(self, user):
+        from gift_manager.forms import PersonForm
+
+        form = PersonForm()
+
+        assert '<option value="" selected>Year</option>' in str(form["birthday_year"])
+        assert str(form.fields["birthday_year"].label) == "Year (optional)"
+
+    def test_year_placeholder_is_translated(self, user):
+        from gift_manager.forms import PersonForm
+
+        with translation.override("fr"):
+            assert '<option value="" selected>Année</option>' in str(PersonForm()["birthday_year"])
+
+    def test_year_choices_run_from_this_year_back_to_1900(self, user):
+        from gift_manager.forms import PersonForm
+
+        years = [value for value, _ in PersonForm().fields["birthday_year"].choices if value != ""]
+
+        assert years[0] == timezone.localdate().year
+        assert years[-1] == 1900
+        assert years == sorted(years, reverse=True)
+
+    def test_stored_year_outside_the_range_is_kept_when_editing(self, user):
+        from gift_manager.forms import PersonForm
+
+        person = PersonFactory(birthday_day=3, birthday_month=4, birthday_year=1850)
+
+        form = PersonForm(instance=person)
+
+        assert 1850 in [value for value, _ in form.fields["birthday_year"].choices]
+        assert '<option value="1850" selected>' in str(form["birthday_year"])
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            {"birthday_day": "32", "birthday_month": "1"},
+            {"birthday_day": "1", "birthday_month": "13"},
+        ],
+    )
+    def test_forged_out_of_range_values_are_rejected(self, client_user, data):
+        response = client_user.post(
+            reverse("gift_manager:person_create"), {"first_name": "Forged", **data}
+        )
+
+        assert response.status_code == 200
+        assert not Person.objects.filter(first_name="Forged").exists()
+
+    def test_future_year_is_rejected_even_if_forged(self, client_user):
+        response = client_user.post(
+            reverse("gift_manager:person_create"),
+            {
+                "first_name": "Future",
+                "birthday_day": "1",
+                "birthday_month": "1",
+                "birthday_year": str(timezone.localdate().year + 1),
+            },
+        )
+
+        assert response.status_code == 200
+        assert "birthday_year" in response.context["form"].errors
+
+    def test_errors_are_shown_under_the_row(self, client_user):
+        response = client_user.post(
+            reverse("gift_manager:person_create"),
+            {"first_name": "Bad", "birthday_day": "30", "birthday_month": "2"},
+        )
+
+        content = response.content.decode()
+        assert "Enter a valid date." in content
+        assert content.index("</fieldset>") > content.index("Enter a valid date.")

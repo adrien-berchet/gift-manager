@@ -4057,3 +4057,6 @@ msgstr "Aucun projet de cadeau pour le moment"
 
 msgid "This object is available to everyone and cannot be removed."
 msgstr "Cet élément est disponible pour tout le monde et ne peut pas être supprimé."
+
+msgid "Year"
+msgstr "Année"

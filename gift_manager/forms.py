@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
 from django.db.models import Q
 from django.db.models import QuerySet
+from django.utils import formats
+from django.utils import timezone
 from django.utils.dates import MONTHS
 from django.utils.translation import gettext_lazy
 
@@ -96,7 +98,58 @@ def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> No
     raise forms.ValidationError(gettext_lazy("Choose a valid recipient."))
 
 
+BIRTHDAY_FIRST_YEAR = 1900
+BIRTHDAY_YEAR_PLACEHOLDER = gettext_lazy("Year")
+
+
+def birthday_field_names() -> list[str]:
+    """Return the birthday field names in the order the active locale writes a date.
+
+    The year always comes last. The month comes before the day when the locale's
+    "month day" format does (English "F j"), otherwise the day comes first (French "j F").
+    """
+    month_day = formats.get_format("MONTH_DAY_FORMAT")
+    day_position = min((month_day.find(char) for char in "dj" if char in month_day), default=-1)
+    month_position = min((month_day.find(char) for char in "FMmn" if char in month_day), default=-1)
+    month_first = month_position != -1 and (day_position == -1 or month_position < day_position)
+    first, second = (
+        ("birthday_month", "birthday_day")
+        if month_first
+        else (
+            "birthday_day",
+            "birthday_month",
+        )
+    )
+    return [first, second, "birthday_year"]
+
+
+def _birthday_select(label, placeholder, choices) -> forms.TypedChoiceField:
+    """Return an optional integer select whose first option is the unset placeholder.
+
+    The label stays available to screen readers; sighted users read the placeholder.
+    """
+    return forms.TypedChoiceField(
+        required=False,
+        label=label,
+        coerce=int,
+        empty_value=None,
+        choices=[("", placeholder), *choices],
+        widget=forms.Select(attrs={"class": "form-select birthday-select"}),
+    )
+
+
 class PersonForm(BaseFormMixin, forms.ModelForm):
+    # The birthday is three optional selects (day, month, year); Person.clean() is the
+    # source of truth for which combinations are valid.
+    birthday_day = _birthday_select(
+        gettext_lazy("Day"), gettext_lazy("Day"), [(day, day) for day in range(1, 32)]
+    )
+    birthday_month = _birthday_select(
+        gettext_lazy("Month"), gettext_lazy("Month"), list(MONTHS.items())
+    )
+    # Choices are built in __init__ so the newest year never goes stale
+    birthday_year = _birthday_select(gettext_lazy("Year (optional)"), BIRTHDAY_YEAR_PLACEHOLDER, [])
+
     # Use a separate field for the decoded email to display properly in the form
     email_address = forms.EmailField(
         required=False,
@@ -126,23 +179,10 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
-            "birthday_day": gettext_lazy("Day"),
-            "birthday_month": gettext_lazy("Month"),
-            "birthday_year": gettext_lazy("Year (optional)"),
         }
         widgets = {
             "first_name": forms.TextInput(attrs={"rows": 1}),
             "family_name": forms.TextInput(attrs={"rows": 1}),
-            "birthday_day": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1, "max": 31, "inputmode": "numeric"}
-            ),
-            "birthday_month": forms.Select(
-                attrs={"class": "form-select"},
-                choices=[("", "—"), *MONTHS.items()],
-            ),
-            "birthday_year": forms.NumberInput(
-                attrs={"class": "form-control", "min": 1, "max": 9999, "inputmode": "numeric"}
-            ),
         }
         error_messages = {
             "first_name": {
@@ -159,10 +199,27 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         self.user = None
         if user is not None:
             self.set_user(user)
+        self._set_birthday_year_choices()
         # Decode the email address for display in the form
         if self.instance and self.instance.pk:
             self.initial["email_address"] = decode_email(self.instance.email_address)
             self.initial.setdefault("groups", list(self.instance.groups.all()))
+
+    def _set_birthday_year_choices(self) -> None:
+        """Offer the years from now back to 1900, plus a stored year outside that range."""
+        years = set(range(BIRTHDAY_FIRST_YEAR, timezone.localdate().year + 1))
+        if self.instance.birthday_year is not None:
+            years.add(self.instance.birthday_year)  # never drop a value that is already stored
+        field = self.fields["birthday_year"]
+        field.choices = [
+            ("", BIRTHDAY_YEAR_PLACEHOLDER),
+            *((year, year) for year in sorted(years, reverse=True)),
+        ]
+
+    @property
+    def birthday_fields(self) -> list:
+        """Return the bound birthday fields in the order of the active locale."""
+        return [self[name] for name in birthday_field_names()]
 
     def set_user(self, user) -> None:
         """Bind the acting user: only groups they can edit are offered as choices."""

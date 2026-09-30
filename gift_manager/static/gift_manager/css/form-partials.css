@@ -498,3 +498,49 @@ select[multiple] option:checked {
 .rating-inline .rating-input-radio:focus-visible ~ .rating-input-star i {
     font-weight: 900;
 }
+
+/* Birthday: day, month and year selects share one row, in the order of the active locale. */
+.birthday-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.birthday-col {
+    min-width: 0;
+}
+
+.birthday-col--day {
+    flex: 3 1 0;
+}
+
+.birthday-col--month {
+    flex: 5 1 0;
+}
+
+.birthday-col--year {
+    flex: 4 1 0;
+}
+
+/* On phones the day and year keep a fixed width and the month takes the rest, with tighter
+   padding so the arrow stays off the text. */
+@media (max-width: 575.98px) {
+    .birthday-col--day {
+        flex: 0 0 4.25rem;
+    }
+
+    .birthday-col--year {
+        flex: 0 0 5rem;
+    }
+
+    .birthday-col--month {
+        flex: 1 1 0;
+    }
+
+    .form-select.birthday-select {
+        padding-left: 0.5rem;
+        padding-right: 1.5rem;
+        font-size: 0.9rem;
+        background-position: right 0.4rem center;
+        background-size: 12px 10px;
+    }
+}
