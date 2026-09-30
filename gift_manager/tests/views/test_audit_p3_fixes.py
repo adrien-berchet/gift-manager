@@ -2,6 +2,7 @@
 
 import inspect
 import json
+from pathlib import Path
 
 import pytest
 from django.conf import settings
@@ -110,8 +111,15 @@ def test_global_search_urls_match_reverse(client, searcher):
 def test_base_template_fetches_the_localized_search_endpoint(client, searcher):
     response = client.get(reverse("gift_manager:home"))
 
-    assert f"fetch(`{reverse('gift_manager:global_search')}?q=" in response.content.decode()
-    assert "fetch(`/api/search/" not in response.content.decode()
+    content = response.content.decode()
+    script = (
+        Path(__file__).resolve().parents[2] / "static/gift_manager/js/global-search.js"
+    ).read_text(encoding="utf-8")
+
+    # The page hands the localized endpoint to the search script, which must use it as-is
+    assert f"globalSearch: '{reverse('gift_manager:global_search')}'" in content
+    assert "fetch(`${config.urls.globalSearch}?q=" in script
+    assert "/api/search/" not in script
 
 
 class TestSharePagePreselection:
