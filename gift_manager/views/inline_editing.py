@@ -170,7 +170,7 @@ class PersonGroupInlineUpdateView(InlineFieldUpdateView):
     """Inline editing for PersonGroup fields."""
 
     model = PersonGroup
-    allowed_fields = ["name", "comment"]
+    allowed_fields = ["name"]
     pk_name = "group_id"
 
 

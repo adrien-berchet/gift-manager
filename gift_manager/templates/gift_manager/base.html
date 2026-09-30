@@ -660,6 +660,7 @@
     </main>
     <!-- Bootstrap JS and dependencies -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{% static 'gift_manager/js/bootstrap-scrollbar-gutter.js' %}"></script>
     <!-- HTMX -->
     <script src="https://cdn.jsdelivr.net/npm/htmx.org@1.9.10/dist/htmx.min.js"></script>
     <!-- Grid.js JS -->
@@ -830,7 +831,7 @@
                 searchController = new AbortController();
 
                 try {
-                    const response = await fetch(`/api/search/?q=${encodeURIComponent(query)}`, {
+                    const response = await fetch(`{% url 'gift_manager:global_search' %}?q=${encodeURIComponent(query)}`, {
                         signal: searchController.signal,
                         headers: {
                             'Accept': 'application/json'

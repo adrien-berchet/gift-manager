@@ -395,7 +395,7 @@ class TestSearchableMultiSelect:
             visible_options = parent_select.locator("option:visible")
 
             # At least the child groups should be visible
-            expect(visible_options.count()).to_be_greater_than(0)
+            assert visible_options.count() > 0
 
     def test_select_all_button_works(self, page: Page, live_server, setup_group_hierarchy):
         """Test that the Select All button selects all visible options."""
@@ -418,10 +418,13 @@ class TestSearchableMultiSelect:
 
             # Verify all options are selected
             parent_select = page.locator("select.searchable-select").first
-            selected_options = parent_select.locator("option[selected]")
+            # Selection is a DOM property, not the `selected` attribute
+            selected_count = parent_select.evaluate(
+                "select => Array.from(select.options).filter(option => option.selected).length"
+            )
 
             # Should have at least some options selected
-            expect(selected_options.count()).to_be_greater_than(0)
+            assert selected_count > 0
 
     def test_clear_all_button_works(self, page: Page, live_server, setup_group_hierarchy):
         """Test that the Clear All button deselects all options."""

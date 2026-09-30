@@ -46,6 +46,10 @@ msgstr "Cet utilisateur n'existe pas."
 msgid "Your account has been successfully reactivated."
 msgstr "Votre compte a été réactivé avec succès."
 
+#: GiftManager/views.py:66 GiftManager/views.py:169
+msgid "This account is disabled. Please contact an administrator."
+msgstr "Ce compte est désactivé. Veuillez contacter un administrateur."
+
 #: gift_manager/forms.py:38
 msgid "Select a recipient"
 msgstr "Sélectionner un destinataire"
@@ -3136,6 +3140,20 @@ msgstr "Vous n'avez pas la permission d'éditer ce groupe"
 msgid "Person removed from group"
 msgstr "Personne supprimée du groupe"
 
+#: gift_manager/group_hierarchy_service.py:40
+#, python-format
+msgid "You do not have permission to edit '%(name)s'."
+msgstr "Vous n'avez pas la permission d'éditer « %(name)s »."
+
+#: gift_manager/group_hierarchy_service.py:65
+#, python-format
+msgid ""
+"Attaching '%(child)s' under '%(parent)s' would share it with other users; "
+"only an owner can do this."
+msgstr ""
+"Rattacher « %(child)s » sous « %(parent)s » le partagerait avec d'autres "
+"utilisateurs ; seul un propriétaire peut le faire."
+
 #: gift_manager/views/person_group.py:348
 msgid "Edit group"
 msgstr "Éditer le groupe"
@@ -3329,6 +3347,59 @@ msgstr "Modifier la réaction"
 
 msgid "This gift plan is already rated. Edit its reaction instead."
 msgstr "Ce projet de cadeau est déjà noté. Modifiez plutôt sa réaction."
+
+#: gift_manager/views/base.py
+#, python-brace-format
+msgid "Email: {email}"
+msgstr "Email : {email}"
+
+#: gift_manager/views/sharing.py
+#, python-format
+msgid ""
+"%(count)d existing permission was already at or above the selected level and "
+"was kept."
+msgid_plural ""
+"%(count)d existing permissions were already at or above the selected level "
+"and were kept."
+msgstr[0] ""
+"%(count)d permission existante était déjà au niveau choisi ou au-dessus et a "
+"été conservée."
+msgstr[1] ""
+"%(count)d permissions existantes étaient déjà au niveau choisi ou au-dessus et "
+"ont été conservées."
+
+#: gift_manager/sharing_service.py
+msgid ""
+"This gift plan is shared with people who cannot see this choice, and you are "
+"not allowed to share it with them."
+msgstr ""
+"Ce projet de cadeau est partagé avec des personnes qui ne peuvent pas voir ce "
+"choix, et vous n'êtes pas autorisé à le partager avec elles."
+
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+msgid "Remove from group"
+msgstr "Retirer du groupe"
+
+#: gift_manager/templates/gift_manager/includes/person_group_remove_person_confirmation.html
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+#, python-format
+msgid "Remove %(person)s from the group %(group)s?"
+msgstr "Retirer %(person)s du groupe %(group)s ?"
+
+#: gift_manager/templates/gift_manager/includes/person_group_remove_person_confirmation.html
+#: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html
+msgid "The person is not deleted: only their membership in this group is removed."
+msgstr ""
+"La personne n'est pas supprimée : seule son appartenance à ce groupe est "
+"retirée."
+
+#: gift_manager/views/person_group.py
+msgid "Invalid group identifier"
+msgstr "Identifiant de groupe invalide"
+
+#: gift_manager/views/person_group.py
+msgid "Invalid parent group identifier"
+msgstr "Identifiant de groupe parent invalide"
 
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""

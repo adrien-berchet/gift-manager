@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -212,21 +213,19 @@ function assert(condition, message) {
     )
 
 
-@pytest.mark.frontend
-@pytest.mark.playwright
-def test_grid_html_helpers_render_hostile_values_safely_in_browser():
-    """Hostile formatter values should render as text in a real browser DOM."""
-    payload = '<img src=x onerror="window.__xssExecuted = true">'
-    grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/grid-utils.js").read_text()
+def _render_hostile_link_in_browser(grid_utils: str, payload: str) -> dict:
+    """Render a hostile link label in Chromium and report what the DOM did.
 
+    Returns {"skip": reason} when Chromium is unavailable.
+    """
     with sync_playwright() as playwright:
         if not Path(playwright.chromium.executable_path).exists():
-            pytest.skip("Playwright Chromium browser is not installed")
+            return {"skip": "Playwright Chromium browser is not installed"}
 
         try:
             browser = playwright.chromium.launch()
         except PlaywrightError as exc:
-            pytest.skip(f"Playwright Chromium could not launch: {exc}")
+            return {"skip": f"Playwright Chromium could not launch: {exc}"}
 
         try:
             page = browser.new_page()
@@ -253,11 +252,32 @@ def test_grid_html_helpers_render_hostile_values_safely_in_browser():
             page.locator("#root").evaluate("(node, html) => { node.innerHTML = html; }", safe_html)
             page.wait_for_timeout(100)
 
-            assert page.evaluate("window.__xssExecuted") is False
-            assert page.locator("#root img").count() == 0
-            assert payload in page.locator("#root").inner_text()
+            return {
+                "executed": page.evaluate("window.__xssExecuted"),
+                "img_count": page.locator("#root img").count(),
+                "text": page.locator("#root").inner_text(),
+            }
         finally:
             browser.close()
+
+
+@pytest.mark.frontend
+@pytest.mark.playwright
+def test_grid_html_helpers_render_hostile_values_safely_in_browser():
+    """Hostile formatter values should render as text in a real browser DOM."""
+    payload = '<img src=x onerror="window.__xssExecuted = true">'
+    grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/grid-utils.js").read_text()
+
+    # Sync Playwright refuses to start on a thread that already runs an asyncio loop,
+    # which is the case once other Playwright/live-server fixtures ran in this session.
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        result = executor.submit(_render_hostile_link_in_browser, grid_utils, payload).result()
+
+    if "skip" in result:
+        pytest.skip(result["skip"])
+    assert result["executed"] is False
+    assert result["img_count"] == 0
+    assert payload in result["text"]
 
 
 def test_grid_templates_route_html_renderers_through_safe_helpers():

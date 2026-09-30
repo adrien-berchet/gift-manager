@@ -1,4 +1,8 @@
 # Docker Compose configuration for Gift Manager
+#
+# Development ports are published on 127.0.0.1 only. To reach a service from another
+# machine, set DB_BIND_ADDRESS / REDIS_BIND_ADDRESS / WEB_BIND_ADDRESS (for example
+# WEB_BIND_ADDRESS=0.0.0.0 to test on a phone) and change the default credentials first.
 # Usage:
 #   Development: docker compose up
 #   Production:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up
@@ -18,7 +22,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${DB_HOST_PORT:-5433}:5432"
+      - "${DB_BIND_ADDRESS:-127.0.0.1}:${DB_HOST_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-gift_manager} -d ${DB_NAME:-gift_manager}"]
       interval: 10s
@@ -36,7 +40,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -67,8 +71,8 @@ services:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
-      - "${WEB_PORT:-8000}:8000"
-      - "5678:5678"  # Debug port
+      - "${WEB_BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-8000}:8000"
+      - "127.0.0.1:5678:5678"  # Debug port, never expose beyond loopback
     depends_on:
       db:
         condition: service_healthy

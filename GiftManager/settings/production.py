@@ -153,6 +153,12 @@ DATABASES = {
         "HOST": get_env_variable("DB_HOST", required=True),
         "PORT": get_env_variable("DB_PORT", "5432"),
         "CONN_MAX_AGE": 60,
+        # Serverless instances are frozen between invocations, so a kept connection can be
+        # dropped while idle: ping it before reuse instead of failing the first query.
+        "CONN_HEALTH_CHECKS": True,
+        # The database is reached through PgBouncer in transaction mode, where a cursor's
+        # DECLARE and FETCH can run on different backends ("portal ... does not exist").
+        "DISABLE_SERVER_SIDE_CURSORS": True,
         "OPTIONS": {
             "connect_timeout": 10,
             "sslmode": get_env_variable("DB_SSLMODE", "require"),
@@ -244,7 +250,7 @@ REDIS_URL = get_env_variable("REDIS_URL", "")
 if REDIS_URL:
     CACHES = {
         "default": {
-            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "BACKEND": "django_redis.cache.RedisCache",
             "LOCATION": REDIS_URL,
             "OPTIONS": {
                 "CLIENT_CLASS": "django_redis.client.DefaultClient",

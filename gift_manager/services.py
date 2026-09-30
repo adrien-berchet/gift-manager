@@ -1,5 +1,9 @@
+from collections.abc import Iterator
+from contextlib import contextmanager
+
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.db.models import Model
 from django.utils.translation import gettext
 
@@ -10,6 +14,25 @@ from gift_manager.models import PersonGroupPermission
 
 class PermissionService:
     """Service for managing permissions."""
+
+    @staticmethod
+    @contextmanager
+    def locked_for_permission_change(obj) -> Iterator[None]:
+        """Serialize permission changes on obj for the duration of the block.
+
+        Checks such as "at least one owner is required" read the current permissions and
+        then write, so two concurrent requests could both pass the check and remove every
+        owner. Holding the object's row lock across check and write makes the second
+        request see the first one's result. Row locks are a no-op on SQLite.
+        """
+        with transaction.atomic():
+            PermissionService.lock_object(obj)
+            yield
+
+    @staticmethod
+    def lock_object(obj) -> None:
+        """Take obj's row lock until the surrounding transaction ends (needs atomic)."""
+        type(obj)._base_manager.select_for_update().filter(pk=obj.pk).first()  # noqa: SLF001
 
     VALID_PERMISSION_LEVELS = {
         PermissionLevel.VIEWER,
@@ -43,6 +66,15 @@ class PermissionService:
                 ) from None
         permission = model.objects.filter(**{"user": user, filter_name: obj}).first()
         return permission.permission_type if permission else PermissionLevel.NONE
+
+    @classmethod
+    def get_permission_map(cls, obj) -> dict[int, int]:
+        """Return every user's direct permission level on obj, in one query."""
+        model = cls.get_permission_model(obj)
+        object_attr = cls._get_permission_object_attr(obj, model)
+        return dict(
+            model.objects.filter(**{object_attr: obj}).values_list("user_id", "permission_type")
+        )
 
     @classmethod
     def get_effective_permission(cls, obj, user) -> int:

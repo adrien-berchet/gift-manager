@@ -88,6 +88,11 @@ class TestEditFormDisplayProperty:
         PermissionService.create_or_update_permission(
             self.user, entity, permission_level=PermissionLevel.OWNER
         )
+        if entity_type.lower() == "relation" and entity.event is not None:
+            # Forms only offer events the user can access
+            PermissionService.create_or_update_permission(
+                self.user, entity.event, permission_level=PermissionLevel.OWNER
+            )
 
         return entity
 

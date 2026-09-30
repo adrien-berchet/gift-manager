@@ -96,7 +96,16 @@
   </div>
 </div>
 
-<div class="btn-group mb-3" role="group" aria-label="{% trans 'Recipient view' %}">
+<div id="recipient-view-switcher"
+     class="btn-group mb-3"
+     role="group"
+     aria-label="{% trans 'Recipient view' %}"
+     data-list-container
+     hx-get="{{ request.get_full_path }}"
+     hx-trigger="refresh"
+     hx-select="#recipient-view-switcher"
+     hx-target="this"
+     hx-swap="outerHTML">
   <a href="{% url 'gift_manager:recipients' %}"
      class="btn btn-outline-secondary {% if recipient_view == 'all' %}active{% endif %}">
     {% trans "All" %}
@@ -133,6 +142,13 @@
   </a>
 </div>
 
+<div id="recipient-list-live"
+     data-list-container
+     hx-get="{{ request.get_full_path }}"
+     hx-trigger="refresh"
+     hx-select="#recipient-list-live"
+     hx-target="this"
+     hx-swap="outerHTML">
 {% if recipients %}
 <div class="recipient-list" id="recipient-list">
   {% for recipient in recipients %}
@@ -201,6 +217,7 @@
   <p>{% trans "No recipients yet." %}</p>
 </div>
 {% endif %}
+</div>
 {% endif %}
 {% endblock %}
 
@@ -228,13 +245,14 @@
 {% else %}
 <script>
 (function () {
-  const rows = Array.from(document.querySelectorAll('.recipient-row'));
   const searchInput = document.getElementById('recipient-search');
   const filterButtons = Array.from(document.querySelectorAll('[data-recipient-filter]'));
-  const emptyMessage = document.getElementById('recipient-empty-filter');
   let activeFilter = 'all';
 
   function applyFilters() {
+    // Rows are queried on each call because list:update swaps the list in place.
+    const rows = Array.from(document.querySelectorAll('.recipient-row'));
+    const emptyMessage = document.getElementById('recipient-empty-filter');
     const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
     let visibleCount = 0;
 
@@ -255,6 +273,9 @@
   if (searchInput) {
     searchInput.addEventListener('input', applyFilters);
   }
+
+  // Keep the active search applied to rows swapped in by list:update.
+  document.body.addEventListener('htmx:afterSettle', applyFilters);
 
   filterButtons.forEach((button) => {
     button.addEventListener('click', () => {

@@ -67,7 +67,7 @@ class TestRelationList:
             permission_level=PermissionLevel.EDITOR,
         )
         event = event_factory(name="Birthday")
-        tag = gift_tag_factory(name="Books")
+        tag = gift_tag_factory(name="Books", shared_with=[self.user])
         self.relation.event = event
         self.relation.due_date = timezone.localdate() - timedelta(days=1)
         self.relation.gift.tags.add(tag)

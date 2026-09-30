@@ -12,6 +12,22 @@ from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.vary import vary_on_headers
 
+# Models routed by public UUID: model name -> (URL name prefix, UUID field).
+# Primary keys are internal and never appear in the app's URLs.
+FALLBACK_ROUTES = {
+    "person": ("person", "person_id"),
+    "gift": ("gift", "gift_id"),
+    "event": ("event", "event_id"),
+    "persongroup": ("person_group", "group_id"),
+    "gifttag": ("gift_tag", "tag_id"),
+    "relation": ("relation", "relation_id"),
+}
+
+
+def fallback_route(model_meta) -> tuple[str, str] | None:
+    """Return (URL name prefix, UUID field) for a model, or None if it has no routes."""
+    return FALLBACK_ROUTES.get(model_meta.model_name)
+
 
 class FallbackModeMixin:
     """Mixin to handle explicit no-JS and fallback rendering in views."""
@@ -84,10 +100,12 @@ class FallbackModeMixin:
         context["no_js"] = self.no_js
         context["is_fallback"] = self.is_fallback
 
-        if hasattr(self, "object") and self.object:
-            model_meta = self.object._meta
-            model_name = model_meta.model_name
-            pk = getattr(self.object, model_meta.pk.name)
+        route = (
+            fallback_route(self.object._meta) if hasattr(self, "object") and self.object else None
+        )
+        if route:
+            model_name, uuid_field = route
+            pk = getattr(self.object, uuid_field)
 
             with suppress(NoReverseMatch):
                 fallback_urls.update(
@@ -287,15 +305,17 @@ class FallbackListMixin:
             if model is None:
                 return actions
             model_meta = model._meta
-            pk = obj.get(model_meta.pk.name)
         else:
             model_meta = obj._meta
-            pk = getattr(obj, model_meta.pk.name)
+
+        route = fallback_route(model_meta)
+        if route is None:
+            return actions
+        model_name, uuid_field = route
+        pk = obj.get(uuid_field) if isinstance(obj, Mapping) else getattr(obj, uuid_field)
 
         if pk is None:
             return actions
-
-        model_name = model_meta.model_name
 
         with suppress(NoReverseMatch):
             actions.extend(

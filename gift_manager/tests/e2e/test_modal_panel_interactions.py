@@ -388,3 +388,52 @@ class TestUnsavedChangesProtection(BaseE2ETest):
             re.compile(r"\bhas-unsaved-changes\b")
         )
         expect(panel.locator(".unsaved-changes-status")).to_be_visible()
+
+
+LAYOUT_ANCHORS_SCRIPT = """() => {
+    const right = (selector) => document.querySelector(selector).getBoundingClientRect().right;
+    return {
+        navbar: right("#navigation .navbar-collapse"),
+        content: right(".page-header-actions"),
+    };
+}"""
+
+
+class TestPanelLayoutStability(BaseE2ETest):
+    """Opening a panel or modal must not shift the page under it."""
+
+    def open_list_with_classic_scrollbar(self, page: Page, live_server, test_user):
+        """Open a list page as a browser with a classic 15px scrollbar measures it."""
+        self.login_as_user(page, live_server, test_user)
+        self.navigate_to_entity_list(page, live_server, "gifts")
+        # Headless Chromium uses overlay scrollbars, so report the root width the way
+        # desktop browsers do when the stable scrollbar gutter takes 15px.
+        page.evaluate("""() => {
+            Object.defineProperty(document.documentElement, "clientWidth", {
+                configurable: true,
+                get: () => window.innerWidth - 15,
+            });
+        }""")
+
+    def test_edit_panel_does_not_shift_page(self, page: Page, live_server, test_user):
+        """The offcanvas edit panel keeps the navbar and content in place."""
+        self.open_list_with_classic_scrollbar(page, live_server, test_user)
+        initial = page.evaluate(LAYOUT_ANCHORS_SCRIPT)
+
+        self.get_create_button(page).click()
+        self.wait_for_panel(page)
+        assert page.evaluate(LAYOUT_ANCHORS_SCRIPT) == initial
+
+        page.keyboard.press("Escape")
+        self.wait_for_panel_close(page)
+        assert page.evaluate(LAYOUT_ANCHORS_SCRIPT) == initial
+
+    def test_modal_does_not_shift_page(self, page: Page, live_server, test_user):
+        """Bootstrap modals keep the navbar and content in place."""
+        self.open_list_with_classic_scrollbar(page, live_server, test_user)
+        initial = page.evaluate(LAYOUT_ANCHORS_SCRIPT)
+
+        page.evaluate("bootstrap.Modal.getOrCreateInstance('#detailPanel').show()")
+        expect(page.locator("#detailPanel")).to_have_class(re.compile(r"\bshow\b"))
+        page.wait_for_timeout(self.animation_timeout)
+        assert page.evaluate(LAYOUT_ANCHORS_SCRIPT) == initial

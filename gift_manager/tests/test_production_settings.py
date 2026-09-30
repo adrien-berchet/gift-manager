@@ -461,6 +461,25 @@ def test_production_settings_define_content_security_policy():
     assert result.returncode == 0, result.stderr
 
 
+def test_production_database_is_safe_behind_transaction_pooler():
+    """Production DB traffic goes through PgBouncer in transaction mode (Vercel + pooler host).
+
+    Server-side cursors break there (DECLARE and FETCH can land on different backends:
+    'portal ... does not exist'), and persistent connections can go stale while the
+    serverless instance is frozen, so reuse must be health-checked.
+    """
+    result = _run_python(
+        "import GiftManager.settings as settings; "
+        "db = settings.DATABASES['default']; "
+        "assert db['DISABLE_SERVER_SIDE_CURSORS'] is True, db; "
+        "assert db['CONN_MAX_AGE'] > 0, db; "
+        "assert db['CONN_HEALTH_CHECKS'] is True, db",
+        _production_env(),
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_explicit_testing_settings_module_imports_without_django_env():
     """Explicit settings modules should not require package-level DJANGO_ENV dispatch."""
     env = _isolated_env()
@@ -507,6 +526,26 @@ def test_explicit_production_settings_module_imports_without_django_env():
     assert result.returncode == 0, result.stderr
 
 
+def test_production_redis_cache_backend_accepts_configured_options():
+    """The Redis cache backend must support the OPTIONS it is configured with."""
+    env = _production_env()
+    env["DJANGO_SETTINGS_MODULE"] = "GiftManager.settings.production"
+    env["REDIS_URL"] = "redis://localhost:6379/1"
+
+    result = _run_python(
+        "import django; django.setup(); "
+        "from django.conf import settings; "
+        "from django.core.cache import caches; "
+        "cache = caches['default']; "
+        "assert type(cache).__module__.startswith('django_redis'), type(cache); "
+        "assert settings.SESSION_ENGINE == 'django.contrib.sessions.backends.cache'; "
+        "assert settings.SESSION_CACHE_ALIAS == 'default'",
+        env,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
 def test_production_compose_requires_critical_environment_values():
     """Production Compose should fail before interpolating blank secrets."""
     compose = (PROJECT_ROOT / "docker-compose.prod.yml").read_text()
@@ -526,6 +565,23 @@ def test_production_compose_requires_critical_environment_values():
         assert f"${{{setting_name}:?" in compose
     assert "DB_SSLMODE=${DB_SSLMODE:-disable}" in compose
     assert "static_volume:/app/staticfiles\n" in compose
+
+
+def test_development_compose_publishes_ports_on_loopback_only():
+    """GM-AUD-015: dev Postgres, Redis, web and debugger must not be reachable from the LAN."""
+    import yaml
+
+    services = yaml.safe_load((PROJECT_ROOT / "docker-compose.yml").read_text())["services"]
+    published = {
+        name: service["ports"] for name, service in services.items() if service.get("ports")
+    }
+
+    assert set(published) == {"db", "redis", "web"}
+    for name, ports in published.items():
+        for port in ports:
+            assert (str(port).startswith("${") and "127.0.0.1}:" in str(port)) or str(
+                port
+            ).startswith("127.0.0.1:"), f"{name} publishes {port} on every interface"
 
 
 def test_production_compose_keeps_web_internal_and_migrations_explicit():

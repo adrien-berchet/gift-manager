@@ -172,6 +172,8 @@
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
+<!-- Membership and gift plan tabs, refreshed in place after changes (person-group-detail.js) -->
+<div id="group-detail-members" data-group-detail-section>
 <!-- Tabs nav -->
 <ul class="nav nav-tabs mb-3" id="groupTab" role="tablist" data-group-detail-tabs>
   <li class="nav-item" role="presentation">
@@ -328,15 +330,16 @@
     {% endif %}
   </div>
 </div>
-{% endif %}
-{% endblock %}
-
-{% block extra_js %} {% load static %}
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-{% include "gift_manager/includes/grid-translations.html" %}
 
 <script>
-  (function () {
+  (function initGroupDetailSection() {
+      // Grid.js and GridUtils load after the page content: wait for them on the first
+      // load. When the section is swapped in after a change they are already there.
+      if (!window.GridUtils || !window.gridjs) {
+          document.addEventListener("DOMContentLoaded", initGroupDetailSection, { once: true });
+          return;
+      }
+
       const updateStatusUrl = "{% url 'gift_manager:relation_status_update' %}";
       const relationStatusOptions = [
           {% for status in relation_statuses %}
@@ -344,11 +347,16 @@
           {% endfor %}
       ];
 
-      // Tab handling
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('tab') === 'gifts') {
-          const giftsTab = new bootstrap.Tab(document.querySelector('#gifts-tab'));
-          giftsTab.show();
+      // Tab handling: the active tab is kept in the URL so reloads and refreshes restore it
+      const tabButtonIds = {
+          persons: 'persons-tab',
+          nested: 'nested-members-tab',
+          gifts: 'gifts-tab',
+          nested_gifts: 'nested-gifts-tab'
+      };
+      const requestedTabId = tabButtonIds[new URLSearchParams(window.location.search).get('tab')];
+      if (requestedTabId) {
+          bootstrap.Tab.getOrCreateInstance(document.getElementById(requestedTabId)).show();
       }
 
       document.querySelector('#persons-tab').addEventListener('click', function (e) {
@@ -799,6 +807,18 @@
   });
   {% endif %}
 
+  })();
+</script>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %} {% load static %}
+<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
+{% include "gift_manager/includes/grid-translations.html" %}
+
+<script>
+  (function () {
   {% if shared_users %}
   // Shares Grid
   const sharesData = [
@@ -849,8 +869,7 @@
       sort: false
   });
   {% endif %}
-
-  }) ();
+  })();
 </script>
 <script src="{% static 'gift_manager/js/person-group-detail.js' %}"></script>
 {% endblock %}

@@ -74,12 +74,17 @@
             const inputs = form.querySelectorAll('input, select, textarea');
 
             inputs.forEach(input => {
-                // Add validation on blur
-                input.addEventListener('blur', () => validateField(input));
+                // Add validation on blur, but only once the user edited the field: an
+                // untouched (e.g. autofocused) field must not show an error and shift the
+                // layout on mousedown, which makes the click on another control miss.
+                input.addEventListener('blur', () => {
+                    if (input.dataset.touched) validateField(input);
+                });
 
                 // Add validation on input with debounce
                 let debounceTimer;
                 input.addEventListener('input', () => {
+                    input.dataset.touched = 'true';
                     clearTimeout(debounceTimer);
                     debounceTimer = setTimeout(() => {
                         validateField(input);

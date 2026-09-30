@@ -11,7 +11,9 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
+from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
 from gift_manager.mixins.performance import BatchOperationMixin
@@ -150,6 +152,13 @@ class PersonListView(
             {"field": "created_at", "label": _("Created"), "type": "date"},
         ]
 
+    def get_fallback_field_value(self, obj, field_name: str) -> object:
+        """Return fallback cell values, decoding the stored (encrypted) email."""
+        value = super().get_fallback_field_value(obj, field_name)
+        if field_name == "email_address":
+            return decode_email(value) or ""
+        return value
+
 
 class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
     model = Person
@@ -179,9 +188,7 @@ class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreate
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["groups"].queryset = PersonGroup.objects.accessible_by(
-            self.request.user
-        ).order_by("name")
+        form.set_user(self.request.user)
         return form
 
 
@@ -202,9 +209,7 @@ class PersonUpdateView(
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
-        form.fields["groups"].queryset = PersonGroup.objects.accessible_by(
-            self.request.user
-        ).order_by("name")
+        form.set_user(self.request.user)
         return form
 
 
@@ -225,6 +230,8 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        visible_group_ids = VisibleMetadata.for_request(self.request).group_ids
+
         # Get all groups this person belongs to
         person_groups = list(self.object.groups.all())
 
@@ -233,11 +240,13 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         ancestor_groups_only = set()
         for group in person_groups:
             ancestors = group.get_ancestors()
-            ancestor_groups_only.update(ancestors)
             all_groups_with_ancestors.update(ancestors)
+            # Only expose ancestors reached through groups the user can see
+            if group.pk in visible_group_ids:
+                ancestor_groups_only.update(a for a in ancestors if a.pk in visible_group_ids)
 
-        # Add groups to context for display
-        context["direct_groups"] = person_groups
+        # Add groups to context for display, limited to the groups the user can see
+        context["direct_groups"] = [g for g in person_groups if g.pk in visible_group_ids]
         context["ancestor_groups"] = sorted(ancestor_groups_only, key=lambda g: g.name)
 
         # Query relations for person directly and all related groups (including ancestors)

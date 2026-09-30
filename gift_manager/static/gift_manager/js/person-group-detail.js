@@ -1,14 +1,24 @@
 (function () {
     "use strict";
 
-    const root = document.querySelector("[data-person-group-detail]");
-    if (!root || root.dataset.groupDetailControllerInitialized === "true") return;
+    // The section is replaced after changes, so it is always looked up again
+    const SECTION_SELECTOR = "[data-group-detail-section]";
+    if (!document.querySelector(SECTION_SELECTOR) || window.groupDetailControllerInitialized) {
+        return;
+    }
+    window.groupDetailControllerInitialized = true;
 
-    root.dataset.groupDetailControllerInitialized = "true";
-
-    const gridContainers = Array.from(root.querySelectorAll("[data-group-detail-grid]"));
-    const gridIds = gridContainers.map((gridContainer) => gridContainer.id);
     const pendingActionWidthFrames = new Map();
+
+    function currentSection() {
+        return document.querySelector(SECTION_SELECTOR);
+    }
+
+    function currentGridContainers() {
+        return Array.from(
+            currentSection()?.querySelectorAll("[data-group-detail-grid]") || []
+        );
+    }
 
     function applyGroupDetailColumnWidths(gridContainer, actionColumnIndex, actionWidth) {
         const table = gridContainer.querySelector(".gridjs-table");
@@ -91,50 +101,141 @@
     }
 
     function scheduleAllGroupDetailActionsWidths() {
-        gridContainers.forEach(scheduleGroupDetailActionsWidth);
+        currentGridContainers().forEach(scheduleGroupDetailActionsWidth);
     }
 
-    gridContainers.forEach((gridContainer) => {
-        new MutationObserver(() => scheduleGroupDetailActionsWidth(gridContainer)).observe(
-            gridContainer,
-            { childList: true, subtree: true }
-        );
-    });
+    function bindSection(section) {
+        section.querySelectorAll("[data-group-detail-grid]").forEach((gridContainer) => {
+            new MutationObserver(() => scheduleGroupDetailActionsWidth(gridContainer)).observe(
+                gridContainer,
+                { childList: true, subtree: true }
+            );
+        });
+        section
+            .querySelectorAll('[data-group-detail-tabs] [data-bs-toggle="tab"]')
+            .forEach((tab) => {
+                tab.addEventListener("shown.bs.tab", scheduleAllGroupDetailActionsWidths);
+            });
+        scheduleAllGroupDetailActionsWidths();
+    }
 
-    const tabs = document.querySelector("[data-group-detail-tabs]");
-    tabs?.querySelectorAll('[data-bs-toggle="tab"]').forEach((tab) => {
-        tab.addEventListener("shown.bs.tab", scheduleAllGroupDetailActionsWidths);
-    });
     document.addEventListener("grid:refreshed", (event) => {
-        const refreshedGridIndex = gridIds.indexOf(event.detail?.containerId);
-        if (refreshedGridIndex >= 0) {
-            scheduleGroupDetailActionsWidth(gridContainers[refreshedGridIndex]);
+        const gridContainer = document.getElementById(event.detail?.containerId || "");
+        if (gridContainer && currentGridContainers().includes(gridContainer)) {
+            scheduleGroupDetailActionsWidth(gridContainer);
         }
     });
     window.addEventListener("resize", scheduleAllGroupDetailActionsWidths);
     if (document.fonts?.ready) {
         document.fonts.ready.then(scheduleAllGroupDetailActionsWidths);
     }
-    scheduleAllGroupDetailActionsWidths();
+    bindSection(currentSection());
 
-    // Refresh the server-rendered detail after a contextual create succeeds so
-    // member counts and gift-plan grids include the newly created object.
-    let refreshAfterGroupDetailCreate = false;
-    root.querySelectorAll("[data-group-detail-create]").forEach((button) => {
-        button.addEventListener("click", () => {
-            refreshAfterGroupDetailCreate = true;
-        });
+    // Member counts and several grids of the section depend on each other and are
+    // rendered by the server: after a change made from this page (contextual create,
+    // edit, delete or member removal), fetch the page again and swap the section in
+    // place. Status changes also emit list:update but only touch their own row, so
+    // only a click on one of these actions arms the refresh.
+    const REFRESHING_ACTIONS = [
+        "[data-group-detail-create]",
+        '[data-action="create"]',
+        '[data-action="edit"]',
+        '[data-action="delete"]',
+    ].join(", ");
+    let refreshPending = false;
+    let refreshController = null;
+
+    // Capture phase: the global action handlers may stop the click from bubbling
+    document.addEventListener(
+        "click",
+        (event) => {
+            if (event.target.closest?.(REFRESHING_ACTIONS)) {
+                refreshPending = true;
+            }
+        },
+        true
+    );
+
+    // A cancelled form or confirmation must not refresh on a later, unrelated update.
+    // On success list:update is handled before these panels finish hiding.
+    const editPanelId = document.querySelector("[data-group-detail-edit-panel-id]")?.dataset
+        .groupDetailEditPanelId;
+    document.getElementById(editPanelId || "")?.addEventListener("hidden.bs.offcanvas", () => {
+        refreshPending = false;
     });
-
-    const editPanelId = root.dataset.groupDetailEditPanelId;
-    const editPanel = editPanelId ? document.getElementById(editPanelId) : null;
-    editPanel?.addEventListener("hidden.bs.offcanvas", () => {
-        refreshAfterGroupDetailCreate = false;
+    document.getElementById("confirmModal")?.addEventListener("hidden.bs.modal", () => {
+        refreshPending = false;
     });
 
     document.addEventListener("list:update", () => {
-        if (refreshAfterGroupDetailCreate) {
+        if (!refreshPending) return;
+        refreshPending = false;
+        refreshSection();
+    });
+
+    function keepActiveTab(section, freshSection) {
+        const activeTab = section.querySelector('[data-bs-toggle="tab"].active');
+        const freshActiveTab = activeTab && freshSection.querySelector(`#${CSS.escape(activeTab.id)}`);
+        if (!freshActiveTab) return;
+
+        freshSection.querySelectorAll('[data-bs-toggle="tab"]').forEach((tab) => {
+            const isActive = tab === freshActiveTab;
+            tab.classList.toggle("active", isActive);
+            tab.setAttribute("aria-selected", String(isActive));
+        });
+        freshSection.querySelectorAll(".tab-pane").forEach((pane) => {
+            const isActive = `#${pane.id}` === freshActiveTab.dataset.bsTarget;
+            pane.classList.toggle("active", isActive);
+            pane.classList.toggle("show", isActive);
+        });
+    }
+
+    function runScripts(container) {
+        // Scripts inserted from a parsed document never run: replace them with live copies
+        container.querySelectorAll("script").forEach((parsedScript) => {
+            const script = document.createElement("script");
+            Array.from(parsedScript.attributes).forEach((attribute) => {
+                script.setAttribute(attribute.name, attribute.value);
+            });
+            script.textContent = parsedScript.textContent;
+            parsedScript.replaceWith(script);
+        });
+    }
+
+    async function refreshSection() {
+        refreshController?.abort();
+        const controller = new AbortController();
+        refreshController = controller;
+
+        try {
+            // A plain request: an HTMX one is answered with the detail panel partial
+            const response = await fetch(window.location.href, {
+                cache: "no-store",
+                credentials: "same-origin",
+                signal: controller.signal,
+            });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const html = await response.text();
+            if (controller.signal.aborted) return;
+
+            const freshSection = new DOMParser()
+                .parseFromString(html, "text/html")
+                .querySelector(SECTION_SELECTOR);
+            const section = currentSection();
+            if (!freshSection || !section) throw new Error("Section not found");
+
+            keepActiveTab(section, freshSection);
+            const newSection = document.importNode(freshSection, true);
+            // Keep the page height while the grids render, so the scroll position holds
+            newSection.style.minHeight = `${section.offsetHeight}px`;
+            section.replaceWith(newSection);
+            runScripts(newSection);
+            bindSection(newSection);
+            window.setTimeout(() => newSection.style.removeProperty("min-height"), 500);
+        } catch (error) {
+            if (error.name === "AbortError") return;
+            console.error("[PersonGroupDetail] Section refresh failed, reloading:", error);
             window.location.reload();
         }
-    });
+    }
 })();

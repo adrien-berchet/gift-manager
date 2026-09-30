@@ -69,3 +69,40 @@ def test_event_search_serializes_schedule_contract(client):
         "recurrence": "",
         "recurrence_label": "",
     }
+
+
+@pytest.mark.django_db
+def test_person_search_returns_decoded_email_not_ciphertext(client):
+    """GM-AUD-006: the endpoint must serialize the displayed email, not the stored value."""
+    user = UserFactory()
+    client.force_login(user)
+    person = PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
+
+    response = client.get(reverse("gift_manager:person_search"), {"search": "Ada"})
+
+    (result,) = response.json()["data"]
+    assert result["email_address"] == "ada.lovelace@example.com"
+    assert result["email_address"] != person.email_address
+
+
+@pytest.mark.django_db
+def test_person_search_does_not_match_on_stored_ciphertext(client):
+    user = UserFactory()
+    client.force_login(user)
+    person = PersonFactory(first_name="Ada", family_name="Lovelace", shared_with=[user])
+    ciphertext_fragment = person.email_address[10:30]
+
+    response = client.get(reverse("gift_manager:person_search"), {"search": ciphertext_fragment})
+
+    assert response.json()["count"] == 0
+
+
+@pytest.mark.django_db
+def test_person_search_without_email_serializes_empty_string(client):
+    user = UserFactory()
+    client.force_login(user)
+    PersonFactory(first_name="Ada", family_name="Lovelace", email_address=None, shared_with=[user])
+
+    response = client.get(reverse("gift_manager:person_search"), {"search": "Ada"})
+
+    assert response.json()["data"][0]["email_address"] == ""

@@ -317,6 +317,82 @@ class TestPersonListGridLoading:
         assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
 
 
+def _submit_recipient_create_form(page: Page, create_label: str, fields: dict[str, str]):
+    """Open a recipients page create panel, fill it and wait for the panel to close."""
+    page.locator(".page-header-actions a[data-action='create']", has_text=create_label).click()
+    panel = page.locator("#editPanel")
+    expect(panel).to_have_class(re.compile(r"\bshow\b"))
+    for field_name, value in fields.items():
+        panel.locator(f"[name='{field_name}']").first.fill(value)
+    panel.locator("button[type='submit'].btn-primary").first.click()
+    expect(panel).not_to_be_visible(timeout=10_000)
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+@pytest.mark.django_db(transaction=True)
+class TestRecipientListLiveUpdates:
+    """Recipients page reflects created recipients without a page reload."""
+
+    def test_created_person_appears_in_all_view(
+        self, page: Page, live_server, seed_data_e2e, console_errors
+    ):
+        """A person created from the All view is listed and counted immediately."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/recipients/")
+        page.wait_for_load_state("networkidle")
+        people_badge = page.locator("a.btn[href*='view=people'] .badge")
+        initial_people_count = int(people_badge.inner_text())
+
+        _submit_recipient_create_form(
+            page, "New Person", {"first_name": "Zelda", "family_name": "Livelist"}
+        )
+
+        new_row = page.locator("#recipient-list .recipient-row", has_text="Zelda")
+        expect(new_row).to_be_visible(timeout=10_000)
+        expect(people_badge).to_have_text(str(initial_people_count + 1))
+
+        page.locator("#recipient-search").fill("Livelist")
+        expect(new_row).to_be_visible()
+        expect(page.locator("#recipient-list .recipient-row:visible")).to_have_count(1)
+        assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
+
+    def test_created_group_appears_in_all_view(
+        self, page: Page, live_server, seed_data_e2e, console_errors
+    ):
+        """A group created from the All view is listed immediately."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/recipients/")
+        page.wait_for_load_state("networkidle")
+
+        _submit_recipient_create_form(page, "New Group", {"name": "Livelist Group"})
+
+        expect(
+            page.locator("#recipient-list .recipient-row", has_text="Livelist Group")
+        ).to_be_visible(timeout=10_000)
+        assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
+
+    def test_created_person_appears_in_people_view(
+        self, page: Page, live_server, seed_data_e2e, console_errors
+    ):
+        """A person created from the People view is added to the grid immediately."""
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/recipients/?view=people")
+        _wait_for_grid(page, "person-grid")
+        people_badge = page.locator("a.btn[href*='view=people'] .badge")
+        initial_people_count = int(people_badge.inner_text())
+
+        _submit_recipient_create_form(
+            page, "New Person", {"first_name": "Zelda", "family_name": "Livelist"}
+        )
+
+        expect(page.locator("#person-grid .gridjs-tbody")).to_contain_text(
+            "Livelist", timeout=10_000
+        )
+        expect(people_badge).to_have_text(str(initial_people_count + 1))
+        assert _filter_js_errors(console_errors) == [], f"Console errors: {console_errors}"
+
+
 @pytest.mark.frontend
 @pytest.mark.e2e
 @pytest.mark.django_db(transaction=True)

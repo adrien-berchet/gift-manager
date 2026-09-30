@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Sequence
 from copy import deepcopy
+from uuid import UUID
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -16,6 +17,7 @@ from django.db.models.functions import Concat
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils.translation import gettext
+from django.utils.translation import ngettext
 from django.views.generic import View
 
 from gift_manager.models import Event
@@ -27,13 +29,14 @@ from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.services import PermissionService
+from gift_manager.sharing_service import INSUFFICIENT_SHARE_PERMISSION_ERROR
+from gift_manager.sharing_service import PERMISSION_ESCALATION_ERROR
+from gift_manager.sharing_service import SharingService
 
 logger = logging.getLogger(__name__)
 
 NON_FRIEND_SHARE_ERROR = "Objects can only be shared with friends."
 UNSHAREABLE_OBJECT_ERROR = "One or more selected objects cannot be shared."
-INSUFFICIENT_SHARE_PERMISSION_ERROR = "You do not have permission to share this object."
-PERMISSION_ESCALATION_ERROR = "You cannot grant a higher permission than your own."
 
 
 class ShareObjectsView(LoginRequiredMixin, View):
@@ -41,6 +44,8 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
     template_name = "gift_manager/share_objects.html"
     minimum_share_permission = PermissionLevel.OWNER
+    # Grants skipped because the friend already had equal or higher direct access
+    kept_permission_count = 0
 
     def get(self, request):
         """Display the sharing form."""
@@ -84,6 +89,14 @@ class ShareObjectsView(LoginRequiredMixin, View):
         )
 
         context = {
+            "preselected": self._get_preselection(
+                request,
+                persons=persons,
+                person_groups=person_groups,
+                gifts=gifts,
+                events=events,
+                relations=relations,
+            ),
             "friends": friends,
             "persons": persons,
             "person_groups": person_groups,
@@ -95,8 +108,53 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         return render(request, self.template_name, context)
 
+    # entity_type values sent by the bulk "share" action -> (context key, UUID field)
+    PRESELECTION_TARGETS = {
+        "person": ("persons", "person_id"),
+        "persongroup": ("person_groups", "group_id"),
+        "gift": ("gifts", "gift_id"),
+        "event": ("events", "event_id"),
+        "relation": ("relations", "relation_id"),
+    }
+
+    @staticmethod
+    def _parse_uuid(raw_id: str) -> str | None:
+        """Return the canonical form of a UUID string, or None when malformed."""
+        try:
+            return str(UUID(raw_id.strip()))
+        except ValueError:
+            return None
+
+    def _get_preselection(self, request, **querysets) -> dict[str, list[str]]:
+        """Return the UUIDs from ?entity_type=&ids= that the user can actually share.
+
+        Ids are only kept when they belong to the accessible objects listed on the
+        page, so forged, unknown or malformed ids are ignored.
+        """
+        preselected = {
+            key: [] for key in ("persons", "person_groups", "gifts", "events", "relations")
+        }
+        target = self.PRESELECTION_TARGETS.get(request.GET.get("entity_type", ""))
+        if target is None:
+            return preselected
+
+        requested = {
+            parsed
+            for raw_id in request.GET.get("ids", "").split(",")
+            if (parsed := self._parse_uuid(raw_id)) is not None
+        }
+
+        key, id_field = target
+        preselected[key] = [
+            str(getattr(obj, id_field))
+            for obj in querysets[key]
+            if str(getattr(obj, id_field)) in requested
+        ]
+        return preselected
+
     def post(self, request):  # noqa: C901, PLR0911
         """Process sharing of selected objects."""
+        self.kept_permission_count = 0
         try:
             with transaction.atomic():
                 # Get selected friends
@@ -199,6 +257,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             messages.success(
                 request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
             )
+            self._add_kept_permissions_message(request)
 
             return redirect("gift_manager:share_objects")
 
@@ -218,6 +277,22 @@ class ShareObjectsView(LoginRequiredMixin, View):
             logger.exception("Unexpected error in ShareObjectsView for user %s", request.user)
             messages.error(request, gettext("An unexpected error occurred while sharing objects."))
             return self.get(request)
+
+    def _add_kept_permissions_message(self, request) -> None:
+        """Tell the user when existing equal or higher permissions were left unchanged."""
+        if not self.kept_permission_count:
+            return
+        messages.info(
+            request,
+            ngettext(
+                "%(count)d existing permission was already at or above the selected "
+                "level and was kept.",
+                "%(count)d existing permissions were already at or above the selected "
+                "level and were kept.",
+                self.kept_permission_count,
+            )
+            % {"count": self.kept_permission_count},
+        )
 
     def _get_selected_friends(self, request) -> Sequence[User]:
         """Get selected friends from the request.
@@ -347,6 +422,8 @@ class ShareObjectsView(LoginRequiredMixin, View):
                 # Add all descendant groups
                 all_groups_to_share.update(group.get_descendants())
 
+        # Deterministic order so concurrent shares take the row locks in the same order
+        all_groups_to_share = sorted(all_groups_to_share, key=lambda group: group.pk)
         for group in all_groups_to_share:
             self._validate_share_permission(actor, group, permission_level, "person groups")
 
@@ -362,7 +439,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
                     # If requested, also share the persons in the group
                     if share_members:
-                        for person in group.person_set.all():
+                        for person in group.person_set.order_by("pk"):
                             self._share_object_with_friend(friend, person, permission_level)
 
         return len(all_groups_to_share)
@@ -467,39 +544,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
 
         for friend in friends:
             for relation in relations:
-                with transaction.atomic():
-                    # Share the relation itself
-                    self._share_object_with_friend(friend, relation, permission_level)
-
-                    # Share the associated gift
-                    if relation.gift:
-                        self._validate_share_permission(
-                            actor, relation.gift, permission_level, "gifts"
-                        )
-                        self._share_object_with_friend(friend, relation.gift, permission_level)
-
-                    # Share the associated person
-                    if relation.person:
-                        self._validate_share_permission(
-                            actor, relation.person, permission_level, "persons"
-                        )
-                        self._share_object_with_friend(friend, relation.person, permission_level)
-
-                    # Share the associated group
-                    if relation.group:
-                        self._validate_share_permission(
-                            actor, relation.group, permission_level, "person groups"
-                        )
-                        self._share_object_with_friend(friend, relation.group, permission_level)
-
-                    # Share the associated event
-                    if relation.event:
-                        self._validate_share_permission(
-                            actor, relation.event, permission_level, "events"
-                        )
-                        self._share_object_with_friend(friend, relation.event, permission_level)
+                self._share_relation_with_friend(actor, friend, relation, permission_level)
 
         return len(relations)
+
+    def _share_relation_with_friend(
+        self, actor: User, friend: User, relation: Relation, permission_level: int
+    ) -> None:
+        """Share a relation and what it displays without lowering existing access.
+
+        ``SharingService.grant`` never lowers access to the related objects but overwrites
+        the permission on the relation itself, so it is only used when it raises it.
+        """
+        related_objects = SharingService.related_objects(relation)
+        with transaction.atomic():
+            for obj in (relation, *related_objects):
+                PermissionService.lock_object(obj)
+
+            if PermissionService.get_permission(relation, friend) < permission_level:
+                SharingService.grant(actor, relation, friend, permission_level)
+                return
+
+            self.kept_permission_count += 1
+            # Keep the relation's access but still expose the objects it displays
+            for related in related_objects:
+                if PermissionService.get_effective_permission(related, friend) < permission_level:
+                    SharingService.assert_can_share(actor, related, permission_level)
+                    self._share_object_with_friend(friend, related, permission_level)
 
     def _get_shareable_objects(
         self,
@@ -519,7 +590,9 @@ class ShareObjectsView(LoginRequiredMixin, View):
             raise ValidationError(gettext("Invalid object selection."))
 
         objects = list(
-            model.objects.accessible_by(actor).filter(**{f"{id_field}__in": requested_ids})
+            model.objects.accessible_by(actor)
+            .filter(**{f"{id_field}__in": requested_ids})
+            .order_by("pk")
         )
         found_ids = {str(getattr(obj, id_field)) for obj in objects}
         if found_ids != requested_ids:
@@ -566,12 +639,27 @@ class ShareObjectsView(LoginRequiredMixin, View):
         """Return actor permission, treating legacy linked Person owners as owners."""
         return PermissionService.get_effective_permission(obj, actor)
 
-    def _share_object_with_friend(self, friend: User, obj, permission_level: int) -> None:
-        """Create or update one object permission for a friend."""
-        object_attr = "group" if isinstance(obj, PersonGroup) else None
-        create_or_update_permission(
-            friend,
-            obj,
-            permission_level=permission_level,
-            object_attr=object_attr,
-        )
+    def _share_object_with_friend(self, friend: User, obj, permission_level: int) -> bool:
+        """Grant a friend at least permission_level on obj, never lowering their access.
+
+        The share page only adds access: an equal or higher direct permission is kept, so
+        it can neither demote nor remove an owner. The object's row lock serializes the
+        read and the write with the edit pages (``locked_for_permission_change``), so a
+        concurrent raise cannot be overwritten with the lower level read before it.
+
+        Returns:
+            True when the permission was created or raised, False when it was kept.
+        """
+        with PermissionService.locked_for_permission_change(obj):
+            if PermissionService.get_permission(obj, friend) >= permission_level:
+                self.kept_permission_count += 1
+                return False
+
+            object_attr = "group" if isinstance(obj, PersonGroup) else None
+            create_or_update_permission(
+                friend,
+                obj,
+                permission_level=permission_level,
+                object_attr=object_attr,
+            )
+        return True

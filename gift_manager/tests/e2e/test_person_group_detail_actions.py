@@ -337,12 +337,15 @@ class TestPersonGroupDetailActions(BaseE2ETest):
         relation_form.locator('select[name="status"]').select_option(str(relation.status.pk))
         relation_form.locator('textarea[name="comment"]').fill("Created through the panel")
 
-        with page.expect_navigation(wait_until="networkidle"):
-            relation_form.locator('button[type="submit"]').click()
+        # The tabs section is refreshed in place: no page reload
+        page.evaluate("window.__groupDetailNotReloaded = true")
+        relation_form.locator('button[type="submit"]').click()
 
+        expect(page.locator("#gifts-tab")).to_contain_text("[2]")
         assert page.url == gift_tab_url
         expect(page.locator("#gifts-list")).to_have_class(re.compile(r"\bactive\b"))
         expect(page.locator("#gifts-grid")).to_contain_text(panel_gift.name)
+        assert page.evaluate("window.__groupDetailNotReloaded") is True
         if viewport_width <= 576:
             run_mobile_table_enhancement()
 

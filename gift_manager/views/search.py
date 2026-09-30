@@ -5,6 +5,7 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views import View
 
+from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -91,7 +92,8 @@ class PersonSearchView(HTMXListSearchView):
     """HTMX search view for persons."""
 
     model = Person
-    search_fields = ["first_name", "family_name", "email_address"]
+    # Emails are stored encrypted, so they cannot be matched by substring in the database
+    search_fields = ["first_name", "family_name"]
 
     def get_queryset(self):
         """Get persons with groups prefetched for result serialization."""
@@ -102,16 +104,17 @@ class PersonSearchView(HTMXListSearchView):
         data = []
         for person in queryset:
             # Get groups info
-            groups_info = []
-            for group in person.groups.all():
-                groups_info.append({"id": str(group.group_id), "name": group.name})
+            groups_info = [
+                {"id": str(group.group_id), "name": group.name}
+                for group in VisibleMetadata.for_request(self.request).groups(person)
+            ]
 
             data.append(
                 {
                     "person_id": str(person.person_id),
                     "first_name": person.first_name,
                     "family_name": person.family_name,
-                    "email_address": person.email_address or "",
+                    "email_address": person.email or "",
                     "groups_info": groups_info,
                 }
             )
@@ -134,9 +137,10 @@ class GiftSearchView(HTMXListSearchView):
         data = []
         for gift in queryset:
             # Get tags info
-            tags_info = []
-            for tag in gift.tags.all():
-                tags_info.append({"id": str(tag.tag_id), "name": tag.name})
+            tags_info = [
+                {"id": str(tag.tag_id), "name": tag.name}
+                for tag in VisibleMetadata.for_request(self.request).tags(gift)
+            ]
 
             data.append(
                 {

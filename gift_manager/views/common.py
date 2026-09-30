@@ -10,6 +10,7 @@ from django.db.models import Model
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
@@ -278,7 +279,7 @@ def global_search(request):
             "subtitle": gift.comment[:50] + "..."
             if gift.comment and len(gift.comment) > 50
             else gift.comment or "",
-            "url": f"/gifts/{gift.gift_id}/",
+            "url": reverse("gift_manager:gift_detail", kwargs={"pk": gift.gift_id}),
         }
         for gift in gifts
     ]
@@ -295,7 +296,7 @@ def global_search(request):
             "icon": "fa-user",
             "title": str(person),
             "subtitle": gettext("Person"),
-            "url": f"/persons/{person.person_id}/",
+            "url": reverse("gift_manager:person_detail", kwargs={"pk": person.person_id}),
         }
         for person in persons
     )
@@ -312,7 +313,7 @@ def global_search(request):
             "icon": "fa-layer-group",
             "title": group.name,
             "subtitle": gettext("Group"),
-            "url": f"/person_groups/{group.group_id}/",
+            "url": reverse("gift_manager:person_group_detail", kwargs={"pk": group.group_id}),
         }
         for group in groups
     )
@@ -331,7 +332,7 @@ def global_search(request):
             "subtitle": event.comment[:50] + "..."
             if event.comment and len(event.comment) > 50
             else event.comment or "",
-            "url": f"/events/{event.event_id}/",
+            "url": reverse("gift_manager:event_detail", kwargs={"pk": event.event_id}),
         }
         for event in events
     )
@@ -348,7 +349,7 @@ def global_search(request):
             "icon": "fa-tag",
             "title": tag.name,
             "subtitle": "",
-            "url": f"/gift-tag/{tag.tag_id}/",
+            "url": reverse("gift_manager:gift_tag_detail", kwargs={"pk": tag.tag_id}),
         }
         for tag in tags
     )

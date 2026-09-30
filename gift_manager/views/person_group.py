@@ -1,28 +1,34 @@
 """PersonGroup-related views."""
 
 import json
+import uuid
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Prefetch
 from django.db.models import Q
+from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils.html import format_html
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.views import View
+from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 
 from gift_manager.forms import PersonGroupAddMultipleChildGroupsForm
 from gift_manager.forms import PersonGroupAddMultiplePersonsForm
 from gift_manager.forms import PersonGroupForm
+from gift_manager.group_hierarchy_service import GroupHierarchyService
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Person
@@ -65,21 +71,25 @@ def get_person_group_grid_column_names():
     }
 
 
-def get_person_group_grid_queryset(user, member_queryset=None):
-    """Return groups prepared for the shared management grid and tree view."""
+def _accessible_members_prefetch(user, member_queryset=None) -> Prefetch:
+    """Prefetch the members a user can access into ``group.accessible_members``.
+
+    Member counts must be computed from this list: ``group.person_set`` also contains
+    persons the user cannot see.
+    """
     if member_queryset is None:
         member_queryset = Person.objects.accessible_by(user)
+    return Prefetch("person_set", queryset=member_queryset, to_attr="accessible_members")
 
+
+def get_person_group_grid_queryset(user, member_queryset=None):
+    """Return groups prepared for the shared management grid and tree view."""
     return (
         PersonGroup.objects.accessible_by(user)
         .prefetch_related(
             "parent_groups",
             "child_groups",
-            Prefetch(
-                "person_set",
-                queryset=member_queryset,
-                to_attr="accessible_members",
-            ),
+            _accessible_members_prefetch(user, member_queryset),
         )
         .order_by("name")
     )
@@ -304,19 +314,84 @@ def add_multiple_child_groups_to_group(request, pk):
     )
 
 
+def _htmx_notification_response(
+    message: str, *, level: str, status: int = 200, list_update: bool = False
+) -> HttpResponse:
+    """Return an empty HTMX response that closes the modal and shows a notification."""
+    events = {"modal:close": {}, "showNotification": {"message": message, "type": level}}
+    if list_update:
+        events["list:update"] = {}
+    response = HttpResponse("", status=status)
+    response["HX-Trigger"] = json.dumps(events)
+    return response
+
+
+def _group_edit_denied_response(request, *, is_htmx: bool, redirect_url: str) -> HttpResponse:
+    """Answer a group membership change attempted without editor permission."""
+    denied_message = gettext("You do not have permission to edit this group")
+    if is_htmx and request.method == "GET":
+        # Shown in the confirmation modal body, without a form to submit
+        return HttpResponse(
+            format_html('<div class="alert alert-danger mb-0">{}</div>', denied_message),
+            status=403,
+        )
+    if is_htmx:
+        return _htmx_notification_response(denied_message, level="error", status=403)
+    messages.error(request, denied_message)
+    return redirect(redirect_url)
+
+
 @login_required
+@require_http_methods(["GET", "POST"])
 def remove_person_from_group(request, pk, person_id):
+    """Remove a person from a group.
+
+    GET only renders a confirmation (a modal body for HTMX, a full page otherwise);
+    the membership is changed by the POST that the confirmation submits.
+    """
+    is_htmx = request.headers.get("HX-Request") == "true"
+    detail_url = reverse("gift_manager:person_group_detail", kwargs={"pk": pk})
+
     with transaction.atomic():
-        group = get_object_or_404(PersonGroup, group_id=pk)
+        group = get_object_or_404(PersonGroup.objects.accessible_by(request.user), group_id=pk)
 
         # Permission: require at least Editor on the group
-        if not _check_editor_permission(request, group):
-            return redirect("gift_manager:person_group_detail", pk=pk)
+        if PermissionService.get_effective_permission(group, request.user) < PermissionLevel.EDITOR:
+            return _group_edit_denied_response(request, is_htmx=is_htmx, redirect_url=detail_url)
 
-        person = get_object_or_404(Person, person_id=person_id)
-        person.groups.remove(group)
-        messages.success(request, _("Person removed from group"))
-        return redirect("gift_manager:person_group_detail", pk=pk)
+        person = get_object_or_404(Person.objects.accessible_by(request.user), person_id=person_id)
+
+        if request.method == "GET":
+            template_name = (
+                "gift_manager/includes/person_group_remove_person_confirmation.html"
+                if is_htmx
+                else "gift_manager/person_group_remove_person_confirm.html"
+            )
+            return render(
+                request,
+                template_name,
+                {
+                    "group": group,
+                    "person": person,
+                    "remove_url": request.path,
+                    "cancel_url": detail_url,
+                },
+            )
+
+        try:
+            GroupHierarchyService.change_members(request.user, group, remove=[person])
+        except PermissionDenied as error:
+            if is_htmx:
+                return _htmx_notification_response(str(error), level="error", status=403)
+            messages.error(request, str(error))
+            return redirect(detail_url)
+
+    success_message = gettext("Person removed from group")
+    if is_htmx:
+        # The detail page refreshes its membership section (counts and grids) on list:update
+        return _htmx_notification_response(success_message, level="success", list_update=True)
+    messages.success(request, success_message)
+    return redirect(detail_url)
 
 
 class PersonGroupDeleteView(BaseDeleteView):
@@ -504,13 +579,13 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                 # Get parent groups and child groups
                 context["parent_groups"] = (
                     accessible_groups.filter(child_groups=selected_group)
-                    .prefetch_related("person_set")
+                    .prefetch_related(_accessible_members_prefetch(request.user))
                     .order_by("name")
                 )
 
                 context["child_groups"] = (
                     accessible_groups.filter(parent_groups=selected_group)
-                    .prefetch_related("person_set")
+                    .prefetch_related(_accessible_members_prefetch(request.user))
                     .order_by("name")
                 )
 
@@ -530,7 +605,9 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
         else:
             # No group selected: show root level groups
             all_accessible_groups = list(
-                accessible_groups.prefetch_related("parent_groups", "person_set").order_by("name")
+                accessible_groups.prefetch_related(
+                    "parent_groups", _accessible_members_prefetch(request.user)
+                ).order_by("name")
             )
             accessible_group_ids = {group.pk for group in all_accessible_groups}
             context["root_groups"] = [
@@ -544,9 +621,57 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
+def _json_error(message: str, status: int) -> JsonResponse:
+    return JsonResponse({"success": False, "message": message}, status=status)
+
+
+def _parse_group_uuid(value) -> uuid.UUID | None:
+    """Return the UUID given as a string, or None when the value is not a valid UUID."""
+    if not isinstance(value, str):
+        return None
+    try:
+        return uuid.UUID(value)
+    except ValueError:
+        return None
+
+
+def _parse_reparent_payload(request) -> tuple[uuid.UUID, list[uuid.UUID], str] | JsonResponse:
+    """Validate the reparent JSON body; return (group id, parent ids, action) or an error."""
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        data = None
+    if not isinstance(data, dict):
+        return _json_error(gettext("Invalid JSON data"), 400)
+
+    group_id = data.get("group_id")
+    parent_ids = data.get("parent_ids", [])
+    action = data.get("action", "set")  # "set", "add", or "remove"
+
+    if not group_id:
+        return _json_error(gettext("group_id is required"), 400)
+    if action not in ["set", "add", "remove"]:
+        return _json_error(gettext("action must be 'set', 'add', or 'remove'"), 400)
+
+    group_uuid = _parse_group_uuid(group_id)
+    if group_uuid is None:
+        return _json_error(gettext("Invalid group identifier"), 400)
+
+    parent_uuids = (
+        [_parse_group_uuid(parent_id) for parent_id in parent_ids]
+        if isinstance(parent_ids, list)
+        else [None]
+    )
+    if None in parent_uuids:
+        return _json_error(gettext("Invalid parent group identifier"), 400)
+
+    # Keep the requested order but ignore duplicates
+    return group_uuid, list(dict.fromkeys(parent_uuids)), action
+
+
 @login_required
 @require_POST
-def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-branches, too-many-return-statements
+def reparent_group(  # noqa: PLR0911 ; pylint: disable=too-many-return-statements
     request,
 ) -> JsonResponse:
     """API endpoint for reparenting groups (used by drag-and-drop and bulk operations).
@@ -556,95 +681,40 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
     - parent_ids: List of parent group UUIDs (can be empty for root groups)
     - action: "set" (replace all parents), "add" (add parents), or "remove" (remove parents)
 
+    Unknown groups and groups the user cannot access get the same 404 answer, so the
+    endpoint does not reveal whether a group exists or what it is called.
+
     Returns JSON with:
     - success: boolean
     - message: string
     - errors: list of error messages (if any)
     """
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({"success": False, "message": gettext("Invalid JSON data")}, status=400)
+    payload = _parse_reparent_payload(request)
+    if isinstance(payload, JsonResponse):
+        return payload
+    group_id, parent_ids, action = payload
 
-    group_id = data.get("group_id")
-    parent_ids = data.get("parent_ids", [])
-    action = data.get("action", "set")  # "set", "add", or "remove"
-
-    # Validate required fields
-    if not group_id:
-        return JsonResponse(
-            {"success": False, "message": gettext("group_id is required")}, status=400
-        )
-
-    if action not in ["set", "add", "remove"]:
-        return JsonResponse(
-            {
-                "success": False,
-                "message": gettext("action must be 'set', 'add', or 'remove'"),
-            },
-            status=400,
-        )
+    accessible_groups = PersonGroup.objects.accessible_by(request.user)
 
     # Get the group
     try:
-        group = PersonGroup.objects.get(group_id=group_id)
+        group = accessible_groups.get(group_id=group_id)
     except PersonGroup.DoesNotExist:
-        return JsonResponse({"success": False, "message": gettext("Group not found")}, status=404)
+        return _json_error(gettext("Group not found"), 404)
 
     # Check permissions - user must be an editor of the group
     permission = PermissionService.get_effective_permission(group, request.user)
     if permission < PermissionLevel.EDITOR:
-        return JsonResponse(
-            {
-                "success": False,
-                "message": gettext("You do not have permission to edit this group"),
-            },
-            status=403,
-        )
+        return _json_error(gettext("You do not have permission to edit this group"), 403)
 
-    # Get parent groups
-    parent_groups = []
-    if parent_ids:
-        # Fetch all candidate groups in one query
-        groups_map = {
-            str(k): v
-            for k, v in PersonGroup.objects.in_bulk(parent_ids, field_name="group_id").items()
-        }
-
-        # Fetch all accessible group IDs in one query
-        accessible_group_ids = set(
-            PersonGroup.objects.accessible_by(request.user)
-            .filter(group_id__in=parent_ids)
-            .values_list("group_id", flat=True)
-        )
-
-        for parent_id in parent_ids:
-            # Check existence
-            if parent_id not in groups_map:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "message": gettext("Parent group not found: %(id)s") % {"id": parent_id},
-                    },
-                    status=404,
-                )
-
-            parent_group = groups_map[parent_id]
-
-            # Check permissions
-            # Note: The original code checked shared_with.filter(id=user.id).exists()
-            # which means direct shared_with membership is required.
-            if parent_group.group_id not in accessible_group_ids:
-                return JsonResponse(
-                    {
-                        "success": False,
-                        "message": gettext("You do not have access to parent group: %(name)s")
-                        % {"name": parent_group.name},
-                    },
-                    status=403,
-                )
-
-            parent_groups.append(parent_group)
+    # Get parent groups: only groups the user can access are candidates
+    parents_by_id = {
+        parent.group_id: parent for parent in accessible_groups.filter(group_id__in=parent_ids)
+    }
+    missing_ids = [parent_id for parent_id in parent_ids if parent_id not in parents_by_id]
+    if missing_ids:
+        return _json_error(gettext("Parent group not found: %(id)s") % {"id": missing_ids[0]}, 404)
+    parent_groups = [parents_by_id[parent_id] for parent_id in parent_ids]
 
     # Check for cycles before making changes
     errors = [
@@ -665,17 +735,25 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
         with transaction.atomic():
             if action == "set":
                 # Replace all parents
-                group.parent_groups.set(parent_groups)
+                # Parents the user cannot edit were never offered: keep them
+                current = set(group.parent_groups.all())
+                selected = set(parent_groups)
+                removable = current - selected
+                editable_pks = GroupHierarchyService.editable_pks(request.user, removable)
+                GroupHierarchyService.change_parents(
+                    request.user,
+                    group,
+                    add=selected - current,
+                    remove={parent for parent in removable if parent.pk in editable_pks},
+                )
                 message = gettext("Group parents updated successfully")
             elif action == "add":
                 # Add new parents
-                for parent_group in parent_groups:
-                    group.parent_groups.add(parent_group)
+                GroupHierarchyService.change_parents(request.user, group, add=parent_groups)
                 message = gettext("Parents added successfully")
             elif action == "remove":
                 # Remove parents
-                for parent_group in parent_groups:
-                    group.parent_groups.remove(parent_group)
+                GroupHierarchyService.change_parents(request.user, group, remove=parent_groups)
                 message = gettext("Parents removed successfully")
             else:
                 message = gettext("Invalid action")
@@ -689,6 +767,8 @@ def reparent_group(  # noqa: C901, PLR0911, PLR0912 ; pylint: disable=too-many-b
             }
         )
 
+    except PermissionDenied as e:
+        return JsonResponse({"success": False, "message": str(e)}, status=403)
     except ValidationError as e:
         return JsonResponse(
             {
