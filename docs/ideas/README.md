@@ -65,7 +65,7 @@ status and notes to reflect the move.
 | 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |
 | 0012 | Global Search Improvements | Proposed | Search | Gift plans in results, recent items, create-on-no-result. |
 | 0013 | Dashboard Polish | Proposed | Dashboard | Better empty state, clickable counts, unused data cleanup. |
-| 0014 | Installable PWA Or Removal Of Dead Offline Code | Proposed | Platform | Decide between a real PWA and deleting unused offline scripts. |
+| 0014 | Installable PWA Or Removal Of Dead Offline Code | Implemented | Platform | Dead offline scripts removed; moved to `implemented/`. A real PWA would be a new idea. |
 | 0015 | Mobile Bottom Navigation Bar | Proposed | Navigation | Bottom tab bar with quick-create action on small screens. |
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
 | 0017 | Extract Inline Scripts And Styles From The Base Template | Proposed | Frontend | Move inline code from base.html to static files and dedupe. |

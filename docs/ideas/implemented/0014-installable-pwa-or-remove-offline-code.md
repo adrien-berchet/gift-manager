@@ -2,7 +2,11 @@
 
 ## Status
 
-Proposed
+Implemented
+
+Resolved with Option B: `offline-sync.js` and `offline-forms.js` (about 1,760
+lines, never loaded by any template) were removed. No other code referenced
+them. An installable PWA can still be proposed later as a separate idea.
 
 ## Summary
 
