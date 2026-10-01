@@ -12,6 +12,7 @@ from django.core.management.base import CommandError
 from django.utils import timezone
 
 from gift_manager.models import Profile
+from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import RelationStatusFactory
@@ -233,6 +234,18 @@ class TestContent:
         html, mimetype = mail.outbox[0].alternatives[0]
         assert mimetype == "text/html"
         assert plan.gift.name in html
+
+    def test_html_alternative_escapes_names_but_text_does_not(self, user):
+        evil = "<script>alert(1)</script> & co"
+        overdue_plan(user, gift=GiftFactory(name=evil))
+        opt_in(user)
+
+        run()
+
+        html = mail.outbox[0].alternatives[0].content
+        assert "<script>" not in html
+        assert "&lt;script&gt;" in html
+        assert evil in mail.outbox[0].body
 
     def test_email_is_rendered_in_the_language_of_the_profile(self, user):
         overdue_plan(user)

@@ -5,6 +5,7 @@ see. All entries are all-day events. Events and birthdays repeat through an ``RR
 of being expanded, so the feed stays small whatever the horizon of the calendar client.
 """
 
+import re
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
@@ -27,14 +28,21 @@ MAX_LINE_OCTETS = 75
 _RECURRENCE_FREQUENCIES = {
     "daily": "DAILY",
     "weekly": "WEEKLY",
-    "monthly": "MONTHLY",
 }
+
+
+# Control characters other than tab and line breaks cannot appear in an iCalendar line
+_CONTROL_CHARACTERS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+# Stable on purpose: a UID must not change when SITE_BASE_URL does, or calendar clients would
+# show every entry twice
+UID_DOMAIN = "gift-manager"
 
 
 def escape_text(value: str) -> str:
     """Escape a TEXT value (RFC 5545 section 3.3.11)."""
     return (
-        value.replace("\\", "\\\\")
+        _CONTROL_CHARACTERS.sub("", value)
+        .replace("\\", "\\\\")
         .replace(";", "\\;")
         .replace(",", "\\,")
         .replace("\r\n", "\\n")
@@ -102,11 +110,6 @@ def _all_day_event(
     return lines
 
 
-def _uid_domain() -> str:
-    base = settings.SITE_BASE_URL.split("://", 1)[-1]
-    return base or "gift-manager.invalid"
-
-
 def _absolute(path: str) -> str | None:
     return f"{settings.SITE_BASE_URL}{path}" if settings.SITE_BASE_URL else None
 
@@ -120,7 +123,7 @@ def _plan_entries(user, stamp: str) -> list[list[str]]:
     )
     return [
         _all_day_event(
-            uid=f"plan-{plan.relation_id}@{_uid_domain()}",
+            uid=f"plan-{plan.relation_id}@{UID_DOMAIN}",
             start=plan.due_date,
             summary=gettext("%(gift)s for %(recipient)s")
             % {"gift": plan.gift.name, "recipient": plan.recipient_name},
@@ -133,11 +136,26 @@ def _plan_entries(user, stamp: str) -> list[list[str]]:
     ]
 
 
+def _monthly_rule(day: int) -> str:
+    """Return a monthly RRULE; a day missing from a month falls on the last day of that month.
+
+    ``Event.next_occurrence`` clamps the day this way, while a bare ``FREQ=MONTHLY`` would make
+    calendar clients skip the shorter months. Taking the last existing day among 28..day gives
+    the same dates.
+    """
+    if day <= 28:
+        return "FREQ=MONTHLY"
+    days = ",".join(str(candidate) for candidate in range(28, day + 1))
+    return f"FREQ=MONTHLY;BYMONTHDAY={days};BYSETPOS=-1"
+
+
 def _event_rule(event: Event) -> str | None:
     if not event.is_recurring:
         return None
     if event.recurrence == "yearly":
         return _yearly_rule(event.date.month, event.date.day)
+    if event.recurrence == "monthly":
+        return _monthly_rule(event.date.day)
     return f"FREQ={_RECURRENCE_FREQUENCIES[event.recurrence]}"
 
 
@@ -150,7 +168,7 @@ def _occasion_entries(user, stamp: str) -> list[list[str]]:
             continue
         entries.append(
             _all_day_event(
-                uid=f"event-{event.event_id}@{_uid_domain()}",
+                uid=f"event-{event.event_id}@{UID_DOMAIN}",
                 start=event.date,
                 summary=event.name,
                 stamp=stamp,
@@ -168,7 +186,7 @@ def _birthday_entries(user, today: date, stamp: str) -> list[list[str]]:
     )
     return [
         _all_day_event(
-            uid=f"birthday-{person.person_id}@{_uid_domain()}",
+            uid=f"birthday-{person.person_id}@{UID_DOMAIN}",
             # Start at the next birthday: older occurrences would only add noise
             start=person.next_birthday(today),
             summary=gettext("Birthday of %(name)s") % {"name": person},

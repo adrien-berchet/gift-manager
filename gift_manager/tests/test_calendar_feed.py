@@ -1,10 +1,13 @@
 """Tests for the private iCalendar feed."""
 
 from datetime import date
+from datetime import datetime
 from datetime import timedelta
 
 import pytest
+from dateutil.rrule import rrulestr
 from django.urls import reverse
+from django.utils import translation
 from icalendar import Calendar
 
 from gift_manager.calendar_feed import build_calendar
@@ -158,6 +161,92 @@ class TestDocument:
 
 
 @pytest.mark.django_db
+class TestMonthlyEvents:
+    @staticmethod
+    def occurrences(user, start, count):
+        (event,) = events_by_uid_prefix(parse(user), "event-")
+        rule = rrulestr(
+            "RRULE:" + event["RRULE"].to_ical().decode(),
+            dtstart=datetime(start.year, start.month, start.day),  # noqa: DTZ001
+        )
+        return [occurrence.date() for occurrence in rule[:count]]
+
+    @pytest.mark.parametrize(
+        ("start", "expected"),
+        [
+            (
+                date(2026, 1, 31),
+                [date(2026, 1, 31), date(2026, 2, 28), date(2026, 3, 31), date(2026, 4, 30)],
+            ),
+            (
+                date(2026, 1, 30),
+                [date(2026, 1, 30), date(2026, 2, 28), date(2026, 3, 30), date(2026, 4, 30)],
+            ),
+            (
+                date(2027, 12, 29),
+                [date(2027, 12, 29), date(2028, 1, 29), date(2028, 2, 29), date(2028, 3, 29)],
+            ),
+            (
+                date(2026, 1, 15),
+                [date(2026, 1, 15), date(2026, 2, 15), date(2026, 3, 15), date(2026, 4, 15)],
+            ),
+        ],
+    )
+    def test_day_missing_from_a_month_falls_on_its_last_day(self, user, start, expected):
+        EventFactory(date=start, recurrence="monthly", shared_with=[user])
+
+        assert self.occurrences(user, start, 4) == expected
+
+    def test_calendar_matches_the_app_next_occurrence(self, user):
+        event = EventFactory(date=date(2026, 1, 31), recurrence="monthly", shared_with=[user])
+
+        expected = event.next_occurrence(date(2026, 2, 1))
+
+        assert expected in self.occurrences(user, date(2026, 1, 31), 4)
+
+
+@pytest.mark.django_db
+class TestStability:
+    def test_uids_do_not_depend_on_the_site_base_url(self, user, settings):
+        plan_for(user, due=TODAY)
+        EventFactory(date=TODAY, shared_with=[user])
+        PersonFactory(birthday_day=5, birthday_month=10, shared_with=[user])
+        settings.SITE_BASE_URL = ""
+        before = {str(e["UID"]) for e in parse(user).walk("VEVENT")}
+
+        settings.SITE_BASE_URL = "https://gifts.example.com"
+        after = {str(e["UID"]) for e in parse(user).walk("VEVENT")}
+
+        assert before == after
+        assert len(before) == 3
+
+    def test_links_are_only_present_when_the_base_url_is_known(self, user, settings):
+        plan_for(user, due=TODAY)
+        settings.SITE_BASE_URL = ""
+        assert "URL:" not in build_calendar(user, today=TODAY)
+
+        settings.SITE_BASE_URL = "https://gifts.example.com"
+        assert "URL:https://gifts.example.com/" in build_calendar(user, today=TODAY)
+
+    def test_language_is_restored_after_building_the_feed(self, user):
+        user.profile.preferred_language = "fr"
+        user.profile.save()
+        with translation.override("en"):
+            build_calendar(user, today=TODAY)
+
+            assert translation.get_language() == "en"
+
+    def test_control_characters_are_dropped_from_text(self, user):
+        plan_for(user, due=TODAY, gift=GiftFactory(name="Tea\x00 set\x0b\x7f"))
+
+        document = build_calendar(user, today=TODAY)
+
+        assert not any(ord(char) < 32 and char not in "\r\n" for char in document)
+        (event,) = events_by_uid_prefix(Calendar.from_ical(document), "plan-")
+        assert "Tea set" in event["SUMMARY"]
+
+
+@pytest.mark.django_db
 class TestPermissionFiltering:
     def test_nothing_the_user_cannot_see_is_in_the_feed(self, user):
         stranger = UserFactory()
@@ -229,6 +318,15 @@ class TestFeedView:
         user.save()
 
         assert client.get(self.feed_url(token)).status_code == 404
+
+    def test_head_request_is_allowed(self, client, user):
+        token = user.profile.regenerate_calendar_token()
+
+        response = client.head(self.feed_url(token))
+
+        assert response.status_code == 200
+        assert response["X-Robots-Tag"] == "noindex, nofollow"
+        assert "gift-manager.ics" in response["Content-Disposition"]
 
     def test_feed_only_accepts_get(self, client, user):
         token = user.profile.regenerate_calendar_token()

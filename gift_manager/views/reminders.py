@@ -10,7 +10,7 @@ from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_safe
 from django.views.generic import View
 
 from gift_manager.calendar_feed import CONTENT_TYPE
@@ -86,7 +86,7 @@ class DigestUnsubscribeView(View):
         return render(request, self.template_name, {"valid": True, "done": True})
 
 
-@require_GET
+@require_safe
 def calendar_feed(request, token):  # noqa: ARG001
     """Serve the iCalendar feed of the user who owns this secret token."""
     profile = get_object_or_404(

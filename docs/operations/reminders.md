@@ -75,5 +75,10 @@ Check the scheduler once with `--dry-run`, then with `--user <you>` on an opted-
 - The feed holds the user's open gift plans with a due date, scheduled events (with their
   repetition) and people's birthdays, restricted to what the user can access, in the
   language chosen on the profile. Calendar clients refresh it on their own schedule.
+- The token is a bearer credential for the whole gift list of the user and is not rotated by a
+  password reset or a sharing change: use "Generate a new link" when in doubt. It also travels in
+  the URL path, so it shows in access logs and in Sentry request data when a request fails
+  (`SENTRY_DSN`); restrict who can read those. The same goes for the signed unsubscribe link, which
+  can only turn the digest off.
 - Responses are sent with `Cache-Control: private, no-store`, `Referrer-Policy: no-referrer`
   and `X-Robots-Tag: noindex`. Avoid logging full request URLs in front proxies for this path.
