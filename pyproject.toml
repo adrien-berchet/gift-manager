@@ -37,6 +37,7 @@ test = [
     "factory-boy>=3.3",
     "faker>=24",
     "hypothesis>=6.0",
+    "icalendar>=6",
     "mock>=5",
     "pip-audit>=2.9",
     "playwright>=1.39",

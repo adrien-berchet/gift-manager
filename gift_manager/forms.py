@@ -19,6 +19,7 @@ from .models import Gift
 from .models import GiftTag
 from .models import Person
 from .models import PersonGroup
+from .models import Profile
 from .models import Relation
 from .sharing_service import RelationExposureDenied
 from .sharing_service import SharingService
@@ -1073,3 +1074,22 @@ class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
         for name in REACTION_FIELD_NAMES:
             if not rating_applies or _reaction_field_omitted(self, name):
                 cleaned_data.pop(name, None)
+
+
+class ReminderPreferencesForm(forms.ModelForm):
+    """Reminder email and language preferences of a user profile."""
+
+    class Meta:
+        model = Profile
+        fields = ["preferred_language", "digest_frequency", "digest_lookahead_days"]
+        widgets = {
+            "preferred_language": forms.Select(attrs={"class": "form-select"}),
+            "digest_frequency": forms.Select(attrs={"class": "form-select"}),
+            "digest_lookahead_days": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # An empty language means "the site language"; say so instead of the default dashes
+        language_field = self.fields["preferred_language"]
+        language_field.choices = [("", gettext_lazy("Default")), *language_field.choices[1:]]

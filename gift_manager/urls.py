@@ -48,6 +48,27 @@ urlpatterns = [
         views.UpdateViewPreferencesView.as_view(),
         name="update_view_preferences",
     ),
+    path(
+        "profile/update-reminder-preferences/",
+        views.UpdateReminderPreferencesView.as_view(),
+        name="update_reminder_preferences",
+    ),
+    path(
+        "profile/calendar-feed/regenerate/",
+        views.RegenerateCalendarFeedView.as_view(),
+        name="calendar_feed_regenerate",
+    ),
+    path(
+        "profile/calendar-feed/disable/",
+        views.DisableCalendarFeedView.as_view(),
+        name="calendar_feed_disable",
+    ),
+    path("calendar/<str:token>.ics", views.calendar_feed, name="calendar_feed"),
+    path(
+        "digest/unsubscribe/<str:token>/",
+        views.DigestUnsubscribeView.as_view(),
+        name="digest_unsubscribe",
+    ),
     path("recipients/", views.RecipientListView.as_view(), name="recipients"),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),

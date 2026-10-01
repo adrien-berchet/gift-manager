@@ -1,5 +1,6 @@
 # pylint: disable=too-many-lines
 import calendar
+import secrets
 import uuid
 from datetime import date as date_class
 from datetime import timedelta
@@ -380,6 +381,44 @@ class Profile(models.Model):
         help_text=gettext_lazy("Default view mode for mobile/small screens"),
     )
 
+    # Reminders: the digest email is opt-in and rendered in ``preferred_language``
+    DIGEST_OFF = "off"
+    DIGEST_WEEKLY = "weekly"
+    DIGEST_DAILY = "daily"
+    DIGEST_FREQUENCY_CHOICES = [
+        (DIGEST_OFF, gettext_lazy("Off")),
+        (DIGEST_WEEKLY, gettext_lazy("Weekly (Mondays)")),
+        (DIGEST_DAILY, gettext_lazy("Daily")),
+    ]
+    DIGEST_LOOKAHEAD_CHOICES = [
+        (7, gettext_lazy("1 week")),
+        (14, gettext_lazy("2 weeks")),
+        (30, gettext_lazy("30 days")),
+    ]
+
+    preferred_language = models.CharField(
+        max_length=10,
+        blank=True,
+        choices=settings.LANGUAGES,
+        verbose_name=gettext_lazy("Language"),
+        help_text=gettext_lazy("Language of the emails and of the calendar feed"),
+    )
+    digest_frequency = models.CharField(
+        max_length=10,
+        choices=DIGEST_FREQUENCY_CHOICES,
+        default=DIGEST_OFF,
+        verbose_name=gettext_lazy("Reminder emails"),
+    )
+    digest_lookahead_days = models.PositiveSmallIntegerField(
+        choices=DIGEST_LOOKAHEAD_CHOICES,
+        default=14,
+        verbose_name=gettext_lazy("Look ahead"),
+    )
+    # Secret of the private calendar feed URL; null while the feed is disabled
+    calendar_token = models.CharField(
+        max_length=64, unique=True, null=True, blank=True, editable=False
+    )
+
     def __str__(self):
         return f"{gettext_lazy('Profile of')} {self.user.username}"
 
@@ -395,6 +434,25 @@ class Profile(models.Model):
         """Set the user email address, encoding it for storage."""
         self.user.email = encode_email(value)
         self.user.save()
+
+    @property
+    def language(self) -> str:
+        """Return the language used for emails and the calendar feed."""
+        supported = {code for code, _ in settings.LANGUAGES}
+        if self.preferred_language in supported:
+            return self.preferred_language
+        return settings.LANGUAGE_CODE
+
+    def regenerate_calendar_token(self) -> str:
+        """Create a new calendar feed secret; the previous feed URL stops working."""
+        self.calendar_token = secrets.token_urlsafe(32)
+        self.save(update_fields=["calendar_token"])
+        return self.calendar_token
+
+    def clear_calendar_token(self) -> None:
+        """Disable the calendar feed."""
+        self.calendar_token = None
+        self.save(update_fields=["calendar_token"])
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)

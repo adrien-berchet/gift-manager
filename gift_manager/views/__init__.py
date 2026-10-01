@@ -88,6 +88,13 @@ from .relation import relation_quick_action
 from .relation import relation_reaction
 from .relation import update_relation_status
 
+# Reminder views
+from .reminders import DigestUnsubscribeView
+from .reminders import DisableCalendarFeedView
+from .reminders import RegenerateCalendarFeedView
+from .reminders import UpdateReminderPreferencesView
+from .reminders import calendar_feed
+
 # Sharing views
 from .sharing import ShareObjectsView
 
@@ -102,6 +109,8 @@ __all__ = [
     "ContextPermissionMixin",
     "CreatePermissionMixin",
     "DeleteSharedMixin",
+    "DigestUnsubscribeView",
+    "DisableCalendarFeedView",
     "EditPermissionMixin",
     "EventCreateView",
     "EventDeleteView",
@@ -139,6 +148,7 @@ __all__ = [
     "PersonUpdateView",
     "ProfileDetailView",
     "RecipientListView",
+    "RegenerateCalendarFeedView",
     "RelationAdvancedListView",
     "RelationCreateView",
     "RelationDeleteView",
@@ -151,9 +161,11 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "UpdateReminderPreferencesView",
     "UpdateViewPreferencesView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
+    "calendar_feed",
     "get_user",
     "global_search",
     "home",

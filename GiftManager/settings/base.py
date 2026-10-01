@@ -236,6 +236,10 @@ LOGOUT_REDIRECT_URL = "/"
 # Site ID configuration
 SITE_ID = 1
 
+# Public base URL (scheme and host, no trailing slash) used to build absolute links outside
+# a request, e.g. in the reminder digest email sent by ``manage.py send_gift_digest``.
+SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "").rstrip("/")
+
 
 # Logging configuration
 LOGGING = {

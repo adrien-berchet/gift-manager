@@ -3885,6 +3885,115 @@ msgid_plural "%(count)s gifts"
 msgstr[0] "%(count)s cadeau"
 msgstr[1] "%(count)s cadeaux"
 
+msgid "Off"
+msgstr "Désactivés"
+
+msgid "Weekly (Mondays)"
+msgstr "Chaque semaine (le lundi)"
+
+msgid "1 week"
+msgstr "1 semaine"
+
+msgid "2 weeks"
+msgstr "2 semaines"
+
+msgid "30 days"
+msgstr "30 jours"
+
+msgid "Language"
+msgstr "Langue"
+
+msgid "Language of the emails and of the calendar feed"
+msgstr "Langue des emails et du flux de calendrier"
+
+msgid "Reminder emails"
+msgstr "Emails de rappel"
+
+msgid "Look ahead"
+msgstr "Période à couvrir"
+
+msgid "Default"
+msgstr "Par défaut"
+
+#, python-format
+msgid "%(gift)s for %(recipient)s"
+msgstr "%(gift)s pour %(recipient)s"
+
+#, python-format
+msgid "Status: %(status)s"
+msgstr "Statut : %(status)s"
+
+#, python-format
+msgid "Birthday of %(name)s"
+msgstr "Anniversaire de %(name)s"
+
+#, python-format
+msgid "Hello %(username)s,"
+msgstr "Bonjour %(username)s,"
+
+msgid "Here is what needs your attention in Gift Manager."
+msgstr "Voici ce qui demande votre attention dans Gift Manager."
+
+msgid "Upcoming events without a gift plan"
+msgstr "Prochains événements sans projet de cadeau"
+
+msgid "To stop receiving these emails, open this link:"
+msgstr "Pour ne plus recevoir ces emails, ouvrez ce lien :"
+
+msgid "Stop receiving these emails"
+msgstr "Ne plus recevoir ces emails"
+
+msgid "Gift Manager reminders"
+msgstr "Rappels Gift Manager"
+
+msgid "Reminders"
+msgstr "Rappels"
+
+msgid "Calendar feed"
+msgstr "Flux de calendrier"
+
+msgid "Generate a new link"
+msgstr "Générer un nouveau lien"
+
+msgid "Disable"
+msgstr "Désactiver"
+
+msgid "Enable calendar feed"
+msgstr "Activer le flux de calendrier"
+
+msgid "This link is not valid."
+msgstr "Ce lien n'est pas valide."
+
+msgid "You will no longer receive reminder emails."
+msgstr "Vous ne recevrez plus d'emails de rappel."
+
+msgid "Do you want to stop receiving reminder emails?"
+msgstr "Voulez-vous ne plus recevoir les emails de rappel ?"
+
+msgid "Reminder preferences saved successfully."
+msgstr "Préférences de rappel enregistrées avec succès."
+
+msgid "Choose valid reminder preferences."
+msgstr "Choisissez des préférences de rappel valides."
+
+msgid "Your calendar feed link has been updated."
+msgstr "Le lien de votre flux de calendrier a été mis à jour."
+
+msgid "Your calendar feed has been disabled."
+msgstr "Votre flux de calendrier a été désactivé."
+
+#, python-format
+msgid "Due in the next day"
+msgid_plural "Due in the next %(days)s days"
+msgstr[0] "Échéance dans le prochain jour"
+msgstr[1] "Échéance dans les %(days)s prochains jours"
+
+#, python-format
+msgid "Gift Manager: %(count)d item needs your attention"
+msgid_plural "Gift Manager: %(count)d items need your attention"
+msgstr[0] "Gift Manager : %(count)d élément nécessite votre attention"
+msgstr[1] "Gift Manager : %(count)d éléments nécessitent votre attention"
+
 #~ msgid "Either a person or a group must be specified but not both."
 #~ msgstr ""
 #~ "Soit une personne, soit un groupe doit être sélectionné, mais pas les "
