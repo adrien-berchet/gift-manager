@@ -237,7 +237,8 @@ class TestStability:
             assert translation.get_language() == "en"
 
     def test_control_characters_are_dropped_from_text(self, user):
-        plan_for(user, due=TODAY, gift=GiftFactory(name="Tea\x00 set\x0b\x7f"))
+        # No NUL here: PostgreSQL cannot store it (see TestHelpers for that character)
+        plan_for(user, due=TODAY, gift=GiftFactory(name="Tea\x01 set\x0b\x7f"))
 
         document = build_calendar(user, today=TODAY)
 
@@ -266,6 +267,10 @@ class TestPermissionFiltering:
 class TestHelpers:
     def test_escape_text(self):
         assert escape_text("a,b;c\\d\ne") == r"a\,b\;c\\d\ne"
+
+    def test_escape_text_drops_control_characters_but_keeps_tabs_and_line_breaks(self):
+        assert escape_text("a\x00b\x01c\x0bd\x0ce\x1ff\x7fg") == "abcdefg"
+        assert escape_text("a\tb\r\nc") == "a\tb\\nc"
 
     def test_fold_line_keeps_short_lines(self):
         assert fold_line("SUMMARY:short") == "SUMMARY:short"
