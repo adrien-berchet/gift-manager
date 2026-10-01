@@ -190,19 +190,44 @@
     flex: 1;
 }
 
-/* Form actions at bottom */
+/* Form actions at the bottom of the panel. The bar is a footer below the scrolling fields (see
+   the layout below), not a sticky element: a sticky bar sits above the padding of the scrolling
+   body, and the scrolled content shows through that strip. */
 .panel-form-actions {
-    position: sticky;
-    bottom: 0;
+    position: relative;
+    flex: 0 0 auto;
     background: var(--surface-card, #ffffff);
     border-top: 1px solid var(--border-color, #dee2e6);
     color: var(--text-primary, #1f2937);
     padding: 1rem;
-    margin: 0 -1rem -1rem -1rem;
+    margin: 0;
     display: flex;
     gap: 0.5rem;
     justify-content: flex-end;
     z-index: 100;
+}
+
+/* The panel body itself never scrolls: the fields do, and the action bar stays below them. */
+#editPanel .offcanvas-body,
+#editPanel #offcanvasContent,
+#editPanel .offcanvas-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+#editPanel .offcanvas-body {
+    padding: 0;
+    overflow: hidden;
+}
+
+#editPanel .form-fields {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding: var(--space-4, 1rem);
 }
 
 .panel-form-actions .btn {

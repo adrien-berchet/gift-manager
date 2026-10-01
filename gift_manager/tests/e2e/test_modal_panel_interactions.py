@@ -137,7 +137,7 @@ class TestPanelInteractions(BaseE2ETest):
         # Check panel header
         panel_title = panel.locator(".offcanvas-title")
         expect(panel_title).to_be_visible()
-        expect(panel_title).to_contain_text("Edit")
+        expect(panel_title).to_contain_text("Edit Person")
 
         # Check panel body contains form
         panel_body = panel.locator(".offcanvas-body")
@@ -239,7 +239,8 @@ class TestPanelInteractions(BaseE2ETest):
 
         # Check panel title indicates creation
         panel_title = panel.locator(".offcanvas-title")
-        expect(panel_title).to_contain_text(re.compile("Create|Edit", re.IGNORECASE))
+        expect(panel_title).to_contain_text("Create Person")
+        expect(panel_title).not_to_contain_text("Edit")
 
         # Check form fields are empty
         form = panel.locator("form")
@@ -248,6 +249,37 @@ class TestPanelInteractions(BaseE2ETest):
 
         family_name_field = form.locator("[name='family_name']")
         expect(family_name_field).to_have_value("")
+
+    def test_panel_actions_stay_at_the_bottom_while_fields_scroll(
+        self, page: Page, live_server, test_user
+    ):
+        """The Cancel/Save bar is flush with the panel bottom and nothing shows under it."""
+        self.login_as_user(page, live_server, test_user)
+        self.navigate_to_entity_list(page, live_server, "persons")
+        page.set_viewport_size({"width": 1280, "height": 600})
+
+        self.get_create_button(page).click()
+        self.wait_for_panel(page)
+
+        page.locator("#editPanel .form-fields").evaluate(
+            "el => { el.scrollTop = el.scrollHeight; }"
+        )
+        geometry = page.evaluate(
+            """() => {
+                const bottom = (selector) =>
+                    document.querySelector(selector).getBoundingClientRect().bottom;
+                const body = document.querySelector("#editPanel .offcanvas-body");
+                return {
+                    panel: bottom("#editPanel"),
+                    bar: bottom("#editPanel .panel-form-actions"),
+                    bodyScrolls: body.scrollHeight > body.clientHeight + 1,
+                };
+            }"""
+        )
+
+        assert geometry["bar"] == geometry["panel"]
+        # Only the fields scroll: a scrolling body would show content under the bar
+        assert geometry["bodyScrolls"] is False
 
 
 class TestPanelFormValidation(BaseE2ETest):

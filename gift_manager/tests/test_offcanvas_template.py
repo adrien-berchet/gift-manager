@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.template import Context
 from django.template import Template
 from django.test import RequestFactory
+from django.utils import translation
 
 from .utils import assert_text_in_rendered
 
@@ -185,3 +186,29 @@ class TestOffcanvasTemplate:
         assert_text_in_rendered("hx-target=", rendered)
         assert_text_in_rendered("hx-swap=", rendered)
         assert_text_in_rendered("hx-indicator=", rendered)
+
+    def test_edit_panel_title_text_is_a_separate_element(self):
+        """The title text sits in its own span so the script can change it, not the badge."""
+        template = Template(
+            "{% load i18n %}{% include 'gift_manager/includes/offcanvas_base.html' %}"
+        )
+        request = self.factory.get("/")
+        request.user = self.user
+
+        rendered = template.render(Context({"request": request}))
+
+        assert_text_in_rendered('class="offcanvas-title-text"', rendered)
+
+    def test_script_strings_are_escaped_in_french(self):
+        """French apostrophes must not break the inline script of the panel."""
+        template = Template(
+            "{% load i18n %}{% include 'gift_manager/includes/offcanvas_base.html' %}"
+        )
+        request = self.factory.get("/")
+        request.user = self.user
+
+        with translation.override("fr"):
+            rendered = template.render(Context({"request": request}))
+
+        assert "n'avez pas la permission d'effectuer" not in rendered
+        assert "n\\u0027avez pas la permission d\\u0027effectuer cette action." in rendered
