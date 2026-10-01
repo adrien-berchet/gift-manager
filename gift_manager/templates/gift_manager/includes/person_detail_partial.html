@@ -44,6 +44,18 @@
                 </div>
                 <div class="col-12">
                     <div class="detail-field">
+                        <label class="detail-label">{% trans "Birthday" %}</label>
+                        <div class="detail-value">
+                            {% if person.has_birthday %}
+                                <i class="fas fa-cake-candles me-1 text-muted"></i>{{ person.birthday_display }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="detail-field">
                         <label class="detail-label">{% trans "Created" %}</label>
                         <div class="detail-value">
                             <i class="fas fa-calendar me-1 text-muted"></i>

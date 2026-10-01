@@ -11,7 +11,9 @@ from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
+from django.db import IntegrityError
 from django.db import models
+from django.db import transaction
 from django.db.models import F
 from django.db.models import Func
 from django.db.models import Q
@@ -64,6 +66,23 @@ class PermissionLevel:
         if case == "title":
             return label.title()
         return label
+
+
+def date_in_year(year: int, month: int, day: int) -> date_class:
+    """Return the date of a yearly occurrence in a given year.
+
+    A day that does not exist in that year (February 29 in a non-leap year) is clamped
+    to the last day of the month.
+    """
+    return date_class(year, month, min(day, calendar.monthrange(year, month)[1]))
+
+
+def next_yearly_occurrence(month: int, day: int, today: date_class) -> date_class:
+    """Return the first occurrence of a month/day that is on or after today."""
+    candidate = date_in_year(today.year, month, day)
+    if candidate >= today:
+        return candidate
+    return date_in_year(today.year + 1, month, day)
 
 
 class UserPermissionQuerySet(models.QuerySet):
@@ -211,8 +230,41 @@ class GiftManager(models.Manager):
         )
 
 
+class EventQuerySet(UserPermissionQuerySet):
+    """QuerySet for Event model: global events are visible to every user."""
+
+    def accessible_by(self, user):
+        """Return all events accessible by a user (global or shared with the user)."""
+        return self.filter(Q(is_global=True) | Q(shared_with=user)).distinct()
+
+
 class EventManager(UserPermissionManager):
     """Manager for Event model with additional query methods."""
+
+    def get_queryset(self):
+        return EventQuerySet(self.model, using=self._db)
+
+    def get_birthday_event(self):
+        """Return the global Birthday event, creating it when it is missing.
+
+        The event is normally provisioned by a migration. It is unscheduled on purpose:
+        the date of a birthday gift plan is the next birthday of its recipient, which is
+        computed from the person, so no event row is needed per person or per year.
+        """
+        event = self.filter(is_birthday=True).first()
+        if event is None:
+            try:
+                with transaction.atomic():
+                    event = self.create(
+                        name=self.model.BIRTHDAY_EVENT_NAME,
+                        schedule_type=self.model.ScheduleType.UNSCHEDULED,
+                        is_global=True,
+                        is_birthday=True,
+                    )
+            except IntegrityError:
+                # A concurrent request created it first: the unique constraint allows one
+                event = self.get(is_birthday=True)
+        return event
 
     def for_list_display(self, user):
         """Return queryset optimized for list display."""
@@ -223,6 +275,8 @@ class EventManager(UserPermissionManager):
             "schedule_type",
             "date",
             "recurrence",
+            "is_global",
+            "is_birthday",
         )
 
 
@@ -405,6 +459,23 @@ class Person(models.Model):
     family_name = models.TextField(unique=False, null=True, blank=True)
     # Email is stored encoded for privacy - use email property for decoded access
     email_address = models.TextField(unique=False, null=True, blank=True)
+    # Birthday: day and month go together, the year is optional. Stored as separate
+    # columns so a birthday without a year needs no placeholder year.
+    birthday_day = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(31)],
+    )
+    birthday_month = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(12)],
+    )
+    birthday_year = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(9999)],
+    )
     creation_date = models.DateTimeField(auto_now_add=True)
     groups = models.ManyToManyField("PersonGroup", blank=True)
     shared_with = models.ManyToManyField(
@@ -424,9 +495,86 @@ class Person(models.Model):
     class Meta:
         verbose_name = gettext_lazy("Person")
         verbose_name_plural = gettext_lazy("Persons")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    # The isnull terms matter: a comparison with NULL is NULL, which a SQL
+                    # CHECK accepts, so a day without a month would otherwise slip through
+                    Q(
+                        birthday_day__isnull=False,
+                        birthday_month__isnull=False,
+                        birthday_day__gte=1,
+                        birthday_day__lte=31,
+                        birthday_month__gte=1,
+                        birthday_month__lte=12,
+                    )
+                    | Q(
+                        birthday_day__isnull=True,
+                        birthday_month__isnull=True,
+                        birthday_year__isnull=True,
+                    )
+                ),
+                name="person_birthday_valid_day_and_month",
+            ),
+        ]
 
     def __str__(self) -> str:
         return (self.first_name + " " + (self.family_name or "")).strip()
+
+    @property
+    def has_birthday(self) -> bool:
+        """Return True when a birthday (day and month) is recorded."""
+        return self.birthday_day is not None and self.birthday_month is not None
+
+    @property
+    def birthday_display(self) -> str:
+        """Return the birthday formatted for the active locale (year only when known)."""
+        if not self.has_birthday:
+            return ""
+        if self.birthday_year is None:
+            # Year 2000 is a leap year, so February 29 is representable
+            return formats.date_format(
+                date_in_year(2000, self.birthday_month, self.birthday_day), "MONTH_DAY_FORMAT"
+            )
+        return formats.date_format(
+            date_in_year(self.birthday_year, self.birthday_month, self.birthday_day), "DATE_FORMAT"
+        )
+
+    def next_birthday(self, today: date_class | None = None) -> date_class | None:
+        """Return the next birthday on or after today, or None without a birthday.
+
+        The birthday is computed, never stored as an Event. A February 29 birthday
+        falls on February 28 in non-leap years.
+        """
+        if not self.has_birthday:
+            return None
+        return next_yearly_occurrence(
+            self.birthday_month, self.birthday_day, today or timezone.localdate()
+        )
+
+    def clean(self):
+        """Validate that the birthday is a real calendar day (February 29 needs no year)."""
+        super().clean()
+        if self.birthday_month is None and self.birthday_day is None:
+            if self.birthday_year is not None:
+                raise ValidationError(
+                    {"birthday_year": gettext_lazy("Enter a day and a month for the birthday.")}
+                )
+            return
+        if self.birthday_month is None or self.birthday_day is None:
+            raise ValidationError(
+                {"birthday_day": gettext_lazy("Enter both the day and the month.")}
+            )
+        if not (1 <= self.birthday_month <= 12 and 1 <= self.birthday_day <= 31):
+            return  # the field validators already report out-of-range values
+        if self.birthday_year is not None and self.birthday_year > timezone.localdate().year:
+            raise ValidationError(
+                {"birthday_year": gettext_lazy("Enter a year that is not in the future.")}
+            )
+        # Year 2000 is a leap year: February 29 stays valid without a year.
+        year = self.birthday_year or 2000
+        if self.birthday_day > calendar.monthrange(year, self.birthday_month)[1]:
+            raise ValidationError({"birthday_day": gettext_lazy("Enter a valid date.")})
 
     @property
     def email(self) -> str | None:
@@ -1060,6 +1208,9 @@ class Event(models.Model):
         ("yearly", gettext_lazy("Yearly")),
     ]
 
+    # Name of the global Birthday event. Not translated: Event.name is a plain field.
+    BIRTHDAY_EVENT_NAME = "Birthday"
+
     event_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
@@ -1076,6 +1227,10 @@ class Event(models.Model):
         blank=True,
     )
     creation_date = models.DateTimeField(auto_now_add=True)
+    # Global events are visible (read-only) to every user; only superusers can change them.
+    is_global = models.BooleanField(default=False, editable=False)
+    # Marks the global event used for birthday gift plans (the name is user-visible).
+    is_birthday = models.BooleanField(default=False, editable=False)
     shared_with = models.ManyToManyField(
         User, through="EventPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
@@ -1086,6 +1241,13 @@ class Event(models.Model):
     class Meta:
         verbose_name = gettext_lazy("Event")
         verbose_name_plural = gettext_lazy("Events")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["is_birthday"],
+                condition=Q(is_birthday=True),
+                name="event_single_birthday_event",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name}"
@@ -1101,6 +1263,9 @@ class Event(models.Model):
     @property
     def date_summary(self) -> str:
         if not self.is_scheduled:
+            if self.is_birthday:
+                # No date of its own: gift plans take the recipient's next birthday
+                return gettext("Repeats yearly, on the recipient's birthday")
             return gettext("No date yet")
 
         formatted_date = formats.date_format(self.date, "DATE_FORMAT")
@@ -1190,14 +1355,7 @@ class Event(models.Model):
         return date_class(year, month, day)
 
     def _next_yearly_occurrence(self, today: date_class) -> date_class:
-        candidate = self._date_for_year(today.year)
-        if candidate >= today:
-            return candidate
-        return self._date_for_year(today.year + 1)
-
-    def _date_for_year(self, year: int) -> date_class:
-        day = min(self.date.day, calendar.monthrange(year, self.date.month)[1])
-        return date_class(year, self.date.month, day)
+        return next_yearly_occurrence(self.date.month, self.date.day, today)
 
 
 class EventPermission(models.Model):

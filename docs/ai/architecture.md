@@ -19,6 +19,11 @@
 - Keep HTMX responses partial-aware and normal requests full-page-aware.
 - Keep form validation in forms or services, not templates or ad hoc JavaScript.
 - Keep UI changes compatible with existing Bootstrap, HTMX, and Grid.js conventions.
+- Occasions derived from data (person birthdays) are computed, never stored as `Event` rows; see
+  `gift_manager/birthdays.py` and `Person.next_birthday`.
+- `Event.is_global` events (the Birthday event) are visible to every user with a VIEWER floor
+  (`EventQuerySet.accessible_by`, `PermissionService.get_effective_permission`). Sharing code that
+  cascades a plan's access to its event must go through `SharingService.needs_cascade_grant`.
 
 ## Risk Areas
 

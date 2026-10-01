@@ -74,7 +74,8 @@ class ShareObjectsView(LoginRequiredMixin, View):
             .order_by("name")
         )
         gifts = Gift.objects.accessible_by(request.user).order_by("name")
-        events = Event.objects.accessible_by(request.user).order_by("name")
+        # Global events (Birthday) are visible to everyone and cannot be shared one by one
+        events = Event.objects.accessible_by(request.user).exclude(is_global=True).order_by("name")
         relations = (
             Relation.objects.accessible_by(request.user)
             .select_related("person", "group", "gift", "event")
@@ -568,7 +569,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
             self.kept_permission_count += 1
             # Keep the relation's access but still expose the objects it displays
             for related in related_objects:
-                if PermissionService.get_effective_permission(related, friend) < permission_level:
+                if SharingService.needs_cascade_grant(related, friend, permission_level):
                     SharingService.assert_can_share(actor, related, permission_level)
                     self._share_object_with_friend(friend, related, permission_level)
 

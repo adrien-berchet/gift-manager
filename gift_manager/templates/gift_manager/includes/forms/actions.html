@@ -1,6 +1,6 @@
 {% load i18n %}
 
-<div class="{% if form_surface == 'page' %}page-form-actions{% else %}panel-form-actions{% endif %}{% if secondary_submit_actions %} has-secondary-submit-actions{% endif %}">
+<div class="{% if form_surface == 'page' %}page-form-actions{% else %}panel-form-actions{% endif %}{% if secondary_submit_actions %} has-secondary-submit-actions{% endif %}"{% if form_surface != 'page' and action and translated_type %} data-panel-title="{{ action }} {{ translated_type }}"{% endif %}>
   {% if delete_url %}
   <a href="{{ delete_url }}"
      class="btn btn-outline-danger form-delete-action"

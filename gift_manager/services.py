@@ -6,10 +6,15 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Model
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
+
+GLOBAL_OBJECT_REMOVAL_ERROR = gettext_lazy(
+    "This object is available to everyone and cannot be removed."
+)
 
 
 class PermissionService:
@@ -88,6 +93,9 @@ class PermissionService:
         permission = cls.get_permission(obj, user)
         if getattr(obj, "user_link_id", None) == user.id:
             return max(permission, PermissionLevel.OWNER)
+        if getattr(obj, "is_global", False):
+            # Global objects (e.g. the Birthday event) are read-only for everyone
+            return max(permission, PermissionLevel.VIEWER)
         return permission
 
     @classmethod
@@ -142,6 +150,10 @@ class PermissionService:
         user_permission = cls.get_effective_permission(obj, user)
         if user_permission < PermissionLevel.VIEWER:
             raise PermissionDenied(gettext("You do not have access to this object."))
+
+        if getattr(obj, "is_global", False):
+            # Access comes from the object being global, there is no permission to remove
+            raise PermissionDenied(GLOBAL_OBJECT_REMOVAL_ERROR)
 
         if isinstance(obj, PersonGroup) and cls.get_permission(obj, user) == PermissionLevel.NONE:
             raise PermissionDenied(gettext("This group access is inherited from a parent group."))

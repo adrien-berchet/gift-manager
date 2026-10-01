@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -85,8 +85,31 @@ Recommended starting context:
 - Feeds the reminders idea (`0003`).
 - Complements the recipient profile notes idea (`0006`).
 
-## Open Questions
+## Decisions
 
-- Should the birthday be shared with users who have view access to the person?
-- Real `Event` rows per person, or computed occasions?
-- Default lookahead window (30 days?) and whether users can change it.
+- **Visibility:** the birthday is shared with everyone who can view the person
+  (`Person.objects.accessible_by(user)`); only editors can change it.
+- **Occasions are computed, not stored:** birthdays never create `Event` rows per
+  person or per year. `Person.next_birthday()` derives the next occurrence (February 29
+  falls on February 28 in non-leap years) and `gift_manager/birthdays.py` builds the
+  dashboard list from it.
+- **One global Birthday event:** gift plans created from a birthday point at a single
+  global event (`Event.is_global` and `Event.is_birthday`, created by migration `0032`,
+  `Event.objects.get_birthday_event()`). It is unscheduled: the plan's due date is the
+  recipient's next birthday. Every user can view it; only superusers can change it. Global
+  events are visible through `EventQuerySet.accessible_by` and get a VIEWER floor in
+  `PermissionService.get_effective_permission`; `SharingService.needs_cascade_grant`
+  keeps plan sharing from requiring ownership of a global event. Other celebrations
+  (Christmas, ...) are still ordinary user-created events; more global events would only
+  need the `is_global` flag.
+- **Window:** fixed 30 days (`UPCOMING_BIRTHDAYS_DAYS`), not configurable.
+- **Plan coverage:** a birthday counts as covered by a live (not abandoned) plan for the
+  person that the user can see, due up to 60 days before the birthday (early or overdue)
+  or on it, and that uses the Birthday event or is due exactly on the birthday. Plans
+  without a due date, or addressed to a group the person belongs to, are not counted.
+  Uncovered birthdays show a "No gift plan yet" warning and the shortcut
+  (`relation_create?birthday_for=<person_id>`).
+- **Known limits:** the Birthday event name is not translated (`Event.name` is a plain
+  field), a superuser can rename or delete it (plans then lose their event and a new one is
+  created on next use), and birthdays are stored in plain text, unlike emails, because their
+  visibility is exactly the person's.

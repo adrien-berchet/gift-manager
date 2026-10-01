@@ -22,9 +22,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
+from datetime import timedelta
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
@@ -164,10 +166,17 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     # ------------------------------------------------------------------
     # 4. Persons (+ group memberships + encrypted emails)
     # ------------------------------------------------------------------
+    # Birthdays relative to today so the dashboard "Upcoming birthdays" section is populated.
+    today = timezone.localdate()
+    mom_birthday_date = today + timedelta(days=5)
+    sister_birthday_date = today + timedelta(days=21)
+
     mom = Person.objects.create(
         first_name="Mom",
         family_name="Seed",
         email_address=encode_email("mom@example.com"),
+        birthday_day=mom_birthday_date.day,
+        birthday_month=mom_birthday_date.month,
     )
     mom.groups.add(family, close_family)
 
@@ -182,6 +191,9 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         first_name="Sister",
         family_name="Seed",
         email_address=encode_email("sister@example.com"),
+        birthday_day=sister_birthday_date.day,
+        birthday_month=sister_birthday_date.month,
+        birthday_year=1992,
     )
     sister.groups.add(family)
 
@@ -189,6 +201,9 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         first_name="Best Friend",
         family_name="Pal",
         email_address=encode_email("bestfriend@example.com"),
+        # Leap-day birthday: celebrated on February 28 in non-leap years.
+        birthday_day=29,
+        birthday_month=2,
     )
     best_friend.groups.add(friends)
 
@@ -265,6 +280,10 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         schedule_type=Event.ScheduleType.ONE_TIME,
         date=date(2026, 6, 15),
     )
+
+    # The global Birthday event is normally provisioned by a migration; make sure it exists
+    # (it is wiped by database flushes) so every user deterministically sees it.
+    Event.objects.get_birthday_event()
 
     events: dict[str, Event] = {
         "christmas": christmas,

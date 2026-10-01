@@ -592,12 +592,12 @@
 
 /* Form Actions in Panels */
 .panel-form-actions {
-    position: sticky;
-    bottom: 0;
+    position: relative;
+    flex: 0 0 auto;
     background: var(--surface-card);
     border-top: 1px solid var(--border-color);
     padding: var(--space-4);
-    margin: 0 calc(-1 * var(--space-4));
+    margin: 0;
     display: flex;
     gap: var(--space-2);
     justify-content: flex-end;

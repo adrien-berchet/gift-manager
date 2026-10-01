@@ -6,6 +6,7 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.models import Event
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import UserFactory
@@ -37,7 +38,8 @@ def test_event_choices_are_limited_to_accessible_events(form_class, user, events
 
     form = form_class(user=user)
 
-    assert set(form.fields["event"].queryset) == {mine}
+    # The global Birthday event is visible to everyone, on top of the user's own events
+    assert set(form.fields["event"].queryset) == {mine, Event.objects.get_birthday_event()}
     assert someone_elses not in form.fields["event"].queryset
 
 

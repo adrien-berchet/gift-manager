@@ -300,25 +300,8 @@
         height: var(--edit-panel-height, 100dvh) !important;
     }
 
-    #editPanel .offcanvas-body,
-    #editPanel #offcanvasContent,
-    #editPanel .offcanvas-form {
-        display: flex;
-        flex-direction: column;
-        flex: 1 1 auto;
-        min-height: 0;
-    }
-
-    #editPanel .offcanvas-body {
-        padding: 0;
-        overflow: hidden;
-    }
-
+    /* The scrolling-fields layout itself lives in form-partials.css; phones use tighter padding. */
     #editPanel .form-fields {
-        flex: 1 1 auto;
-        min-height: 0;
-        overflow-y: auto;
-        overscroll-behavior-y: contain;
         padding: var(--space-3, 12px);
     }
 
@@ -327,12 +310,9 @@
     }
 
     #editPanel .panel-form-actions {
-        position: relative;
-        flex: 0 0 auto;
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: var(--space-2, 8px);
-        margin: 0;
         padding: var(--space-3, 12px);
         padding-bottom: max(var(--space-3, 12px), env(safe-area-inset-bottom));
     }

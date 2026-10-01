@@ -671,4 +671,29 @@
         }
 
     })();
+
+    // The edit panel title follows the form it shows ("Create Person", "Edit Gift", ...). Forms
+    // carry their title in data-panel-title; this covers every way content reaches the panel.
+    (function setupEditPanelTitle() {
+        const panel = document.getElementById('editPanel');
+        const content = document.getElementById('offcanvasContent');
+        const titleText = panel && panel.querySelector('.offcanvas-title-text');
+        if (!content || !titleText) return;
+
+        const defaultTitle = titleText.textContent.trim();
+
+        function syncTitle() {
+            const marker = content.querySelector('[data-panel-title]');
+            if (marker) {
+                titleText.textContent = marker.dataset.panelTitle;
+            } else if (content.querySelector('.loading-state')) {
+                // Do not flash the previous form's title while the next one loads
+                titleText.textContent = '';
+            } else {
+                titleText.textContent = defaultTitle;
+            }
+        }
+
+        new MutationObserver(syncTitle).observe(content, { childList: true, subtree: true });
+    })();
 })();

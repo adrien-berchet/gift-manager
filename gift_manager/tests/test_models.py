@@ -1561,7 +1561,7 @@ class TestEventManagerMethods:
             user=user, event=event, permission_type=PermissionLevel.VIEWER
         )
 
-        results = Event.objects.for_list_display(user)
+        results = Event.objects.for_list_display(user).filter(pk=event.pk)
         assert len(results) == 1
         result = results[0]
 

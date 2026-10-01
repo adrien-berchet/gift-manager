@@ -23,7 +23,7 @@
 
   <div class="offcanvas-header">
     <h5 class="offcanvas-title" id="editPanelLabel">
-      {% block offcanvas_title %}{% trans "Edit" %}{% endblock %}
+      <span class="offcanvas-title-text">{% block offcanvas_title %}{% trans "Edit" %}{% endblock %}</span>
     </h5>
     <button type="button"
             class="btn-close"
@@ -313,8 +313,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 hideOffcanvasLoading(panelId);
             } else {
                 const errorMessage = e.detail.xhr.status === 403
-                    ? '{% trans "You do not have permission to perform this action." %}'
-                    : '{% trans "An error occurred. Please try again." %}';
+                    ? '{% trans "You do not have permission to perform this action." as t %}{{ t|escapejs }}'
+                    : '{% trans "An error occurred. Please try again." as t %}{{ t|escapejs }}';
                 showOffcanvasError(errorMessage, panelId);
             }
         }
