@@ -47,8 +47,8 @@ class TestDocument:
     def test_empty_calendar_is_valid(self, user):
         calendar = parse(user)
 
-        assert calendar["VERSION"] == "2.0"
-        assert "PRODID" in calendar
+        assert calendar.get("VERSION") == "2.0"
+        assert calendar.get("PRODID")
         assert list(calendar.walk("VEVENT")) == []
 
     def test_uses_crlf_line_endings(self, user):
