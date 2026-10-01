@@ -276,6 +276,7 @@ class EventManager(UserPermissionManager):
             "date",
             "recurrence",
             "is_global",
+            "is_birthday",
         )
 
 
@@ -1262,6 +1263,9 @@ class Event(models.Model):
     @property
     def date_summary(self) -> str:
         if not self.is_scheduled:
+            if self.is_birthday:
+                # No date of its own: gift plans take the recipient's next birthday
+                return gettext("Repeats yearly, on the recipient's birthday")
             return gettext("No date yet")
 
         formatted_date = formats.date_format(self.date, "DATE_FORMAT")

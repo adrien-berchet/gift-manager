@@ -1,5 +1,6 @@
 """Views for person birthdays: forms, detail page, dashboard section and plan shortcut."""
 
+import html
 import re
 from datetime import timedelta
 
@@ -17,6 +18,8 @@ from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
+
+HTMX = {"HTTP_HX_REQUEST": "true"}
 
 
 @pytest.fixture
@@ -540,3 +543,78 @@ class TestBirthdaySelectors:
         content = response.content.decode()
         assert "Enter a valid date." in content
         assert content.index("</fieldset>") > content.index("Enter a valid date.")
+
+
+class TestBirthdayEventScheduleDisplay:
+    """The Birthday event reads "Repeats yearly, on the recipient's birthday" everywhere."""
+
+    SUMMARY = "Repeats yearly, on the recipient's birthday"
+    EXPLANATION = "The due date of a gift plan is the recipient's next birthday."
+
+    @pytest.fixture
+    def birthday_event(self):
+        return Event.objects.get_birthday_event()
+
+    def test_events_list_rows_carry_the_summary(self, client_user, birthday_event):
+        content = html.unescape(
+            client_user.get(reverse("gift_manager:events")).content.decode()
+        ).replace("\\u0027", "'")
+
+        assert self.SUMMARY in content
+        assert "No date yet" not in content
+
+    def test_events_search_api_carries_the_summary(self, client_user, birthday_event):
+        response = client_user.get(reverse("gift_manager:event_search"), {"search": "Birthday"})
+
+        row = next(
+            r for r in response.json()["data"] if r["event_id"] == str(birthday_event.event_id)
+        )
+        assert row["date_summary"] == self.SUMMARY
+        assert row["schedule_display"] == self.SUMMARY
+
+    def test_event_detail_shows_the_summary_and_the_explanation(self, client_user, birthday_event):
+        response = client_user.get(
+            reverse("gift_manager:event_detail", kwargs={"pk": birthday_event.event_id})
+        )
+
+        content = html.unescape(response.content.decode())
+        assert self.SUMMARY in content
+        assert self.EXPLANATION in content
+        assert "No date yet" not in content
+
+    def test_regular_event_detail_has_no_explanation(self, client_user, user):
+        from gift_manager.tests.factories import EventFactory
+
+        event = EventFactory(shared_with=[user])
+
+        content = html.unescape(
+            client_user.get(
+                reverse("gift_manager:event_detail", kwargs={"pk": event.event_id})
+            ).content.decode()
+        )
+
+        assert self.EXPLANATION not in content
+        assert self.SUMMARY not in content
+
+    def test_event_detail_is_translated(self, client_user, birthday_event):
+        with translation.override("fr"):
+            content = html.unescape(
+                client_user.get(f"/fr/events/{birthday_event.event_id}/").content.decode()
+            )
+
+        assert "Se répète annuellement, à la date d'anniversaire du destinataire" in content
+        assert "La date limite d'un projet de cadeau est le prochain anniversaire" in content
+
+    def test_gift_plan_detail_shows_the_summary(self, client_user, user, birthday_event):
+        from gift_manager.tests.factories import RelationFactory
+
+        relation = RelationFactory(event=birthday_event, shared_with=[user])
+
+        content = html.unescape(
+            client_user.get(
+                reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
+                **HTMX,
+            ).content.decode()
+        )
+
+        assert f"Schedule: {self.SUMMARY}" in content

@@ -858,6 +858,9 @@ class TestEventListGridLoading:
         assert "Christmas" in body
         assert "Graduation" in body
         assert "Repeats yearly from" in body
+        # The global Birthday event takes its dates from each recipient's birthday
+        assert "Repeats yearly, on the recipient's birthday" in body
+        assert "No date yet" not in body
 
     def test_three_events_visible(self, page: Page, live_server, seed_data_e2e):
         """Alice sees the 3 seed events plus the global Birthday event."""

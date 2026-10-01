@@ -4060,3 +4060,9 @@ msgstr "Cet élément est disponible pour tout le monde et ne peut pas être sup
 
 msgid "Year"
 msgstr "Année"
+
+msgid "Repeats yearly, on the recipient's birthday"
+msgstr "Se répète annuellement, à la date d'anniversaire du destinataire"
+
+msgid "The due date of a gift plan is the recipient's next birthday."
+msgstr "La date limite d'un projet de cadeau est le prochain anniversaire du destinataire."

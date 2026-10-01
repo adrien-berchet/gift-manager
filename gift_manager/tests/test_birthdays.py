@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db import transaction
+from django.utils import translation
 
 from gift_manager.birthdays import build_upcoming_birthdays
 from gift_manager.models import Event
@@ -513,3 +514,45 @@ class TestBirthdayCoverage:
         )
 
         assert build_upcoming_birthdays(user, TODAY)[0]["has_plan"] is False
+
+
+@pytest.mark.django_db
+class TestBirthdayEventSchedule:
+    """The unscheduled Birthday event explains where its dates come from."""
+
+    SUMMARY = "Repeats yearly, on the recipient's birthday"
+
+    def test_summary_explains_the_recipient_birthday(self):
+        assert Event.objects.get_birthday_event().date_summary == self.SUMMARY
+
+    def test_summary_is_translated(self):
+        event = Event.objects.get_birthday_event()
+
+        with translation.override("fr"):
+            assert event.date_summary == (
+                "Se répète annuellement, à la date d'anniversaire du destinataire"
+            )
+
+    def test_regular_unscheduled_event_still_says_no_date_yet(self):
+        event = Event.objects.create(name="Someday")
+
+        assert event.date_summary == "No date yet"
+
+    def test_a_scheduled_birthday_event_shows_its_date(self):
+        event = Event.objects.get_birthday_event()
+        event.schedule_type = Event.ScheduleType.RECURRING
+        event.recurrence = "yearly"
+        event.date = date(2000, 5, 15)
+
+        assert event.date_summary.startswith("Repeats yearly from")
+        assert "recipient" not in event.date_summary
+
+    def test_list_display_does_not_defer_the_birthday_flag(self, user, django_assert_num_queries):
+        Event.objects.get_birthday_event()
+        EventFactory(shared_with=[user])
+
+        events = list(Event.objects.for_list_display(user))
+        with django_assert_num_queries(0):
+            summaries = [event.date_summary for event in events]
+
+        assert self.SUMMARY in summaries
