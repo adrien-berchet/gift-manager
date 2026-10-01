@@ -172,6 +172,97 @@ class TestSelection:
 
 
 @pytest.mark.django_db
+class TestSentTracking:
+    def test_sending_records_the_day(self, user):
+        overdue_plan(user)
+        opt_in(user)
+
+        run()
+
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on == timezone.localdate()
+
+    def test_running_again_the_same_day_sends_nothing_more(self, user):
+        overdue_plan(user)
+        opt_in(user)
+
+        run()
+        output = run()
+
+        assert len(mail.outbox) == 1
+        assert "1 already sent today" in output
+        assert "Sent 0 digest" in output
+
+    def test_a_digest_sent_on_a_previous_day_does_not_block_today(self, user):
+        overdue_plan(user)
+        opt_in(user, last_digest_sent_on=timezone.localdate() - timedelta(days=1))
+
+        run()
+
+        assert len(mail.outbox) == 1
+
+    def test_rerun_after_a_partial_failure_only_emails_the_failed_user(self, user):
+        other = UserFactory()
+        for account in (user, other):
+            overdue_plan(account)
+            opt_in(account)
+
+        real_send = mail.EmailMultiAlternatives.send
+        failing = [user.profile.email]
+
+        def flaky_send(self, *args, **kwargs):
+            if self.to == failing:
+                msg = "smtp down"
+                raise OSError(msg)
+            return real_send(self, *args, **kwargs)
+
+        with (
+            mock.patch.object(mail.EmailMultiAlternatives, "send", flaky_send),
+            pytest.raises(CommandError),
+        ):
+            run()
+        assert [message.to for message in mail.outbox] == [[other.profile.email]]
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on is None
+
+        run()
+
+        assert [message.to for message in mail.outbox] == [
+            [other.profile.email],
+            [user.profile.email],
+        ]
+
+    def test_dry_run_does_not_record_anything(self, user):
+        overdue_plan(user)
+        opt_in(user)
+
+        run("--dry-run")
+
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on is None
+
+    def test_an_empty_digest_is_not_recorded_so_later_runs_can_still_send(self, user):
+        opt_in(user)
+        run()
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on is None
+
+        overdue_plan(user)
+        run()
+
+        assert len(mail.outbox) == 1
+
+    def test_user_option_also_skips_a_user_already_sent(self, user):
+        overdue_plan(user)
+        opt_in(user)
+
+        run("--user", user.username)
+        run("--user", user.username)
+
+        assert len(mail.outbox) == 1
+
+
+@pytest.mark.django_db
 class TestFrequency:
     def test_weekly_digest_is_sent_on_mondays(self, user):
         overdue_plan(user)

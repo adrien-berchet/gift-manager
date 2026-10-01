@@ -96,8 +96,10 @@ The operational runbook is `docs/operations/reminders.md`.
   `digest_lookahead_days`, `preferred_language` (empty means the site language, used for the
   email and the feed) and `calendar_token`. The profile page edits them.
 - **Scheduling:** the command is meant to run once a day from a plain scheduler (systemd timer
-  units and a cron line are documented); weekly digests are sent on Mondays. No last-sent state
-  is stored, so running it twice on the same day sends twice.
+  units and a cron line are documented); weekly digests are sent on Mondays.
+  `Profile.last_digest_sent_on` records the day of the last digest sent, so running the command
+  again the same day (for example after a partial failure) only emails the users who did not get
+  theirs; empty digests and dry runs record nothing.
 - **Links** are built from the `SITE_BASE_URL` setting, which the command requires.
 - **Unsubscribe:** a signed link (`django.core.signing`, no login). GET asks for confirmation,
   POST turns the digest off; the POST is CSRF-exempt so it also serves RFC 8058 one-click
@@ -108,7 +110,6 @@ The operational runbook is `docs/operations/reminders.md`.
   "Generate a new link" (the old URL then returns 404) and removed by "Disable".
 - **No new production dependency:** the iCalendar document is serialized by
   `gift_manager/calendar_feed.py`; `icalendar` is only a test dependency used to parse it back.
-- **Known limits:** no per-user send log (a failed run is retried by running the command again,
-  which re-sends to users who already got it); the feed token is not hashed in the database;
-  monthly events on days 29 to 31 follow the RFC 5545 rule of skipping months without that day
-  in the calendar feed.
+- **Known limits:** a weekly digest is skipped when the command does not run on a Monday (no
+  catch-up; `--include-weekly` sends the missed ones by hand); the feed token is not hashed in the
+  database; the token is not rotated by a password reset.

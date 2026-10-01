@@ -5,7 +5,9 @@ Designed to run from a plain scheduler (cron, systemd timer, platform scheduler)
     python manage.py send_gift_digest
 
 Users who chose the weekly digest only receive it on Mondays. At most one email is sent per
-user and per run, and none when nothing needs their attention. Links are built from the
+user and per day (the day is recorded in ``Profile.last_digest_sent_on``, so running the command
+again, for instance after a partial failure, only emails the users who did not get theirs), and
+none when nothing needs their attention. Links are built from the
 ``SITE_BASE_URL`` setting.
 """
 
@@ -72,6 +74,10 @@ class Command(BaseCommand):
         )
         if options["user"]:
             users = users.filter(username=options["user"])
+        # A user who already got today's digest (an earlier run, possibly a partially failed
+        # one) is not emailed again
+        already_sent = users.filter(profile__last_digest_sent_on=today).count()
+        users = users.exclude(profile__last_digest_sent_on=today)
 
         sent = skipped = failed = 0
         for user in users:
@@ -86,7 +92,10 @@ class Command(BaseCommand):
                 failed += 1
 
         verb = "Would send" if options["dry_run"] else "Sent"
-        self.stdout.write(f"{verb} {sent} digest(s); {skipped} skipped (nothing to report).")
+        self.stdout.write(
+            f"{verb} {sent} digest(s); {skipped} skipped (nothing to report); "
+            f"{already_sent} already sent today."
+        )
         if failed:
             msg = f"{failed} digest(s) could not be sent (see the log)."
             raise CommandError(msg)
@@ -131,4 +140,5 @@ class Command(BaseCommand):
                 render_to_string("gift_manager/email/digest.html", context), "text/html"
             )
             message.send()
+        Profile.objects.filter(pk=user.profile.pk).update(last_digest_sent_on=timezone.localdate())
         return True

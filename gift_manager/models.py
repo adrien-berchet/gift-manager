@@ -414,6 +414,9 @@ class Profile(models.Model):
         default=14,
         verbose_name=gettext_lazy("Look ahead"),
     )
+    # Day of the last digest email actually sent; lets a re-run of the command skip the users
+    # who already got theirs (e.g. after a partial failure)
+    last_digest_sent_on = models.DateField(null=True, blank=True, editable=False)
     # Secret of the private calendar feed URL; null while the feed is disabled
     calendar_token = models.CharField(
         max_length=64, unique=True, null=True, blank=True, editable=False

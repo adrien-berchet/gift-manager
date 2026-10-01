@@ -23,7 +23,8 @@ What the command does:
 - Only includes what the user can access at the time of the run.
 - Adds `List-Unsubscribe` headers and an unsubscribe link (a signed link that turns the
   digest off without logging in).
-- Logs and counts a failing recipient, keeps going, and exits non-zero at the end.
+- Skips users who already got today's digest, logs and counts a failing recipient, keeps going,
+  and exits non-zero at the end.
 
 Options:
 
@@ -31,8 +32,12 @@ Options:
 - `--include-weekly`: also send weekly digests when it is not Monday.
 - `--user USERNAME`: only consider one user (useful to test a deployment).
 
-Running the command twice on the same day sends the digest twice, so schedule it once a
-day.
+The day of the last digest sent is stored on the profile (`last_digest_sent_on`), so running the
+command again on the same day only emails the users who did not get theirs yet. After a partial
+failure (the command exits non-zero and logs the recipients that failed) just run it again.
+Nothing is recorded for `--dry-run` or when there was nothing to report. Weekly digests are only
+due on Mondays: if the host is down on a Monday, weekly subscribers get nothing that week, unless you run the command once with
+`--include-weekly`.
 
 ## Required Settings
 
