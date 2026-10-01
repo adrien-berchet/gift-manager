@@ -603,7 +603,10 @@ class TestBirthdayEventScheduleDisplay:
             )
 
         assert "Se répète annuellement, à la date d'anniversaire du destinataire" in content
-        assert "La date limite d'un projet de cadeau est le prochain anniversaire" in content
+        assert (
+            "La date limite d'un projet de cadeau est le prochain anniversaire"  # codespell:ignore
+            in content
+        )
 
     def test_gift_plan_detail_shows_the_summary(self, client_user, user, birthday_event):
         from gift_manager.tests.factories import RelationFactory
