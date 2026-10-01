@@ -110,6 +110,14 @@ The operational runbook is `docs/operations/reminders.md`.
   "Generate a new link" (the old URL then returns 404) and removed by "Disable".
 - **No new production dependency:** the iCalendar document is serialized by
   `gift_manager/calendar_feed.py`; `icalendar` is only a test dependency used to parse it back.
+- **Vercel Cron:** production runs on Vercel, which cannot run management commands, so
+  `GET /cron/send-gift-digest/` (declared in `vercel.json`, daily at 06:00 UTC) runs the same
+  `gift_manager.digest_sending.send_digests` as the command. It is protected by `CRON_SECRET`
+  (`Authorization: Bearer`, constant-time comparison, disabled with a 404 while the secret is unset
+  or shorter than 16 characters), sits outside the language prefix because cron calls do not follow
+  redirects, only returns counts, and answers 500 when a recipient failed. The day of the digest is
+  claimed with a conditional update before each send (and restored when the send fails), so the
+  best-effort, possibly duplicated Vercel delivery cannot email a user twice.
 - **Weekly catch-up:** later in the week a weekly digest is still due for users whose last digest
   predates that Monday (a missed run or failed send); a user who never got one waits for a Monday.
 - **Known limits:** the feed token is not hashed in the database; the token is not rotated by a

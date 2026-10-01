@@ -1,23 +1,33 @@
 """Reminder views: preferences, digest unsubscribe link and the private calendar feed."""
 
+import hmac
+import logging
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import ImproperlyConfigured
 from django.http import Http404
 from django.http import HttpResponse
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_safe
 from django.views.generic import View
 
 from gift_manager.calendar_feed import CONTENT_TYPE
 from gift_manager.calendar_feed import build_calendar
+from gift_manager.digest_sending import send_digests
 from gift_manager.forms import ReminderPreferencesForm
 from gift_manager.models import Profile
 from gift_manager.reminders import read_unsubscribe_token
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateReminderPreferencesView(LoginRequiredMixin, View):
@@ -99,4 +109,47 @@ def calendar_feed(request, token):  # noqa: ARG001
     response["Referrer-Policy"] = "no-referrer"
     response["X-Robots-Tag"] = "noindex, nofollow"
     response["Content-Disposition"] = 'inline; filename="gift-manager.ics"'
+    return response
+
+
+def _has_valid_cron_secret(request) -> bool:
+    """Return whether the request carries ``Authorization: Bearer <CRON_SECRET>``."""
+    expected = settings.CRON_SECRET
+    scheme, _, provided = request.headers.get("Authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not provided:
+        return False
+    return hmac.compare_digest(provided.encode(), expected.encode())
+
+
+@require_GET
+def cron_send_gift_digest(request):
+    """Send the due reminder digests; called by Vercel Cron, which cannot run commands.
+
+    The endpoint is disabled (404) until a ``CRON_SECRET`` of a sensible length is configured,
+    and answers 401 to any request without it. Vercel does not follow redirects, so the URL lives
+    outside the language prefix. The response only holds counts, and is a 500 when a digest
+    failed or the site is not configured, so the failure shows in the Vercel logs. Running it
+    again is safe: users who already got today's digest are skipped.
+    """
+    if len(settings.CRON_SECRET) < settings.MIN_CRON_SECRET_LENGTH:
+        raise Http404
+    if not _has_valid_cron_secret(request):
+        return JsonResponse({"error": "unauthorized"}, status=401)
+
+    try:
+        run = send_digests()
+    except ImproperlyConfigured:
+        logger.exception("The gift digest cron endpoint is not configured")
+        return JsonResponse({"error": "SITE_BASE_URL is not configured"}, status=500)
+
+    response = JsonResponse(
+        {
+            "sent": run.sent,
+            "skipped": run.skipped,
+            "already_sent": run.already_sent,
+            "failed": run.failed,
+        },
+        status=500 if run.failed else 200,
+    )
+    response["Cache-Control"] = "no-store"
     return response

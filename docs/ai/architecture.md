@@ -27,7 +27,8 @@
 - Reminders: `gift_manager/reminders.py` builds the digest email content (reusing the dashboard
   buckets and `build_upcoming_birthdays`) and `gift_manager/calendar_feed.py` serializes the private
   `.ics` feed. Both read through `accessible_by(user)` and render in `Profile.language`. The digest is
-  sent by `manage.py send_gift_digest` from a plain scheduler; see `docs/operations/reminders.md`.
+  sent by `gift_manager/digest_sending.py`, run by `manage.py send_gift_digest` from a plain scheduler or
+  by the Vercel Cron endpoint `/cron/send-gift-digest/`; see `docs/operations/reminders.md`.
 
 ## Risk Areas
 

@@ -26,5 +26,11 @@
             "dest": "GiftManager/wsgi.py"
         }
     ],
-    "outputDirectory": "staticfiles"
+    "outputDirectory": "staticfiles",
+    "crons": [
+        {
+            "path": "/cron/send-gift-digest/",
+            "schedule": "0 6 * * *"
+        }
+    ]
 }

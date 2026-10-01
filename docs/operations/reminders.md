@@ -46,6 +46,7 @@ before that week's Monday.
 - `SITE_BASE_URL`: public base URL without trailing slash, for example
   `https://gift.example.com`. Links in the email are built from it, and the command
   refuses to run without it. `docker-compose.prod.yml` passes it to the `web` service.
+- `CRON_SECRET`: only for the Vercel Cron endpoint (see below).
 - The usual email settings (`EMAIL_HOST`, `DEFAULT_FROM_EMAIL`, ...).
 
 ## Scheduling
@@ -67,10 +68,52 @@ cron equivalent:
 0 7 * * * cd /opt/gift-manager && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T web python manage.py send_gift_digest
 ```
 
-Vercel deployments have no process to run management commands: use an external
-scheduler that can run the command against the same database and settings.
+On Vercel, where no management command can run, use the Vercel Cron job described below.
 
 Check the scheduler once with `--dry-run`, then with `--user <you>` on an opted-in account.
+
+### Vercel Cron
+
+`vercel.json` declares a cron job that calls `GET /cron/send-gift-digest/` every day at
+06:00 UTC. The endpoint runs the same code as the command (`gift_manager.digest_sending`).
+
+Setup, in the Vercel project settings (Environment Variables, Production):
+
+- `CRON_SECRET`: a random string of at least 16 characters (for example
+  `openssl rand -base64 32`). Vercel sends it as `Authorization: Bearer <secret>` when it calls
+  the endpoint. While it is unset or shorter than 16 characters the endpoint does not exist (404),
+  and any call without the right secret gets a 401.
+- `SITE_BASE_URL`: the public URL used in the emails (see above). Without it the endpoint answers 500.
+
+Then deploy to production and check, in the Vercel dashboard:
+
+1. Settings > Cron Jobs lists `/cron/send-gift-digest/`. If the deployment fails on the `crons`
+   entry, the configuration is not accepted: report it rather than working around it.
+2. Run it once from that page ("Run") and open "View Logs". A 200 with the counts
+   (`sent`, `skipped`, `already_sent`, `failed`) is success. The response never contains user data.
+   If you get a 400 `DisallowedHost`, add the host Vercel used (shown in the log) to `ALLOWED_HOSTS`.
+3. To trigger it yourself, for example to test with an opted-in account:
+   `curl -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/cron/send-gift-digest/`.
+
+What to know:
+
+- Cron expressions are in UTC, and cron jobs only run on the production deployment.
+- On the Hobby plan, a daily job runs at some point during the scheduled hour (06:00 to 06:59 UTC),
+  and nothing more frequent than daily is allowed. Pro runs it within the scheduled minute.
+- Cron calls do not follow redirects, which is why the URL is outside the language prefix and ends
+  with a slash. Do not put a redirect in front of it.
+- The endpoint answers 500 when a recipient failed (and sends the others). Vercel does not retry:
+  the failed users get their digest at the next run, the next day. To retry sooner, call the
+  endpoint again with `curl` as above; users already sent today are skipped.
+- Vercel delivery is best effort and can occasionally run a job twice. This is safe: the day of the
+  last digest is claimed with a conditional database update before each email is sent, so a user
+  gets at most one digest per day even when two runs overlap. A missed run is made up by the weekly
+  catch-up, and daily subscribers just get their digest the next day.
+- The digests of all users are sent one after the other in a single function call, so it is bound by
+  the function duration limit of your Vercel plan. If it is not enough with many users, the digests
+  that did not go out are sent by the next call (call the endpoint again), and the duration limit
+  can be raised on a plan that allows it.
+- Do not put the secret in the URL or in logs. Rotate it by changing the variable and redeploying.
 
 ## Calendar Feed
 

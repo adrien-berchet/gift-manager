@@ -240,6 +240,12 @@ SITE_ID = 1
 # a request, e.g. in the reminder digest email sent by ``manage.py send_gift_digest``.
 SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "").rstrip("/")
 
+# Secret that protects ``/cron/send-gift-digest/``, which Vercel Cron calls with
+# ``Authorization: Bearer <CRON_SECRET>``. The endpoint does not exist while this is unset or
+# shorter than ``MIN_CRON_SECRET_LENGTH`` (Vercel recommends at least 16 characters).
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
+MIN_CRON_SECRET_LENGTH = 16
+
 
 # Logging configuration
 LOGGING = {

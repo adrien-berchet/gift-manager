@@ -11,6 +11,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.utils import timezone
 
+from gift_manager import digest_sending
 from gift_manager.models import Profile
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
@@ -232,6 +233,38 @@ class TestSentTracking:
             [other.profile.email],
             [user.profile.email],
         ]
+
+    def test_a_run_that_overlaps_another_one_does_not_email_the_user_twice(self, user):
+        overdue_plan(user)
+        opt_in(user)
+        real_build_digest = digest_sending.build_digest
+
+        def build_then_lose_the_race(*args, **kwargs):
+            digest = real_build_digest(*args, **kwargs)
+            # Another run (a scheduler delivering twice) claims the user meanwhile
+            Profile.objects.filter(user=user).update(last_digest_sent_on=timezone.localdate())
+            return digest
+
+        with mock.patch.object(digest_sending, "build_digest", build_then_lose_the_race):
+            output = run()
+
+        assert mail.outbox == []
+        assert "Sent 0 digest" in output
+        assert "1 already sent today" in output
+
+    def test_the_day_is_restored_when_sending_fails(self, user):
+        yesterday = timezone.localdate() - timedelta(days=1)
+        overdue_plan(user)
+        opt_in(user, last_digest_sent_on=yesterday)
+
+        with (
+            mock.patch.object(mail.EmailMultiAlternatives, "send", side_effect=OSError("down")),
+            pytest.raises(CommandError),
+        ):
+            run()
+
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on == yesterday
 
     def test_dry_run_does_not_record_anything(self, user):
         overdue_plan(user)
