@@ -4,20 +4,23 @@ Designed to run from a plain scheduler (cron, systemd timer, platform scheduler)
 
     python manage.py send_gift_digest
 
-Users who chose the weekly digest only receive it on Mondays. At most one email is sent per
-user and per day (the day is recorded in ``Profile.last_digest_sent_on``, so running the command
-again, for instance after a partial failure, only emails the users who did not get theirs), and
-none when nothing needs their attention. Links are built from the
+Users who chose the weekly digest receive it on Mondays, or on a later day of the week when
+the Monday digest was missed (the command did not run, or the user's digest failed). At most one
+email is sent per user and per day: the day is recorded in ``Profile.last_digest_sent_on``, so
+running the command again, for instance after a partial failure, only emails the users who did
+not get theirs. Nothing is sent when nothing needs a user's attention. Links are built from the
 ``SITE_BASE_URL`` setting.
 """
 
 import logging
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.core.mail import EmailMultiAlternatives
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
+from django.db.models import Q
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils import translation
@@ -49,7 +52,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--include-weekly",
             action="store_true",
-            help="Also send weekly digests when it is not Monday.",
+            help="Send the digest of every weekly user, whatever the weekday.",
         )
         parser.add_argument(
             "--user",
@@ -63,12 +66,19 @@ class Command(BaseCommand):
             raise CommandError(msg)
 
         today = timezone.localdate()
-        frequencies = [Profile.DIGEST_DAILY]
-        if options["include_weekly"] or today.weekday() == MONDAY:
-            frequencies.append(Profile.DIGEST_WEEKLY)
+        # Weekly digests are due on Mondays. Later in the week they are still due for the users
+        # who got none since the last Monday (a missed run), but not for users who never got one:
+        # opting in on a Wednesday waits for the next Monday.
+        weekly_due = Q(profile__digest_frequency=Profile.DIGEST_WEEKLY)
+        if not (options["include_weekly"] or today.weekday() == MONDAY):
+            last_monday = today - timedelta(days=today.weekday())
+            weekly_due &= Q(profile__last_digest_sent_on__lt=last_monday)
 
         users = (
-            User.objects.filter(is_active=True, profile__digest_frequency__in=frequencies)
+            User.objects.filter(
+                Q(profile__digest_frequency=Profile.DIGEST_DAILY) | weekly_due,
+                is_active=True,
+            )
             .select_related("profile")
             .order_by("pk")
         )

@@ -96,7 +96,7 @@ The operational runbook is `docs/operations/reminders.md`.
   `digest_lookahead_days`, `preferred_language` (empty means the site language, used for the
   email and the feed) and `calendar_token`. The profile page edits them.
 - **Scheduling:** the command is meant to run once a day from a plain scheduler (systemd timer
-  units and a cron line are documented); weekly digests are sent on Mondays.
+  units and a cron line are documented); weekly digests are due on Mondays.
   `Profile.last_digest_sent_on` records the day of the last digest sent, so running the command
   again the same day (for example after a partial failure) only emails the users who did not get
   theirs; empty digests and dry runs record nothing.
@@ -110,6 +110,7 @@ The operational runbook is `docs/operations/reminders.md`.
   "Generate a new link" (the old URL then returns 404) and removed by "Disable".
 - **No new production dependency:** the iCalendar document is serialized by
   `gift_manager/calendar_feed.py`; `icalendar` is only a test dependency used to parse it back.
-- **Known limits:** a weekly digest is skipped when the command does not run on a Monday (no
-  catch-up; `--include-weekly` sends the missed ones by hand); the feed token is not hashed in the
-  database; the token is not rotated by a password reset.
+- **Weekly catch-up:** later in the week a weekly digest is still due for users whose last digest
+  predates that Monday (a missed run or failed send); a user who never got one waits for a Monday.
+- **Known limits:** the feed token is not hashed in the database; the token is not rotated by a
+  password reset.

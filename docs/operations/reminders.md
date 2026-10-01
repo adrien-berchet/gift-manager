@@ -12,8 +12,10 @@ python manage.py send_gift_digest
 
 What the command does:
 
-- Considers active users whose digest frequency is `daily`, plus the ones who chose
-  `weekly` when the command runs on a Monday (local time, `TIME_ZONE`).
+- Considers active users whose digest frequency is `daily`, plus the ones who chose `weekly`:
+  on Mondays (local time, `TIME_ZONE`), and later in the week for the users who got no digest since
+  that Monday (a missed run or a failed send). Someone who never got a digest waits for a Monday,
+  so opting in on a Wednesday does not send anything before the next one.
 - Sends at most one email per user and per run, in the language chosen on the profile
   (the site language by default), and nothing when there is nothing to report.
 - Lists overdue plans, plans due within the user's lookahead (7, 14 or 30 days),
@@ -29,15 +31,15 @@ What the command does:
 Options:
 
 - `--dry-run`: report how many digests would be sent, send nothing.
-- `--include-weekly`: also send weekly digests when it is not Monday.
+- `--include-weekly`: send the digest of every weekly user, whatever the weekday.
 - `--user USERNAME`: only consider one user (useful to test a deployment).
 
 The day of the last digest sent is stored on the profile (`last_digest_sent_on`), so running the
 command again on the same day only emails the users who did not get theirs yet. After a partial
 failure (the command exits non-zero and logs the recipients that failed) just run it again.
-Nothing is recorded for `--dry-run` or when there was nothing to report. Weekly digests are only
-due on Mondays: if the host is down on a Monday, weekly subscribers get nothing that week, unless you run the command once with
-`--include-weekly`.
+Nothing is recorded for `--dry-run` or when there was nothing to report. The weekly catch-up
+uses the same date: on a day other than Monday, a weekly user is due when their last digest is dated
+before that week's Monday.
 
 ## Required Settings
 

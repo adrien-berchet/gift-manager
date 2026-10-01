@@ -21,6 +21,7 @@ from gift_manager.tests.factories import UserFactory
 BASE_URL = "https://gifts.example.com"
 MONDAY = date(2026, 9, 28)
 TUESDAY = date(2026, 9, 29)
+SATURDAY = date(2026, 10, 3)
 
 
 @pytest.fixture(autouse=True)
@@ -290,6 +291,56 @@ class TestFrequency:
             run("--include-weekly")
 
         assert len(mail.outbox) == 1
+
+    def test_missed_monday_digest_is_sent_later_in_the_week(self, user):
+        overdue_plan(user)
+        opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY - timedelta(days=7))
+
+        with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):
+            run()
+
+        assert len(mail.outbox) == 1
+        user.profile.refresh_from_db()
+        assert user.profile.last_digest_sent_on == TUESDAY
+
+    def test_digest_sent_this_week_is_not_sent_again_later_in_the_week(self, user):
+        overdue_plan(user)
+        opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY)
+
+        with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
+            run()
+
+        assert mail.outbox == []
+
+    def test_catch_up_reaches_the_end_of_the_week(self, user):
+        overdue_plan(user)
+        opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY - timedelta(days=7))
+
+        with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
+            run()
+
+        assert len(mail.outbox) == 1
+
+    def test_user_who_never_got_a_digest_waits_for_monday(self, user):
+        overdue_plan(user)
+        opt_in(user, Profile.DIGEST_WEEKLY)
+
+        with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
+            run()
+
+        assert mail.outbox == []
+
+    def test_catch_up_does_not_apply_to_daily_or_disabled_users(self, user):
+        other = UserFactory()
+        for account in (user, other):
+            overdue_plan(account)
+        opt_in(user, Profile.DIGEST_OFF, last_digest_sent_on=MONDAY - timedelta(days=7))
+        opt_in(other, Profile.DIGEST_DAILY, last_digest_sent_on=TUESDAY)
+
+        with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):
+            run()
+
+        assert mail.outbox == []
 
     def test_daily_digest_is_sent_any_day(self, user):
         overdue_plan(user)
