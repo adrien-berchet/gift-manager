@@ -618,3 +618,57 @@ class TestBirthdayEventScheduleDisplay:
         )
 
         assert f"Schedule: {self.SUMMARY}" in content
+
+
+class TestDashboardBirthdayCards:
+    """Upcoming birthdays are small cards laid out in a grid, not full-width rows."""
+
+    @staticmethod
+    def _cards(content):
+        section = content[content.index('class="birthday-cards"') :]
+        section = section[: section.index("</ul>")]
+        return re.findall(r'<li class="birthday-card">(.*?)</li>', section, re.DOTALL)
+
+    def test_one_card_per_upcoming_birthday(self, client_user, user):
+        for days in (2, 9, 20):
+            _person_with_birthday_in(days, user=user)
+
+        content = client_user.get(reverse("gift_manager:home")).content.decode()
+
+        assert len(self._cards(content)) == 3
+        assert 'class="dashboard-action-count">3<' in content
+
+    def test_card_without_a_plan_holds_the_warning_and_the_create_link(self, client_user, user):
+        person = _person_with_birthday_in(4, user=user, first_name="Anna", family_name="Smith")
+
+        (card,) = self._cards(client_user.get(reverse("gift_manager:home")).content.decode())
+
+        assert "Anna Smith" in card
+        assert "No gift plan yet" in card
+        assert f"birthday_for={person.person_id}" in card
+        assert 'data-action="create"' in card
+
+    def test_card_with_a_plan_has_only_the_status_badge(self, client_user, user):
+        from gift_manager.tests.factories import RelationFactory
+
+        person = _person_with_birthday_in(4, user=user)
+        relation = RelationFactory(
+            person=person,
+            event=Event.objects.get_birthday_event(),
+            due_date=person.next_birthday(),
+            shared_with=[user],
+        )
+        assert relation.person == person
+
+        (card,) = self._cards(client_user.get(reverse("gift_manager:home")).content.decode())
+
+        assert "Gift plan in progress" in card
+        assert "Create a gift plan" not in card
+
+    def test_dashboard_does_not_use_the_form_row_class(self, client_user, user):
+        """`birthday-row` belongs to the person form: its dashboard styling must not leak into it."""
+        _person_with_birthday_in(4, user=user)
+
+        content = client_user.get(reverse("gift_manager:home")).content.decode()
+
+        assert "birthday-row" not in content

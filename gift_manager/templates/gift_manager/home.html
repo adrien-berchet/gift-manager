@@ -563,49 +563,78 @@
         margin-bottom: var(--space-6);
     }
 
-    .birthday-list {
+    /* Birthday cards: small cards, several per row (about four on a wide screen, one on a phone) */
+    .birthday-cards {
         display: grid;
-        gap: var(--space-2);
+        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+        gap: var(--space-3);
         margin: 0;
         padding: 0;
         list-style: none;
     }
 
-    .birthday-row {
+    .birthday-card {
         display: flex;
-        align-items: center;
-        flex-wrap: wrap;
+        flex-direction: column;
         gap: var(--space-3);
+        min-width: 0;
         padding: var(--space-3);
         border: 1px solid var(--border-color);
         border-radius: var(--radius-md);
         background: var(--surface-card);
     }
 
-    .birthday-icon {
+    .birthday-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-3);
+    }
+
+    .birthday-card-icon {
+        margin-top: 0.2rem;
         color: var(--text-muted);
     }
 
-    .birthday-info {
+    .birthday-card-body {
         display: grid;
-        flex: 1 1 10rem;
         min-width: 0;
     }
 
-    .birthday-name {
+    .birthday-card-name {
         color: var(--text-primary);
         font-weight: 700;
         text-decoration: none;
         overflow-wrap: anywhere;
     }
 
-    .birthday-name:hover {
+    .birthday-card-name:hover {
         text-decoration: underline;
     }
 
-    .birthday-when {
+    .birthday-card-when {
         color: var(--text-secondary);
         font-size: var(--text-sm);
+    }
+
+    /* The footer sticks to the bottom so the actions line up across cards of the same row */
+    .birthday-card-footer {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        margin-top: auto;
+    }
+
+    .birthday-card .quick-action-btn {
+        padding: var(--space-2) var(--space-3);
+        font-size: var(--text-sm);
+    }
+
+    /* Plain-case badge: shorter, so the status and the action fit on one line */
+    .birthday-card .badge {
+        font-size: 0.75rem;
+        letter-spacing: 0;
+        text-transform: none;
     }
 
     .dashboard-empty-action {
@@ -1001,25 +1030,29 @@
             <h2 id="dashboard-birthdays-heading">{% trans "Upcoming birthdays" %}</h2>
             <span class="dashboard-action-count">{{ upcoming_birthdays|length }}</span>
         </div>
-        <ul class="birthday-list">
+        <ul class="birthday-cards">
             {% for birthday in upcoming_birthdays %}
-            <li class="birthday-row">
-                <i class="fas fa-cake-candles birthday-icon" aria-hidden="true"></i>
-                <div class="birthday-info">
-                    <a href="{% url 'gift_manager:person_detail' pk=birthday.person.person_id %}" class="birthday-name">{{ birthday.person }}</a>
-                    <span class="birthday-when">
-                        {{ birthday.date|date:"MONTH_DAY_FORMAT" }} &middot;
-                        {% if birthday.is_today %}{% trans "Today" %}{% elif birthday.days_until == 1 %}{% trans "Tomorrow" %}{% else %}{% blocktrans with days=birthday.days_until %}In {{ days }} days{% endblocktrans %}{% endif %}
-                    </span>
+            <li class="birthday-card">
+                <div class="birthday-card-header">
+                    <i class="fas fa-cake-candles birthday-card-icon" aria-hidden="true"></i>
+                    <div class="birthday-card-body">
+                        <a href="{% url 'gift_manager:person_detail' pk=birthday.person.person_id %}" class="birthday-card-name">{{ birthday.person }}</a>
+                        <span class="birthday-card-when">
+                            {{ birthday.date|date:"MONTH_DAY_FORMAT" }} &middot;
+                            {% if birthday.is_today %}{% trans "Today" %}{% elif birthday.days_until == 1 %}{% trans "Tomorrow" %}{% else %}{% blocktrans with days=birthday.days_until %}In {{ days }} days{% endblocktrans %}{% endif %}
+                        </span>
+                    </div>
                 </div>
-                {% if birthday.has_plan %}
-                <span class="badge text-bg-success">{% trans "Gift plan in progress" %}</span>
-                {% else %}
-                <span class="badge text-bg-warning">{% trans "No gift plan yet" %}</span>
-                <a href="{{ birthday.create_url }}" class="quick-action-btn" data-action="create">
-                    <i class="fas fa-plus" aria-hidden="true"></i>{% trans "Create a gift plan" %}
-                </a>
-                {% endif %}
+                <div class="birthday-card-footer">
+                    {% if birthday.has_plan %}
+                    <span class="badge text-bg-success">{% trans "Gift plan in progress" %}</span>
+                    {% else %}
+                    <span class="badge text-bg-warning">{% trans "No gift plan yet" %}</span>
+                    <a href="{{ birthday.create_url }}" class="quick-action-btn" data-action="create">
+                        <i class="fas fa-plus" aria-hidden="true"></i>{% trans "Create a gift plan" %}
+                    </a>
+                    {% endif %}
+                </div>
             </li>
             {% endfor %}
         </ul>
