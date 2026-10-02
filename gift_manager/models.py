@@ -423,7 +423,8 @@ class Profile(models.Model):
     )
 
     def __str__(self):
-        return f"{gettext_lazy('Profile of')} {self.user.username}"
+        label = gettext_lazy("Profile of")
+        return f"{label} {self.user.username}"
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:profile_detail")
@@ -491,7 +492,9 @@ class Invitation(models.Model):
     accepted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
-        return f"{gettext_lazy('Invitation from')} {self.sender} {gettext_lazy('to')} {self.email}"
+        prefix = gettext_lazy("Invitation from")
+        to_label = gettext_lazy("to")
+        return f"{prefix} {self.sender} {to_label} {self.email}"
 
     @property
     def email(self) -> str | None:

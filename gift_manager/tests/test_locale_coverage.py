@@ -103,24 +103,25 @@ def test_every_template_and_python_string_has_a_french_translation():
             if msgid:
                 used.setdefault(msgid, path.relative_to(PROJECT_ROOT).as_posix())
 
-    package = PROJECT_ROOT / "gift_manager"
-    for path in package.rglob("*.py"):
-        if {"tests", "migrations"} & set(path.parts):
-            continue
-        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
-            if not isinstance(node, ast.Call) or not node.args:
+    packages = [PROJECT_ROOT / "gift_manager", PROJECT_ROOT / "GiftManager"]
+    for package in packages:
+        for path in package.rglob("*.py"):
+            if {"tests", "migrations"} & set(path.parts):
                 continue
-            func = node.func
-            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
-            first = node.args[0]
-            if (
-                name in {"gettext", "gettext_lazy", "_"}
-                and isinstance(first, ast.Constant)
-                and isinstance(first.value, str)
-            ):
-                used.setdefault(
-                    first.value, f"{path.relative_to(PROJECT_ROOT).as_posix()}:{node.lineno}"
-                )
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if not isinstance(node, ast.Call) or not node.args:
+                    continue
+                func = node.func
+                name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+                first = node.args[0]
+                if (
+                    name in {"gettext", "gettext_lazy", "_"}
+                    and isinstance(first, ast.Constant)
+                    and isinstance(first.value, str)
+                ):
+                    used.setdefault(
+                        first.value, f"{path.relative_to(PROJECT_ROOT).as_posix()}:{node.lineno}"
+                    )
 
     missing = sorted(
         f"{where}: {msgid}" for msgid, where in used.items() if msgid not in translated
