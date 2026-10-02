@@ -1017,9 +1017,19 @@
         <div class="dashboard-empty-action">
             <i class="fas fa-circle-check" aria-hidden="true"></i>
             <p>{% trans "No gift plans need attention." %}</p>
+            {% if next_upcoming_item %}
+            <p class="mb-0">
+                {% trans "Coming up next:" %}
+                <a href="{{ next_upcoming_item.url }}" class="dashboard-action-link">{{ next_upcoming_item.title }}</a>
+                &middot; {{ next_upcoming_item.date|date:"MONTH_DAY_FORMAT" }}
+                ({% if next_upcoming_item.days_until == 0 %}{% trans "Today" %}{% elif next_upcoming_item.days_until == 1 %}{% trans "Tomorrow" %}{% else %}{% blocktrans with days=next_upcoming_item.days_until %}In {{ days }} days{% endblocktrans %}{% endif %})
+            </p>
+            {% else %}
+            <p class="mb-0">{% trans "Create a gift plan to start tracking what you will give next." %}</p>
             <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
                 <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Create a gift plan" %}
             </a>
+            {% endif %}
         </div>
         {% endif %}
     </section>

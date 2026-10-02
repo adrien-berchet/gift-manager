@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -67,4 +67,5 @@ Recommended starting context:
 
 ## Open Questions
 
-- Should clicking a tile apply a filter or only open the list?
+- Resolved: tiles only open their list (they already did); the empty state shows the
+  sooner of the next open gift plan or the next dated event.

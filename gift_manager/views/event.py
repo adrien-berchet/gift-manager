@@ -21,6 +21,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.base import QueryStringPrefillMixin
 
 
 class EventListView(
@@ -58,7 +59,9 @@ class EventListView(
         ]
 
 
-class EventCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
+class EventCreateView(
+    QueryStringPrefillMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView
+):
     model = Event
     form_class = EventForm
     success_url = reverse_lazy("gift_manager:events")
@@ -69,6 +72,7 @@ class EventCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateV
     form_css_class = "event-form"
     form_type = "event-edit"
     close_offcanvas = True
+    prefill_fields = {"name": "name"}
 
 
 class EventUpdateView(

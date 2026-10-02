@@ -63,8 +63,8 @@ status and notes to reflect the move.
 | 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
 | 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |
 | 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |
-| 0012 | Global Search Improvements | Proposed | Search | Gift plans in results, recent items, create-on-no-result. |
-| 0013 | Dashboard Polish | Proposed | Dashboard | Better empty state, clickable counts, unused data cleanup. |
+| 0012 | Global Search Improvements | Implemented | Search | Gift plans in results, recent items, create-on-no-result. Moved to `implemented/`. |
+| 0013 | Dashboard Polish | Implemented | Dashboard | Next-upcoming empty state and unused data cleanup. Moved to `implemented/`. |
 | 0014 | Installable PWA Or Removal Of Dead Offline Code | Implemented | Platform | Dead offline scripts removed; moved to `implemented/`. A real PWA would be a new idea. |
 | 0015 | Mobile Bottom Navigation Bar | Proposed | Navigation | Bottom tab bar with quick-create action on small screens. |
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |

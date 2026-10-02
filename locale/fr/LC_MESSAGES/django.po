@@ -4175,3 +4175,18 @@ msgstr "Se répète annuellement, à la date d'anniversaire du destinataire"
 
 msgid "The due date of a gift plan is the recipient's next birthday."
 msgstr "La date limite d'un projet de cadeau est le prochain anniversaire du destinataire."
+
+msgid "Recent"
+msgstr "Récents"
+
+msgid "Create person"
+msgstr "Créer une personne"
+
+msgid "Create event"
+msgstr "Créer un événement"
+
+msgid "Coming up next:"
+msgstr "À venir :"
+
+msgid "Create a gift plan to start tracking what you will give next."
+msgstr "Créez un projet de cadeau pour commencer à suivre ce que vous offrirez ensuite."

@@ -240,6 +240,25 @@ class SharedUsersMixin:
         return context
 
 
+class QueryStringPrefillMixin:
+    """Prefill create-form fields from query-string parameters.
+
+    ``prefill_fields`` maps a query-string parameter to the form field it fills. Only
+    non-empty values for declared fields are used, so the form is never prefilled with
+    arbitrary data.
+    """
+
+    prefill_fields: dict[str, str] = {}
+
+    def get_initial(self) -> dict:
+        initial = super().get_initial()
+        for param, field in self.prefill_fields.items():
+            value = self.request.GET.get(param, "").strip()
+            if value:
+                initial[field] = value
+        return initial
+
+
 class CreatePermissionMixin:
     """Mixin to add shared user permissions to CreateView forms."""
 

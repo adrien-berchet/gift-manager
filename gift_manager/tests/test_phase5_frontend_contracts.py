@@ -398,6 +398,20 @@ def test_global_search_combobox_and_stale_response_contract():
     assert "safeSearchUrl" in script
 
 
+def test_global_search_recent_items_and_create_actions_contract():
+    content = read(TEMPLATE_ROOT / "base.html")
+    script = read(STATIC_ROOT / "js/global-search.js")
+
+    for url_key in ("giftCreate", "personCreate", "eventCreate"):
+        assert f"{url_key}: '{{% url" in content
+    assert "gift_plan: i18n.giftPlans" in script
+    assert "localStorage" in script
+    assert "renderCreateActions(query)" in script
+    # Create links keep going through the sanitiser and the offcanvas create pattern.
+    assert 'data-action="create"' in script
+    assert "safeSearchUrl(`${action.url}?name=${encodeURIComponent(query)}`)" in script
+
+
 def test_base_template_delegates_behaviour_to_static_scripts():
     content = read(TEMPLATE_ROOT / "base.html")
 

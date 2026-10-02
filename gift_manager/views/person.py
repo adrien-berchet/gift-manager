@@ -31,6 +31,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.base import QueryStringPrefillMixin
 
 
 def get_person_grid_column_names():
@@ -160,7 +161,9 @@ class PersonListView(
         return value
 
 
-class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
+class PersonCreateView(
+    QueryStringPrefillMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView
+):
     model = Person
     form_class = PersonForm
     success_url = reverse_lazy("gift_manager:persons")
@@ -171,6 +174,7 @@ class PersonCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreate
     form_css_class = "person-form"
     form_type = "person-edit"
     close_offcanvas = True
+    prefill_fields = {"name": "first_name"}
 
     def get_initial(self):
         initial = super().get_initial()

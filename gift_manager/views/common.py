@@ -203,6 +203,49 @@ def get_user(user_id, *, return_id=False) -> tuple[User, str] | tuple[User, str,
     return user, username
 
 
+def _find_next_upcoming_item(gift_plans: list[Relation], user, today: date) -> dict | None:
+    """Return the soonest open gift plan or event dated today or later, if any."""
+    candidates = []
+
+    open_plans = [
+        plan
+        for plan in gift_plans
+        if plan.due_date and plan.due_date >= today and not is_terminal_status(plan.status)
+    ]
+    if open_plans:
+        plan = min(open_plans, key=lambda item: item.due_date)
+        candidates.append(
+            {
+                "kind": "gift_plan",
+                "title": f"{plan.gift.name} → {plan.recipient_name}",
+                "date": plan.due_date,
+                "url": reverse("gift_manager:relation_detail", kwargs={"pk": plan.relation_id}),
+            }
+        )
+
+    event = (
+        Event.objects.accessible_by(user)
+        .filter(date__gte=today, is_birthday=False)
+        .order_by("date")
+        .first()
+    )
+    if event:
+        candidates.append(
+            {
+                "kind": "event",
+                "title": event.name,
+                "date": event.date,
+                "url": reverse("gift_manager:event_detail", kwargs={"pk": event.event_id}),
+            }
+        )
+
+    if not candidates:
+        return None
+    item = min(candidates, key=lambda candidate: candidate["date"])
+    item["days_until"] = (item["date"] - today).days
+    return item
+
+
 def home(request):
     """Home page view with dashboard."""
     context = {}
@@ -250,13 +293,8 @@ def home(request):
 
         context["upcoming_birthdays"] = build_upcoming_birthdays(user, today)
 
-        # Recent gifts (last 5)
-        context["recent_gifts"] = Gift.objects.accessible_by(user).order_by("-creation_date")[:5]
-
-        # Recent persons (last 5)
-        context["recent_persons"] = Person.objects.accessible_by(user).order_by("-creation_date")[
-            :5
-        ]
+        if not action_groups:
+            context["next_upcoming_item"] = _find_next_upcoming_item(gift_plans, user, today)
 
     return render(request, "gift_manager/home.html", context)
 
@@ -273,13 +311,41 @@ def global_search(request):
     user = request.user
     max_per_category = 5
 
+    # Search Gift Plans (by gift, recipient or event name)
+    gift_plans = (
+        Relation.objects.accessible_by(user)
+        .with_related_objects()
+        .filter(
+            Q(gift__name__icontains=query)
+            | Q(person__first_name__icontains=query)
+            | Q(person__family_name__icontains=query)
+            | Q(group__name__icontains=query)
+            | Q(event__name__icontains=query)
+        )
+        .order_by("-creation_date")[:max_per_category]
+    )
+    results = [
+        {
+            "type": "gift_plan",
+            "icon": "fa-hand-holding-heart",
+            "title": plan.gift.name,
+            "subtitle": " · ".join(
+                part
+                for part in (plan.recipient_name, plan.event.name if plan.event else "")
+                if part
+            ),
+            "url": reverse("gift_manager:relation_detail", kwargs={"pk": plan.relation_id}),
+        }
+        for plan in gift_plans
+    ]
+
     # Search Gifts
     gifts = (
         Gift.objects.accessible_by(user)
         .filter(Q(name__icontains=query) | Q(comment__icontains=query))
         .order_by("-creation_date")[:max_per_category]
     )
-    results = [
+    results.extend(
         {
             "type": "gift",
             "icon": "fa-gift",
@@ -290,7 +356,7 @@ def global_search(request):
             "url": reverse("gift_manager:gift_detail", kwargs={"pk": gift.gift_id}),
         }
         for gift in gifts
-    ]
+    )
 
     # Search Persons
     persons = (

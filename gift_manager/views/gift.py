@@ -31,6 +31,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.base import QueryStringPrefillMixin
 
 
 class GiftListView(
@@ -124,7 +125,9 @@ class GiftListView(
         ]
 
 
-class GiftCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView):
+class GiftCreateView(
+    QueryStringPrefillMixin, FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateView
+):
     model = Gift
     form_class = GiftForm
     success_url = reverse_lazy("gift_manager:gifts")
@@ -135,6 +138,7 @@ class GiftCreateView(FallbackModeFormMixin, QueryOptimizationMixin, BaseCreateVi
     form_css_class = "gift-form"
     form_type = "gift"
     close_offcanvas = True
+    prefill_fields = {"name": "name"}
     create_gift_plan_action = "create_gift_plan"
     gift_plan_template_name = "gift_manager/includes/relation_form_partial.html"
 

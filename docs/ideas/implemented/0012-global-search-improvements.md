@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -67,4 +67,5 @@ Recommended starting context:
 
 ## Open Questions
 
-- Store recent items per device only, or on the profile?
+- Resolved: recent items are stored per device in `localStorage`. They are recorded when a
+  result is opened from the palette (not on every page visit).
