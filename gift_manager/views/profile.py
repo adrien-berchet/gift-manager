@@ -254,12 +254,10 @@ class SendInvitationView(LoginRequiredMixin, View):
             reverse("gift_manager:accept_invitation", args=[invitation.token])
         )
         # Use the plain email for sending
+        invitation_prompt = gettext("To accept the invitation, click on the following link:")
         send_mail(
             subject=gettext("Join my friends on Gift Manager"),
-            message=(
-                f"{gettext('To accept the invitation, click on the following link:')} "
-                f"{invitation_link}"
-            ),
+            message=f"{invitation_prompt} {invitation_link}",
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[recipient_email],
         )
