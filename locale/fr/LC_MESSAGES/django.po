@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-02 18:12+0200\n"
+"POT-Creation-Date: 2026-10-02 18:17+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -85,7 +85,7 @@ msgstr "Sélectionner un destinataire"
 msgid "People"
 msgstr "Personnes"
 
-#: gift_manager/forms.py:70 gift_manager/forms.py:170
+#: gift_manager/forms.py:70 gift_manager/forms.py:171
 #: gift_manager/templates/gift_manager/home.html:1101
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:93
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:165
@@ -103,94 +103,98 @@ msgstr "Sélectionnez un destinataire."
 msgid "Choose a valid recipient."
 msgstr "Choisissez un destinataire valide."
 
-#: gift_manager/forms.py:106
+#: gift_manager/forms.py:107
 msgid "Year"
 msgstr "Année"
 
-#: gift_manager/forms.py:149
+#: gift_manager/forms.py:150
 msgid "Day"
 msgstr "Jour"
 
-#: gift_manager/forms.py:152
+#: gift_manager/forms.py:153
 msgid "Month"
 msgstr "Mois"
 
-#: gift_manager/forms.py:155
+#: gift_manager/forms.py:156
 msgid "Year (optional)"
 msgstr "Année (facultatif)"
 
-#: gift_manager/forms.py:160
+#: gift_manager/forms.py:161
 #: gift_manager/templates/gift_manager/profile_detail.html:289
 #: gift_manager/views/person.py:42
 msgid "Email address"
 msgstr "Adresse email"
 
-#: gift_manager/forms.py:162 gift_manager/views/profile.py:228
+#: gift_manager/forms.py:163 gift_manager/views/profile.py:228
 msgid "Enter a valid email address."
 msgstr "Entrer une adresse email valide."
 
-#: gift_manager/forms.py:177
+#: gift_manager/forms.py:178
 msgid "Interests"
 msgstr "Centres d'intérêt"
 
-#: gift_manager/forms.py:178
+#: gift_manager/forms.py:179
 msgid "Gift tags describing what this person likes."
 msgstr "Étiquettes de cadeau décrivant ce que la personne aime."
 
-#: gift_manager/forms.py:193
+#: gift_manager/forms.py:194
 #: gift_manager/templates/gift_manager/person_group_detail.html:396
 #: gift_manager/templates/gift_manager/person_group_detail.html:472
 #: gift_manager/views/person.py:40
 msgid "First name"
 msgstr "Prénom"
 
-#: gift_manager/forms.py:194
+#: gift_manager/forms.py:195
 #: gift_manager/templates/gift_manager/person_group_detail.html:407
 #: gift_manager/templates/gift_manager/person_group_detail.html:483
 #: gift_manager/views/person.py:41
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: gift_manager/forms.py:195
+#: gift_manager/forms.py:196
 msgid "Notes"
 msgstr "Notes"
 
-#: gift_manager/forms.py:198
+#: gift_manager/forms.py:199
 msgid "Sizes, allergies, things to avoid, ideas mentioned in passing."
 msgstr "Tailles, allergies, choses à éviter, idées évoquées en passant."
 
-#: gift_manager/forms.py:207
+#: gift_manager/forms.py:208
 msgid "This first name is too long."
 msgstr "Ce prénom est trop long."
 
-#: gift_manager/forms.py:210
+#: gift_manager/forms.py:211
 msgid "This family name is too long."
 msgstr "Ce nom de famille est trop long."
 
-#: gift_manager/forms.py:330
+#: gift_manager/forms.py:255
+msgid "These notes are too long."
+msgstr "Ces notes sont trop longues."
+
+#: gift_manager/forms.py:337
 #: gift_manager/templates/gift_manager/person_group_explorer.html:145
 msgid "Parent groups"
 msgstr "Groupes parents"
 
-#: gift_manager/forms.py:331 gift_manager/forms.py:344
-#: gift_manager/forms.py:357
+#: gift_manager/forms.py:338 gift_manager/forms.py:351
+#: gift_manager/forms.py:364
 msgid "Hold Ctrl/Cmd to select multiple. Use the search box to filter."
 msgstr ""
 "Maintenir Ctrl/Cmd pour sélectionner plusieurs. Utilisez la boite de "
 "recherche pour filtrer."
 
-#: gift_manager/forms.py:343
+#: gift_manager/forms.py:350
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:95
 msgid "Members"
 msgstr "Membres"
 
-#: gift_manager/forms.py:356 gift_manager/forms.py:610
+#: gift_manager/forms.py:363 gift_manager/forms.py:617
 #: gift_manager/templates/gift_manager/person_group_explorer.html:55
 msgid "Child groups"
 msgstr "Groupes enfants"
 
-#: gift_manager/forms.py:366 gift_manager/forms.py:806
-#: gift_manager/forms.py:928
+#: gift_manager/forms.py:373 gift_manager/forms.py:813
+#: gift_manager/forms.py:935
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:91
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:18
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:18
@@ -200,21 +204,21 @@ msgstr "Groupes enfants"
 msgid "Name"
 msgstr "Nom"
 
-#: gift_manager/forms.py:490
+#: gift_manager/forms.py:497
 #, python-format
 msgid ""
 "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
 msgstr ""
 "Ajouter le parent '%(parent)s' créerait un cycle dans la hiérarchie des tags."
 
-#: gift_manager/forms.py:509
+#: gift_manager/forms.py:516
 #, python-format
 msgid "The following groups cannot be both parent and child: %(names)s"
 msgstr ""
 "Les groupes suivants ne peuvent pas être à la fois parent et enfant : "
 "%(names)s"
 
-#: gift_manager/forms.py:527
+#: gift_manager/forms.py:534
 #, python-format
 msgid ""
 "Cannot add parent '%(parent)s' and child(ren) '%(children)s' simultaneously "
@@ -225,7 +229,7 @@ msgstr ""
 "simultanément parce que l'enfant est un ancêtre du parent (Cycle: Groupe -> "
 "Enfant -> ... -> Parent -> Groupe)."
 
-#: gift_manager/forms.py:566
+#: gift_manager/forms.py:573
 #, python-format
 msgid ""
 "Adding '%(child)s' as a child would create a cycle in the group hierarchy "
@@ -234,16 +238,16 @@ msgstr ""
 "Ajouter '%(child)s' comme enfant créerait un cycle dans la hiérarchie des "
 "groupes (il est déjà un ancêtre)."
 
-#: gift_manager/forms.py:574
+#: gift_manager/forms.py:581
 msgid "A group cannot be a child of itself."
 msgstr "Un groupe ne peut pas être un enfant de lui-même."
 
-#: gift_manager/forms.py:611
+#: gift_manager/forms.py:618
 msgid "Select groups to add as children of this group"
 msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 
-#: gift_manager/forms.py:717 gift_manager/forms.py:764
-#: gift_manager/forms.py:1054 gift_manager/models.py:1238
+#: gift_manager/forms.py:724 gift_manager/forms.py:771
+#: gift_manager/forms.py:1061 gift_manager/models.py:1238
 #: gift_manager/templates/gift_manager/base.html:77
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:18
 #: gift_manager/templates/gift_manager/person_group_detail.html:685
@@ -252,9 +256,9 @@ msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 msgid "Gift"
 msgstr "Cadeau"
 
-#: gift_manager/forms.py:718 gift_manager/forms.py:765
-#: gift_manager/forms.py:807 gift_manager/forms.py:876
-#: gift_manager/forms.py:929 gift_manager/forms.py:1055
+#: gift_manager/forms.py:725 gift_manager/forms.py:772
+#: gift_manager/forms.py:814 gift_manager/forms.py:883
+#: gift_manager/forms.py:936 gift_manager/forms.py:1062
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:103
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:25
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:25
@@ -268,8 +272,8 @@ msgstr "Cadeau"
 msgid "Comment"
 msgstr "Commentaire"
 
-#: gift_manager/forms.py:719 gift_manager/forms.py:766
-#: gift_manager/forms.py:877 gift_manager/forms.py:1056
+#: gift_manager/forms.py:726 gift_manager/forms.py:773
+#: gift_manager/forms.py:884 gift_manager/forms.py:1063
 #: gift_manager/models.py:1311
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:165
 #: gift_manager/templates/gift_manager/person_group_detail.html:591
@@ -279,8 +283,8 @@ msgstr "Commentaire"
 msgid "Event"
 msgstr "Événement"
 
-#: gift_manager/forms.py:720 gift_manager/forms.py:767
-#: gift_manager/forms.py:878 gift_manager/forms.py:1057
+#: gift_manager/forms.py:727 gift_manager/forms.py:774
+#: gift_manager/forms.py:885 gift_manager/forms.py:1064
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:53
 #: gift_manager/templates/gift_manager/person_group_detail.html:573
 #: gift_manager/templates/gift_manager/person_group_detail.html:716
@@ -290,8 +294,8 @@ msgstr "Événement"
 msgid "Status"
 msgstr "Statut"
 
-#: gift_manager/forms.py:721 gift_manager/forms.py:768
-#: gift_manager/forms.py:879 gift_manager/forms.py:1058
+#: gift_manager/forms.py:728 gift_manager/forms.py:775
+#: gift_manager/forms.py:886 gift_manager/forms.py:1065
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:166
 #: gift_manager/templates/gift_manager/person_group_detail.html:606
 #: gift_manager/templates/gift_manager/person_group_detail.html:745
@@ -300,15 +304,15 @@ msgstr "Statut"
 msgid "Due date"
 msgstr "Échéance"
 
-#: gift_manager/forms.py:748
+#: gift_manager/forms.py:755
 msgid "The specified person does not exist."
 msgstr "La personne demandée n'existe pas."
 
-#: gift_manager/forms.py:795
+#: gift_manager/forms.py:802
 msgid "The specified person group does not exist."
 msgstr "Le groupe demandé n'existe pas."
 
-#: gift_manager/forms.py:808 gift_manager/templates/gift_manager/base.html:125
+#: gift_manager/forms.py:815 gift_manager/templates/gift_manager/base.html:125
 #: gift_manager/templates/gift_manager/base.html:351
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:145
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:48
@@ -316,19 +320,19 @@ msgstr "Le groupe demandé n'existe pas."
 msgid "Tags"
 msgstr "Tags"
 
-#: gift_manager/forms.py:816
+#: gift_manager/forms.py:823
 msgid "This name is too long."
 msgstr "Ce nom est trop long."
 
-#: gift_manager/forms.py:819
+#: gift_manager/forms.py:826
 msgid "This comment is too long."
 msgstr "Ce commentaire est trop long."
 
-#: gift_manager/forms.py:853 gift_manager/models.py:1197
+#: gift_manager/forms.py:860 gift_manager/models.py:1197
 msgid "Adding this parent would create a cycle in the tag hierarchy."
 msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
 
-#: gift_manager/forms.py:861 gift_manager/forms.py:1029
+#: gift_manager/forms.py:868 gift_manager/forms.py:1036
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:29
 #: gift_manager/templates/gift_manager/person_group_detail.html:697
 #: gift_manager/templates/gift_manager/relation_status_detail.html:64
@@ -336,33 +340,33 @@ msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
 msgid "Recipient"
 msgstr "Destinataire"
 
-#: gift_manager/forms.py:864 gift_manager/forms.py:1032
+#: gift_manager/forms.py:871 gift_manager/forms.py:1039
 msgid "Choose the person or group this gift plan is for."
 msgstr "Choisissez la personne ou le groupe concerné par ce projet de cadeau."
 
-#: gift_manager/forms.py:911
+#: gift_manager/forms.py:918
 msgid "The specified gift does not exist."
 msgstr "Le cadeau demandé n'existe pas."
 
-#: gift_manager/forms.py:930
+#: gift_manager/forms.py:937
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:46
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:52
 #: gift_manager/views/event.py:45
 msgid "Schedule"
 msgstr "Planification"
 
-#: gift_manager/forms.py:931
+#: gift_manager/forms.py:938
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:65
 #: gift_manager/views/event.py:58
 msgid "Date"
 msgstr "Date"
 
-#: gift_manager/forms.py:932
+#: gift_manager/forms.py:939
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:76
 msgid "Recurrence"
 msgstr "Récurrence"
 
-#: gift_manager/forms.py:936
+#: gift_manager/forms.py:943
 msgid ""
 "Use the event date for one-time events, or the typical date for repeating "
 "events."
@@ -370,28 +374,28 @@ msgstr ""
 "Utilisez la date de l'événement ponctuel, ou la date habituelle d'un "
 "événement récurrent."
 
-#: gift_manager/forms.py:959 gift_manager/forms.py:965
+#: gift_manager/forms.py:966 gift_manager/forms.py:972
 #: gift_manager/models.py:1373 gift_manager/models.py:1378
 msgid "Choose a date."
 msgstr "Choisissez une date."
 
-#: gift_manager/forms.py:967 gift_manager/models.py:1380
+#: gift_manager/forms.py:974 gift_manager/models.py:1380
 msgid "Choose a recurrence."
 msgstr "Choisissez une récurrence."
 
-#: gift_manager/forms.py:970 gift_manager/models.py:1382
+#: gift_manager/forms.py:977 gift_manager/models.py:1382
 msgid "Choose a valid schedule."
 msgstr "Choisissez une planification valide."
 
-#: gift_manager/forms.py:982
+#: gift_manager/forms.py:989
 msgid "Rating"
 msgstr "Note"
 
-#: gift_manager/forms.py:994
+#: gift_manager/forms.py:1001
 msgid "Note"
 msgstr "Commentaire"
 
-#: gift_manager/forms.py:1122
+#: gift_manager/forms.py:1129
 msgid "Default"
 msgstr "Par défaut"
 

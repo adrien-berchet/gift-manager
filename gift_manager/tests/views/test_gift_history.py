@@ -257,3 +257,14 @@ class TestRepeatGiftHint:
         response = client.get(reverse("gift_manager:relation_create"))
 
         assert reverse("gift_manager:repeat_gift_hint") in response.content.decode()
+
+    def test_group_recipient_gets_repeat_warning_but_no_suggestions(self, client, user):
+        group = PersonGroupFactory()
+        _share(user, group)
+        relation = GroupRelationFactory(group=group, gift=self.gift, status=_status("Planned"))
+        _share(user, relation)
+
+        content = self.hint(client, f"group:{group.group_id}", self.gift)
+
+        assert "data-repeat-gift-hint" in content
+        assert "data-interest-suggestions" not in content

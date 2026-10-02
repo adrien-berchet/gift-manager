@@ -55,6 +55,12 @@ class TestPersonForm:
         assert saved.notes == "Allergic to nuts"
         assert list(saved.interests.all()) == [tag]
 
+    def test_overlong_notes_are_rejected(self, user):
+        form = _form(user, notes="x" * 5001)
+
+        assert not form.is_valid()
+        assert "notes" in form.errors
+
     def test_inaccessible_tags_are_rejected(self, user):
         tag = GiftTagFactory(name="Not mine")
 
@@ -134,7 +140,7 @@ class TestInterestMatching:
 
     def test_skips_gifts_already_planned_for_the_person(self):
         gift = GiftFactory(name="Tent", tags=[self.tag], shared_with=[self.user])
-        RelationFactory(person=self.person, gift=gift)
+        RelationFactory(person=self.person, gift=gift, shared_with=[self.user])
 
         assert gifts_matching_interests(self.user, self.person) == []
 
@@ -153,3 +159,16 @@ class TestInterestMatching:
 
         assert "data-interest-suggestions" in content
         assert f'data-suggest-gift="{gift.pk}"' in content
+
+    def test_plans_hidden_from_the_viewer_do_not_exclude_a_gift(self):
+        gift = GiftFactory(name="Tent", tags=[self.tag], shared_with=[self.user])
+        RelationFactory(person=self.person, gift=gift)  # not shared with the viewer
+
+        assert gifts_matching_interests(self.user, self.person) == [gift]
+
+    def test_inaccessible_interest_tags_do_not_match(self):
+        secret = GiftTagFactory(name="Secret")
+        self.person.interests.set([secret])
+        GiftFactory(name="Hidden match", tags=[secret], shared_with=[self.user])
+
+        assert gifts_matching_interests(self.user, self.person) == []

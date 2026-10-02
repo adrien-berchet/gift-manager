@@ -22,7 +22,7 @@
     <button type="button"
             class="btn btn-outline-secondary btn-sm me-1 mb-1"
             data-suggest-gift="{{ suggested.pk }}"
-            hx-on:click="var s=document.querySelector('select[name=gift]'); if(s){s.value=this.dataset.suggestGift; s.dispatchEvent(new Event('change',{bubbles:true}));}">
+            hx-on:click="var s=this.closest('form').querySelector('select[name=gift]'); if(s){s.value=this.dataset.suggestGift; s.dispatchEvent(new Event('change',{bubbles:true}));}">
         {{ suggested.name }}
     </button>
     {% endfor %}

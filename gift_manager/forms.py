@@ -102,6 +102,7 @@ def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> No
     instance.person, instance.group = resolve_recipient_choice(recipient_value, user)
 
 
+PERSON_NOTES_MAX_LENGTH = 5000
 BIRTHDAY_FIRST_YEAR = 1900
 BIRTHDAY_YEAR_PLACEHOLDER = gettext_lazy("Year")
 
@@ -247,6 +248,12 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             PersonGroup.objects.accessible_by(user), user
         ).order_by("name")
         self.fields["interests"].queryset = GiftTag.objects.accessible_by(user).order_by("name")
+
+    def clean_notes(self):
+        notes = self.cleaned_data.get("notes")
+        if notes and len(notes) > PERSON_NOTES_MAX_LENGTH:
+            raise forms.ValidationError(gettext_lazy("These notes are too long."))
+        return notes
 
     def _interest_selection(self) -> set:
         """Return the interests to store: the selected ones plus those never offered."""
