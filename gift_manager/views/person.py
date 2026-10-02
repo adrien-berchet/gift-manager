@@ -272,6 +272,15 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             key=lambda r: (r.reaction_rating, r.gift.name),
         )
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["gift_history_url"] = reverse(
+            "gift_manager:person_gift_history", kwargs={"pk": self.object.person_id}
+        )
+        # Interests are gift tags: only the ones the viewer can see are shown
+        visible_tag_ids = VisibleMetadata.for_request(self.request).tag_ids
+        context["interests"] = sorted(
+            (tag for tag in self.object.interests.all() if tag.pk in visible_tag_ids),
+            key=lambda tag: tag.name.lower(),
+        )
 
         # Build action buttons configuration
         is_editor = context.get("is_editor", False)

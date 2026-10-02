@@ -121,6 +121,8 @@
     </div>
     {% endif %}
 
+    {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
+
     <!-- Gift Plans -->
     {% if relations %}
     <div class="detail-section mb-4">

@@ -72,8 +72,10 @@ def build_recipient_choices(
     return choices
 
 
-def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> None:
-    """Map a typed recipient value back to the current Relation fields."""
+def resolve_recipient_choice(
+    recipient_value: str, user
+) -> tuple[Person | None, PersonGroup | None]:
+    """Map a typed recipient value to the accessible (person, group) it designates."""
     if not recipient_value:
         raise forms.ValidationError(gettext_lazy("Select a recipient."))
 
@@ -86,17 +88,18 @@ def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> No
 
     try:
         if recipient_type == "person":
-            instance.person = Person.objects.accessible_by(user).get(person_id=object_id)
-            instance.group = None
-            return
+            return Person.objects.accessible_by(user).get(person_id=object_id), None
         if recipient_type == "group":
-            instance.group = PersonGroup.objects.accessible_by(user).get(group_id=object_id)
-            instance.person = None
-            return
+            return None, PersonGroup.objects.accessible_by(user).get(group_id=object_id)
     except (DjangoValidationError, Person.DoesNotExist, PersonGroup.DoesNotExist, ValueError):
         raise forms.ValidationError(gettext_lazy("Choose a valid recipient.")) from None
 
     raise forms.ValidationError(gettext_lazy("Choose a valid recipient."))
+
+
+def apply_recipient_choice(instance: Relation, recipient_value: str, user) -> None:
+    """Map a typed recipient value back to the current Relation fields."""
+    instance.person, instance.group = resolve_recipient_choice(recipient_value, user)
 
 
 BIRTHDAY_FIRST_YEAR = 1900
@@ -166,6 +169,14 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         required=False,
         label=gettext_lazy("Groups"),
     )
+    # Declared for the same reason: only the tags the user can access are offered, and the
+    # interests they were never offered must survive an edit (see _interest_selection).
+    interests = forms.ModelMultipleChoiceField(
+        queryset=GiftTag.objects.none(),
+        required=False,
+        label=gettext_lazy("Interests"),
+        help_text=gettext_lazy("Gift tags describing what this person likes."),
+    )
 
     class Meta:
         model = Person
@@ -176,14 +187,20 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             "birthday_day",
             "birthday_month",
             "birthday_year",
+            "notes",
         ]
         labels = {
             "first_name": gettext_lazy("First name"),
             "family_name": gettext_lazy("Family name"),
+            "notes": gettext_lazy("Notes"),
+        }
+        help_texts = {
+            "notes": gettext_lazy("Sizes, allergies, things to avoid, ideas mentioned in passing."),
         }
         widgets = {
             "first_name": forms.TextInput(attrs={"rows": 1}),
             "family_name": forms.TextInput(attrs={"rows": 1}),
+            "notes": forms.Textarea(attrs={"rows": 4}),
         }
         error_messages = {
             "first_name": {
@@ -205,6 +222,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         if self.instance and self.instance.pk:
             self.initial["email_address"] = decode_email(self.instance.email_address)
             self.initial.setdefault("groups", list(self.instance.groups.all()))
+            self.initial.setdefault("interests", list(self.instance.interests.all()))
 
     def _set_birthday_year_choices(self) -> None:
         """Offer the years from now back to 1900, plus a stored year outside that range."""
@@ -228,6 +246,14 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         self.fields["groups"].queryset = _editable_by(
             PersonGroup.objects.accessible_by(user), user
         ).order_by("name")
+        self.fields["interests"].queryset = GiftTag.objects.accessible_by(user).order_by("name")
+
+    def _interest_selection(self) -> set:
+        """Return the interests to store: the selected ones plus those never offered."""
+        selected = set(self.cleaned_data.get("interests", []))
+        offered = set(self.fields["interests"].queryset)
+        current = set(self.instance.interests.all()) if self.instance.pk else set()
+        return selected | (current - offered)
 
     def _group_changes(self) -> tuple[set, set]:
         """Return (add, remove) groups; groups not offered as choices are left untouched."""
@@ -266,6 +292,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
                     GroupHierarchyService.change_person_groups(
                         self.user, instance, add=add, remove=remove, person_is_new=is_new
                     )
+                    instance.interests.set(self._interest_selection())
         return instance
 
 

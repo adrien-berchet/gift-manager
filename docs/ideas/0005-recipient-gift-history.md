@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -74,3 +74,7 @@ Recommended starting context:
 ## Open Questions
 
 - Should group-targeted plans appear in the history of each member?
+
+## Implementation Notes
+
+Implemented: the history includes plans reaching a person through their groups (labelled with the group) and, on a group page, plans targeting the group directly. Ideas are excluded, abandoned plans are shown. The duplicate warning is a live HTMX hint (`/relations/repeat-gift-hint/`) that ignores abandoned plans.

@@ -470,6 +470,9 @@ class PersonGroupDetailView(BaseDetailView):
         )
 
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["gift_history_url"] = reverse(
+            "gift_manager:person_group_gift_history", kwargs={"pk": self.object.group_id}
+        )
 
         # Member counts
         context["direct_member_count"] = context["members"].count()

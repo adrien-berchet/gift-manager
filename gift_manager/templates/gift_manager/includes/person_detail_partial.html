@@ -67,6 +67,25 @@
             </div>
         </div>
 
+        <!-- Notes and interests -->
+        {% if person.notes or interests %}
+        <div class="detail-section mb-4">
+            <h6 class="detail-section-title text-muted mb-3">
+                <i class="fas fa-lightbulb me-2"></i>{% trans "Notes and interests" %}
+            </h6>
+            {% if interests %}
+            <div class="detail-value mb-2" data-person-interests>
+                {% for tag in interests %}
+                <span class="badge bg-success me-1 mb-1"><i class="fas fa-tag me-1"></i>{{ tag.name }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if person.notes %}
+            <p class="detail-value mb-0" data-person-notes style="white-space: pre-line;">{{ person.notes }}</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
         <!-- Groups -->
         {% if direct_groups or ancestor_groups %}
         <div class="detail-section mb-4">
@@ -156,6 +175,8 @@
 
             {% include "gift_manager/includes/relation_cards_partial.html" with relations=relations person=person is_editor=is_editor viewer_request=request only %}
         </div>
+
+        {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
 
         {% include "gift_manager/includes/reaction_history_partial.html" with given_reactions=given_reactions abandoned_reactions=abandoned_reactions only %}
 
