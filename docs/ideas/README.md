@@ -70,6 +70,7 @@ status and notes to reflect the move.
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
 | 0017 | Extract Inline Scripts And Styles From The Base Template | Implemented | Frontend | base.html inline code moved to static files; moved to `implemented/`. |
 | 0018 | Unify Delete Confirmation | Implemented | Frontend | Single shared delete flow; moved to `implemented/`. |
+| 0019 | Scope Form Loading State To Form Submissions | Proposed | Frontend | Stop in-form background HTMX requests from locking the whole form for 30 seconds. |
 
 ## Working With Ideas
 
