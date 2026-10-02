@@ -156,7 +156,9 @@ def _event_rule(event: Event) -> str | None:
         return _yearly_rule(event.date.month, event.date.day)
     if event.recurrence == "monthly":
         return _monthly_rule(event.date.day)
-    return f"FREQ={_RECURRENCE_FREQUENCIES[event.recurrence]}"
+    frequency = _RECURRENCE_FREQUENCIES.get(event.recurrence)
+    # An unknown value (a row that bypassed validation) is listed once rather than breaking the feed
+    return f"FREQ={frequency}" if frequency else None
 
 
 def _occasion_entries(user, stamp: str) -> list[list[str]]:

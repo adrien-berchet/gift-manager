@@ -139,6 +139,23 @@ class TestSelection:
 
         assert [message.to for message in mail.outbox] == [[other.profile.email]]
 
+    def test_unknown_user_is_an_error(self, user):
+        overdue_plan(user)
+        opt_in(user)
+
+        with pytest.raises(CommandError, match="does not exist"):
+            run("--user", "nobody")
+
+        assert mail.outbox == []
+
+    def test_existing_user_who_is_not_due_is_not_an_error(self, user):
+        overdue_plan(user)  # digest still off
+
+        output = run("--user", user.username)
+
+        assert "Sent 0 digest" in output
+        assert mail.outbox == []
+
     def test_dry_run_sends_nothing(self, user):
         overdue_plan(user)
         opt_in(user)
@@ -399,6 +416,32 @@ class TestContent:
         assert message.extra_headers["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
         assert link in message.body
         assert link in message.alternatives[0].content
+
+    def test_birthday_without_a_plan_links_to_plan_creation(self, user):
+        soon = timezone.localdate() + timedelta(days=3)
+        person = PersonFactory(birthday_day=soon.day, birthday_month=soon.month, shared_with=[user])
+        opt_in(user)
+
+        run()
+
+        body = mail.outbox[0].body
+        assert "No gift plan yet" in body
+        assert f"birthday_for={person.person_id}" in body
+
+    def test_birthday_with_a_plan_has_no_plan_creation_link(self, user):
+        soon = timezone.localdate() + timedelta(days=3)
+        person = PersonFactory(birthday_day=soon.day, birthday_month=soon.month, shared_with=[user])
+        RelationFactory(
+            person=person,
+            due_date=soon,
+            status=RelationStatusFactory(status="Planned"),
+            shared_with=[user],
+        )
+        opt_in(user)
+
+        run()
+
+        assert "No gift plan yet" not in mail.outbox[0].body
 
     def test_html_alternative_is_attached(self, user):
         plan = overdue_plan(user)

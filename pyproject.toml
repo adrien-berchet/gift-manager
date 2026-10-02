@@ -46,6 +46,7 @@ test = [
     "pytest-html>=4",
     "pytest-playwright>=0.7",
     "pytest>=8",
+    "python-dateutil>=2.8",
     "tox-gh-actions>=3",
     "tox>=4",
 ]

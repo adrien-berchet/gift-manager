@@ -118,6 +118,11 @@ The operational runbook is `docs/operations/reminders.md`.
   redirects, only returns counts, and answers 500 when a recipient failed. The day of the digest is
   claimed with a conditional update before each send (and restored when the send fails), so the
   best-effort, possibly duplicated Vercel delivery cannot email a user twice.
+- **Weekly digest with an empty Monday:** the day is only recorded when an email is sent, so a
+  weekly user with nothing to report on Monday is still due for the rest of that week, and gets the
+  digest as soon as something qualifies (for example on a Thursday). "Weekly (Mondays)" therefore
+  means "on Monday, or later that week if there was nothing to send on Monday"; strictly Monday-only
+  delivery would need a separate "checked on" date.
 - **Weekly catch-up:** later in the week a weekly digest is still due for users whose last digest
   predates that Monday (a missed run or failed send); a user who never got one waits for a Monday.
 - **Known limits:** the feed token is not hashed in the database; the token is not rotated by a

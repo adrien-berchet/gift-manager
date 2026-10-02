@@ -10,6 +10,7 @@ Mondays with a catch-up, at most one email per user and per day, links built fro
 ``SITE_BASE_URL``) live in ``gift_manager.digest_sending``.
 """
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ImproperlyConfigured
 from django.core.management.base import BaseCommand
 from django.core.management.base import CommandError
@@ -38,10 +39,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        username = options["user"]
+        if username and not User.objects.filter(username=username).exists():
+            msg = f"User {username!r} does not exist."
+            raise CommandError(msg)
+
         try:
             run = send_digests(
                 include_weekly=options["include_weekly"],
-                username=options["user"],
+                username=username,
                 dry_run=options["dry_run"],
             )
         except ImproperlyConfigured as error:

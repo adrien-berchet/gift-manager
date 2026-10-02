@@ -739,6 +739,7 @@ dev = [
     { name = "pytest-html" },
     { name = "pytest-mypy" },
     { name = "pytest-playwright" },
+    { name = "python-dateutil" },
     { name = "ruff" },
     { name = "tox" },
     { name = "tox-gh-actions" },
@@ -765,6 +766,7 @@ test = [
     { name = "pytest-django" },
     { name = "pytest-html" },
     { name = "pytest-playwright" },
+    { name = "python-dateutil" },
     { name = "tox" },
     { name = "tox-gh-actions" },
 ]
@@ -801,6 +803,7 @@ requires-dist = [
     { name = "pytest-html", marker = "extra == 'test'", specifier = ">=4" },
     { name = "pytest-mypy", marker = "extra == 'mypy'", specifier = ">=0.10" },
     { name = "pytest-playwright", marker = "extra == 'test'", specifier = ">=0.7" },
+    { name = "python-dateutil", marker = "extra == 'test'", specifier = ">=2.8" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3" },
     { name = "sentry-sdk", extras = ["django"], specifier = ">=1.40" },

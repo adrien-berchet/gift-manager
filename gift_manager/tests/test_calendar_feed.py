@@ -97,6 +97,16 @@ class TestDocument:
 
         assert event["RRULE"]["FREQ"] == [freq]
 
+    def test_unknown_recurrence_is_listed_once_instead_of_breaking_the_feed(self, user):
+        event = EventFactory(date=date(2026, 3, 14), recurrence="yearly", shared_with=[user])
+        # A row that bypassed model validation
+        Event.objects.filter(pk=event.pk).update(recurrence="fortnightly")
+
+        (entry,) = events_by_uid_prefix(parse(user), "event-")
+
+        assert entry["DTSTART"].dt == date(2026, 3, 14)
+        assert "RRULE" not in entry
+
     def test_unscheduled_events_are_left_out(self, user):
         EventFactory(
             schedule_type=Event.ScheduleType.UNSCHEDULED,
