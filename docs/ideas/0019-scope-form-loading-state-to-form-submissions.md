@@ -70,7 +70,7 @@ Recommended starting context:
 
 - `docs/ai/architecture.md`
 - `docs/ai/testing.md`
-- `docs/ideas/0005-recipient-gift-history.md` (origin of the workaround)
+- `docs/ideas/implemented/0005-recipient-gift-history.md` (origin of the workaround)
 
 ## Acceptance Criteria
 
