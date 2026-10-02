@@ -21,7 +21,15 @@
         let resultIdCounter = 0;
         let currentResults = [];
 
-        const RECENT_STORAGE_KEY = 'giftManager.recentSearchItems';
+        // Scoped per user so accounts sharing a browser never see each other's recent items.
+        // Without a user id nothing is stored.
+        const RECENT_STORAGE_KEY = config.userId ? `giftManager.recentSearchItems.${config.userId}` : null;
+        try {
+            // Remove the unscoped key written by earlier versions
+            localStorage.removeItem('giftManager.recentSearchItems');
+        } catch (error) {
+            // Storage can be unavailable; recent items are optional.
+        }
         const MAX_RECENT_ITEMS = 5;
         const typeLabels = {
             gift_plan: i18n.giftPlans,
@@ -32,6 +40,7 @@
         };
 
         function loadRecentItems() {
+            if (!RECENT_STORAGE_KEY) return [];
             try {
                 const items = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) || '[]');
                 return Array.isArray(items) ? items.filter((item) => item && item.url && item.title) : [];
@@ -41,6 +50,7 @@
         }
 
         function rememberItem(result) {
+            if (!RECENT_STORAGE_KEY) return;
             try {
                 const entry = {
                     type: result.type,

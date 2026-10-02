@@ -1026,10 +1026,10 @@
             </p>
             {% else %}
             <p class="mb-0">{% trans "Create a gift plan to start tracking what you will give next." %}</p>
+            {% endif %}
             <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
                 <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Create a gift plan" %}
             </a>
-            {% endif %}
         </div>
         {% endif %}
     </section>

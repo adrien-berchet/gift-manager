@@ -856,6 +856,18 @@ class TestGlobalSearchView:
         titles = [r["title"] for r in response.json()["results"] if r["type"] == "gift_plan"]
         assert titles == ["<img src=x onerror=alert(1)>"]
 
+    def test_search_limits_gift_plans_per_category(self):
+        """Gift plan results are capped like the other categories."""
+        # Arrange
+        for index in range(7):
+            RelationFactory(gift=GiftFactory(name=f"Kite {index}"), shared_with=[self.user])
+
+        # Act
+        response = self.client.get(reverse("gift_manager:global_search"), {"q": "kite"})
+
+        # Assert
+        assert len([r for r in response.json()["results"] if r["type"] == "gift_plan"]) == 5
+
 
 @pytest.mark.django_db
 class TestCreateFormPrefill:
@@ -879,6 +891,25 @@ class TestCreateFormPrefill:
 
         assert response.status_code == 200
         assert response.context["form"].initial[field] == "Prefilled value"
+
+    @pytest.mark.parametrize(
+        ("url_name", "input_name"),
+        [
+            ("gift_manager:gift_create", "name"),
+            ("gift_manager:event_create", "name"),
+            ("gift_manager:person_create", "first_name"),
+        ],
+    )
+    def test_prefilled_value_is_rendered_in_htmx_partial(self, url_name, input_name):
+        response = self.client.get(
+            reverse(url_name), {"name": 'Quote " <b>'}, HTTP_HX_REQUEST="true"
+        )
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert f'name="{input_name}"' in content
+        assert "Quote &quot; &lt;b&gt;" in content
+        assert "<b>" not in content
 
     @pytest.mark.parametrize(
         "url_name",
@@ -977,3 +1008,82 @@ class TestDashboardEmptyState:
         assert "recent_gifts" not in response.context
         assert "recent_persons" not in response.context
         assert not [q for q in queries if "LIMIT 5" in q["sql"] and "gift_manager_gift" in q["sql"]]
+
+    def test_empty_state_keeps_create_button_with_upcoming_item(self):
+        EventFactory(
+            name="Garden party",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=45),
+            shared_with=[self.user],
+        )
+
+        content = self.client.get(reverse("gift_manager:home")).content.decode()
+
+        assert "Coming up next:" in content
+        assert reverse("gift_manager:relation_create") in content
+        assert "Create a gift plan" in content
+
+    @pytest.mark.parametrize(
+        ("offset_days", "label"), [(0, "Today"), (1, "Tomorrow"), (3, "In 3 days")]
+    )
+    def test_empty_state_relative_day_label(self, offset_days, label):
+        EventFactory(
+            name="Soon event",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=offset_days),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["next_upcoming_item"]["days_until"] == offset_days
+        assert f"({label})" in response.content.decode()
+
+    def test_empty_state_uses_next_occurrence_of_recurring_event(self):
+        today = timezone.localdate()
+        event = EventFactory(
+            name="Anniversary",
+            schedule_type=Event.ScheduleType.RECURRING,
+            recurrence="yearly",
+            date=today - timedelta(days=400),
+            shared_with=[self.user],
+        )
+        expected = event.next_occurrence(today)
+        assert expected > today
+
+        item = self.client.get(reverse("gift_manager:home")).context["next_upcoming_item"]
+
+        assert item["kind"] == "event"
+        assert item["date"] == expected
+        assert item["days_until"] == (expected - today).days
+
+    def test_empty_state_ignores_terminal_status_plans(self):
+        RelationFactory(
+            gift=GiftFactory(name="Already given"),
+            status=RelationStatusFactory(status="Given"),
+            due_date=timezone.localdate() + timedelta(days=90),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["dashboard_action_groups"] == []
+        assert response.context["next_upcoming_item"] is None
+
+    def test_empty_state_ignores_inaccessible_plans_and_events(self):
+        today = timezone.localdate()
+        RelationFactory(
+            gift=GiftFactory(name="Private plan"),
+            status=RelationStatusFactory(status="Planned"),
+            due_date=today + timedelta(days=90),
+        )
+        EventFactory(
+            name="Private event",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=today + timedelta(days=40),
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["next_upcoming_item"] is None
+        assert "Private" not in response.content.decode()

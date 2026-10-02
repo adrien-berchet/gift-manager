@@ -204,7 +204,7 @@ def get_user(user_id, *, return_id=False) -> tuple[User, str] | tuple[User, str,
 
 
 def _find_next_upcoming_item(gift_plans: list[Relation], user, today: date) -> dict | None:
-    """Return the soonest open gift plan or event dated today or later, if any."""
+    """Return the soonest open gift plan or event occurrence from today onwards, if any."""
     candidates = []
 
     open_plans = [
@@ -223,18 +223,19 @@ def _find_next_upcoming_item(gift_plans: list[Relation], user, today: date) -> d
             }
         )
 
-    event = (
-        Event.objects.accessible_by(user)
-        .filter(date__gte=today, is_birthday=False)
-        .order_by("date")
-        .first()
-    )
-    if event:
+    # Recurring events store their first date, so rank them by their next occurrence
+    event_occurrences = [
+        (occurrence, event)
+        for event in Event.objects.accessible_by(user).filter(date__isnull=False, is_birthday=False)
+        if (occurrence := event.next_occurrence(today)) is not None
+    ]
+    if event_occurrences:
+        occurrence, event = min(event_occurrences, key=lambda pair: pair[0])
         candidates.append(
             {
                 "kind": "event",
                 "title": event.name,
-                "date": event.date,
+                "date": occurrence,
                 "url": reverse("gift_manager:event_detail", kwargs={"pk": event.event_id}),
             }
         )

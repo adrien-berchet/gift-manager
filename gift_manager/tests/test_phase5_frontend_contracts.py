@@ -406,6 +406,9 @@ def test_global_search_recent_items_and_create_actions_contract():
         assert f"{url_key}: '{{% url" in content
     assert "gift_plan: i18n.giftPlans" in script
     assert "localStorage" in script
+    # Recent items are scoped per user so shared browsers do not leak them across accounts.
+    assert "userId: {% if user.is_authenticated %}{{ user.pk }}" in content
+    assert "recentSearchItems.${config.userId}" in script
     assert "renderCreateActions(query)" in script
     # Create links keep going through the sanitiser and the offcanvas create pattern.
     assert 'data-action="create"' in script
