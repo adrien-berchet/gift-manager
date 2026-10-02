@@ -415,6 +415,19 @@ def test_global_search_recent_items_and_create_actions_contract():
     assert "safeSearchUrl(`${action.url}?name=${encodeURIComponent(query)}`)" in script
 
 
+def test_global_search_modal_fits_the_visible_area_on_phones():
+    script = read(STATIC_ROOT / "js/global-search.js")
+    styles = read(STATIC_ROOT / "css/base-layout.css")
+
+    # The visible area (above the on-screen keyboard) is tracked through the visual viewport.
+    assert "window.visualViewport" in script
+    assert "--search-viewport-height" in script
+    assert "--search-viewport-top" in script
+    # The generic "keyboard-visible" 50vh cap of mobile-responsive.css must not clip the results.
+    assert ".search-modal .modal-dialog.keyboard-visible .modal-body" in styles
+    assert "var(--search-viewport-height, 100dvh)" in styles
+
+
 def test_base_template_delegates_behaviour_to_static_scripts():
     content = read(TEMPLATE_ROOT / "base.html")
 

@@ -117,8 +117,28 @@
             }
         });
 
-        // Focus input when modal opens
+        // Keep the modal inside the visible area when the on-screen keyboard is open
+        const visualViewport = window.visualViewport;
+        function syncVisibleArea() {
+            searchModal.style.setProperty('--search-viewport-height', `${Math.round(visualViewport.height)}px`);
+            searchModal.style.setProperty('--search-viewport-top', `${Math.round(visualViewport.offsetTop)}px`);
+        }
+        function trackVisibleArea(enabled) {
+            if (!visualViewport) return;
+            const method = enabled ? 'addEventListener' : 'removeEventListener';
+            visualViewport[method]('resize', syncVisibleArea);
+            visualViewport[method]('scroll', syncVisibleArea);
+            if (enabled) {
+                syncVisibleArea();
+            } else {
+                searchModal.style.removeProperty('--search-viewport-height');
+                searchModal.style.removeProperty('--search-viewport-top');
+            }
+        }
+
+        // Show recent items and start tracking the visible area when the modal opens
         searchModal.addEventListener('show.bs.modal', () => {
+            trackVisibleArea(true);
             if (!searchInput.value.trim()) {
                 setResultsHtml(renderEmptyState());
             }
@@ -132,6 +152,7 @@
 
         // Clear input and reset results when modal closes
         searchModal.addEventListener('hidden.bs.modal', () => {
+            trackVisibleArea(false);
             abortSearch();
             searchInput.value = '';
             setResultsHtml(renderEmptyState());
