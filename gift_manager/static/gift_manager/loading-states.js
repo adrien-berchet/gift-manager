@@ -174,6 +174,8 @@
         // Form submission loading states
         setupFormLoadingStates() {
             document.body.addEventListener('htmx:beforeRequest', (e) => {
+                // Background requests (e.g. inline hints) must not lock the form
+                if (e.detail.elt.closest('[data-loading-ignore]')) return;
                 const form = e.detail.elt.closest('form');
                 if (form) {
                     const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
