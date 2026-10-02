@@ -342,3 +342,54 @@ body {
         display: none;
     }
 }
+
+/*
+ * Search modal on phones: sit at the top and let the results use all the space that is
+ * actually visible (the keyboard height is tracked by global-search.js through
+ * --search-viewport-height / --search-viewport-top). This overrides the generic 50vh cap
+ * that mobile-responsive.css applies to modals while an input is focused.
+ */
+@media (max-width: 768px) {
+    .search-modal .modal-dialog {
+        align-items: flex-start;
+        margin-top: calc(var(--search-viewport-top, 0px) + var(--space-2));
+        max-height: none;
+        min-height: 0;
+    }
+
+    .search-modal .modal-dialog.keyboard-visible,
+    .search-modal .modal-dialog.keyboard-visible .modal-body {
+        max-height: none;
+    }
+
+    .search-modal .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(var(--search-viewport-height, 100dvh) - var(--space-4));
+        overflow: hidden;
+    }
+
+    .search-modal .modal-body {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .search-modal .search-input-wrapper {
+        flex-shrink: 0;
+    }
+
+    .search-modal .search-results {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    /* Keyboard hints do not apply to touch and would take room from the results */
+    .search-modal .search-footer {
+        display: none;
+    }
+}

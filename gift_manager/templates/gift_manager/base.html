@@ -332,11 +332,20 @@
     <script>
         window.GiftManager = {
             isAuthenticated: {% if user.is_authenticated %}true{% else %}false{% endif %},
+            userId: {% if user.is_authenticated %}{{ user.pk }}{% else %}null{% endif %},
             urls: {
-                {% if user.is_authenticated %}globalSearch: '{% url "gift_manager:global_search" %}'{% endif %}
+                {% if user.is_authenticated %}globalSearch: '{% url "gift_manager:global_search" %}',
+                giftCreate: '{% url "gift_manager:gift_create" %}',
+                personCreate: '{% url "gift_manager:person_create" %}',
+                eventCreate: '{% url "gift_manager:event_create" %}'{% endif %}
             },
             i18n: {
                 gifts: '{% trans "Gifts" as t %}{{ t|escapejs }}',
+                giftPlans: '{% trans "Gift Plans" as t %}{{ t|escapejs }}',
+                recentItems: '{% trans "Recent" as t %}{{ t|escapejs }}',
+                createGiftNamed: '{% trans "Create gift" as t %}{{ t|escapejs }}',
+                createPersonNamed: '{% trans "Create person" as t %}{{ t|escapejs }}',
+                createEventNamed: '{% trans "Create event" as t %}{{ t|escapejs }}',
                 recipients: '{% trans "Recipients" as t %}{{ t|escapejs }}',
                 events: '{% trans "Events" as t %}{{ t|escapejs }}',
                 tags: '{% trans "Tags" as t %}{{ t|escapejs }}',

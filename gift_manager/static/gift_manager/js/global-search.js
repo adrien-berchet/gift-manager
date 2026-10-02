@@ -19,6 +19,94 @@
         let selectedIndex = -1;
         const quickLinksHTML = searchResults.innerHTML;
         let resultIdCounter = 0;
+        let currentResults = [];
+
+        // Scoped per user so accounts sharing a browser never see each other's recent items.
+        // Without a user id nothing is stored.
+        const RECENT_STORAGE_KEY = config.userId ? `giftManager.recentSearchItems.${config.userId}` : null;
+        try {
+            // Remove the unscoped key written by earlier versions
+            localStorage.removeItem('giftManager.recentSearchItems');
+        } catch (error) {
+            // Storage can be unavailable; recent items are optional.
+        }
+        const MAX_RECENT_ITEMS = 5;
+        const typeLabels = {
+            gift_plan: i18n.giftPlans,
+            gift: i18n.gifts,
+            recipient: i18n.recipients,
+            event: i18n.events,
+            tag: i18n.tags
+        };
+
+        function loadRecentItems() {
+            if (!RECENT_STORAGE_KEY) return [];
+            try {
+                const items = JSON.parse(localStorage.getItem(RECENT_STORAGE_KEY) || '[]');
+                return Array.isArray(items) ? items.filter((item) => item && item.url && item.title) : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function rememberItem(result) {
+            if (!RECENT_STORAGE_KEY) return;
+            try {
+                const entry = {
+                    type: result.type,
+                    icon: result.icon,
+                    title: result.title,
+                    subtitle: result.subtitle || '',
+                    url: result.url
+                };
+                const items = loadRecentItems().filter((item) => item.url !== entry.url);
+                items.unshift(entry);
+                localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(items.slice(0, MAX_RECENT_ITEMS)));
+            } catch (error) {
+                // Storage can be unavailable (private mode, quota); recent items are optional.
+            }
+        }
+
+        function renderResultItem(result, index) {
+            return `
+                <a href="${safeSearchUrl(result.url)}" class="search-result-item" role="option" aria-selected="false" data-result-index="${index}">
+                    <div class="search-result-icon"><i class="fas ${safeIconClass(result.icon)}" aria-hidden="true"></i></div>
+                    <div class="search-result-content">
+                        <div class="search-result-title">${escapeHtml(result.title)}</div>
+                        ${result.subtitle ? `<div class="search-result-subtitle">${escapeHtml(result.subtitle)}</div>` : ''}
+                    </div>
+                </a>
+            `;
+        }
+
+        function renderEmptyState() {
+            const recent = loadRecentItems();
+            currentResults = recent;
+            if (recent.length === 0) {
+                return quickLinksHTML;
+            }
+            const recentHtml = `<div class="search-category">${escapeHtml(i18n.recentItems)}</div>`
+                + recent.map(renderResultItem).join('');
+            return recentHtml + quickLinksHTML;
+        }
+
+        function renderCreateActions(query) {
+            const actions = [
+                { url: config.urls.giftCreate, icon: 'fa-gift', label: i18n.createGiftNamed },
+                { url: config.urls.personCreate, icon: 'fa-user-plus', label: i18n.createPersonNamed },
+                { url: config.urls.eventCreate, icon: 'fa-calendar-plus', label: i18n.createEventNamed }
+            ].filter((action) => action.url);
+
+            return actions.map((action) => `
+                <a href="${safeSearchUrl(`${action.url}?name=${encodeURIComponent(query)}`)}"
+                   class="search-result-item" role="option" aria-selected="false" data-action="create">
+                    <div class="search-result-icon"><i class="fas ${safeIconClass(action.icon)}" aria-hidden="true"></i></div>
+                    <div class="search-result-content">
+                        <div class="search-result-title">${escapeHtml(action.label)} "${escapeHtml(query)}"</div>
+                    </div>
+                </a>
+            `).join('');
+        }
 
         // Keyboard shortcut to open search (Ctrl+K or Cmd+K)
         document.addEventListener('keydown', (e) => {
@@ -29,7 +117,33 @@
             }
         });
 
-        // Focus input when modal opens
+        // Keep the modal inside the visible area when the on-screen keyboard is open
+        const visualViewport = window.visualViewport;
+        function syncVisibleArea() {
+            searchModal.style.setProperty('--search-viewport-height', `${Math.round(visualViewport.height)}px`);
+            searchModal.style.setProperty('--search-viewport-top', `${Math.round(visualViewport.offsetTop)}px`);
+        }
+        function trackVisibleArea(enabled) {
+            if (!visualViewport) return;
+            const method = enabled ? 'addEventListener' : 'removeEventListener';
+            visualViewport[method]('resize', syncVisibleArea);
+            visualViewport[method]('scroll', syncVisibleArea);
+            if (enabled) {
+                syncVisibleArea();
+            } else {
+                searchModal.style.removeProperty('--search-viewport-height');
+                searchModal.style.removeProperty('--search-viewport-top');
+            }
+        }
+
+        // Show recent items and start tracking the visible area when the modal opens
+        searchModal.addEventListener('show.bs.modal', () => {
+            trackVisibleArea(true);
+            if (!searchInput.value.trim()) {
+                setResultsHtml(renderEmptyState());
+            }
+        });
+
         searchModal.addEventListener('shown.bs.modal', () => {
             syncResultSemantics();
             searchInput.focus();
@@ -38,9 +152,10 @@
 
         // Clear input and reset results when modal closes
         searchModal.addEventListener('hidden.bs.modal', () => {
+            trackVisibleArea(false);
             abortSearch();
             searchInput.value = '';
-            setResultsHtml(quickLinksHTML);
+            setResultsHtml(renderEmptyState());
         });
 
         // Perform search
@@ -49,7 +164,7 @@
 
             if (!query || query.length < 2) {
                 abortSearch();
-                setResultsHtml(quickLinksHTML);
+                setResultsHtml(renderEmptyState());
                 return;
             }
 
@@ -75,24 +190,20 @@
                 }
 
                 if (data.results.length === 0) {
+                    currentResults = [];
                     setResultsHtml(`
                         <div class="search-no-results">
                             <i class="fas fa-search fa-2x mb-3" style="opacity: 0.3;"></i>
                             <p>${escapeHtml(i18n.noResultsFor)} "<strong>${escapeHtml(query)}</strong>"</p>
                         </div>
+                        ${renderCreateActions(query)}
                     `);
                     return;
                 }
 
-                // Group results by type
+                // Group results by type, keeping a flat list so clicks can be recorded
+                currentResults = [];
                 const grouped = {};
-                const typeLabels = {
-                    gift: i18n.gifts,
-                    recipient: i18n.recipients,
-                    event: i18n.events,
-                    tag: i18n.tags
-                };
-
                 data.results.forEach(result => {
                     if (!grouped[result.type]) {
                         grouped[result.type] = [];
@@ -102,17 +213,10 @@
 
                 let html = '';
                 for (const [type, results] of Object.entries(grouped)) {
-                    html += `<div class="search-category">${typeLabels[type] || type}</div>`;
+                    html += `<div class="search-category">${escapeHtml(typeLabels[type] || type)}</div>`;
                     results.forEach(result => {
-                        html += `
-                            <a href="${safeSearchUrl(result.url)}" class="search-result-item" role="option" aria-selected="false">
-                                <div class="search-result-icon"><i class="fas ${safeIconClass(result.icon)}" aria-hidden="true"></i></div>
-                                <div class="search-result-content">
-                                    <div class="search-result-title">${escapeHtml(result.title)}</div>
-                                    ${result.subtitle ? `<div class="search-result-subtitle">${escapeHtml(result.subtitle)}</div>` : ''}
-                                </div>
-                            </a>
-                        `;
+                        html += renderResultItem(result, currentResults.length);
+                        currentResults.push(result);
                     });
                 }
 
@@ -177,6 +281,22 @@
                 .filter((token) => /^fa[-a-z0-9]*$/.test(token))
                 .join(' ');
         }
+
+        // Remember visited results and close the modal when a create action opens its form
+        searchResults.addEventListener('click', (e) => {
+            const item = e.target.closest('.search-result-item');
+            if (!item) return;
+
+            if (item.dataset.resultIndex !== undefined) {
+                const result = currentResults[Number(item.dataset.resultIndex)];
+                if (result) rememberItem(result);
+            }
+
+            if (item.dataset.action === 'create') {
+                const modal = bootstrap.Modal.getInstance(searchModal);
+                if (modal) modal.hide();
+            }
+        });
 
         // Debounced search on input
         searchInput.addEventListener('input', (e) => {

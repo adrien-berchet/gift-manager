@@ -4,7 +4,9 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -15,6 +17,7 @@ from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
+from gift_manager.tests.factories import GroupRelationFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
@@ -785,3 +788,302 @@ class TestGlobalSearchView:
         assert "gift" in types_found
         assert "event" in types_found
         assert "recipient" in types_found
+
+    def test_search_finds_gift_plans_by_gift_recipient_and_event(self):
+        """Gift plans match on their gift, recipient and event names."""
+        # Arrange
+        plan = RelationFactory(
+            gift=GiftFactory(name="Telescope"),
+            person=PersonFactory(first_name="Ada", family_name="Lovelace"),
+            event=EventFactory(name="Solstice"),
+            shared_with=[self.user],
+        )
+        url = reverse("gift_manager:global_search")
+
+        for query in ("telescope", "lovelace", "solstice"):
+            # Act
+            response = self.client.get(url, {"q": query})
+
+            # Assert
+            plan_results = [r for r in response.json()["results"] if r["type"] == "gift_plan"]
+            assert len(plan_results) == 1, query
+            assert plan_results[0]["title"] == "Telescope"
+            assert plan_results[0]["subtitle"] == "Ada Lovelace · Solstice"
+            assert plan_results[0]["icon"] == "fa-hand-holding-heart"
+            assert plan_results[0]["url"] == reverse(
+                "gift_manager:relation_detail", kwargs={"pk": plan.relation_id}
+            )
+
+    def test_search_finds_gift_plans_by_group_name(self):
+        """Group-recipient gift plans match on the group name."""
+        # Arrange
+        GroupRelationFactory(
+            gift=GiftFactory(name="Board game"),
+            group=PersonGroupFactory(name="Cousins"),
+            shared_with=[self.user],
+        )
+
+        # Act
+        response = self.client.get(reverse("gift_manager:global_search"), {"q": "cousins"})
+
+        # Assert
+        plan_results = [r for r in response.json()["results"] if r["type"] == "gift_plan"]
+        assert [r["title"] for r in plan_results] == ["Board game"]
+
+    def test_search_excludes_inaccessible_gift_plans(self):
+        """Gift plans the user cannot access are never returned."""
+        # Arrange
+        RelationFactory(gift=GiftFactory(name="Secret telescope"))
+
+        # Act
+        response = self.client.get(reverse("gift_manager:global_search"), {"q": "telescope"})
+
+        # Assert
+        assert [r for r in response.json()["results"] if r["type"] == "gift_plan"] == []
+
+    def test_search_gift_plan_titles_are_returned_unescaped_for_client_side_escaping(self):
+        """Markup in a gift name is returned as plain JSON data (the client escapes it)."""
+        # Arrange
+        RelationFactory(
+            gift=GiftFactory(name="<img src=x onerror=alert(1)>"), shared_with=[self.user]
+        )
+
+        # Act
+        response = self.client.get(reverse("gift_manager:global_search"), {"q": "onerror"})
+
+        # Assert
+        assert response["Content-Type"].startswith("application/json")
+        titles = [r["title"] for r in response.json()["results"] if r["type"] == "gift_plan"]
+        assert titles == ["<img src=x onerror=alert(1)>"]
+
+    def test_search_limits_gift_plans_per_category(self):
+        """Gift plan results are capped like the other categories."""
+        # Arrange
+        for index in range(7):
+            RelationFactory(gift=GiftFactory(name=f"Kite {index}"), shared_with=[self.user])
+
+        # Act
+        response = self.client.get(reverse("gift_manager:global_search"), {"q": "kite"})
+
+        # Assert
+        assert len([r for r in response.json()["results"] if r["type"] == "gift_plan"]) == 5
+
+
+@pytest.mark.django_db
+class TestCreateFormPrefill:
+    """Create forms can be prefilled from the command palette's create actions."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, client, user):
+        self.client = client
+        client.force_login(user)
+
+    @pytest.mark.parametrize(
+        ("url_name", "field"),
+        [
+            ("gift_manager:gift_create", "name"),
+            ("gift_manager:event_create", "name"),
+            ("gift_manager:person_create", "first_name"),
+        ],
+    )
+    def test_name_query_parameter_prefills_form(self, url_name, field):
+        response = self.client.get(reverse(url_name), {"name": "Prefilled value"})
+
+        assert response.status_code == 200
+        assert response.context["form"].initial[field] == "Prefilled value"
+
+    @pytest.mark.parametrize(
+        ("url_name", "input_name"),
+        [
+            ("gift_manager:gift_create", "name"),
+            ("gift_manager:event_create", "name"),
+            ("gift_manager:person_create", "first_name"),
+        ],
+    )
+    def test_prefilled_value_is_rendered_in_htmx_partial(self, url_name, input_name):
+        response = self.client.get(
+            reverse(url_name), {"name": 'Quote " <b>'}, HTTP_HX_REQUEST="true"
+        )
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert f'name="{input_name}"' in content
+        assert "Quote &quot; &lt;b&gt;" in content
+        assert "<b>" not in content
+
+    @pytest.mark.parametrize(
+        "url_name",
+        ["gift_manager:gift_create", "gift_manager:event_create", "gift_manager:person_create"],
+    )
+    def test_blank_name_does_not_prefill(self, url_name):
+        response = self.client.get(reverse(url_name), {"name": "   "})
+
+        assert response.status_code == 200
+        assert "name" not in response.context["form"].initial
+        assert "first_name" not in response.context["form"].initial
+
+
+@pytest.mark.django_db
+class TestDashboardEmptyState:
+    """The dashboard's "all caught up" state and unused-data cleanup."""
+
+    @pytest.fixture(autouse=True)
+    def setup_user(self, client, user):
+        self.client = client
+        self.user = user
+        client.force_login(user)
+
+    def test_empty_state_without_upcoming_item_guides_to_create(self):
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["dashboard_action_groups"] == []
+        assert response.context["next_upcoming_item"] is None
+        assert "Create a gift plan" in response.content.decode()
+
+    def test_empty_state_shows_next_gift_plan(self):
+        today = timezone.localdate()
+        plan = RelationFactory(
+            gift=GiftFactory(name="Far plan"),
+            status=RelationStatusFactory(status="Planned"),
+            due_date=today + timedelta(days=90),
+            shared_with=[self.user],
+        )
+        RelationFactory(
+            gift=GiftFactory(name="Farther plan"),
+            status=RelationStatusFactory(status="Planned"),
+            due_date=today + timedelta(days=120),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        item = response.context["next_upcoming_item"]
+        assert item["kind"] == "gift_plan"
+        assert item["days_until"] == 90
+        assert item["url"] == reverse(
+            "gift_manager:relation_detail", kwargs={"pk": plan.relation_id}
+        )
+        assert "Far plan" in response.content.decode()
+
+    def test_empty_state_prefers_sooner_event(self):
+        today = timezone.localdate()
+        RelationFactory(
+            gift=GiftFactory(name="Far plan"),
+            status=RelationStatusFactory(status="Planned"),
+            due_date=today + timedelta(days=90),
+            shared_with=[self.user],
+        )
+        event = EventFactory(
+            name="Garden party",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=today + timedelta(days=45),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        item = response.context["next_upcoming_item"]
+        assert item["kind"] == "event"
+        assert item["url"] == reverse("gift_manager:event_detail", kwargs={"pk": event.event_id})
+
+    def test_next_upcoming_item_not_computed_when_actions_exist(self):
+        RelationFactory(
+            status=RelationStatusFactory(status="Planned"),
+            due_date=timezone.localdate() - timedelta(days=1),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["dashboard_action_groups"]
+        assert "next_upcoming_item" not in response.context
+
+    def test_home_does_not_load_unused_recent_lists(self):
+        GiftFactory(shared_with=[self.user])
+        PersonFactory(shared_with=[self.user])
+
+        with CaptureQueriesContext(connection) as queries:
+            response = self.client.get(reverse("gift_manager:home"))
+
+        assert "recent_gifts" not in response.context
+        assert "recent_persons" not in response.context
+        assert not [q for q in queries if "LIMIT 5" in q["sql"] and "gift_manager_gift" in q["sql"]]
+
+    def test_empty_state_keeps_create_button_with_upcoming_item(self):
+        EventFactory(
+            name="Garden party",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=45),
+            shared_with=[self.user],
+        )
+
+        content = self.client.get(reverse("gift_manager:home")).content.decode()
+
+        assert "Coming up next:" in content
+        assert reverse("gift_manager:relation_create") in content
+        assert "Create a gift plan" in content
+
+    @pytest.mark.parametrize(
+        ("offset_days", "label"), [(0, "Today"), (1, "Tomorrow"), (3, "In 3 days")]
+    )
+    def test_empty_state_relative_day_label(self, offset_days, label):
+        EventFactory(
+            name="Soon event",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=offset_days),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["next_upcoming_item"]["days_until"] == offset_days
+        assert f"({label})" in response.content.decode()
+
+    def test_empty_state_uses_next_occurrence_of_recurring_event(self):
+        today = timezone.localdate()
+        event = EventFactory(
+            name="Anniversary",
+            schedule_type=Event.ScheduleType.RECURRING,
+            recurrence="yearly",
+            date=today - timedelta(days=400),
+            shared_with=[self.user],
+        )
+        expected = event.next_occurrence(today)
+        assert expected > today
+
+        item = self.client.get(reverse("gift_manager:home")).context["next_upcoming_item"]
+
+        assert item["kind"] == "event"
+        assert item["date"] == expected
+        assert item["days_until"] == (expected - today).days
+
+    def test_empty_state_ignores_terminal_status_plans(self):
+        RelationFactory(
+            gift=GiftFactory(name="Already given"),
+            status=RelationStatusFactory(status="Given"),
+            due_date=timezone.localdate() + timedelta(days=90),
+            shared_with=[self.user],
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["dashboard_action_groups"] == []
+        assert response.context["next_upcoming_item"] is None
+
+    def test_empty_state_ignores_inaccessible_plans_and_events(self):
+        today = timezone.localdate()
+        RelationFactory(
+            gift=GiftFactory(name="Private plan"),
+            status=RelationStatusFactory(status="Planned"),
+            due_date=today + timedelta(days=90),
+        )
+        EventFactory(
+            name="Private event",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=today + timedelta(days=40),
+        )
+
+        response = self.client.get(reverse("gift_manager:home"))
+
+        assert response.context["next_upcoming_item"] is None
+        assert "Private" not in response.content.decode()
