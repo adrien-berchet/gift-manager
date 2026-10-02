@@ -11,6 +11,7 @@ from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
 
@@ -79,6 +80,21 @@ class TestPersonForm:
         assert form.is_valid(), form.errors
         form.save()
         assert list(person.interests.all()) == [hidden]
+
+    def test_commit_false_then_save_m2m_saves_interests_and_groups(self, user):
+        tag = GiftTagFactory(name="Kayaking", shared_with=[user])
+        group = PersonGroupFactory()
+        _share(user, group)
+
+        form = _form(user, interests=[tag.pk], groups=[group.pk])
+        assert form.is_valid(), form.errors
+        person = form.save(commit=False)
+        assert person.pk is None
+        person.save()
+        form.save_m2m()
+
+        assert list(person.interests.all()) == [tag]
+        assert list(person.groups.all()) == [group]
 
     def test_both_form_variants_render_the_fields(self, client, person):
         url = reverse("gift_manager:person_edit", kwargs={"pk": person.person_id})

@@ -285,21 +285,32 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
                 self.add_error("groups", str(error))
         return cleaned_data
 
+    def _save_m2m(self) -> None:
+        """Save group memberships and interests.
+
+        ``save(commit=False)`` callers reach this through ``form.save_m2m()`` once the person
+        is saved. Both are declared fields, so Django's own many-to-many saving skips them.
+        """
+        super()._save_m2m()
+        if self.user is None:
+            return
+        add, remove = self._group_changes()
+        GroupHierarchyService.change_person_groups(
+            self.user, self.instance, add=add, remove=remove, person_is_new=self._person_is_new
+        )
+        self.instance.interests.set(self._interest_selection())
+
     def save(self, *, commit=True):  # pylint: disable=arguments-differ
         instance = super().save(commit=False)
         # Encode the email address before saving
         email = self.cleaned_data.get("email_address")
         instance.email_address = encode_email(email)
+        # Remembered now: by the time the many-to-many data is saved the person has a pk
+        self._person_is_new = instance.pk is None
         if commit:
-            is_new = instance.pk is None
             with transaction.atomic():
                 instance.save()
-                if self.user is not None:
-                    add, remove = self._group_changes()
-                    GroupHierarchyService.change_person_groups(
-                        self.user, instance, add=add, remove=remove, person_is_new=is_new
-                    )
-                    instance.interests.set(self._interest_selection())
+                self.save_m2m()
         return instance
 
 
