@@ -1,0 +1,19 @@
+{% load i18n %}{% autoescape off %}{% blocktrans with username=user.username %}Hello {{ username }},{% endblocktrans %}
+
+{% trans "Here is what needs your attention in Gift Manager." %}
+{% if digest.overdue %}
+{% trans "Overdue" %}
+{% for plan in digest.overdue %}- {{ plan.gift.name }} → {{ plan.recipient_name }} ({{ plan.due_date|date:"DATE_FORMAT" }}): {{ base_url }}{% url 'gift_manager:relation_detail' plan.relation_id %}
+{% endfor %}{% endif %}{% if digest.due_soon %}
+{% blocktrans count days=digest.lookahead_days %}Due in the next day{% plural %}Due in the next {{ days }} days{% endblocktrans %}
+{% for plan in digest.due_soon %}- {{ plan.gift.name }} → {{ plan.recipient_name }} ({{ plan.due_date|date:"DATE_FORMAT" }}): {{ base_url }}{% url 'gift_manager:relation_detail' plan.relation_id %}
+{% endfor %}{% endif %}{% if digest.birthdays %}
+{% trans "Upcoming birthdays" %}
+{% for item in digest.birthdays %}- {{ item.person }} ({{ item.date|date:"DATE_FORMAT" }}){% if not item.has_plan %} - {% trans "No gift plan yet" %}: {{ base_url }}{{ item.create_url }}{% endif %}
+{% endfor %}{% endif %}{% if digest.events %}
+{% trans "Upcoming events without a gift plan" %}
+{% for item in digest.events %}- {{ item.event.name }} ({{ item.date|date:"DATE_FORMAT" }}): {{ base_url }}{{ item.url }}
+{% endfor %}{% endif %}
+{% trans "To stop receiving these emails, open this link:" %}
+{{ unsubscribe_url }}
+{% endautoescape %}

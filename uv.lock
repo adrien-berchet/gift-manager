@@ -726,6 +726,7 @@ dev = [
     { name = "factory-boy" },
     { name = "faker" },
     { name = "hypothesis" },
+    { name = "icalendar" },
     { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ipython", version = "9.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "mock" },
@@ -738,6 +739,7 @@ dev = [
     { name = "pytest-html" },
     { name = "pytest-mypy" },
     { name = "pytest-playwright" },
+    { name = "python-dateutil" },
     { name = "ruff" },
     { name = "tox" },
     { name = "tox-gh-actions" },
@@ -755,6 +757,7 @@ test = [
     { name = "factory-boy" },
     { name = "faker" },
     { name = "hypothesis" },
+    { name = "icalendar" },
     { name = "mock" },
     { name = "pip-audit" },
     { name = "playwright" },
@@ -763,6 +766,7 @@ test = [
     { name = "pytest-django" },
     { name = "pytest-html" },
     { name = "pytest-playwright" },
+    { name = "python-dateutil" },
     { name = "tox" },
     { name = "tox-gh-actions" },
 ]
@@ -784,6 +788,7 @@ requires-dist = [
     { name = "gift-manager", extras = ["mypy", "test"], marker = "extra == 'dev'" },
     { name = "gunicorn", specifier = ">=21.0" },
     { name = "hypothesis", marker = "extra == 'test'", specifier = ">=6.0" },
+    { name = "icalendar", marker = "extra == 'test'", specifier = ">=6" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.5" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9" },
@@ -798,6 +803,7 @@ requires-dist = [
     { name = "pytest-html", marker = "extra == 'test'", specifier = ">=4" },
     { name = "pytest-mypy", marker = "extra == 'mypy'", specifier = ">=0.10" },
     { name = "pytest-playwright", marker = "extra == 'test'", specifier = ">=0.7" },
+    { name = "python-dateutil", marker = "extra == 'test'", specifier = ">=2.8" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3" },
     { name = "sentry-sdk", extras = ["django"], specifier = ">=1.40" },
@@ -958,6 +964,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/51/73/37a4d4a6f3f0789fb2fddc851da957075fbe223706d1148ccc4dda825171/hypothesis-6.163.0-pp311-pypy311_pp73-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:34fc895691a2420595506eb17f3a104f2fa9039f013c0770a6cc2743ccaf6fed", size = 1096016, upload-time = "2026-07-28T07:15:09.821Z" },
     { url = "https://files.pythonhosted.org/packages/48/46/20bc7801f8b539334dc0439c28753632a078c96d6732eccf1bd4880644d2/hypothesis-6.163.0-pp311-pypy311_pp73-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7ef8954e37c80e0c46e6161eef1c72c71059b95250e620a77bd646f6c7a52a2d", size = 1145797, upload-time = "2026-07-28T07:15:39.864Z" },
     { url = "https://files.pythonhosted.org/packages/94/c2/4d5c8feb78ed86e698d4e0665d3179eb657ae66d3606ffe096d8055aaa82/hypothesis-6.163.0-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:d0838a28e9943d5b834ebae59b02adda76e2cd1e65caa808104c72102052057d", size = 662696, upload-time = "2026-07-28T07:15:38.519Z" },
+]
+
+[[package]]
+name = "icalendar"
+version = "7.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "tzdata" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/47/2b/1bbf82d316df18c3331d9a06228819c8a5814ceda545a3e9980e52ffce1b/icalendar-7.3.0.tar.gz", hash = "sha256:7bd001c8e648205e1bde5c6a5b77096598e8d0893dcf57755c6c597635620132", size = 525811, upload-time = "2026-08-19T15:10:21.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/82/50bff78b0bb0c7d7c0cb39e0ee189b92f611fff6bd7cf57f25e92d5a7551/icalendar-7.3.0-py3-none-any.whl", hash = "sha256:8355acfe17be81b368f0b1e3740817cea9b56ea889931f8f1a87c62f2d28db0b", size = 542540, upload-time = "2026-08-19T15:10:19.525Z" },
 ]
 
 [[package]]

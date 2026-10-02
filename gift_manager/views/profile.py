@@ -21,6 +21,7 @@ from django.views.generic import View
 
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
+from gift_manager.forms import ReminderPreferencesForm
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -204,6 +205,16 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
 
     def get_object(self, *args):
         return Profile.objects.get(user=self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        profile = context["profile"]
+        context["reminder_form"] = ReminderPreferencesForm(instance=profile)
+        if profile.calendar_token:
+            context["calendar_feed_url"] = self.request.build_absolute_uri(
+                reverse("gift_manager:calendar_feed", kwargs={"token": profile.calendar_token})
+            )
+        return context
 
 
 class SendInvitationView(LoginRequiredMixin, View):

@@ -214,6 +214,64 @@
         </form>
     </div>
 
+    <!-- Reminders Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-bell"></i> {% trans "Reminders" %}</h2>
+
+        <form method="post" action="{% url 'gift_manager:update_reminder_preferences' %}" id="reminder-preferences-form">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ reminder_form.digest_frequency.id_for_label }}">{{ reminder_form.digest_frequency.label }}</label>
+                    {{ reminder_form.digest_frequency }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ reminder_form.digest_lookahead_days.id_for_label }}">{{ reminder_form.digest_lookahead_days.label }}</label>
+                    {{ reminder_form.digest_lookahead_days }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="{{ reminder_form.preferred_language.id_for_label }}">{{ reminder_form.preferred_language.label }}</label>
+                    {{ reminder_form.preferred_language }}
+                </div>
+            </div>
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>{% trans "Save Preferences" %}
+                </button>
+            </div>
+        </form>
+
+        <hr>
+
+        <h3 class="h5"><i class="fas fa-calendar-alt me-2"></i>{% trans "Calendar feed" %}</h3>
+        {% if calendar_feed_url %}
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" id="calendar-feed-url" value="{{ calendar_feed_url }}" readonly aria-label="{% trans 'Calendar feed' %}">
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <form method="post" action="{% url 'gift_manager:calendar_feed_regenerate' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-sync-alt me-1"></i>{% trans "Generate a new link" %}
+                    </button>
+                </form>
+                <form method="post" action="{% url 'gift_manager:calendar_feed_disable' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-ban me-1"></i>{% trans "Disable" %}
+                    </button>
+                </form>
+            </div>
+        {% else %}
+            <form method="post" action="{% url 'gift_manager:calendar_feed_regenerate' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-calendar-plus me-1"></i>{% trans "Enable calendar feed" %}
+                </button>
+            </form>
+        {% endif %}
+    </div>
+
     <!-- Friends Section -->
     <div class="profile-section">
         <h2>

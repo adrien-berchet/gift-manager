@@ -83,9 +83,14 @@ def _build_gift_plan_action_groups(
     user,
     today: date,
     now,
+    due_soon_days: int = DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS,
 ) -> list[dict]:
-    """Build priority-ordered dashboard action groups for gift plans."""
-    due_soon_end = today + timedelta(days=DASHBOARD_QUICK_ACTION_DUE_SOON_DAYS)
+    """Build priority-ordered dashboard action groups for gift plans.
+
+    ``due_soon_days`` is the length of the "Due soon" window; the reminder digest widens it
+    to the lookahead chosen by the user.
+    """
+    due_soon_end = today + timedelta(days=due_soon_days)
     stale_before = now - timedelta(days=DASHBOARD_STALE_AFTER_DAYS)
     groups = {
         "overdue": {

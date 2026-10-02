@@ -1,0 +1,33 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head><meta charset="utf-8"><title>{% trans "Gift Manager reminders" %}</title></head>
+<body style="font-family: Arial, Helvetica, sans-serif; color: #212529; line-height: 1.5;">
+<p>{% blocktrans with username=user.username %}Hello {{ username }},{% endblocktrans %}</p>
+<p>{% trans "Here is what needs your attention in Gift Manager." %}</p>
+{% if digest.overdue %}
+<h3 style="color: #b02a37;">{% trans "Overdue" %}</h3>
+<ul>
+{% for plan in digest.overdue %}<li><a href="{{ base_url }}{% url 'gift_manager:relation_detail' plan.relation_id %}">{{ plan.gift.name }} → {{ plan.recipient_name }}</a> ({{ plan.due_date|date:"DATE_FORMAT" }})</li>
+{% endfor %}</ul>
+{% endif %}
+{% if digest.due_soon %}
+<h3>{% blocktrans count days=digest.lookahead_days %}Due in the next day{% plural %}Due in the next {{ days }} days{% endblocktrans %}</h3>
+<ul>
+{% for plan in digest.due_soon %}<li><a href="{{ base_url }}{% url 'gift_manager:relation_detail' plan.relation_id %}">{{ plan.gift.name }} → {{ plan.recipient_name }}</a> ({{ plan.due_date|date:"DATE_FORMAT" }})</li>
+{% endfor %}</ul>
+{% endif %}
+{% if digest.birthdays %}
+<h3>{% trans "Upcoming birthdays" %}</h3>
+<ul>
+{% for item in digest.birthdays %}<li><a href="{{ base_url }}{% url 'gift_manager:person_detail' item.person.person_id %}">{{ item.person }}</a> ({{ item.date|date:"DATE_FORMAT" }}){% if not item.has_plan %} - <a href="{{ base_url }}{{ item.create_url }}">{% trans "No gift plan yet" %}</a>{% endif %}</li>
+{% endfor %}</ul>
+{% endif %}
+{% if digest.events %}
+<h3>{% trans "Upcoming events without a gift plan" %}</h3>
+<ul>
+{% for item in digest.events %}<li><a href="{{ base_url }}{{ item.url }}">{{ item.event.name }}</a> ({{ item.date|date:"DATE_FORMAT" }})</li>
+{% endfor %}</ul>
+{% endif %}
+<p style="color: #6c757d; font-size: 0.875em;"><a href="{{ unsubscribe_url }}">{% trans "Stop receiving these emails" %}</a></p>
+</body>
+</html>

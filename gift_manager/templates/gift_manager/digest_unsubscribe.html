@@ -1,0 +1,34 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Reminder emails" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">{% trans "Reminder emails" %}</h4>
+                </div>
+                <div class="card-body text-center">
+                    {% if not valid %}
+                        <p class="card-text">{% trans "This link is not valid." %}</p>
+                    {% elif done %}
+                        <p class="card-text">{% trans "You will no longer receive reminder emails." %}</p>
+                    {% else %}
+                        <p class="card-text">{% trans "Do you want to stop receiving reminder emails?" %}</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary">{% trans "Stop receiving these emails" %}</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'gift_manager:home' %}" class="btn btn-outline-secondary">{% trans "Go to Home Page" %}</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
