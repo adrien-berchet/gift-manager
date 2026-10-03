@@ -1,0 +1,18 @@
+{% load i18n custom_filters %}
+{% with safe_url=url|safe_http_url %}
+{% if safe_url or price != None %}
+<div class="link-price-display{% if compact %} link-price-display--compact{% endif %} d-flex flex-wrap align-items-center gap-3">
+  {% if price != None %}
+  <span class="link-price-display__price">
+    <i class="fas fa-tag me-1" aria-hidden="true"></i><span class="visually-hidden">{% trans "Estimated price" %}</span>
+    {{ price|format_price:currency }}
+  </span>
+  {% endif %}
+  {% if safe_url %}
+  <a class="link-price-display__link" href="{{ safe_url }}"{% if compact %} title="{{ safe_url|url_host }}"{% endif %} target="_blank" rel="noopener noreferrer nofollow">
+    <i class="fas fa-up-right-from-square me-1" aria-hidden="true"></i>{% if compact %}<span class="link-price-display__host">{{ safe_url|url_host }}</span>{% else %}{% trans "Open link" %} <span class="text-muted small">({{ safe_url|url_host }})</span>{% endif %}
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+{% endwith %}

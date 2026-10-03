@@ -1,0 +1,17 @@
+{% load i18n custom_filters %}
+{% if budget and budget.has_data %}
+<div class="budget-summary border rounded p-3 mb-3">
+  <h6 class="detail-section-title text-muted mb-2">
+    <i class="fas fa-wallet me-2" aria-hidden="true"></i>{% trans "Budget" %}
+  </h6>
+  <dl class="row mb-0">
+    <dt class="col-6">{% trans "Planned" %}</dt>
+    <dd class="col-6 mb-1">{{ budget.planned|format_price:request.user.profile.currency }}</dd>
+    <dt class="col-6">{% trans "Spent" %}</dt>
+    <dd class="col-6 mb-1">{{ budget.spent|format_price:request.user.profile.currency }}</dd>
+  </dl>
+  {% if budget.without_price %}
+  <p class="text-muted small mb-0">{% blocktrans count counter=budget.without_price %}{{ counter }} plan without price{% plural %}{{ counter }} plans without price{% endblocktrans %}</p>
+  {% endif %}
+</div>
+{% endif %}

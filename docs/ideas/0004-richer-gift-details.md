@@ -2,7 +2,12 @@
 
 ## Status
 
-Proposed
+Slice 1 implemented (link, price, budgets); images deferred
+
+Slice 1 decisions: a gift's link and price are defaults that a gift plan can override
+(`Relation.url` / `Relation.price`); currency is a per-user preference
+(`Profile.currency`); budgets are computed by `BudgetService` in `gift_manager/services.py`.
+See `docs/superpowers/specs/2026-10-03-richer-gift-details-design.md`.
 
 ## Summary
 

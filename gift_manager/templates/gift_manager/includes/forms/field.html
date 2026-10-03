@@ -52,6 +52,11 @@
         </div>
         {{ field }}
       </div>
+      {% elif suffix %}
+      <div class="input-group">
+        {{ field }}
+        <span class="input-group-text">{{ suffix }}</span>
+      </div>
       {% else %}
         {{ field }}
       {% endif %}

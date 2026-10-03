@@ -14,6 +14,24 @@
     outline: 0;
 }
 
+/* Input group (e.g. the currency next to a price): the addon follows the input's height */
+.input-group > .form-input-text {
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group > .form-input-text ~ .input-group-text {
+    height: 2em;
+    padding-top: 0;
+    padding-bottom: 0;
+    font-size: 1rem;
+    line-height: 1;
+    align-items: center;
+}
+
 .form-textarea {
     height: 6em;
     width: 100%;

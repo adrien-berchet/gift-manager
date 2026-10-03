@@ -1,0 +1,10 @@
+{% load i18n %}
+{% if form.url and form.price %}
+<details class="form-collapsible mb-3"{% if form.url.value or form.price.value != None and form.price.value != '' or form.url.errors or form.price.errors %} open{% endif %}>
+  <summary class="form-label">{% trans "Link and price" %}</summary>
+  <div class="pt-2">
+    {% include "gift_manager/includes/forms/field.html" with field=form.url %}
+    {% include "gift_manager/includes/forms/field.html" with field=form.price suffix=request.user.profile.currency %}
+  </div>
+</details>
+{% endif %}

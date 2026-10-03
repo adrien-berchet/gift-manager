@@ -16,6 +16,7 @@ from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import GLOBAL_OBJECT_REMOVAL_ERROR
+from gift_manager.services import BudgetService
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -114,6 +115,7 @@ class EventDetailView(BaseDetailView):
             .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["budget"] = BudgetService.for_event(self.request.user, self.object)
 
         # Add action buttons
         is_editor = context["is_editor"]

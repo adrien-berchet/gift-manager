@@ -265,7 +265,7 @@
 
 /* The paginated variant keeps rows stable without tying cards to a page. */
 .gift-plan-card-grid--paginated {
-    --gift-plan-card-height: 15.5rem;
+    --gift-plan-card-height: 17.5rem;
     align-content: start;
     grid-auto-rows: var(--gift-plan-card-height);
     overflow: visible;
@@ -822,4 +822,34 @@
     .gift-plan-card-actions {
         justify-content: flex-start;
     }
+}
+
+/* Link and price on a card: one compact line, and no row of the card is squeezed to make room */
+.gift-plan-card > * {
+    flex-shrink: 0;
+}
+
+.gift-plan-card > .gift-plan-note {
+    flex-shrink: 1;
+    min-height: 1.35em;
+}
+
+.link-price-display--compact {
+    flex-wrap: nowrap !important;
+    gap: 0.75rem !important;
+    min-width: 0;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+}
+
+.link-price-display--compact .link-price-display__price {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.link-price-display--compact .link-price-display__link {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

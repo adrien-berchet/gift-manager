@@ -104,6 +104,8 @@
     {% endif %}
     {% endwith %}
 
+    {% include "gift_manager/includes/link_price_display.html" with url=card.relation.effective_url price=card.relation.effective_price currency=request.user.profile.currency compact=True %}
+
     {% if card.relation.comment %}
     <p class="gift-plan-note">{{ card.relation.comment|truncatechars:160 }}</p>
     {% else %}

@@ -5,6 +5,7 @@ from django.utils.text import slugify
 IDEA_STATUS_SLUGS = {"idea"}
 ABANDONED_STATUS_SLUGS = {"abandoned"}
 GIVEN_STATUS_SLUGS = {"given"}
+PURCHASED_STATUS_SLUGS = {"purchased"}
 TERMINAL_STATUS_SLUGS = GIVEN_STATUS_SLUGS | ABANDONED_STATUS_SLUGS
 
 
@@ -34,6 +35,11 @@ def is_terminal_status(status) -> bool:
 def is_given_status(status) -> bool:
     """Return whether *status* is the Given status."""
     return status is not None and relation_status_slug(status) in GIVEN_STATUS_SLUGS
+
+
+def is_purchased_status(status) -> bool:
+    """Return whether *status* is the Purchased status."""
+    return status is not None and relation_status_slug(status) in PURCHASED_STATUS_SLUGS
 
 
 def is_abandoned_status(status) -> bool:
