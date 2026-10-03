@@ -28,6 +28,7 @@ from gift_manager.models import Profile
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import SharingService
+from gift_manager.templatetags.custom_filters import format_price
 from gift_manager.views.common import get_user
 
 logger = logging.getLogger(__name__)
@@ -947,8 +948,11 @@ class DeleteConfirmationMixin:
             schedule = self.object.date_summary
             details.append(gettext("Schedule: {schedule}").format(schedule=schedule))
 
-        if hasattr(self.object, "price") and self.object.price:
-            details.append(f"Price: ${self.object.price}")
+        if getattr(self.object, "price", None) is not None:
+            currency = self.request.user.profile.currency
+            details.append(
+                gettext("Price: {price}").format(price=format_price(self.object.price, currency))
+            )
 
         return details
 

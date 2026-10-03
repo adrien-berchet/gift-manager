@@ -1189,15 +1189,21 @@ class ReminderPreferencesForm(forms.ModelForm):
 
     class Meta:
         model = Profile
-        fields = ["preferred_language", "digest_frequency", "digest_lookahead_days"]
+        fields = ["preferred_language", "digest_frequency", "digest_lookahead_days", "currency"]
         widgets = {
             "preferred_language": forms.Select(attrs={"class": "form-select"}),
             "digest_frequency": forms.Select(attrs={"class": "form-select"}),
             "digest_lookahead_days": forms.Select(attrs={"class": "form-select"}),
+            "currency": forms.Select(attrs={"class": "form-select"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Forms posted without a currency keep the stored one
+        self.fields["currency"].required = False
         # An empty language means "the site language"; say so instead of the default dashes
         language_field = self.fields["preferred_language"]
         language_field.choices = [("", gettext_lazy("Default")), *language_field.choices[1:]]
+
+    def clean_currency(self) -> str:
+        return self.cleaned_data.get("currency") or self.instance.currency
