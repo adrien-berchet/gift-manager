@@ -332,3 +332,66 @@ def test_grid_template_tags_escape_json_and_html():
     email = grid_tags.format_grid_value('x" onclick="alert(1)', "email")
     assert 'onclick="alert(1)' not in str(email)
     assert "&quot; onclick=&quot;alert(1)" in str(email)
+
+
+@pytest.mark.django_db
+def test_gift_details_render_hostile_values_escaped(authenticated_client, user):
+    """Hostile names, links and prices never reach the page as markup or as unsafe hrefs."""
+    from decimal import Decimal
+
+    from django.template.loader import render_to_string
+    from django.test import RequestFactory
+    from django.urls import reverse
+
+    from gift_manager.gift_plan_cards import build_gift_plan_card
+    from gift_manager.permissions import PermissionLevel
+    from gift_manager.permissions import create_or_update_permission
+    from gift_manager.tests.factories import GiftFactory
+    from gift_manager.tests.factories import RelationFactory
+
+    hostile_name = "<img src=x onerror=alert(1)>"
+    hostile_url = 'https://a.example/?q="><script>alert(1)</script>'
+    gift = GiftFactory(name=hostile_name, url=hostile_url, price=Decimal("1.50"))
+    relation = RelationFactory(gift=gift)
+    for obj in (gift, relation, relation.person):
+        create_or_update_permission(user, obj, permission_level=PermissionLevel.OWNER)
+
+    request = RequestFactory().get("/")
+    request.user = user
+    card = build_gift_plan_card(relation, urgency_key="upcoming", permission=PermissionLevel.OWNER)
+    pages = [
+        render_to_string(
+            "gift_manager/includes/gift_plan_card.html", {"card": card, "request": request}
+        ),
+        authenticated_client.get(
+            reverse("gift_manager:gift_detail", kwargs={"pk": gift.gift_id})
+        ).content.decode(),
+        authenticated_client.get(
+            reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id})
+        ).content.decode(),
+    ]
+    for page in pages:
+        assert hostile_name not in page
+        assert "<script>alert(1)</script>" not in page
+        assert "&lt;img src=x" in page or "link-price-display" in page
+
+
+@pytest.mark.django_db
+def test_legacy_unsafe_url_is_not_rendered_as_a_link(authenticated_client, user):
+    """A javascript: URL stored outside the forms (e.g. imported) is never made clickable."""
+    from django.urls import reverse
+
+    from gift_manager.models import Gift
+    from gift_manager.permissions import PermissionLevel
+    from gift_manager.permissions import create_or_update_permission
+    from gift_manager.tests.factories import GiftFactory
+
+    gift = GiftFactory()
+    Gift.objects.filter(pk=gift.pk).update(url="javascript:alert(1)")
+    create_or_update_permission(user, gift, permission_level=PermissionLevel.OWNER)
+
+    content = authenticated_client.get(
+        reverse("gift_manager:gift_detail", kwargs={"pk": gift.gift_id})
+    ).content.decode()
+
+    assert 'href="javascript:' not in content

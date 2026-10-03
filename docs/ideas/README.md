@@ -55,7 +55,7 @@ status and notes to reflect the move.
 | 0001 | Gift Plan Suggestions For A Recipient | Proposed | Gift Plans | Catalogue scoring plus AI new-gift ideas per recipient, with persisted dismissals. |
 | 0002 | Person Birthdays And Personal Occasions | Implemented | Recipients | Birthday on people, dashboard section and one-click plan creation. Moved to `implemented/`. |
 | 0003 | Reminders And Calendar Feed | Implemented | Notifications | Opt-in digest email via management command plus private .ics feed. Moved to `implemented/`. |
-| 0004 | Richer Gift Details (Link, Price, Image) | Proposed | Gifts | Optional URL, price and image on gifts, with budget totals. |
+| 0004 | Richer Gift Details (Link, Price, Image) | Slice 1 implemented | Gifts | Optional URL, price and image on gifts, with budget totals. |
 | 0005 | Recipient Gift History And Repeat-Gift Warning | Implemented | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. Moved to `implemented/`. |
 | 0006 | Recipient Notes And Interests | Implemented | Recipients | Notes and interest tags on people, matched against gift tags. Moved to `implemented/`. |
 | 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
