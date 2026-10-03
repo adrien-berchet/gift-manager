@@ -10,7 +10,7 @@
   {% endif %}
   {% if safe_url %}
   <a class="link-price-display__link" href="{{ safe_url }}" target="_blank" rel="noopener noreferrer nofollow">
-    <i class="fas fa-up-right-from-square me-1" aria-hidden="true"></i>{% trans "Open link" %}
+    <i class="fas fa-up-right-from-square me-1" aria-hidden="true"></i>{% trans "Open link" %} <span class="text-muted small">({{ safe_url|url_host }})</span>
   </a>
   {% endif %}
 </div>

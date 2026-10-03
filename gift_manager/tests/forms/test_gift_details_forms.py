@@ -11,6 +11,8 @@ from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
+from gift_manager.permissions import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
@@ -155,6 +157,15 @@ class TestCollapsedSection:
             permission_type=PermissionLevel.OWNER
         )
         response = client.get(reverse("gift_manager:gift_edit", kwargs={"pk": gift.gift_id}))
+        assert DETAILS_OPEN.search(response.content.decode())
+
+    def test_section_open_when_plan_override_is_zero(self, client, user):
+        relation = RelationFactory(price=Decimal(0))
+        for obj in (relation, relation.gift, relation.person):
+            create_or_update_permission(user, obj, permission_level=PermissionLevel.OWNER)
+        response = client.get(
+            reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id})
+        )
         assert DETAILS_OPEN.search(response.content.decode())
 
     def test_section_open_on_error(self, client):

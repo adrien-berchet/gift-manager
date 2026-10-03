@@ -96,6 +96,10 @@ class TestPlanCard:
         assert 'href="https://plan.example"' in rendered
         assert LINK_ATTRS in rendered
 
+    def test_shows_the_link_host_next_to_the_link(self, user):
+        relation = RelationFactory(gift=GiftFactory(url="https://shop.example/a/b?c=1"))
+        assert "(shop.example)" in _render_card(user, relation)
+
     def test_hides_block_when_empty(self, user):
         relation = RelationFactory(gift=GiftFactory(price=None, url=""), price=None, url="")
         assert "link-price-display" not in _render_card(user, relation)

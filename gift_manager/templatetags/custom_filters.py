@@ -134,4 +134,14 @@ def safe_http_url(value):
         parts = urlsplit(value or "")
     except ValueError:
         return ""
-    return value if parts.scheme.lower() in {"http", "https"} and parts.netloc else ""
+    safe = parts.scheme.lower() in {"http", "https"} and parts.netloc and "@" not in parts.netloc
+    return value if safe else ""
+
+
+@register.filter
+def url_host(value):
+    """Return the host of *value* so users can see where a link leads."""
+    try:
+        return urlsplit(value or "").hostname or ""
+    except ValueError:
+        return ""

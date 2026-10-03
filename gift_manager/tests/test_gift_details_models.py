@@ -21,7 +21,14 @@ def test_validate_http_url_accepts_http_and_https(value):
 
 @pytest.mark.parametrize(
     "value",
-    ["javascript:alert(1)", "data:text/html,x", "ftp://a.b", "example.com", "https://"],
+    [
+        "javascript:alert(1)",
+        "data:text/html,x",
+        "ftp://a.b",
+        "example.com",
+        "https://",
+        "https://amazon.com@evil.example/",
+    ],
 )
 def test_validate_http_url_rejects_unsafe_schemes(value):
     with pytest.raises(ValidationError):
