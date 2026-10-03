@@ -368,6 +368,13 @@
     color: #f8fafc;
 }
 
+/* Dark mode input group addons (e.g. the currency next to a price) */
+[data-theme="dark"] .input-group-text {
+    background-color: #475569;
+    border-color: #475569;
+    color: #f8fafc;
+}
+
 [data-theme="dark"] .form-control::placeholder {
     color: #94a3b8;
 }

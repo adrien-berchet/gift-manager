@@ -35,6 +35,7 @@ from django.utils.translation import gettext_lazy
 from .email_encoding import decode_email
 from .email_encoding import encode_email
 from .statuses import can_rate_status
+from .validators import validate_http_url
 
 _PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
 _PERMISSION_LABEL_DICT = {
@@ -396,6 +397,20 @@ class Profile(models.Model):
         (30, gettext_lazy("30 days")),
     ]
 
+    CURRENCY_CHOICES = [
+        ("EUR", "EUR (€)"),
+        ("USD", "USD ($)"),
+        ("GBP", "GBP (£)"),
+        ("CHF", "CHF"),
+        ("CAD", "CAD ($)"),
+    ]
+
+    currency = models.CharField(
+        max_length=3,
+        choices=CURRENCY_CHOICES,
+        default="EUR",
+        verbose_name=gettext_lazy("Currency"),
+    )
     preferred_language = models.CharField(
         max_length=10,
         blank=True,
@@ -1225,6 +1240,21 @@ class Gift(models.Model):
     gift_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
+    url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_http_url],
+        verbose_name=gettext_lazy("Link"),
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        verbose_name=gettext_lazy("Estimated price"),
+    )
     tags = models.ManyToManyField(GiftTag, related_name="gifts", blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     shared_with = models.ManyToManyField(
@@ -1237,6 +1267,12 @@ class Gift(models.Model):
     class Meta:
         verbose_name = gettext_lazy("Gift")
         verbose_name_plural = gettext_lazy("Gifts")
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(price__isnull=True) | Q(price__gte=0),
+                name="gift_price_non_negative",
+            ),
+        ]
 
     def __str__(self) -> str:
         return f"{self.name}"
@@ -1497,6 +1533,22 @@ class Relation(models.Model):
     )
     due_date = models.DateField(unique=False, null=True, blank=True)
     comment = models.TextField(unique=False, null=True, blank=True)
+    # Optional overrides of the gift's link and price for this plan
+    url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_http_url],
+        verbose_name=gettext_lazy("Link"),
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        verbose_name=gettext_lazy("Estimated price"),
+    )
     creation_date = models.DateTimeField(auto_now_add=True)
     status_changed_at = models.DateTimeField(null=True, blank=True, editable=False)
     reaction_rating = models.PositiveSmallIntegerField(
@@ -1528,6 +1580,10 @@ class Relation(models.Model):
                 | Q(reaction_rating__gte=1, reaction_rating__lte=5),
                 name="relation_reaction_rating_range",
             ),
+            models.CheckConstraint(
+                condition=Q(price__isnull=True) | Q(price__gte=0),
+                name="relation_price_non_negative",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -1549,6 +1605,16 @@ class Relation(models.Model):
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
+
+    @property
+    def effective_url(self) -> str:
+        """Return the plan's link, falling back to the gift's."""
+        return self.url or self.gift.url
+
+    @property
+    def effective_price(self):
+        """Return the plan's price, falling back to the gift's (``None`` when neither is set)."""
+        return self.price if self.price is not None else self.gift.price
 
     def clean(self):
         """Ensure that exactly one of person or group is set.

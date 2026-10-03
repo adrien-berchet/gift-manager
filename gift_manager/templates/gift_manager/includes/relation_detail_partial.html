@@ -105,6 +105,16 @@
                 </div>
             </div>
             {% endif %}
+            {% if object.effective_url or object.effective_price != None %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Link and price" %}</label>
+                    <div class="detail-value">
+                        {% include "gift_manager/includes/link_price_display.html" with url=object.effective_url price=object.effective_price currency=request.user.profile.currency %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             <div class="col-12">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Created" %}</label>

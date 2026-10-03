@@ -27,6 +27,16 @@
                 </div>
             </div>
             {% endif %}
+            {% if gift.url or gift.price != None %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Link and price" %}</label>
+                    <div class="detail-value">
+                        {% include "gift_manager/includes/link_price_display.html" with url=gift.url price=gift.price currency=request.user.profile.currency %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             <div class="col-12">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Created" %}</label>

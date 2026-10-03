@@ -1,10 +1,15 @@
+from urllib.parse import urlsplit
+
 from django import template
+from django.utils import formats
 
 from gift_manager.email_encoding import decode_email as _decode_email
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.statuses import relation_status_slug
 
 register = template.Library()
+
+_CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "CHF": "CHF", "CAD": "CA$"}
 
 
 @register.filter
@@ -111,3 +116,32 @@ def visible_tags(gift, request):
 def visible_groups(person, request):
     """Return the groups of a person that the requesting user is allowed to see."""
     return VisibleMetadata.for_request(request).groups(person)
+
+
+@register.filter
+def format_price(value, currency="EUR"):
+    """Format a decimal price with two decimals in the active locale and a currency symbol."""
+    if value is None:
+        return ""
+    amount = formats.number_format(value, decimal_pos=2, use_l10n=True, force_grouping=True)
+    return f"{amount}\u00a0{_CURRENCY_SYMBOLS.get(currency, currency)}"
+
+
+@register.filter
+def safe_http_url(value):
+    """Return *value* only when it is an absolute http(s) URL, otherwise an empty string."""
+    try:
+        parts = urlsplit(value or "")
+    except ValueError:
+        return ""
+    safe = parts.scheme.lower() in {"http", "https"} and parts.netloc and "@" not in parts.netloc
+    return value if safe else ""
+
+
+@register.filter
+def url_host(value):
+    """Return the host of *value* so users can see where a link leads."""
+    try:
+        return urlsplit(value or "").hostname or ""
+    except ValueError:
+        return ""

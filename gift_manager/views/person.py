@@ -25,6 +25,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.services import BudgetService
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_given_status
 from gift_manager.statuses import is_terminal_status
@@ -269,6 +270,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         context["abandoned_relations"] = [r for r in relations if is_abandoned_status(r.status)]
         context["given_count"] = sum(1 for r in relations if is_given_status(r.status))
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["budget"] = BudgetService.for_person(self.request.user, self.object)
         context["gift_history_url"] = reverse(
             "gift_manager:person_gift_history", kwargs={"pk": self.object.person_id}
         )

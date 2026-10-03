@@ -1,16 +1,23 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
+from decimal import Decimal
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Count
 from django.db.models import Model
+from django.db.models import Q
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
+from gift_manager.models import Relation
 
 GLOBAL_OBJECT_REMOVAL_ERROR = gettext_lazy(
     "This object is available to everyone and cannot be removed."
@@ -313,3 +320,62 @@ class PermissionService:
             return False
         else:
             return True
+
+
+@dataclass(frozen=True)
+class BudgetSummary:
+    """Totals of the priced gift plans of a person or an event.
+
+    ``planned`` covers every plan that is not abandoned, ``spent`` only the plans already
+    purchased or given, and ``without_price`` counts the non-abandoned plans with no price.
+    """
+
+    planned: Decimal
+    spent: Decimal
+    without_price: int
+
+    @property
+    def has_data(self) -> bool:
+        """Return whether there is anything to show (a price or an unpriced plan)."""
+        return bool(self.planned or self.spent or self.without_price)
+
+
+def _status_is(*names: str) -> Q:
+    """Match plans whose status is one of *names* (canonical English status names)."""
+    return Q(status__status_en__in=names) | (
+        Q(status__status_en__isnull=True) & Q(status__status__in=names)
+    )
+
+
+class BudgetService:
+    """Budget totals computed from the plans a user can access."""
+
+    ABANDONED = _status_is("Abandoned")
+    SPENT = _status_is("Purchased", "Given")
+
+    @classmethod
+    def for_person(cls, user, person) -> BudgetSummary:
+        """Return the budget of the plans addressed to *person* (group plans excluded)."""
+        return cls._summarize(Relation.objects.accessible_by(user).filter(person=person))
+
+    @classmethod
+    def for_event(cls, user, event) -> BudgetSummary:
+        """Return the budget of the plans attached to *event*."""
+        return cls._summarize(Relation.objects.accessible_by(user).filter(event=event))
+
+    @classmethod
+    def _summarize(cls, relations) -> BudgetSummary:
+        price = Coalesce("price", "gift__price")
+        open_plans = ~cls.ABANDONED
+        totals = relations.annotate(effective_price_db=price).aggregate(
+            planned=Sum("effective_price_db", filter=open_plans),
+            spent=Sum("effective_price_db", filter=cls.SPENT),
+            without_price=Count(
+                "pk", filter=open_plans & Q(effective_price_db__isnull=True), distinct=True
+            ),
+        )
+        return BudgetSummary(
+            planned=totals["planned"] or Decimal(0),
+            spent=totals["spent"] or Decimal(0),
+            without_price=totals["without_price"],
+        )
