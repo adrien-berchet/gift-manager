@@ -259,12 +259,6 @@ class TestRepeatGiftHint:
 
         assert reverse("gift_manager:repeat_gift_hint") in response.content.decode()
 
-    def test_hint_request_does_not_lock_the_form(self, client):
-        """loading-states.js disables every form control during a request from the form."""
-        content = client.get(reverse("gift_manager:relation_create")).content.decode()
-
-        assert "data-loading-ignore" in content
-
     def test_group_recipient_gets_repeat_warning_but_no_suggestions(self, client, user):
         group = PersonGroupFactory()
         _share(user, group)
