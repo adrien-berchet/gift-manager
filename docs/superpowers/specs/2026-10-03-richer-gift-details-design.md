@@ -1,6 +1,6 @@
 # Richer Gift Details (Link, Price, Budgets) - Design
 
-Implements slice 1 of `docs/ideas/0004-richer-gift-details.md`. Images are deferred.
+Implements slice 1 of `docs/ideas/implemented/0004-richer-gift-details.md`. Images are deferred.
 
 ## Goals
 

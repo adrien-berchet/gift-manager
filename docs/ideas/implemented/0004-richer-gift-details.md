@@ -2,7 +2,7 @@
 
 ## Status
 
-Slice 1 implemented (link, price, budgets); images deferred
+Implemented (link, price, budgets); image upload deferred
 
 Slice 1 decisions: a gift's link and price are defaults that a gift plan can override
 (`Relation.url` / `Relation.price`); currency is a per-user preference

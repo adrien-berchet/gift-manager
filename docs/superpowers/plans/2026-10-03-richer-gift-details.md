@@ -104,7 +104,7 @@
 ### Task 5: XSS safety, e2e, translations, docs
 
 **Files:**
-- Modify: `gift_manager/tests/test_grid_xss_safety.py`, `locale/fr/LC_MESSAGES/django.po` (+ compiled `.mo` if the repo tracks it), `docs/ideas/0004-richer-gift-details.md` (status), `docs/ideas/README.md` if it lists status
+- Modify: `gift_manager/tests/test_grid_xss_safety.py`, `locale/fr/LC_MESSAGES/django.po` (+ compiled `.mo` if the repo tracks it), `docs/ideas/implemented/0004-richer-gift-details.md` (status), `docs/ideas/README.md` if it lists status
 - Create: `gift_manager/tests/e2e/test_gift_details_e2e.py`
 
 **Interfaces:** Consumes everything above; produces nothing.
