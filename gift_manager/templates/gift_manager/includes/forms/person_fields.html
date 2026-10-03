@@ -21,3 +21,6 @@
 </fieldset>
 {% trans "Search groups..." as groups_search_placeholder %}
 {% include "gift_manager/includes/forms/field.html" with field=form.groups searchable=True search_placeholder=groups_search_placeholder select_all_action="select-all-groups" clear_all_action="clear-all-groups" %}
+{% include "gift_manager/includes/forms/field.html" with field=form.notes %}
+{% trans "Search tags..." as interests_search_placeholder %}
+{% include "gift_manager/includes/forms/field.html" with field=form.interests searchable=True search_placeholder=interests_search_placeholder %}

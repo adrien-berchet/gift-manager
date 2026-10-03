@@ -26,6 +26,8 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_given_status
+from gift_manager.statuses import is_terminal_status
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -261,17 +263,21 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
         )
-        context["relations"] = relations
-        rated_relations = [relation for relation in relations if relation.has_visible_reaction]
-        context["given_reactions"] = sorted(
-            (r for r in rated_relations if not is_abandoned_status(r.status)),
-            key=lambda r: (-r.reaction_rating, r.gift.name),
-        )
-        context["abandoned_reactions"] = sorted(
-            (r for r in rated_relations if is_abandoned_status(r.status)),
-            key=lambda r: (r.reaction_rating, r.gift.name),
-        )
+        # Given plans live in the gift history and abandoned ones in their own section:
+        # each plan is shown once.
+        context["relations"] = [r for r in relations if not is_terminal_status(r.status)]
+        context["abandoned_relations"] = [r for r in relations if is_abandoned_status(r.status)]
+        context["given_count"] = sum(1 for r in relations if is_given_status(r.status))
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["gift_history_url"] = reverse(
+            "gift_manager:person_gift_history", kwargs={"pk": self.object.person_id}
+        )
+        # Interests are gift tags: only the ones the viewer can see are shown
+        visible_tag_ids = VisibleMetadata.for_request(self.request).tag_ids
+        context["interests"] = sorted(
+            (tag for tag in self.object.interests.all() if tag.pk in visible_tag_ids),
+            key=lambda tag: tag.name.lower(),
+        )
 
         # Build action buttons configuration
         is_editor = context.get("is_editor", False)

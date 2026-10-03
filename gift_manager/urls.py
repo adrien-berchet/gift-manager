@@ -76,11 +76,21 @@ urlpatterns = [
     path("persons/<uuid:pk>/edit/", views.PersonUpdateView.as_view(), name="person_edit"),
     path("persons/<uuid:pk>/delete/", views.PersonDeleteView.as_view(), name="person_delete"),
     path(
+        "persons/<uuid:pk>/gift-history/",
+        views.person_gift_history,
+        name="person_gift_history",
+    ),
+    path(
         "persons/<uuid:pk>/add_relation/",
         views.PersonRelationCreateView.as_view(),
         name="person_relation_create",
     ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
+    path(
+        "person_groups/<uuid:pk>/gift-history/",
+        views.person_group_gift_history,
+        name="person_group_gift_history",
+    ),
     path(
         "person_groups/explore/",
         views.PersonGroupExplorerView.as_view(),
@@ -168,6 +178,11 @@ urlpatterns = [
         "relations/create/",
         views.RelationCreateView.as_view(),
         name="relation_create",
+    ),
+    path(
+        "relations/repeat-gift-hint/",
+        views.repeat_gift_hint,
+        name="repeat_gift_hint",
     ),
     path(
         "relations/<uuid:pk>/",

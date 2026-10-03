@@ -34,6 +34,9 @@ from .gift import GiftListView
 from .gift import GiftUpdateView
 
 # GiftTag views
+from .gift_history import person_gift_history
+from .gift_history import person_group_gift_history
+from .gift_history import repeat_gift_hint
 from .gift_tag import GiftTagCreateView
 from .gift_tag import GiftTagDeleteView
 from .gift_tag import GiftTagDetailView
@@ -169,9 +172,12 @@ __all__ = [
     "get_user",
     "global_search",
     "home",
+    "person_gift_history",
+    "person_group_gift_history",
     "relation_quick_action",
     "relation_reaction",
     "remove_person_from_group",
     "reparent_group",
+    "repeat_gift_hint",
     "update_relation_status",
 ]

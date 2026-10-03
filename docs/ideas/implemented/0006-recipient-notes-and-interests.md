@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -71,3 +71,7 @@ Recommended starting context:
 
 - Reuse `GiftTag` for interests or add a separate interest model?
 - Should notes be visible to users the person is shared with at view level?
+
+## Implementation Notes
+
+Implemented: `Person.notes` and `Person.interests` (M2M to `GiftTag`). Notes are visible to anyone who can view the person. Interests the viewer cannot access are hidden and preserved on edit. The plan form shows matching gifts through the same HTMX hint endpoint.

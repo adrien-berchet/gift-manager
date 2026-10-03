@@ -5,7 +5,10 @@
            class="fw-semibold"
            data-action="detail"
            data-detail-url="{% url 'gift_manager:relation_detail' relation.relation_id %}">{{ relation.gift.name }}</a>
+        {% if relation.has_visible_reaction %}
         {% rating_stars relation.reaction_rating %}
+        <span class="badge bg-secondary">{% trans "Estimated" %}</span>
+        {% endif %}
         {% if relation.group %}
         <span class="badge recipient-type-badge recipient-type-badge--group"
               title="{% trans 'Gift plan for this group directly' %}">
@@ -13,7 +16,10 @@
         </span>
         {% endif %}
     </div>
-    {% if relation.reaction_note %}
+    {% if relation.comment %}
+    <p class="text-muted small mb-0 mt-1" data-plan-comment style="white-space: pre-line;"><i class="fas fa-comment me-1" aria-hidden="true"></i>{{ relation.comment }}</p>
+    {% endif %}
+    {% if relation.has_visible_reaction and relation.reaction_note %}
     <p class="text-muted small mb-0 mt-1">{{ relation.reaction_note }}</p>
     {% endif %}
 </li>

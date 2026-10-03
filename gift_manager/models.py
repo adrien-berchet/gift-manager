@@ -540,6 +540,11 @@ class Person(models.Model):
         blank=True,
         validators=[MinValueValidator(1), MaxValueValidator(9999)],
     )
+    # Free-text notes (sizes, allergies, things to avoid). Shared with everyone who can
+    # see the person, like the rest of the person's data. Never log their content.
+    notes = models.TextField(null=True, blank=True)
+    # Interests reuse the gift tags, so they can be matched against a gift's tags directly.
+    interests = models.ManyToManyField("GiftTag", related_name="interested_persons", blank=True)
     creation_date = models.DateTimeField(auto_now_add=True)
     groups = models.ManyToManyField("PersonGroup", blank=True)
     shared_with = models.ManyToManyField(

@@ -11,6 +11,16 @@
 {% if form.gift %}
   {% include "gift_manager/includes/forms/field.html" with field=form.gift %}
 {% endif %}
+{% if form.recipient and form.gift %}
+<div id="repeat-gift-hint"
+     data-loading-ignore
+     hx-get="{% url 'gift_manager:repeat_gift_hint' %}{% if form.instance.pk %}?relation={{ form.instance.relation_id }}{% endif %}"
+     hx-trigger="load, change from:#{{ form.recipient.id_for_label }}, change from:#{{ form.gift.id_for_label }}"
+     hx-include="#{{ form.recipient.id_for_label }}, #{{ form.gift.id_for_label }}"
+     hx-target="this"
+     hx-swap="innerHTML"
+     hx-indicator="none"></div>
+{% endif %}
 {% include "gift_manager/includes/forms/field.html" with field=form.comment %}
 {% include "gift_manager/includes/forms/field.html" with field=form.event %}
 {% include "gift_manager/includes/forms/field.html" with field=form.status %}

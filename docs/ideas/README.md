@@ -56,8 +56,8 @@ status and notes to reflect the move.
 | 0002 | Person Birthdays And Personal Occasions | Implemented | Recipients | Birthday on people, dashboard section and one-click plan creation. Moved to `implemented/`. |
 | 0003 | Reminders And Calendar Feed | Implemented | Notifications | Opt-in digest email via management command plus private .ics feed. Moved to `implemented/`. |
 | 0004 | Richer Gift Details (Link, Price, Image) | Proposed | Gifts | Optional URL, price and image on gifts, with budget totals. |
-| 0005 | Recipient Gift History And Repeat-Gift Warning | Proposed | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. |
-| 0006 | Recipient Notes And Interests | Proposed | Recipients | Notes and interest tags on people, matched against gift tags. |
+| 0005 | Recipient Gift History And Repeat-Gift Warning | Implemented | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. Moved to `implemented/`. |
+| 0006 | Recipient Notes And Interests | Implemented | Recipients | Notes and interest tags on people, matched against gift tags. Moved to `implemented/`. |
 | 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
 | 0008 | Duplicate And Repeat Gift Plans | Proposed | Gift Plans | Duplicate action and "plan again" for recurring events. |
 | 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
@@ -70,6 +70,7 @@ status and notes to reflect the move.
 | 0016 | Guided Gift Plan Creation | Proposed | Gift Plans | Three-step creation flow with inline gift and event creation. |
 | 0017 | Extract Inline Scripts And Styles From The Base Template | Implemented | Frontend | base.html inline code moved to static files; moved to `implemented/`. |
 | 0018 | Unify Delete Confirmation | Implemented | Frontend | Single shared delete flow; moved to `implemented/`. |
+| 0019 | Scope Form Loading State To Form Submissions | Proposed | Frontend | Stop in-form background HTMX requests from locking the whole form for 30 seconds. |
 
 ## Working With Ideas
 

@@ -37,6 +37,9 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import PermissionLevel
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_given_status
+from gift_manager.statuses import is_terminal_status
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -469,7 +472,20 @@ class PersonGroupDetailView(BaseDetailView):
             .order_by("status__pk", "gift__name")
         )
 
+        # The side panel shows plans still in progress, abandoned ones and (lazy-loaded) the
+        # given ones once each; the full-page tabs keep using the complete `relations`.
+        group_relations = list(context["relations"])
+        context["in_progress_relations"] = [
+            r for r in group_relations if not is_terminal_status(r.status)
+        ]
+        context["abandoned_relations"] = [
+            r for r in group_relations if is_abandoned_status(r.status)
+        ]
+        context["given_count"] = sum(1 for r in group_relations if is_given_status(r.status))
         context["relation_statuses"] = RelationStatus.objects.all()
+        context["gift_history_url"] = reverse(
+            "gift_manager:person_group_gift_history", kwargs={"pk": self.object.group_id}
+        )
 
         # Member counts
         context["direct_member_count"] = context["members"].count()

@@ -1,0 +1,30 @@
+{% load i18n %}
+{% comment %} Non-blocking hint: the chosen gift already has a plan for the same recipient. {% endcomment %}
+{% if repeats %}
+<div class="alert alert-warning py-2 mb-3" role="status" data-repeat-gift-hint>
+    <i class="fas fa-triangle-exclamation me-1" aria-hidden="true"></i>
+    {% blocktrans with gift=gift.name %}"{{ gift }}" is already planned for this recipient:{% endblocktrans %}
+    <ul class="mb-0 small">
+        {% for relation in repeats %}
+        <li>
+            {{ relation.status }}{% if relation.event %} — {{ relation.event.name }}{% endif %}{% if relation.due_date %} ({{ relation.due_date|date:"DATE_FORMAT" }}){% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% if suggestions %}
+<div class="alert alert-light border py-2 mb-3" data-interest-suggestions>
+    <div class="small fw-semibold mb-1">
+        <i class="fas fa-lightbulb me-1" aria-hidden="true"></i>{% trans "Matches this person's interests" %}
+    </div>
+    {% for suggested in suggestions %}
+    <button type="button"
+            class="btn btn-outline-secondary btn-sm me-1 mb-1"
+            data-suggest-gift="{{ suggested.pk }}"
+            hx-on:click="var s=this.closest('form').querySelector('select[name=gift]'); if(s){s.value=this.dataset.suggestGift; s.dispatchEvent(new Event('change',{bubbles:true}));}">
+        {{ suggested.name }}
+    </button>
+    {% endfor %}
+</div>
+{% endif %}
