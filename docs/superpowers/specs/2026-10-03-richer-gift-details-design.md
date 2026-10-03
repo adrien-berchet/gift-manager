@@ -59,7 +59,10 @@ Scraping, price tracking, payments/affiliates, multi-currency conversion, images
 
 ## UI
 
-- Gift form (`includes/forms/gift_fields.html`) and plan form: add url and price fields.
+- Gift form (`includes/forms/gift_fields.html`) and plan form: add url and price fields
+  inside a collapsed section (Bootstrap collapse, "Link and price"). The section is
+  collapsed by default, but opens automatically when a field holds a value or has a
+  validation error, and works without JavaScript (e.g. `<details>` fallback).
   The plan form shows the gift's values as placeholders.
 - Gift detail, plan card and plan detail show the link and price only when set; nothing
   when empty (`includes/gift_detail_partial.html`, `includes/gift_plan_card.html`,
