@@ -98,7 +98,10 @@ class TestPlanCard:
 
     def test_shows_the_link_host_next_to_the_link(self, user):
         relation = RelationFactory(gift=GiftFactory(url="https://shop.example/a/b?c=1"))
-        assert "(shop.example)" in _render_card(user, relation)
+        rendered = _render_card(user, relation)
+        # The compact card shows the host as the link text instead of "Open link (host)"
+        assert 'link-price-display__host">shop.example<' in rendered
+        assert "Open link" not in rendered
 
     def test_hides_block_when_empty(self, user):
         relation = RelationFactory(gift=GiftFactory(price=None, url=""), price=None, url="")

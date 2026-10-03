@@ -12,6 +12,7 @@ from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import RelationFactory
 
 
@@ -121,3 +122,60 @@ class TestCurrencyAddonAppearance:
         assert metrics["contrast"] >= 4.5, metrics
         if theme == "dark":
             assert metrics["addonBackground"] != "rgb(233, 236, 239)", metrics
+
+
+CARD_LAYOUT_JS = """
+(title) => {
+  const card = [...document.querySelectorAll('.gift-plan-card')]
+    .find((el) => el.textContent.includes(title));
+  const squashed = [...card.children]
+    .filter((child) => child.getBoundingClientRect().height > 0)
+    .filter((child) => child.scrollHeight > child.clientHeight + 1)
+    .map((child) => child.className);
+  const note = card.querySelector('.gift-plan-note');
+  return {
+    clipped: card.scrollHeight > card.clientHeight + 1,
+    squashed,
+    noteHeight: note ? note.getBoundingClientRect().height : 0,
+    noteVisible: note ? note.getBoundingClientRect().bottom <= card.getBoundingClientRect().bottom : false,
+  };
+}
+"""
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestDashboardCardWithDetails:
+    @pytest.mark.parametrize("width", [1280, 390], ids=["desktop", "phone"])
+    def test_card_with_link_price_tags_and_comment_is_not_squashed(
+        self, page: Page, live_server, seed_data_e2e, width
+    ):
+        page.set_viewport_size({"width": width, "height": 900})
+        alice = seed_data_e2e.alice
+        tags = [GiftTagFactory(name=f"Tag {i}", shared_with=[alice]) for i in range(2)]
+        relation = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(
+                name="Detailed Novel",
+                shared_with=[alice],
+                price=Decimal(15),
+                url="https://www.linkedin.com/in/someone",
+                tags=tags,
+            ),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate() + timedelta(days=1),
+            comment="A comment that should stay readable on the card",
+        )
+        create_or_update_permission(alice, relation, permission_level=PermissionLevel.OWNER)
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+        card = page.locator(".gift-plan-card", has_text="Detailed Novel").first
+        expect(card).to_be_visible()
+
+        layout = page.evaluate(CARD_LAYOUT_JS, "Detailed Novel")
+
+        assert layout["clipped"] is False, layout
+        assert layout["squashed"] == [], layout
+        assert layout["noteHeight"] > 0 and layout["noteVisible"], layout
