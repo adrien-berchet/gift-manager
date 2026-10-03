@@ -1601,6 +1601,9 @@ class Relation(models.Model):
         super().save(*args, **kwargs)
         self._loaded_status_id = self.status_id
 
+    def get_absolute_url(self) -> str:
+        return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
+
     @property
     def effective_url(self) -> str:
         """Return the plan's link, falling back to the gift's."""
@@ -1610,9 +1613,6 @@ class Relation(models.Model):
     def effective_price(self):
         """Return the plan's price, falling back to the gift's (``None`` when neither is set)."""
         return self.price if self.price is not None else self.gift.price
-
-    def get_absolute_url(self) -> str:
-        return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
 
     def clean(self):
         """Ensure that exactly one of person or group is set.

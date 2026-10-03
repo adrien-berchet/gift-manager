@@ -31,20 +31,20 @@ def test_validate_http_url_rejects_unsafe_schemes(value):
 @pytest.mark.django_db
 class TestEffectiveValues:
     def test_effective_price_prefers_plan_override(self):
-        relation = RelationFactory(gift=GiftFactory(price=Decimal("10")), price=Decimal("5"))
-        assert relation.effective_price == Decimal("5")
+        relation = RelationFactory(gift=GiftFactory(price=Decimal(10)), price=Decimal(5))
+        assert relation.effective_price == Decimal(5)
 
     def test_effective_price_falls_back_to_gift(self):
-        relation = RelationFactory(gift=GiftFactory(price=Decimal("10")), price=None)
-        assert relation.effective_price == Decimal("10")
+        relation = RelationFactory(gift=GiftFactory(price=Decimal(10)), price=None)
+        assert relation.effective_price == Decimal(10)
 
     def test_effective_price_none_when_both_missing(self):
         relation = RelationFactory(gift=GiftFactory(price=None), price=None)
         assert relation.effective_price is None
 
     def test_zero_plan_price_is_an_override(self):
-        relation = RelationFactory(gift=GiftFactory(price=Decimal("10")), price=Decimal("0"))
-        assert relation.effective_price == Decimal("0")
+        relation = RelationFactory(gift=GiftFactory(price=Decimal(10)), price=Decimal(0))
+        assert relation.effective_price == Decimal(0)
 
     def test_effective_url_falls_back_to_gift(self):
         relation = RelationFactory(gift=GiftFactory(url="https://gift.example"), url="")
@@ -61,11 +61,11 @@ class TestEffectiveValues:
 class TestPriceConstraint:
     def test_negative_gift_price_violates_constraint(self):
         with pytest.raises(IntegrityError), transaction.atomic():
-            GiftFactory(price=Decimal("-1"))
+            GiftFactory(price=Decimal(-1))
 
     def test_negative_relation_price_violates_constraint(self):
         with pytest.raises(IntegrityError), transaction.atomic():
-            RelationFactory(price=Decimal("-1"))
+            RelationFactory(price=Decimal(-1))
 
 
 @pytest.mark.django_db
