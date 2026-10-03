@@ -1252,6 +1252,7 @@ class Gift(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+        validators=[MinValueValidator(0)],
         verbose_name=gettext_lazy("Estimated price"),
     )
     tags = models.ManyToManyField(GiftTag, related_name="gifts", blank=True)
@@ -1545,6 +1546,7 @@ class Relation(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+        validators=[MinValueValidator(0)],
         verbose_name=gettext_lazy("Estimated price"),
     )
     creation_date = models.DateTimeField(auto_now_add=True)

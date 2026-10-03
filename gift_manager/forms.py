@@ -1,3 +1,4 @@
+import contextlib
 from collections.abc import Iterator
 
 from django import forms
@@ -39,6 +40,43 @@ class BaseFormMixin:
                 field.widget.attrs.update({"class": "form-textarea"})
             elif isinstance(field.widget, forms.DateInput):
                 field.widget.attrs.update({"class": "form-date-input", "type": "date"})
+
+
+LINK_PRICE_LABELS = {
+    "url": gettext_lazy("Link"),
+    "price": gettext_lazy("Estimated price"),
+}
+
+
+def link_price_widgets() -> dict:
+    """Return the widgets of the optional link and price fields."""
+    return {
+        "url": forms.URLInput(attrs={"class": "form-input-text", "placeholder": "https://"}),
+        "price": forms.NumberInput(
+            attrs={"class": "form-input-text", "step": "0.01", "min": "0", "inputmode": "decimal"}
+        ),
+    }
+
+
+def _format_price_placeholder(price) -> str:
+    return "" if price is None else f"{price:.2f}"
+
+
+class GiftDefaultsPlaceholderMixin:
+    """Show the gift's link and price as placeholders of a gift plan's override fields."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk and self.instance.gift_id:
+            self.set_gift_placeholders(self.instance.gift)
+
+    def set_gift_placeholders(self, gift) -> None:
+        if gift is None:
+            return
+        if gift.url:
+            self.fields["url"].widget.attrs["placeholder"] = gift.url
+        if gift.price is not None:
+            self.fields["price"].widget.attrs["placeholder"] = _format_price_placeholder(gift.price)
 
 
 def build_recipient_choices(
@@ -722,18 +760,22 @@ class RelationReassignmentMixin:
             return super().save(commit=commit)
 
 
-class PersonRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
+class PersonRelationForm(
+    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "event", "status", "due_date"]
+        fields = ["gift", "comment", "url", "price", "event", "status", "due_date"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
+            **link_price_widgets(),
             # ISO format: an <input type="date"> ignores values in the locale's format
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),
             "comment": gettext_lazy("Comment"),
+            **LINK_PRICE_LABELS,
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
@@ -769,18 +811,22 @@ class PersonRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelFo
         return cleaned_data
 
 
-class PersonGroupRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
+class PersonGroupRelationForm(
+    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "event", "status", "due_date"]
+        fields = ["gift", "comment", "url", "price", "event", "status", "due_date"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
+            **link_price_widgets(),
             # ISO format: an <input type="date"> ignores values in the locale's format
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),
             "comment": gettext_lazy("Comment"),
+            **LINK_PRICE_LABELS,
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
@@ -819,15 +865,17 @@ class PersonGroupRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.Mo
 class GiftForm(BaseFormMixin, forms.ModelForm):
     class Meta:
         model = Gift
-        fields = ["name", "comment", "tags"]
+        fields = ["name", "comment", "url", "price", "tags"]
         labels = {
             "name": gettext_lazy("Name"),
             "comment": gettext_lazy("Comment"),
+            **LINK_PRICE_LABELS,
             "tags": gettext_lazy("Tags"),
         }
         widgets = {
             "name": forms.TextInput(attrs={"rows": 1}),
             "comment": forms.Textarea(attrs={"rows": 3}),
+            **link_price_widgets(),
         }
         error_messages = {
             "name": {
@@ -874,7 +922,9 @@ class GiftTagForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class GiftRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
+class GiftRelationForm(
+    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,
@@ -884,14 +934,16 @@ class GiftRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
 
     class Meta:
         model = Relation
-        fields = ["recipient", "comment", "event", "status", "due_date"]
+        fields = ["recipient", "comment", "url", "price", "event", "status", "due_date"]
         widgets = {
             # ISO format: an <input type="date"> ignores values in the locale's format
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "comment": forms.Textarea(attrs={"rows": 3}),
+            **link_price_widgets(),
         }
         labels = {
             "comment": gettext_lazy("Comment"),
+            **LINK_PRICE_LABELS,
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
@@ -906,6 +958,11 @@ class GiftRelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
             self.initial["recipient"] = self.instance.recipient_key
         self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
+        if self.gift_id and self.user and self.user.is_authenticated:
+            with contextlib.suppress(DjangoValidationError):
+                self.set_gift_placeholders(
+                    Gift.objects.accessible_by(self.user).filter(gift_id=self.gift_id).first()
+                )
 
     def clean(self):
         """Validate and map the typed recipient choice to person/group fields."""
@@ -1042,7 +1099,9 @@ class RelationReactionForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
+class RelationForm(
+    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,
@@ -1058,6 +1117,8 @@ class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
             "recipient",
             "gift",
             "comment",
+            "url",
+            "price",
             "event",
             "status",
             "due_date",
@@ -1065,12 +1126,14 @@ class RelationForm(RelationReassignmentMixin, BaseFormMixin, forms.ModelForm):
         ]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
+            **link_price_widgets(),
             # ISO format: an <input type="date"> ignores values in the locale's format
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
         }
         labels = {
             "gift": gettext_lazy("Gift"),
             "comment": gettext_lazy("Comment"),
+            **LINK_PRICE_LABELS,
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
