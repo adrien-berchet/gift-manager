@@ -35,6 +35,9 @@
                     <span class="text-muted small fst-italic">{% trans "Awaiting reaction" %}</span>
                     {% endif %}
                 </div>
+                {% if relation.comment %}
+                <p class="text-muted small mb-0 mt-1" data-plan-comment style="white-space: pre-line;"><i class="fas fa-comment me-1" aria-hidden="true"></i>{{ relation.comment }}</p>
+                {% endif %}
                 {% if relation.has_visible_reaction and relation.reaction_note %}
                 <p class="text-muted small mb-0 mt-1">{{ relation.reaction_note }}</p>
                 {% endif %}

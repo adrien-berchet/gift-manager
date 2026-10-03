@@ -97,6 +97,13 @@ class TestPersonGiftHistory:
     def test_anonymous_is_redirected(self):
         assert Client().get(_history_url(self.person)).status_code == 302
 
+    def test_plan_comment_is_shown(self, client, user):
+        _plan(user, self.person, gift=GiftFactory(name="Generic"), comment="Blue size 42")
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "Blue size 42" in content
+
     def test_rating_note_and_awaiting_reaction(self, client, user):
         _plan(
             user,

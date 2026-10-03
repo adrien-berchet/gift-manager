@@ -609,6 +609,22 @@ class TestReactionDisplay:
         assert "Nope" in html
         assert "Estimated" in html
 
+    def test_person_detail_shows_comments_of_abandoned_and_in_progress_plans(self):
+        from gift_manager.tests.factories import PersonFactory
+
+        person = PersonFactory()
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
+        self._make("Abandoned", person=person, comment="Too expensive in the end")
+        self._make("Planned", person=person, comment="Check the colour first")
+
+        html = self.client.get(
+            reverse("gift_manager:person_detail", kwargs={"pk": person.person_id}),
+            HTTP_HX_REQUEST="true",
+        ).content.decode()
+
+        assert "Too expensive in the end" in html
+        assert "Check the colour first" in html
+
     def test_person_detail_shows_each_plan_once(self):
         from gift_manager.tests.factories import PersonFactory
 
