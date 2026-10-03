@@ -138,6 +138,8 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         if comment_field.count() > 0:
             comment_field.fill("A gift for testing complete workflows")
         if price_field.count() > 0:
+            # The price lives in the collapsed "Link and price" section
+            panel.locator("details", has_text="Link and price").locator("summary").click()
             price_field.fill("99.99")
 
         # Submit creation
