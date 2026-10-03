@@ -18,8 +18,7 @@
      hx-trigger="load, change from:#{{ form.recipient.id_for_label }}, change from:#{{ form.gift.id_for_label }}"
      hx-include="#{{ form.recipient.id_for_label }}, #{{ form.gift.id_for_label }}"
      hx-target="this"
-     hx-swap="innerHTML"
-     hx-indicator="none"></div>
+     hx-swap="innerHTML"></div>
 {% endif %}
 {% include "gift_manager/includes/forms/field.html" with field=form.comment %}
 {% include "gift_manager/includes/forms/link_price_section.html" %}
