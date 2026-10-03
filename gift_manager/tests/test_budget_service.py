@@ -152,6 +152,30 @@ class TestViews:
         assert response.context["budget"].planned == Decimal(12)
         assert "budget-summary" in response.content.decode()
 
+    def test_person_budget_is_at_the_bottom_of_the_left_column(self, client, user, person):
+        create_or_update_permission(user, person, permission_level=PermissionLevel.OWNER)
+        _plan(user, person, price="12")
+
+        content = client.get(
+            reverse("gift_manager:person_detail", kwargs={"pk": person.person_id})
+        ).content.decode()
+
+        # The left column (col-lg-5) ends right before the right one (col-lg-7)
+        assert (
+            content.index("col-lg-5") < content.index("budget-summary") < content.index("col-lg-7")
+        )
+
+    def test_event_budget_comes_after_the_gift_plans(self, client, user, person):
+        event = EventFactory()
+        create_or_update_permission(user, event, permission_level=PermissionLevel.OWNER)
+        _plan(user, person, price="12", event=event)
+
+        content = client.get(
+            reverse("gift_manager:event_detail", kwargs={"pk": event.event_id})
+        ).content.decode()
+
+        assert content.index("relation-item") < content.index("budget-summary")
+
     def test_event_detail_renders_budget_when_priced(self, client, user, person):
         event = EventFactory()
         create_or_update_permission(user, event, permission_level=PermissionLevel.OWNER)

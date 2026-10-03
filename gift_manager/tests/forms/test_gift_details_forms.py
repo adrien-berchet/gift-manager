@@ -175,3 +175,25 @@ class TestCollapsedSection:
         content = response.content.decode()
         assert DETAILS_OPEN.search(content)
         assert "Enter a valid" in content
+
+
+class TestCurrencyOnForms:
+    @pytest.fixture
+    def client(self, authenticated_client):
+        return authenticated_client
+
+    def test_gift_form_shows_the_user_currency(self, client, user):
+        user.profile.currency = "USD"
+        user.profile.save()
+        content = client.get(reverse("gift_manager:gift_create")).content.decode()
+        assert re.search(r'class="input-group-text"[^>]*>\s*USD\s*<', content)
+
+    def test_gift_form_defaults_to_eur(self, client):
+        content = client.get(reverse("gift_manager:gift_create")).content.decode()
+        assert re.search(r'class="input-group-text"[^>]*>\s*EUR\s*<', content)
+
+    def test_plan_form_shows_the_user_currency(self, client, user):
+        user.profile.currency = "GBP"
+        user.profile.save()
+        content = client.get(reverse("gift_manager:relation_create")).content.decode()
+        assert re.search(r'class="input-group-text"[^>]*>\s*GBP\s*<', content)

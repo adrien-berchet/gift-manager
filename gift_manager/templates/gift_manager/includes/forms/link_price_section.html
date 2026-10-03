@@ -4,7 +4,7 @@
   <summary class="form-label">{% trans "Link and price" %}</summary>
   <div class="pt-2">
     {% include "gift_manager/includes/forms/field.html" with field=form.url %}
-    {% include "gift_manager/includes/forms/field.html" with field=form.price %}
+    {% include "gift_manager/includes/forms/field.html" with field=form.price suffix=request.user.profile.currency %}
   </div>
 </details>
 {% endif %}
