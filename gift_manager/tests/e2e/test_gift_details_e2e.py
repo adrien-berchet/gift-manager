@@ -66,3 +66,50 @@ class TestGiftDetailsWorkflow:
         gift = Gift.objects.get(name="Form Gift")
         assert gift.url == "https://shop.example/form"
         assert gift.price == Decimal("19.90")
+
+
+CONTRAST_JS = """
+() => {
+  const parse = (value) => value.match(/[\\d.]+/g).slice(0, 3).map(Number);
+  const channel = (c) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = ([r, g, b]) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+  const addon = document.querySelector('.input-group-text');
+  const input = document.querySelector("input[name='price']");
+  const addonStyle = getComputedStyle(addon);
+  const inputStyle = getComputedStyle(input);
+  const [hi, lo] = [luminance(parse(addonStyle.color)), luminance(parse(addonStyle.backgroundColor))]
+    .sort((a, b) => b - a);
+  return {
+    addonHeight: addon.getBoundingClientRect().height,
+    inputHeight: input.getBoundingClientRect().height,
+    contrast: (hi + 0.05) / (lo + 0.05),
+    addonBackground: addonStyle.backgroundColor,
+    inputBackground: inputStyle.backgroundColor,
+  };
+}
+"""
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestCurrencyAddonAppearance:
+    @pytest.mark.parametrize("theme", ["light", "dark"])
+    def test_currency_addon_matches_the_price_input(
+        self, page: Page, live_server, seed_data_e2e, theme
+    ):
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}/gifts/create/", wait_until="domcontentloaded")
+        page.locator("details", has_text="Link and price").locator("summary").click()
+        page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        expect(page.locator(".input-group-text")).to_be_visible()
+
+        metrics = page.evaluate(CONTRAST_JS)
+
+        assert abs(metrics["addonHeight"] - metrics["inputHeight"]) < 0.5, metrics
+        assert metrics["contrast"] >= 4.5, metrics
+        if theme == "dark":
+            assert metrics["addonBackground"] != "rgb(233, 236, 239)", metrics
