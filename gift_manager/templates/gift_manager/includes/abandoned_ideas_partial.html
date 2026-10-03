@@ -1,0 +1,20 @@
+{% load i18n custom_filters %}
+{% comment %}
+  Abandoned gift plans of a recipient, collapsed by default.
+  Required context:
+    abandoned_relations – Relation objects with the Abandoned status
+  A rating on an abandoned plan is an estimate of how much the recipient would have liked it.
+{% endcomment %}
+{% if abandoned_relations %}
+<details class="abandoned-ideas detail-section mt-4 mb-4 border rounded p-2" data-abandoned-ideas>
+    <summary class="fw-semibold text-muted">
+        <i class="fas fa-ban me-2" aria-hidden="true"></i>{% trans "Abandoned ideas" %}
+        <span class="badge bg-secondary ms-2">{{ abandoned_relations|length }}</span>
+    </summary>
+    <ul class="list-unstyled mt-3 mb-0">
+        {% for relation in abandoned_relations %}
+        {% include "gift_manager/includes/reaction_history_item.html" with relation=relation %}
+        {% endfor %}
+    </ul>
+</details>
+{% endif %}

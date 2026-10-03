@@ -584,15 +584,14 @@ class TestReactionDisplay:
 
         assert "Hidden note" not in html
 
-    def test_person_detail_lists_given_and_abandoned_reactions(self):
+    def test_person_detail_lists_abandoned_ideas_with_estimated_reactions(self):
         from gift_manager.tests.factories import PersonFactory
 
         person = PersonFactory()
         create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
-        self._make("Given", person=person, reaction_rating=2)
-        loved = self._make("Given", person=person, reaction_rating=5)
         abandoned = self._make("Abandoned", person=person, reaction_rating=1, reaction_note="Nope")
-        self._make("Given", person=person)
+        unrated = self._make("Abandoned", person=person)
+        self._make("Given", person=person, reaction_rating=5)
 
         response = self.client.get(
             reverse("gift_manager:person_detail", kwargs={"pk": person.person_id}),
@@ -600,16 +599,38 @@ class TestReactionDisplay:
         )
 
         assert response.status_code == 200
-        assert [r.pk for r in response.context["given_reactions"]][0] == loved.pk
-        assert len(response.context["given_reactions"]) == 2
-        assert [r.pk for r in response.context["abandoned_reactions"]] == [abandoned.pk]
+        assert {r.pk for r in response.context["abandoned_relations"]} == {
+            abandoned.pk,
+            unrated.pk,
+        }
         html = response.content.decode()
-        assert 'data-reaction-list="given"' in html
-        assert 'data-reaction-list="abandoned"' in html
-        assert "Abandoned ideas" in html
+        assert "data-abandoned-ideas" in html
+        assert "<details" in html
         assert "Nope" in html
+        assert "Estimated" in html
 
-    def test_person_detail_includes_group_plan_reactions_flagged_as_group(self):
+    def test_person_detail_shows_each_plan_once(self):
+        from gift_manager.tests.factories import PersonFactory
+
+        person = PersonFactory()
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
+        in_progress = self._make("Planned", person=person)
+        given = self._make("Given", person=person, reaction_rating=4)
+        abandoned = self._make("Abandoned", person=person)
+
+        response = self.client.get(
+            reverse("gift_manager:person_detail", kwargs={"pk": person.person_id}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert [r.pk for r in response.context["relations"]] == [in_progress.pk]
+        assert [r.pk for r in response.context["abandoned_relations"]] == [abandoned.pk]
+        assert response.context["given_count"] == 1
+        html = response.content.decode()
+        assert given.gift.name not in html  # given plans are lazy-loaded in the history
+        assert abandoned.gift.name in html
+
+    def test_person_detail_includes_abandoned_group_plans_flagged_as_group(self):
         from gift_manager.tests.factories import PersonFactory
         from gift_manager.tests.factories import PersonGroupFactory
 
@@ -617,7 +638,8 @@ class TestReactionDisplay:
         group = PersonGroupFactory()
         person.groups.add(group)
         create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
-        relation = GroupRelationFactory(group=group, status=_status("Given"), reaction_rating=4)
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.OWNER)
+        relation = GroupRelationFactory(group=group, status=_status("Abandoned"))
         create_or_update_permission(self.user, relation, permission_level=PermissionLevel.OWNER)
 
         response = self.client.get(
@@ -625,10 +647,10 @@ class TestReactionDisplay:
             HTTP_HX_REQUEST="true",
         )
 
-        assert [r.pk for r in response.context["given_reactions"]] == [relation.pk]
+        assert [r.pk for r in response.context["abandoned_relations"]] == [relation.pk]
         assert group.name in response.content.decode()
 
-    def test_person_detail_without_reactions_has_no_history_section(self):
+    def test_person_detail_without_abandoned_plans_has_no_abandoned_section(self):
         from gift_manager.tests.factories import PersonFactory
 
         person = PersonFactory()
@@ -640,7 +662,7 @@ class TestReactionDisplay:
             HTTP_HX_REQUEST="true",
         )
 
-        assert "reaction-history" not in response.content.decode()
+        assert "data-abandoned-ideas" not in response.content.decode()
 
     def test_edit_form_shows_reaction_section_for_given_only(self):
         given = self._make("Given", reaction_rating=3)

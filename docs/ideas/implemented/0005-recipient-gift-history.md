@@ -39,42 +39,6 @@ Christmas, and did she like it?" without scanning the plan list.
 - Editing history inline beyond existing quick actions.
 - Changing permission rules.
 
-## Implementation Notes For AI Agent
-
-- Data source: `Relation` with `status`, `reaction_rating`, `reaction_note`,
-  `event`, `due_date` in `gift_manager/models.py`; use
-  `Relation.objects.accessible_by(user)`.
-- Display partials: `includes/person_detail_partial.html`,
-  `includes/person_group_detail_partial.html`, `includes/rating_stars.html`,
-  `includes/reaction_history_partial.html`.
-- Reaction visibility rules: check `has_visible_reaction` and related
-  helpers before showing notes.
-- Duplicate check belongs in form validation or a service, not in the
-  template; typed recipient choices (`person:<id>`, `group:<id>`) are
-  handled in `gift_manager/forms.py`.
-- Avoid N+1 queries; prefetch gift, event and status.
-
-Recommended starting context:
-
-- `docs/ai/architecture.md`
-- `docs/ai/testing.md`
-
-## Acceptance Criteria
-
-- The history shows only plans the viewer can access, newest year first.
-- Ratings and notes respect existing visibility rules.
-- The duplicate warning appears for the same recipient and gift, does not
-  block saving, and does not appear for other recipients.
-- Query count for the history is bounded (covered by a test).
-
-## Dependencies Or Related Ideas
-
-- Supports `0001` (suggestions exclude already-given gifts).
-
-## Open Questions
-
-- Should group-targeted plans appear in the history of each member?
-
 ## Implementation Notes
 
-Implemented: the history includes plans reaching a person through their groups (labelled with the group) and, on a group page, plans targeting the group directly. Ideas are excluded, abandoned plans are shown. The duplicate warning is a live HTMX hint (`/relations/repeat-gift-hint/`) that ignores abandoned plans.
+Implemented: the history lists only given plans, grouped by year, newest first. It includes plans reaching a person through their groups (labelled with the group when visible) and, on a group page, plans targeting the group directly. To show each plan once, the detail panels list only plans in progress, put abandoned plans in a collapsed "Abandoned ideas" section and load the history lazily. The duplicate warning is a live HTMX hint (`/relations/repeat-gift-hint/`) that ignores abandoned plans.

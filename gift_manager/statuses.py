@@ -31,6 +31,11 @@ def is_terminal_status(status) -> bool:
     return relation_status_slug(status) in TERMINAL_STATUS_SLUGS
 
 
+def is_given_status(status) -> bool:
+    """Return whether *status* is the Given status."""
+    return status is not None and relation_status_slug(status) in GIVEN_STATUS_SLUGS
+
+
 def is_abandoned_status(status) -> bool:
     """Return whether *status* is the Abandoned status."""
     return status is not None and relation_status_slug(status) in ABANDONED_STATUS_SLUGS

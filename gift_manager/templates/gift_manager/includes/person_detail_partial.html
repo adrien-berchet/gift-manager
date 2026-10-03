@@ -147,7 +147,7 @@
 
         <div class="detail-section">
             <h6 class="detail-section-title text-muted mb-3">
-                <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift Plans" %}
+                <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift plans in progress" %}
                 {% if relations %}<span class="badge bg-secondary ms-2">{{ relations|length }}</span>{% endif %}
             </h6>
 
@@ -156,19 +156,19 @@
                 <div class="col-4">
                     <div class="stat-card p-2 text-center rounded">
                         <div class="stat-number h5 mb-0">{{ relations|length }}</div>
-                        <div class="stat-label text-muted">{% trans "Gift Plans" %}</div>
+                        <div class="stat-label text-muted">{% trans "In progress" %}</div>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="stat-card p-2 text-center rounded">
-                        <div class="stat-number h5 mb-0">{{ direct_groups|length }}</div>
-                        <div class="stat-label text-muted">{% trans "Groups" %}</div>
+                        <div class="stat-number h5 mb-0">{{ given_count }}</div>
+                        <div class="stat-label text-muted">{% trans "Given" %}</div>
                     </div>
                 </div>
                 <div class="col-4">
                     <div class="stat-card p-2 text-center rounded">
-                        <div class="stat-number h5 mb-0">{{ shared_users|length }}</div>
-                        <div class="stat-label text-muted">{% trans "Shared" %}</div>
+                        <div class="stat-number h5 mb-0">{{ abandoned_relations|length }}</div>
+                        <div class="stat-label text-muted">{% trans "Abandoned" %}</div>
                     </div>
                 </div>
             </div>
@@ -176,9 +176,9 @@
             {% include "gift_manager/includes/relation_cards_partial.html" with relations=relations person=person is_editor=is_editor viewer_request=request only %}
         </div>
 
-        {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
+        {% include "gift_manager/includes/abandoned_ideas_partial.html" with abandoned_relations=abandoned_relations only %}
 
-        {% include "gift_manager/includes/reaction_history_partial.html" with given_reactions=given_reactions abandoned_reactions=abandoned_reactions only %}
+        {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
 
     </div>
 </div>

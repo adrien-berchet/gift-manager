@@ -14,7 +14,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.statuses import is_abandoned_status
-from gift_manager.statuses import is_idea_status
+from gift_manager.statuses import is_given_status
 
 
 @dataclass(frozen=True)
@@ -68,10 +68,10 @@ def group_history_queryset(user, group: PersonGroup) -> QuerySet:
 
 
 def build_gift_history(relations, visible_group_ids: set[int]) -> list[HistoryYear]:
-    """Group plans by year, newest year first; ideas are not history and are left out."""
+    """Group the plans that were given by year, newest year first; other plans are left out."""
     by_year: dict[int | None, list[HistoryEntry]] = {}
     for relation in relations:
-        if is_idea_status(relation.status):
+        if not is_given_status(relation.status):
             continue
         group_name = (
             relation.group.name

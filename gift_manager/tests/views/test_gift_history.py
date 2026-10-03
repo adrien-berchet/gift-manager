@@ -70,12 +70,15 @@ class TestPersonGiftHistory:
         content = response.content.decode()
         assert content.index("New gift") < content.index("Old gift")
 
-    def test_ideas_are_not_history(self, client, user):
-        _plan(user, self.person, status="Idea", gift=GiftFactory(name="Just an idea"))
+    @pytest.mark.parametrize("status", ["Idea", "Planned", "Purchased", "Abandoned"])
+    def test_only_given_plans_are_history(self, client, user, status):
+        _plan(user, self.person, status=status, gift=GiftFactory(name="Not given"))
+        _plan(user, self.person, status="Given", gift=GiftFactory(name="Was given"))
 
-        response = client.get(_history_url(self.person))
+        content = client.get(_history_url(self.person)).content.decode()
 
-        assert "Just an idea" not in response.content.decode()
+        assert "Was given" in content
+        assert "Not given" not in content
 
     def test_other_users_plans_are_hidden(self, client, user):
         RelationFactory(
@@ -94,29 +97,20 @@ class TestPersonGiftHistory:
     def test_anonymous_is_redirected(self):
         assert Client().get(_history_url(self.person)).status_code == 302
 
-    def test_rating_and_note_follow_reaction_visibility(self, client, user):
+    def test_rating_note_and_awaiting_reaction(self, client, user):
         _plan(
             user,
             self.person,
-            status="Given",
             gift=GiftFactory(name="Rated"),
             reaction_rating=4,
             reaction_note="Loved it",
         )
-        # A rating left on a plan that is no longer rateable must stay hidden
-        _plan(
-            user,
-            self.person,
-            status="Planned",
-            gift=GiftFactory(name="Stale"),
-            reaction_rating=5,
-            reaction_note="Stale note",
-        )
+        _plan(user, self.person, gift=GiftFactory(name="Unrated"))
 
         content = client.get(_history_url(self.person)).content.decode()
 
         assert "Loved it" in content
-        assert "Stale note" not in content
+        assert content.count("Awaiting reaction") == 1
 
     def test_group_plans_show_group_only_when_visible(self, client, user):
         visible_group = PersonGroupFactory(name="Visible family")
@@ -274,3 +268,37 @@ class TestRepeatGiftHint:
 
         assert "data-repeat-gift-hint" in content
         assert "data-interest-suggestions" not in content
+
+
+@pytest.mark.django_db
+class TestGroupDetailSplitsPlans:
+    def test_group_panel_shows_each_plan_once(self, client, user):
+        group = PersonGroupFactory()
+        _share(user, group)
+        planned = GroupRelationFactory(
+            group=group, status=_status("Planned"), gift=GiftFactory(name="In progress gift")
+        )
+        given = GroupRelationFactory(
+            group=group, status=_status("Given"), gift=GiftFactory(name="Given gift")
+        )
+        abandoned = GroupRelationFactory(
+            group=group, status=_status("Abandoned"), gift=GiftFactory(name="Dropped gift")
+        )
+        for relation in (planned, given, abandoned):
+            _share(user, relation)
+
+        response = client.get(
+            reverse("gift_manager:person_group_detail", kwargs={"pk": group.group_id}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert [r.pk for r in response.context["in_progress_relations"]] == [planned.pk]
+        assert [r.pk for r in response.context["abandoned_relations"]] == [abandoned.pk]
+        assert response.context["given_count"] == 1
+        html = response.content.decode()
+        assert "In progress gift" in html
+        assert "Dropped gift" in html
+        assert "Given gift" not in html
+        assert (
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id}) in html
+        )
