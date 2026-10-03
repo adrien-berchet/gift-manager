@@ -133,7 +133,7 @@
             {% trans "These gift plans target the group directly, not each member individually." %}
         </p>
 
-        <div class="relations-list">
+        <div class="relations-list detail-scroll-group" tabindex="0" role="region" aria-label="{% trans 'Gift plans in progress' %}">
             {% for relation in in_progress_relations %}
             <div class="relation-item border rounded p-3 mb-2">
                 <div class="d-flex align-items-start justify-content-between">

@@ -11,7 +11,7 @@
         <i class="fas fa-ban me-2" aria-hidden="true"></i>{% trans "Abandoned ideas" %}
         <span class="badge bg-secondary ms-2">{{ abandoned_relations|length }}</span>
     </summary>
-    <ul class="list-unstyled mt-3 mb-0">
+    <ul class="list-unstyled mt-3 mb-0 detail-scroll-group" tabindex="0" aria-label="{% trans 'Abandoned ideas' %}" style="--detail-scroll-group-max-height: 16rem;">
         {% for relation in abandoned_relations %}
         {% include "gift_manager/includes/reaction_history_item.html" with relation=relation %}
         {% endfor %}

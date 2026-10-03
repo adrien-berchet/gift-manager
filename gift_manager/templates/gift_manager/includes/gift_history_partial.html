@@ -6,7 +6,7 @@
   Reactions are shown only when they apply to the plan's status (has_visible_reaction).
 {% endcomment %}
 {% if history %}
-<div class="gift-history" data-gift-history>
+<div class="gift-history detail-scroll-group" data-gift-history tabindex="0" role="region" aria-label="{% trans 'Gift history' %}">
     {% for year in history %}
     <div class="gift-history-year mb-3" data-history-year="{{ year.year|default:'' }}">
         <h6 class="text-muted mb-2">{% if year.year %}{{ year.year }}{% else %}{% trans "No date" %}{% endif %}</h6>

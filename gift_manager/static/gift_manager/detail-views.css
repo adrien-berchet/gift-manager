@@ -95,6 +95,38 @@
     overflow-y: visible;
 }
 
+/* Independently scrollable groups of a recipient panel (plans, abandoned ideas, history):
+   a long group never pushes the others out of sight. */
+.detail-scroll-group {
+    max-height: var(--detail-scroll-group-max-height, 24rem);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    overscroll-behavior: contain;
+}
+
+.detail-scroll-group:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+.detail-scroll-group::-webkit-scrollbar {
+    width: 6px;
+}
+
+.detail-scroll-group::-webkit-scrollbar-track {
+    background: var(--bs-light);
+    border-radius: 3px;
+}
+
+.detail-scroll-group::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 3px;
+}
+
+.detail-scroll-group::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-primary);
+}
+
 .relation-item {
     background-color: var(--bs-light);
     border: 1px solid var(--bs-border-color);
