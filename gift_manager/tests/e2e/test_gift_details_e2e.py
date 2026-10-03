@@ -11,9 +11,17 @@ from playwright.sync_api import expect
 from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
-from gift_manager.tests.e2e.test_dashboard_layout import login
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import RelationFactory
+
+
+def login(page: Page, base_url: str):
+    """Log in as Alice, waiting for the redirect rather than for an idle network."""
+    page.goto(f"{base_url}/accounts/login/", wait_until="domcontentloaded")
+    page.fill('input[name="login"]', "alice")
+    page.fill('input[name="password"]', "alice_password")
+    page.click('button[type="submit"]')
+    page.wait_for_url(lambda url: "/accounts/login/" not in url, timeout=30_000)
 
 
 @pytest.mark.django_db(transaction=True)
