@@ -179,19 +179,7 @@
             document.body.addEventListener('htmx:beforeRequest', (e) => {
                 const form = this.getSubmittedForm(e.detail.elt);
                 if (!form || this.formLocks.has(form)) return;
-
-                const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-                if (submitButton) {
-                    this.showButtonLoading(submitButton, 'submitting');
-                }
-
-                // Disable all form controls
-                const enableControls = this.disableFormControls(form);
-                this.formLocks.set(form, () => {
-                    enableControls();
-                    if (submitButton) this.hideButtonLoading(submitButton);
-                    this.formLocks.delete(form);
-                });
+                this.lockForm(form, this.getSubmitter(form, e.detail));
             });
 
             const unlock = (e) => {
@@ -202,6 +190,38 @@
             ['htmx:afterRequest', 'htmx:responseError', 'htmx:sendError'].forEach((name) => {
                 document.body.addEventListener(name, unlock);
             });
+        }
+
+        // Lock a form for the duration of its submission. The lock is released by
+        // the request-completion events, or on page unload / after a fallback timeout.
+        lockForm(form, submitter) {
+            if (submitter) {
+                this.showButtonLoading(submitter, 'submitting');
+            }
+            const restoreControls = this.disableFormControls(form, submitter);
+
+            const release = () => {
+                window.removeEventListener('beforeunload', release);
+                clearTimeout(timeoutId);
+                restoreControls();
+                if (submitter) this.hideButtonLoading(submitter);
+                this.formLocks.delete(form);
+            };
+            window.addEventListener('beforeunload', release, { once: true });
+            const timeoutId = setTimeout(release, 30000); // Fallback timeout
+            this.formLocks.set(form, release);
+        }
+
+        // The submit button that triggered the request (spinner target)
+        getSubmitter(form, detail) {
+            const submitSelector = 'button[type="submit"], input[type="submit"]';
+            const triggering = detail.requestConfig && detail.requestConfig.triggeringEvent;
+            const submitter = (triggering && triggering.submitter) || detail.elt;
+            if (submitter && submitter.matches && submitter.matches(submitSelector) &&
+                form.contains(submitter)) {
+                return submitter;
+            }
+            return form.querySelector(submitSelector);
         }
 
         // Return the form submitted by a request element, or null for any other request
@@ -365,32 +385,25 @@
             }
         }
 
-        // Disable form controls during submission; returns an idempotent function
-        // restoring them. Also restored on page unload or after a fallback timeout.
-        disableFormControls(form) {
+        // Disable every form control except the submitter (which shows its own
+        // loading state); returns an idempotent function restoring them.
+        disableFormControls(form, except = null) {
             const controls = Array.from(form.querySelectorAll('input, select, textarea, button'))
-                .filter(control => control.type !== 'submit');
+                .filter(control => control !== except);
             controls.forEach(control => {
                 control.dataset.originalDisabled = control.disabled;
                 control.disabled = true;
             });
 
             let restored = false;
-            const enableControls = () => {
+            return () => {
                 if (restored) return;
                 restored = true;
-                window.removeEventListener('beforeunload', enableControls);
-                clearTimeout(timeoutId);
                 controls.forEach(control => {
                     control.disabled = control.dataset.originalDisabled === 'true';
                     delete control.dataset.originalDisabled;
                 });
-                this.formLocks.delete(form);
             };
-
-            window.addEventListener('beforeunload', enableControls, { once: true });
-            const timeoutId = setTimeout(enableControls, 30000); // Fallback timeout
-            return enableControls;
         }
 
         // Get appropriate loading icon for different operations
