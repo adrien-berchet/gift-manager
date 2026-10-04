@@ -2,7 +2,19 @@
 
 ## Status
 
-Proposed
+Implemented
+
+`setupFormLoadingStates` in `loading-states.js` now locks a form only when the
+request comes from the form itself or its submit button. `disableFormControls`
+returns an idempotent restore function that runs on `htmx:afterRequest`,
+`htmx:responseError` and `htmx:sendError`, keeping the `beforeunload` and 30 s
+fallbacks. Controls disabled before a submission stay disabled. Findings:
+
+- No existing form relied on a descendant request locking the whole form; every
+  form partial posts through the `<form>` itself.
+- `data-loading-ignore` was removed from `relation_fields.html` as redundant.
+- `unsaved-changes.js` needed no change.
+- Coverage: `gift_manager/tests/e2e/test_form_loading_state.py`.
 
 ## Summary
 
@@ -92,7 +104,4 @@ Recommended starting context:
 
 ## Open Questions
 
-- Do any existing forms contain inner HTMX buttons that depend on the whole form
-  being locked while they run?
-- Should `data-loading-ignore` be kept as an explicit opt-out, or removed once
-  the handler is scoped to form submissions?
+None.

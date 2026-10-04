@@ -17,6 +17,55 @@ from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
 
 
+def wait_for_stable_action_layout(page: Page, grid_selector: str) -> None:
+    """Wait until the grid's action column geometry stops changing.
+
+    person-group-detail.js applies the action column width in a
+    requestAnimationFrame after every DOM mutation, so the layout can still move
+    after the width variable is first set (for example after the section is
+    swapped following a contextual create). Wait for the same geometry on several
+    consecutive animation frames instead of measuring mid-settle.
+    """
+    stable = page.evaluate(
+        """async selector => {
+            const signature = () => {
+                const grid = document.querySelector(selector);
+                const cell = grid?.querySelector('tbody tr:first-child td:last-child');
+                const buttons = cell?.querySelector('.quick-actions-container');
+                const wrapper = grid?.querySelector('.gridjs-wrapper');
+                if (!grid || !cell || !buttons || !wrapper) return null;
+                const box = element => {
+                    const rect = element.getBoundingClientRect();
+                    return [rect.x, rect.width];
+                };
+                return JSON.stringify([
+                    getComputedStyle(grid).getPropertyValue('--group-detail-actions-width'),
+                    Array.from(grid.querySelectorAll('colgroup[data-group-detail-columns] col'))
+                        .map(col => col.style.width),
+                    box(wrapper),
+                    box(cell),
+                    box(buttons),
+                ]);
+            };
+            const nextFrame = () => new Promise(resolve => requestAnimationFrame(resolve));
+            const requiredStableFrames = 5;
+            const maxFrames = 300;
+            let previous = null;
+            let stableFrames = 0;
+            for (let frame = 0; frame < maxFrames; frame++) {
+                await nextFrame();
+                const current = signature();
+                stableFrames = current !== null && current === previous ? stableFrames + 1 : 0;
+                if (stableFrames >= requiredStableFrames) return true;
+                previous = current;
+            }
+            return false;
+        }""",
+        grid_selector,
+    )
+    assert stable, f"{grid_selector} action column layout did not settle"
+
+
 class TestPersonGroupDetailActions(BaseE2ETest):
     """Contextual creates use the panel and leave every Actions column reachable."""
 
@@ -371,6 +420,7 @@ class TestPersonGroupDetailActions(BaseE2ETest):
                 }""",
                 arg=grid_selector,
             )
+            wait_for_stable_action_layout(page, grid_selector)
 
             wrapper = grid.locator(".gridjs-wrapper")
             dimensions = wrapper.evaluate(

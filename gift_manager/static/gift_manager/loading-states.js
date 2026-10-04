@@ -118,6 +118,7 @@
     class LoadingStateManager {
         constructor() {
             this.activeLoadings = new Map();
+            this.formLocks = new Map(); // form -> function releasing its lock
             this.init();
         }
 
@@ -172,21 +173,63 @@
         }
 
         // Form submission loading states
+        // Only a request issued by the form itself (or its submit button) locks
+        // the form; background requests from descendants (hints, previews, ...) do not.
         setupFormLoadingStates() {
             document.body.addEventListener('htmx:beforeRequest', (e) => {
-                // Background requests (e.g. inline hints) must not lock the form
-                if (e.detail.elt.closest('[data-loading-ignore]')) return;
-                const form = e.detail.elt.closest('form');
-                if (form) {
-                    const submitButton = form.querySelector('button[type="submit"], input[type="submit"]');
-                    if (submitButton) {
-                        this.showButtonLoading(submitButton, 'submitting');
-                    }
-
-                    // Disable all form controls
-                    this.disableFormControls(form);
-                }
+                const form = this.getSubmittedForm(e.detail.elt);
+                if (!form || this.formLocks.has(form)) return;
+                this.lockForm(form, this.getSubmitter(form, e.detail));
             });
+
+            const unlock = (e) => {
+                const form = this.getSubmittedForm(e.detail.elt);
+                const release = form && this.formLocks.get(form);
+                if (release) release();
+            };
+            ['htmx:afterRequest', 'htmx:responseError', 'htmx:sendError'].forEach((name) => {
+                document.body.addEventListener(name, unlock);
+            });
+        }
+
+        // Lock a form for the duration of its submission. The lock is released by
+        // the request-completion events, or on page unload / after a fallback timeout.
+        lockForm(form, submitter) {
+            if (submitter) {
+                this.showButtonLoading(submitter, 'submitting');
+            }
+            const restoreControls = this.disableFormControls(form, submitter);
+
+            const release = () => {
+                window.removeEventListener('beforeunload', release);
+                clearTimeout(timeoutId);
+                restoreControls();
+                if (submitter) this.hideButtonLoading(submitter);
+                this.formLocks.delete(form);
+            };
+            window.addEventListener('beforeunload', release, { once: true });
+            const timeoutId = setTimeout(release, 30000); // Fallback timeout
+            this.formLocks.set(form, release);
+        }
+
+        // The submit button that triggered the request (spinner target)
+        getSubmitter(form, detail) {
+            const submitSelector = 'button[type="submit"], input[type="submit"]';
+            const triggering = detail.requestConfig && detail.requestConfig.triggeringEvent;
+            const submitter = (triggering && triggering.submitter) || detail.elt;
+            if (submitter && submitter.matches && submitter.matches(submitSelector) &&
+                form.contains(submitter)) {
+                return submitter;
+            }
+            return form.querySelector(submitSelector);
+        }
+
+        // Return the form submitted by a request element, or null for any other request
+        getSubmittedForm(element) {
+            if (!element) return null;
+            if (element.tagName === 'FORM') return element;
+            const isSubmit = element.matches('button[type="submit"], input[type="submit"]');
+            return isSubmit ? element.closest('form') : null;
         }
 
         // Button loading states for non-HTMX buttons
@@ -342,28 +385,25 @@
             }
         }
 
-        // Disable form controls during submission
-        disableFormControls(form) {
-            const controls = form.querySelectorAll('input, select, textarea, button');
+        // Disable every form control except the submitter (which shows its own
+        // loading state); returns an idempotent function restoring them.
+        disableFormControls(form, except = null) {
+            const controls = Array.from(form.querySelectorAll('input, select, textarea, button'))
+                .filter(control => control !== except);
             controls.forEach(control => {
-                if (control.type !== 'submit') {
-                    control.dataset.originalDisabled = control.disabled;
-                    control.disabled = true;
-                }
+                control.dataset.originalDisabled = control.disabled;
+                control.disabled = true;
             });
 
-            // Re-enable on page unload or after timeout
-            const enableControls = () => {
+            let restored = false;
+            return () => {
+                if (restored) return;
+                restored = true;
                 controls.forEach(control => {
-                    if (control.type !== 'submit') {
-                        control.disabled = control.dataset.originalDisabled === 'true';
-                        delete control.dataset.originalDisabled;
-                    }
+                    control.disabled = control.dataset.originalDisabled === 'true';
+                    delete control.dataset.originalDisabled;
                 });
             };
-
-            window.addEventListener('beforeunload', enableControls, { once: true });
-            setTimeout(enableControls, 30000); // Fallback timeout
         }
 
         // Get appropriate loading icon for different operations
