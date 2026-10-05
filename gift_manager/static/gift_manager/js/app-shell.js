@@ -259,6 +259,15 @@
                 e.detail.shouldSwap = true;
                 e.detail.isError = false;
             }
+
+            // A refused claim (409) or comment (422) answers with the coordination fragment,
+            // alert included: show it instead of dropping the response
+            const target = e.detail.target;
+            if (target && target.id === 'relation-coordination' &&
+                (xhr.status === 409 || xhr.status === 422)) {
+                e.detail.shouldSwap = true;
+                e.detail.isError = false;
+            }
         });
 
         // Handle form submissions with HTMX

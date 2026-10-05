@@ -284,8 +284,13 @@ def home(request):
             now=now,
         )
 
+        # Only plans the user can see count: a hidden surprise plan must not make a gift look
+        # planned to its recipient
         unassigned_gift_count = (
-            Gift.objects.accessible_by(user).filter(gifts__isnull=True).distinct().count()
+            Gift.objects.accessible_by(user)
+            .exclude(pk__in=Relation.objects.accessible_by(user).values("gift_id"))
+            .distinct()
+            .count()
         )
         context["dashboard_action_groups"] = action_groups
         context["dashboard_summary"] = _build_dashboard_summary(

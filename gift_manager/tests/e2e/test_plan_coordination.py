@@ -1,6 +1,7 @@
 """Browser test of plan coordination: claim, comment, release and a hidden surprise."""
 
 import pytest
+from django.utils import timezone
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
@@ -84,3 +85,34 @@ class TestPlanCoordination:
         open_page(page, f"{live_server.url}/relations/")
         expect(page.get_by_text("Coordinated Gift").first).to_be_visible()
         expect(page.get_by_text("Hidden Surprise Gift")).to_have_count(0)
+
+    def test_refusals_are_shown_in_the_page(self, page: Page, live_server, seed_data_e2e):
+        """A claim conflict and an invalid comment answer with 4xx: the alert must still show."""
+        alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+        gift = GiftFactory(name="Contested Gift", shared_with=[alice, bob])
+        plan = RelationFactory(person=seed_data_e2e.persons["dad"], gift=gift, event=None)
+        share(plan, alice, PermissionLevel.OWNER)
+        share(plan, bob, PermissionLevel.EDITOR)
+
+        login_as(page, live_server.url, "bob")
+        open_page(page, f"{live_server.url}{plan.get_absolute_url()}")
+        coordination = page.locator("#relation-coordination")
+        expect(page.get_by_role("button", name="I'll take this")).to_be_visible()
+
+        # Alice claims the plan while Bob's page still offers it
+        plan.claimed_by = alice
+        plan.claimed_at = timezone.now()
+        plan.save()
+        page.get_by_role("button", name="I'll take this").click()
+        expect(coordination.get_by_role("alert")).to_contain_text(
+            "alice has already claimed this gift plan"
+        )
+        expect(coordination).to_contain_text("Claimed by alice")
+
+        # The browser limits the comment length; the server still refuses a longer one (422)
+        page.evaluate(
+            "document.querySelector('#relation-comment-text').removeAttribute('maxlength')"
+        )
+        page.fill("#relation-comment-text", "x" * 2001)
+        page.get_by_role("button", name="Send").click()
+        expect(coordination.get_by_role("alert")).to_contain_text("at most 2000 characters")

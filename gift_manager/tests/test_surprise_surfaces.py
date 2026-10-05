@@ -4,8 +4,11 @@ Audit of the paths that read gift plans (``Relation``) outside ``accessible_by``
 the surprise flag was introduced (idea 0007):
 
 - ``mixins/performance.py`` prefetches ``persons`` / ``gifts`` / ``relations`` with
-  ``Relation.objects`` (unfiltered) on the person, gift and event list views: LEAK, fixed by
-  dropping those reverse prefetches (the detail views already query ``accessible_by``).
+  ``Relation.objects`` (unfiltered) for the person, gift and event querysets: LEAK, fixed by
+  filtering those prefetches through ``accessible_by`` (``visible_relations``).
+- ``views/common.py`` unassigned-gifts count used the raw reverse relation ``gifts__isnull``:
+  LEAK (a hidden plan made the recipient's gift look planned), found by the final review and
+  fixed by excluding gifts with a plan the user can see.
 - ``views/base.py`` ``get_related_objects`` counts ``object.relations`` for the delete
   confirmation: LEAK, now counts through ``accessible_by``.
 - Dashboard stats, plan list, advanced list, search, global search, detail, edit, person / group
@@ -287,3 +290,14 @@ def test_the_recipient_loses_nothing_when_the_flag_is_off(client, scene):
     text = _get(client, scene.recipient, reverse("gift_manager:relations")).content.decode()
 
     assert any(marker in text for marker in scene.markers)
+
+
+def test_unassigned_gift_count_does_not_reveal_the_hidden_plan(client, scene):
+    """The recipient's gift looks unplanned: the count must be as if the plan did not exist."""
+    home = reverse("gift_manager:home")
+
+    recipient = _get(client, scene.recipient, home).context["dashboard_summary"]
+    collaborator = _get(client, scene.collaborator, home).context["dashboard_summary"]
+
+    assert recipient["unassigned_gifts"] == 1, "the surprise plan changed the recipient's count"
+    assert collaborator["unassigned_gifts"] == 0, "control: the gift is planned for them"
