@@ -1,0 +1,56 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Plan again" %}{% endblock %}
+
+{% block content %}
+<div class="page-header detail-page-header">
+    <h1>{% trans "Plan again" %}</h1>
+    <div class="page-header-actions">
+        <a href="{% url 'gift_manager:event_detail' event.event_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2" aria-hidden="true"></i>{{ event.name }}
+        </a>
+    </div>
+</div>
+
+<div class="detail-page-shell">
+    <p class="text-muted">
+        {% blocktrans with name=event.name %}Choose the gift plans of the last occurrence of {{ name }} to recreate as new ideas.{% endblocktrans %}
+    </p>
+
+    {% if candidates %}
+    <form method="post" class="plan-again-form">
+        {% csrf_token %}
+        <div class="list-group mb-3">
+            {% for candidate in candidates %}
+            <label class="list-group-item d-flex align-items-start gap-3">
+                <input class="form-check-input mt-1"
+                       type="checkbox"
+                       name="relations"
+                       value="{{ candidate.relation.relation_id }}"
+                       checked>
+                <span class="flex-grow-1">
+                    <strong>{{ candidate.relation.gift.name }}</strong>
+                    <span class="text-muted">&rarr; {{ candidate.relation.recipient_name }}</span>
+                    <span class="d-block small text-muted">
+                        {% trans "Last due:" %} {{ candidate.relation.due_date|date:"DATE_FORMAT" }}
+                        &middot;
+                        {% if candidate.due_date %}
+                        {% trans "New due date:" %} {{ candidate.due_date|date:"DATE_FORMAT" }}
+                        {% else %}
+                        {% trans "No due date" %}
+                        {% endif %}
+                    </span>
+                </span>
+            </label>
+            {% endfor %}
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-rotate-right me-2" aria-hidden="true"></i>{% trans "Create selected gift plans" %}
+        </button>
+    </form>
+    {% else %}
+    <div class="alert alert-info">{% trans "There is nothing to plan again: no gift plan of the last occurrence is waiting to be repeated." %}</div>
+    {% endif %}
+</div>
+{% endblock %}

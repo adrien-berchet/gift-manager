@@ -586,7 +586,7 @@ class TestDashboardLayout:
             page.set_viewport_size({"width": width, "height": 900})
             expect(card).to_be_visible()
             actions = card.locator(".gift-plan-card-actions")
-            expect(actions.locator(".btn")).to_have_count(4)
+            expect(actions.locator(".btn")).to_have_count(5)
             expect(actions.get_by_role("link", name=detail_label, exact=True)).to_be_visible()
             expect(actions.get_by_role("link", name=edit_label, exact=True)).to_be_visible()
             page.wait_for_function(

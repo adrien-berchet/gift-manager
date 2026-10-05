@@ -638,6 +638,27 @@
     padding: 0.25rem;
 }
 
+/* Narrowest phones: two labelled actions and three icon-only ones still share one row, so the
+   mobile touch-target minimum (44px) gives way to a tighter one (30px, above the 24px WCAG 2.2 minimum) */
+@media (max-width: 359.98px) {
+    .gift-plan-card-actions {
+        gap: 0.25rem;
+    }
+
+    .gift-plan-card-actions .btn {
+        padding-right: 0.3rem;
+        padding-left: 0.3rem;
+    }
+
+    .gift-plan-card-actions .gift-plan-card-utility-action {
+        flex-basis: 1.875rem;
+        width: 1.875rem;
+        min-width: 1.875rem;
+        padding-right: 0.25rem;
+        padding-left: 0.25rem;
+    }
+}
+
 .gift-plan-card-actions .btn-primary {
     background-color: var(--gift-plan-action-primary-bg);
     border-color: var(--gift-plan-action-primary-bg);

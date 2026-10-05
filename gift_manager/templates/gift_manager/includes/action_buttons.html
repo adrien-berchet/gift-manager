@@ -12,6 +12,7 @@
     - enabled: whether button is enabled (optional, default True)
     - tooltip: tooltip text when disabled (optional)
     - css_class: additional CSS classes (optional)
+    - data_action: value of the data-action attribute, e.g. 'create' to open a form in the panel (custom only, optional)
 {% endcomment %}
 
 <div class="action-buttons" style="white-space: nowrap;">
@@ -59,6 +60,7 @@
     {% elif button.type == 'custom' %}
       <a href="{{ button.url }}"
          class="btn {{ button.btn_class|default:'btn-secondary' }} mb-3 {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if button.data_action %}data-action="{{ button.data_action }}"{% endif %}
          {% if not button.enabled|default:True %}disabled style="opacity: 0.5;" data-toggle="tooltip" title="{{ button.tooltip|default:'' }}"{% endif %}>
         {% if button.icon %}<i class="{{ button.icon }}"></i>{% endif %}
         {{ button.label }}

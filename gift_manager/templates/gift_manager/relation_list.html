@@ -310,7 +310,8 @@
                 "{{item.relation_id}}",
                 "{% url 'gift_manager:relation_detail' item.relation_id %}",
                 "{% url 'gift_manager:relation_edit' item.relation_id %}",
-                "{% url 'gift_manager:relation_delete' item.relation_id %}"
+                "{% url 'gift_manager:relation_delete' item.relation_id %}",
+                "{% url 'gift_manager:relation_create' %}?duplicate_of={{ item.relation_id }}"
             ]
             {% if not forloop.last %}, {% endif %}
             {% endfor %}
@@ -457,16 +458,18 @@
             { name: 'relation_detail_url', hidden: true },
             { name: 'relation_edit_url', hidden: true },
             { name: 'relation_delete_url', hidden: true },
+            { name: 'relation_duplicate_url', hidden: true },
             {
                 name: '{% trans "Actions"|escapejs %}',
-                width: '340px',
+                width: '360px',
                 sort: false,
                 formatter: PermissionUtils.permissionAwareActionFormatter({
                     details: (row) => row.cells[10].data,
                     edit: (row) => row.cells[11].data,
                     delete: (row) => row.cells[12].data,
+                    duplicate: (row) => row.cells[13].data,
                     share: () => "{% url 'gift_manager:share_objects' %}"
-                }, ['details', 'edit', 'delete', 'share'], {
+                }, ['details', 'edit', 'duplicate', 'delete', 'share'], {
                     idResolver: (row) => row.cells[9].data  // relation_id
                 }, userPermissions)
             }

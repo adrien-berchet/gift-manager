@@ -55,6 +55,10 @@ from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.plan_repeat import DUPLICATE_OF_PARAM
+from gift_manager.plan_repeat import duplicate_initial
+from gift_manager.plan_repeat import duplicate_plan_url
+from gift_manager.plan_repeat import parse_duplicate_source
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import RelationExposureDenied
 from gift_manager.sharing_service import SharingService
@@ -592,7 +596,18 @@ class RelationCreateView(BaseCreateView):
     def get_initial(self):
         initial = super().get_initial()
         initial.update(self._birthday_initial())
+        initial.update(self._duplicate_initial())
         return initial
+
+    def _duplicate_initial(self) -> dict:
+        """Pre-fill the form with a copy of a plan the user can see (no reaction, status Idea).
+
+        Unknown, invalid or inaccessible plans are ignored, like any other bad query value.
+        """
+        source = parse_duplicate_source(
+            self.request.user, self.request.GET.get(DUPLICATE_OF_PARAM, "")
+        )
+        return duplicate_initial(source) if source else {}
 
     def _birthday_initial(self) -> dict:
         """Pre-fill recipient, Birthday event and due date for a person's next birthday.
@@ -713,6 +728,14 @@ class RelationDetailView(BaseDetailView):
                 "tooltip": _("You do not have permission to edit this object")
                 if not is_editor
                 else None,
+            },
+            {
+                "type": "custom",
+                "url": duplicate_plan_url(self.object),
+                "label": _("Duplicate gift plan"),
+                "icon": "fas fa-copy",
+                "btn_class": "btn-secondary",
+                "data_action": "create",
             },
             {
                 "type": "delete",

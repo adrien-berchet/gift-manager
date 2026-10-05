@@ -25,6 +25,7 @@ from .event import EventDeleteView
 from .event import EventDetailView
 from .event import EventListView
 from .event import EventUpdateView
+from .event import event_plan_again
 
 # Gift views
 from .gift import GiftCreateView
@@ -169,6 +170,7 @@ __all__ = [
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",
+    "event_plan_again",
     "get_user",
     "global_search",
     "home",

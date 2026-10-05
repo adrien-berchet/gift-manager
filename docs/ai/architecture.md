@@ -31,6 +31,9 @@
   `.ics` feed. Both read through `accessible_by(user)` and render in `Profile.language`. The digest is
   sent by `gift_manager/digest_sending.py`, run by `manage.py send_gift_digest` from a plain scheduler or
   by the Vercel Cron endpoint `/cron/send-gift-digest/`; see `docs/operations/reminders.md`.
+- Duplicating a plan and "Plan again" (recreating a repeating event's last occurrence as `Idea`
+  plans, Birthday event included) live in `gift_manager/plan_repeat.py`; copies are owned by the
+  creating user only and never carry reactions or sharing.
 
 ## Risk Areas
 

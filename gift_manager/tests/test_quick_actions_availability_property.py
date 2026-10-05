@@ -77,7 +77,7 @@ class TestQuickActionsAvailabilityProperty:
             "person": ["give", "details", "edit", "delete", "share"],
             "gift": ["give", "details", "edit", "delete", "share"],
             "event": ["details", "edit", "delete", "share"],  # No 'give' for events
-            "relation": ["details", "edit", "delete", "share"],
+            "relation": ["details", "edit", "duplicate", "delete", "share"],
             "persongroup": ["give", "details", "edit", "delete", "share"],
             "gifttag": ["details", "edit", "delete", "share"],  # Assuming similar to events
         }

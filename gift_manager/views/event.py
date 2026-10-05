@@ -1,9 +1,19 @@
 """Event-related views."""
 
+import uuid
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.http import Http404
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
+from django.utils.translation import ngettext
+from django.views.decorators.http import require_http_methods
 
 from gift_manager.forms import EventForm
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
@@ -15,6 +25,9 @@ from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.plan_repeat import find_repeat_candidates
+from gift_manager.plan_repeat import repeat_plans
+from gift_manager.plan_repeat import supports_plan_again
 from gift_manager.services import GLOBAL_OBJECT_REMOVAL_ERROR
 from gift_manager.services import BudgetService
 from gift_manager.views.base import BaseCreateView
@@ -146,4 +159,65 @@ class EventDetailView(BaseDetailView):
                 else None,
             },
         ]
+        if supports_plan_again(self.object):
+            context["action_buttons"].insert(
+                1,
+                {
+                    "type": "custom",
+                    "url": reverse(
+                        "gift_manager:event_plan_again", kwargs={"pk": self.object.event_id}
+                    ),
+                    "label": _("Plan again"),
+                    "icon": "fas fa-rotate-right",
+                    "btn_class": "btn-secondary",
+                },
+            )
         return context
+
+
+def parse_uuids(raw_values) -> list[uuid.UUID]:
+    """Return the valid UUIDs among posted values, ignoring the others."""
+    return [uuid.UUID(raw) for raw in raw_values if _is_uuid(raw)]
+
+
+def _is_uuid(raw) -> bool:
+    try:
+        uuid.UUID(raw)
+    except ValueError:
+        return False
+    return True
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def event_plan_again(request, pk):
+    """List the last occurrence's plans of a repeating event and recreate the chosen ones."""
+    event = get_object_or_404(Event.objects.accessible_by(request.user), event_id=pk)
+    if not supports_plan_again(event):
+        raise Http404
+
+    if request.method == "POST":
+        relation_ids = parse_uuids(request.POST.getlist("relations"))
+        created = repeat_plans(request.user, event, relation_ids)
+        if created:
+            messages.success(
+                request,
+                ngettext(
+                    "%(count)d gift plan created as an idea.",
+                    "%(count)d gift plans created as ideas.",
+                    len(created),
+                )
+                % {"count": len(created)},
+            )
+        else:
+            messages.info(request, gettext("No gift plan was created."))
+        return redirect("gift_manager:event_detail", pk=event.event_id)
+
+    return render(
+        request,
+        "gift_manager/event_plan_again.html",
+        {
+            "event": event,
+            "candidates": find_repeat_candidates(request.user, event),
+        },
+    )
