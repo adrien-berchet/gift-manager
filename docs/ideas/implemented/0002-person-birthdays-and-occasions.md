@@ -113,3 +113,9 @@ Recommended starting context:
   field), a superuser can rename or delete it (plans then lose their event and a new one is
   created on next use), and birthdays are stored in plain text, unlike emails, because their
   visibility is exactly the person's.
+- **Existing "Birthday" events:** users who had created their own "Birthday" event can move
+  their gift plans to the global one with `python manage.py merge_birthday_events`. It is a
+  dry run by default; `--apply` moves the gift plans (due dates, statuses and sharing are kept),
+  `--delete-old-events` also removes the emptied events, `--name` and `--event-id` choose which
+  events to merge, and look-alike events such as "Mom Birthday" are listed but never merged
+  automatically. Running it again is harmless.
