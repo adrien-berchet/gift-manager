@@ -327,6 +327,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
                 "person__person_id",
                 "group__group_id",
                 "event__name",
+                "event__is_birthday",
                 "event__event_id",
                 "status",
                 "due_date",
@@ -357,7 +358,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
         today = timezone.localdate()
         event_options = list(
             Event.objects.accessible_by(self.request.user)
-            .only("id", "event_id", "name")
+            .only("id", "event_id", "name", "is_birthday")
             .order_by("name")
         )
         groups = {
