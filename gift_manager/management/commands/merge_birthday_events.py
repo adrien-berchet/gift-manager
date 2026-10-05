@@ -16,7 +16,8 @@ Usage::
     python manage.py merge_birthday_events --name Birthday --name Anniversaire
     python manage.py merge_birthday_events --event-id <uuid> --apply
 
-Events are selected by name (case-insensitive, default ``Birthday``) or by ``--event-id``.
+Events are selected by name (case-insensitive, default ``Birthday``) or by ``--event-id``;
+with ``--event-id`` alone, only those events are selected.
 Events with a different name, such as "Mom Birthday", are never merged automatically: they
 are listed so you can pass their id explicitly if they should be merged too. Running the
 command again is safe: events that were already merged have no gift plan left to move.
@@ -54,7 +55,7 @@ class Command(BaseCommand):
             dest="names",
             help=(
                 "Name of the events to merge, case-insensitive. Repeat for several names "
-                f"(default: {', '.join(DEFAULT_NAMES)})."
+                f"(default: {', '.join(DEFAULT_NAMES)}, unless --event-id is given)."
             ),
         )
         parser.add_argument(
@@ -75,7 +76,10 @@ class Command(BaseCommand):
             message = "--delete-old-events needs --apply."
             raise CommandError(message)
 
-        names = [name.strip() for name in (options["names"] or DEFAULT_NAMES) if name.strip()]
+        # The default name only applies when nothing else selects events: with --event-id alone,
+        # exactly those events are merged
+        requested = options["names"] or (None if options["event_ids"] else DEFAULT_NAMES)
+        names = [name.strip() for name in (requested or []) if name.strip()]
         if not names and not options["event_ids"]:
             message = "Give at least one non-empty --name or an --event-id."
             raise CommandError(message)

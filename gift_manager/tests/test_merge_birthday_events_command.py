@@ -210,6 +210,29 @@ class TestSelection:
         plan.refresh_from_db()
         assert plan.event == global_event
 
+    def test_an_explicit_event_id_alone_does_not_select_events_by_the_default_name(
+        self, global_event, old_event
+    ):
+        other = EventFactory(name="Anniversaire")
+        old_plan = RelationFactory(event=old_event)
+        plan = RelationFactory(event=other)
+
+        output = _run("--apply", "--event-id", str(other.event_id))
+
+        plan.refresh_from_db()
+        old_plan.refresh_from_db()
+        assert plan.event == global_event
+        assert old_plan.event == old_event  # named "Birthday", but not asked for
+        assert "1 Birthday event(s) to merge" in output
+
+    def test_an_event_id_and_a_name_select_both(self, global_event, old_event):
+        other = EventFactory(name="Anniversaire")
+        plans = [RelationFactory(event=old_event), RelationFactory(event=other)]
+
+        _run("--apply", "--name", "Birthday", "--event-id", str(other.event_id))
+
+        assert _plans_on(global_event) == {plan.pk for plan in plans}
+
 
 class TestDeletion:
     def test_old_events_are_kept_by_default(self, global_event, old_event):
