@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import IntegrityError
+from django.db import connection
 from django.db import models
 from django.db import transaction
 from django.db.models import Exists
@@ -22,6 +23,7 @@ from django.db.models import OuterRef
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
+from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
@@ -286,31 +288,37 @@ class EventManager(UserPermissionManager):
         )
 
 
-def recipient_group_ids_for(user) -> set[int]:
-    """Return the pks of the groups that ``user`` is a recipient of.
+def recipient_groups_for(user) -> RawSQL:
+    """Return a subquery of the pks of the groups that ``user`` is a recipient of.
 
     These are the groups of each person linked to ``user`` (``Person.user_link``) plus all of
-    their ancestor groups: a member of a nested group is a member of its parents. The hierarchy
-    is read in one query, so the cost does not depend on its depth.
+    their ancestor groups: a member of a nested group is a member of its parents. It is a
+    recursive query embedded in the caller's statement, so reading plans costs no extra query
+    whatever the depth of the hierarchy.
     """
-    group_ids = set(PersonGroup.objects.filter(person__user_link=user).values_list("pk", flat=True))
-    if not group_ids:
-        return group_ids
-
-    parents: dict[int, set[int]] = {}
-    through = PersonGroup.parent_groups.through
-    for child_id, parent_id in through.objects.values_list(
-        "from_persongroup_id", "to_persongroup_id"
-    ):
-        parents.setdefault(child_id, set()).add(parent_id)
-
-    to_visit = list(group_ids)
-    while to_visit:
-        for parent_id in parents.get(to_visit.pop(), ()):
-            if parent_id not in group_ids:
-                group_ids.add(parent_id)
-                to_visit.append(parent_id)
-    return group_ids
+    quote = connection.ops.quote_name
+    membership = Person.groups.through._meta  # noqa: SLF001
+    hierarchy = PersonGroup.parent_groups.through._meta  # noqa: SLF001
+    person_meta = Person._meta  # noqa: SLF001
+    person_fk = quote(membership.get_field("person").column)
+    group_fk = quote(membership.get_field("persongroup").column)
+    child_fk = quote(hierarchy.get_field("from_persongroup").column)
+    parent_fk = quote(hierarchy.get_field("to_persongroup").column)
+    sql = f"""
+        WITH RECURSIVE recipient_groups(group_id) AS (
+            SELECT membership.{group_fk}
+            FROM {quote(membership.db_table)} AS membership
+            JOIN {quote(person_meta.db_table)} AS person
+              ON person.{quote(person_meta.pk.column)} = membership.{person_fk}
+            WHERE person.{quote(person_meta.get_field("user_link").column)} = %s
+            UNION
+            SELECT hierarchy.{parent_fk}
+            FROM {quote(hierarchy.db_table)} AS hierarchy
+            JOIN recipient_groups ON hierarchy.{child_fk} = recipient_groups.group_id
+        )
+        SELECT group_id FROM recipient_groups
+    """  # noqa: S608 - identifiers come from model metadata, the user pk is a parameter
+    return RawSQL(sql, [user.pk])  # noqa: S611 - see the comment on ``sql``
 
 
 class RelationQuerySet(UserPermissionQuerySet):
@@ -327,7 +335,7 @@ class RelationQuerySet(UserPermissionQuerySet):
         )
         return (
             self.filter(is_surprise=True)
-            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_group_ids_for(user)))
+            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_groups_for(user)))
             .exclude(Exists(owns_plan))
         )
 
