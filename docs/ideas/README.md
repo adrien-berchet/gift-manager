@@ -59,7 +59,7 @@ status and notes to reflect the move.
 | 0005 | Recipient Gift History And Repeat-Gift Warning | Implemented | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. Moved to `implemented/`. |
 | 0006 | Recipient Notes And Interests | Implemented | Recipients | Notes and interest tags on people, matched against gift tags. Moved to `implemented/`. |
 | 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
-| 0008 | Duplicate And Repeat Gift Plans | Proposed | Gift Plans | Duplicate action and "plan again" for recurring events. |
+| 0008 | Duplicate And Repeat Gift Plans | Implemented | Gift Plans | Duplicate action and "plan again" for recurring and birthday events. Moved to `implemented/`. |
 | 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
 | 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |
 | 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |

@@ -99,7 +99,7 @@ class TestQuickActionButtons:
         assert "'share'" in content
 
         # Check that the actions array includes all buttons
-        assert "['details', 'edit', 'delete', 'share']" in content
+        assert "['details', 'edit', 'duplicate', 'delete', 'share']" in content
 
     def test_person_group_list_contains_action_buttons(self):
         """Test that person group list contains quick action buttons."""

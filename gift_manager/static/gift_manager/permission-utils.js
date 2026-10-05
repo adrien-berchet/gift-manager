@@ -78,6 +78,13 @@
                 action: "delete",
                 requiredPermission: PERMISSION_LEVELS.OWNER,
             },
+            duplicate: {
+                class: "btn-secondary",
+                icon: "fa-copy",
+                title: "Duplicate",
+                action: "create",
+                requiredPermission: PERMISSION_LEVELS.VIEWER,
+            },
             share: {
                 class: "btn-success",
                 icon: "fa-share-alt",

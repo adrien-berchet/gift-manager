@@ -212,6 +212,11 @@ urlpatterns = [
     path("events/", views.EventListView.as_view(), name="events"),
     path("events/create/", views.EventCreateView.as_view(), name="event_create"),
     path("events/<uuid:pk>/", views.EventDetailView.as_view(), name="event_detail"),
+    path(
+        "events/<uuid:pk>/plan-again/",
+        views.event_plan_again,
+        name="event_plan_again",
+    ),
     path("events/<uuid:pk>/edit/", views.EventUpdateView.as_view(), name="event_edit"),
     path("events/<uuid:pk>/delete/", views.EventDeleteView.as_view(), name="event_delete"),
     path("relation_statuses/", views.RelationStatusListView.as_view(), name="relation_statuses"),

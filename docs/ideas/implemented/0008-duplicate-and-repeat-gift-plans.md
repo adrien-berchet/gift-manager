@@ -2,7 +2,17 @@
 
 ## Status
 
-Proposed
+Implemented
+
+Decisions: copies never inherit sharing (the user who creates a copy is its only owner);
+"Plan again" always creates `Idea` plans; "Duplicate" opens the plan form pre-filled
+(`?duplicate_of=<plan id>`, from the card, detail page and grid) and also starts in `Idea`.
+"Plan again" lives on the detail page of a repeating event and of the Birthday event, whose
+copies are due on each recipient's next birthday (no date for a group or a person without a
+birthday). Plans of the last occurrence are offered once per gift and recipient, unless a live
+plan already covers the next occurrence; abandoned plans are never offered. The same
+visibility rules as the plan form apply: a copy needs access to the gift and the recipient,
+and no more. Logic: `gift_manager/plan_repeat.py`.
 
 ## Summary
 
