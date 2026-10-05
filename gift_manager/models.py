@@ -24,6 +24,7 @@ from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
 from django.db.models.query_utils import DeferredAttribute
+from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
@@ -1612,6 +1613,18 @@ class Relation(models.Model):
     shared_with = models.ManyToManyField(
         User, through="RelationPermission", related_name="shared_relations"
     )
+    # Hides the plan from its recipient when the recipient is also a user of the app
+    is_surprise = models.BooleanField(default=False)
+    # The collaborator who is buying the gift. ``claimed_at`` can outlive ``claimed_by``
+    # when the claimer's account is deleted, so only ``claimed_by`` tells if it is claimed.
+    claimed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="claimed_relations",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
 
     # Custom manager
     objects = RelationManager()
@@ -1636,10 +1649,19 @@ class Relation(models.Model):
                 condition=Q(price__isnull=True) | Q(price__gte=0),
                 name="relation_price_non_negative",
             ),
+            models.CheckConstraint(
+                condition=Q(claimed_by__isnull=True) | Q(claimed_at__isnull=False),
+                name="relation_claimed_by_requires_claimed_at",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.recipient_name} - {self.gift} ({self.status})"
+
+    @property
+    def is_claimed(self) -> bool:
+        """Return whether a collaborator has claimed this gift plan."""
+        return self.claimed_by_id is not None
 
     def save(self, *args, **kwargs):
         """Override save method.
@@ -1777,6 +1799,31 @@ class RelationPermission(models.Model):
     @classproperty
     def filter_name(self):
         return "relation"
+
+
+class RelationComment(models.Model):
+    """A short comment left by a collaborator on a gift plan."""
+
+    relation = models.ForeignKey(Relation, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="relation_comments"
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "pk")
+
+    def __str__(self) -> str:
+        return f"{self.author} on {self.relation_id}: {self.text[:30]}"
+
+
+@receiver(post_delete, sender=RelationPermission)
+def release_claim_when_access_is_removed(sender, instance, **kwargs):
+    """Release the claim a user holds on a plan once they lose access to it."""
+    Relation.objects.filter(pk=instance.relation_id, claimed_by_id=instance.user_id).update(
+        claimed_by=None, claimed_at=None
+    )
 
 
 # Signal handlers for GiftTag cache invalidation

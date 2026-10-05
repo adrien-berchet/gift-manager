@@ -34,7 +34,10 @@ backfilling the surprise flag, changes to the sharing UI redesign tracked in
 - `Relation.claimed_by`: `ForeignKey(User, null=True, blank=True, on_delete=SET_NULL,
   related_name="claimed_relations")`.
 - `Relation.claimed_at`: `DateTimeField(null=True, blank=True)`.
-- Check constraint: `claimed_by IS NULL` iff `claimed_at IS NULL`.
+- Check constraint `relation_claimed_by_requires_claimed_at`: `claimed_by IS NULL OR
+  claimed_at IS NOT NULL`. It is deliberately one-directional: when the claimer's account
+  is deleted, `SET_NULL` clears `claimed_by` but leaves `claimed_at`, so only `claimed_by`
+  tells whether a plan is claimed.
 - `RelationComment`: `relation` (FK, `CASCADE`, `related_name="comments"`), `author`
   (FK User, `SET_NULL`, null), `text` (`TextField`, validated non-blank, max 2000 chars at
   form level), `created_at` (`auto_now_add`), ordered by `created_at, pk`.
