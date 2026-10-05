@@ -109,9 +109,15 @@ Recommended starting context:
   without a due date, or addressed to a group the person belongs to, are not counted.
   Uncovered birthdays show a "No gift plan yet" warning and the shortcut
   (`relation_create?birthday_for=<person_id>`).
-- **Known limits:** the Birthday event name is not translated (`Event.name` is a plain
-  field), a superuser can rename or delete it (plans then lose their event and a new one is
-  created on next use), and birthdays are stored in plain text, unlike emails, because their
+- **Event name per language:** the stored name stays the canonical English "Birthday", and the
+  global Birthday event reads in the active language ("Anniversaire" in French) everywhere:
+  `Event.name` returns the translated name for events flagged `is_birthday` (see
+  `EventNameField`), saving never writes the translation back, and server-side searches also
+  match the translated name (`birthday_event_name_q`). Places that read the database directly
+  (`values()`) use the `event_display_name` template filter. A superuser renaming the event
+  does not change what users read: it is system-managed.
+- **Known limits:** a superuser can delete the event (plans then lose their event and a new one
+  is created on next use), and birthdays are stored in plain text, unlike emails, because their
   visibility is exactly the person's.
 - **Existing "Birthday" events:** users who had created their own "Birthday" event can move
   their gift plans to the global one with `python manage.py merge_birthday_events`. It is a

@@ -288,7 +288,7 @@
                     url: {% if item.person__person_id %} "{% url 'gift_manager:person_detail' item.person__person_id %}" {% elif item.group__group_id %} "{% url 'gift_manager:person_group_detail' item.group__group_id %}" {% else %} null {% endif %}
                 },
                 {% if item.event__event_id %}
-                { id: "{{ item.event__event_id }}", name: "{{ item.event__name|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
+                { id: "{{ item.event__event_id }}", name: "{{ item.event__name|event_display_name:item.event__is_birthday|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
                 {% else %}
                 null,
                 {% endif %}

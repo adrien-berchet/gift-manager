@@ -23,6 +23,7 @@ from django.db.models import Value
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
+from django.db.models.query_utils import DeferredAttribute
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
@@ -340,6 +341,7 @@ class RelationManager(models.Manager):
                 "person__person_id",
                 "group__group_id",
                 "event__name",
+                "event__is_birthday",
                 "event__event_id",
                 "status",
                 "due_date",
@@ -1298,6 +1300,56 @@ class GiftPermission(models.Model):
         return "gift"
 
 
+class EventNameDescriptor(DeferredAttribute):
+    """Return the name in the active language for the global Birthday event.
+
+    The stored name stays the canonical English one: only reading it translates, and saving
+    writes the stored value back (see ``EventNameField``), so a translation never reaches the
+    database. Other events keep the name their user typed.
+    """
+
+    def __get__(self, instance, cls=None):
+        value = super().__get__(instance, cls)
+        if instance is not None and instance.__dict__.get("is_birthday"):
+            return gettext("Birthday")
+        return value
+
+    def __set__(self, instance, value):
+        # Defining __set__ makes this a data descriptor, so it also wins over the instance
+        # dictionary on reads; the stored value still lives in that dictionary.
+        instance.__dict__[self.field.attname] = value
+
+
+class EventNameField(models.TextField):
+    """Event name that reads translated for the global Birthday event."""
+
+    descriptor_class = EventNameDescriptor
+
+    def deconstruct(self):
+        # A plain TextField as far as migrations are concerned: no schema or state change
+        name, _path, args, kwargs = super().deconstruct()
+        return name, "django.db.models.TextField", args, kwargs
+
+    def pre_save(self, model_instance, add):
+        stored = model_instance.__dict__.get(self.attname)
+        return stored if stored is not None else super().pre_save(model_instance, add)
+
+    def value_from_object(self, obj):
+        stored = obj.__dict__.get(self.attname)
+        return stored if stored is not None else super().value_from_object(obj)
+
+
+def birthday_event_name_q(query: str, prefix: str = "") -> Q:
+    """Return a filter matching the global Birthday event when the query fits its translated name.
+
+    Its stored name is English, so a search typed in the user's language (for example
+    "anniv") would otherwise miss it. ``prefix`` reaches it through a relation (``"event__"``).
+    """
+    if query.strip() and query.strip().lower() in gettext("Birthday").lower():
+        return Q(**{f"{prefix}is_birthday": True})
+    return Q()
+
+
 class Event(models.Model):
     """Model for an event."""
 
@@ -1313,11 +1365,11 @@ class Event(models.Model):
         ("yearly", gettext_lazy("Yearly")),
     ]
 
-    # Name of the global Birthday event. Not translated: Event.name is a plain field.
+    # Stored name of the global Birthday event; it reads translated (see EventNameDescriptor)
     BIRTHDAY_EVENT_NAME = "Birthday"
 
     event_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    name = models.TextField(unique=False, null=False)
+    name = EventNameField(unique=False, null=False)
     comment = models.TextField(unique=False, null=True, blank=True)
     schedule_type = models.CharField(
         max_length=20,

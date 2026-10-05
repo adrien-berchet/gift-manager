@@ -12,6 +12,7 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import birthday_event_name_q
 
 
 class HTMXSearchMixin:
@@ -160,6 +161,14 @@ class EventSearchView(HTMXListSearchView):
     model = Event
     search_fields = ["name", "comment"]
 
+    def get_search_queryset(self, queryset, search_term):
+        """Also match the Birthday event by its translated name."""
+        matched = super().get_search_queryset(queryset, search_term)
+        extra = birthday_event_name_q(search_term)
+        if not extra:
+            return matched
+        return queryset.filter(Q(pk__in=matched.values("pk")) | extra)
+
     def get_search_data(self, queryset):
         """Convert event queryset to data format."""
         data = []
@@ -199,6 +208,14 @@ class RelationSearchView(HTMXListSearchView):
     def get_queryset(self):
         """Get gift plans with related objects selected for result serialization."""
         return super().get_queryset().select_related("person", "group", "gift", "event", "status")
+
+    def get_search_queryset(self, queryset, search_term):
+        """Also match plans of the Birthday event by its translated name."""
+        matched = super().get_search_queryset(queryset, search_term)
+        extra = birthday_event_name_q(search_term, "event__")
+        if not extra:
+            return matched
+        return queryset.filter(Q(pk__in=matched.values("pk")) | extra)
 
     def get_search_data(self, queryset):
         """Convert relation queryset to data format."""

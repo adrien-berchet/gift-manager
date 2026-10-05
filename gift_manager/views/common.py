@@ -25,6 +25,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import birthday_event_name_q
 from gift_manager.services import PermissionService
 from gift_manager.statuses import GIVEN_STATUS_SLUGS
 from gift_manager.statuses import is_idea_status
@@ -322,6 +323,7 @@ def global_search(request):
             | Q(person__family_name__icontains=query)
             | Q(group__name__icontains=query)
             | Q(event__name__icontains=query)
+            | birthday_event_name_q(query, "event__")
         )
         .order_by("-creation_date")[:max_per_category]
     )
@@ -396,7 +398,9 @@ def global_search(request):
     # Search Events
     events = (
         Event.objects.accessible_by(user)
-        .filter(Q(name__icontains=query) | Q(comment__icontains=query))
+        .filter(
+            Q(name__icontains=query) | Q(comment__icontains=query) | birthday_event_name_q(query)
+        )
         .order_by("-creation_date")[:max_per_category]
     )
     results.extend(

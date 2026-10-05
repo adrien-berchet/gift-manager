@@ -2,6 +2,7 @@ from urllib.parse import urlsplit
 
 from django import template
 from django.utils import formats
+from django.utils.translation import gettext
 
 from gift_manager.email_encoding import decode_email as _decode_email
 from gift_manager.metadata_visibility import VisibleMetadata
@@ -10,6 +11,16 @@ from gift_manager.statuses import relation_status_slug
 register = template.Library()
 
 _CURRENCY_SYMBOLS = {"EUR": "€", "USD": "$", "GBP": "£", "CHF": "CHF", "CAD": "CA$"}
+
+
+@register.filter
+def event_display_name(name, is_birthday):
+    """Return an event name from a values() row, translated for the global Birthday event.
+
+    Rows read straight from the database carry the stored English name; model instances
+    already translate it themselves (``Event.name``).
+    """
+    return gettext("Birthday") if is_birthday else name
 
 
 @register.filter

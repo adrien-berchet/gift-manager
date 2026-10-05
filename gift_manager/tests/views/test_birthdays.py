@@ -675,3 +675,88 @@ class TestDashboardBirthdayCards:
         content = client_user.get(reverse("gift_manager:home")).content.decode()
 
         assert "birthday-row" not in content
+
+
+class TestTranslatedBirthdayEventPages:
+    """French users read "Anniversaire" wherever the global Birthday event is shown."""
+
+    @pytest.fixture
+    def birthday_event(self):
+        return Event.objects.get_birthday_event()
+
+    def _get(self, client, url, **extra):
+        with translation.override("fr"):
+            return html.unescape(client.get(url, **extra).content.decode())
+
+    def test_events_list(self, client_user, birthday_event):
+        content = self._get(client_user, "/fr/events/")
+
+        assert "Anniversaire" in content
+        assert 'name: "Birthday"' not in content and '"Birthday",' not in content
+
+    def test_event_detail(self, client_user, birthday_event):
+        content = self._get(client_user, f"/fr/events/{birthday_event.event_id}/")
+
+        assert "Anniversaire" in content
+
+    def test_english_users_still_read_birthday(self, client_user, birthday_event):
+        content = html.unescape(
+            client_user.get(f"/en/events/{birthday_event.event_id}/").content.decode()
+        )
+
+        assert "Birthday" in content
+        assert "Anniversaire" not in content
+
+    def test_event_search_by_translated_name(self, client_user, birthday_event):
+        with translation.override("fr"):
+            payload = client_user.get(
+                reverse("gift_manager:event_search"), {"search": "anniv"}
+            ).json()
+
+        assert [row["name"] for row in payload["data"]] == ["Anniversaire"]
+
+    def test_global_search_by_translated_name(self, client_user, birthday_event):
+        with translation.override("fr"):
+            results = client_user.get(reverse("gift_manager:global_search"), {"q": "anniv"}).json()[
+                "results"
+            ]
+
+        assert [r["title"] for r in results if r["type"] == "event"] == ["Anniversaire"]
+
+    def test_gift_plan_search_by_translated_name(self, client_user, user, birthday_event):
+        from gift_manager.tests.factories import RelationFactory
+
+        RelationFactory(event=birthday_event, shared_with=[user])
+
+        with translation.override("fr"):
+            rows = client_user.get(
+                reverse("gift_manager:relation_search"), {"search": "anniv"}
+            ).json()["data"]
+
+        assert [row["event_name"] for row in rows] == ["Anniversaire"]
+
+    def test_gift_plan_lists_and_cards(self, client_user, user, birthday_event):
+        from gift_manager.tests.factories import RelationFactory
+
+        RelationFactory(event=birthday_event, shared_with=[user])
+
+        for url in ("/fr/relations/", "/fr/relations/advanced/"):
+            content = self._get(client_user, url)
+            assert "Anniversaire" in content, url
+            assert 'name: "Birthday"' not in content, url
+
+    def test_gift_plan_detail(self, client_user, user, birthday_event):
+        from gift_manager.tests.factories import RelationFactory
+
+        plan = RelationFactory(event=birthday_event, shared_with=[user])
+
+        content = self._get(
+            client_user, f"/fr/relations/{plan.relation_id}/", HTTP_HX_REQUEST="true"
+        )
+
+        assert "Anniversaire" in content
+
+    def test_plan_form_offers_the_translated_name(self, client_user, birthday_event):
+        content = self._get(client_user, "/fr/relations/create/")
+
+        assert ">Anniversaire</option>" in content

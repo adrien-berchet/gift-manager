@@ -24,6 +24,8 @@
 - `Event.is_global` events (the Birthday event) are visible to every user with a VIEWER floor
   (`EventQuerySet.accessible_by`, `PermissionService.get_effective_permission`). Sharing code that
   cascades a plan's access to its event must go through `SharingService.needs_cascade_grant`.
+  Its stored name is English; reading `Event.name` translates it (`EventNameField`), so code reading
+  names straight from the database (`values()`) must translate with `event_display_name`.
 - Reminders: `gift_manager/reminders.py` builds the digest email content (reusing the dashboard
   buckets and `build_upcoming_birthdays`) and `gift_manager/calendar_feed.py` serializes the private
   `.ics` feed. Both read through `accessible_by(user)` and render in `Profile.language`. The digest is

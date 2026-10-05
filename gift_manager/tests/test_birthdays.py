@@ -17,7 +17,9 @@ from gift_manager.models import Event
 from gift_manager.models import EventPermission
 from gift_manager.models import EventQuerySet
 from gift_manager.models import PermissionLevel
+from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
+from gift_manager.models import birthday_event_name_q
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import SharingService
@@ -556,3 +558,95 @@ class TestBirthdayEventSchedule:
             summaries = [event.date_summary for event in events]
 
         assert self.SUMMARY in summaries
+
+
+@pytest.mark.django_db
+class TestTranslatedBirthdayEventName:
+    """The global Birthday event reads in each user's language; the stored name stays English."""
+
+    def test_name_follows_the_active_language(self):
+        event = Event.objects.get_birthday_event()
+
+        with translation.override("en"):
+            assert event.name == "Birthday"
+            assert str(event) == "Birthday"
+        with translation.override("fr"):
+            assert event.name == "Anniversaire"
+            assert str(event) == "Anniversaire"
+
+    def test_a_regular_event_keeps_the_name_its_user_typed(self):
+        event = EventFactory(name="Birthday")
+
+        with translation.override("fr"):
+            assert event.name == "Birthday"
+
+    def test_saving_never_writes_the_translation(self):
+        event = Event.objects.get_birthday_event()
+
+        with translation.override("fr"):
+            event.comment = "Edited in French"
+            event.save()
+            event.refresh_from_db()
+            assert event.name == "Anniversaire"
+
+        assert Event.objects.filter(pk=event.pk).values_list("name", flat=True).get() == "Birthday"
+
+    def test_a_queryset_update_is_not_affected(self):
+        event = Event.objects.get_birthday_event()
+
+        with translation.override("fr"):
+            Event.objects.filter(pk=event.pk).update(comment="x")
+
+        assert Event.objects.filter(pk=event.pk).values_list("name", flat=True).get() == "Birthday"
+
+    def test_the_edit_form_shows_the_stored_name(self):
+        from gift_manager.forms import EventForm
+
+        event = Event.objects.get_birthday_event()
+
+        with translation.override("fr"):
+            form = EventForm(instance=event)
+
+        assert form.initial["name"] == "Birthday"
+
+    def test_list_display_events_are_translated(self, user):
+        Event.objects.get_birthday_event()
+
+        with translation.override("fr"):
+            names = [event.name for event in Event.objects.for_list_display(user)]
+
+        assert "Anniversaire" in names
+
+    def test_relation_events_are_translated(self):
+        plan = RelationFactory(event=Event.objects.get_birthday_event())
+
+        with translation.override("fr"):
+            plan = type(plan).objects.select_related("event").get(pk=plan.pk)
+            assert plan.event.name == "Anniversaire"
+
+    @pytest.mark.parametrize(
+        ("language", "query"), [("fr", "anniv"), ("en", "birth"), ("en", "BIRTHDAY")]
+    )
+    def test_search_matches_the_translated_name(self, language, query):
+        event = Event.objects.get_birthday_event()
+        other = EventFactory(name="Christmas")
+
+        with translation.override(language):
+            found = set(Event.objects.filter(birthday_event_name_q(query)))
+
+        assert found == {event}
+        assert other not in found
+
+    def test_search_does_not_match_other_languages_or_blank_queries(self):
+        with translation.override("en"):
+            assert not birthday_event_name_q("anniv")
+            assert not birthday_event_name_q("   ")
+
+    def test_search_through_a_relation(self):
+        plan = RelationFactory(event=Event.objects.get_birthday_event())
+        RelationFactory(event=EventFactory(name="Christmas"))
+
+        with translation.override("fr"):
+            found = set(Relation.objects.filter(birthday_event_name_q("anniv", "event__")))
+
+        assert found == {plan}
