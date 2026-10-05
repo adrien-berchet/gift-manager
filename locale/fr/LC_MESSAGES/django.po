@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 17:06+0200\n"
+"POT-Creation-Date: 2026-10-05 18:05+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -434,7 +434,7 @@ msgstr "Acheté"
 msgid "Abandon"
 msgstr "Abandonner"
 
-#: gift_manager/gift_plan_cards.py:56
+#: gift_manager/gift_plan_cards.py:58
 #: gift_manager/templates/gift_manager/relation_list.html:247
 #: gift_manager/views/relation.py:493 gift_manager/views/relation.py:507
 msgid "Missing event"
@@ -1528,9 +1528,9 @@ msgstr "Lecture"
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:44
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:45
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:52
-#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:199
-#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:200
+#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:207
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:208
+#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:216
 #: gift_manager/templates/gift_manager/includes/offcanvas_base.html:26
 #: gift_manager/templates/gift_manager/includes/permission_actions.html:11
 #: gift_manager/templates/gift_manager/includes/permission_actions.html:16
@@ -2439,7 +2439,12 @@ msgstr "Aucune note pour l'instant."
 msgid "Choose event"
 msgstr "Choisir un événement"
 
-#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:209
+#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:197
+#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:198
+msgid "Duplicate"
+msgstr "Dupliquer"
+
+#: gift_manager/templates/gift_manager/includes/gift_plan_card.html:217
 #: gift_manager/templates/gift_manager/relation_list.html:245
 msgid "You do not have permission to edit this gift plan"
 msgstr "Vous n'avez pas la permission de modifier ce projet de cadeau"
