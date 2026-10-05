@@ -1,6 +1,6 @@
 # Shared Plan Coordination - Design
 
-Implements `docs/ideas/0007-shared-plan-coordination.md`.
+Implements `docs/ideas/implemented/0007-shared-plan-coordination.md`.
 
 ## Goals
 
