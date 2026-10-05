@@ -15,8 +15,10 @@ from django.core.validators import MinValueValidator
 from django.db import IntegrityError
 from django.db import models
 from django.db import transaction
+from django.db.models import Exists
 from django.db.models import F
 from django.db.models import Func
+from django.db.models import OuterRef
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
@@ -284,8 +286,55 @@ class EventManager(UserPermissionManager):
         )
 
 
+def recipient_group_ids_for(user) -> set[int]:
+    """Return the pks of the groups that ``user`` is a recipient of.
+
+    These are the groups of each person linked to ``user`` (``Person.user_link``) plus all of
+    their ancestor groups: a member of a nested group is a member of its parents. The hierarchy
+    is read in one query, so the cost does not depend on its depth.
+    """
+    group_ids = set(PersonGroup.objects.filter(person__user_link=user).values_list("pk", flat=True))
+    if not group_ids:
+        return group_ids
+
+    parents: dict[int, set[int]] = {}
+    through = PersonGroup.parent_groups.through
+    for child_id, parent_id in through.objects.values_list(
+        "from_persongroup_id", "to_persongroup_id"
+    ):
+        parents.setdefault(child_id, set()).add(parent_id)
+
+    to_visit = list(group_ids)
+    while to_visit:
+        for parent_id in parents.get(to_visit.pop(), ()):
+            if parent_id not in group_ids:
+                group_ids.add(parent_id)
+                to_visit.append(parent_id)
+    return group_ids
+
+
 class RelationQuerySet(UserPermissionQuerySet):
     """QuerySet for Relation model with additional query methods."""
+
+    def hidden_surprises_for(self, user):
+        """Return the surprise plans ``user`` must never see, shared with them or not.
+
+        A surprise plan is hidden from its recipient: the person linked to ``user`` or a member
+        of the targeted group (nested groups included). A user who owns the plan is exempt.
+        """
+        owns_plan = RelationPermission.objects.filter(
+            relation=OuterRef("pk"), user=user, permission_type=PermissionLevel.OWNER
+        )
+        return (
+            self.filter(is_surprise=True)
+            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_group_ids_for(user)))
+            .exclude(Exists(owns_plan))
+        )
+
+    def accessible_by(self, user):
+        """Return the plans shared with ``user``, except the surprises addressed to them."""
+        hidden = self.model.objects.hidden_surprises_for(user).values("pk")
+        return super().accessible_by(user).exclude(pk__in=hidden)
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -319,6 +368,10 @@ class RelationManager(models.Manager):
     def accessible_by(self, user):
         """Return all objects accessible by a user (shared with the user)."""
         return self.get_queryset().accessible_by(user)
+
+    def hidden_surprises_for(self, user):
+        """Return the surprise plans hidden from a user (see the queryset method)."""
+        return self.get_queryset().hidden_surprises_for(user)
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -1658,11 +1711,6 @@ class Relation(models.Model):
     def __str__(self) -> str:
         return f"{self.recipient_name} - {self.gift} ({self.status})"
 
-    @property
-    def is_claimed(self) -> bool:
-        """Return whether a collaborator has claimed this gift plan."""
-        return self.claimed_by_id is not None
-
     def save(self, *args, **kwargs):
         """Override save method.
 
@@ -1679,6 +1727,11 @@ class Relation(models.Model):
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
+
+    @property
+    def is_claimed(self) -> bool:
+        """Return whether a collaborator has claimed this gift plan."""
+        return self.claimed_by_id is not None
 
     @property
     def effective_url(self) -> str:
