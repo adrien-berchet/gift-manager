@@ -1,0 +1,86 @@
+"""Browser test of plan coordination: claim, comment, release and a hidden surprise."""
+
+import pytest
+from playwright.sync_api import Page
+from playwright.sync_api import expect
+
+from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import RelationFactory
+
+
+def login_as(page: Page, base_url: str, username: str):
+    """Log in as a seed user (their password is ``<username>_password``)."""
+    page.context.clear_cookies()
+    page.goto(f"{base_url}/accounts/login/")
+    page.fill('input[name="login"]', username)
+    page.fill('input[name="password"]', f"{username}_password")
+    page.click('button[type="submit"]')
+    page.wait_for_url(lambda url: "/accounts/login/" not in url, timeout=30_000)
+
+
+def open_page(page: Page, url: str):
+    """Open a page and wait for HTMX; slow third-party assets must not decide the outcome."""
+    response = page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_function("typeof window.htmx?.process === 'function'", timeout=30_000)
+    return response
+
+
+def share(relation, user, level):
+    create_or_update_permission(user, relation, permission_level=level)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestPlanCoordination:
+    def test_claim_comment_release_and_hidden_surprise(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+        gift = GiftFactory(name="Coordinated Gift", shared_with=[alice, bob])
+        plan = RelationFactory(person=seed_data_e2e.persons["dad"], gift=gift, event=None)
+        share(plan, alice, PermissionLevel.OWNER)
+        share(plan, bob, PermissionLevel.EDITOR)
+        detail = f"{live_server.url}{plan.get_absolute_url()}"
+
+        # Bob claims the plan and leaves a comment
+        login_as(page, live_server.url, "bob")
+        open_page(page, detail)
+        page.get_by_role("button", name="I'll take this").click()
+        expect(page.locator("#relation-coordination")).to_contain_text("Claimed by bob")
+        page.fill("#relation-comment-text", "I know a shop that has it")
+        page.get_by_role("button", name="Send").click()
+        expect(page.locator("#relation-coordination")).to_contain_text("I know a shop that has it")
+
+        # Alice sees who claimed it and the comment, then releases the claim as an owner
+        login_as(page, live_server.url, "alice")
+        open_page(page, detail)
+        coordination = page.locator("#relation-coordination")
+        expect(coordination).to_contain_text("Claimed by bob")
+        expect(coordination).to_contain_text("I know a shop that has it")
+        page.get_by_role("button", name="Release").click()
+        expect(page.get_by_role("button", name="I'll take this")).to_be_visible()
+
+        # A surprise plan for Bob is invisible to Bob and still visible to Alice
+        surprise = RelationFactory(
+            person=PersonFactory(first_name="Bobby", user_link=bob),
+            gift=GiftFactory(name="Hidden Surprise Gift", shared_with=[alice, bob]),
+            event=None,
+            is_surprise=True,
+        )
+        share(surprise, alice, PermissionLevel.OWNER)
+        share(surprise, bob, PermissionLevel.VIEWER)
+        surprise_url = f"{live_server.url}{surprise.get_absolute_url()}"
+
+        open_page(page, surprise_url)
+        expect(page.locator("#relation-coordination")).to_contain_text("Coordination")
+
+        login_as(page, live_server.url, "bob")
+        response = page.goto(surprise_url, wait_until="domcontentloaded")
+        assert response.status == 404
+        open_page(page, f"{live_server.url}/relations/")
+        expect(page.get_by_text("Coordinated Gift").first).to_be_visible()
+        expect(page.get_by_text("Hidden Surprise Gift")).to_have_count(0)
