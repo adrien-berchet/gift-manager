@@ -25,6 +25,7 @@ from django.views.generic import UpdateView
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Profile
+from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import SharingService
@@ -956,20 +957,29 @@ class DeleteConfirmationMixin:
 
         return details
 
+    def _count_visible(self, related_manager) -> int:
+        """Count the related objects, counting only the gift plans the user may see."""
+        queryset = related_manager.all()
+        if queryset.model is Relation:
+            queryset = Relation.objects.accessible_by(self.request.user).filter(
+                pk__in=queryset.values("pk")
+            )
+        return queryset.count()
+
     def get_related_objects(self):
         """Return information about related objects that will be affected."""
         related = []
 
         # Check for common relationships
         if hasattr(self.object, "gifts") and hasattr(self.object.gifts, "count"):
-            count = self.object.gifts.count()
+            count = self._count_visible(self.object.gifts)
             if count > 0:
                 related.append(
                     {"name": "gift", "name_plural": "gifts", "count": count, "icon": "gift"}
                 )
 
         if hasattr(self.object, "events") and hasattr(self.object.events, "count"):
-            count = self.object.events.count()
+            count = self._count_visible(self.object.events)
             if count > 0:
                 related.append(
                     {
@@ -981,7 +991,7 @@ class DeleteConfirmationMixin:
                 )
 
         if hasattr(self.object, "relations") and hasattr(self.object.relations, "count"):
-            count = self.object.relations.count()
+            count = self._count_visible(self.object.relations)
             if count > 0:
                 related.append(
                     {
