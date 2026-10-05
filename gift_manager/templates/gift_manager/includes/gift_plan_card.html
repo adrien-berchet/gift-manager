@@ -190,14 +190,6 @@
            title="{% trans 'Details' %}">
             <i class="fas fa-eye" aria-hidden="true"></i>
         </a>
-        <a href="{{ card.duplicate_url }}"
-           class="btn btn-sm btn-outline-secondary gift-plan-card-utility-action"
-           data-action="create"
-           data-create-url="{{ card.duplicate_url }}"
-           aria-label="{% trans 'Duplicate' %}"
-           title="{% trans 'Duplicate' %}">
-            <i class="fas fa-copy" aria-hidden="true"></i>
-        </a>
         {% if card.can_edit %}
         {% if not card.has_contextual_edit_action %}
         <a href="{{ card.edit_url }}"

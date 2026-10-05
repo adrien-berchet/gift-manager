@@ -11,7 +11,6 @@ from gift_manager.gift_plan_actions import gift_plan_has_missing_event
 from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
-from gift_manager.plan_repeat import duplicate_plan_url
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import relation_status_slug
@@ -44,7 +43,6 @@ def build_gift_plan_card(
         "status_class": gift_plan_status_class(relation.status),
         "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
         "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
-        "duplicate_url": duplicate_plan_url(relation),
         "quick_action_url": reverse(
             "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
         ),
