@@ -148,3 +148,22 @@ def default_surprise_for(recipient: Person | PersonGroup | None, creator: User) 
             .exists()
         )
     return False
+
+
+def coordination_context(relation: Relation, user: User) -> dict:
+    """Return what the plan's detail page needs to show the claim and the comment thread."""
+    level = PermissionService.get_effective_permission(relation, user)
+    is_owner = level >= PermissionLevel.OWNER
+    claimed_by = relation.claimed_by if relation.is_claimed else None
+    return {
+        "claimed_by": claimed_by,
+        "claimed_at": relation.claimed_at if claimed_by else None,
+        "can_claim": claimed_by is None,
+        "can_release": claimed_by is not None and (claimed_by.pk == user.pk or is_owner),
+        "can_comment": True,
+        "comments": [
+            {"obj": comment, "can_delete": comment.author_id == user.pk or is_owner}
+            for comment in relation.comments.select_related("author")
+        ],
+        "can_set_surprise": level >= PermissionLevel.EDITOR and can_be_surprise(relation),
+    }

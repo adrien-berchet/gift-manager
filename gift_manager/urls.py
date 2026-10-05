@@ -204,6 +204,18 @@ urlpatterns = [
         views.relation_quick_action,
         name="relation_quick_action",
     ),
+    path("relations/<uuid:pk>/claim/", views.relation_claim, name="relation_claim"),
+    path("relations/<uuid:pk>/release/", views.relation_release, name="relation_release"),
+    path(
+        "relations/<uuid:pk>/comments/",
+        views.relation_comment_add,
+        name="relation_comment_add",
+    ),
+    path(
+        "relations/<uuid:pk>/comments/<int:comment_id>/delete/",
+        views.relation_comment_delete,
+        name="relation_comment_delete",
+    ),
     path(
         "relations/<uuid:pk>/reaction/",
         views.relation_reaction,

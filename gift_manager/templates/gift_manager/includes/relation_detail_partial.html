@@ -55,6 +55,9 @@
                         <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
                             {{ object.status }}
                         </span>
+                        {% if object.is_surprise %}
+                        <span class="badge bg-warning text-dark ms-2"><i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Surprise" %}</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -209,6 +212,10 @@
         </div>
     </div>
     {% endif %}
+
+    {% with relation=object %}
+    {% include "gift_manager/includes/relation_coordination_partial.html" %}
+    {% endwith %}
 
     <!-- Shared With -->
     {% if shared_users %}

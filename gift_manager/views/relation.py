@@ -35,6 +35,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
+from gift_manager import plan_coordination
 from gift_manager.birthdays import BIRTHDAY_FOR_PARAM
 from gift_manager.forms import GiftRelationForm
 from gift_manager.forms import PersonGroupRelationForm
@@ -718,6 +719,9 @@ class RelationDetailView(BaseDetailView):
         context["gift_plan_status_class"] = gift_plan_status_class(self.object.status)
         context["gift_plan_urgency_key"] = gift_plan_urgency_key(self.object)
         context["is_abandoned"] = is_abandoned_status(self.object.status)
+        context["coordination"] = plan_coordination.coordination_context(
+            self.object, self.request.user
+        )
 
         # Add action buttons
         is_editor = context["is_editor"]

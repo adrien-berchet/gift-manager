@@ -63,6 +63,10 @@ from .person_group import add_multiple_child_groups_to_group
 from .person_group import add_multiple_persons_to_group
 from .person_group import remove_person_from_group
 from .person_group import reparent_group
+from .plan_coordination import relation_claim
+from .plan_coordination import relation_comment_add
+from .plan_coordination import relation_comment_delete
+from .plan_coordination import relation_release
 
 # Profile views
 from .profile import AcceptInvitationView
@@ -177,8 +181,12 @@ __all__ = [
     "home",
     "person_gift_history",
     "person_group_gift_history",
+    "relation_claim",
+    "relation_comment_add",
+    "relation_comment_delete",
     "relation_quick_action",
     "relation_reaction",
+    "relation_release",
     "remove_person_from_group",
     "reparent_group",
     "repeat_gift_hint",
