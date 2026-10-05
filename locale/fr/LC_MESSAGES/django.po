@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 18:05+0200\n"
+"POT-Creation-Date: 2026-10-05 21:04+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -76,27 +76,27 @@ msgid_plural "Gift Manager: %(count)d items need your attention"
 msgstr[0] "Gift Manager : %(count)d élément nécessite votre attention"
 msgstr[1] "Gift Manager : %(count)d éléments nécessitent votre attention"
 
-#: gift_manager/forms.py:46 gift_manager/models.py:1250
-#: gift_manager/models.py:1594
+#: gift_manager/forms.py:51 gift_manager/models.py:1312
+#: gift_manager/models.py:1656
 msgid "Link"
 msgstr "Lien"
 
-#: gift_manager/forms.py:47 gift_manager/models.py:1258
-#: gift_manager/models.py:1602
+#: gift_manager/forms.py:52 gift_manager/models.py:1320
+#: gift_manager/models.py:1664
 #: gift_manager/templates/gift_manager/includes/link_price_display.html:7
 msgid "Estimated price"
 msgstr "Prix estimé"
 
-#: gift_manager/forms.py:89
+#: gift_manager/forms.py:94
 msgid "Select a recipient"
 msgstr "Sélectionner un destinataire"
 
-#: gift_manager/forms.py:100
+#: gift_manager/forms.py:105
 #: gift_manager/templates/gift_manager/recipient_list.html:116
 msgid "People"
 msgstr "Personnes"
 
-#: gift_manager/forms.py:108 gift_manager/forms.py:209
+#: gift_manager/forms.py:113 gift_manager/forms.py:214
 #: gift_manager/templates/gift_manager/home.html:1101
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:93
 #: gift_manager/templates/gift_manager/recipient_list.html:121
@@ -104,107 +104,107 @@ msgstr "Personnes"
 msgid "Groups"
 msgstr "Groupes"
 
-#: gift_manager/forms.py:118
+#: gift_manager/forms.py:123
 msgid "Select a recipient."
 msgstr "Sélectionnez un destinataire."
 
-#: gift_manager/forms.py:122 gift_manager/forms.py:125
-#: gift_manager/forms.py:133 gift_manager/forms.py:135
+#: gift_manager/forms.py:127 gift_manager/forms.py:130
+#: gift_manager/forms.py:138 gift_manager/forms.py:140
 msgid "Choose a valid recipient."
 msgstr "Choisissez un destinataire valide."
 
-#: gift_manager/forms.py:145
+#: gift_manager/forms.py:150
 msgid "Year"
 msgstr "Année"
 
-#: gift_manager/forms.py:188
+#: gift_manager/forms.py:193
 msgid "Day"
 msgstr "Jour"
 
-#: gift_manager/forms.py:191
+#: gift_manager/forms.py:196
 msgid "Month"
 msgstr "Mois"
 
-#: gift_manager/forms.py:194
+#: gift_manager/forms.py:199
 msgid "Year (optional)"
 msgstr "Année (facultatif)"
 
-#: gift_manager/forms.py:199
+#: gift_manager/forms.py:204
 #: gift_manager/templates/gift_manager/profile_detail.html:293
 #: gift_manager/views/person.py:45
 msgid "Email address"
 msgstr "Adresse email"
 
-#: gift_manager/forms.py:201 gift_manager/views/profile.py:228
+#: gift_manager/forms.py:206 gift_manager/views/profile.py:228
 msgid "Enter a valid email address."
 msgstr "Entrer une adresse email valide."
 
-#: gift_manager/forms.py:216
+#: gift_manager/forms.py:221
 msgid "Interests"
 msgstr "Centres d'intérêt"
 
-#: gift_manager/forms.py:217
+#: gift_manager/forms.py:222
 msgid "Gift tags describing what this person likes."
 msgstr "Étiquettes de cadeau décrivant ce que la personne aime."
 
-#: gift_manager/forms.py:232
+#: gift_manager/forms.py:237
 #: gift_manager/templates/gift_manager/person_group_detail.html:396
 #: gift_manager/templates/gift_manager/person_group_detail.html:472
 #: gift_manager/views/person.py:43
 msgid "First name"
 msgstr "Prénom"
 
-#: gift_manager/forms.py:233
+#: gift_manager/forms.py:238
 #: gift_manager/templates/gift_manager/person_group_detail.html:407
 #: gift_manager/templates/gift_manager/person_group_detail.html:483
 #: gift_manager/views/person.py:44
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: gift_manager/forms.py:234
+#: gift_manager/forms.py:239
 msgid "Notes"
 msgstr "Notes"
 
-#: gift_manager/forms.py:237
+#: gift_manager/forms.py:242
 msgid "Sizes, allergies, things to avoid, ideas mentioned in passing."
 msgstr "Tailles, allergies, choses à éviter, idées évoquées en passant."
 
-#: gift_manager/forms.py:246
+#: gift_manager/forms.py:251
 msgid "This first name is too long."
 msgstr "Ce prénom est trop long."
 
-#: gift_manager/forms.py:249
+#: gift_manager/forms.py:254
 msgid "This family name is too long."
 msgstr "Ce nom de famille est trop long."
 
-#: gift_manager/forms.py:293
+#: gift_manager/forms.py:298
 msgid "These notes are too long."
 msgstr "Ces notes sont trop longues."
 
-#: gift_manager/forms.py:386
+#: gift_manager/forms.py:391
 #: gift_manager/templates/gift_manager/person_group_explorer.html:145
 msgid "Parent groups"
 msgstr "Groupes parents"
 
-#: gift_manager/forms.py:387 gift_manager/forms.py:400
-#: gift_manager/forms.py:413
+#: gift_manager/forms.py:392 gift_manager/forms.py:405
+#: gift_manager/forms.py:418
 msgid "Hold Ctrl/Cmd to select multiple. Use the search box to filter."
 msgstr ""
 "Maintenir Ctrl/Cmd pour sélectionner plusieurs. Utilisez la boite de "
 "recherche pour filtrer."
 
-#: gift_manager/forms.py:399
+#: gift_manager/forms.py:404
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:95
 msgid "Members"
 msgstr "Membres"
 
-#: gift_manager/forms.py:412 gift_manager/forms.py:666
+#: gift_manager/forms.py:417 gift_manager/forms.py:671
 #: gift_manager/templates/gift_manager/person_group_explorer.html:55
 msgid "Child groups"
 msgstr "Groupes enfants"
 
-#: gift_manager/forms.py:422 gift_manager/forms.py:870
-#: gift_manager/forms.py:1003
+#: gift_manager/forms.py:427 gift_manager/forms.py:948
+#: gift_manager/forms.py:1095
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:91
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:18
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:18
@@ -214,115 +214,123 @@ msgstr "Groupes enfants"
 msgid "Name"
 msgstr "Nom"
 
-#: gift_manager/forms.py:546
+#: gift_manager/forms.py:551
 #, python-format
 msgid ""
 "Adding '%(parent)s' as a parent would create a cycle in the group hierarchy."
 msgstr ""
 "Ajouter le parent '%(parent)s' créerait un cycle dans la hiérarchie des tags."
 
-#: gift_manager/forms.py:565
+#: gift_manager/forms.py:570
 #, python-format
 msgid "The following groups cannot be both parent and child: %(names)s"
 msgstr ""
 "Les groupes suivants ne peuvent pas être à la fois parent et enfant : "
 "%(names)s"
 
-#: gift_manager/forms.py:583
+#: gift_manager/forms.py:588
 #, python-format
 msgid ""
 "Cannot add parent '%(parent)s' and child(ren) '%(children)s' simultaneously "
-"because the child(ren) are ancestors of the parent (Cycle: Group -> Child -"
-"> ... -> Parent -> Group)."
+"because the child(ren) are ancestors of the parent (Cycle: Group -> Child -> "
+"... -> Parent -> Group)."
 msgstr ""
 "Impossible d'ajouter le parent '%(parent)s' et l'enfant '%(children)s' "
 "simultanément parce que l'enfant est un ancêtre du parent (Cycle: Groupe -> "
 "Enfant -> ... -> Parent -> Groupe)."
 
-#: gift_manager/forms.py:622
+#: gift_manager/forms.py:627
 #, python-format
 msgid ""
-"Adding '%(child)s' as a child would create a cycle in the group hierarchy "
-"(it is already an ancestor)."
+"Adding '%(child)s' as a child would create a cycle in the group hierarchy (it"
+" is already an ancestor)."
 msgstr ""
 "Ajouter '%(child)s' comme enfant créerait un cycle dans la hiérarchie des "
 "groupes (il est déjà un ancêtre)."
 
-#: gift_manager/forms.py:630
+#: gift_manager/forms.py:635
 msgid "A group cannot be a child of itself."
 msgstr "Un groupe ne peut pas être un enfant de lui-même."
 
-#: gift_manager/forms.py:667
+#: gift_manager/forms.py:672
 msgid "Select groups to add as children of this group"
 msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 
-#: gift_manager/forms.py:776 gift_manager/forms.py:827
-#: gift_manager/forms.py:1134 gift_manager/models.py:1270
+#: gift_manager/forms.py:838 gift_manager/forms.py:899
+#: gift_manager/forms.py:1231 gift_manager/models.py:1332
 #: gift_manager/templates/gift_manager/base.html:77
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:18
 #: gift_manager/templates/gift_manager/person_group_detail.html:685
 #: gift_manager/templates/gift_manager/relation_status_detail.html:86
-#: gift_manager/views/relation.py:289
+#: gift_manager/views/relation.py:294
 msgid "Gift"
 msgstr "Cadeau"
 
-#: gift_manager/forms.py:777 gift_manager/forms.py:828
-#: gift_manager/forms.py:871 gift_manager/forms.py:945
-#: gift_manager/forms.py:1004 gift_manager/forms.py:1135
+#: gift_manager/forms.py:839 gift_manager/forms.py:900
+#: gift_manager/forms.py:949 gift_manager/forms.py:1036
+#: gift_manager/forms.py:1096 gift_manager/forms.py:1232
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:103
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:25
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:25
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:103
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:74
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:106
 #: gift_manager/templates/gift_manager/person_group_detail.html:567
 #: gift_manager/templates/gift_manager/person_group_detail.html:710
 #: gift_manager/templates/gift_manager/relation_status_detail.html:99
 #: gift_manager/views/event.py:58 gift_manager/views/event.py:70
 #: gift_manager/views/gift.py:54 gift_manager/views/gift.py:124
-#: gift_manager/views/relation.py:290
+#: gift_manager/views/relation.py:295
 msgid "Comment"
 msgstr "Commentaire"
 
-#: gift_manager/forms.py:779 gift_manager/forms.py:830
-#: gift_manager/forms.py:947 gift_manager/forms.py:1137
-#: gift_manager/models.py:1399
+#: gift_manager/forms.py:841 gift_manager/forms.py:902
+#: gift_manager/forms.py:1038 gift_manager/forms.py:1234
+#: gift_manager/models.py:1461
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:167
 #: gift_manager/templates/gift_manager/person_group_detail.html:591
 #: gift_manager/templates/gift_manager/person_group_detail.html:730
 #: gift_manager/templates/gift_manager/relation_status_detail.html:105
-#: gift_manager/views/relation.py:292
+#: gift_manager/views/relation.py:297
 msgid "Event"
 msgstr "Événement"
 
-#: gift_manager/forms.py:780 gift_manager/forms.py:831
-#: gift_manager/forms.py:948 gift_manager/forms.py:1138
+#: gift_manager/forms.py:842 gift_manager/forms.py:903
+#: gift_manager/forms.py:1039 gift_manager/forms.py:1235
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:53
 #: gift_manager/templates/gift_manager/person_group_detail.html:573
 #: gift_manager/templates/gift_manager/person_group_detail.html:716
 #: gift_manager/templates/gift_manager/relation_list.html:228
 #: gift_manager/templates/gift_manager/relation_status_detail.html:9
-#: gift_manager/views/relation.py:231 gift_manager/views/relation.py:293
+#: gift_manager/views/relation.py:236 gift_manager/views/relation.py:298
 msgid "Status"
 msgstr "Statut"
 
-#: gift_manager/forms.py:781 gift_manager/forms.py:832
-#: gift_manager/forms.py:949 gift_manager/forms.py:1139
+#: gift_manager/forms.py:843 gift_manager/forms.py:904
+#: gift_manager/forms.py:1040 gift_manager/forms.py:1236
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:168
 #: gift_manager/templates/gift_manager/person_group_detail.html:606
 #: gift_manager/templates/gift_manager/person_group_detail.html:745
 #: gift_manager/templates/gift_manager/relation_status_detail.html:120
-#: gift_manager/views/relation.py:294
+#: gift_manager/views/relation.py:299
 msgid "Due date"
 msgstr "Échéance"
 
-#: gift_manager/forms.py:808
+#: gift_manager/forms.py:844 gift_manager/forms.py:905
+#: gift_manager/forms.py:1041 gift_manager/forms.py:1237
+#: gift_manager/templates/gift_manager/includes/forms/surprise_field.html:5
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:59
+msgid "Surprise"
+msgstr "Surprise"
+
+#: gift_manager/forms.py:876
 msgid "The specified person does not exist."
 msgstr "La personne demandée n'existe pas."
 
-#: gift_manager/forms.py:859
+#: gift_manager/forms.py:937
 msgid "The specified person group does not exist."
 msgstr "Le groupe demandé n'existe pas."
 
-#: gift_manager/forms.py:873 gift_manager/templates/gift_manager/base.html:125
+#: gift_manager/forms.py:951 gift_manager/templates/gift_manager/base.html:125
 #: gift_manager/templates/gift_manager/base.html:351
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:145
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:58
@@ -330,53 +338,53 @@ msgstr "Le groupe demandé n'existe pas."
 msgid "Tags"
 msgstr "Tags"
 
-#: gift_manager/forms.py:882
+#: gift_manager/forms.py:960
 msgid "This name is too long."
 msgstr "Ce nom est trop long."
 
-#: gift_manager/forms.py:885
+#: gift_manager/forms.py:963
 msgid "This comment is too long."
 msgstr "Ce commentaire est trop long."
 
-#: gift_manager/forms.py:919 gift_manager/models.py:1214
+#: gift_manager/forms.py:997 gift_manager/models.py:1276
 msgid "Adding this parent would create a cycle in the tag hierarchy."
 msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
 
-#: gift_manager/forms.py:929 gift_manager/forms.py:1106
+#: gift_manager/forms.py:1011 gift_manager/forms.py:1202
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:29
 #: gift_manager/templates/gift_manager/person_group_detail.html:697
 #: gift_manager/templates/gift_manager/relation_status_detail.html:64
-#: gift_manager/views/relation.py:291
+#: gift_manager/views/relation.py:296
 msgid "Recipient"
 msgstr "Destinataire"
 
-#: gift_manager/forms.py:932 gift_manager/forms.py:1109
+#: gift_manager/forms.py:1014 gift_manager/forms.py:1205
 msgid "Choose the person or group this gift plan is for."
 msgstr "Choisissez la personne ou le groupe concerné par ce projet de cadeau."
 
-#: gift_manager/forms.py:986
+#: gift_manager/forms.py:1078
 msgid "The specified gift does not exist."
 msgstr "Le cadeau demandé n'existe pas."
 
-#: gift_manager/forms.py:1005
+#: gift_manager/forms.py:1097
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:46
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:52
 #: gift_manager/views/event.py:59
 msgid "Schedule"
 msgstr "Planification"
 
-#: gift_manager/forms.py:1006
+#: gift_manager/forms.py:1098
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:65
 #: gift_manager/views/event.py:72
 msgid "Date"
 msgstr "Date"
 
-#: gift_manager/forms.py:1007
+#: gift_manager/forms.py:1099
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:76
 msgid "Recurrence"
 msgstr "Récurrence"
 
-#: gift_manager/forms.py:1011
+#: gift_manager/forms.py:1103
 msgid ""
 "Use the event date for one-time events, or the typical date for repeating "
 "events."
@@ -384,28 +392,28 @@ msgstr ""
 "Utilisez la date de l'événement ponctuel, ou la date habituelle d'un "
 "événement récurrent."
 
-#: gift_manager/forms.py:1034 gift_manager/forms.py:1040
-#: gift_manager/models.py:1461 gift_manager/models.py:1466
+#: gift_manager/forms.py:1126 gift_manager/forms.py:1132
+#: gift_manager/models.py:1523 gift_manager/models.py:1528
 msgid "Choose a date."
 msgstr "Choisissez une date."
 
-#: gift_manager/forms.py:1042 gift_manager/models.py:1468
+#: gift_manager/forms.py:1134 gift_manager/models.py:1530
 msgid "Choose a recurrence."
 msgstr "Choisissez une récurrence."
 
-#: gift_manager/forms.py:1045 gift_manager/models.py:1470
+#: gift_manager/forms.py:1137 gift_manager/models.py:1532
 msgid "Choose a valid schedule."
 msgstr "Choisissez une planification valide."
 
-#: gift_manager/forms.py:1057
+#: gift_manager/forms.py:1149
 msgid "Rating"
 msgstr "Note"
 
-#: gift_manager/forms.py:1069
+#: gift_manager/forms.py:1161
 msgid "Note"
 msgstr "Commentaire"
 
-#: gift_manager/forms.py:1206
+#: gift_manager/forms.py:1304
 msgid "Default"
 msgstr "Par défaut"
 
@@ -436,7 +444,7 @@ msgstr "Abandonner"
 
 #: gift_manager/gift_plan_cards.py:58
 #: gift_manager/templates/gift_manager/relation_list.html:247
-#: gift_manager/views/relation.py:493 gift_manager/views/relation.py:507
+#: gift_manager/views/relation.py:498 gift_manager/views/relation.py:512
 msgid "Missing event"
 msgstr "Événement manquant"
 
@@ -495,8 +503,8 @@ msgid ""
 "{processed} of {total} items {operation} successfully. {errors} errors "
 "occurred."
 msgstr ""
-"{processed} sur {total} éléments {operation} avec succès. {errors} erreurs "
-"se sont produites."
+"{processed} sur {total} éléments {operation} avec succès. {errors} erreurs se"
+" sont produites."
 
 #: gift_manager/mixins/notifications.py:270
 msgid ""
@@ -511,148 +519,148 @@ msgstr ""
 msgid "Validation Error"
 msgstr "Erreur de validation"
 
-#: gift_manager/models.py:43
+#: gift_manager/models.py:48
 msgid "none"
 msgstr "aucun"
 
-#: gift_manager/models.py:44
+#: gift_manager/models.py:49
 msgid "viewer"
 msgstr "lecteur"
 
-#: gift_manager/models.py:45
+#: gift_manager/models.py:50
 msgid "editor"
 msgstr "éditeur"
 
-#: gift_manager/models.py:46
+#: gift_manager/models.py:51
 msgid "owner"
 msgstr "propriétaire"
 
-#: gift_manager/models.py:359 gift_manager/templates/gift_manager/base.html:381
+#: gift_manager/models.py:421 gift_manager/templates/gift_manager/base.html:381
 #: gift_manager/templates/gift_manager/profile_detail.html:175
 #: gift_manager/templates/gift_manager/profile_detail.html:195
 msgid "List"
 msgstr "Liste"
 
-#: gift_manager/models.py:360
+#: gift_manager/models.py:422
 msgid "Card"
 msgstr "Carte"
 
-#: gift_manager/models.py:376
+#: gift_manager/models.py:438
 msgid "Default view for desktop"
 msgstr "Vue par défaut pour ordinateur"
 
-#: gift_manager/models.py:377
+#: gift_manager/models.py:439
 msgid "Default view mode for desktop/large screens"
 msgstr "Vue par défaut pour écrans larges"
 
-#: gift_manager/models.py:383
+#: gift_manager/models.py:445
 msgid "Default view for mobile"
 msgstr "Vue par défaut pour mobile"
 
-#: gift_manager/models.py:384
+#: gift_manager/models.py:446
 msgid "Default view mode for mobile/small screens"
 msgstr "Vue par défaut pour petits écrans"
 
-#: gift_manager/models.py:392
+#: gift_manager/models.py:454
 msgid "Off"
 msgstr "Désactivés"
 
-#: gift_manager/models.py:393
+#: gift_manager/models.py:455
 msgid "Weekly (Mondays)"
 msgstr "Chaque semaine (le lundi)"
 
-#: gift_manager/models.py:394 gift_manager/models.py:1362
+#: gift_manager/models.py:456 gift_manager/models.py:1424
 msgid "Daily"
 msgstr "Quotidien"
 
-#: gift_manager/models.py:397
+#: gift_manager/models.py:459
 msgid "1 week"
 msgstr "1 semaine"
 
-#: gift_manager/models.py:398
+#: gift_manager/models.py:460
 msgid "2 weeks"
 msgstr "2 semaines"
 
-#: gift_manager/models.py:399
+#: gift_manager/models.py:461
 msgid "30 days"
 msgstr "30 jours"
 
-#: gift_manager/models.py:414
+#: gift_manager/models.py:476
 msgid "Currency"
 msgstr "Devise"
 
-#: gift_manager/models.py:420
+#: gift_manager/models.py:482
 msgid "Language"
 msgstr "Langue"
 
-#: gift_manager/models.py:421
+#: gift_manager/models.py:483
 msgid "Language of the emails and of the calendar feed"
 msgstr "Langue des emails et du flux de calendrier"
 
-#: gift_manager/models.py:427
+#: gift_manager/models.py:489
 #: gift_manager/templates/gift_manager/digest_unsubscribe.html:4
 #: gift_manager/templates/gift_manager/digest_unsubscribe.html:12
 msgid "Reminder emails"
 msgstr "Emails de rappel"
 
-#: gift_manager/models.py:432
+#: gift_manager/models.py:494
 msgid "Look ahead"
 msgstr "Période à couvrir"
 
-#: gift_manager/models.py:443
+#: gift_manager/models.py:505
 msgid "Profile of"
 msgstr "Profil de"
 
-#: gift_manager/models.py:512
+#: gift_manager/models.py:574
 msgid "Invitation from"
 msgstr "Invitation de"
 
-#: gift_manager/models.py:513
+#: gift_manager/models.py:575
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:8
 msgid "to"
 msgstr "à"
 
-#: gift_manager/models.py:582 gift_manager/models.py:1733
+#: gift_manager/models.py:644 gift_manager/models.py:1816
 #: gift_manager/templates/gift_manager/relation_list.html:237
 #: gift_manager/templates/gift_manager/relation_status_detail.html:27
 #: gift_manager/views/common.py:375 gift_manager/views/recipient.py:125
 msgid "Person"
 msgstr "Personne"
 
-#: gift_manager/models.py:583
+#: gift_manager/models.py:645
 #: gift_manager/templates/gift_manager/share_objects.html:107
 msgid "Persons"
 msgstr "Personnes"
 
-#: gift_manager/models.py:647
+#: gift_manager/models.py:709
 msgid "Enter a day and a month for the birthday."
 msgstr "Saisissez un jour et un mois pour l'anniversaire."
 
-#: gift_manager/models.py:652
+#: gift_manager/models.py:714
 msgid "Enter both the day and the month."
 msgstr "Saisissez à la fois le jour et le mois."
 
-#: gift_manager/models.py:658
+#: gift_manager/models.py:720
 msgid "Enter a year that is not in the future."
 msgstr "Saisissez une année qui n'est pas dans le futur."
 
-#: gift_manager/models.py:663
+#: gift_manager/models.py:725
 msgid "Enter a valid date."
 msgstr "Saisissez une date valide."
 
-#: gift_manager/models.py:750
+#: gift_manager/models.py:812
 msgid "Person group"
 msgstr "Groupe de personnes"
 
-#: gift_manager/models.py:751
+#: gift_manager/models.py:813
 msgid "Person groups"
 msgstr "Groupe de personnes"
 
-#: gift_manager/models.py:953
+#: gift_manager/models.py:1015
 msgid "Adding this parent would create a cycle in the group hierarchy."
 msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des groupes."
 
-#: gift_manager/models.py:1271
+#: gift_manager/models.py:1333
 #: gift_manager/templates/gift_manager/base.html:105
 #: gift_manager/templates/gift_manager/base.html:343
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:142
@@ -662,38 +670,38 @@ msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des groupes."
 msgid "Gifts"
 msgstr "Cadeaux"
 
-#: gift_manager/models.py:1314 gift_manager/models.py:1348
+#: gift_manager/models.py:1376 gift_manager/models.py:1410
 #: gift_manager/templates/gift_manager/includes/forms/person_fields.html:7
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:47
 #: gift_manager/templatetags/custom_filters.py:23
 msgid "Birthday"
 msgstr "Anniversaire"
 
-#: gift_manager/models.py:1357 gift_manager/models.py:1426
+#: gift_manager/models.py:1419 gift_manager/models.py:1488
 msgid "No date yet"
 msgstr "Aucune date pour le moment"
 
-#: gift_manager/models.py:1358
+#: gift_manager/models.py:1420
 msgid "One-time"
 msgstr "Ponctuel"
 
-#: gift_manager/models.py:1359
+#: gift_manager/models.py:1421
 msgid "Repeating"
 msgstr "Récurrent"
 
-#: gift_manager/models.py:1363
+#: gift_manager/models.py:1425
 msgid "Weekly"
 msgstr "Hebdomadaire"
 
-#: gift_manager/models.py:1364
+#: gift_manager/models.py:1426
 msgid "Monthly"
 msgstr "Mensuel"
 
-#: gift_manager/models.py:1365
+#: gift_manager/models.py:1427
 msgid "Yearly"
 msgstr "Annuel"
 
-#: gift_manager/models.py:1400
+#: gift_manager/models.py:1462
 #: gift_manager/templates/gift_manager/base.html:120
 #: gift_manager/templates/gift_manager/base.html:350
 #: gift_manager/templates/gift_manager/event_detail.html:14
@@ -703,69 +711,94 @@ msgstr "Annuel"
 msgid "Events"
 msgstr "Événements"
 
-#: gift_manager/models.py:1425
+#: gift_manager/models.py:1487
 msgid "Repeats yearly, on the recipient's birthday"
 msgstr "Se répète annuellement, à la date d'anniversaire du destinataire"
 
-#: gift_manager/models.py:1430
+#: gift_manager/models.py:1492
 #, python-format
 msgid "Repeats %(recurrence)s from %(date)s"
 msgstr "Se répète %(recurrence)s à partir du %(date)s"
 
-#: gift_manager/models.py:1440
+#: gift_manager/models.py:1502
 msgid "daily"
 msgstr "quotidiennement"
 
-#: gift_manager/models.py:1441
+#: gift_manager/models.py:1503
 msgid "weekly"
 msgstr "hebdomadairement"
 
-#: gift_manager/models.py:1442
+#: gift_manager/models.py:1504
 msgid "monthly"
 msgstr "mensuellement"
 
-#: gift_manager/models.py:1443
+#: gift_manager/models.py:1505
 msgid "yearly"
 msgstr "annuellement"
 
-#: gift_manager/models.py:1454
+#: gift_manager/models.py:1516
 msgid "Leave the date empty for unscheduled events."
 msgstr "Laissez la date vide pour les événements sans planification."
 
-#: gift_manager/models.py:1457
+#: gift_manager/models.py:1519
 msgid "Leave the recurrence empty for unscheduled events."
 msgstr "Laissez la récurrence vide pour les événements sans planification."
 
-#: gift_manager/models.py:1463
+#: gift_manager/models.py:1525
 msgid "One-time events cannot have a recurrence."
 msgstr "Les événements ponctuels ne peuvent pas avoir de récurrence."
 
-#: gift_manager/models.py:1546
+#: gift_manager/models.py:1608
 msgid "Relation Status"
 msgstr "Statut de la relation"
 
-#: gift_manager/models.py:1547
+#: gift_manager/models.py:1609
 msgid "Relation Statuses"
 msgstr "Statuts des relations"
 
-#: gift_manager/models.py:1620
+#: gift_manager/models.py:1694
 msgid "Relation"
 msgstr "Relation"
 
-#: gift_manager/models.py:1621
+#: gift_manager/models.py:1695
 msgid "Relations"
 msgstr "Relations"
 
-#: gift_manager/models.py:1679
+#: gift_manager/models.py:1762
 msgid "Choose exactly one recipient: a person or a group."
 msgstr "Choisissez exactement un destinataire : une personne ou un groupe."
 
-#: gift_manager/models.py:1735
+#: gift_manager/models.py:1818
 #: gift_manager/templates/gift_manager/relation_list.html:238
 #: gift_manager/templates/gift_manager/relation_status_detail.html:28
 #: gift_manager/views/common.py:392 gift_manager/views/recipient.py:145
 msgid "Group"
 msgstr "Groupe"
+
+#: gift_manager/plan_coordination.py:27
+msgid "Write a comment before sending it."
+msgstr "Écrivez un commentaire avant de l'envoyer."
+
+#: gift_manager/plan_coordination.py:28
+#, python-format
+msgid "A comment can have at most %(limit)d characters."
+msgstr "Un commentaire ne peut pas dépasser %(limit)d caractères."
+
+#: gift_manager/plan_coordination.py:35
+msgid "This gift plan is already claimed."
+msgstr "Ce projet de cadeau est déjà pris en charge."
+
+#: gift_manager/plan_coordination.py:46 gift_manager/plan_coordination.py:48
+msgid "You do not have permission to do this on this gift plan."
+msgstr "Vous n'avez pas la permission de faire cela sur ce projet de cadeau."
+
+#: gift_manager/plan_coordination.py:83
+msgid "Only the person who claimed this gift can release it."
+msgstr "Seule la personne qui a pris en charge ce cadeau peut le libérer."
+
+#: gift_manager/plan_coordination.py:103
+msgid "You cannot delete this comment."
+msgstr "Vous ne pouvez pas supprimer ce commentaire."
 
 #: gift_manager/services.py:23
 msgid "This object is available to everyone and cannot be removed."
@@ -784,9 +817,9 @@ msgstr ""
 msgid "Could not determine filter name for this object type"
 msgstr "Impossible de déterminer le nom du filtre pour ce type d'objet"
 
-#: gift_manager/services.py:112 gift_manager/views/base.py:319
-#: gift_manager/views/base.py:496 gift_manager/views/base.py:530
-#: gift_manager/views/base.py:623 gift_manager/views/base.py:715
+#: gift_manager/services.py:112 gift_manager/views/base.py:320
+#: gift_manager/views/base.py:497 gift_manager/views/base.py:531
+#: gift_manager/views/base.py:624 gift_manager/views/base.py:716
 msgid "Invalid permission value."
 msgstr "Niveau de permission invalide."
 
@@ -795,7 +828,7 @@ msgid "You do not have permission to manage sharing for this object."
 msgstr "Vous n'avez pas la permission de gérer le partage de cet élément."
 
 #: gift_manager/services.py:142 gift_manager/services.py:145
-#: gift_manager/views/base.py:325
+#: gift_manager/views/base.py:326
 msgid "Objects can only be shared with friends."
 msgstr "Les éléments ne peuvent être partagés qu'avec des amis."
 
@@ -803,7 +836,7 @@ msgstr "Les éléments ne peuvent être partagés qu'avec des amis."
 msgid "At least one owner is required."
 msgstr "Au moins un propriétaire est requis."
 
-#: gift_manager/services.py:159 gift_manager/views/base.py:1035
+#: gift_manager/services.py:159 gift_manager/views/base.py:1045
 msgid "You do not have access to this object."
 msgstr "Vous n'avez pas accès à cet élément."
 
@@ -820,8 +853,8 @@ msgid ""
 "This gift plan is shared with people who cannot see this choice, and you are "
 "not allowed to share it with them."
 msgstr ""
-"Ce projet de cadeau est partagé avec des personnes qui ne peuvent pas voir "
-"ce choix, et vous n'êtes pas autorisé à le partager avec elles."
+"Ce projet de cadeau est partagé avec des personnes qui ne peuvent pas voir ce"
+" choix, et vous n'êtes pas autorisé à le partager avec elles."
 
 #: gift_manager/templates/account/account_inactive.html:4
 msgid "Account inactive"
@@ -938,7 +971,7 @@ msgstr "Tableau de bord"
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:77
 #: gift_manager/templates/gift_manager/relation_detail.html:14
 #: gift_manager/templates/gift_manager/share_objects.html:247
-#: gift_manager/views/relation.py:272
+#: gift_manager/views/relation.py:277
 msgid "Gift Plans"
 msgstr "Projets de cadeaux"
 
@@ -1325,8 +1358,8 @@ msgstr "Voici ce qui demande votre attention dans Gift Manager."
 #: gift_manager/templates/gift_manager/email/digest.html:8
 #: gift_manager/templates/gift_manager/email/digest.txt:5
 #: gift_manager/templates/gift_manager/home.html:938
-#: gift_manager/views/common.py:99 gift_manager/views/relation.py:371
-#: gift_manager/views/relation.py:495
+#: gift_manager/views/common.py:99 gift_manager/views/relation.py:376
+#: gift_manager/views/relation.py:500
 msgid "Overdue"
 msgstr "En retard"
 
@@ -1421,8 +1454,8 @@ msgid ""
 "There is nothing to plan again: no gift plan of the last occurrence is "
 "waiting to be repeated."
 msgstr ""
-"Rien à planifier à nouveau : aucun projet de cadeau de la dernière "
-"occurrence n'attend d'être répété."
+"Rien à planifier à nouveau : aucun projet de cadeau de la dernière occurrence"
+" n'attend d'être répété."
 
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:126
 msgid "Compatibility Mode"
@@ -1430,8 +1463,8 @@ msgstr "Mode de compatibilité"
 
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:128
 msgid ""
-"The application is running in compatibility mode. All features are "
-"available, but some may require page refreshes."
+"The application is running in compatibility mode. All features are available,"
+" but some may require page refreshes."
 msgstr ""
 "L'application fonctionne en mode compatibilité. Toutes les fonctionnalités "
 "sont disponibles, mais certaines peuvent nécessiter des actualisations de "
@@ -1467,17 +1500,13 @@ msgstr "Notice de compatibilité du navigateur"
 #, python-format
 msgid ""
 "\n"
-"                You are using %(browser)s, which has limited support for "
-"modern web features.\n"
-"                The application will work in compatibility mode with basic "
-"functionality.\n"
+"                You are using %(browser)s, which has limited support for modern web features.\n"
+"                The application will work in compatibility mode with basic functionality.\n"
 "            "
 msgstr ""
 "\n"
-"                Vous utilisez %(browser)s qui a un support limité pour les "
-"fonctionnalités modernes.\n"
-"                L'application fonctionnera en mode compatibilité avec les "
-"fonctionnalités de base.\n"
+"                Vous utilisez %(browser)s qui a un support limité pour les fonctionnalités modernes.\n"
+"                L'application fonctionnera en mode compatibilité avec les fonctionnalités de base.\n"
 "            "
 
 #: gift_manager/templates/gift_manager/fallback/includes/browser_notice.html:16
@@ -1538,7 +1567,7 @@ msgstr "Lecture"
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:22
 #: gift_manager/templates/gift_manager/person_group_explorer.html:227
 #: gift_manager/tests/e2e/test_dashboard_layout.py:581
-#: gift_manager/views/base.py:772
+#: gift_manager/views/base.py:773
 msgid "Edit"
 msgstr "Éditer"
 
@@ -1715,7 +1744,7 @@ msgstr "Éditer le tag"
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:51
 #: gift_manager/views/event.py:141 gift_manager/views/gift.py:276
 #: gift_manager/views/person.py:293 gift_manager/views/person_group.py:506
-#: gift_manager/views/relation.py:728
+#: gift_manager/views/relation.py:736
 msgid "You do not have permission to edit this object"
 msgstr "Vous n'avez pas la permission d'éditer cet objet"
 
@@ -1732,7 +1761,7 @@ msgstr "Supprimer le tag"
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:55
 #: gift_manager/views/event.py:155 gift_manager/views/gift.py:286
 #: gift_manager/views/person.py:303 gift_manager/views/person_group.py:518
-#: gift_manager/views/relation.py:748
+#: gift_manager/views/relation.py:756
 msgid ""
 "You do not have permission to delete this object so it will only be unshared "
 "with you"
@@ -1891,8 +1920,8 @@ msgid "Needs attention"
 msgstr "À traiter"
 
 #: gift_manager/templates/gift_manager/home.html:945
-#: gift_manager/views/common.py:105 gift_manager/views/relation.py:378
-#: gift_manager/views/relation.py:496
+#: gift_manager/views/common.py:105 gift_manager/views/relation.py:383
+#: gift_manager/views/relation.py:501
 msgid "Due soon"
 msgstr "Échéance proche"
 
@@ -1978,8 +2007,8 @@ msgstr "Suivez vos Cadeaux"
 #: gift_manager/templates/gift_manager/home.html:1149
 msgid "Keep a catalog of gift ideas and track what you've given to whom."
 msgstr ""
-"Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert "
-"à qui."
+"Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert à"
+" qui."
 
 #: gift_manager/templates/gift_manager/home.html:1153
 msgid "Manage Recipients"
@@ -2202,7 +2231,7 @@ msgstr "Informations de base"
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:40
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:59
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:24
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:120
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:123
 #: gift_manager/views/person.py:156
 msgid "Created"
 msgstr "Créé"
@@ -2226,27 +2255,27 @@ msgstr "Projet de cadeau directement destiné à ce groupe."
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:129
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:117
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:159
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:100
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:103
 msgid "Due:"
 msgstr "Échéance :"
 
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:146
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:134
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:129
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:132
 msgid "View gift plan details"
 msgstr "Voir les détails du projet de cadeau"
 
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:153
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:141
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:176
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:138
-#: gift_manager/views/relation.py:726
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:141
+#: gift_manager/views/relation.py:734
 msgid "Edit gift plan"
 msgstr "Modifier le projet de cadeau"
 
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:160
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:148
-#: gift_manager/views/relation.py:745
+#: gift_manager/views/relation.py:753
 msgid "Delete gift plan"
 msgstr "Supprimer le projet de cadeau"
 
@@ -2255,7 +2284,7 @@ msgstr "Supprimer le projet de cadeau"
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:176
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:126
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:195
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:217
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:224
 msgid "Shared With"
 msgstr "Partagé avec"
 
@@ -2331,7 +2360,7 @@ msgstr "Rechercher des tags parents..."
 
 #: gift_manager/templates/gift_manager/includes/forms/link_price_section.html:4
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:33
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:111
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:114
 msgid "Link and price"
 msgstr "Lien et prix"
 
@@ -2351,7 +2380,7 @@ msgstr "Rechercher des groupes enfants..."
 msgid "Search members..."
 msgstr "Rechercher des membres..."
 
-#: gift_manager/templates/gift_manager/includes/forms/relation_fields.html:29
+#: gift_manager/templates/gift_manager/includes/forms/relation_fields.html:39
 #: gift_manager/templates/gift_manager/relation_reaction.html:4
 #: gift_manager/templates/gift_manager/relation_reaction.html:9
 msgid "Reaction"
@@ -2392,7 +2421,7 @@ msgstr ""
 
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:110
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:152
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:94
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:97
 msgid "Event:"
 msgstr "Événement :"
 
@@ -2403,13 +2432,13 @@ msgstr "Historique des cadeaux"
 
 #: gift_manager/templates/gift_manager/includes/gift_history_partial.html:12
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:17
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:81
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:84
 msgid "No date"
 msgstr "Sans date"
 
 #: gift_manager/templates/gift_manager/includes/gift_history_partial.html:28
 #: gift_manager/templates/gift_manager/includes/reaction_history_item.html:14
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:62
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:65
 msgid "Gift plan for this group directly"
 msgstr "Projet de cadeau directement destiné à ce groupe"
 
@@ -2726,7 +2755,7 @@ msgid "How much would they have liked it?"
 msgstr "Dans quelle mesure l'aurait-il ou elle apprécié ?"
 
 #: gift_manager/templates/gift_manager/includes/rating_inline.html:15
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:91
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:94
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:22
 msgid "Their reaction"
 msgstr "Sa réaction"
@@ -2783,48 +2812,73 @@ msgstr "Tri : échéance"
 msgid "Add a new gift plan for this person"
 msgstr "Ajouter un nouveau projet de cadeau pour cette personne"
 
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:121
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:60
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:14
+msgid "Claimed by"
+msgstr "Pris en charge par"
+
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:124
 msgid "View gift"
 msgstr "Voir le cadeau"
 
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:152
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:155
 msgid "No gift plans found for this person."
 msgstr "Aucun projet de cadeau trouvé pour cette personne."
 
-#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:157
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:160
 msgid "Add one?"
 msgstr "En ajouter un ?"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:65
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:77
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:4
+msgid "Coordination"
+msgstr "Coordination"
+
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:26
+msgid "Release"
+msgstr "Libérer"
+
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:36
+msgid "I'll take this"
+msgstr "Je m'en occupe"
+
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:57
+msgid "Delete comment"
+msgstr "Supprimer le commentaire"
+
+#: gift_manager/templates/gift_manager/includes/relation_coordination_partial.html:76
+msgid "Send"
+msgstr "Envoyer"
+
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:68
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:80
 msgid "Due Date"
 msgstr "Échéance"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:91
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:94
 msgid "How much they would have liked it"
 msgstr "Dans quelle mesure il ou elle l'aurait apprécié"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:135
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:138
 msgid "Event Information"
 msgstr "Informations sur l'événement"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:155
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:158
 msgid "Schedule:"
 msgstr "Planification :"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:161
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:164
 msgid "Date:"
 msgstr "Date :"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:168
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:171
 msgid "Recurrence:"
 msgstr "Récurrence :"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:179
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:182
 msgid "Gift Details"
 msgstr "Détails du cadeau"
 
-#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:200
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:203
 msgid "Tags:"
 msgstr "Tags :"
 
@@ -3299,12 +3353,12 @@ msgid "Total"
 msgstr "Total"
 
 #: gift_manager/templates/gift_manager/relation_list.html:57
-#: gift_manager/views/common.py:111 gift_manager/views/relation.py:392
+#: gift_manager/views/common.py:111 gift_manager/views/relation.py:397
 msgid "Needs details"
 msgstr "Informations à compléter"
 
 #: gift_manager/templates/gift_manager/relation_list.html:61
-#: gift_manager/views/relation.py:399
+#: gift_manager/views/relation.py:404
 msgid "Ideas"
 msgstr "Idées"
 
@@ -3333,7 +3387,7 @@ msgid "No gift plans yet."
 msgstr "Aucun projet de cadeau pour l'instant."
 
 #: gift_manager/templates/gift_manager/relation_list.html:141
-#: gift_manager/views/relation.py:580
+#: gift_manager/views/relation.py:585
 msgid "Advanced Gift Plans List"
 msgstr "Liste avancée des projets de cadeaux"
 
@@ -3358,7 +3412,7 @@ msgid "Bulk status update completed"
 msgstr "Mise à jour groupée des statuts terminée"
 
 #: gift_manager/templates/gift_manager/relation_list.html:246
-#: gift_manager/views/relation.py:491 gift_manager/views/relation.py:505
+#: gift_manager/views/relation.py:496 gift_manager/views/relation.py:510
 msgid "Missing due date"
 msgstr "Échéance manquante"
 
@@ -3499,84 +3553,84 @@ msgstr "Inscrivez-vous ici"
 msgid "Enter a valid http or https URL."
 msgstr "Saisissez une adresse http ou https valide."
 
-#: gift_manager/views/base.py:322 gift_manager/views/base.py:527
-#: gift_manager/views/base.py:560 gift_manager/views/base.py:620
-#: gift_manager/views/base.py:667 gift_manager/views/base.py:712
+#: gift_manager/views/base.py:323 gift_manager/views/base.py:528
+#: gift_manager/views/base.py:561 gift_manager/views/base.py:621
+#: gift_manager/views/base.py:668 gift_manager/views/base.py:713
 msgid "User not found."
 msgstr "Utilisateur non trouvé."
 
-#: gift_manager/views/base.py:349 gift_manager/views/gift.py:191
+#: gift_manager/views/base.py:350 gift_manager/views/gift.py:191
 msgid "Create"
 msgstr "Création"
 
-#: gift_manager/views/base.py:415
+#: gift_manager/views/base.py:416
 msgid "{} created successfully"
 msgstr "{} créé avec succès"
 
-#: gift_manager/views/base.py:593
+#: gift_manager/views/base.py:594
 #, python-brace-format
 msgid "Permission for '{username}' changed to '{permission_level}'"
 msgstr "La permission de '{username}' a été changée en '{permission_level}'"
 
-#: gift_manager/views/base.py:640
+#: gift_manager/views/base.py:641
 #, python-brace-format
 msgid "Sharing with '{username}' removed successfully"
 msgstr "Partage avec '{username}' supprimé avec succès"
 
-#: gift_manager/views/base.py:685
+#: gift_manager/views/base.py:686
 #, python-brace-format
 msgid "Object shared with '{username}' successfully"
 msgstr "Objet partagé avec '{username}' avec succès"
 
-#: gift_manager/views/base.py:766
+#: gift_manager/views/base.py:767
 msgid "You do not have permission to edit this object."
 msgstr "Vous n'avez pas la permission de modifier cet élément."
 
-#: gift_manager/views/base.py:813
+#: gift_manager/views/base.py:814
 msgid "{} updated successfully"
 msgstr "{} mis à jour avec succès"
 
-#: gift_manager/views/base.py:851 gift_manager/views/base.py:864
+#: gift_manager/views/base.py:852 gift_manager/views/base.py:865
 msgid ""
 "You no longer have access to this {}, but it remains shared with other users"
 msgstr ""
 "Vous n'avez plus accès à cet élément ({}), mais il reste partagé avec "
 "d'autres utilisateurs"
 
-#: gift_manager/views/base.py:857
+#: gift_manager/views/base.py:858
 msgid "Use the leave access action to remove your own access."
 msgstr "Utilisez l'action « Quitter » pour retirer votre propre accès."
 
-#: gift_manager/views/base.py:870 gift_manager/views/base.py:1042
-#: gift_manager/views/base.py:1048
+#: gift_manager/views/base.py:871 gift_manager/views/base.py:1052
+#: gift_manager/views/base.py:1058
 msgid "You do not have permission to delete this object."
 msgstr "Vous n'avez pas la permission de supprimer cet élément."
 
-#: gift_manager/views/base.py:875
+#: gift_manager/views/base.py:876
 msgid "{} successfully deleted"
 msgstr "{} supprimé avec succès"
 
-#: gift_manager/views/base.py:940
+#: gift_manager/views/base.py:941
 #, python-brace-format
 msgid "Email: {email}"
 msgstr "Email : {email}"
 
-#: gift_manager/views/base.py:944
+#: gift_manager/views/base.py:945
 #, python-brace-format
 msgid "Created: {date}"
 msgstr "Créé le : {date}"
 
-#: gift_manager/views/base.py:949
+#: gift_manager/views/base.py:950
 #, python-brace-format
 msgid "Schedule: {schedule}"
 msgstr "Planification : {schedule}"
 
-#: gift_manager/views/base.py:954
+#: gift_manager/views/base.py:955
 #, python-brace-format
 msgid "Price: {price}"
 msgstr "Prix : {price}"
 
-#: gift_manager/views/base.py:1069
+#: gift_manager/views/base.py:1079
 msgid "{} deleted successfully"
 msgstr "{} supprimé avec succès"
 
@@ -3640,8 +3694,8 @@ msgstr ""
 "de cadeaux."
 
 #: gift_manager/views/bulk_operations.py:245
-#: gift_manager/views/bulk_operations.py:253 gift_manager/views/relation.py:979
-#: gift_manager/views/relation.py:1020
+#: gift_manager/views/bulk_operations.py:253
+#: gift_manager/views/relation.py:1010 gift_manager/views/relation.py:1051
 msgid "Choose a valid status."
 msgstr "Choisissez un statut valide."
 
@@ -3785,9 +3839,9 @@ msgid "Save and create gift plan"
 msgstr "Sauvegarder et créer un projet de cadeau"
 
 #: gift_manager/views/gift.py:189 gift_manager/views/gift.py:190
-#: gift_manager/views/relation.py:105 gift_manager/views/relation.py:142
-#: gift_manager/views/relation.py:181 gift_manager/views/relation.py:590
-#: gift_manager/views/relation.py:661
+#: gift_manager/views/relation.py:110 gift_manager/views/relation.py:147
+#: gift_manager/views/relation.py:186 gift_manager/views/relation.py:595
+#: gift_manager/views/relation.py:666
 msgid "Gift Plan"
 msgstr "Projet de cadeau"
 
@@ -3905,6 +3959,15 @@ msgstr "Action invalide"
 msgid "An error occurred: %(error)s"
 msgstr "Une erreur s'est produite : %(error)s"
 
+#: gift_manager/views/plan_coordination.py:61
+#, python-format
+msgid "%(name)s has already claimed this gift plan."
+msgstr "%(name)s a déjà pris en charge ce projet de cadeau."
+
+#: gift_manager/views/plan_coordination.py:62
+msgid "Someone"
+msgstr "Quelqu'un"
+
 #: gift_manager/views/profile.py:232
 msgid "You cannot send an invitation to yourself."
 msgstr "Vous ne pouvez pas vous envoyer une invitation."
@@ -3939,104 +4002,104 @@ msgstr "Vous êtes maintenant ami avec {}"
 msgid "Display preferences saved successfully."
 msgstr "Préférences d'affichage enregistrées avec succès"
 
-#: gift_manager/views/relation.py:215 gift_manager/views/relation.py:702
+#: gift_manager/views/relation.py:220 gift_manager/views/relation.py:707
 msgid "gift plan"
 msgstr "projet de cadeau"
 
-#: gift_manager/views/relation.py:372
+#: gift_manager/views/relation.py:377
 msgid "Due before today"
 msgstr "Échéance dépassée"
 
-#: gift_manager/views/relation.py:379
+#: gift_manager/views/relation.py:384
 msgid "Due in the next 7 days"
 msgstr "Échéance dans les 7 prochains jours"
 
-#: gift_manager/views/relation.py:385
+#: gift_manager/views/relation.py:390
 msgid "Later"
 msgstr "Plus tard"
 
-#: gift_manager/views/relation.py:386
+#: gift_manager/views/relation.py:391
 msgid "Due after the next 7 days"
 msgstr "Échéance au-delà des 7 prochains jours"
 
-#: gift_manager/views/relation.py:393
+#: gift_manager/views/relation.py:398
 msgid "Missing due date or event"
 msgstr "Échéance ou événement manquant"
 
-#: gift_manager/views/relation.py:400
+#: gift_manager/views/relation.py:405
 msgid "Open-ended ideas to revisit later"
 msgstr "Idées ouvertes à revoir plus tard"
 
-#: gift_manager/views/relation.py:406
+#: gift_manager/views/relation.py:411
 msgid "Completed"
 msgstr "Terminé"
 
-#: gift_manager/views/relation.py:407
+#: gift_manager/views/relation.py:412
 msgid "Already given or finished"
 msgstr "Déjà offert ou terminé"
 
-#: gift_manager/views/relation.py:735
+#: gift_manager/views/relation.py:743
 msgid "Duplicate gift plan"
 msgstr "Dupliquer le projet de cadeau"
 
-#: gift_manager/views/relation.py:839
+#: gift_manager/views/relation.py:847
 msgid "Choose a valid event and due date."
 msgstr "Choisissez un événement et une échéance valides."
 
-#: gift_manager/views/relation.py:843 gift_manager/views/relation.py:857
+#: gift_manager/views/relation.py:851 gift_manager/views/relation.py:865
 msgid "Gift plan marked as planned."
 msgstr "Projet de cadeau marqué comme planifié."
 
-#: gift_manager/views/relation.py:849
+#: gift_manager/views/relation.py:857
 msgid "Choose a valid due date."
 msgstr "Choisissez une échéance valide."
 
-#: gift_manager/views/relation.py:851
+#: gift_manager/views/relation.py:859
 msgid "Due date updated."
 msgstr "Échéance mise à jour."
 
-#: gift_manager/views/relation.py:855
+#: gift_manager/views/relation.py:863
 msgid "Gift plan marked as given."
 msgstr "Projet de cadeau marqué comme offert."
 
-#: gift_manager/views/relation.py:856
+#: gift_manager/views/relation.py:864
 msgid "Gift plan marked as purchased."
 msgstr "Projet de cadeau marqué comme acheté."
 
-#: gift_manager/views/relation.py:858
+#: gift_manager/views/relation.py:866
 msgid "Gift plan abandoned."
 msgstr "Projet de cadeau abandonné."
 
-#: gift_manager/views/relation.py:872 gift_manager/views/relation.py:922
-#: gift_manager/views/relation.py:987
+#: gift_manager/views/relation.py:880 gift_manager/views/relation.py:930
+#: gift_manager/views/relation.py:1018
 msgid "You cannot edit this gift plan."
 msgstr "Vous ne pouvez pas modifier ce projet de cadeau."
 
-#: gift_manager/views/relation.py:877
+#: gift_manager/views/relation.py:885
 msgid "This quick action is not available for this gift plan."
 msgstr "Cette action rapide n'est pas disponible pour ce projet de cadeau."
 
-#: gift_manager/views/relation.py:887
+#: gift_manager/views/relation.py:895
 msgid "Required relation status is not configured."
 msgstr "Le statut de projet de cadeau requis n'est pas configuré."
 
-#: gift_manager/views/relation.py:925
+#: gift_manager/views/relation.py:933
 msgid "Only given or abandoned gift plans can be rated."
 msgstr "Seuls les projets de cadeaux offerts ou abandonnés peuvent être notés."
 
-#: gift_manager/views/relation.py:946
+#: gift_manager/views/relation.py:977
 msgid "This gift plan is already rated. Edit its reaction instead."
 msgstr "Ce projet de cadeau est déjà noté. Modifiez plutôt sa réaction."
 
-#: gift_manager/views/relation.py:957
+#: gift_manager/views/relation.py:988
 msgid "Choose a rating from 1 to 5."
 msgstr "Choisissez une note de 1 à 5."
 
-#: gift_manager/views/relation.py:969
+#: gift_manager/views/relation.py:1000
 msgid "Reaction saved."
 msgstr "Réaction enregistrée."
 
-#: gift_manager/views/relation.py:1018
+#: gift_manager/views/relation.py:1049
 msgid "Gift Plan not found"
 msgstr "Projet de cadeau introuvable"
 
