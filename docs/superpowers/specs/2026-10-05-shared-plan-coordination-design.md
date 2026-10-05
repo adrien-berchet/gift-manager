@@ -17,7 +17,7 @@ Implements `docs/ideas/0007-shared-plan-coordination.md`.
 | Claim semantics | One claimer per plan. While claimed, nobody else can claim. Only the claimer or a plan OWNER can release. |
 | Comment deletion | The author or a plan OWNER. Comments are not editable (YAGNI). |
 | Who may change the surprise flag | Plan OWNER and EDITOR (existing editor semantics via `PermissionService`). |
-| Surprise default | On when a plan is **created** for a person recipient that has a `user_link`. No backfill of existing plans. Group recipients default to off. |
+| Surprise default | On when a plan is **created** for a person recipient that has a `user_link`, or for a group with at least one member (nested groups included) that has a `user_link`. Users who would be exempt (the creator, or any user holding OWNER on the plan) do not count as recipients. No backfill of existing plans. |
 | Enforcement | Inside `RelationQuerySet.accessible_by`, so every consumer inherits it. |
 | Group recipients | A surprise plan targeting a group is hidden from every user whose linked person is a member of the group, **including members of descendant groups** (`PersonGroup.get_all_members(include_nested=True)` semantics). |
 | Owner exception | A user with OWNER permission on the plan is never hidden from it. When a person recipient's `user_link` is a plan OWNER, the flag is forced off and not editable in the UI or by the server, even for editors. |
@@ -59,7 +59,9 @@ raises `PermissionDenied` otherwise. No parallel access logic.
 - `can_be_surprise(relation)`: false when the recipient is a person whose `user_link` holds
   OWNER on the plan.
 - `default_surprise_for(person_or_group, creator)`: used by the create form/view to
-  prefill the checkbox (person with `user_link` that is not the creator).
+  prefill the checkbox. True when the person has a `user_link` that is not the creator, or
+  when the group (nested members included, via `get_all_members(include_nested=True)`) has a
+  member whose `user_link` is set and is not the creator.
 
 ## Surprise visibility
 
@@ -122,12 +124,14 @@ queryset method.
   detail, reminders digest, calendar feed, gift history, birthdays, budgets, exports,
   reverse accessors; each for person recipient, group recipient, nested-group member,
   non-recipient (still visible), and owner-recipient (still visible).
-- Form tests: default prefill, forced-off for owner-recipient, editor-only.
+- Form tests: default prefill for person and group recipients (including a nested-group
+  member and a group whose only linked member is the creator), forced-off for
+  owner-recipient, editor-only.
 - Existing permission tests and `gift_manager/tests/test_permission_locking.py` pass;
   `makemigrations --check` clean; one e2e flow (claim, comment, release) on PostgreSQL.
 
-## Open points for spec review
+## Resolved review points
 
-- Group recipients default to surprise **off**; only person recipients prefill it on.
+- Group recipients also default to surprise **on** (see the default rule above).
 - An existing plan that is later flagged as a surprise keeps comments written by the
   recipient but they become invisible to them (no cleanup).
