@@ -185,6 +185,11 @@ urlpatterns = [
         name="repeat_gift_hint",
     ),
     path(
+        "relations/surprise-default/",
+        views.surprise_default_hint,
+        name="surprise_default_hint",
+    ),
+    path(
         "relations/<uuid:pk>/",
         views.RelationDetailView.as_view(),
         name="relation_detail",

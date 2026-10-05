@@ -2,11 +2,11 @@
 
 import django.db.models.deletion
 from django.conf import settings
-from django.db import migrations, models
+from django.db import migrations
+from django.db import models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("gift_manager", "0036_richer_gift_details"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),

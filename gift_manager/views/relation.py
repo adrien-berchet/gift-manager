@@ -30,6 +30,7 @@ from django.utils.html import conditional_escape
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django.utils.translation import gettext_noop
+from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
@@ -40,6 +41,7 @@ from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
 from gift_manager.forms import RelationReactionForm
+from gift_manager.forms import resolve_recipient_choice
 from gift_manager.gift_plan_actions import ACTION_STATUS_SLUGS
 from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
 from gift_manager.gift_plan_actions import gift_plan_has_missing_event
@@ -55,6 +57,8 @@ from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.plan_coordination import can_be_surprise_for_owners
+from gift_manager.plan_coordination import default_surprise_for
 from gift_manager.plan_repeat import DUPLICATE_OF_PARAM
 from gift_manager.plan_repeat import duplicate_initial
 from gift_manager.plan_repeat import duplicate_plan_url
@@ -926,6 +930,29 @@ def _reaction_guard_response(user, relation) -> JsonResponse | None:
             status=400,
         )
     return None
+
+
+@login_required
+@require_GET
+def surprise_default_hint(request):
+    """Return the surprise checkbox a new plan for the chosen recipient starts with.
+
+    The plan form swaps it in when the recipient changes. A malformed value and a recipient the
+    user cannot access get the same answer, so nothing is revealed about either.
+    """
+    try:
+        person, group = resolve_recipient_choice(request.GET.get("recipient", ""), request.user)
+    except ValidationError:
+        return HttpResponseBadRequest()
+    recipient = person or group
+    return render(
+        request,
+        "gift_manager/includes/forms/surprise_field.html",
+        {
+            "show": can_be_surprise_for_owners(recipient, [request.user.id]),
+            "checked": default_surprise_for(recipient, request.user),
+        },
+    )
 
 
 @login_required

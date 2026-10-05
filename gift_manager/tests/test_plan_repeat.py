@@ -4,10 +4,12 @@ from datetime import date
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 
 from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
+from gift_manager.models import RelationComment
 from gift_manager.plan_repeat import find_repeat_candidates
 from gift_manager.plan_repeat import repeat_plans
 from gift_manager.plan_repeat import supports_plan_again
@@ -376,3 +378,17 @@ class TestDuplicatePlan:
         )
 
         assert url in detail.content.decode()
+
+
+class TestCoordinationCarryOver:
+    def test_repeat_keeps_the_surprise_flag_but_not_the_claim_or_comments(self, user, event):
+        source = _plan(user, event, due_date=date(2025, 12, 25), is_surprise=True)
+        Relation.objects.filter(pk=source.pk).update(claimed_by=user, claimed_at=timezone.now())
+        RelationComment.objects.create(relation=source, author=user, text="I will buy it")
+
+        (copy,) = repeat_plans(user, event, [source.relation_id], TODAY)
+
+        assert copy.is_surprise is True
+        assert copy.claimed_by is None
+        assert copy.claimed_at is None
+        assert copy.comments.count() == 0

@@ -90,6 +90,7 @@ from .relation import RelationStatusListView
 from .relation import RelationUpdateView
 from .relation import relation_quick_action
 from .relation import relation_reaction
+from .relation import surprise_default_hint
 from .relation import update_relation_status
 
 # Reminder views
@@ -181,5 +182,6 @@ __all__ = [
     "remove_person_from_group",
     "reparent_group",
     "repeat_gift_hint",
+    "surprise_default_hint",
     "update_relation_status",
 ]
