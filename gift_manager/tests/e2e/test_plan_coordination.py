@@ -1,10 +1,12 @@
 """Browser test of plan coordination: claim, comment, release and a hidden surprise."""
 
 import pytest
+from django.urls import reverse
 from django.utils import timezone
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager import plan_coordination
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
@@ -116,3 +118,33 @@ class TestPlanCoordination:
         page.fill("#relation-comment-text", "x" * 2001)
         page.get_by_role("button", name="Send").click()
         expect(coordination.get_by_role("alert")).to_contain_text("at most 2000 characters")
+
+    def test_opening_a_plan_does_not_focus_or_scroll_to_the_comment_box(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        alice = seed_data_e2e.alice
+        dad = seed_data_e2e.persons["dad"]
+        gift = GiftFactory(name="Quiet Gift", shared_with=[alice])
+        plan = RelationFactory(person=dad, gift=gift, event=None)
+        share(plan, alice, PermissionLevel.OWNER)
+        for _ in range(8):  # make the detail long enough to scroll
+            plan_coordination.add_comment(plan, alice, "A comment that takes some room.\n" * 3)
+        active = "document.activeElement && document.activeElement.id"
+
+        # Full page
+        login_as(page, live_server.url, "alice")
+        open_page(page, f"{live_server.url}{plan.get_absolute_url()}")
+        expect(page.locator("#relation-coordination")).to_be_visible()
+        assert page.evaluate(active) != "relation-comment-text"
+        assert page.evaluate("window.scrollY") == 0
+
+        # Side panel opened from the person's page
+        open_page(
+            page,
+            live_server.url + reverse("gift_manager:person_detail", kwargs={"pk": dad.person_id}),
+        )
+        page.locator(f'a[data-detail-url*="{plan.relation_id}"]').first.click()
+        expect(page.locator("#detailPanel #relation-coordination")).to_be_visible()
+        page.wait_for_timeout(1000)  # let the panel's focus handling run
+        assert page.evaluate(active) != "relation-comment-text"
+        assert page.evaluate("document.querySelector('#detailPanelBody').scrollTop") == 0
