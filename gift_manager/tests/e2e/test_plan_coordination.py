@@ -206,6 +206,20 @@ class TestPlanCoordination:
 
         toast = page.locator(".toast").filter(has_text="Successfully shared items")
         expect(toast).to_be_visible()
+        # "Visible" to the browser is not enough: it must be on screen, readable, top right
+        page.wait_for_function(  # it slides in: wait until it has settled inside the viewport
+            """() => {
+                const toast = document.querySelector('.toast.show');
+                const box = toast && toast.getBoundingClientRect();
+                return box && box.right <= window.innerWidth && box.height > 24;
+            }""",
+            timeout=3_000,
+        )
+        box = toast.bounding_box()
+        viewport = page.viewport_size
+        assert box["height"] > 24, f"toast squashed to {box['height']}px"
+        assert box["x"] >= 0 and box["x"] + box["width"] <= viewport["width"], f"off screen: {box}"
+        assert box["x"] > viewport["width"] / 2 and box["y"] < 200, f"not top right: {box}"
         # It floats over the page instead of taking room in it
         assert (
             page.evaluate("getComputedStyle(document.querySelector('#toastContainer')).position")

@@ -284,8 +284,9 @@ a:focus {
     content: "💡 ";
 }
 
-/* ARIA Live Region Styling */
-[aria-live] {
+/* ARIA Live Region Styling: hidden announcers for screen readers. Toasts are live regions too
+   (role="alert"), but they must stay visible, so they are left out. */
+[aria-live]:not(.toast) {
     position: absolute;
     left: -10000px;
     width: 1px;
