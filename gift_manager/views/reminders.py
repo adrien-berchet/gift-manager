@@ -24,6 +24,7 @@ from gift_manager.calendar_feed import CONTENT_TYPE
 from gift_manager.calendar_feed import build_calendar
 from gift_manager.digest_sending import send_digests
 from gift_manager.forms import ReminderPreferencesForm
+from gift_manager.mixins.notifications import settings_form_response
 from gift_manager.models import Profile
 from gift_manager.reminders import read_unsubscribe_token
 
@@ -35,12 +36,17 @@ class UpdateReminderPreferencesView(LoginRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         form = ReminderPreferencesForm(request.POST, instance=request.user.profile)
-        if form.is_valid():
+        ok = form.is_valid()
+        if ok:
             form.save()
-            messages.success(request, gettext("Reminder preferences saved successfully."))
-        else:
-            messages.error(request, gettext("Choose valid reminder preferences."))
-        return redirect("gift_manager:profile_detail")
+        return settings_form_response(
+            request,
+            gettext("Reminder preferences saved successfully.")
+            if ok
+            else gettext("Choose valid reminder preferences."),
+            redirect_to="gift_manager:profile_detail",
+            ok=ok,
+        )
 
 
 class RegenerateCalendarFeedView(LoginRequiredMixin, View):
