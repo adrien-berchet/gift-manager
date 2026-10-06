@@ -148,3 +148,36 @@ class TestPlanCoordination:
         page.wait_for_timeout(1000)  # let the panel's focus handling run
         assert page.evaluate(active) != "relation-comment-text"
         assert page.evaluate("document.querySelector('#detailPanelBody').scrollTop") == 0
+
+    def test_sharing_a_surprise_with_its_recipient_warns(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+        alice.profile.friends.add(bob.profile)
+        gift = GiftFactory(name="Warned Gift")
+        share(gift, alice, PermissionLevel.OWNER)
+        bobby = PersonFactory(first_name="Bobby", user_link=bob)
+        share(bobby, alice, PermissionLevel.OWNER)
+        plan = RelationFactory(person=bobby, gift=gift, event=None, is_surprise=True)
+        share(plan, alice, PermissionLevel.OWNER)
+        share(plan, bob, PermissionLevel.VIEWER)
+
+        login_as(page, live_server.url, "alice")
+        open_page(
+            page,
+            f"{live_server.url}{reverse('gift_manager:relation_detail', kwargs={'pk': plan.relation_id})}",
+        )
+        shared_with = page.locator("#relation-coordination ~ .detail-section")
+        expect(shared_with).to_contain_text("Can't see it")
+
+        # Change Bob's level from the edit panel, opened from the person's page like a user does
+        person_url = reverse("gift_manager:person_detail", kwargs={"pk": bobby.person_id})
+        open_page(page, live_server.url + person_url)
+        page.locator(f'a[data-edit-url*="{plan.relation_id}"]').first.click()
+        panel = page.locator("#editPanel")
+        panel.locator("summary", has_text="Sharing").click()
+        panel.locator(f"#permission-{bob.id}").select_option(str(PermissionLevel.EDITOR))
+        panel.locator("button[type='submit']").first.click()
+        expect(
+            page.locator(".toast").filter(has_text="bob will not be able to see")
+        ).to_be_visible()

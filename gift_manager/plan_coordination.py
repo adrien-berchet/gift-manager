@@ -14,6 +14,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
+from django.utils.translation import ngettext
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
@@ -167,3 +168,48 @@ def coordination_context(relation: Relation, user: User) -> dict:
         ],
         "can_set_surprise": level >= PermissionLevel.EDITOR and can_be_surprise(relation),
     }
+
+
+def hidden_recipient_ids(relation: Relation) -> set[int]:
+    """Return the users a surprise plan is hidden from, in a constant number of queries.
+
+    These are the linked user of the recipient person, or the linked users of the members of the
+    recipient group (nested groups included), except the owners of the plan. It is the same rule
+    as ``Relation.objects.hidden_surprises_for``, computed from the plan's side so a list of
+    people can be checked at once.
+    """
+    if not relation.is_surprise:
+        return set()
+    if relation.person_id is not None:
+        candidates = {relation.person.user_link_id} - {None}
+    else:
+        candidates = set(
+            relation.group.get_all_members(include_nested=True)
+            .filter(user_link__isnull=False)
+            .values_list("user_link_id", flat=True)
+        )
+    owner_ids = {
+        user_id
+        for user_id, level in PermissionService.get_permission_map(relation).items()
+        if level == PermissionLevel.OWNER
+    }
+    return candidates - owner_ids
+
+
+def surprise_sharing_warning(obj: object, users: Iterable[User]) -> str:
+    """Return a warning when ``obj`` is a surprise plan that some of ``users`` cannot see.
+
+    Sharing still goes through (the sharer may have a reason); the warning tells them that
+    those people will not see the plan. Empty when there is nothing to warn about.
+    """
+    if not isinstance(obj, Relation):
+        return ""
+    hidden = hidden_recipient_ids(obj)
+    names = sorted(user.username for user in users if user.pk in hidden)
+    if not names:
+        return ""
+    return ngettext(
+        "%(names)s will not be able to see the gift plan “%(gift)s”: it is a surprise for them.",
+        "%(names)s will not be able to see the gift plan “%(gift)s”: it is a surprise for them.",
+        len(names),
+    ) % {"names": ", ".join(names), "gift": obj.gift.name}

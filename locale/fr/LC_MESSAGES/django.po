@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-05 21:04+0200\n"
+"POT-Creation-Date: 2026-10-06 13:39+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -623,7 +623,7 @@ msgstr "à"
 #: gift_manager/models.py:644 gift_manager/models.py:1816
 #: gift_manager/templates/gift_manager/relation_list.html:237
 #: gift_manager/templates/gift_manager/relation_status_detail.html:27
-#: gift_manager/views/common.py:375 gift_manager/views/recipient.py:125
+#: gift_manager/views/common.py:380 gift_manager/views/recipient.py:125
 msgid "Person"
 msgstr "Personne"
 
@@ -771,34 +771,49 @@ msgstr "Choisissez exactement un destinataire : une personne ou un groupe."
 #: gift_manager/models.py:1818
 #: gift_manager/templates/gift_manager/relation_list.html:238
 #: gift_manager/templates/gift_manager/relation_status_detail.html:28
-#: gift_manager/views/common.py:392 gift_manager/views/recipient.py:145
+#: gift_manager/views/common.py:397 gift_manager/views/recipient.py:145
 msgid "Group"
 msgstr "Groupe"
 
-#: gift_manager/plan_coordination.py:27
+#: gift_manager/plan_coordination.py:28
 msgid "Write a comment before sending it."
 msgstr "Écrivez un commentaire avant de l'envoyer."
 
-#: gift_manager/plan_coordination.py:28
+#: gift_manager/plan_coordination.py:29
 #, python-format
 msgid "A comment can have at most %(limit)d characters."
 msgstr "Un commentaire ne peut pas dépasser %(limit)d caractères."
 
-#: gift_manager/plan_coordination.py:35
+#: gift_manager/plan_coordination.py:36
 msgid "This gift plan is already claimed."
 msgstr "Ce projet de cadeau est déjà pris en charge."
 
-#: gift_manager/plan_coordination.py:46 gift_manager/plan_coordination.py:48
+#: gift_manager/plan_coordination.py:47 gift_manager/plan_coordination.py:49
 msgid "You do not have permission to do this on this gift plan."
 msgstr "Vous n'avez pas la permission de faire cela sur ce projet de cadeau."
 
-#: gift_manager/plan_coordination.py:83
+#: gift_manager/plan_coordination.py:84
 msgid "Only the person who claimed this gift can release it."
 msgstr "Seule la personne qui a pris en charge ce cadeau peut le libérer."
 
-#: gift_manager/plan_coordination.py:103
+#: gift_manager/plan_coordination.py:104
 msgid "You cannot delete this comment."
 msgstr "Vous ne pouvez pas supprimer ce commentaire."
+
+#: gift_manager/plan_coordination.py:212
+#, python-format
+msgid ""
+"%(names)s will not be able to see the gift plan “%(gift)s”: it is a surprise "
+"for them."
+msgid_plural ""
+"%(names)s will not be able to see the gift plan “%(gift)s”: it is a surprise "
+"for them."
+msgstr[0] ""
+"%(names)s ne pourra pas voir le projet de cadeau « %(gift)s » : c'est une "
+"surprise pour cette personne."
+msgstr[1] ""
+"%(names)s ne pourront pas voir le projet de cadeau « %(gift)s » : c'est une "
+"surprise pour ces personnes."
 
 #: gift_manager/services.py:23
 msgid "This object is available to everyone and cannot be removed."
@@ -817,9 +832,9 @@ msgstr ""
 msgid "Could not determine filter name for this object type"
 msgstr "Impossible de déterminer le nom du filtre pour ce type d'objet"
 
-#: gift_manager/services.py:112 gift_manager/views/base.py:320
-#: gift_manager/views/base.py:497 gift_manager/views/base.py:531
-#: gift_manager/views/base.py:624 gift_manager/views/base.py:716
+#: gift_manager/services.py:112 gift_manager/views/base.py:332
+#: gift_manager/views/base.py:513 gift_manager/views/base.py:548
+#: gift_manager/views/base.py:650 gift_manager/views/base.py:748
 msgid "Invalid permission value."
 msgstr "Niveau de permission invalide."
 
@@ -828,7 +843,7 @@ msgid "You do not have permission to manage sharing for this object."
 msgstr "Vous n'avez pas la permission de gérer le partage de cet élément."
 
 #: gift_manager/services.py:142 gift_manager/services.py:145
-#: gift_manager/views/base.py:326
+#: gift_manager/views/base.py:338
 msgid "Objects can only be shared with friends."
 msgstr "Les éléments ne peuvent être partagés qu'avec des amis."
 
@@ -836,7 +851,7 @@ msgstr "Les éléments ne peuvent être partagés qu'avec des amis."
 msgid "At least one owner is required."
 msgstr "Au moins un propriétaire est requis."
 
-#: gift_manager/services.py:159 gift_manager/views/base.py:1045
+#: gift_manager/services.py:159 gift_manager/views/base.py:1077
 msgid "You do not have access to this object."
 msgstr "Vous n'avez pas accès à cet élément."
 
@@ -1567,7 +1582,7 @@ msgstr "Lecture"
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:22
 #: gift_manager/templates/gift_manager/person_group_explorer.html:227
 #: gift_manager/tests/e2e/test_dashboard_layout.py:581
-#: gift_manager/views/base.py:773
+#: gift_manager/views/base.py:805
 msgid "Edit"
 msgstr "Éditer"
 
@@ -2882,6 +2897,14 @@ msgstr "Détails du cadeau"
 msgid "Tags:"
 msgstr "Tags :"
 
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:237
+msgid "This gift plan is a surprise for them"
+msgstr "Ce projet de cadeau est une surprise pour cette personne"
+
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:237
+msgid "Can't see it"
+msgstr "Ne le voit pas"
+
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:39
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:40
 msgid "Skip"
@@ -3553,84 +3576,84 @@ msgstr "Inscrivez-vous ici"
 msgid "Enter a valid http or https URL."
 msgstr "Saisissez une adresse http ou https valide."
 
-#: gift_manager/views/base.py:323 gift_manager/views/base.py:528
-#: gift_manager/views/base.py:561 gift_manager/views/base.py:621
-#: gift_manager/views/base.py:668 gift_manager/views/base.py:713
+#: gift_manager/views/base.py:335 gift_manager/views/base.py:545
+#: gift_manager/views/base.py:581 gift_manager/views/base.py:647
+#: gift_manager/views/base.py:694 gift_manager/views/base.py:745
 msgid "User not found."
 msgstr "Utilisateur non trouvé."
 
-#: gift_manager/views/base.py:350 gift_manager/views/gift.py:191
+#: gift_manager/views/base.py:365 gift_manager/views/gift.py:191
 msgid "Create"
 msgstr "Création"
 
-#: gift_manager/views/base.py:416
+#: gift_manager/views/base.py:431
 msgid "{} created successfully"
 msgstr "{} créé avec succès"
 
-#: gift_manager/views/base.py:594
+#: gift_manager/views/base.py:615
 #, python-brace-format
 msgid "Permission for '{username}' changed to '{permission_level}'"
 msgstr "La permission de '{username}' a été changée en '{permission_level}'"
 
-#: gift_manager/views/base.py:641
+#: gift_manager/views/base.py:667
 #, python-brace-format
 msgid "Sharing with '{username}' removed successfully"
 msgstr "Partage avec '{username}' supprimé avec succès"
 
-#: gift_manager/views/base.py:686
+#: gift_manager/views/base.py:713
 #, python-brace-format
 msgid "Object shared with '{username}' successfully"
 msgstr "Objet partagé avec '{username}' avec succès"
 
-#: gift_manager/views/base.py:767
+#: gift_manager/views/base.py:799
 msgid "You do not have permission to edit this object."
 msgstr "Vous n'avez pas la permission de modifier cet élément."
 
-#: gift_manager/views/base.py:814
+#: gift_manager/views/base.py:846
 msgid "{} updated successfully"
 msgstr "{} mis à jour avec succès"
 
-#: gift_manager/views/base.py:852 gift_manager/views/base.py:865
+#: gift_manager/views/base.py:884 gift_manager/views/base.py:897
 msgid ""
 "You no longer have access to this {}, but it remains shared with other users"
 msgstr ""
 "Vous n'avez plus accès à cet élément ({}), mais il reste partagé avec "
 "d'autres utilisateurs"
 
-#: gift_manager/views/base.py:858
+#: gift_manager/views/base.py:890
 msgid "Use the leave access action to remove your own access."
 msgstr "Utilisez l'action « Quitter » pour retirer votre propre accès."
 
-#: gift_manager/views/base.py:871 gift_manager/views/base.py:1052
-#: gift_manager/views/base.py:1058
+#: gift_manager/views/base.py:903 gift_manager/views/base.py:1084
+#: gift_manager/views/base.py:1090
 msgid "You do not have permission to delete this object."
 msgstr "Vous n'avez pas la permission de supprimer cet élément."
 
-#: gift_manager/views/base.py:876
+#: gift_manager/views/base.py:908
 msgid "{} successfully deleted"
 msgstr "{} supprimé avec succès"
 
-#: gift_manager/views/base.py:941
+#: gift_manager/views/base.py:973
 #, python-brace-format
 msgid "Email: {email}"
 msgstr "Email : {email}"
 
-#: gift_manager/views/base.py:945
+#: gift_manager/views/base.py:977
 #, python-brace-format
 msgid "Created: {date}"
 msgstr "Créé le : {date}"
 
-#: gift_manager/views/base.py:950
+#: gift_manager/views/base.py:982
 #, python-brace-format
 msgid "Schedule: {schedule}"
 msgstr "Planification : {schedule}"
 
-#: gift_manager/views/base.py:955
+#: gift_manager/views/base.py:987
 #, python-brace-format
 msgid "Price: {price}"
 msgstr "Prix : {price}"
 
-#: gift_manager/views/base.py:1079
+#: gift_manager/views/base.py:1111
 msgid "{} deleted successfully"
 msgstr "{} supprimé avec succès"
 
@@ -4119,37 +4142,37 @@ msgstr "Le lien de votre flux de calendrier a été mis à jour."
 msgid "Your calendar feed has been disabled."
 msgstr "Votre flux de calendrier a été désactivé."
 
-#: gift_manager/views/sharing.py:165
+#: gift_manager/views/sharing.py:168
 msgid "Please select at least one friend."
 msgstr "Merci de sélectionner au moins un ami"
 
-#: gift_manager/views/sharing.py:174
+#: gift_manager/views/sharing.py:177
 msgid "Please select at least one object to share."
 msgstr "Merci de sélectionner au moins un objet à partager."
 
-#: gift_manager/views/sharing.py:197
+#: gift_manager/views/sharing.py:200
 msgid "Invalid permission level selected."
 msgstr "Niveau de permission invalide."
 
-#: gift_manager/views/sharing.py:259
+#: gift_manager/views/sharing.py:262
 msgid "Successfully shared items with {} friend(s)"
 msgstr "Les éléments ont été partagés avec succès avec {} ami(s)"
 
-#: gift_manager/views/sharing.py:268
+#: gift_manager/views/sharing.py:272
 msgid "You don't have permission to share one or more selected objects."
 msgstr ""
 "Vous n'avez pas la permission de partager un ou plusieurs objets "
 "sélectionnés."
 
-#: gift_manager/views/sharing.py:274
+#: gift_manager/views/sharing.py:278
 msgid "Invalid data provided. Please check your selections."
 msgstr "Données invalides fournies. Merci de vérifier vos sélections."
 
-#: gift_manager/views/sharing.py:279
+#: gift_manager/views/sharing.py:283
 msgid "An unexpected error occurred while sharing objects."
 msgstr "Une erreur s'est produite lors du partage des objets."
 
-#: gift_manager/views/sharing.py:289
+#: gift_manager/views/sharing.py:298
 #, python-format
 msgid ""
 "%(count)d existing permission was already at or above the selected level and "
@@ -4164,10 +4187,10 @@ msgstr[1] ""
 "%(count)d permissions existantes étaient déjà au niveau choisi ou au-dessus "
 "et ont été conservées."
 
-#: gift_manager/views/sharing.py:333
+#: gift_manager/views/sharing.py:342
 msgid "Invalid friend selection."
 msgstr "Sélection d'amis invalide."
 
-#: gift_manager/views/sharing.py:591
+#: gift_manager/views/sharing.py:605
 msgid "Invalid object selection."
 msgstr "Sélection d'éléments invalide."

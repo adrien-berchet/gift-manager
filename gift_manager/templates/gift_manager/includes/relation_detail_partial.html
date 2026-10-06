@@ -232,7 +232,12 @@
                     <i class="fas fa-user me-2 text-muted"></i>
                     <span>{{ shared_user.user.username }}</span>
                 </div>
-                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+                <span>
+                    {% if shared_user.hidden_surprise %}
+                    <span class="badge bg-warning text-dark me-1" title="{% trans 'This gift plan is a surprise for them' %}"><i class="fas fa-eye-slash me-1" aria-hidden="true"></i>{% trans "Can't see it" %}</span>
+                    {% endif %}
+                    <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+                </span>
             </div>
             {% endfor %}
         </div>

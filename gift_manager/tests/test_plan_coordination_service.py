@@ -3,6 +3,7 @@
 import pytest
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
+from django.utils import translation
 
 from gift_manager import plan_coordination
 from gift_manager.models import PermissionLevel
@@ -317,3 +318,77 @@ def test_default_is_off_for_a_group_whose_only_linked_member_is_the_creator():
     PersonFactory(groups=[group])
 
     assert plan_coordination.default_surprise_for(group, creator) is False
+
+
+# --- sharing a surprise plan with someone who cannot see it ----------------------------------
+
+
+def test_hidden_recipient_ids_for_a_person_recipient_and_the_owner_exemption():
+    recipient, owner = UserFactory(), UserFactory()
+    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+    _share(relation, owner, PermissionLevel.OWNER)
+
+    assert plan_coordination.hidden_recipient_ids(relation) == {recipient.pk}
+
+    _share(relation, recipient, PermissionLevel.OWNER)
+    assert plan_coordination.hidden_recipient_ids(relation) == set()
+
+
+def test_hidden_recipient_ids_for_a_group_include_nested_members():
+    direct, nested, parent_member = UserFactory(), UserFactory(), UserFactory()
+    group, child, parent = PersonGroupFactory(), PersonGroupFactory(), PersonGroupFactory()
+    child.parent_groups.add(group)
+    group.parent_groups.add(parent)
+    PersonFactory(user_link=direct, groups=[group])
+    PersonFactory(user_link=nested, groups=[child])
+    PersonFactory(user_link=parent_member, groups=[parent])
+    PersonFactory(groups=[group])
+    relation = GroupRelationFactory(group=group, is_surprise=True)
+
+    assert plan_coordination.hidden_recipient_ids(relation) == {direct.pk, nested.pk}
+
+
+def test_hidden_recipient_ids_is_empty_when_the_plan_is_not_a_surprise():
+    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()), is_surprise=False)
+
+    assert plan_coordination.hidden_recipient_ids(relation) == set()
+
+
+def test_hidden_recipient_ids_agrees_with_hidden_surprises_for():
+    users = [UserFactory() for _ in range(3)]
+    group = PersonGroupFactory()
+    PersonFactory(user_link=users[0], groups=[group])
+    relation = GroupRelationFactory(group=group, is_surprise=True)
+
+    hidden = plan_coordination.hidden_recipient_ids(relation)
+
+    for user in users:
+        in_queryset = Relation.objects.hidden_surprises_for(user).filter(pk=relation.pk).exists()
+        assert (user.pk in hidden) is in_queryset
+
+
+def test_sharing_warning_names_only_the_people_who_cannot_see_the_plan():
+    recipient, other = UserFactory(), UserFactory()
+    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+
+    warning = plan_coordination.surprise_sharing_warning(relation, [recipient, other])
+
+    assert recipient.username in warning
+    assert other.username not in warning
+    assert str(relation.gift.name) in warning
+    assert plan_coordination.surprise_sharing_warning(relation, [other]) == ""
+
+
+def test_sharing_warning_is_translated_and_agrees_in_number():
+    first, second = UserFactory(username="anna"), UserFactory(username="ben")
+    group = PersonGroupFactory()
+    PersonFactory(user_link=first, groups=[group])
+    PersonFactory(user_link=second, groups=[group])
+    relation = GroupRelationFactory(group=group, is_surprise=True)
+
+    with translation.override("fr"):
+        one = plan_coordination.surprise_sharing_warning(relation, [first])
+        two = plan_coordination.surprise_sharing_warning(relation, [first, second])
+
+    assert "anna ne pourra pas voir" in one
+    assert "anna, ben ne pourront pas voir" in two

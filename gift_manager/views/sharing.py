@@ -28,6 +28,7 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.plan_coordination import surprise_sharing_warning
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import INSUFFICIENT_SHARE_PERMISSION_ERROR
 from gift_manager.sharing_service import PERMISSION_ESCALATION_ERROR
@@ -46,6 +47,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
     minimum_share_permission = PermissionLevel.OWNER
     # Grants skipped because the friend already had equal or higher direct access
     kept_permission_count = 0
+    surprise_warnings: list[str] = []
 
     def get(self, request):
         """Display the sharing form."""
@@ -156,6 +158,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
     def post(self, request):  # noqa: C901, PLR0911
         """Process sharing of selected objects."""
         self.kept_permission_count = 0
+        self.surprise_warnings = []
         try:
             with transaction.atomic():
                 # Get selected friends
@@ -259,6 +262,7 @@ class ShareObjectsView(LoginRequiredMixin, View):
                 request, gettext("Successfully shared items with {} friend(s)").format(len(friends))
             )
             self._add_kept_permissions_message(request)
+            self._add_surprise_warnings(request)
 
             return redirect("gift_manager:share_objects")
 
@@ -278,6 +282,11 @@ class ShareObjectsView(LoginRequiredMixin, View):
             logger.exception("Unexpected error in ShareObjectsView for user %s", request.user)
             messages.error(request, gettext("An unexpected error occurred while sharing objects."))
             return self.get(request)
+
+    def _add_surprise_warnings(self, request) -> None:
+        """Warn about the surprise plans hidden from the friends they were just shared with."""
+        for warning in self.surprise_warnings:
+            messages.warning(request, warning)
 
     def _add_kept_permissions_message(self, request) -> None:
         """Tell the user when existing equal or higher permissions were left unchanged."""
@@ -546,6 +555,11 @@ class ShareObjectsView(LoginRequiredMixin, View):
         for friend in friends:
             for relation in relations:
                 self._share_relation_with_friend(actor, friend, relation, permission_level)
+
+        # After every grant, so a recipient who was just made an owner is not reported
+        for relation in relations:
+            if warning := surprise_sharing_warning(relation, friends):
+                self.surprise_warnings.append(warning)
 
         return len(relations)
 

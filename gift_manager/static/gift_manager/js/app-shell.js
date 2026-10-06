@@ -82,6 +82,11 @@
             showNotification(data.message, data.type || 'info');
         });
 
+        // A warning that travels next to the success notification of the same response
+        document.addEventListener('showWarning', function(e) {
+            showNotification(e.detail.message, 'warning');
+        });
+
         function escapeNotificationHtml(text) {
             const div = document.createElement('div');
             div.textContent = String(text || '');
