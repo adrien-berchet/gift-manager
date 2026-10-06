@@ -129,34 +129,16 @@
    Animation Enhancements
    ========================================================================= */
 
+/* Bootstrap puts `showing` on a toast while it comes in (and drops it once in) and again
+   while it goes out (and drops it once gone). A transition toward the `showing` look therefore
+   plays the right way both times: slide in from the right, slide out to the right. A keyframe
+   animation on `.showing` would replay the entrance on the way out. */
+.toast {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
 .toast.showing {
-    animation: toast-slide-in 0.3s ease-out;
-}
-
-.toast.hide {
-    animation: toast-slide-out 0.3s ease-in;
-}
-
-@keyframes toast-slide-in {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes toast-slide-out {
-    from {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    to {
-        transform: translateX(100%);
-        opacity: 0;
-    }
+    transform: translateX(100%);
 }
 
 /* =========================================================================
@@ -375,9 +357,8 @@ st.notification-info .toast-body::before {
    ========================================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-    .toast.showing,
-    .toast.hide {
-        animation: none;
+    .toast {
+        transition: none;
     }
 
     .toast-body .btn:hover {

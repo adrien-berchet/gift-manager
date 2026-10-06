@@ -1,5 +1,7 @@
 """Browser test of plan coordination: claim, comment, release and a hidden surprise."""
 
+from itertools import pairwise
+
 import pytest
 from django.urls import reverse
 from django.utils import timezone
@@ -231,3 +233,52 @@ class TestPlanCoordination:
         open_page(page, share_url)  # the message was shown once: nothing queued any more
         assert page.locator(".toast").count() == 0
         assert page.locator("h1").first.bounding_box()["y"] == title_with_toast
+
+    def test_a_toast_slides_in_and_out_smoothly(self, page: Page, live_server, seed_data_e2e):
+        """Each way is one smooth move: in from the right, out to the right (no replay)."""
+        login_as(page, live_server.url, "alice")
+        open_page(page, live_server.url + reverse("gift_manager:home"))
+        page.evaluate(
+            """() => {
+                window.__trace = [];
+                window.__tracing = true;
+                const sample = () => {
+                    const toast = document.querySelector('.toast');
+                    if (toast) {
+                        const box = toast.getBoundingClientRect();
+                        window.__trace.push([box.left, parseFloat(getComputedStyle(toast).opacity)]);
+                    }
+                    if (window.__tracing) requestAnimationFrame(sample);
+                };
+                requestAnimationFrame(sample);
+            }"""
+        )
+        page.evaluate("showNotification('Probe', 'success')")
+        page.wait_for_function(  # settled: shown, no longer sliding in
+            "() => { const t = document.querySelector('.toast'); "
+            "return t && t.classList.contains('show') && !t.classList.contains('showing'); }",
+            timeout=5_000,
+        )
+        page.wait_for_timeout(500)
+        entrance = page.evaluate("window.__trace.splice(0)")
+
+        page.locator(".toast .btn-close").click()
+        page.wait_for_function("!document.querySelector('.toast')", timeout=5_000)
+        page.evaluate("window.__tracing = false")
+        leaving = page.evaluate("window.__trace.splice(0)")
+
+        def assert_one_way(trace, *, towards_right: bool, fades_in: bool, name: str):
+            assert len(trace) > 3, f"{name} not observed: {trace}"
+            lefts = [left for left, _ in trace]
+            opacities = [opacity for _, opacity in trace]
+            sign = 1 if towards_right else -1
+            assert all(sign * (b - a) >= -1 for a, b in pairwise(lefts)), (
+                f"{name} goes back and forth: {lefts}"
+            )
+            fade = 1 if fades_in else -1
+            assert all(fade * (b - a) >= -0.05 for a, b in pairwise(opacities)), (
+                f"{name} fades the wrong way: {opacities}"
+            )
+
+        assert_one_way(entrance, towards_right=False, fades_in=True, name="entrance")
+        assert_one_way(leaving, towards_right=True, fades_in=False, name="exit")
