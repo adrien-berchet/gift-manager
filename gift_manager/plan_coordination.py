@@ -180,14 +180,17 @@ def hidden_recipient_ids(relation: Relation) -> set[int]:
     """
     if not relation.is_surprise:
         return set()
+    candidates: set[int | None] = set()
     if relation.person_id is not None:
         candidates = {relation.person.user_link_id} - {None}
-    else:
+    elif relation.group_id is not None:
         candidates = set(
             relation.group.get_all_members(include_nested=True)
             .filter(user_link__isnull=False)
             .values_list("user_link_id", flat=True)
         )
+    if not candidates:
+        return set()
     owner_ids = {
         user_id
         for user_id, level in PermissionService.get_permission_map(relation).items()

@@ -1876,7 +1876,7 @@ class RelationComment(models.Model):
         ordering = ("created_at", "pk")
 
     def __str__(self) -> str:
-        return f"{self.author} on {self.relation_id}: {self.text[:30]}"
+        return f"{self.author} on {self.relation_id}: {str(self.text)[:30]}"
 
 
 @receiver(post_delete, sender=RelationPermission)

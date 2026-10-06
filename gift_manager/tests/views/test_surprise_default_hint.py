@@ -68,9 +68,18 @@ def test_no_checkbox_for_the_creators_own_person(client, creator):
     assert "is_surprise" not in response.content.decode()
 
 
-@pytest.mark.parametrize("recipient", ["", "garbage", "person:not-a-uuid", "team:1"])
+@pytest.mark.parametrize("recipient", ["garbage", "person:not-a-uuid", "team:1"])
 def test_malformed_recipient_is_a_bad_request(client, creator, recipient):
     assert _hint(client, recipient).status_code == 400
+
+
+def test_clearing_the_recipient_shows_an_unchecked_checkbox(client, creator):
+    response = _hint(client, "")
+
+    content = response.content.decode()
+    assert response.status_code == 200  # a 4xx would leave the previous checkbox in place
+    assert 'name="is_surprise"' in content
+    assert "checked" not in content
 
 
 def test_inaccessible_recipient_gets_the_same_bad_request(client, creator):

@@ -17,6 +17,8 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.translation import gettext_lazy
 from dotenv import load_dotenv
 
+from gift_manager.message_levels import parse_message_level
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -100,12 +102,17 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "gift_manager.context_processors.display_messages",
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = "GiftManager.wsgi.app"
+
+# Lowest level of the flash messages shown at the top of pages: debug, info, success, warning or
+# error. Messages below it are dropped without being shown.
+MESSAGES_DISPLAY_LEVEL = parse_message_level(get_env_variable("MESSAGES_DISPLAY_LEVEL", "info"))
 
 
 # Database

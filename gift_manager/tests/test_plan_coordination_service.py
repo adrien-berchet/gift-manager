@@ -392,3 +392,7 @@ def test_sharing_warning_is_translated_and_agrees_in_number():
 
     assert "anna ne pourra pas voir" in one
     assert "anna, ben ne pourront pas voir" in two
+
+
+def test_hidden_recipient_ids_of_a_plan_without_a_recipient_is_empty():
+    assert plan_coordination.hidden_recipient_ids(Relation(is_surprise=True)) == set()

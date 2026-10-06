@@ -944,6 +944,14 @@ def surprise_default_hint(request):
     The plan form swaps it in when the recipient changes. A malformed value and a recipient the
     user cannot access get the same answer, so nothing is revealed about either.
     """
+    if not request.GET.get("recipient"):
+        # The recipient was cleared: back to the blank form's unchecked box (htmx does not swap
+        # a 4xx answer, which would leave the previous recipient's checkbox in place)
+        return render(
+            request,
+            "gift_manager/includes/forms/surprise_field.html",
+            {"show": True, "checked": False},
+        )
     try:
         person, group = resolve_recipient_choice(request.GET.get("recipient", ""), request.user)
     except ValidationError:
