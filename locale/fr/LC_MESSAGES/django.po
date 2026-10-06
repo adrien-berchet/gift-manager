@@ -1207,6 +1207,10 @@ msgstr "Envoi..."
 msgid "Processing..."
 msgstr "Traitement en cours..."
 
+#: gift_manager/templates/gift_manager/base.html:370
+msgid "Saved"
+msgstr "Enregistré"
+
 #: gift_manager/templates/gift_manager/base.html:361
 #: gift_manager/templates/gift_manager/includes/offcanvas_base.html:316
 msgid "You do not have permission to perform this action."
