@@ -106,3 +106,4 @@ def test_the_profile_forms_are_submitted_through_htmx_without_swapping(
     form = content[content.index(f'id="{form_id}"') - 200 : content.index(f'id="{form_id}"') + 200]
     assert f'hx-post="{reverse(url_name)}"' in form
     assert 'hx-swap="none"' in form
+    assert "data-keep-button-label" in form

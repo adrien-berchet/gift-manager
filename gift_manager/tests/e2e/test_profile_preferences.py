@@ -32,6 +32,37 @@ class TestProfilePreferences:
         )
         assert after == before, f"the page moved: {before} -> {after}"
 
+    @pytest.mark.parametrize("form_id", ["view-preferences-form", "reminder-preferences-form"])
+    def test_save_button_keeps_its_size_while_saving(
+        self, page: Page, live_server, seed_data_e2e, form_id
+    ):
+        self._open_profile(page, live_server)
+        button = page.locator(f"#{form_id} button[type='submit']")
+        # Record the button box and the page layout on every frame around the click
+        page.evaluate(
+            """(formId) => {
+                const button = document.querySelector(`#${formId} button[type='submit']`);
+                const heading = document.querySelector('h1, h2');
+                const sample = () => {
+                    const box = button.getBoundingClientRect();
+                    return [box.width, box.height, heading.getBoundingClientRect().top];
+                };
+                window.__samples = [sample()];
+                const loop = () => { window.__samples.push(sample()); requestAnimationFrame(loop); };
+                requestAnimationFrame(loop);
+            }""",
+            form_id,
+        )
+
+        button.click()
+        page.wait_for_timeout(1500)  # longer than any minimum loading duration
+
+        samples = page.evaluate("window.__samples")
+        assert len(samples) > 10
+        assert {tuple(sample) for sample in samples} == {tuple(samples[0])}, (
+            f"layout changed while saving: {sorted({tuple(s) for s in samples})}"
+        )
+
     def test_display_preferences_save_without_reload(self, page: Page, live_server, seed_data_e2e):
         before = self._open_profile(page, live_server)
 

@@ -195,10 +195,13 @@
         // Lock a form for the duration of its submission. The lock is released by
         // the request-completion events, or on page unload / after a fallback timeout.
         lockForm(form, submitter) {
-            if (submitter) {
+            // A form that saves in place keeps its button as it is: swapping the label for a
+            // spinner would resize the button and shift the page. The button is still disabled.
+            const keepLabel = form.hasAttribute('data-keep-button-label');
+            if (submitter && !keepLabel) {
                 this.showButtonLoading(submitter, 'submitting');
             }
-            const restoreControls = this.disableFormControls(form, submitter);
+            const restoreControls = this.disableFormControls(form, keepLabel ? null : submitter);
 
             const release = () => {
                 window.removeEventListener('beforeunload', release);
