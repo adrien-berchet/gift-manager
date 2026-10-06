@@ -181,3 +181,39 @@ class TestPlanCoordination:
         expect(
             page.locator(".toast").filter(has_text="bob will not be able to see")
         ).to_be_visible()
+
+    def test_flash_messages_are_toasts_over_the_page_that_disappear(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+        alice.profile.friends.add(bob.profile)
+        gift = GiftFactory(name="Shared Gift")
+        share(gift, alice, PermissionLevel.OWNER)
+        person = PersonFactory(first_name="Pat")
+        share(person, alice, PermissionLevel.OWNER)
+        plan = RelationFactory(person=person, gift=gift, event=None)
+        share(plan, alice, PermissionLevel.OWNER)
+        share_url = live_server.url + reverse("gift_manager:share_objects")
+
+        login_as(page, live_server.url, "alice")
+        open_page(page, share_url)
+        page.locator(f"#friend-{bob.id}").check()
+        page.eval_on_selector(
+            f"#relation-{plan.relation_id}",
+            "box => { box.checked = true; box.dispatchEvent(new Event('change', {bubbles: true})); }",
+        )
+        page.locator("#share-button").click()
+
+        toast = page.locator(".toast").filter(has_text="Successfully shared items")
+        expect(toast).to_be_visible()
+        # It floats over the page instead of taking room in it
+        assert (
+            page.evaluate("getComputedStyle(document.querySelector('#toastContainer')).position")
+            == "fixed"
+        )
+        title_with_toast = page.locator("h1").first.bounding_box()["y"]
+        expect(toast).to_be_hidden(timeout=15_000)  # hides itself after a few seconds
+
+        open_page(page, share_url)  # the message was shown once: nothing queued any more
+        assert page.locator(".toast").count() == 0
+        assert page.locator("h1").first.bounding_box()["y"] == title_with_toast

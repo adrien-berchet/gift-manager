@@ -110,7 +110,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "GiftManager.wsgi.app"
 
-# Lowest level of the flash messages shown at the top of pages: debug, info, success, warning or
+# Lowest level of the flash messages shown as toasts over pages: debug, info, success, warning or
 # error. Messages below it are dropped without being shown.
 MESSAGES_DISPLAY_LEVEL = parse_message_level(get_env_variable("MESSAGES_DISPLAY_LEVEL", "info"))
 

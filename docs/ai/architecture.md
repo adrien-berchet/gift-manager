@@ -43,9 +43,11 @@
   use `Relation.objects.hidden_surprises_for(user)` or go through `accessible_by`;
   `tests/test_surprise_surfaces.py` pins every surface. Losing access to a plan (the
   `RelationPermission` row is deleted) releases the claim the user held.
-- Flash messages (`django.contrib.messages`) are shown as alerts at the top of every full page by
-  `base.html`, through the lazy `display_messages` context processor
-  (`gift_manager/context_processors.py`), from `MESSAGES_DISPLAY_LEVEL` up (env var, default `info`,
+- Flash messages (`django.contrib.messages`) are shown as toasts over every full page: `base.html`
+  emits them as JSON (`#flash-messages`, plus a `<noscript>` alert) and `app-shell.js` passes them to
+  `showNotification`, which hides them after 5 seconds. They come from the lazy `flash_messages`
+  variable of the `display_messages` context processor (`gift_manager/context_processors.py`), from
+  `MESSAGES_DISPLAY_LEVEL` up (env var, default `info`,
   see `.env.example`). HTMX responses must not queue messages: they carry their feedback in
   `HX-Trigger` events (`showNotification`, `showWarning`) so nothing is left to show on a later page.
 

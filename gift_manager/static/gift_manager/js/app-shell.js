@@ -93,12 +93,15 @@
             return div.innerHTML;
         }
 
+        let toastCounter = 0;
+
         // Global notification function
         window.showNotification = function(message, type = 'info') {
             // Create toast notification
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
 
-            const toastId = 'toast-' + Date.now();
+            // Several toasts can be created in the same millisecond (the messages of a page load)
+            const toastId = 'toast-' + Date.now() + '-' + (toastCounter++);
             const iconClass = {
                 'success': 'fas fa-check-circle text-success',
                 'error': 'fas fa-exclamation-circle text-danger',
@@ -128,6 +131,28 @@
                 toastElement.remove();
             });
         };
+
+        // Flash messages queued by the server (django.contrib.messages) are shown as toasts,
+        // which disappear on their own; the page renders them as JSON in #flash-messages
+        function showFlashMessages() {
+            const data = document.getElementById('flash-messages');
+            if (!data) return;
+            let flashMessages = [];
+            try {
+                flashMessages = JSON.parse(data.textContent);
+            } catch (error) {
+                console.error('Unreadable flash messages', error);
+            }
+            flashMessages.forEach(function(item) {
+                showNotification(item.message, item.type);
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showFlashMessages);
+        } else {
+            showFlashMessages();
+        }
 
         function createToastContainer() {
             const container = document.createElement('div');

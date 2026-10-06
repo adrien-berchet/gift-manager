@@ -313,12 +313,15 @@
     {% include 'gift_manager/includes/offcanvas_base.html' %}
 
     <main class="container mt-4" id="main-content" tabindex="-1">
-        {% for message in display_messages %}
-        <div class="alert alert-{% if message.level_tag == 'error' %}danger{% else %}{{ message.level_tag|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
-            <i class="fas {% if message.level_tag == 'success' %}fa-check-circle{% elif message.level_tag == 'warning' %}fa-exclamation-triangle{% elif message.level_tag == 'error' %}fa-circle-exclamation{% else %}fa-info-circle{% endif %} me-2" aria-hidden="true"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="{% trans 'Close' %}"></button>
-        </div>
-        {% endfor %}
+        {% with flash=flash_messages %}{% if flash %}
+        {# Shown as toasts by app-shell.js, over the page so the layout does not move #}
+        {{ flash|json_script:"flash-messages" }}
+        <noscript>
+            {% for item in flash %}
+            <div class="alert alert-{{ item.alert_class }}" role="alert">{{ item.message }}</div>
+            {% endfor %}
+        </noscript>
+        {% endif %}{% endwith %}
         {% block content %}{% endblock %}
     </main>
     <!-- Bootstrap JS and dependencies -->
