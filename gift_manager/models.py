@@ -1887,6 +1887,22 @@ def release_claim_when_access_is_removed(sender, instance, **kwargs):
     )
 
 
+@receiver(post_save, sender=Relation)
+def release_claim_of_hidden_recipient(sender, instance, created, **kwargs):
+    """Release the claim when its holder can no longer see the plan.
+
+    That happens when the plan becomes a surprise for them (the flag is ticked or the recipient
+    changes), so a plan is never stuck on a claimer who cannot even open it.
+    """
+    if created or not instance.is_surprise or instance.claimed_by_id is None:
+        return
+    claimer = instance.claimed_by
+    if Relation.objects.hidden_surprises_for(claimer).filter(pk=instance.pk).exists():
+        Relation.objects.filter(pk=instance.pk).update(claimed_by=None, claimed_at=None)
+        instance.claimed_by = None
+        instance.claimed_at = None
+
+
 # Signal handlers for GiftTag cache invalidation
 @receiver(post_save, sender=GiftTag)
 def clear_gifttag_cache_on_save(sender, instance, **kwargs):
