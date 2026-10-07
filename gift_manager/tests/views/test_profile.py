@@ -122,23 +122,53 @@ class TestSendInvitationView:
 
     @override_settings(USE_I18N=False)
     @patch("gift_manager.views.profile.send_mail")
-    def test_post_normalizes_and_reuses_pending_invitation(self, mock_send_mail):
-        """Repeated pending invitations to the same address reuse one token."""
+    def test_post_rejects_duplicate_pending_invitation(self, mock_send_mail):
+        """A second invitation to the same address, whatever its case, is refused."""
         url = reverse("gift_manager:send_invitation")
 
         first_response = self.client.post(url, {"recipient_email": "Recipient@Example.COM"})
         second_response = self.client.post(url, {"recipient_email": "recipient@example.com"})
 
         assert first_response.status_code == 302
-        assert second_response.status_code == 302
+        assert second_response.status_code == 400
+        assert "already pending" in second_response.content.decode()
         invitations = Invitation.objects.filter(sender=self.user)
         assert invitations.count() == 1
         assert invitations.get().email == "recipient@example.com"
-        assert mock_send_mail.call_count == 2
-        assert (
-            mock_send_mail.call_args_list[0].kwargs["message"]
-            == mock_send_mail.call_args_list[1].kwargs["message"]
+        mock_send_mail.assert_called_once()
+
+    @override_settings(USE_I18N=False, INVITATION_SEND_LIMIT=1)
+    @patch("gift_manager.views.profile.send_mail")
+    def test_duplicate_pending_invitation_does_not_use_rate_limit_quota(self, mock_send_mail):
+        """A refused duplicate must not count against the send limit."""
+        url = reverse("gift_manager:send_invitation")
+        self.client.post(url, {"recipient_email": "first@example.com"})
+        cache.delete(f"gift_manager:invitation-send:{self.user.pk}")
+
+        duplicate = self.client.post(url, {"recipient_email": "first@example.com"})
+        other = self.client.post(url, {"recipient_email": "second@example.com"})
+
+        assert duplicate.status_code == 400
+        assert other.status_code == 302
+
+    @override_settings(USE_I18N=False, INVITATION_EXPIRY_DAYS=7)
+    @patch("gift_manager.views.profile.send_mail")
+    def test_expired_pending_invitation_does_not_block_new_one(self, mock_send_mail):
+        """An expired invitation is not pending, so a new one can be sent."""
+        expired = Invitation.objects.create(
+            sender=self.user, recipient_email=encode_email("again@example.com")
         )
+        Invitation.objects.filter(pk=expired.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:send_invitation"), {"recipient_email": "again@example.com"}
+        )
+
+        assert response.status_code == 302
+        assert Invitation.objects.filter(sender=self.user).count() == 2
+        mock_send_mail.assert_called_once()
 
     @override_settings(USE_I18N=False)
     @patch("gift_manager.views.profile.send_mail")

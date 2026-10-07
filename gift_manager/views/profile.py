@@ -255,6 +255,16 @@ class SendInvitationView(LoginRequiredMixin, View):
             form.add_error("recipient_email", gettext("You are already friends with this user."))
             return self._render(request, form, status=400)
 
+        if _pending_invitation_for(request.user, recipient_email) is not None:
+            form.add_error(
+                "recipient_email",
+                gettext(
+                    "An invitation to this address is already pending. "
+                    "Cancel it below, then send a new one."
+                ),
+            )
+            return self._render(request, form, status=400)
+
         if _invitation_send_limit_exceeded(request.user):
             form.add_error(
                 None,
@@ -262,13 +272,10 @@ class SendInvitationView(LoginRequiredMixin, View):
             )
             return self._render(request, form, status=429)
 
-        invitation = _pending_invitation_for(request.user, recipient_email)
-        if invitation is None:
-            # Store the email encoded for privacy
-            encoded_email = encode_email(recipient_email)
-            invitation = Invitation.objects.create(
-                sender=request.user, recipient_email=encoded_email
-            )
+        # Store the email encoded for privacy
+        invitation = Invitation.objects.create(
+            sender=request.user, recipient_email=encode_email(recipient_email)
+        )
         invitation_link = request.build_absolute_uri(
             reverse("gift_manager:accept_invitation", args=[invitation.token])
         )

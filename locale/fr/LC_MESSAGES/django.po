@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 09:17+0000\n"
+"POT-Creation-Date: 2026-10-07 09:41+0000\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -4073,42 +4073,48 @@ msgstr "Vous ne pouvez pas vous envoyer une invitation."
 msgid "You are already friends with this user."
 msgstr "Vous êtes déjà ami avec cet utilisateur."
 
-#: gift_manager/views/profile.py:261
+#: gift_manager/views/profile.py:262
+msgid ""
+"An invitation to this address is already pending. Cancel it below, then send a new one."
+msgstr ""
+"Une invitation à cette adresse est déjà en attente. Annulez-la ci-dessous, puis envoyez-en une nouvelle."
+
+#: gift_manager/views/profile.py:271
 msgid "You have sent too many invitations recently. Please try again later."
 msgstr ""
 "Vous avez envoyé trop d'invitations récemment. Veuillez réessayer plus tard."
 
-#: gift_manager/views/profile.py:276
+#: gift_manager/views/profile.py:283
 msgid "To accept the invitation, click on the following link:"
 msgstr "Pour accepter l'invitation, cliquez sur le lien suivant :"
 
-#: gift_manager/views/profile.py:278
+#: gift_manager/views/profile.py:285
 msgid "Join my friends on Gift Manager"
 msgstr "Rejoins mes amis sur Gift Manager"
 
-#: gift_manager/views/profile.py:284
+#: gift_manager/views/profile.py:291
 #, python-brace-format
 msgid "Invitation sent to {email}."
 msgstr "Invitation envoyée à {email}."
 
-#: gift_manager/views/profile.py:297
+#: gift_manager/views/profile.py:304
 msgid "Invitation cancelled."
 msgstr "Invitation annulée."
 
-#: gift_manager/views/profile.py:313
+#: gift_manager/views/profile.py:320
 msgid "This invitation can only be accepted by the invited email address."
 msgstr ""
 "Cette invitation ne peut être acceptée que par l'adresse email invitée."
 
-#: gift_manager/views/profile.py:317
+#: gift_manager/views/profile.py:324
 msgid "You are now friend with {}"
 msgstr "Vous êtes maintenant ami avec {}"
 
-#: gift_manager/views/profile.py:350
+#: gift_manager/views/profile.py:357
 msgid "Display preferences saved successfully."
 msgstr "Préférences d'affichage enregistrées avec succès"
 
-#: gift_manager/views/profile.py:395
+#: gift_manager/views/profile.py:402
 #, python-brace-format
 msgid "{username} was removed from your friends."
 msgstr "{username} a été retiré de vos amis."
