@@ -82,18 +82,26 @@
             showNotification(data.message, data.type || 'info');
         });
 
+        // A warning that travels next to the success notification of the same response
+        document.addEventListener('showWarning', function(e) {
+            showNotification(e.detail.message, 'warning');
+        });
+
         function escapeNotificationHtml(text) {
             const div = document.createElement('div');
             div.textContent = String(text || '');
             return div.innerHTML;
         }
 
+        let toastCounter = 0;
+
         // Global notification function
         window.showNotification = function(message, type = 'info') {
             // Create toast notification
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
 
-            const toastId = 'toast-' + Date.now();
+            // Several toasts can be created in the same millisecond (the messages of a page load)
+            const toastId = 'toast-' + Date.now() + '-' + (toastCounter++);
             const iconClass = {
                 'success': 'fas fa-check-circle text-success',
                 'error': 'fas fa-exclamation-circle text-danger',
@@ -123,6 +131,28 @@
                 toastElement.remove();
             });
         };
+
+        // Flash messages queued by the server (django.contrib.messages) are shown as toasts,
+        // which disappear on their own; the page renders them as JSON in #flash-messages
+        function showFlashMessages() {
+            const data = document.getElementById('flash-messages');
+            if (!data) return;
+            let flashMessages = [];
+            try {
+                flashMessages = JSON.parse(data.textContent);
+            } catch (error) {
+                console.error('Unreadable flash messages', error);
+            }
+            flashMessages.forEach(function(item) {
+                showNotification(item.message, item.type);
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showFlashMessages);
+        } else {
+            showFlashMessages();
+        }
 
         function createToastContainer() {
             const container = document.createElement('div');
@@ -256,6 +286,15 @@
             const elt = e.detail.elt;
 
             if (isManagedForm(elt) && (xhr.status === 400 || xhr.status === 422)) {
+                e.detail.shouldSwap = true;
+                e.detail.isError = false;
+            }
+
+            // A refused claim (409) or comment (422) answers with the coordination fragment,
+            // alert included: show it instead of dropping the response
+            const target = e.detail.target;
+            if (target && target.id === 'relation-coordination' &&
+                (xhr.status === 409 || xhr.status === 422)) {
                 e.detail.shouldSwap = true;
                 e.detail.isError = false;
             }

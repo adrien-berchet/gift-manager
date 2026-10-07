@@ -57,7 +57,8 @@ def duplicate_plan_url(relation: Relation) -> str:
 def duplicate_initial(relation: Relation) -> dict:
     """Return the plan form's initial values for a copy of ``relation``.
 
-    The status is left to its default (``Idea``) and the reaction is never copied.
+    The status is left to its default (``Idea``); the reaction, claim and comments are never
+    copied, while the surprise flag is: the recipient is the same.
     """
     return {
         "recipient": relation.recipient_key,
@@ -67,6 +68,7 @@ def duplicate_initial(relation: Relation) -> dict:
         "comment": relation.comment,
         "url": relation.url,
         "price": relation.price,
+        "is_surprise": relation.is_surprise,
     }
 
 
@@ -199,6 +201,7 @@ def repeat_plans(
                 comment=source.comment,
                 url=source.url,
                 price=source.price,
+                is_surprise=source.is_surprise,
             )
             PermissionService.create_or_update_permission(
                 user, copy, permission_level=PermissionLevel.OWNER, object_attr="relation"

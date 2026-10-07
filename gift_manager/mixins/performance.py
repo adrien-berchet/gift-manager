@@ -59,12 +59,23 @@ class QueryOptimizationMixin:
 
         return queryset
 
+    def visible_relations(self) -> QuerySet:
+        """Return the gift plans the requesting user may see.
+
+        Prefetched plans must go through ``accessible_by``: it hides the surprise plans from
+        their recipient, which an unfiltered ``Relation.objects`` would leak.
+        """
+        user = getattr(getattr(self, "request", None), "user", None)
+        if user is None or not user.is_authenticated:
+            return Relation.objects.none()
+        return Relation.objects.accessible_by(user)
+
     def optimize_person_queryset(self, queryset: QuerySet) -> QuerySet:
         """Optimize Person queryset."""
         return queryset.prefetch_related(
             "groups",
             "shared_with",
-            Prefetch("persons", queryset=Relation.objects.select_related("gift", "event")),
+            Prefetch("persons", queryset=self.visible_relations().select_related("gift", "event")),
         )
 
     def optimize_gift_queryset(self, queryset: QuerySet) -> QuerySet:
@@ -74,7 +85,9 @@ class QueryOptimizationMixin:
             "shared_with",
             Prefetch(
                 "gifts",
-                queryset=Relation.objects.select_related("person", "group", "event", "status"),
+                queryset=self.visible_relations().select_related(
+                    "person", "group", "event", "status"
+                ),
             ),
         )
 
@@ -84,9 +97,9 @@ class QueryOptimizationMixin:
             "shared_with",
             Prefetch(
                 "relations",
-                queryset=Relation.objects.select_related(
-                    "person", "group", "gift", "status"
-                ).prefetch_related("gift__tags"),
+                queryset=self.visible_relations()
+                .select_related("person", "group", "gift", "status")
+                .prefetch_related("gift__tags"),
             ),
         )
 

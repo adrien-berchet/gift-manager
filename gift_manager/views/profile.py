@@ -22,6 +22,7 @@ from django.views.generic import View
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
 from gift_manager.forms import ReminderPreferencesForm
+from gift_manager.mixins.notifications import settings_form_response
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import GiftTag
@@ -311,8 +312,11 @@ class UpdateViewPreferencesView(LoginRequiredMixin, View):
             profile.default_view_mobile = default_view_mobile
 
         profile.save()
-        messages.success(request, gettext("Display preferences saved successfully."))
-        return redirect("gift_manager:profile_detail")
+        return settings_form_response(
+            request,
+            gettext("Display preferences saved successfully."),
+            redirect_to="gift_manager:profile_detail",
+        )
 
 
 class RemoveFriendView(LoginRequiredMixin, View):

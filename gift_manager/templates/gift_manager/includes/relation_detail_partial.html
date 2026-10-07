@@ -55,6 +55,9 @@
                         <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
                             {{ object.status }}
                         </span>
+                        {% if object.is_surprise %}
+                        <span class="badge bg-warning text-dark ms-2"><i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Surprise" %}</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -210,6 +213,10 @@
     </div>
     {% endif %}
 
+    {% with relation=object %}
+    {% include "gift_manager/includes/relation_coordination_partial.html" %}
+    {% endwith %}
+
     <!-- Shared With -->
     {% if shared_users %}
     <div class="detail-section mb-4">
@@ -225,7 +232,12 @@
                     <i class="fas fa-user me-2 text-muted"></i>
                     <span>{{ shared_user.user.username }}</span>
                 </div>
-                <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+                <span>
+                    {% if shared_user.hidden_surprise %}
+                    <span class="badge bg-warning text-dark me-1" title="{% trans 'This gift plan is a surprise for them' %}"><i class="fas fa-eye-slash me-1" aria-hidden="true"></i>{% trans "Can't see it" %}</span>
+                    {% endif %}
+                    <span class="badge bg-outline-secondary">{{ shared_user.permission_label }}</span>
+                </span>
             </div>
             {% endfor %}
         </div>

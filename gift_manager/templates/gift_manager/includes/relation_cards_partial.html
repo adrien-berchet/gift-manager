@@ -56,6 +56,9 @@
                         {% if relation.has_visible_reaction %}
                         {% rating_stars relation.reaction_rating %}
                         {% endif %}
+                        {% if relation.claimed_by %}
+                        <span class="badge bg-info text-dark"><i class="fas fa-hand me-1" aria-hidden="true"></i>{% trans "Claimed by" %} {{ relation.claimed_by.username }}</span>
+                        {% endif %}
                         {% if relation.group %}
                         <span class="badge recipient-type-badge recipient-type-badge--group"
                               style="font-size:0.7rem;"

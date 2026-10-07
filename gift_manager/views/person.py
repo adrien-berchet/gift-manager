@@ -260,7 +260,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         relations = list(
             Relation.objects.accessible_by(self.request.user)
             .filter(Q(person=self.object) | Q(group__in=all_groups_with_ancestors))
-            .select_related("status", "gift", "event", "person", "group")
+            .select_related("status", "gift", "event", "person", "group", "claimed_by")
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
         )

@@ -18,13 +18,16 @@
 
     const config = {
         minLoadingDuration: 300, // Minimum time to show loading state
+        inPlaceSpinnerDuration: 400, // Minimum time the spinner shows on a button saving in place
+        savedFeedbackDuration: 1500, // How long a button shows "Saved" once the save succeeded
         skeletonCount: 3,        // Default number of skeleton items
         loadingText: {
             default: i18nText('loading', 'Loading...'),
             saving: i18nText('saving', 'Saving...'),
             deleting: i18nText('deleting', 'Deleting...'),
             submitting: i18nText('submitting', 'Submitting...'),
-            processing: i18nText('processing', 'Processing...')
+            processing: i18nText('processing', 'Processing...'),
+            saved: i18nText('saved', 'Saved')
         }
     };
 
@@ -119,6 +122,7 @@
         constructor() {
             this.activeLoadings = new Map();
             this.formLocks = new Map(); // form -> function releasing its lock
+            this.inPlaceFeedback = new WeakMap(); // button -> state to restore after the feedback
             this.init();
         }
 
@@ -185,7 +189,7 @@
             const unlock = (e) => {
                 const form = this.getSubmittedForm(e.detail.elt);
                 const release = form && this.formLocks.get(form);
-                if (release) release();
+                if (release) release(e.detail.successful === true);
             };
             ['htmx:afterRequest', 'htmx:responseError', 'htmx:sendError'].forEach((name) => {
                 document.body.addEventListener(name, unlock);
@@ -194,22 +198,89 @@
 
         // Lock a form for the duration of its submission. The lock is released by
         // the request-completion events, or on page unload / after a fallback timeout.
+        // A form marked data-keep-button-label saves in place: its button shows a spinner,
+        // then "Saved", without ever changing size (see beginInPlaceFeedback).
         lockForm(form, submitter) {
+            const inPlace = form.hasAttribute('data-keep-button-label');
             if (submitter) {
-                this.showButtonLoading(submitter, 'submitting');
+                if (inPlace) {
+                    this.beginInPlaceFeedback(submitter);
+                } else {
+                    this.showButtonLoading(submitter, 'submitting');
+                }
             }
             const restoreControls = this.disableFormControls(form, submitter);
 
-            const release = () => {
+            const release = (successful = false) => {
                 window.removeEventListener('beforeunload', release);
                 clearTimeout(timeoutId);
                 restoreControls();
-                if (submitter) this.hideButtonLoading(submitter);
+                if (submitter) {
+                    if (inPlace) {
+                        this.endInPlaceFeedback(submitter, successful === true);
+                    } else {
+                        this.hideButtonLoading(submitter);
+                    }
+                }
                 this.formLocks.delete(form);
             };
             window.addEventListener('beforeunload', release, { once: true });
             const timeoutId = setTimeout(release, 30000); // Fallback timeout
             this.formLocks.set(form, release);
+        }
+
+        // In-place save feedback: the button keeps the exact size it had (swapping its label
+        // for a spinner would resize it and shift the page), shows a spinner while the request
+        // runs, then a green "Saved" once it succeeded, then goes back to what it was.
+        beginInPlaceFeedback(button) {
+            this.resetInPlaceFeedback(button);
+            const box = button.getBoundingClientRect();
+            this.inPlaceFeedback.set(button, {
+                html: button.innerHTML,
+                className: button.className,
+                style: button.getAttribute('style'),
+                disabled: button.disabled,
+                startedAt: Date.now(),
+                timer: null
+            });
+            button.style.width = `${box.width}px`;
+            button.style.height = `${box.height}px`;
+            button.disabled = true;
+            // The original label stays available to assistive technology
+            button.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i>' +
+                `<span class="visually-hidden">${button.innerHTML}</span>`;
+        }
+
+        endInPlaceFeedback(button, successful) {
+            const state = this.inPlaceFeedback.get(button);
+            if (!state) return;
+            const wait = Math.max(0, config.inPlaceSpinnerDuration - (Date.now() - state.startedAt));
+            state.timer = setTimeout(() => {
+                if (!successful) {
+                    this.resetInPlaceFeedback(button);
+                    return;
+                }
+                button.disabled = state.disabled;
+                button.className = state.className.replace(/\bbtn-(?!sm\b|lg\b)\S+/g, '').trim() + ' btn-success';
+                button.innerHTML = '<i class="fas fa-check me-1" aria-hidden="true"></i>' +
+                    `<span>${config.loadingText.saved}</span>`;
+                state.timer = setTimeout(() => this.resetInPlaceFeedback(button), config.savedFeedbackDuration);
+            }, wait);
+        }
+
+        resetInPlaceFeedback(button) {
+            const state = this.inPlaceFeedback.get(button);
+            if (!state) return;
+            clearTimeout(state.timer);
+            button.innerHTML = state.html;
+            button.className = state.className;
+            button.disabled = state.disabled;
+            if (state.style === null) {
+                button.removeAttribute('style');
+            } else {
+                button.setAttribute('style', state.style);
+            }
+            this.inPlaceFeedback.delete(button);
         }
 
         // The submit button that triggered the request (spinner target)

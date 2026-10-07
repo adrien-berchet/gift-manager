@@ -34,6 +34,22 @@
 - Duplicating a plan and "Plan again" (recreating a repeating event's last occurrence as `Idea`
   plans, Birthday event included) live in `gift_manager/plan_repeat.py`; copies are owned by the
   creating user only and never carry reactions or sharing.
+- Plan coordination: `gift_manager/plan_coordination.py` holds the claim, release, comment and
+  surprise-flag rules on top of `PermissionService`; views in `views/plan_coordination.py` look plans
+  up through `accessible_by` (404, never 403, for users who cannot see a plan). A surprise plan
+  (`Relation.is_surprise`) is hidden from its recipient, and from every member of a targeted group
+  (nested groups included), inside `RelationQuerySet.accessible_by`; users who own the plan are never
+  hidden. Code that reads plans outside `accessible_by` (prefetches, reverse accessors, counts) must
+  use `Relation.objects.hidden_surprises_for(user)` or go through `accessible_by`;
+  `tests/test_surprise_surfaces.py` pins every surface. Losing access to a plan (the
+  `RelationPermission` row is deleted) releases the claim the user held.
+- Flash messages (`django.contrib.messages`) are shown as toasts over every full page: `base.html`
+  emits them as JSON (`#flash-messages`, plus a `<noscript>` alert) and `app-shell.js` passes them to
+  `showNotification`, which hides them after 5 seconds. They come from the lazy `flash_messages`
+  variable of the `display_messages` context processor (`gift_manager/context_processors.py`), from
+  `MESSAGES_DISPLAY_LEVEL` up (env var, default `info`,
+  see `.env.example`). HTMX responses must not queue messages: they carry their feedback in
+  `HX-Trigger` events (`showNotification`, `showWarning`) so nothing is left to show on a later page.
 
 ## Risk Areas
 

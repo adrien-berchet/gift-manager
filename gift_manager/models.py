@@ -13,17 +13,22 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
 from django.db import IntegrityError
+from django.db import connection
 from django.db import models
 from django.db import transaction
+from django.db.models import Exists
 from django.db.models import F
 from django.db.models import Func
+from django.db.models import OuterRef
 from django.db.models import Q
 from django.db.models import TextField
 from django.db.models import Value
+from django.db.models.expressions import RawSQL
 from django.db.models.functions import Coalesce
 from django.db.models.functions import Concat
 from django.db.models.functions import NullIf
 from django.db.models.query_utils import DeferredAttribute
+from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.urls import reverse
@@ -283,8 +288,61 @@ class EventManager(UserPermissionManager):
         )
 
 
+def recipient_groups_for(user) -> RawSQL:
+    """Return a subquery of the pks of the groups that ``user`` is a recipient of.
+
+    These are the groups of each person linked to ``user`` (``Person.user_link``) plus all of
+    their ancestor groups: a member of a nested group is a member of its parents. It is a
+    recursive query embedded in the caller's statement, so reading plans costs no extra query
+    whatever the depth of the hierarchy.
+    """
+    quote = connection.ops.quote_name
+    membership = Person.groups.through._meta  # noqa: SLF001
+    hierarchy = PersonGroup.parent_groups.through._meta  # noqa: SLF001
+    person_meta = Person._meta  # noqa: SLF001
+    person_fk = quote(membership.get_field("person").column)
+    group_fk = quote(membership.get_field("persongroup").column)
+    child_fk = quote(hierarchy.get_field("from_persongroup").column)
+    parent_fk = quote(hierarchy.get_field("to_persongroup").column)
+    sql = f"""
+        WITH RECURSIVE recipient_groups(group_id) AS (
+            SELECT membership.{group_fk}
+            FROM {quote(membership.db_table)} AS membership
+            JOIN {quote(person_meta.db_table)} AS person
+              ON person.{quote(person_meta.pk.column)} = membership.{person_fk}
+            WHERE person.{quote(person_meta.get_field("user_link").column)} = %s
+            UNION
+            SELECT hierarchy.{parent_fk}
+            FROM {quote(hierarchy.db_table)} AS hierarchy
+            JOIN recipient_groups ON hierarchy.{child_fk} = recipient_groups.group_id
+        )
+        SELECT group_id FROM recipient_groups
+    """  # noqa: S608 - identifiers come from model metadata, the user pk is a parameter
+    return RawSQL(sql, [user.pk])  # noqa: S611 - see the comment on ``sql``
+
+
 class RelationQuerySet(UserPermissionQuerySet):
     """QuerySet for Relation model with additional query methods."""
+
+    def hidden_surprises_for(self, user):
+        """Return the surprise plans ``user`` must never see, shared with them or not.
+
+        A surprise plan is hidden from its recipient: the person linked to ``user`` or a member
+        of the targeted group (nested groups included). A user who owns the plan is exempt.
+        """
+        owns_plan = RelationPermission.objects.filter(
+            relation=OuterRef("pk"), user=user, permission_type=PermissionLevel.OWNER
+        )
+        return (
+            self.filter(is_surprise=True)
+            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_groups_for(user)))
+            .exclude(Exists(owns_plan))
+        )
+
+    def accessible_by(self, user):
+        """Return the plans shared with ``user``, except the surprises addressed to them."""
+        hidden = self.model.objects.hidden_surprises_for(user).values("pk")
+        return super().accessible_by(user).exclude(pk__in=hidden)
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -318,6 +376,10 @@ class RelationManager(models.Manager):
     def accessible_by(self, user):
         """Return all objects accessible by a user (shared with the user)."""
         return self.get_queryset().accessible_by(user)
+
+    def hidden_surprises_for(self, user):
+        """Return the surprise plans hidden from a user (see the queryset method)."""
+        return self.get_queryset().hidden_surprises_for(user)
 
     def with_related_objects(self):
         """Return relations with all related objects selected."""
@@ -1612,6 +1674,18 @@ class Relation(models.Model):
     shared_with = models.ManyToManyField(
         User, through="RelationPermission", related_name="shared_relations"
     )
+    # Hides the plan from its recipient when the recipient is also a user of the app
+    is_surprise = models.BooleanField(default=False)
+    # The collaborator who is buying the gift. ``claimed_at`` can outlive ``claimed_by``
+    # when the claimer's account is deleted, so only ``claimed_by`` tells if it is claimed.
+    claimed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="claimed_relations",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
 
     # Custom manager
     objects = RelationManager()
@@ -1636,6 +1710,10 @@ class Relation(models.Model):
                 condition=Q(price__isnull=True) | Q(price__gte=0),
                 name="relation_price_non_negative",
             ),
+            models.CheckConstraint(
+                condition=Q(claimed_by__isnull=True) | Q(claimed_at__isnull=False),
+                name="relation_claimed_by_requires_claimed_at",
+            ),
         ]
 
     def __str__(self) -> str:
@@ -1657,6 +1735,11 @@ class Relation(models.Model):
 
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:relation_detail", kwargs={"pk": self.relation_id})
+
+    @property
+    def is_claimed(self) -> bool:
+        """Return whether a collaborator has claimed this gift plan."""
+        return self.claimed_by_id is not None
 
     @property
     def effective_url(self) -> str:
@@ -1777,6 +1860,47 @@ class RelationPermission(models.Model):
     @classproperty
     def filter_name(self):
         return "relation"
+
+
+class RelationComment(models.Model):
+    """A short comment left by a collaborator on a gift plan."""
+
+    relation = models.ForeignKey(Relation, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="relation_comments"
+    )
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at", "pk")
+
+    def __str__(self) -> str:
+        return f"{self.author} on {self.relation_id}: {str(self.text)[:30]}"
+
+
+@receiver(post_delete, sender=RelationPermission)
+def release_claim_when_access_is_removed(sender, instance, **kwargs):
+    """Release the claim a user holds on a plan once they lose access to it."""
+    Relation.objects.filter(pk=instance.relation_id, claimed_by_id=instance.user_id).update(
+        claimed_by=None, claimed_at=None
+    )
+
+
+@receiver(post_save, sender=Relation)
+def release_claim_of_hidden_recipient(sender, instance, created, **kwargs):
+    """Release the claim when its holder can no longer see the plan.
+
+    That happens when the plan becomes a surprise for them (the flag is ticked or the recipient
+    changes), so a plan is never stuck on a claimer who cannot even open it.
+    """
+    if created or not instance.is_surprise or instance.claimed_by_id is None:
+        return
+    claimer = instance.claimed_by
+    if Relation.objects.hidden_surprises_for(claimer).filter(pk=instance.pk).exists():
+        Relation.objects.filter(pk=instance.pk).update(claimed_by=None, claimed_at=None)
+        instance.claimed_by = None
+        instance.claimed_at = None
 
 
 # Signal handlers for GiftTag cache invalidation

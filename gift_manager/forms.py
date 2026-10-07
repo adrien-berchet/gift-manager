@@ -18,10 +18,15 @@ from .group_hierarchy_service import GroupHierarchyService
 from .models import Event
 from .models import Gift
 from .models import GiftTag
+from .models import PermissionLevel
 from .models import Person
 from .models import PersonGroup
 from .models import Profile
 from .models import Relation
+from .plan_coordination import can_be_surprise
+from .plan_coordination import can_be_surprise_for_owners
+from .plan_coordination import default_surprise_for
+from .services import PermissionService
 from .sharing_service import RelationExposureDenied
 from .sharing_service import SharingService
 from .statuses import can_rate_status
@@ -714,6 +719,59 @@ class PersonGroupAddMultipleChildGroupsForm(forms.Form):
         parent_group.save()
 
 
+class SurpriseFieldMixin:
+    """Add the ``is_surprise`` checkbox to a gift plan form.
+
+    New plans start with ``default_surprise_for`` the recipient known when the form is built.
+    The checkbox is dropped for users who may not change the flag (below editor on an existing
+    plan) and where it cannot apply (the recipient is one of the plan's owners); in that last
+    case a stored ``True`` is cleared on save whatever was submitted. Must come first in the
+    bases; subclasses set ``self.user`` before calling ``super().__init__``.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        user = getattr(self, "user", None)
+        editable = bool(user and user.is_authenticated)
+        if editable and self.instance.pk:
+            editable = PermissionService.get_effective_permission(
+                self.instance, user
+            ) >= PermissionLevel.EDITOR and can_be_surprise(self.instance)
+        elif editable:
+            recipient = self._surprise_recipient()
+            editable = can_be_surprise_for_owners(recipient, [user.id])
+            if editable:
+                self.initial.setdefault("is_surprise", default_surprise_for(recipient, user))
+        if not editable:
+            self.fields.pop("is_surprise", None)
+
+    def _surprise_recipient(self) -> Person | PersonGroup | None:
+        """Return the recipient known when a new plan form is built (if any)."""
+        try:
+            person, group = resolve_recipient_choice(self.initial.get("recipient", ""), self.user)
+        except DjangoValidationError:
+            return None
+        return person or group
+
+    def _surprise_owner_ids(self) -> set[int]:
+        """Return the users who own the plan: the creator while the plan is new."""
+        if self.instance.pk:
+            return {
+                user_id
+                for user_id, level in PermissionService.get_permission_map(self.instance).items()
+                if level == PermissionLevel.OWNER
+            }
+        return {self.user.id} if self.user and self.user.is_authenticated else set()
+
+    def _post_clean(self) -> None:
+        # The instance only carries the submitted recipient once the ModelForm built it
+        super()._post_clean()
+        if self.errors or not self.instance.is_surprise:
+            return
+        if not can_be_surprise_for_owners(self.instance.recipient, self._surprise_owner_ids()):
+            self.instance.is_surprise = False
+
+
 class RelationReassignmentMixin:
     """Refuse edits that would show a shared relation's new objects to its audience.
 
@@ -761,11 +819,15 @@ class RelationReassignmentMixin:
 
 
 class PersonRelationForm(
-    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+    SurpriseFieldMixin,
+    GiftDefaultsPlaceholderMixin,
+    RelationReassignmentMixin,
+    BaseFormMixin,
+    forms.ModelForm,
 ):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "url", "price", "event", "status", "due_date"]
+        fields = ["gift", "comment", "url", "price", "event", "status", "due_date", "is_surprise"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
             **link_price_widgets(),
@@ -779,6 +841,7 @@ class PersonRelationForm(
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
+            "is_surprise": gettext_lazy("Surprise"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -788,6 +851,11 @@ class PersonRelationForm(
         self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
         self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
+
+    def _surprise_recipient(self) -> Person | None:
+        if not (self.person_id and self.user and self.user.is_authenticated):
+            return None
+        return Person.objects.accessible_by(self.user).filter(person_id=self.person_id).first()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -812,11 +880,15 @@ class PersonRelationForm(
 
 
 class PersonGroupRelationForm(
-    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+    SurpriseFieldMixin,
+    GiftDefaultsPlaceholderMixin,
+    RelationReassignmentMixin,
+    BaseFormMixin,
+    forms.ModelForm,
 ):
     class Meta:
         model = Relation
-        fields = ["gift", "comment", "url", "price", "event", "status", "due_date"]
+        fields = ["gift", "comment", "url", "price", "event", "status", "due_date", "is_surprise"]
         widgets = {
             "comment": forms.Textarea(attrs={"rows": 3}),
             **link_price_widgets(),
@@ -830,6 +902,7 @@ class PersonGroupRelationForm(
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
+            "is_surprise": gettext_lazy("Surprise"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -839,6 +912,11 @@ class PersonGroupRelationForm(
         self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
         self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         self.fields["event"].required = False
+
+    def _surprise_recipient(self) -> PersonGroup | None:
+        if not (self.group_id and self.user and self.user.is_authenticated):
+            return None
+        return PersonGroup.objects.accessible_by(self.user).filter(group_id=self.group_id).first()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -923,7 +1001,11 @@ class GiftTagForm(BaseFormMixin, forms.ModelForm):
 
 
 class GiftRelationForm(
-    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+    SurpriseFieldMixin,
+    GiftDefaultsPlaceholderMixin,
+    RelationReassignmentMixin,
+    BaseFormMixin,
+    forms.ModelForm,
 ):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
@@ -934,7 +1016,16 @@ class GiftRelationForm(
 
     class Meta:
         model = Relation
-        fields = ["recipient", "comment", "url", "price", "event", "status", "due_date"]
+        fields = [
+            "recipient",
+            "comment",
+            "url",
+            "price",
+            "event",
+            "status",
+            "due_date",
+            "is_surprise",
+        ]
         widgets = {
             # ISO format: an <input type="date"> ignores values in the locale's format
             "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -947,6 +1038,7 @@ class GiftRelationForm(
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
+            "is_surprise": gettext_lazy("Surprise"),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1100,7 +1192,11 @@ class RelationReactionForm(BaseFormMixin, forms.ModelForm):
 
 
 class RelationForm(
-    GiftDefaultsPlaceholderMixin, RelationReassignmentMixin, BaseFormMixin, forms.ModelForm
+    SurpriseFieldMixin,
+    GiftDefaultsPlaceholderMixin,
+    RelationReassignmentMixin,
+    BaseFormMixin,
+    forms.ModelForm,
 ):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
@@ -1122,6 +1218,7 @@ class RelationForm(
             "event",
             "status",
             "due_date",
+            "is_surprise",
             *REACTION_FIELD_NAMES,
         ]
         widgets = {
@@ -1137,6 +1234,7 @@ class RelationForm(
             "event": gettext_lazy("Event"),
             "status": gettext_lazy("Status"),
             "due_date": gettext_lazy("Due date"),
+            "is_surprise": gettext_lazy("Surprise"),
         }
 
     def __init__(self, *args, **kwargs):

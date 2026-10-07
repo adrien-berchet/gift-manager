@@ -24,6 +24,16 @@
 {% include "gift_manager/includes/forms/field.html" with field=form.event %}
 {% include "gift_manager/includes/forms/field.html" with field=form.status %}
 {% include "gift_manager/includes/forms/field.html" with field=form.due_date %}
+{% if form.is_surprise or form.recipient and not form.instance.pk %}
+<div id="surprise-field"
+     {% if form.recipient and not form.instance.pk %}hx-get="{% url 'gift_manager:surprise_default_hint' %}"
+     hx-trigger="change from:#{{ form.recipient.id_for_label }}"
+     hx-include="#{{ form.recipient.id_for_label }}"
+     hx-target="this"
+     hx-swap="innerHTML"{% endif %}>
+  {% if form.is_surprise %}{% include "gift_manager/includes/forms/surprise_field.html" with show=True checked=form.is_surprise.value %}{% endif %}
+</div>
+{% endif %}
 {% if form.reaction_rating %}
 <div class="reaction-fields" data-reaction-fields{% if not form.reaction_section_visible %} hidden{% endif %}>
   <h3 class="h6 mt-3">{% trans "Reaction" %}</h3>

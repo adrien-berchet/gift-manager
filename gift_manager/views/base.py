@@ -25,13 +25,36 @@ from django.views.generic import UpdateView
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Profile
+from gift_manager.models import Relation
 from gift_manager.permissions import PERMISSION_LEVELS
+from gift_manager.plan_coordination import hidden_recipient_ids
+from gift_manager.plan_coordination import surprise_sharing_warning
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import SharingService
 from gift_manager.templatetags.custom_filters import format_price
 from gift_manager.views.common import get_user
 
 logger = logging.getLogger(__name__)
+
+
+def report_sharing_warning(request, response, warning: str) -> None:
+    """Show a sharing warning to the sharer: a toast for HTMX saves, a flash message otherwise.
+
+    It travels in its own ``showWarning`` event, next to the success notification the response
+    already carries, so the two do not overwrite each other.
+    """
+    if not warning:
+        return
+    if request.headers.get("HX-Request") != "true":
+        messages.warning(request, warning)
+        return
+    raw = response.headers.get("HX-Trigger", "")
+    try:
+        triggers = json.loads(raw) if raw else {}
+    except ValueError:
+        triggers = {raw: {}}  # a plain event name
+    triggers["showWarning"] = {"message": warning}
+    response["HX-Trigger"] = json.dumps(triggers)
 
 
 class HTMXResponseMixin:
@@ -229,12 +252,21 @@ class SharedUsersMixin:
 
         # Get the users with whom this object is shared, with their permissions
         permissions = PermissionService.get_permission_map(self.object)
+        # A surprise plan is hidden from its recipient: say so next to the person it is shared with
+        hidden_ids = (
+            hidden_recipient_ids(self.object) if isinstance(self.object, Relation) else set()
+        )
         shared_users = []
         for user in self.object.shared_with.exclude(id=self.request.user.id).order_by("username"):
             permission = permissions.get(user.id, PermissionLevel.NONE)
             permission_label = PermissionLevel.get_label(permission)
             shared_users.append(
-                {"user": user, "permission": permission, "permission_label": permission_label}
+                {
+                    "user": user,
+                    "permission": permission,
+                    "permission_label": permission_label,
+                    "hidden_surprise": user.id in hidden_ids,
+                }
             )
 
         context["shared_users"] = shared_users
@@ -305,6 +337,7 @@ class CreatePermissionMixin:
         )
 
         # Process the shared users
+        granted_users = []
         for key, value in self.request.POST.items():
             if (
                 key.startswith("share_with_") and value
@@ -326,7 +359,11 @@ class CreatePermissionMixin:
 
                 # Create or update the permission for this user (cascading to related objects)
                 SharingService.grant(self.request.user, self.object, user, permission)
+                granted_users.append(user)
 
+        report_sharing_warning(
+            self.request, response, surprise_sharing_warning(self.object, granted_users)
+        )
         return response
 
 
@@ -480,11 +517,13 @@ class EditPermissionMixin:
         with transaction.atomic():
             response = super().form_valid(form)
             with PermissionService.locked_for_permission_change(self.object):
-                self._process_main_form_permission_fields()
+                warning = self._process_main_form_permission_fields()
+        report_sharing_warning(self.request, response, warning)
         return response
 
-    def _process_main_form_permission_fields(self) -> None:
+    def _process_main_form_permission_fields(self) -> str:
         """Apply non-JavaScript edit-time sharing changes from permission_<id> fields."""
+        granted_users = []
         for key, value in self.request.POST.items():
             if not key.startswith("permission_"):
                 continue
@@ -520,6 +559,7 @@ class EditPermissionMixin:
                         permission_level,
                     )
                     SharingService.grant(self.request.user, self.object, user, permission_level)
+                    granted_users.append(user)
             except PermissionDenied:
                 raise
             except User.DoesNotExist:
@@ -528,6 +568,8 @@ class EditPermissionMixin:
             except (ValueError, TypeError) as e:
                 logger.warning("Invalid permission update from main form: %s", e)
                 raise PermissionDenied(gettext("Invalid permission value.")) from e
+
+        return surprise_sharing_warning(self.object, granted_users)
 
     def post(self, request, *args, **kwargs):  # noqa: PLR0911
         self.object = self.get_object()
@@ -588,6 +630,7 @@ class EditPermissionMixin:
                     new_permission,
                 )
                 SharingService.grant(request.user, self.object, user, new_permission)
+            warning = surprise_sharing_warning(self.object, [user])
 
             permission_label = PermissionLevel.get_label(new_permission)
             message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
@@ -608,11 +651,16 @@ class EditPermissionMixin:
                         "update_url": request.path,
                     },
                 )
-                response["HX-Trigger"] = json.dumps({"showSuccess": message})
+                triggers = {"showSuccess": message}
+                if warning:
+                    triggers["showNotification"] = {"message": warning, "type": "warning"}
+                response["HX-Trigger"] = json.dumps(triggers)
                 return response
 
             # Fallback for non-HTMX requests
             messages.success(request, message)
+            if warning:
+                messages.warning(request, warning)
             return self.get(request)
 
         except User.DoesNotExist:
@@ -681,6 +729,7 @@ class EditPermissionMixin:
                     permission,
                 )
                 SharingService.grant(request.user, self.object, user, permission)
+            warning = surprise_sharing_warning(self.object, [user])
 
             message = gettext("Object shared with '{username}' successfully").format(
                 username=username
@@ -700,11 +749,16 @@ class EditPermissionMixin:
                         "update_url": request.path,
                     },
                 )
-                response["HX-Trigger"] = json.dumps({"showSuccess": message})
+                triggers = {"showSuccess": message}
+                if warning:
+                    triggers["showNotification"] = {"message": warning, "type": "warning"}
+                response["HX-Trigger"] = json.dumps(triggers)
                 return response
 
             # Fallback for non-HTMX requests
             messages.success(request, message)
+            if warning:
+                messages.warning(request, warning)
             return self.get(request)
 
         except User.DoesNotExist:
@@ -956,20 +1010,29 @@ class DeleteConfirmationMixin:
 
         return details
 
+    def _count_visible(self, related_manager) -> int:
+        """Count the related objects, counting only the gift plans the user may see."""
+        queryset = related_manager.all()
+        if queryset.model is Relation:
+            queryset = Relation.objects.accessible_by(self.request.user).filter(
+                pk__in=queryset.values("pk")
+            )
+        return queryset.count()
+
     def get_related_objects(self):
         """Return information about related objects that will be affected."""
         related = []
 
         # Check for common relationships
         if hasattr(self.object, "gifts") and hasattr(self.object.gifts, "count"):
-            count = self.object.gifts.count()
+            count = self._count_visible(self.object.gifts)
             if count > 0:
                 related.append(
                     {"name": "gift", "name_plural": "gifts", "count": count, "icon": "gift"}
                 )
 
         if hasattr(self.object, "events") and hasattr(self.object.events, "count"):
-            count = self.object.events.count()
+            count = self._count_visible(self.object.events)
             if count > 0:
                 related.append(
                     {
@@ -981,7 +1044,7 @@ class DeleteConfirmationMixin:
                 )
 
         if hasattr(self.object, "relations") and hasattr(self.object.relations, "count"):
-            count = self.object.relations.count()
+            count = self._count_visible(self.object.relations)
             if count > 0:
                 related.append(
                     {

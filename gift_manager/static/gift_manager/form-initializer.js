@@ -383,6 +383,10 @@
                         return response.json();
                     })
                     .then((data) => {
+                        // A surprise plan is hidden from the person it was just shared with
+                        if (data.warning && window.showNotification) {
+                            window.showNotification(data.warning, "warning");
+                        }
                         // Show success feedback (optional)
                         if (statusSpan) {
                             statusSpan.innerHTML = '<i class="fas fa-check text-success"></i>';

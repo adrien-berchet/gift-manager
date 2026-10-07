@@ -58,7 +58,7 @@ status and notes to reflect the move.
 | 0004 | Richer Gift Details (Link, Price, Image) | Implemented | Gifts | Optional URL and price on gifts and plans, with budget totals; image upload deferred. Moved to `implemented/`. |
 | 0005 | Recipient Gift History And Repeat-Gift Warning | Implemented | Recipients | Yearly timeline with reactions and duplicate-gift warning in the plan form. Moved to `implemented/`. |
 | 0006 | Recipient Notes And Interests | Implemented | Recipients | Notes and interest tags on people, matched against gift tags. Moved to `implemented/`. |
-| 0007 | Coordination On Shared Gift Plans | Proposed | Sharing | Claimed-by marker, plan comments and surprise flag. |
+| 0007 | Coordination On Shared Gift Plans | Implemented | Sharing | Claimed-by marker, plan comments and surprise flag hidden from the recipient. Moved to `implemented/`. |
 | 0008 | Duplicate And Repeat Gift Plans | Implemented | Gift Plans | Duplicate action and "plan again" for recurring and birthday events. Moved to `implemented/`. |
 | 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
 | 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |

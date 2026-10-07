@@ -27,8 +27,7 @@ def test_ci_security_scans_are_blocking_and_locked():
     assert "uv run --locked --extra test bandit" in ci
     assert "--severity-level high" in ci
     assert "scripts/audit_dependencies.sh" in ci
-    assert "--output pip-audit-report.json" in ci
-    assert "--format json" in ci
+    assert "--json-output pip-audit-report.json" in ci
     assert "id: pip-audit-production" in pre_commit
     assert "entry: scripts/audit_dependencies.sh" in pre_commit
     assert "pass_filenames: false" in pre_commit
@@ -39,6 +38,7 @@ def test_ci_security_scans_are_blocking_and_locked():
     assert "--locked" in audit_script
     assert "uv run --locked --extra test pip-audit" in audit_script
     assert "--no-deps" in audit_script
+    assert "--format json" in audit_script
     assert "--disable-pip" in audit_script
     assert '"$@"' in audit_script
     assert "makemigrations --check --dry-run" in ci

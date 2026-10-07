@@ -1,0 +1,79 @@
+{% load i18n %}
+<div id="relation-coordination" class="detail-section mb-4">
+    <h6 class="detail-section-title text-muted mb-3">
+        <i class="fas fa-people-group me-2" aria-hidden="true"></i>{% trans "Coordination" %}
+    </h6>
+
+    {% if error %}
+    <div class="alert alert-warning py-2" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+        {% if coordination.claimed_by %}
+        <span class="badge bg-info text-dark">
+            <i class="fas fa-hand me-1" aria-hidden="true"></i>{% trans "Claimed by" %} {{ coordination.claimed_by.username }}
+        </span>
+        {% if coordination.claimed_at %}
+        <small class="text-muted">{{ coordination.claimed_at|date:"DATE_FORMAT" }}</small>
+        {% endif %}
+        {% if coordination.can_release %}
+        <form method="post"
+              action="{% url 'gift_manager:relation_release' pk=relation.relation_id %}"
+              hx-post="{% url 'gift_manager:relation_release' pk=relation.relation_id %}"
+              hx-target="#relation-coordination"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary btn-sm">{% trans "Release" %}</button>
+        </form>
+        {% endif %}
+        {% elif coordination.can_claim %}
+        <form method="post"
+              action="{% url 'gift_manager:relation_claim' pk=relation.relation_id %}"
+              hx-post="{% url 'gift_manager:relation_claim' pk=relation.relation_id %}"
+              hx-target="#relation-coordination"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm">{% trans "I'll take this" %}</button>
+        </form>
+        {% endif %}
+    </div>
+
+    <ul class="list-unstyled mb-3">
+        {% for item in coordination.comments %}
+        <li class="border-bottom py-2">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div>
+                    <strong>{{ item.obj.author.username|default:"—" }}</strong>
+                    <small class="text-muted ms-1">{{ item.obj.created_at|date:"DATE_FORMAT" }} {{ item.obj.created_at|time:"H:i" }}</small>
+                    <div>{{ item.obj.text|linebreaksbr }}</div>
+                </div>
+                {% if item.can_delete %}
+                <form method="post"
+                      action="{% url 'gift_manager:relation_comment_delete' pk=relation.relation_id comment_id=item.obj.pk %}"
+                      hx-post="{% url 'gift_manager:relation_comment_delete' pk=relation.relation_id comment_id=item.obj.pk %}"
+                      hx-target="#relation-coordination"
+                      hx-swap="outerHTML">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="{% trans 'Delete comment' %}">
+                        <i class="fas fa-trash" aria-hidden="true"></i>
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+
+    {% if coordination.can_comment %}
+    <form method="post"
+          action="{% url 'gift_manager:relation_comment_add' pk=relation.relation_id %}"
+          hx-post="{% url 'gift_manager:relation_comment_add' pk=relation.relation_id %}"
+          hx-target="#relation-coordination"
+          hx-swap="outerHTML">
+        {% csrf_token %}
+        <label for="relation-comment-text" class="form-label">{% trans "Comment" %}</label>
+        <textarea id="relation-comment-text" name="text" class="form-control mb-2" rows="2" maxlength="2000" required>{{ comment_text }}</textarea>
+        <button type="submit" class="btn btn-outline-primary btn-sm">{% trans "Send" %}</button>
+    </form>
+    {% endif %}
+</div>

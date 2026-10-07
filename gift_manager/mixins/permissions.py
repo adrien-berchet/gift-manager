@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 
 from gift_manager.models import PermissionLevel
+from gift_manager.plan_coordination import surprise_sharing_warning
 from gift_manager.services import PermissionService
 from gift_manager.sharing_service import SharingService
 
@@ -431,6 +432,7 @@ class PermissionUpdateMixin:
             friend = User.objects.get(id=user_id)
 
             # Update or remove permission, serialized with other changes on this object
+            warning = ""
             with PermissionService.locked_for_permission_change(self.object):
                 if permission == "not_shared":
                     PermissionService.assert_can_manage_permission(
@@ -454,8 +456,9 @@ class PermissionUpdateMixin:
                         f"Updated permission to {permission} for user {friend.username} "
                         f"on {self.object}"
                     )
+                    warning = surprise_sharing_warning(self.object, [friend])
 
-            return self._permission_update_success_response(request)
+            return self._permission_update_success_response(request, warning=warning)
 
         except User.DoesNotExist:
             logger.error(f"User {user_id} not found")
@@ -471,13 +474,28 @@ class PermissionUpdateMixin:
             logger.error(f"Error updating permission: {e}", exc_info=True)
             return self._permission_update_error_response(request, str(e), 500)
 
-    def _permission_update_success_response(self, request) -> HttpResponse:
-        """Return the successful response for a permission update request."""
+    def _permission_update_success_response(self, request, warning: str = "") -> HttpResponse:
+        """Return the successful response for a permission update request.
+
+        ``warning`` tells the sharer that a surprise plan is hidden from the person they just
+        shared it with; it is shown as a notification.
+        """
         if request.headers.get("X-Permission-Update"):
-            return JsonResponse({"status": "success", "message": "Permission updated"})
+            data = {"status": "success", "message": "Permission updated"}
+            if warning:
+                data["warning"] = warning
+            return JsonResponse(data)
 
         response = HttpResponse(status=204)
-        response["HX-Trigger"] = "permissionUpdated"
+        if warning:
+            response["HX-Trigger"] = json.dumps(
+                {
+                    "permissionUpdated": "",
+                    "showNotification": {"message": warning, "type": "warning"},
+                }
+            )
+        else:
+            response["HX-Trigger"] = "permissionUpdated"
         return response
 
     def _permission_update_error_response(self, request, message: str, status: int) -> HttpResponse:

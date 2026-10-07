@@ -2,7 +2,15 @@
 
 ## Status
 
-Proposed
+Implemented
+
+Decisions: any user with access to a plan (viewers included) can claim it and comment; one
+claimer at a time, released by the claimer or a plan owner; owners and editors set the surprise
+flag. A surprise plan is hidden from the linked recipient, or from every member of the targeted
+group (nested groups included), inside `RelationQuerySet.accessible_by`; a user who owns the plan
+is never hidden. The flag defaults on for new plans addressed to another app user. The rules live
+in `gift_manager/plan_coordination.py`. See
+`docs/superpowers/specs/2026-10-05-shared-plan-coordination-design.md`.
 
 ## Summary
 
@@ -69,5 +77,5 @@ Recommended starting context:
 
 ## Open Questions
 
-- Can viewers comment?
-- Should the surprise flag be the default when the recipient is a user?
+Resolved: viewers can comment and claim; the surprise flag defaults on when the recipient is
+another user (person or group member).
