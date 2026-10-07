@@ -2,10 +2,12 @@
 
 import uuid
 from datetime import date
+from datetime import datetime
 from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
+from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Case
@@ -771,18 +773,61 @@ def _get_relation_status_by_slug(status_slug: str) -> RelationStatus:
     raise RelationStatus.DoesNotExist
 
 
-def _relation_quick_action_response(message: str, *extra_events) -> HttpResponse:
+def _relation_quick_action_response(
+    message: str, *extra_events, undo: dict | None = None
+) -> HttpResponse:
     """Return a no-swap HTMX response that refreshes card lists."""
+    notification = {"message": message, "type": "success"}
+    if undo:
+        notification["undo"] = undo
     response = HttpResponse("")
     response["HX-Reswap"] = "none"
     response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
         [
             "list:update",
-            {"showNotification": {"message": message, "type": "success"}},
+            {"showNotification": notification},
             *extra_events,
         ]
     )
     return response
+
+
+QUICK_ACTION_UNDO_SALT = "gift_manager.relation_quick_action_undo"
+QUICK_ACTION_UNDO_MAX_AGE = 300
+UNDOABLE_QUICK_ACTIONS = {"given", "purchased", "planned", "abandoned", "set_date"}
+
+
+def _relation_undo_state(relation, *, field: str) -> dict:
+    """Return the JSON-safe values an undo token tracks for a relation."""
+    if field == "due_date":
+        return {"due_date": relation.due_date.isoformat() if relation.due_date else None}
+    changed_at = relation.status_changed_at
+    return {
+        "status": relation.status_id,
+        "status_changed_at": changed_at.isoformat() if changed_at else None,
+    }
+
+
+def _build_quick_action_undo(relation, user, action: str, previous: dict) -> dict:
+    """Return the notification payload that lets the user revert a quick action."""
+    field = "due_date" if action == "set_date" else "status"
+    token = signing.dumps(
+        {
+            "relation": str(relation.relation_id),
+            "user": user.pk,
+            "field": field,
+            "previous": previous,
+            "current": _relation_undo_state(relation, field=field),
+        },
+        salt=QUICK_ACTION_UNDO_SALT,
+    )
+    return {
+        "url": reverse(
+            "gift_manager:relation_quick_action_undo", kwargs={"pk": relation.relation_id}
+        ),
+        "token": token,
+        "label": gettext("Undo"),
+    }
 
 
 def _available_relation_quick_action_names(relation) -> set[str]:
@@ -886,6 +931,8 @@ def relation_quick_action(request, pk):
             status=400,
         )
 
+    field = "due_date" if action == "set_date" else "status"
+    previous = _relation_undo_state(relation, field=field)
     try:
         message = _apply_relation_quick_action(relation, request.user, action, request.POST)
     except ValueError as exc:
@@ -895,10 +942,79 @@ def relation_quick_action(request, pk):
             {"error": gettext("Required relation status is not configured.")},
             status=400,
         )
+    undo = (
+        _build_quick_action_undo(relation, request.user, action, previous)
+        if action in UNDOABLE_QUICK_ACTIONS
+        else None
+    )
     if action in REACTION_PROMPT_ACTIONS:
         prompt_url = reverse("gift_manager:relation_reaction", kwargs={"pk": relation.relation_id})
-        return _relation_quick_action_response(message, {"reaction:prompt": {"url": prompt_url}})
-    return _relation_quick_action_response(message)
+        return _relation_quick_action_response(
+            message, {"reaction:prompt": {"url": prompt_url}}, undo=undo
+        )
+    return _relation_quick_action_response(message, undo=undo)
+
+
+def _restore_relation_from_undo(relation, payload: dict) -> bool:
+    """Restore the previous values when the relation still matches the undone state."""
+    field = payload["field"]
+    if _relation_undo_state(relation, field=field) != payload["current"]:
+        return False
+
+    previous = payload["previous"]
+    if field == "due_date":
+        updates = {
+            "due_date": date.fromisoformat(previous["due_date"]) if previous["due_date"] else None
+        }
+    else:
+        changed_at = previous["status_changed_at"]
+        updates = {
+            "status_id": previous["status"],
+            "status_changed_at": datetime.fromisoformat(changed_at) if changed_at else None,
+        }
+    # A queryset update keeps status_changed_at: save() would stamp it with now().
+    Relation.objects.filter(pk=relation.pk).update(**updates)
+    return True
+
+
+@login_required
+@require_POST
+def relation_quick_action_undo(request, pk):
+    """Revert a quick action while the plan still has the values the action produced."""
+    try:
+        payload = signing.loads(
+            request.POST.get("token", ""),
+            salt=QUICK_ACTION_UNDO_SALT,
+            max_age=QUICK_ACTION_UNDO_MAX_AGE,
+        )
+    except signing.BadSignature:
+        return JsonResponse({"error": gettext("This change can no longer be undone.")}, status=400)
+    if payload.get("relation") != str(pk) or payload.get("user") != request.user.pk:
+        return JsonResponse({"error": gettext("This change can no longer be undone.")}, status=400)
+
+    relation = get_object_or_404(Relation.objects.accessible_by(request.user), relation_id=pk)
+    if PermissionService.get_effective_permission(relation, request.user) < PermissionLevel.EDITOR:
+        return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
+
+    with transaction.atomic():
+        # Lock the row so a concurrent edit cannot slip in between the check and the restore.
+        relation = Relation.objects.select_for_update().get(pk=relation.pk)
+        if not _restore_relation_from_undo(relation, payload):
+            return JsonResponse(
+                {"error": gettext("This gift plan changed since, so the change was not undone.")},
+                status=409,
+            )
+
+    response = HttpResponse("")
+    response["HX-Reswap"] = "none"
+    response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
+        [
+            "list:update",
+            "reaction:cancel",
+            {"showNotification": {"message": gettext("Change undone."), "type": "success"}},
+        ]
+    )
+    return response
 
 
 def _reaction_form_response(request, relation, form, *, status=200) -> HttpResponse:

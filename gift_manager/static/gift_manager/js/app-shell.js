@@ -79,7 +79,54 @@
         // Notification system
         document.addEventListener('showNotification', function(e) {
             const data = e.detail;
-            showNotification(data.message, data.type || 'info');
+            const options = {};
+            if (data.undo) {
+                options.action = {
+                    label: data.undo.label || i18n.undo,
+                    onClick: function() {
+                        submitUndo(data.undo);
+                    }
+                };
+            }
+            showNotification(data.message, data.type || 'info', options);
+        });
+
+        // Revert a low-risk action: the server re-checks permissions and the plan's state
+        function submitUndo(undo) {
+            fetch(undo.url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'HX-Request': 'true',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: new URLSearchParams({ token: undo.token }).toString()
+            })
+                .then(function(response) {
+                    if (!response.ok) {
+                        return response.json().catch(function() { return {}; }).then(function(body) {
+                            showNotification(body.error || i18n.genericError, 'error');
+                        });
+                    }
+                    const header = response.headers.get('HX-Trigger');
+                    const events = header ? JSON.parse(header) : {};
+                    Object.keys(events).forEach(function(eventName) {
+                        document.dispatchEvent(new CustomEvent(eventName, { detail: events[eventName] || {} }));
+                    });
+                })
+                .catch(function(error) {
+                    console.error('Could not undo the change:', error);
+                    showNotification(i18n.genericError, 'error');
+                });
+        }
+
+        // Undoing a "given"/"abandoned" action closes the reaction prompt it opened
+        document.addEventListener('reaction:cancel', function() {
+            const panel = document.getElementById('editPanel');
+            if (panel && panel.querySelector('#relation-reaction-form')) {
+                document.dispatchEvent(new CustomEvent('offcanvas:close', { detail: { target: 'editPanel' } }));
+            }
         });
 
         // A warning that travels next to the success notification of the same response
@@ -96,7 +143,9 @@
         let toastCounter = 0;
 
         // Global notification function
-        window.showNotification = function(message, type = 'info') {
+        // options.action ({label, onClick}) adds a button, e.g. Undo, and makes the toast polite
+        window.showNotification = function(message, type = 'info', options = {}) {
+            const action = options.action;
             // Create toast notification
             const toastContainer = document.getElementById('toastContainer') || createToastContainer();
 
@@ -110,12 +159,13 @@
             }[type] || 'fas fa-info-circle text-info';
 
             const toastHtml = `
-                <div id="${toastId}" class="toast align-items-center border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                <div id="${toastId}" class="toast align-items-center border-0" role="${action ? 'status' : 'alert'}" aria-live="${action ? 'polite' : 'assertive'}" aria-atomic="true">
                     <div class="d-flex">
                         <div class="toast-body d-flex align-items-center">
                             <i class="${iconClass} me-2"></i>
                             ${escapeNotificationHtml(message)}
                         </div>
+                        ${action ? `<button type="button" class="btn btn-sm btn-link m-auto flex-shrink-0" data-toast-action>${escapeNotificationHtml(action.label)}</button>` : ''}
                         <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="${escapeNotificationHtml(i18n.close)}"></button>
                     </div>
                 </div>
@@ -125,6 +175,14 @@
             const toastElement = document.getElementById(toastId);
             const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
             toast.show();
+
+            const actionButton = toastElement.querySelector('[data-toast-action]');
+            if (actionButton) {
+                actionButton.addEventListener('click', function() {
+                    toast.hide();
+                    action.onClick();
+                });
+            }
 
             // Remove toast element after it's hidden
             toastElement.addEventListener('hidden.bs.toast', function() {

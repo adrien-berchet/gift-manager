@@ -4192,6 +4192,22 @@ msgstr "Projet de cadeau abandonné."
 msgid "You cannot edit this gift plan."
 msgstr "Vous ne pouvez pas modifier ce projet de cadeau."
 
+#: gift_manager/templates/gift_manager/base.html gift_manager/views/relation.py
+msgid "Undo"
+msgstr "Annuler"
+
+#: gift_manager/views/relation.py
+msgid "Change undone."
+msgstr "Modification annulée."
+
+#: gift_manager/views/relation.py
+msgid "This change can no longer be undone."
+msgstr "Cette modification ne peut plus être annulée."
+
+#: gift_manager/views/relation.py
+msgid "This gift plan changed since, so the change was not undone."
+msgstr "Ce projet de cadeau a changé depuis, la modification n'a donc pas été annulée."
+
 #: gift_manager/views/relation.py:885
 msgid "This quick action is not available for this gift plan."
 msgstr "Cette action rapide n'est pas disponible pour ce projet de cadeau."

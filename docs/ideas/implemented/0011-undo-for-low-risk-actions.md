@@ -2,7 +2,17 @@
 
 ## Status
 
-Proposed
+Implemented
+
+Gift-plan card quick actions (Given, Purchased, Abandon, Set date) now show a toast
+with an Undo button for 5 seconds. `showNotification` in `app-shell.js` accepts
+`options.action` ({label, onClick}); the toast is then `role="status"` /
+`aria-live="polite"`. `relation_quick_action` returns a signed token (5 minutes max
+age, bound to the user and plan) holding the previous and resulting values, and
+`relation_quick_action_undo` restores them (including `status_changed_at`) only if
+the plan still matches the resulting state (409 otherwise) and the user can still
+edit it. Undoing also closes the reaction prompt opened by Given/Abandon. The "Plan"
+action is not undoable because of its sharing cascade, and tag removal was left out.
 
 ## Summary
 
@@ -65,4 +75,4 @@ Recommended starting context:
 
 ## Open Questions
 
-- Undo window length?
+- Undo window length? Answered: 5 seconds.
