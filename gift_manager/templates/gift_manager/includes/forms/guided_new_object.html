@@ -6,7 +6,7 @@
     {% include "gift_manager/includes/forms/field.html" with field=field %}
   {% endfor %}
   <details class="form-collapsible guided-new-details mb-3"{% if step_form.details_open %} open{% endif %}>
-    <summary class="form-label">{% trans "More details" %}</summary>
+    <summary class="form-label">{% if details_label %}{{ details_label }}{% else %}{% trans "More details" %}{% endif %}</summary>
     <div class="pt-2">
       {% for field in step_form.new_detail_fields %}
         {% if field.name == "birthday_day" %}

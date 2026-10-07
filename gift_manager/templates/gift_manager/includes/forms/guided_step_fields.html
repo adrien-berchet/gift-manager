@@ -8,19 +8,26 @@
   {% trans "Or create a new gift" as new_heading %}
   {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
 {% else %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.event %}
-  {% trans "Or create a new event" as new_heading %}
-  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.due_date %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.comment %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.surprise_for %}
-  <details class="form-collapsible guided-plan-details mb-3"{% if step_form.plan_details_open %} open{% endif %}>
-    <summary class="form-label">{% trans "More details" %}</summary>
-    <div class="pt-2">
-      {% include "gift_manager/includes/forms/field.html" with field=step_form.status %}
-      {% include "gift_manager/includes/forms/field.html" with field=step_form.url %}
-      {% include "gift_manager/includes/forms/field.html" with field=step_form.price suffix=request.user.profile.currency %}
-      {% include "gift_manager/includes/forms/field.html" with field=step_form.is_surprise %}
-    </div>
-  </details>
+  <section class="guided-section guided-section--event border rounded p-3 mb-3" aria-labelledby="guided-event-heading">
+    <h3 id="guided-event-heading" class="h6 fw-semibold mb-3">{% trans "Event" %}</h3>
+    {% include "gift_manager/includes/forms/field.html" with field=step_form.event %}
+    {% trans "Or create a new event" as new_heading %}
+    {% trans "More event details" as event_details_label %}
+    {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading details_label=event_details_label %}
+  </section>
+  <section class="guided-section guided-section--plan border rounded p-3 mb-3" aria-labelledby="guided-plan-heading">
+    <h3 id="guided-plan-heading" class="h6 fw-semibold mb-3">{% trans "Gift Plan" %}</h3>
+    {% include "gift_manager/includes/forms/field.html" with field=step_form.due_date %}
+    {% include "gift_manager/includes/forms/field.html" with field=step_form.comment %}
+    {% include "gift_manager/includes/forms/field.html" with field=step_form.surprise_for %}
+    <details class="form-collapsible guided-plan-details mb-0"{% if step_form.plan_details_open %} open{% endif %}>
+      <summary class="form-label">{% trans "More gift plan details" %}</summary>
+      <div class="pt-2">
+        {% include "gift_manager/includes/forms/field.html" with field=step_form.status %}
+        {% include "gift_manager/includes/forms/field.html" with field=step_form.url %}
+        {% include "gift_manager/includes/forms/field.html" with field=step_form.price suffix=request.user.profile.currency %}
+        {% include "gift_manager/includes/forms/field.html" with field=step_form.is_surprise %}
+      </div>
+    </details>
+  </section>
 {% endif %}

@@ -69,6 +69,14 @@ Each "create new" block embeds the real model form as a prefixed sub-form of the
   `PersonForm.set_user`; the gift's tags are limited to the tags the user can access, as in the
   gift create view.
 
+### Step 3 layout and wording
+
+Step 3 (progress label "Event and gift plan") is two titled sections, in the words of the complete
+workflow: **Event** (the existing-event chooser, the new event with its date, and "More event
+details") and **Gift Plan** (due date, "Gift plan comment" and "More gift plan details"). Fields
+that exist on both objects are labelled by owner: "Event name", "Event date", "Event comment" vs
+"Due date", "Gift plan comment".
+
 ### Plan details (step 3)
 
 Due date (blank → the chosen event's next occurrence, or the new event's date) and notes

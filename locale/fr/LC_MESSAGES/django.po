@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 22:35+0200\n"
+"POT-Creation-Date: 2026-10-07 23:11+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -284,6 +284,7 @@ msgstr "Commentaire"
 #: gift_manager/forms.py:841 gift_manager/forms.py:902
 #: gift_manager/forms.py:1038 gift_manager/forms.py:1234
 #: gift_manager/guided_plan.py:232 gift_manager/models.py:1467
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:12
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:167
 #: gift_manager/templates/gift_manager/person_group_detail.html:591
 #: gift_manager/templates/gift_manager/person_group_detail.html:730
@@ -315,7 +316,7 @@ msgstr "Échéance"
 
 #: gift_manager/forms.py:844 gift_manager/forms.py:905
 #: gift_manager/forms.py:1041 gift_manager/forms.py:1237
-#: gift_manager/guided_plan.py:249
+#: gift_manager/guided_plan.py:256
 #: gift_manager/templates/gift_manager/includes/forms/surprise_field.html:5
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:59
 msgid "Surprise"
@@ -495,11 +496,28 @@ msgstr ""
 msgid "Enter a name for the new event."
 msgstr "Saisissez un nom pour le nouvel événement."
 
+#: gift_manager/guided_plan.py:240 gift_manager/views/event.py:57
+#: gift_manager/views/event.py:69
+msgid "Event name"
+msgstr "Nom de l'événement"
+
+#: gift_manager/guided_plan.py:241
+msgid "Event date"
+msgstr "Date de l'événement"
+
+#: gift_manager/guided_plan.py:242
+msgid "Event comment"
+msgstr "Commentaire de l'événement"
+
 #: gift_manager/guided_plan.py:250
+msgid "Gift plan comment"
+msgstr "Commentaire du projet de cadeau"
+
+#: gift_manager/guided_plan.py:257
 msgid "No"
 msgstr "Non"
 
-#: gift_manager/guided_plan.py:250
+#: gift_manager/guided_plan.py:257
 msgid "Yes"
 msgstr "Oui"
 
@@ -2475,7 +2493,6 @@ msgid "Search parent tags..."
 msgstr "Rechercher des tags parents..."
 
 #: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:9
-#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:18
 msgid "More details"
 msgstr "Plus de détails"
 
@@ -2492,9 +2509,25 @@ msgstr "Ou créer une nouvelle personne"
 msgid "Or create a new gift"
 msgstr "Ou créer un nouveau cadeau"
 
-#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:12
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:14
 msgid "Or create a new event"
 msgstr "Ou créer un nouvel événement"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:15
+msgid "More event details"
+msgstr "Plus de détails sur l'événement"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:19
+#: gift_manager/views/gift.py:189 gift_manager/views/gift.py:190
+#: gift_manager/views/relation.py:112 gift_manager/views/relation.py:149
+#: gift_manager/views/relation.py:188 gift_manager/views/relation.py:597
+#: gift_manager/views/relation.py:668 gift_manager/views/relation_guided.py:61
+msgid "Gift Plan"
+msgstr "Projet de cadeau"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:24
+msgid "More gift plan details"
+msgstr "Plus de détails sur le projet de cadeau"
 
 #: gift_manager/templates/gift_manager/includes/forms/link_price_section.html:4
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:33
@@ -3999,10 +4032,6 @@ msgstr "ID d'opération requis"
 msgid "Stale"
 msgstr "Inactif"
 
-#: gift_manager/views/event.py:57 gift_manager/views/event.py:69
-msgid "Event name"
-msgstr "Nom de l'événement"
-
 #: gift_manager/views/event.py:71
 msgid "Schedule type"
 msgstr "Type de planification"
@@ -4033,13 +4062,6 @@ msgstr "Nom du cadeau"
 #: gift_manager/views/gift.py:158
 msgid "Save and create gift plan"
 msgstr "Sauvegarder et créer un projet de cadeau"
-
-#: gift_manager/views/gift.py:189 gift_manager/views/gift.py:190
-#: gift_manager/views/relation.py:112 gift_manager/views/relation.py:149
-#: gift_manager/views/relation.py:188 gift_manager/views/relation.py:597
-#: gift_manager/views/relation.py:668 gift_manager/views/relation_guided.py:61
-msgid "Gift Plan"
-msgstr "Projet de cadeau"
 
 #: gift_manager/views/gift.py:274
 msgid "Edit gift"
@@ -4336,8 +4358,8 @@ msgid "Gift Plan not found"
 msgstr "Projet de cadeau introuvable"
 
 #: gift_manager/views/relation_guided.py:22
-msgid "Occasion"
-msgstr "Occasion"
+msgid "Event and gift plan"
+msgstr "Événement et projet de cadeau"
 
 #: gift_manager/views/relation_guided.py:144
 msgid "The gift plan could not be created."
@@ -4411,6 +4433,14 @@ msgstr "Sélection d'amis invalide."
 #: gift_manager/views/sharing.py:605
 msgid "Invalid object selection."
 msgstr "Sélection d'éléments invalide."
+
+#, fuzzy
+#~| msgid "gift plan"
+#~ msgid "Gift plan"
+#~ msgstr "projet de cadeau"
+
+#~ msgid "Occasion"
+#~ msgstr "Occasion"
 
 #~ msgid "New event date"
 #~ msgstr "Date du nouvel événement"

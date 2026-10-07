@@ -654,3 +654,39 @@ class TestNewObjectBlocks:
         tag = re.search(rf'<input[^>]*name="{name}"[^>]*>', content).group(0)
         assert "required" not in tag
         assert "data-required" not in tag
+
+
+class TestStepThreeSections:
+    def _content(self, client, url):
+        return client.get(url, {"step": 3}, **HTMX).content.decode()
+
+    def test_step_three_separates_the_event_from_the_gift_plan(self, authenticated_client, url):
+        content = self._content(authenticated_client, url)
+
+        event_part, plan_part = content.split("guided-section--plan", 1)
+        assert "guided-section--event" in event_part
+        for name in ("event", "new_event-name", "new_event-date", "new_event-comment"):
+            assert f'name="{name}"' in event_part, name
+            assert f'name="{name}"' not in plan_part, name
+        for name in ("due_date", "comment", "status", "url", "price", "is_surprise"):
+            assert f'name="{name}"' in plan_part, name
+            assert f'name="{name}"' not in event_part, name
+
+    def test_step_three_sections_have_headings_and_distinct_disclosures(
+        self, authenticated_client, url
+    ):
+        content = self._content(authenticated_client, url)
+
+        event_part, plan_part = content.split("guided-section--plan", 1)
+        assert re.search(r"<h3[^>]*>\s*Event\s*</h3>", event_part)
+        assert re.search(r"<h3[^>]*>\s*Gift Plan\s*</h3>", plan_part)
+        assert "More event details" in event_part
+        assert "More gift plan details" in plan_part
+        assert "More event details" not in plan_part
+
+    def test_progress_label_of_the_last_step_uses_the_workflow_words(
+        self, authenticated_client, url
+    ):
+        response = authenticated_client.get(url, {"step": 3}, **HTMX)
+
+        assert str(response.context["steps"][2]["label"]) == "Event and gift plan"

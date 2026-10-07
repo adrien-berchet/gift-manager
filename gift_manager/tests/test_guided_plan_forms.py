@@ -680,3 +680,19 @@ class TestBuildRelationData:
 def test_french_messages_are_exactly_translated(message, expected):
     with translation.override("fr"):
         assert str(message) == expected
+
+
+class TestStepThreeWording:
+    def test_event_fields_are_labelled_as_event_fields(self, user):
+        form = GuidedOccasionForm(user=user)
+
+        labels = {name: str(field.label) for name, field in form.new_form.fields.items()}
+        assert labels["name"] == "Event name"
+        assert labels["date"] == "Event date"
+        assert labels["comment"] == "Event comment"
+
+    def test_gift_plan_fields_are_labelled_as_gift_plan_fields(self, user):
+        form = GuidedOccasionForm(user=user)
+
+        assert str(form.fields["comment"].label) == "Gift plan comment"
+        assert str(form.fields["due_date"].label) == "Due date"

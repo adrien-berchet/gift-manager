@@ -19,7 +19,7 @@ from .relation import RelationCreateView
 STEP_LABELS = {
     "recipient": gettext_lazy("Recipient"),
     "gift": gettext_lazy("Gift"),
-    "occasion": gettext_lazy("Occasion"),
+    "occasion": gettext_lazy("Event and gift plan"),
 }
 
 

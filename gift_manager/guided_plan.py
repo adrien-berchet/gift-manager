@@ -235,12 +235,19 @@ class GuidedOccasionForm(_NewObjectStepForm):
         widget=forms.Select(attrs={"class": "form-select"}),
     )
 
+    def _configure_new_form(self, form: forms.ModelForm) -> None:
+        # The step also holds the gift plan's own fields: say which "name", "date", "comment"
+        form.fields["name"].label = gettext_lazy("Event name")
+        form.fields["date"].label = gettext_lazy("Event date")
+        form.fields["comment"].label = gettext_lazy("Event comment")
+
     def __init__(self, data=None, *, user, recipient_value: str = "", **kwargs):
         super().__init__(data, user=user, **kwargs)
         self.fields["event"].queryset = Event.objects.accessible_by(user).order_by("name")
         plan_form = RelationForm(initial={"recipient": recipient_value}, user=user)
         for name in PLAN_FIELD_NAMES:
             self.fields[name] = plan_form.fields[name]
+        self.fields["comment"].label = gettext_lazy("Gift plan comment")
         status = self.fields["status"]
         status.empty_label = None
         idea = RelationStatus.objects.filter(status_en=DEFAULT_STATUS_NAME).first()

@@ -149,9 +149,9 @@ class TestGuidedPlanWorkflow:
         page.wait_for_url(lambda url: not url.rstrip("/").endswith("/relations"))
 
 
-def open_details(panel, index: int = 0):
-    """Open the ``index``-th "More details" disclosure of the current step."""
-    panel.locator("details summary").nth(index).click()
+def open_details(panel, label: str = "More details"):
+    """Open the "More details" disclosure of the current step named ``label``."""
+    panel.get_by_text(label, exact=True).click()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -184,10 +184,10 @@ class TestGuidedPlanFullData:
         page.evaluate(
             "document.getElementById('id_new_event-date')._flatpickr.setDate('2031-05-04', true)"
         )
-        open_details(panel, 0)
+        open_details(panel, "More event details")
         panel.get_by_label("Repeating").check()
         panel.locator("#id_new_event-recurrence").select_option("yearly")
-        open_details(panel, 1)
+        open_details(panel, "More gift plan details")
         panel.locator("#id_status").select_option(label="Planned")
         panel.locator("#id_is_surprise").select_option("false")
         panel.get_by_role("button", name="Create gift plan").click()
@@ -240,3 +240,23 @@ class TestGuidedPlanFullData:
 
         expect(panel.locator("details.guided-new-details")).to_have_attribute("open", "")
         expect(panel.get_by_text("Enter a valid date.").first).to_be_visible()
+
+    def test_step_three_separates_the_event_from_the_gift_plan(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+        panel.locator("#id_new_gift-name").fill("Sections Gift")
+        click_next(panel)
+
+        event_section = panel.locator(".guided-section--event")
+        plan_section = panel.locator(".guided-section--plan")
+        expect(event_section.get_by_role("heading", name="Event")).to_be_visible()
+        expect(plan_section.get_by_role("heading", name="Gift Plan")).to_be_visible()
+        expect(event_section.locator("#id_new_event-comment")).to_have_count(1)
+        expect(plan_section.locator("#id_comment")).to_have_count(1)
+        expect(event_section.get_by_text("Event comment")).to_have_count(1)
+        expect(plan_section.get_by_text("Gift plan comment")).to_have_count(1)
+        expect(panel.locator("li[aria-current='step']")).to_contain_text("Event and gift plan")
