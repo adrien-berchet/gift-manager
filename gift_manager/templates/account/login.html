@@ -5,9 +5,8 @@
     {% trans "Sign In" %}
 {% endblock head_title %}
 {% block content %}
-    {% element h1 %}
-        {% trans "Sign In" %}
-    {% endelement %}
+<div class="card shadow-sm p-4 mx-auto my-4 login-card" style="max-width: 26rem;">
+    <h1 class="h3 fw-bold mb-3">{% trans "Sign In" %}</h1>
     {% if not SOCIALACCOUNT_ONLY %}
         <p>
             {% blocktrans trimmed %}
@@ -29,10 +28,9 @@
             {% endif %}
             {{ redirect_field }}
             <div class="d-grid gap-2">
-                <button type="submit" class="btn btn-primary btn-lg">
+                <button type="submit" class="btn btn-primary">
                     <i class="fas fa-sign-in-alt me-1" aria-hidden="true"></i>{% trans "Sign In" %}
                 </button>
-                <a href="{% url 'account_reset_password' %}" class="btn btn-link">{% trans "Forgot your password?" %}</a>
             </div>
         </form>
     {% endif %}
@@ -55,6 +53,7 @@
     {% if SOCIALACCOUNT_ENABLED %}
         {% include "socialaccount/snippets/login.html" with page_layout="entrance" %}
     {% endif %}
+</div>
 {% endblock content %}
 {% block extra_body %}
     {{ block.super }}

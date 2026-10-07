@@ -28,6 +28,11 @@
         color: var(--color-primary);
     }
 
+    /* Light mode row highlight; dark mode is handled globally in theme.css */
+    :root:not([data-theme="dark"]) .friends-list .list-group-item:hover {
+        background-color: #f1f5f9;
+    }
+
     .profile-field {
         display: flex;
         align-items: center;
