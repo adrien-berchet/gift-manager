@@ -13,6 +13,7 @@ from gift_manager.models import RelationStatus
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.statuses import relation_status_slug
+from gift_manager.tests.factories import RelationFactory
 
 
 @pytest.mark.django_db
@@ -376,6 +377,234 @@ class TestRelationQuickAction:
         )
 
         assert response.status_code == 400
+
+
+@pytest.mark.django_db
+class TestRelationQuickActionUndo:
+    """Tests for undoing gift-plan card quick actions."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user, person_relation, event_factory):
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+        self.relation = person_relation
+        self.relation.event = event_factory()
+        self.relation.due_date = timezone.localdate() + timedelta(days=2)
+        self.relation.status = RelationStatus.objects.get_or_create(status="Planned")[0]
+        self.relation.save()
+        # Backdate so a restore that stamps "now" would be detected
+        self.original_changed_at = timezone.now() - timedelta(days=3)
+        type(self.relation).objects.filter(pk=self.relation.pk).update(
+            status_changed_at=self.original_changed_at
+        )
+        for status in ("Purchased", "Given", "Abandoned"):
+            RelationStatus.objects.get_or_create(status=status)
+        create_or_update_permission(user, self.relation, permission_level=PermissionLevel.EDITOR)
+        self.action_url = reverse(
+            "gift_manager:relation_quick_action", kwargs={"pk": self.relation.relation_id}
+        )
+        self.undo_url = reverse(
+            "gift_manager:relation_quick_action_undo", kwargs={"pk": self.relation.relation_id}
+        )
+
+    def do_action(self, **data):
+        response = self.client.post(self.action_url, data, HTTP_HX_REQUEST="true")
+        assert response.status_code == 200
+        return json.loads(response["HX-Trigger"])["showNotification"]["undo"]
+
+    def undo(self, undo):
+        return self.client.post(self.undo_url, {"token": undo["token"]}, HTTP_HX_REQUEST="true")
+
+    @override_settings(USE_I18N=False)
+    def test_status_action_response_carries_undo(self):
+        undo = self.do_action(action="given")
+
+        assert undo["url"] == self.undo_url
+        assert undo["token"]
+        assert undo["label"] == "Undo"
+
+    @override_settings(USE_I18N=False)
+    def test_plan_action_has_no_undo(self, event_factory):
+        idea = RelationStatus.objects.get_or_create(status="Idea")[0]
+        self.relation.status = idea
+        self.relation.event = None
+        self.relation.due_date = None
+        self.relation.save(update_fields=["status", "event", "due_date"])
+        event = event_factory(shared_with=[self.user])
+
+        response = self.client.post(
+            self.action_url,
+            {"action": "plan", "event": str(event.event_id), "due_date": "2026-08-15"},
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert "undo" not in json.loads(response["HX-Trigger"])["showNotification"]
+
+    @override_settings(USE_I18N=False)
+    def test_undo_restores_status_and_status_changed_at(self):
+        undo = self.do_action(action="given")
+        self.relation.refresh_from_db()
+        assert self.relation.status_changed_at > self.original_changed_at
+
+        response = self.undo(undo)
+
+        assert response.status_code == 200
+        triggers = json.loads(response["HX-Trigger"])
+        assert "list:update" in triggers
+        assert "reaction:cancel" in triggers
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "planned"
+        assert self.relation.status_changed_at == self.original_changed_at
+
+    @override_settings(USE_I18N=False)
+    def test_undo_restores_empty_due_date(self):
+        # "Set date" is only offered to plans without a due date
+        self.relation.due_date = None
+        self.relation.save(update_fields=["due_date"])
+        undo = self.do_action(action="set_date", due_date="2026-08-15")
+        self.relation.refresh_from_db()
+        assert self.relation.due_date is not None
+
+        response = self.undo(undo)
+
+        assert response.status_code == 200
+        self.relation.refresh_from_db()
+        assert self.relation.due_date is None
+
+    @override_settings(USE_I18N=False)
+    def test_undo_fails_when_status_changed_meanwhile(self):
+        undo = self.do_action(action="purchased")
+        self.relation.refresh_from_db()
+        self.relation.status = RelationStatus.objects.get(status="Given")
+        self.relation.save(update_fields=["status"])
+
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_fails_when_due_date_changed_meanwhile(self):
+        self.relation.due_date = None
+        self.relation.save(update_fields=["due_date"])
+        undo = self.do_action(action="set_date", due_date="2026-08-15")
+        self.relation.refresh_from_db()
+        self.relation.due_date = timezone.localdate() + timedelta(days=30)
+        self.relation.save(update_fields=["due_date"])
+
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert self.relation.due_date == timezone.localdate() + timedelta(days=30)
+
+    @override_settings(USE_I18N=False)
+    def test_undo_fails_when_permission_lost(self):
+        undo = self.do_action(action="given")
+        create_or_update_permission(
+            self.user, self.relation, permission_level=PermissionLevel.VIEWER
+        )
+
+        response = self.undo(undo)
+
+        assert response.status_code == 403
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_rejects_invalid_token(self):
+        response = self.client.post(self.undo_url, {"token": "nope"}, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 400
+
+    @override_settings(USE_I18N=False)
+    def test_undo_rejects_expired_token(self):
+        undo = self.do_action(action="given")
+
+        with override_settings(), pytest.MonkeyPatch.context() as patch:
+            patch.setattr("gift_manager.views.relation.QUICK_ACTION_UNDO_MAX_AGE", -1)
+            response = self.undo(undo)
+
+        assert response.status_code == 400
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_rejects_token_of_another_user(self, django_user_model):
+        undo = self.do_action(action="given")
+        other = django_user_model.objects.create_user(
+            username="other", email="other@example.com", password="pw"
+        )
+        create_or_update_permission(other, self.relation, permission_level=PermissionLevel.EDITOR)
+        other_client = Client()
+        other_client.force_login(other)
+
+        response = other_client.post(self.undo_url, {"token": undo["token"]})
+
+        assert response.status_code == 400
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_token_cannot_be_replayed(self):
+        undo = self.do_action(action="given")
+
+        assert self.undo(undo).status_code == 200
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "planned"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_token_is_bound_to_its_relation(self):
+        undo = self.do_action(action="given")
+        other = RelationFactory(person=self.relation.person)
+        create_or_update_permission(self.user, other, permission_level=PermissionLevel.EDITOR)
+        other_url = reverse(
+            "gift_manager:relation_quick_action_undo", kwargs={"pk": other.relation_id}
+        )
+
+        response = self.client.post(other_url, {"token": undo["token"]})
+
+        assert response.status_code == 400
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_restores_missing_status_changed_at(self):
+        type(self.relation).objects.filter(pk=self.relation.pk).update(status_changed_at=None)
+        undo = self.do_action(action="given")
+        self.relation.refresh_from_db()
+        assert self.relation.status_changed_at is not None
+
+        assert self.undo(undo).status_code == 200
+
+        self.relation.refresh_from_db()
+        assert self.relation.status_changed_at is None
+
+    @override_settings(USE_I18N=False)
+    def test_undo_fails_when_reaction_was_saved_meanwhile(self):
+        undo = self.do_action(action="given")
+        reaction = self.client.post(
+            reverse("gift_manager:relation_reaction", kwargs={"pk": self.relation.relation_id}),
+            {"reaction_rating": 5, "reaction_note": "Loved it"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert reaction.status_code == 200
+
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+        assert self.relation.reaction_rating == 5
+
+    @override_settings(USE_I18N=False)
+    def test_undo_requires_post(self):
+        assert self.client.get(self.undo_url).status_code == 405
 
 
 @pytest.mark.django_db

@@ -2,7 +2,15 @@
 
 ## Status
 
-Proposed
+Implemented
+
+Login now uses a new `account/login.html` built on the shared field and error
+partials (the old `registration/login.html` was removed). The send-invitation page
+validates through `InvitationForm`, shows inline errors, and lists pending
+invitations with their expiry date and a cancel action (`CancelInvitationView`).
+The profile friends list is a responsive list group, and removing a friend goes
+through a confirmation step (`ConfirmRemoveFriendView` plus a modal, with a
+non-JavaScript fallback page).
 
 ## Summary
 
@@ -69,4 +77,4 @@ Recommended starting context:
 
 ## Open Questions
 
-- Should pending invitations be cancellable?
+- Should pending invitations be cancellable? Answered: yes.

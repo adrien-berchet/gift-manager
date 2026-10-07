@@ -61,8 +61,8 @@ status and notes to reflect the move.
 | 0007 | Coordination On Shared Gift Plans | Implemented | Sharing | Claimed-by marker, plan comments and surprise flag hidden from the recipient. Moved to `implemented/`. |
 | 0008 | Duplicate And Repeat Gift Plans | Implemented | Gift Plans | Duplicate action and "plan again" for recurring and birthday events. Moved to `implemented/`. |
 | 0009 | Close Translation And Locale Gaps | Implemented | i18n | Locale-aware dates, lang attribute, JS labels; moved to `implemented/`. |
-| 0010 | Consistent Login, Invitation And Friends Pages | Proposed | Accounts | Restyle pages that bypass the shared form components. |
-| 0011 | Undo Toasts For Low-Risk Actions | Proposed | Interaction | Undo instead of modals for reversible actions. |
+| 0010 | Consistent Login, Invitation And Friends Pages | Implemented | Accounts | Shared-component login, invitation page with cancellable pending invites, confirmed friend removal; moved to `implemented/`. |
+| 0011 | Undo Toasts For Low-Risk Actions | Implemented | Interaction | Undo toast on card quick actions; moved to `implemented/`. |
 | 0012 | Global Search Improvements | Implemented | Search | Gift plans in results, recent items, create-on-no-result. Moved to `implemented/`. |
 | 0013 | Dashboard Polish | Implemented | Dashboard | Next-upcoming empty state and unused data cleanup. Moved to `implemented/`. |
 | 0014 | Installable PWA Or Removal Of Dead Offline Code | Implemented | Platform | Dead offline scripts removed; moved to `implemented/`. A real PWA would be a new idea. |

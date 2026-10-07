@@ -214,6 +214,11 @@ urlpatterns = [
         views.relation_quick_action,
         name="relation_quick_action",
     ),
+    path(
+        "relations/<uuid:pk>/quick-action/undo/",
+        views.relation_quick_action_undo,
+        name="relation_quick_action_undo",
+    ),
     path("relations/<uuid:pk>/claim/", views.relation_claim, name="relation_claim"),
     path("relations/<uuid:pk>/release/", views.relation_release, name="relation_release"),
     path(

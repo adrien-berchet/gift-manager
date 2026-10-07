@@ -95,6 +95,7 @@ from .relation import RelationStatusDetailView
 from .relation import RelationStatusListView
 from .relation import RelationUpdateView
 from .relation import relation_quick_action
+from .relation import relation_quick_action_undo
 from .relation import relation_reaction
 from .relation import surprise_default_hint
 from .relation import update_relation_status
@@ -189,6 +190,7 @@ __all__ = [
     "relation_comment_add",
     "relation_comment_delete",
     "relation_quick_action",
+    "relation_quick_action_undo",
     "relation_reaction",
     "relation_release",
     "remove_person_from_group",
