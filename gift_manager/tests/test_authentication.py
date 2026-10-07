@@ -112,3 +112,25 @@ class TestEmailVerification:
         assert user is None, (
             "User should not be created without email when ACCOUNT_EMAIL_REQUIRED=True"
         )
+
+
+@pytest.mark.django_db
+class TestLoginPage:
+    """The login page uses the shared form components."""
+
+    def test_renders_shared_fields(self, client):
+        response = client.get(reverse("account_login"))
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert "form-field" in content
+        assert 'class="form-control"' in content
+        assert reverse("account_reset_password") in content
+
+    def test_invalid_credentials_show_error_summary(self, client):
+        response = client.post(
+            reverse("account_login"), {"login": "nobody", "password": "wrong-password"}
+        )
+
+        assert response.status_code == 200
+        assert "form-error-summary" in response.content.decode()

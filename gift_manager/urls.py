@@ -39,6 +39,16 @@ urlpatterns = [
         name="invitation_expired",
     ),
     path(
+        "cancel-invitation/<int:invitation_id>/",
+        views.CancelInvitationView.as_view(),
+        name="cancel_invitation",
+    ),
+    path(
+        "profile/confirm-remove-friend/<int:friend_id>/",
+        views.ConfirmRemoveFriendView.as_view(),
+        name="confirm_remove_friend",
+    ),
+    path(
         "profile/remove-friend/<int:friend_id>/",
         views.RemoveFriendView.as_view(),
         name="remove_friend",

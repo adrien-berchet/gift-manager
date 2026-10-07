@@ -1,0 +1,7 @@
+{% load i18n %}
+<p class="mb-2">
+    {% blocktrans with name=friend_name %}Are you sure you want to remove <strong>{{ name }}</strong> from your friends?{% endblocktrans %}
+</p>
+<p class="text-muted small mb-3">
+    {% trans "You will both lose access to the objects shared through this friendship. Existing owners keep their access." %}
+</p>

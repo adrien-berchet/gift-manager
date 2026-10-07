@@ -287,33 +287,23 @@
             </a>
         </h2>
         {% if profile.friends.all %}
-            <div class="table-responsive mt-3">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>{% trans "Username" %}</th>
-                            <th>{% trans "Email address" %}</th>
-                            <th>{% trans "Actions" %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for friend in profile.friends.all %}
-                            <tr>
-                                <td>{{ friend.user.username }}</td>
-                                <td>{{ friend.user.email|decode_email }}</td>
-                                <td>
-                                    <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}" style="display:inline;">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger btn-sm" title="{% trans 'Remove friend' %}">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+            <ul class="list-group list-group-flush mt-3 friends-list">
+                {% for friend in profile.friends.all %}
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+                        <div>
+                            <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ friend.user.username }}</div>
+                            <div class="text-muted small">{{ friend.user.email|decode_email }}</div>
+                        </div>
+                        <a href="{% url 'gift_manager:confirm_remove_friend' friend.pk %}"
+                           class="btn btn-outline-danger btn-sm"
+                           data-remove-friend
+                           data-friend-name="{{ friend.user.username }}"
+                           data-remove-url="{% url 'gift_manager:remove_friend' friend.pk %}">
+                            <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
         {% else %}
             <p class="text-muted">{% trans "You don't have any friend yet." %}</p>
         {% endif %}
@@ -335,6 +325,37 @@
 </div>
 {% endblock %}
 
+{% block body_end %}
+{{ block.super }}
+<div class="modal fade" id="removeFriendModal" tabindex="-1" aria-labelledby="removeFriendModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" id="removeFriendForm" action="">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeFriendModalLabel">{% trans "Remove friend" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">
+                        {% blocktrans with name='<strong id="removeFriendName"></strong>'|safe %}Are you sure you want to remove {{ name }} from your friends?{% endblocktrans %}
+                    </p>
+                    <p class="text-muted small mb-0">
+                        {% trans "You will both lose access to the objects shared through this friendship. Existing owners keep their access." %}
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
 {% block extra_js %}
 <script>
     // Clear all view preference localStorage when profile preferences are updated
@@ -347,6 +368,19 @@
             if (key.startsWith('view-preference-')) {
                 localStorage.removeItem(key);
             }
+        });
+    });
+</script>
+<script>
+    // Confirm friend removal in a modal; without JavaScript the link opens a confirmation page.
+    document.querySelectorAll('[data-remove-friend]').forEach(function(link) {
+        link.addEventListener('click', function(event) {
+            const modalElement = document.getElementById('removeFriendModal');
+            if (!modalElement || typeof bootstrap === 'undefined') { return; }
+            event.preventDefault();
+            document.getElementById('removeFriendForm').action = link.dataset.removeUrl;
+            document.getElementById('removeFriendName').textContent = link.dataset.friendName;
+            bootstrap.Modal.getOrCreateInstance(modalElement).show();
         });
     });
 </script>

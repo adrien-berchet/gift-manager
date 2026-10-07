@@ -1,0 +1,24 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Remove friend" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 720px;">
+    <div class="card p-4">
+        <h1 class="h3 mb-3">{% trans "Remove friend" %}</h1>
+        {% include "gift_manager/includes/remove_friend_confirmation.html" with friend_name=friend.user.username %}
+        <form method="post" action="{% url 'gift_manager:remove_friend' friend.pk %}">
+            {% csrf_token %}
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Cancel" %}
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

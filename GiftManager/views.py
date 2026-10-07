@@ -36,6 +36,16 @@ class CustomAuthenticationForm(AllAuthLoginForm):
     We overload confirm_login_allowed to not block the connection.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("login", "password"):
+            field = self.fields.get(name)
+            if field is not None:
+                field.widget.attrs["class"] = "form-control"
+        remember = self.fields.get("remember")
+        if remember is not None:
+            remember.widget.attrs["class"] = "form-check-input"
+
     def confirm_login_allowed(self, user):
         # Do not raise an exception even if the account is inactive
         pass
