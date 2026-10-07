@@ -534,3 +534,92 @@ class TestEntryPoints:
         assert "data-unsaved-always-dirty" not in first
         assert 'data-unsaved-always-dirty="true"' in second
         assert 'data-unsaved-no-save="true"' in second
+
+
+class TestNewObjectBlocks:
+    def _content(self, client, url, step):
+        return client.get(url, {"step": step}, **HTMX).content.decode()
+
+    def test_step_one_renders_new_person_inputs(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 1)
+
+        for name in (
+            "new_person-first_name",
+            "new_person-family_name",
+            "new_person-email_address",
+            "new_person-birthday_day",
+            "new_person-birthday_month",
+            "new_person-birthday_year",
+            "new_person-notes",
+            "new_person-groups",
+            "new_person-interests",
+        ):
+            assert f'name="{name}"' in content, name
+
+    def test_step_two_renders_new_gift_inputs(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 2)
+
+        for name in (
+            "new_gift-name",
+            "new_gift-comment",
+            "new_gift-url",
+            "new_gift-price",
+            "new_gift-tags",
+        ):
+            assert f'name="{name}"' in content, name
+
+    def test_step_three_renders_new_event_and_plan_inputs(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 3)
+
+        for name in (
+            "event",
+            "new_event-name",
+            "new_event-date",
+            "new_event-comment",
+            "new_event-schedule_type",
+            "new_event-recurrence",
+            "due_date",
+            "comment",
+            "status",
+            "url",
+            "price",
+            "is_surprise",
+        ):
+            assert f'name="{name}"' in content, name
+
+    def test_details_are_closed_by_default(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 1)
+
+        assert re.search(r"<details[^>]*guided-new-details[^>]*>", content)
+        assert not re.search(r"<details[^>]*guided-new-details[^>]* open", content)
+
+    def test_details_open_when_values_present(self, authenticated_client, url):
+        response = _post(
+            authenticated_client, url, 2, nav="back", **{"new_person-notes": "Likes tea"}
+        )
+
+        content = response.content.decode()
+        assert re.search(r"<details[^>]*guided-new-details[^>]* open", content)
+
+    def test_details_open_when_the_new_object_has_errors(self, authenticated_client, url):
+        response = _post(
+            authenticated_client,
+            url,
+            1,
+            **_new_person(**{"new_person-birthday_day": "31", "new_person-birthday_month": "2"}),
+        )
+
+        assert re.search(r"<details[^>]*guided-new-details[^>]* open", response.content.decode())
+
+    @pytest.mark.parametrize(
+        ("step", "name"),
+        [(1, "new_person-first_name"), (2, "new_gift-name"), (3, "new_event-name")],
+    )
+    def test_new_object_inputs_never_block_the_browser_form(
+        self, authenticated_client, url, step, name
+    ):
+        content = self._content(authenticated_client, url, step)
+
+        tag = re.search(rf'<input[^>]*name="{name}"[^>]*>', content).group(0)
+        assert "required" not in tag
+        assert "data-required" not in tag

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 17:15+0200\n"
+"POT-Creation-Date: 2026-10-07 22:23+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -159,7 +159,7 @@ msgstr "Prénom"
 msgid "Family name"
 msgstr "Nom de famille"
 
-#: gift_manager/forms.py:239 gift_manager/guided_plan.py:115
+#: gift_manager/forms.py:239
 msgid "Notes"
 msgstr "Notes"
 
@@ -255,12 +255,12 @@ msgid "Select groups to add as children of this group"
 msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 
 #: gift_manager/forms.py:838 gift_manager/forms.py:899
-#: gift_manager/forms.py:1231 gift_manager/guided_plan.py:59
+#: gift_manager/forms.py:1231 gift_manager/guided_plan.py:196
 #: gift_manager/models.py:1338 gift_manager/templates/gift_manager/base.html:77
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:18
 #: gift_manager/templates/gift_manager/person_group_detail.html:685
 #: gift_manager/templates/gift_manager/relation_status_detail.html:86
-#: gift_manager/views/relation.py:296 gift_manager/views/relation_guided.py:20
+#: gift_manager/views/relation.py:296 gift_manager/views/relation_guided.py:21
 msgid "Gift"
 msgstr "Cadeau"
 
@@ -283,7 +283,7 @@ msgstr "Commentaire"
 
 #: gift_manager/forms.py:841 gift_manager/forms.py:902
 #: gift_manager/forms.py:1038 gift_manager/forms.py:1234
-#: gift_manager/guided_plan.py:94 gift_manager/models.py:1467
+#: gift_manager/guided_plan.py:222 gift_manager/models.py:1467
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:167
 #: gift_manager/templates/gift_manager/person_group_detail.html:591
 #: gift_manager/templates/gift_manager/person_group_detail.html:730
@@ -305,7 +305,6 @@ msgstr "Statut"
 
 #: gift_manager/forms.py:843 gift_manager/forms.py:904
 #: gift_manager/forms.py:1040 gift_manager/forms.py:1236
-#: gift_manager/guided_plan.py:110
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:168
 #: gift_manager/templates/gift_manager/person_group_detail.html:606
 #: gift_manager/templates/gift_manager/person_group_detail.html:745
@@ -316,6 +315,7 @@ msgstr "Échéance"
 
 #: gift_manager/forms.py:844 gift_manager/forms.py:905
 #: gift_manager/forms.py:1041 gift_manager/forms.py:1237
+#: gift_manager/guided_plan.py:239
 #: gift_manager/templates/gift_manager/includes/forms/surprise_field.html:5
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:59
 msgid "Surprise"
@@ -350,11 +350,11 @@ msgid "Adding this parent would create a cycle in the tag hierarchy."
 msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
 
 #: gift_manager/forms.py:1011 gift_manager/forms.py:1202
-#: gift_manager/guided_plan.py:41
+#: gift_manager/guided_plan.py:165
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:29
 #: gift_manager/templates/gift_manager/person_group_detail.html:697
 #: gift_manager/templates/gift_manager/relation_status_detail.html:64
-#: gift_manager/views/relation.py:298 gift_manager/views/relation_guided.py:19
+#: gift_manager/views/relation.py:298 gift_manager/views/relation_guided.py:20
 msgid "Recipient"
 msgstr "Destinataire"
 
@@ -393,8 +393,7 @@ msgstr ""
 "événement récurrent."
 
 #: gift_manager/forms.py:1126 gift_manager/forms.py:1132
-#: gift_manager/guided_plan.py:137 gift_manager/models.py:1529
-#: gift_manager/models.py:1534
+#: gift_manager/models.py:1529 gift_manager/models.py:1534
 msgid "Choose a date."
 msgstr "Choisissez une date."
 
@@ -467,43 +466,36 @@ msgstr ""
 "Rattacher « %(child)s » sous « %(parent)s » le partagerait avec d'autres "
 "utilisateurs ; seul un propriétaire peut le faire."
 
-#: gift_manager/guided_plan.py:65
-msgid "Or create a new gift"
-msgstr "Ou créer un nouveau cadeau"
+#: gift_manager/guided_plan.py:161
+msgid "Choose a recipient or enter the first name of a new person."
+msgstr "Choisissez un destinataire ou saisissez le prénom d'une nouvelle personne."
 
-#: gift_manager/guided_plan.py:67 gift_manager/views/gift.py:53
-#: gift_manager/views/gift.py:123
-msgid "Gift name"
-msgstr "Nom du cadeau"
+#: gift_manager/guided_plan.py:162
+msgid "Choose an existing recipient or enter a new person, not both."
+msgstr "Choisissez un destinataire existant ou saisissez une nouvelle personne, pas les deux."
+"Choisissez un événement existant ou saisissez-en un nouveau, pas les deux."
 
-#: gift_manager/guided_plan.py:83
-msgid "Choose an existing gift or enter a new one, not both."
-msgstr "Choisissez un cadeau existant ou saisissez-en un nouveau, pas les deux."
-
-#: gift_manager/guided_plan.py:86
+#: gift_manager/guided_plan.py:192
 msgid "Choose a gift or enter a new gift name."
 msgstr "Choisissez un cadeau ou saisissez le nom d'un nouveau cadeau."
 
-#: gift_manager/guided_plan.py:100
-msgid "Or create a new event"
-msgstr "Ou créer un nouvel événement"
+#: gift_manager/guided_plan.py:193
+msgid "Choose an existing gift or enter a new one, not both."
+msgstr "Choisissez un cadeau existant ou saisissez-en un nouveau, pas les deux."
+"Choisissez un cadeau existant ou saisissez-en un nouveau, pas les deux."
 
-#: gift_manager/guided_plan.py:102 gift_manager/views/event.py:57
-#: gift_manager/views/event.py:69
-msgid "Event name"
-msgstr "Nom de l'événement"
-
-#: gift_manager/guided_plan.py:105
-msgid "New event date"
-msgstr "Date du nouvel événement"
-
-#: gift_manager/guided_plan.py:134
+#: gift_manager/guided_plan.py:219
 msgid "Choose an existing event or enter a new one, not both."
 msgstr "Choisissez un événement existant ou saisissez-en un nouveau, pas les deux."
+"Choisissez un événement existant ou saisissez-en un nouveau, pas les deux."
 
-#: gift_manager/guided_plan.py:139
-msgid "Enter a name for the new event."
-msgstr "Saisissez un nom pour le nouvel événement."
+#: gift_manager/guided_plan.py:240
+msgid "No"
+msgstr "Non"
+
+#: gift_manager/guided_plan.py:240
+msgid "Yes"
+msgstr "Oui"
 
 #: gift_manager/mixins/notifications.py:159
 #, python-brace-format
@@ -714,6 +706,7 @@ msgid "Gifts"
 msgstr "Cadeaux"
 
 #: gift_manager/models.py:1382 gift_manager/models.py:1416
+#: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:14
 #: gift_manager/templates/gift_manager/includes/forms/person_fields.html:7
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:47
 #: gift_manager/templatetags/custom_filters.py:23
@@ -946,9 +939,9 @@ msgstr "Réactiver le compte"
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:170
 #: gift_manager/templates/gift_manager/includes/modal_base.html:20
 #: gift_manager/templates/gift_manager/includes/person_group_management_grid.html:86
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:47
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:50
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:52
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:65
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:68
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:70
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:33
 #: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html:23
 #: gift_manager/templates/gift_manager/profile_detail.html:366
@@ -1720,7 +1713,7 @@ msgstr "actuelle"
 #: gift_manager/templates/gift_manager/fallback/list_fallback.html:120
 #: gift_manager/templates/gift_manager/fallback/list_fallback.html:181
 #: gift_manager/templates/gift_manager/includes/grid-translations.html:11
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:66
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:84
 msgid "Next"
 msgstr "Suivant"
 
@@ -2316,7 +2309,7 @@ msgstr "Attention : Suppression en cascade"
 
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:23
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:30
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:58
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:76
 msgid "Back"
 msgstr "Retour"
 
@@ -2444,6 +2437,7 @@ msgid "Ready to save"
 msgstr "Prêt à sauvegarder"
 
 #: gift_manager/templates/gift_manager/includes/forms/errors.html:7
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:44
 msgid "Please correct the errors below."
 msgstr "Veuillez corriger les erreurs ci-dessous."
 
@@ -2465,6 +2459,7 @@ msgid "Clear all"
 msgstr "Tout effacer"
 
 #: gift_manager/templates/gift_manager/includes/forms/gift_fields.html:6
+#: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:34
 #: gift_manager/templates/gift_manager/includes/forms/person_fields.html:25
 msgid "Search tags..."
 msgstr "Rechercher des tags..."
@@ -2473,15 +2468,33 @@ msgstr "Rechercher des tags..."
 msgid "Search parent tags..."
 msgstr "Rechercher des tags parents..."
 
+#: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:9
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:17
+msgid "More details"
+msgstr "Plus de détails"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:31
+#: gift_manager/templates/gift_manager/includes/forms/person_fields.html:22
+msgid "Search groups..."
+msgstr "Rechercher des groupes..."
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:4
+msgid "Or create a new person"
+msgstr "Ou créer une nouvelle personne"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:8
+msgid "Or create a new gift"
+msgstr "Ou créer un nouveau cadeau"
+
+#: gift_manager/templates/gift_manager/includes/forms/guided_step_fields.html:12
+msgid "Or create a new event"
+msgstr "Ou créer un nouvel événement"
+
 #: gift_manager/templates/gift_manager/includes/forms/link_price_section.html:4
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:33
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:114
 msgid "Link and price"
 msgstr "Lien et prix"
-
-#: gift_manager/templates/gift_manager/includes/forms/person_fields.html:22
-msgid "Search groups..."
-msgstr "Rechercher des groupes..."
 
 #: gift_manager/templates/gift_manager/includes/forms/person_group_fields.html:4
 msgid "Search parent groups..."
@@ -3013,17 +3026,17 @@ msgstr "Les données saisies seront perdues."
 msgid "Progress"
 msgstr "Progression"
 
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:43
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:61
 #: gift_manager/templates/gift_manager/relation_guided.html:5
 #: gift_manager/templates/gift_manager/relation_guided.html:10
 msgid "New gift plan"
 msgstr "Nouveau projet de cadeau"
 
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:64
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:82
 msgid "Create gift plan"
 msgstr "Créer le projet de cadeau"
 
-#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:76
+#: gift_manager/templates/gift_manager/includes/relation_guided_partial.html:94
 msgid "Use an empty full form"
 msgstr "Utiliser un formulaire complet vide"
 
@@ -3980,6 +3993,10 @@ msgstr "ID d'opération requis"
 msgid "Stale"
 msgstr "Inactif"
 
+#: gift_manager/views/event.py:57 gift_manager/views/event.py:69
+msgid "Event name"
+msgstr "Nom de l'événement"
+
 #: gift_manager/views/event.py:71
 msgid "Schedule type"
 msgstr "Type de planification"
@@ -4003,6 +4020,10 @@ msgstr[1] "%(count)d projets de cadeaux créés comme idées."
 msgid "No gift plan was created."
 msgstr "Aucun projet de cadeau n'a été créé."
 
+#: gift_manager/views/gift.py:53 gift_manager/views/gift.py:123
+msgid "Gift name"
+msgstr "Nom du cadeau"
+
 #: gift_manager/views/gift.py:158
 msgid "Save and create gift plan"
 msgstr "Sauvegarder et créer un projet de cadeau"
@@ -4010,7 +4031,7 @@ msgstr "Sauvegarder et créer un projet de cadeau"
 #: gift_manager/views/gift.py:189 gift_manager/views/gift.py:190
 #: gift_manager/views/relation.py:112 gift_manager/views/relation.py:149
 #: gift_manager/views/relation.py:188 gift_manager/views/relation.py:597
-#: gift_manager/views/relation.py:668 gift_manager/views/relation_guided.py:60
+#: gift_manager/views/relation.py:668 gift_manager/views/relation_guided.py:61
 msgid "Gift Plan"
 msgstr "Projet de cadeau"
 
@@ -4308,11 +4329,11 @@ msgstr "Réaction enregistrée."
 msgid "Gift Plan not found"
 msgstr "Projet de cadeau introuvable"
 
-#: gift_manager/views/relation_guided.py:21
+#: gift_manager/views/relation_guided.py:22
 msgid "Occasion"
 msgstr "Occasion"
 
-#: gift_manager/views/relation_guided.py:134
+#: gift_manager/views/relation_guided.py:144
 msgid "The gift plan could not be created."
 msgstr "Le projet de cadeau n'a pas pu être créé."
 
@@ -4384,6 +4405,12 @@ msgstr "Sélection d'amis invalide."
 #: gift_manager/views/sharing.py:605
 msgid "Invalid object selection."
 msgstr "Sélection d'éléments invalide."
+
+#~ msgid "New event date"
+#~ msgstr "Date du nouvel événement"
+
+#~ msgid "Enter a name for the new event."
+#~ msgstr "Saisissez un nom pour le nouvel événement."
 
 #~ msgid "Forgot your password?"
 #~ msgstr "Mot de passe oublié ?"

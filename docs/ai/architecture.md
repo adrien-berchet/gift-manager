@@ -47,6 +47,9 @@
   server-side step per request; answers of other steps travel as hidden inputs. The final save
   re-validates every step, creates inline gifts/events in the same transaction as the plan, and goes
   through `RelationForm` and `RelationCreateView.form_valid`, so guided and full-form plans match.
+  New recipients, gifts and events embed the real `PersonForm`/`GiftForm`/`EventForm` as prefixed
+  sub-forms (`new_person`, `new_gift`, `new_event`), validated only when their identifying field is
+  filled, so their full data and validation rules apply (inline groups and sharing are not offered).
   Hidden carried answers are invisible to `unsaved-changes.js`; the form opts in with
   `data-unsaved-always-dirty` (plus `data-unsaved-no-save`, `data-unsaved-body`).
 - Flash messages (`django.contrib.messages`) are shown as toasts over every full page: `base.html`

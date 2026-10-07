@@ -81,12 +81,23 @@ class _NewObjectStepForm(_GuidedStepForm):
         if self.new_requested:
             form = self.new_form_class(data, prefix=self.new_prefix, **self._new_form_kwargs())
             self._configure_new_form(form)
-            return form
+            return self._relax_browser_validation(form)
         form = self.new_form_class(prefix=self.new_prefix, **self._new_form_kwargs())
         self._configure_new_form(form)
+        self._relax_browser_validation(form)
         form.initial.update(self.new_defaults)
         if values is not None:
             self._prefill(form, values, prefix=self.new_prefix)
+        return form
+
+    def _relax_browser_validation(self, form: forms.ModelForm) -> forms.ModelForm:
+        """Keep the browser from blocking a step because of an unused new-object block.
+
+        The identifying field is filled whenever the sub-form is validated, so it never needs to
+        be required; the server validates the rest when the new object is requested.
+        """
+        form.use_required_attribute = False
+        form.fields[self.identifying_field].required = False
         return form
 
     @staticmethod

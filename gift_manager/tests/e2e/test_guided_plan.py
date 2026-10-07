@@ -39,15 +39,15 @@ class TestGuidedPlanWorkflow:
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
 
-        expect(panel.locator("#id_new_gift_name")).to_be_visible()
-        panel.locator("#id_new_gift_name").fill("Guided Scarf")
+        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        panel.locator("#id_new_gift-name").fill("Guided Scarf")
         click_next(panel)
 
-        expect(panel.locator("#id_new_event_name")).to_be_visible()
-        panel.locator("#id_new_event_name").fill("Guided Housewarming")
+        expect(panel.locator("#id_new_event-name")).to_be_visible()
+        panel.locator("#id_new_event-name").fill("Guided Housewarming")
         # The date input is replaced by a flatpickr widget: set the date through its API
         page.evaluate(
-            "document.getElementById('id_new_event_date')._flatpickr.setDate('2031-05-04', true)"
+            "document.getElementById('id_new_event-date')._flatpickr.setDate('2031-05-04', true)"
         )
         panel.locator("#id_comment").fill("Wrap it nicely")
         panel.get_by_role("button", name="Create gift plan").click()
@@ -78,12 +78,12 @@ class TestGuidedPlanWorkflow:
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
 
-        panel.locator("#id_new_gift_name").fill("Keyboard Gift")
-        panel.locator("#id_new_gift_name").press("Enter")
+        panel.locator("#id_new_gift-name").fill("Keyboard Gift")
+        panel.locator("#id_new_gift-name").press("Enter")
 
-        expect(panel.locator("#id_new_event_name")).to_be_visible()
+        expect(panel.locator("#id_new_event-name")).to_be_visible()
         panel.get_by_role("button", name="Back").click()
-        expect(panel.locator("#id_new_gift_name")).to_have_value("Keyboard Gift")
+        expect(panel.locator("#id_new_gift-name")).to_have_value("Keyboard Gift")
         panel.get_by_role("button", name="Back").click()
         expect(panel.locator("#id_recipient")).to_have_value(f"person:{dad.person_id}")
 
@@ -104,7 +104,7 @@ class TestGuidedPlanWorkflow:
 
         modal.locator("#keep-editing-btn").click()
         expect(modal).to_be_hidden()
-        expect(panel.locator("#id_new_gift_name")).to_be_visible()
+        expect(panel.locator("#id_new_gift-name")).to_be_visible()
 
         panel.get_by_role("link", name="Use an empty full form").click()
         modal.locator("#discard-changes-btn").click()
@@ -119,7 +119,7 @@ class TestGuidedPlanWorkflow:
         panel = open_guided_flow(page, live_server)
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
-        panel.locator("#id_new_gift_name").fill("Prompt Free Gift")
+        panel.locator("#id_new_gift-name").fill("Prompt Free Gift")
         click_next(panel)
         panel.get_by_role("button", name="Create gift plan").click()
         expect(panel).to_be_hidden()
@@ -147,3 +147,96 @@ class TestGuidedPlanWorkflow:
 
         expect(modal).to_be_hidden()
         page.wait_for_url(lambda url: not url.rstrip("/").endswith("/relations"))
+
+
+def open_details(panel, index: int = 0):
+    """Open the ``index``-th "More details" disclosure of the current step."""
+    panel.locator("details summary").nth(index).click()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestGuidedPlanFullData:
+    def test_guided_flow_creates_new_person_gift_and_event_with_details(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        panel = open_guided_flow(page, live_server)
+
+        panel.locator("#id_new_person-first_name").fill("Anna")
+        open_details(panel)
+        panel.locator("#id_new_person-family_name").fill("Martin")
+        panel.locator("#id_new_person-email_address").fill("anna@example.com")
+        panel.locator("#id_new_person-notes").fill("Likes tea")
+        panel.locator("#id_new_person-groups").select_option(label="Friends")
+        click_next(panel)
+
+        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        panel.locator("#id_new_gift-name").fill("Guided Scarf")
+        open_details(panel)
+        panel.locator("#id_new_gift-comment").fill("Soft wool")
+        panel.locator("#id_new_gift-url").fill("https://example.com/scarf")
+        panel.locator("#id_new_gift-price").fill("19.90")
+        click_next(panel)
+
+        expect(panel.locator("#id_new_event-name")).to_be_visible()
+        panel.locator("#id_new_event-name").fill("Guided Anniversary")
+        page.evaluate(
+            "document.getElementById('id_new_event-date')._flatpickr.setDate('2031-05-04', true)"
+        )
+        open_details(panel, 0)
+        panel.get_by_label("Repeating").check()
+        panel.locator("#id_new_event-recurrence").select_option("yearly")
+        open_details(panel, 1)
+        panel.locator("#id_status").select_option(label="Planned")
+        panel.locator("#id_is_surprise").select_option("false")
+        panel.get_by_role("button", name="Create gift plan").click()
+
+        expect(panel).to_be_hidden()
+        plan = Relation.objects.get(gift__name="Guided Scarf")
+        person = plan.person
+        assert (person.first_name, person.family_name, person.notes) == (
+            "Anna",
+            "Martin",
+            "Likes tea",
+        )
+        assert list(person.groups.values_list("name", flat=True)) == ["Friends"]
+        assert (str(plan.gift.price), plan.gift.url, plan.gift.comment) == (
+            "19.90",
+            "https://example.com/scarf",
+            "Soft wool",
+        )
+        assert (plan.event.schedule_type, plan.event.recurrence) == (
+            Event.ScheduleType.RECURRING,
+            "yearly",
+        )
+        assert plan.status.status_en == "Planned"
+        assert plan.is_surprise is False
+
+    def test_back_keeps_multi_valued_selection(self, page: Page, live_server, seed_data_e2e):
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_new_person-first_name").fill("Anna")
+        open_details(panel)
+        panel.locator("#id_new_person-groups").select_option(label=["Family", "Friends"])
+        click_next(panel)
+        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+
+        panel.get_by_role("button", name="Back").click()
+
+        expect(panel.locator("#id_new_person-first_name")).to_have_value("Anna")
+        selected = panel.locator("#id_new_person-groups").evaluate(
+            "select => [...select.selectedOptions].map(option => option.textContent.trim())"
+        )
+        assert sorted(selected) == ["Family", "Friends"]
+
+    def test_new_object_error_opens_details(self, page: Page, live_server, seed_data_e2e):
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_new_person-first_name").fill("Anna")
+        open_details(panel)
+        panel.locator("#id_new_person-birthday_day").select_option("31")
+        panel.locator("#id_new_person-birthday_month").select_option("2")
+
+        click_next(panel)
+
+        expect(panel.locator("details.guided-new-details")).to_have_attribute("open", "")
+        expect(panel.get_by_text("Enter a valid date.").first).to_be_visible()

@@ -1,8 +1,25 @@
-{% include "gift_manager/includes/forms/field.html" with field=step_form.recipient %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.gift %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.new_gift_name %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.event %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.new_event_name %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.new_event_date %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.due_date %}
-{% include "gift_manager/includes/forms/field.html" with field=step_form.comment %}
+{% load i18n %}
+{% if step == 1 %}
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.recipient %}
+  {% trans "Or create a new person" as new_heading %}
+  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
+{% elif step == 2 %}
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.gift %}
+  {% trans "Or create a new gift" as new_heading %}
+  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
+{% else %}
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.event %}
+  {% trans "Or create a new event" as new_heading %}
+  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.due_date %}
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.comment %}
+  <details class="form-collapsible guided-plan-details mb-3"{% if step_form.status.errors or step_form.url.errors or step_form.price.errors or step_form.url.value or step_form.price.value %} open{% endif %}>
+    <summary class="form-label">{% trans "More details" %}</summary>
+    <div class="pt-2">
+      {% include "gift_manager/includes/forms/field.html" with field=step_form.status %}
+      {% include "gift_manager/includes/forms/field.html" with field=step_form.url %}
+      {% include "gift_manager/includes/forms/field.html" with field=step_form.price suffix=request.user.profile.currency %}
+      {% include "gift_manager/includes/forms/field.html" with field=step_form.is_surprise %}
+    </div>
+  </details>
+{% endif %}

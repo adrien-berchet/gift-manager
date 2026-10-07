@@ -1,0 +1,46 @@
+{% load i18n %}
+{# A new object of a guided step: its identifying fields, then the rest under "More details". #}
+<fieldset class="guided-new-object mb-3">
+  <legend class="form-label fs-6">{{ heading }}</legend>
+  {% for field in step_form.new_visible_fields %}
+    {% include "gift_manager/includes/forms/field.html" with field=field %}
+  {% endfor %}
+  <details class="form-collapsible guided-new-details mb-3"{% if step_form.details_open %} open{% endif %}>
+    <summary class="form-label">{% trans "More details" %}</summary>
+    <div class="pt-2">
+      {% for field in step_form.new_detail_fields %}
+        {% if field.name == "birthday_day" %}
+        <fieldset class="form-group form-field mb-3">
+          <legend class="form-label fs-6">{% trans "Birthday" %}</legend>
+          <div class="birthday-row">
+            {% for birthday_field in step_form.new_form.birthday_fields %}
+            <div class="birthday-col birthday-col--{{ birthday_field.name|cut:'birthday_' }}">
+              <label for="{{ birthday_field.id_for_label }}" class="visually-hidden">{{ birthday_field.label }}</label>
+              {{ birthday_field }}
+            </div>
+            {% endfor %}
+          </div>
+          {% for birthday_field in step_form.new_form.birthday_fields %}
+            {% for error in birthday_field.errors %}
+            <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+          {% endfor %}
+        </fieldset>
+        {% elif field.name == "birthday_month" or field.name == "birthday_year" %}
+        {% elif field.name == "groups" %}
+        {% trans "Search groups..." as groups_search_placeholder %}
+        {% include "gift_manager/includes/forms/field.html" with field=field searchable=True search_placeholder=groups_search_placeholder %}
+        {% elif field.name == "interests" or field.name == "tags" %}
+        {% trans "Search tags..." as tags_search_placeholder %}
+        {% include "gift_manager/includes/forms/field.html" with field=field searchable=True search_placeholder=tags_search_placeholder %}
+        {% elif field.name == "schedule_type" %}
+        {% include "gift_manager/includes/forms/field.html" with field=field radio_group_class="schedule-type-selection" %}
+        {% elif field.name == "price" %}
+        {% include "gift_manager/includes/forms/field.html" with field=field suffix=request.user.profile.currency %}
+        {% else %}
+        {% include "gift_manager/includes/forms/field.html" with field=field %}
+        {% endif %}
+      {% endfor %}
+    </div>
+  </details>
+</fieldset>
