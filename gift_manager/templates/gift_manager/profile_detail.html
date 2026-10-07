@@ -33,6 +33,19 @@
         background-color: #f1f5f9;
     }
 
+    /* Keep the remove button readable on the dark card background */
+    [data-theme="dark"] .friends-list .btn-outline-danger {
+        color: #f87171;
+        border-color: #f87171;
+    }
+
+    [data-theme="dark"] .friends-list .btn-outline-danger:hover,
+    [data-theme="dark"] .friends-list .btn-outline-danger:focus-visible {
+        color: #fff;
+        background-color: var(--color-danger);
+        border-color: var(--color-danger);
+    }
+
     .profile-field {
         display: flex;
         align-items: center;
