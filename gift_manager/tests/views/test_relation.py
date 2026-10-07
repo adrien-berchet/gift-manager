@@ -13,6 +13,7 @@ from gift_manager.models import RelationStatus
 from gift_manager.permissions import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.statuses import relation_status_slug
+from gift_manager.tests.factories import RelationFactory
 
 
 @pytest.mark.django_db
@@ -545,6 +546,61 @@ class TestRelationQuickActionUndo:
         assert response.status_code == 400
         self.relation.refresh_from_db()
         assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_token_cannot_be_replayed(self):
+        undo = self.do_action(action="given")
+
+        assert self.undo(undo).status_code == 200
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "planned"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_token_is_bound_to_its_relation(self):
+        undo = self.do_action(action="given")
+        other = RelationFactory(person=self.relation.person)
+        create_or_update_permission(self.user, other, permission_level=PermissionLevel.EDITOR)
+        other_url = reverse(
+            "gift_manager:relation_quick_action_undo", kwargs={"pk": other.relation_id}
+        )
+
+        response = self.client.post(other_url, {"token": undo["token"]})
+
+        assert response.status_code == 400
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+
+    @override_settings(USE_I18N=False)
+    def test_undo_restores_missing_status_changed_at(self):
+        type(self.relation).objects.filter(pk=self.relation.pk).update(status_changed_at=None)
+        undo = self.do_action(action="given")
+        self.relation.refresh_from_db()
+        assert self.relation.status_changed_at is not None
+
+        assert self.undo(undo).status_code == 200
+
+        self.relation.refresh_from_db()
+        assert self.relation.status_changed_at is None
+
+    @override_settings(USE_I18N=False)
+    def test_undo_fails_when_reaction_was_saved_meanwhile(self):
+        undo = self.do_action(action="given")
+        reaction = self.client.post(
+            reverse("gift_manager:relation_reaction", kwargs={"pk": self.relation.relation_id}),
+            {"reaction_rating": 5, "reaction_note": "Loved it"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert reaction.status_code == 200
+
+        response = self.undo(undo)
+
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "given"
+        assert self.relation.reaction_rating == 5
 
     @override_settings(USE_I18N=False)
     def test_undo_requires_post(self):

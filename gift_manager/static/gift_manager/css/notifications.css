@@ -72,7 +72,8 @@
 }
 
 /* Action buttons in toasts */
-.toast-body .btn {
+.toast-body .btn,
+.toast [data-toast-action] {
     font-size: var(--text-xs);
     padding: var(--space-1) var(--space-2);
     border-radius: var(--radius-sm);
@@ -81,7 +82,8 @@
     transition: all var(--transition-fast);
 }
 
-.toast-body .btn:hover {
+.toast-body .btn:hover,
+.toast [data-toast-action]:hover {
     transform: translateY(-1px);
     box-shadow: var(--shadow-sm);
 }
@@ -347,7 +349,8 @@ st.notification-info .toast-body::before {
         background-color: var(--color-info) !important;
     }
 
-    .toast-body .btn {
+    .toast-body .btn,
+    .toast [data-toast-action] {
         border: 2px solid currentColor;
     }
 }
@@ -361,7 +364,8 @@ st.notification-info .toast-body::before {
         transition: none;
     }
 
-    .toast-body .btn:hover {
+    .toast-body .btn:hover,
+    .toast [data-toast-action]:hover {
         transform: none;
     }
 

@@ -794,7 +794,7 @@ def _relation_quick_action_response(
 
 QUICK_ACTION_UNDO_SALT = "gift_manager.relation_quick_action_undo"
 QUICK_ACTION_UNDO_MAX_AGE = 300
-UNDOABLE_QUICK_ACTIONS = {"given", "purchased", "planned", "abandoned", "set_date"}
+UNDOABLE_QUICK_ACTIONS = {"given", "purchased", "abandoned", "set_date"}
 
 
 def _relation_undo_state(relation, *, field: str) -> dict:
@@ -805,6 +805,9 @@ def _relation_undo_state(relation, *, field: str) -> dict:
     return {
         "status": relation.status_id,
         "status_changed_at": changed_at.isoformat() if changed_at else None,
+        # A reaction saved meanwhile must block the undo: it would stay on the reverted plan
+        "reaction_rating": relation.reaction_rating,
+        "reaction_note": relation.reaction_note,
     }
 
 

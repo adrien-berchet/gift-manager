@@ -109,8 +109,7 @@
                             showNotification(body.error || i18n.genericError, 'error');
                         });
                     }
-                    const header = response.headers.get('HX-Trigger');
-                    const events = header ? JSON.parse(header) : {};
+                    const events = parseHxTriggerEvents(response.headers.get('HX-Trigger'));
                     Object.keys(events).forEach(function(eventName) {
                         document.dispatchEvent(new CustomEvent(eventName, { detail: events[eventName] || {} }));
                     });
@@ -121,11 +120,22 @@
                 });
         }
 
-        // Undoing a "given"/"abandoned" action closes the reaction prompt it opened
+        // Undoing a "given"/"abandoned" action closes the reaction prompt it opened, even when
+        // the form is still loading: it is closed as soon as it arrives
+        let reactionPrompt = null;
+
+        function closeEditPanel() {
+            document.dispatchEvent(new CustomEvent('offcanvas:close', { detail: { target: 'editPanel' } }));
+        }
+
         document.addEventListener('reaction:cancel', function() {
+            if (reactionPrompt && !reactionPrompt.done) {
+                reactionPrompt.cancelled = true;
+                return;
+            }
             const panel = document.getElementById('editPanel');
             if (panel && panel.querySelector('#relation-reaction-form')) {
-                document.dispatchEvent(new CustomEvent('offcanvas:close', { detail: { target: 'editPanel' } }));
+                closeEditPanel();
             }
         });
 
@@ -179,6 +189,7 @@
             const actionButton = toastElement.querySelector('[data-toast-action]');
             if (actionButton) {
                 actionButton.addEventListener('click', function() {
+                    actionButton.disabled = true;
                     toast.hide();
                     action.onClick();
                 });
@@ -632,7 +643,7 @@
             const offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
             offcanvas.show();
 
-            fetch(formUrl, {
+            return fetch(formUrl, {
                 headers: {
                     'HX-Request': 'true',
                     'X-CSRFToken': getCookie('csrftoken')
@@ -663,7 +674,14 @@
         document.addEventListener('reaction:prompt', function(e) {
             const promptUrl = e.detail && e.detail.url;
             if (promptUrl) {
-                loadFormInPanel(promptUrl, 'editPanel');
+                const prompt = { done: false, cancelled: false };
+                reactionPrompt = prompt;
+                Promise.resolve(loadFormInPanel(promptUrl, 'editPanel')).finally(function() {
+                    prompt.done = true;
+                    // The plan was reverted meanwhile, so the server may answer with an error
+                    // instead of the form: close the panel whatever it ended up showing
+                    if (prompt.cancelled) closeEditPanel();
+                });
             }
         });
 
