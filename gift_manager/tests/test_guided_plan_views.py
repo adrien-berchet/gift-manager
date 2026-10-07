@@ -91,7 +91,9 @@ class TestSteps:
         )
         assert b"<html" not in response.content
 
-    def test_next_with_invalid_step_stays_on_step_with_error(self, authenticated_client, url):
+    def test_next_with_invalid_step_stays_on_step_with_error(
+        self, authenticated_client, url, person
+    ):
         response = _post(authenticated_client, url, 1, recipient="")
 
         assert response.context["step"] == 1
@@ -690,3 +692,100 @@ class TestStepThreeSections:
         response = authenticated_client.get(url, {"step": 3}, **HTMX)
 
         assert str(response.context["steps"][2]["label"]) == "Event and gift plan"
+
+
+class TestModeMarkup:
+    def _content(self, client, url, step):
+        return client.get(url, {"step": step}, **HTMX).content.decode()
+
+    @staticmethod
+    def _radios(content, name):
+        return re.findall(rf'<input[^>]*type="radio"[^>]*name="{name}"[^>]*>', content)
+
+    def test_step_one_offers_existing_or_new_when_people_exist(
+        self, authenticated_client, url, person
+    ):
+        content = self._content(authenticated_client, url, 1)
+
+        radios = self._radios(content, "recipient_mode")
+        assert [re.search(r'value="(\w+)"', tag).group(1) for tag in radios] == [
+            "existing",
+            "new",
+        ]
+        assert "checked" in radios[0]
+        assert "Existing recipient" in content
+        assert "New person" in content
+        assert "guided-panel--existing" in content
+        assert "guided-panel--new" in content
+
+    def test_step_one_skips_the_choice_without_existing_people(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 1)
+
+        assert not self._radios(content, "recipient_mode")
+        assert re.search(
+            r'<input[^>]*type="hidden"[^>]*name="recipient_mode"[^>]*value="new"', content
+        )
+        assert "guided-panel--existing" not in content
+        assert "guided-panel--new" in content
+
+    def test_step_two_offers_existing_or_new_when_gifts_exist(
+        self, authenticated_client, url, user
+    ):
+        GiftFactory(shared_with=[user])
+
+        content = self._content(authenticated_client, url, 2)
+
+        assert len(self._radios(content, "gift_mode")) == 2
+        assert "Existing gift" in content
+        assert "New gift" in content
+
+    def test_step_three_offers_existing_new_and_no_event(self, authenticated_client, url):
+        content = self._content(authenticated_client, url, 3)
+
+        radios = self._radios(content, "event_mode")
+        assert [re.search(r'value="(\w+)"', tag).group(1) for tag in radios] == [
+            "existing",
+            "new",
+            "none",
+        ]
+        assert "No event" in content
+
+    def test_posted_mode_is_carried_and_restored(self, authenticated_client, url, person):
+        forward = _post(
+            authenticated_client,
+            url,
+            1,
+            recipient_mode="new",
+            **_new_person(),
+        )
+
+        assert ("recipient_mode", "new") in forward.context["carried"]
+        back = _post(
+            authenticated_client,
+            url,
+            2,
+            nav="back",
+            **dict(forward.context["carried"]),
+        )
+        radios = self._radios(back.content.decode(), "recipient_mode")
+        assert "checked" in next(tag for tag in radios if 'value="new"' in tag)
+        assert "checked" not in next(tag for tag in radios if 'value="existing"' in tag)
+
+    def test_stale_chooser_value_does_not_set_the_surprise_default_in_new_mode(
+        self, authenticated_client, url, user
+    ):
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client,
+            url,
+            2,
+            recipient_mode="new",
+            recipient=_recipient(linked),
+            gift=gift.pk,
+            **_new_person(),
+        )
+
+        assert response.context["step"] == 3
+        assert response.context["step_form"].fields["is_surprise"].initial == "false"

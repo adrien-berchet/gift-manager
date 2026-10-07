@@ -48,8 +48,9 @@
   re-validates every step, creates inline gifts/events in the same transaction as the plan, and goes
   through `RelationForm` and `RelationCreateView.form_valid`, so guided and full-form plans match.
   New recipients, gifts and events embed the real `PersonForm`/`GiftForm`/`EventForm` as prefixed
-  sub-forms (`new_person`, `new_gift`, `new_event`), validated only when their identifying field is
-  filled, so their full data and validation rules apply (inline groups and sharing are not offered).
+  sub-forms (`new_person`, `new_gift`, `new_event`), validated only in "new" mode, so their full data and validation rules apply (inline groups and sharing are not
+  offered). Each step posts an explicit mode (`recipient_mode`, `gift_mode`, `event_mode`: existing, new or
+  none); CSS shows only the chosen panel and the choice is skipped when the user has nothing existing to pick.
   Hidden carried answers are invisible to `unsaved-changes.js`; the form opts in with
   `data-unsaved-always-dirty` (plus `data-unsaved-no-save`, `data-unsaved-body`).
 - Flash messages (`django.contrib.messages`) are shown as toasts over every full page: `base.html`

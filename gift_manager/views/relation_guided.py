@@ -74,7 +74,9 @@ class RelationGuidedCreateView(RelationCreateView):
         kwargs = {}
         if name == "occasion":
             # The plan's surprise default depends on the recipient chosen in step 1
-            kwargs["recipient_value"] = self._posted().get("recipient", "")
+            posted = self._posted()
+            new_person = posted.get("recipient_mode") == "new"
+            kwargs["recipient_value"] = "" if new_person else posted.get("recipient", "")
         return STEP_FORMS[name](
             data, user=self.request.user, initial_values=initial_values, **kwargs
         )

@@ -58,10 +58,9 @@ Each "create new" block embeds the real model form as a prefixed sub-form of the
 
 - Fields added to those forms later appear in the guided flow without extra work, and their
   `clean()` rules apply (birthday combinations, email, event schedule/recurrence rules).
-- Rule per step: choose an existing object **or** fill the new one, not both. The new block counts
-  as filled when its identifying field is non-empty. When it is filled the whole sub-form is
-  validated and its errors are shown on that step; when an existing object is chosen the
-  sub-form is ignored.
+- Rule per step: an explicit **mode** decides the path (see "Choosing a path"). Only the chosen
+  path is validated; the other path's inputs are still posted (so typed values survive switching)
+  but ignored. In "new" mode the sub-form is fully validated and its errors are shown on that step.
 - A new event defaults to the one-time schedule; its date is visible next to the name because it
   is needed in the common case. The "More details" disclosure opens automatically when it holds
   values or errors.
@@ -76,6 +75,26 @@ workflow: **Event** (the existing-event chooser, the new event with its date, an
 details") and **Gift Plan** (due date, "Gift plan comment" and "More gift plan details"). Fields
 that exist on both objects are labelled by owner: "Event name", "Event date", "Event comment" vs
 "Due date", "Gift plan comment".
+
+### Choosing a path (existing or new)
+
+Each step shows a segmented radio choice, then only the chosen path's panel:
+
+- Step 1 `recipient_mode`: "Existing recipient" | "New person".
+- Step 2 `gift_mode`: "Existing gift" | "New gift".
+- Step 3 `event_mode`: "Existing event" | "New event" | "No event".
+
+The radios are plain `<input type="radio">` posted with the form (carried like any other input);
+CSS (`:has(...:checked)`) hides the inactive panel, and where `:has` is unsupported both panels
+stay visible. The mode decides the path, so there is no "not both" error. "Existing" with nothing
+chosen is an error for recipient and gift, and means "no event" for the event step. When a post
+carries no valid mode (non-browser clients), the mode is inferred from what is filled (the chooser
+first, then the identifying field).
+
+Default mode: "existing" when the user has something to choose from, otherwise "new" (event:
+"none"). When a user has no existing recipient or gift, the choice is skipped and only the
+"new" panel is shown. The recipient used for the surprise default ignores a stale chooser value
+when the mode is "new".
 
 ### Plan details (step 3)
 

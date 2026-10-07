@@ -1,0 +1,36 @@
+{% load i18n %}
+{# One step's two paths: pick an existing object or create a new one (CSS shows the chosen panel). #}
+<fieldset class="guided-choice mb-3">
+  <legend class="form-label fs-6 {{ legend_class }}">{{ legend }}</legend>
+  {% if step_form.show_mode_choice %}
+  <div class="guided-choice-options" role="group">
+    {% for value, label in step_form.mode_choices %}
+    <input type="radio"
+           class="btn-check"
+           name="{{ step_form.mode_name }}"
+           id="id_{{ step_form.mode_name }}_{{ value }}"
+           value="{{ value }}"
+           autocomplete="off"{% if step_form.mode == value %} checked{% endif %}>
+    <label class="btn btn-sm btn-outline-primary px-2" for="id_{{ step_form.mode_name }}_{{ value }}">{{ label }}</label>
+    {% endfor %}
+  </div>
+  {% else %}
+  <input type="hidden" name="{{ step_form.mode_name }}" value="{{ step_form.mode }}">
+  {% endif %}
+  {% if step_form.existing_offered %}
+  <div class="guided-panel guided-panel--existing">
+    <div class="form-group form-field mb-3{% if field.errors %} has-errors{% endif %}">
+      <label for="{{ field.id_for_label }}" class="visually-hidden">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}
+      <div class="invalid-feedback d-block">
+        {% for error in field.errors %}<div>{{ error }}</div>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  <div class="guided-panel guided-panel--new">
+    {% include "gift_manager/includes/forms/guided_new_object.html" %}
+  </div>
+</fieldset>

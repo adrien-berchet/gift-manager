@@ -22,6 +22,11 @@ def open_guided_flow(page: Page, live_server):
     return panel
 
 
+def choose_mode(panel, label: str):
+    """Pick one of a step's paths ("New person", "Existing gift", "No event", ...)."""
+    panel.locator("label", has_text=label).click()
+
+
 def click_next(panel):
     panel.get_by_role("button", name="Next").click()
 
@@ -39,11 +44,13 @@ class TestGuidedPlanWorkflow:
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
 
-        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        expect(panel.get_by_text("New gift", exact=True)).to_be_visible()
+        choose_mode(panel, "New gift")
         panel.locator("#id_new_gift-name").fill("Guided Scarf")
         click_next(panel)
 
-        expect(panel.locator("#id_new_event-name")).to_be_visible()
+        expect(panel.get_by_text("New event", exact=True)).to_be_visible()
+        choose_mode(panel, "New event")
         panel.locator("#id_new_event-name").fill("Guided Housewarming")
         # The date input is replaced by a flatpickr widget: set the date through its API
         page.evaluate(
@@ -69,7 +76,7 @@ class TestGuidedPlanWorkflow:
 
         click_next(panel)
 
-        expect(panel.get_by_text("Choose a gift or enter a new gift name.").first).to_be_visible()
+        expect(panel.get_by_text("Select a gift.").first).to_be_visible()
         expect(panel.locator("li[aria-current='step']")).to_contain_text("Gift")
 
     def test_enter_advances_and_back_keeps_values(self, page: Page, live_server, seed_data_e2e):
@@ -78,10 +85,12 @@ class TestGuidedPlanWorkflow:
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
 
+        choose_mode(panel, "New gift")
+
         panel.locator("#id_new_gift-name").fill("Keyboard Gift")
         panel.locator("#id_new_gift-name").press("Enter")
 
-        expect(panel.locator("#id_new_event-name")).to_be_visible()
+        expect(panel.get_by_text("New event", exact=True)).to_be_visible()
         panel.get_by_role("button", name="Back").click()
         expect(panel.locator("#id_new_gift-name")).to_have_value("Keyboard Gift")
         panel.get_by_role("button", name="Back").click()
@@ -104,7 +113,7 @@ class TestGuidedPlanWorkflow:
 
         modal.locator("#keep-editing-btn").click()
         expect(modal).to_be_hidden()
-        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        expect(panel.get_by_text("New gift", exact=True)).to_be_visible()
 
         panel.get_by_role("link", name="Use an empty full form").click()
         modal.locator("#discard-changes-btn").click()
@@ -119,6 +128,7 @@ class TestGuidedPlanWorkflow:
         panel = open_guided_flow(page, live_server)
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
+        choose_mode(panel, "New gift")
         panel.locator("#id_new_gift-name").fill("Prompt Free Gift")
         click_next(panel)
         panel.get_by_role("button", name="Create gift plan").click()
@@ -163,6 +173,8 @@ class TestGuidedPlanFullData:
     ):
         panel = open_guided_flow(page, live_server)
 
+        choose_mode(panel, "New person")
+
         panel.locator("#id_new_person-first_name").fill("Anna")
         open_details(panel)
         panel.locator("#id_new_person-family_name").fill("Martin")
@@ -171,7 +183,8 @@ class TestGuidedPlanFullData:
         panel.locator("#id_new_person-groups").select_option(label="Friends")
         click_next(panel)
 
-        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        expect(panel.get_by_text("New gift", exact=True)).to_be_visible()
+        choose_mode(panel, "New gift")
         panel.locator("#id_new_gift-name").fill("Guided Scarf")
         open_details(panel)
         panel.locator("#id_new_gift-comment").fill("Soft wool")
@@ -179,7 +192,8 @@ class TestGuidedPlanFullData:
         panel.locator("#id_new_gift-price").fill("19.90")
         click_next(panel)
 
-        expect(panel.locator("#id_new_event-name")).to_be_visible()
+        expect(panel.get_by_text("New event", exact=True)).to_be_visible()
+        choose_mode(panel, "New event")
         panel.locator("#id_new_event-name").fill("Guided Anniversary")
         page.evaluate(
             "document.getElementById('id_new_event-date')._flatpickr.setDate('2031-05-04', true)"
@@ -215,11 +229,12 @@ class TestGuidedPlanFullData:
 
     def test_back_keeps_multi_valued_selection(self, page: Page, live_server, seed_data_e2e):
         panel = open_guided_flow(page, live_server)
+        choose_mode(panel, "New person")
         panel.locator("#id_new_person-first_name").fill("Anna")
         open_details(panel)
         panel.locator("#id_new_person-groups").select_option(label=["Family", "Friends"])
         click_next(panel)
-        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        expect(panel.get_by_text("New gift", exact=True)).to_be_visible()
 
         panel.get_by_role("button", name="Back").click()
 
@@ -231,6 +246,7 @@ class TestGuidedPlanFullData:
 
     def test_new_object_error_opens_details(self, page: Page, live_server, seed_data_e2e):
         panel = open_guided_flow(page, live_server)
+        choose_mode(panel, "New person")
         panel.locator("#id_new_person-first_name").fill("Anna")
         open_details(panel)
         panel.locator("#id_new_person-birthday_day").select_option("31")
@@ -248,6 +264,7 @@ class TestGuidedPlanFullData:
         panel = open_guided_flow(page, live_server)
         panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
         click_next(panel)
+        choose_mode(panel, "New gift")
         panel.locator("#id_new_gift-name").fill("Sections Gift")
         click_next(panel)
 
@@ -260,3 +277,58 @@ class TestGuidedPlanFullData:
         expect(event_section.get_by_text("Event comment")).to_have_count(1)
         expect(plan_section.get_by_text("Gift plan comment")).to_have_count(1)
         expect(panel.locator("li[aria-current='step']")).to_contain_text("Event and gift plan")
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestGuidedPlanChoice:
+    def test_only_the_chosen_path_is_shown(self, page: Page, live_server, seed_data_e2e):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+
+        expect(panel.locator("#id_gift")).to_be_visible()
+        expect(panel.locator("#id_new_gift-name")).to_be_hidden()
+
+        choose_mode(panel, "New gift")
+
+        expect(panel.locator("#id_new_gift-name")).to_be_visible()
+        expect(panel.locator("#id_gift")).to_be_hidden()
+
+        choose_mode(panel, "Existing gift")
+
+        expect(panel.locator("#id_gift")).to_be_visible()
+        expect(panel.locator("#id_new_gift-name")).to_be_hidden()
+
+    def test_typed_values_survive_switching_paths(self, page: Page, live_server, seed_data_e2e):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+        choose_mode(panel, "New gift")
+        panel.locator("#id_new_gift-name").fill("Kept Gift")
+
+        choose_mode(panel, "Existing gift")
+        choose_mode(panel, "New gift")
+
+        expect(panel.locator("#id_new_gift-name")).to_have_value("Kept Gift")
+
+    def test_no_event_creates_a_plan_without_event(self, page: Page, live_server, seed_data_e2e):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+        choose_mode(panel, "New gift")
+        panel.locator("#id_new_gift-name").fill("No Event Gift")
+        click_next(panel)
+
+        choose_mode(panel, "No event")
+        expect(panel.locator("#id_event")).to_be_hidden()
+        expect(panel.locator("#id_new_event-name")).to_be_hidden()
+        panel.get_by_role("button", name="Create gift plan").click()
+
+        expect(panel).to_be_hidden()
+        plan = Relation.objects.get(gift__name="No Event Gift")
+        assert plan.event is None

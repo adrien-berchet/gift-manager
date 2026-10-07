@@ -1,7 +1,6 @@
 {% load i18n %}
 {# A new object of a guided step: its identifying fields, then the rest under "More details". #}
-<fieldset class="guided-new-object mb-3">
-  <legend class="form-label fs-6">{{ heading }}</legend>
+<div class="guided-new-object">
   {% for field in step_form.new_visible_fields %}
     {% include "gift_manager/includes/forms/field.html" with field=field %}
   {% endfor %}
@@ -43,4 +42,4 @@
       {% endfor %}
     </div>
   </details>
-</fieldset>
+</div>

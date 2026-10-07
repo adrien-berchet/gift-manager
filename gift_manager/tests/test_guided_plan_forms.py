@@ -5,7 +5,6 @@ from decimal import Decimal
 
 import pytest
 from django.urls import reverse
-from django.utils import translation
 
 from gift_manager.forms import decode_email
 from gift_manager.guided_plan import GuidedGiftForm
@@ -100,7 +99,6 @@ class TestRecipientForm:
         form = GuidedRecipientForm({}, user=user)
 
         assert not form.is_valid()
-        assert "recipient" in form.errors
 
     def test_recipient_form_accepts_new_person_with_details(self, user):
         group = _editable_group(user)
@@ -115,23 +113,22 @@ class TestRecipientForm:
         assert form.new_requested
         assert form.new_form.cleaned_data["groups"].get() == group
 
-    def test_recipient_form_ignores_new_person_details_without_first_name(self, user):
+    def test_recipient_form_keeps_details_typed_without_first_name(self, user):
         form = GuidedRecipientForm({"new_person-email_address": "a@b.com"}, user=user)
 
         assert not form.is_valid()
-        assert "recipient" in form.errors
-        assert not form.new_requested
-        assert form.new_form.initial["email_address"] == "a@b.com"
+        assert form.new_form["email_address"].value() == "a@b.com"
 
-    def test_recipient_form_rejects_both_existing_and_new(self, user):
+    def test_recipient_form_existing_wins_when_no_mode_is_posted(self, user):
         person = PersonFactory(shared_with=[user])
 
         form = GuidedRecipientForm(
             {"recipient": f"person:{person.person_id}", **_person_data()}, user=user
         )
 
-        assert not form.is_valid()
-        assert "recipient" in form.errors
+        assert form.is_valid(), form.errors
+        assert form.mode == "existing"
+        assert not form.new_requested
 
     def test_recipient_form_validates_new_person_when_requested(self, user):
         form = GuidedRecipientForm(
@@ -169,7 +166,6 @@ class TestGiftForm:
         form = GuidedGiftForm({}, user=user)
 
         assert not form.is_valid()
-        assert "gift" in form.errors
 
     def test_gift_form_accepts_existing_gift(self, user):
         gift = GiftFactory(shared_with=[user])
@@ -196,18 +192,20 @@ class TestGiftForm:
         assert not form.is_valid()
         assert "tags" in form.new_form.errors
 
-    def test_gift_form_rejects_both(self, user):
+    def test_gift_form_existing_wins_when_no_mode_is_posted(self, user):
         gift = GiftFactory(shared_with=[user])
 
         form = GuidedGiftForm({"gift": gift.pk, "new_gift-name": "Scarf"}, user=user)
 
-        assert not form.is_valid()
+        assert form.is_valid(), form.errors
+        assert form.mode == "existing"
+        assert not form.new_requested
 
     def test_gift_form_rejects_whitespace_name(self, user):
-        form = GuidedGiftForm({"new_gift-name": "   "}, user=user)
+        form = GuidedGiftForm({"gift_mode": "new", "new_gift-name": "   "}, user=user)
 
         assert not form.is_valid()
-        assert "gift" in form.errors
+        assert "name" in form.new_form.errors
 
     def test_gift_form_rejects_inaccessible_gift(self, user):
         gift = GiftFactory()
@@ -297,18 +295,17 @@ class TestOccasionForm:
         assert not form.is_valid()
         assert "date" in form.new_form.errors
 
-    def test_occasion_form_new_event_details_without_name_are_rejected_and_kept(self, user):
+    def test_occasion_form_new_event_details_without_a_new_mode_are_ignored_and_kept(self, user):
         form = GuidedOccasionForm(
             {"new_event-comment": "x", "status": _idea_status().pk, "is_surprise": "false"},
             user=user,
         )
 
-        assert not form.is_valid()
-        assert "event" in form.errors
+        assert form.is_valid(), form.errors
         assert not form.new_requested
         assert form.new_form.initial["comment"] == "x"
 
-    def test_occasion_form_rejects_event_and_new_event(self, user):
+    def test_occasion_form_existing_wins_when_no_mode_is_posted(self, user):
         event = EventFactory(shared_with=[user])
 
         form = GuidedOccasionForm(
@@ -321,8 +318,9 @@ class TestOccasionForm:
             user=user,
         )
 
-        assert not form.is_valid()
-        assert "event" in form.errors
+        assert form.is_valid(), form.errors
+        assert form.mode == "existing"
+        assert form.cleaned_data["event"] == event
 
     def test_occasion_form_rejects_inaccessible_event(self, user):
         event = EventFactory()
@@ -432,7 +430,7 @@ class TestOccasionPlanDetails:
 
         assert "is_surprise" not in form.initial
 
-    def test_occasion_form_event_date_without_name_is_rejected(self, user):
+    def test_occasion_form_event_date_is_ignored_unless_the_new_mode_is_chosen(self, user):
         form = GuidedOccasionForm(
             {
                 "new_event-date": "2030-05-04",
@@ -442,8 +440,9 @@ class TestOccasionPlanDetails:
             user=user,
         )
 
-        assert not form.is_valid()
-        assert "event" in form.errors
+        assert form.is_valid(), form.errors
+        assert form.cleaned_data["event"] is None
+        assert form.cleaned_data["due_date"] is None
 
     def test_occasion_form_default_schedule_alone_is_not_a_new_event(self, user):
         form = GuidedOccasionForm(
@@ -658,41 +657,3 @@ class TestBuildRelationData:
         assert data["recipient"] == inline.recipient_value
         assert data["recipient"].startswith("person:")
         assert data["status"] == _idea_status().pk
-
-
-@pytest.mark.parametrize(
-    ("message", "expected"),
-    [
-        (
-            GuidedRecipientForm.both_message,
-            "Choisissez un destinataire existant ou saisissez une nouvelle personne, pas les deux.",
-        ),
-        (
-            GuidedGiftForm.both_message,
-            "Choisissez un cadeau existant ou saisissez-en un nouveau, pas les deux.",
-        ),
-        (
-            GuidedOccasionForm.both_message,
-            "Choisissez un événement existant ou saisissez-en un nouveau, pas les deux.",
-        ),
-    ],
-)
-def test_french_messages_are_exactly_translated(message, expected):
-    with translation.override("fr"):
-        assert str(message) == expected
-
-
-class TestStepThreeWording:
-    def test_event_fields_are_labelled_as_event_fields(self, user):
-        form = GuidedOccasionForm(user=user)
-
-        labels = {name: str(field.label) for name, field in form.new_form.fields.items()}
-        assert labels["name"] == "Event name"
-        assert labels["date"] == "Event date"
-        assert labels["comment"] == "Event comment"
-
-    def test_gift_plan_fields_are_labelled_as_gift_plan_fields(self, user):
-        form = GuidedOccasionForm(user=user)
-
-        assert str(form.fields["comment"].label) == "Gift plan comment"
-        assert str(form.fields["due_date"].label) == "Due date"

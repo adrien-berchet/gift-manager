@@ -1,19 +1,16 @@
 {% load i18n %}
 {% if step == 1 %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.recipient %}
-  {% trans "Or create a new person" as new_heading %}
-  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
+  {% trans "Recipient" as legend %}
+  {% include "gift_manager/includes/forms/guided_choice.html" with legend=legend field=step_form.recipient %}
 {% elif step == 2 %}
-  {% include "gift_manager/includes/forms/field.html" with field=step_form.gift %}
-  {% trans "Or create a new gift" as new_heading %}
-  {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
+  {% trans "Gift" as legend %}
+  {% include "gift_manager/includes/forms/guided_choice.html" with legend=legend field=step_form.gift %}
 {% else %}
   <section class="guided-section guided-section--event border rounded p-3 mb-3" aria-labelledby="guided-event-heading">
     <h3 id="guided-event-heading" class="h6 fw-semibold mb-3">{% trans "Event" %}</h3>
-    {% include "gift_manager/includes/forms/field.html" with field=step_form.event %}
-    {% trans "Or create a new event" as new_heading %}
+    {% trans "Event" as legend %}
     {% trans "More event details" as event_details_label %}
-    {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading details_label=event_details_label %}
+    {% include "gift_manager/includes/forms/guided_choice.html" with legend=legend legend_class="visually-hidden" field=step_form.event details_label=event_details_label %}
   </section>
   <section class="guided-section guided-section--plan border rounded p-3 mb-3" aria-labelledby="guided-plan-heading">
     <h3 id="guided-plan-heading" class="h6 fw-semibold mb-3">{% trans "Gift Plan" %}</h3>

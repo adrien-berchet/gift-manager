@@ -46,10 +46,11 @@ class _GuidedStepForm(BaseFormMixin, forms.Form):
 class _NewObjectStepForm(_GuidedStepForm):
     """A step offering an existing object (the chooser field) or a new one (``new_form``).
 
-    ``new_form`` is bound to the posted data only when the new object is requested, i.e. when its
-    identifying field is filled; otherwise it is unbound, prefilled with whatever was typed, and
-    never validated. ``initial_values`` prefills an unbound step (own fields and ``new_form``)
-    from previously posted values.
+    The posted *mode* (``<chooser>_mode``: existing, new or none) decides the path and only that
+    path is validated. ``new_form`` is bound to the posted data only in "new" mode; otherwise it is
+    unbound, prefilled with whatever was typed, and never validated. ``initial_values`` prefills an
+    unbound step (own fields and ``new_form``) from previously posted values. When no valid mode is
+    posted, it is inferred from what is filled (the chooser first, then the identifying field).
     """
 
     chooser_name: str
@@ -58,19 +59,55 @@ class _NewObjectStepForm(_GuidedStepForm):
     identifying_field: str
     visible_new_fields: tuple[str, ...]
     new_defaults: dict = {}
-    choose_message = None
-    both_message = None
-    name_message = None  # shown when the block holds values but no identifying field
+    mode_labels: dict  # value -> label, in display order ("existing" is dropped if unavailable)
+    fallback_mode = "new"  # the default mode when there is nothing existing to choose from
+    choose_message = None  # shown when "existing" is chosen with nothing selected
 
     def __init__(self, data=None, *, user, initial_values=None, **kwargs):
         super().__init__(data, user=user, **kwargs)
         values = data if data is not None else initial_values
-        self.new_requested = data is not None and bool(
-            (data.get(f"{self.new_prefix}-{self.identifying_field}") or "").strip()
+        self.mode_name = f"{self.chooser_name}_mode"
+        self.mode_choices_all = list(self.mode_labels.items())
+        existing_available = self._has_existing()
+        self.mode_choices = [
+            (value, label)
+            for value, label in self.mode_choices_all
+            if value != "existing" or existing_available
+        ]
+        self.show_mode_choice = len(self.mode_choices) > 1
+        self.default_mode = "existing" if existing_available else self.fallback_mode
+        self.mode = self._resolve_mode(values)
+        self.new_requested = data is not None and self.mode == "new"
+        self.fields[self.mode_name] = forms.CharField(
+            required=False, widget=forms.HiddenInput, initial=self.mode
         )
         self.new_form = self._build_new_form(data, values)
-        if data is None and values is not None:
-            self._prefill(self, values, prefix="")
+        if data is None:
+            if values is not None:
+                self._prefill(self, values, prefix="")
+            self.initial[self.mode_name] = self.mode
+
+    def _has_existing(self) -> bool:
+        """Whether the user has an existing object to choose from in this step."""
+        raise NotImplementedError
+
+    @property
+    def existing_offered(self) -> bool:
+        """Whether the "existing" path is offered (the chooser panel is rendered)."""
+        return any(value == "existing" for value, _ in self.mode_choices)
+
+    def _resolve_mode(self, values) -> str:
+        offered = {value for value, _ in self.mode_choices}
+        if values is None:
+            return self.default_mode
+        mode = values.get(self.mode_name)
+        if mode in offered:
+            return mode
+        if values.get(self.chooser_name):
+            return "existing"
+        if (values.get(f"{self.new_prefix}-{self.identifying_field}") or "").strip():
+            return "new"
+        return self.default_mode
 
     def _new_form_kwargs(self) -> dict:
         return {}
@@ -91,14 +128,14 @@ class _NewObjectStepForm(_GuidedStepForm):
             self._prefill(form, values, prefix=self.new_prefix)
         return form
 
-    def _relax_browser_validation(self, form: forms.ModelForm) -> forms.ModelForm:
+    @staticmethod
+    def _relax_browser_validation(form: forms.ModelForm) -> forms.ModelForm:
         """Keep the browser from blocking a step because of an unused new-object block.
 
-        The identifying field is filled whenever the sub-form is validated, so it never needs to
-        be required; the server validates the rest when the new object is requested.
+        The block is hidden unless "new" is chosen, and a hidden required input would stop the
+        browser from submitting; the server validates the sub-form when it is requested.
         """
         form.use_required_attribute = False
-        form.fields[self.identifying_field].required = False
         return form
 
     @staticmethod
@@ -129,11 +166,6 @@ class _NewObjectStepForm(_GuidedStepForm):
         return value not in (None, "", [], ()) and value != self.new_defaults.get(bound.name)
 
     @property
-    def has_new_values(self) -> bool:
-        """Whether anything was typed in the new-object block, identifying field included."""
-        return any(self._holds_value(self.new_form[name]) for name in self.new_form.fields)
-
-    @property
     def details_open(self) -> bool:
         """Whether "More details" should start open: it has errors or non-default values."""
         if self.new_requested and self.new_form.errors:
@@ -142,15 +174,13 @@ class _NewObjectStepForm(_GuidedStepForm):
 
     def clean(self) -> dict:
         cleaned_data = super().clean()
-        if self.chooser_name in self.errors:
-            return cleaned_data
-        existing = cleaned_data.get(self.chooser_name)
-        if existing and self.new_requested:
-            self.add_error(self.chooser_name, self.both_message)
-        elif not existing and not self.new_requested:
-            message = self.choose_message or (self.has_new_values and self.name_message)
-            if message:
-                self.add_error(self.chooser_name, message)
+        if self.mode != "existing":
+            # The chooser is not used in this mode: ignore whatever it still holds
+            self.errors.pop(self.chooser_name, None)
+            cleaned_data[self.chooser_name] = None
+        elif self.chooser_name not in self.errors and not cleaned_data.get(self.chooser_name):
+            if self.choose_message:
+                self.add_error(self.chooser_name, self.choose_message)
         return cleaned_data
 
     def is_valid(self) -> bool:
@@ -167,8 +197,11 @@ class GuidedRecipientForm(_NewObjectStepForm):
     new_prefix = "new_person"
     identifying_field = "first_name"
     visible_new_fields = ("first_name",)
-    choose_message = gettext_lazy("Choose a recipient or enter the first name of a new person.")
-    both_message = gettext_lazy("Choose an existing recipient or enter a new person, not both.")
+    mode_labels = {
+        "existing": gettext_lazy("Existing recipient"),
+        "new": gettext_lazy("New person"),
+    }
+    choose_message = gettext_lazy("Select a recipient.")
 
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
@@ -179,6 +212,9 @@ class GuidedRecipientForm(_NewObjectStepForm):
     def __init__(self, data=None, *, user, **kwargs):
         super().__init__(data, user=user, **kwargs)
         self.fields["recipient"].choices = build_recipient_choices(user)
+
+    def _has_existing(self) -> bool:
+        return len(build_recipient_choices(self.user)) > 1
 
     def _new_form_kwargs(self) -> dict:
         return {"user": self.user}
@@ -198,8 +234,11 @@ class GuidedGiftForm(_NewObjectStepForm):
     new_prefix = "new_gift"
     identifying_field = "name"
     visible_new_fields = ("name",)
-    choose_message = gettext_lazy("Choose a gift or enter a new gift name.")
-    both_message = gettext_lazy("Choose an existing gift or enter a new one, not both.")
+    mode_labels = {
+        "existing": gettext_lazy("Existing gift"),
+        "new": gettext_lazy("New gift"),
+    }
+    choose_message = gettext_lazy("Select a gift.")
 
     gift = forms.ModelChoiceField(
         label=gettext_lazy("Gift"),
@@ -211,6 +250,9 @@ class GuidedGiftForm(_NewObjectStepForm):
     def __init__(self, data=None, *, user, **kwargs):
         super().__init__(data, user=user, **kwargs)
         self.fields["gift"].queryset = Gift.objects.accessible_by(user).order_by("name")
+
+    def _has_existing(self) -> bool:
+        return Gift.objects.accessible_by(self.user).exists()
 
     def _configure_new_form(self, form: forms.ModelForm) -> None:
         form.fields["tags"].queryset = GiftTag.objects.accessible_by(self.user).order_by("name")
@@ -225,8 +267,12 @@ class GuidedOccasionForm(_NewObjectStepForm):
     identifying_field = "name"
     visible_new_fields = ("name", "date")
     new_defaults = {"schedule_type": Event.ScheduleType.ONE_TIME}
-    both_message = gettext_lazy("Choose an existing event or enter a new one, not both.")
-    name_message = gettext_lazy("Enter a name for the new event.")
+    mode_labels = {
+        "existing": gettext_lazy("Existing event"),
+        "new": gettext_lazy("New event"),
+        "none": gettext_lazy("No event"),
+    }
+    fallback_mode = "none"
 
     event = forms.ModelChoiceField(
         label=gettext_lazy("Event"),
@@ -234,6 +280,9 @@ class GuidedOccasionForm(_NewObjectStepForm):
         required=False,
         widget=forms.Select(attrs={"class": "form-select"}),
     )
+
+    def _has_existing(self) -> bool:
+        return Event.objects.accessible_by(self.user).exists()
 
     def _configure_new_form(self, form: forms.ModelForm) -> None:
         # The step also holds the gift plan's own fields: say which "name", "date", "comment"
