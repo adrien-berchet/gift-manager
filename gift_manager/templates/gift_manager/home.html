@@ -910,6 +910,9 @@
             <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
                 <i class="fas fa-hand-holding-heart me-2"></i>{% trans "New Gift Plan" %}
             </a>
+            <a href="{% url 'gift_manager:relation_guided_create' %}" class="btn btn-outline-primary" data-action="create">
+                <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>{% trans "Guided" %}
+            </a>
             <a href="{% url 'gift_manager:relations' %}" class="btn btn-outline-secondary">
                 <i class="fas fa-list me-2"></i>{% trans "Gift Plans" %}
             </a>
@@ -1029,6 +1032,9 @@
             {% endif %}
             <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
                 <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Create a gift plan" %}
+            </a>
+            <a href="{% url 'gift_manager:relation_guided_create' %}" class="btn btn-outline-primary" data-action="create">
+                <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>{% trans "Guided" %}
             </a>
         </div>
         {% endif %}

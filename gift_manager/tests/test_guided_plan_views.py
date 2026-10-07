@@ -1,5 +1,6 @@
 """Tests for the guided gift plan creation view."""
 
+import re
 from datetime import date
 from unittest.mock import patch
 
@@ -279,3 +280,33 @@ class TestFinalSubmit:
         assert Gift.objects.count() == gifts_before
         assert Event.objects.count() == events_before
         assert response.context["step_form"].non_field_errors()
+
+
+class TestEntryPoints:
+    def test_relation_list_links_to_guided_flow(self, authenticated_client, url):
+        response = authenticated_client.get(reverse("gift_manager:relations"))
+
+        assert f'href="{url}"' in response.content.decode()
+
+    def test_home_links_to_guided_flow(self, authenticated_client, url):
+        response = authenticated_client.get(reverse("gift_manager:home"))
+
+        assert f'href="{url}"' in response.content.decode()
+
+    def test_pages_load_the_guided_plan_script(self, authenticated_client):
+        response = authenticated_client.get(reverse("gift_manager:home"))
+
+        assert "guided-plan.js" in response.content.decode()
+
+    def test_full_form_link_asks_for_confirmation_in_the_offcanvas(self, authenticated_client, url):
+        content = authenticated_client.get(url, **HTMX).content.decode()
+
+        assert "data-guided-full-form" in content
+        assert 'data-confirm-message="' in content
+        assert 'data-action="create"' in content
+
+    def test_full_form_link_is_a_plain_link_on_the_page(self, authenticated_client, url):
+        content = authenticated_client.get(url).content.decode()
+
+        link = re.search(r"<a[^>]*data-guided-full-form[^>]*>", content).group(0)
+        assert 'data-action="create"' not in link

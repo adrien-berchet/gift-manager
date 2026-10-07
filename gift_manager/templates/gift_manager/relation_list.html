@@ -25,6 +25,9 @@
         <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift plan" %}
         </a>
+        <a href="{% url 'gift_manager:relation_guided_create' %}" class="btn btn-outline-primary" data-action="create">
+            <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>{% trans "Guided" %}
+        </a>
         {% if show_workspace %}
         <a href="{% url 'gift_manager:relation_advanced_list' %}" class="btn btn-outline-secondary">
             <i class="fas fa-table-list me-2" aria-hidden="true"></i>{% trans "Advanced List" %}
@@ -128,6 +131,9 @@
         <h3>{% trans "No gift plans yet." %}</h3>
         <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "Create new gift plan" %}
+        </a>
+        <a href="{% url 'gift_manager:relation_guided_create' %}" class="btn btn-outline-primary" data-action="create">
+            <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>{% trans "Guided" %}
         </a>
     </div>
     {% endif %}
