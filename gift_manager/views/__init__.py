@@ -70,6 +70,8 @@ from .plan_coordination import relation_release
 
 # Profile views
 from .profile import AcceptInvitationView
+from .profile import CancelInvitationView
+from .profile import ConfirmRemoveFriendView
 from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
@@ -114,7 +116,9 @@ __all__ = [
     "BaseDetailView",
     "BaseListView",
     "BaseUpdateView",
+    "CancelInvitationView",
     "CancelToPreviousMixin",
+    "ConfirmRemoveFriendView",
     "ContextPermissionMixin",
     "CreatePermissionMixin",
     "DeleteSharedMixin",

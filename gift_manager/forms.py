@@ -1305,3 +1305,23 @@ class ReminderPreferencesForm(forms.ModelForm):
 
     def clean_currency(self) -> str:
         return self.cleaned_data.get("currency") or self.instance.currency
+
+
+class InvitationForm(forms.Form):
+    """Form used to invite someone by email address.
+
+    Rules that depend on the sender (self-invite, existing friend, rate limit) are
+    enforced by the view, which adds the matching errors to this form.
+    """
+
+    recipient_email = forms.EmailField(
+        label=gettext_lazy("Recipient email"),
+        error_messages={"invalid": gettext_lazy("Enter a valid email address.")},
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "autocomplete": "off", "autofocus": True}
+        ),
+    )
+
+    def clean_recipient_email(self):
+        """Normalize the address so pending invitations can be matched."""
+        return self.cleaned_data["recipient_email"].casefold()

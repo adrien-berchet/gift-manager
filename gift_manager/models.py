@@ -584,14 +584,20 @@ class Invitation(models.Model):
         """Set the recipient email address, encoding it for storage."""
         self.recipient_email = encode_email(value)
 
+    @property
+    def expires_at(self):
+        """Return the expiry datetime, or None when invitations do not expire."""
+        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", None)
+        if expiry_days is None or self.created_at is None:
+            return None
+        return self.created_at + timedelta(days=expiry_days)
+
     def is_expired(self):
         """Check if the invitation has expired."""
-        expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", None)
-        if expiry_days is None:
+        expires_at = self.expires_at
+        if expires_at is None:
             return False  # If not configured, invitations don't expire
-
-        expiry_date = self.created_at + timedelta(days=expiry_days)
-        return timezone.now() > expiry_date
+        return timezone.now() > expires_at
 
 
 class Person(models.Model):

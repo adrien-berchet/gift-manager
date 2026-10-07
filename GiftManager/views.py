@@ -36,6 +36,23 @@ class CustomAuthenticationForm(AllAuthLoginForm):
     We overload confirm_login_allowed to not block the connection.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ("login", "password"):
+            field = self.fields.get(name)
+            if field is not None:
+                self._add_css_class(field, "form-control")
+        remember = self.fields.get("remember")
+        if remember is not None:
+            self._add_css_class(remember, "form-check-input")
+
+    @staticmethod
+    def _add_css_class(field, css_class: str) -> None:
+        """Append a CSS class to the field widget without dropping existing ones."""
+        classes = field.widget.attrs.get("class", "").split()
+        if css_class not in classes:
+            field.widget.attrs["class"] = " ".join([*classes, css_class])
+
     def confirm_login_allowed(self, user):
         # Do not raise an exception even if the account is inactive
         pass

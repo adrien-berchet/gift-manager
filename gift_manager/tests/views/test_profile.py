@@ -7,6 +7,7 @@ import pytest
 from allauth.account.models import EmailAddress
 from allauth.account.signals import email_confirmed
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.test import Client
 from django.test import override_settings
@@ -100,7 +101,7 @@ class TestSendInvitationView:
         # Assert
         # Check redirection
         assert response.status_code == 302
-        assert reverse("gift_manager:profile_detail") in response.url
+        assert response.url == reverse("gift_manager:send_invitation")
 
         # Verify invitation was created (email is stored encrypted)
         invitation = Invitation.objects.get(sender=self.user)
@@ -121,23 +122,53 @@ class TestSendInvitationView:
 
     @override_settings(USE_I18N=False)
     @patch("gift_manager.views.profile.send_mail")
-    def test_post_normalizes_and_reuses_pending_invitation(self, mock_send_mail):
-        """Repeated pending invitations to the same address reuse one token."""
+    def test_post_rejects_duplicate_pending_invitation(self, mock_send_mail):
+        """A second invitation to the same address, whatever its case, is refused."""
         url = reverse("gift_manager:send_invitation")
 
         first_response = self.client.post(url, {"recipient_email": "Recipient@Example.COM"})
         second_response = self.client.post(url, {"recipient_email": "recipient@example.com"})
 
         assert first_response.status_code == 302
-        assert second_response.status_code == 302
+        assert second_response.status_code == 400
+        assert "already pending" in second_response.content.decode()
         invitations = Invitation.objects.filter(sender=self.user)
         assert invitations.count() == 1
         assert invitations.get().email == "recipient@example.com"
-        assert mock_send_mail.call_count == 2
-        assert (
-            mock_send_mail.call_args_list[0].kwargs["message"]
-            == mock_send_mail.call_args_list[1].kwargs["message"]
+        mock_send_mail.assert_called_once()
+
+    @override_settings(USE_I18N=False, INVITATION_SEND_LIMIT=1)
+    @patch("gift_manager.views.profile.send_mail")
+    def test_duplicate_pending_invitation_does_not_use_rate_limit_quota(self, mock_send_mail):
+        """A refused duplicate must not count against the send limit."""
+        url = reverse("gift_manager:send_invitation")
+        self.client.post(url, {"recipient_email": "first@example.com"})
+        cache.delete(f"gift_manager:invitation-send:{self.user.pk}")
+
+        duplicate = self.client.post(url, {"recipient_email": "first@example.com"})
+        other = self.client.post(url, {"recipient_email": "second@example.com"})
+
+        assert duplicate.status_code == 400
+        assert other.status_code == 302
+
+    @override_settings(USE_I18N=False, INVITATION_EXPIRY_DAYS=7)
+    @patch("gift_manager.views.profile.send_mail")
+    def test_expired_pending_invitation_does_not_block_new_one(self, mock_send_mail):
+        """An expired invitation is not pending, so a new one can be sent."""
+        expired = Invitation.objects.create(
+            sender=self.user, recipient_email=encode_email("again@example.com")
         )
+        Invitation.objects.filter(pk=expired.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:send_invitation"), {"recipient_email": "again@example.com"}
+        )
+
+        assert response.status_code == 302
+        assert Invitation.objects.filter(sender=self.user).count() == 2
+        mock_send_mail.assert_called_once()
 
     @override_settings(USE_I18N=False)
     @patch("gift_manager.views.profile.send_mail")
@@ -149,7 +180,8 @@ class TestSendInvitationView:
 
         response = self.client.post(url, {"recipient_email": "sender@example.com"})
 
-        assert response.status_code == 302
+        assert response.status_code == 400
+        assert "You cannot send an invitation to yourself." in response.content.decode()
         assert Invitation.objects.filter(sender=self.user).count() == 0
         mock_send_mail.assert_not_called()
 
@@ -168,9 +200,58 @@ class TestSendInvitationView:
 
         response = self.client.post(url, {"recipient_email": "friend@example.com"})
 
-        assert response.status_code == 302
+        assert response.status_code == 400
+        assert "You are already friends with this user." in response.content.decode()
         assert Invitation.objects.filter(sender=self.user).count() == 0
         mock_send_mail.assert_not_called()
+
+    @override_settings(USE_I18N=False)
+    def test_post_invalid_email_shows_field_error(self):
+        """An invalid address re-renders the form with an inline error."""
+        response = self.client.post(
+            reverse("gift_manager:send_invitation"), {"recipient_email": "not-an-email"}
+        )
+
+        assert response.status_code == 400
+        assert response.context["form"].errors["recipient_email"] == [
+            "Enter a valid email address."
+        ]
+        assert Invitation.objects.filter(sender=self.user).count() == 0
+
+    @override_settings(USE_I18N=False)
+    @patch("gift_manager.views.profile.send_mail")
+    def test_post_shows_success_message_and_pending_invitation(self, mock_send_mail):
+        """After sending, the page confirms and lists the pending invitation."""
+        url = reverse("gift_manager:send_invitation")
+
+        response = self.client.post(url, {"recipient_email": "new@example.com"}, follow=True)
+
+        content = response.content.decode()
+        assert "Invitation sent to new@example.com." in content
+        assert "Pending invitations" in content
+        assert [i.email for i in response.context["pending_invitations"]] == ["new@example.com"]
+
+    @override_settings(USE_I18N=False, INVITATION_EXPIRY_DAYS=7)
+    def test_pending_list_excludes_expired_accepted_and_other_senders(self):
+        """Only the sender's unaccepted, unexpired invitations are listed."""
+        other = User.objects.create_user(username="other", password="x", email="o@example.com")
+        active = Invitation.objects.create(
+            sender=self.user, recipient_email=encode_email("a@example.com")
+        )
+        expired = Invitation.objects.create(
+            sender=self.user, recipient_email=encode_email("b@example.com")
+        )
+        Invitation.objects.filter(pk=expired.pk).update(
+            created_at=timezone.now() - timedelta(days=30)
+        )
+        Invitation.objects.create(
+            sender=self.user, recipient_email=encode_email("c@example.com"), accepted=True
+        )
+        Invitation.objects.create(sender=other, recipient_email=encode_email("d@example.com"))
+
+        response = self.client.get(reverse("gift_manager:send_invitation"))
+
+        assert list(response.context["pending_invitations"]) == [active]
 
     @override_settings(USE_I18N=False, INVITATION_SEND_LIMIT=1)
     @patch("gift_manager.views.profile.send_mail")
@@ -743,6 +824,9 @@ class TestRemoveFriendView:
         assert response.status_code == 302
         assert reverse("gift_manager:profile_detail") in response.url
 
+        flashed = [str(m) for m in get_messages(response.wsgi_request)]
+        assert any("was removed from your friends" in m for m in flashed)
+
         # Verify that the friend has been removed from both sides
         self.profile1.refresh_from_db()
         self.profile2.refresh_from_db()
@@ -896,3 +980,117 @@ class TestRemoveFriendView:
 
         assert self.profile2 in self.profile1.friends.all()
         assert self.profile1 in self.profile2.friends.all()
+
+
+@pytest.mark.django_db
+class TestCancelInvitationView:
+    """Tests for CancelInvitationView."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user):
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+        self.invitation = Invitation.objects.create(
+            sender=user, recipient_email=encode_email("r@example.com")
+        )
+
+    def test_sender_can_cancel(self):
+        url = reverse("gift_manager:cancel_invitation", args=[self.invitation.pk])
+
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert response.url == reverse("gift_manager:send_invitation")
+        assert not Invitation.objects.filter(pk=self.invitation.pk).exists()
+
+    def test_other_user_cannot_cancel(self):
+        other = User.objects.create_user(username="intruder", password="x", email="i@example.com")
+        self.client.force_login(other)
+        url = reverse("gift_manager:cancel_invitation", args=[self.invitation.pk])
+
+        response = self.client.post(url)
+
+        assert response.status_code == 404
+        assert Invitation.objects.filter(pk=self.invitation.pk).exists()
+
+    def test_accepted_invitation_cannot_be_cancelled(self):
+        Invitation.objects.filter(pk=self.invitation.pk).update(accepted=True)
+        url = reverse("gift_manager:cancel_invitation", args=[self.invitation.pk])
+
+        assert self.client.post(url).status_code == 404
+
+    def test_get_not_allowed(self):
+        url = reverse("gift_manager:cancel_invitation", args=[self.invitation.pk])
+
+        assert self.client.get(url).status_code == 405
+
+    def test_requires_login(self):
+        url = reverse("gift_manager:cancel_invitation", args=[self.invitation.pk])
+
+        response = Client().post(url)
+
+        assert response.status_code == 302
+        assert Invitation.objects.filter(pk=self.invitation.pk).exists()
+
+
+@pytest.mark.django_db
+class TestConfirmRemoveFriendView:
+    """Tests for the friend-removal confirmation page and the friends list."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user):
+        self.user = user
+        self.friend = User.objects.create_user(
+            username="buddy", email=encode_email("buddy@example.com"), password="x"
+        )
+        user.profile.friends.add(self.friend.profile)
+        self.friend.profile.friends.add(user.profile)
+        self.client = Client()
+        self.client.force_login(user)
+
+    def test_confirmation_page_shows_friend_and_post_form(self):
+        url = reverse("gift_manager:confirm_remove_friend", args=[self.friend.profile.pk])
+
+        response = self.client.get(url)
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert "buddy" in content
+        assert reverse("gift_manager:remove_friend", args=[self.friend.profile.pk]) in content
+        # Viewing the confirmation page does not remove anything.
+        assert self.user.profile.friends.filter(pk=self.friend.profile.pk).exists()
+
+    def test_confirmation_page_404_for_non_friend(self):
+        stranger = User.objects.create_user(username="stranger", password="x", email="s@x.com")
+
+        url = reverse("gift_manager:confirm_remove_friend", args=[stranger.profile.pk])
+
+        assert self.client.get(url).status_code == 404
+
+    def test_profile_lists_friend_with_confirmation_link(self):
+        response = self.client.get(reverse("gift_manager:profile_detail"))
+
+        content = response.content.decode()
+        assert "buddy@example.com" in content
+        assert (
+            reverse("gift_manager:confirm_remove_friend", args=[self.friend.profile.pk]) in content
+        )
+        assert "removeFriendModal" in content
+
+    def test_confirmation_page_requires_login(self):
+        url = reverse("gift_manager:confirm_remove_friend", args=[self.friend.profile.pk])
+
+        response = Client().get(url)
+
+        assert response.status_code == 302
+        assert "login" in response.url
+
+    def test_friend_username_is_escaped_in_list(self):
+        self.friend.username = "<script>x</script>"
+        self.friend.save()
+
+        content = self.client.get(reverse("gift_manager:profile_detail")).content.decode()
+
+        assert "<script>x</script>" not in content
+        assert "&lt;script&gt;x&lt;/script&gt;" in content

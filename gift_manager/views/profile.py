@@ -9,6 +9,7 @@ from django.core.mail import send_mail
 from django.db import transaction
 from django.forms import EmailField
 from django.forms import ValidationError
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -21,6 +22,7 @@ from django.views.generic import View
 
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
+from gift_manager.forms import InvitationForm
 from gift_manager.forms import ReminderPreferencesForm
 from gift_manager.mixins.notifications import settings_form_response
 from gift_manager.models import Event
@@ -205,7 +207,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "profile"
 
     def get_object(self, *args):
-        return Profile.objects.get(user=self.request.user)
+        return Profile.objects.prefetch_related("friends__user").get(user=self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -219,38 +221,61 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
 
 
 class SendInvitationView(LoginRequiredMixin, View):
+    template_name = "gift_manager/send_invitation.html"
+
+    def _render(self, request, form, status=200) -> HttpResponse:
+        pending = [
+            invitation
+            for invitation in Invitation.objects.filter(
+                sender=request.user, accepted=False
+            ).order_by("-created_at")
+            if not invitation.is_expired()
+        ]
+        return render(
+            request,
+            self.template_name,
+            {"form": form, "pending_invitations": pending},
+            status=status,
+        )
+
     def get(self, request, *args, **kwargs):
-        return render(request, "gift_manager/send_invitation.html")
+        return self._render(request, InvitationForm())
 
     def post(self, request, *args, **kwargs):
-        try:
-            recipient_email = _normalize_invitation_email(request.POST.get("recipient_email"))
-        except ValidationError:
-            messages.error(request, gettext("Enter a valid email address."))
-            return render(request, "gift_manager/send_invitation.html", status=400)
+        form = InvitationForm(request.POST)
+        if not form.is_valid():
+            return self._render(request, form, status=400)
+        recipient_email = form.cleaned_data["recipient_email"]
 
         if _user_has_email(request.user, recipient_email):
-            messages.error(request, gettext("You cannot send an invitation to yourself."))
-            return redirect("gift_manager:profile_detail")
+            form.add_error("recipient_email", gettext("You cannot send an invitation to yourself."))
+            return self._render(request, form, status=400)
 
         if _user_is_friends_with_email(request.user, recipient_email):
-            messages.error(request, gettext("You are already friends with this user."))
-            return redirect("gift_manager:profile_detail")
+            form.add_error("recipient_email", gettext("You are already friends with this user."))
+            return self._render(request, form, status=400)
+
+        if _pending_invitation_for(request.user, recipient_email) is not None:
+            form.add_error(
+                "recipient_email",
+                gettext(
+                    "An invitation to this address is already pending. "
+                    "Cancel it below, then send a new one."
+                ),
+            )
+            return self._render(request, form, status=400)
 
         if _invitation_send_limit_exceeded(request.user):
-            messages.error(
-                request,
+            form.add_error(
+                None,
                 gettext("You have sent too many invitations recently. Please try again later."),
             )
-            return render(request, "gift_manager/send_invitation.html", status=429)
+            return self._render(request, form, status=429)
 
-        invitation = _pending_invitation_for(request.user, recipient_email)
-        if invitation is None:
-            # Store the email encoded for privacy
-            encoded_email = encode_email(recipient_email)
-            invitation = Invitation.objects.create(
-                sender=request.user, recipient_email=encoded_email
-            )
+        # Store the email encoded for privacy
+        invitation = Invitation.objects.create(
+            sender=request.user, recipient_email=encode_email(recipient_email)
+        )
         invitation_link = request.build_absolute_uri(
             reverse("gift_manager:accept_invitation", args=[invitation.token])
         )
@@ -262,7 +287,22 @@ class SendInvitationView(LoginRequiredMixin, View):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[recipient_email],
         )
-        return redirect("gift_manager:profile_detail")
+        messages.success(
+            request, gettext("Invitation sent to {email}.").format(email=recipient_email)
+        )
+        return redirect("gift_manager:send_invitation")
+
+
+class CancelInvitationView(LoginRequiredMixin, View):
+    """Let a sender withdraw one of their own pending invitations."""
+
+    def post(self, request, invitation_id, *args, **kwargs):
+        invitation = get_object_or_404(
+            Invitation, pk=invitation_id, sender=request.user, accepted=False
+        )
+        invitation.delete()
+        messages.success(request, gettext("Invitation cancelled."))
+        return redirect("gift_manager:send_invitation")
 
 
 class AcceptInvitationView(View):
@@ -319,6 +359,22 @@ class UpdateViewPreferencesView(LoginRequiredMixin, View):
         )
 
 
+class ConfirmRemoveFriendView(LoginRequiredMixin, View):
+    """Non-JavaScript fallback page asking for confirmation before removing a friend."""
+
+    def get(self, request, friend_id, *args, **kwargs):
+        friend_profile = get_object_or_404(
+            Profile.objects.select_related("user"),
+            pk=friend_id,
+            friends=request.user.profile,
+        )
+        return render(
+            request,
+            "gift_manager/confirm_remove_friend.html",
+            {"friend": friend_profile},
+        )
+
+
 class RemoveFriendView(LoginRequiredMixin, View):
     shared_object_models = (Person, PersonGroup, Gift, GiftTag, Event, Relation)
 
@@ -341,6 +397,10 @@ class RemoveFriendView(LoginRequiredMixin, View):
 
             self._cleanup_former_friend_permissions(request.user, friend)
 
+        messages.success(
+            request,
+            gettext("{username} was removed from your friends.").format(username=friend.username),
+        )
         return redirect("gift_manager:profile_detail")
 
     def _cleanup_former_friend_permissions(self, user, friend) -> None:
