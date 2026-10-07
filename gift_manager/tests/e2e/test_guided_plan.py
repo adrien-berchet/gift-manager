@@ -111,3 +111,39 @@ class TestGuidedPlanWorkflow:
 
         expect(panel.locator("#relation-form")).to_be_visible()
         expect(panel.locator("#id_recipient")).to_have_value("")
+
+    def test_no_unsaved_prompt_after_creating_the_plan(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+        panel.locator("#id_new_gift_name").fill("Prompt Free Gift")
+        click_next(panel)
+        panel.get_by_role("button", name="Create gift plan").click()
+        expect(panel).to_be_hidden()
+
+        # The closed panel still holds the last step; it must not guard leaving the page
+        page.locator("nav a.nav-link", has_text="Dashboard").first.click()
+
+        expect(page.locator("#unsaved-changes-modal")).to_be_hidden()
+        page.wait_for_url(lambda url: not url.rstrip("/").endswith("/relations"))
+
+    def test_no_unsaved_prompt_after_discarding_a_later_step(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        dad = seed_data_e2e.persons["dad"]
+        panel = open_guided_flow(page, live_server)
+        panel.locator("#id_recipient").select_option(f"person:{dad.person_id}")
+        click_next(panel)
+        panel.get_by_role("button", name="Cancel").click()
+        modal = page.locator("#unsaved-changes-modal")
+        expect(modal).to_be_visible()
+        modal.locator("#discard-changes-btn").click()
+        expect(panel).to_be_hidden()
+
+        page.locator("nav a.nav-link", has_text="Dashboard").first.click()
+
+        expect(modal).to_be_hidden()
+        page.wait_for_url(lambda url: not url.rstrip("/").endswith("/relations"))

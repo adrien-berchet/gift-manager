@@ -598,6 +598,9 @@
             return;
         }
 
+        // Saved or discarded: the carried input no longer needs protecting, even if the form
+        // stays in the DOM (e.g. inside a closed panel)
+        delete form.dataset.unsavedAlwaysDirty;
         state.original = snapshotForm(form);
         updateFormState(form, false);
         submittingForms.delete(form);
