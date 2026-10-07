@@ -3,6 +3,7 @@
 from django import forms
 from django.db import transaction
 from django.http import HttpResponse
+from django.http import QueryDict
 from django.urls import reverse
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
@@ -68,24 +69,32 @@ class RelationGuidedCreateView(RelationCreateView):
         except (TypeError, ValueError):
             return 1
 
-    def _step_form(self, step: int, data=None, **kwargs) -> forms.Form:
-        return STEP_FORMS[GUIDED_STEPS[step - 1]](data, user=self.request.user, **kwargs)
+    def _step_form(self, step: int, data=None, *, initial_values=None) -> forms.Form:
+        name = GUIDED_STEPS[step - 1]
+        kwargs = {}
+        if name == "occasion":
+            # The plan's surprise default depends on the recipient chosen in step 1
+            kwargs["recipient_value"] = self._posted().get("recipient", "")
+        return STEP_FORMS[name](
+            data, user=self.request.user, initial_values=initial_values, **kwargs
+        )
+
+    def _posted(self) -> QueryDict:
+        return self.request.POST if self.request.method == "POST" else QueryDict()
 
     def _initial_form(self, step: int, data) -> forms.Form:
         """Return an unbound form of ``step`` showing the values already entered in ``data``."""
-        form = self._step_form(step)
-        form.initial = {name: data[name] for name in form.fields if name in data}
-        return form
+        return self._step_form(step, initial_values=data)
 
     def _render_step(self, step: int, form: forms.Form) -> HttpResponse:
         """Render ``step`` with ``form``; the other steps' answers become hidden inputs."""
-        data = self.request.POST if self.request.method == "POST" else {}
+        data = self._posted()
         carried = [
-            (name, data[name])
-            for other, step_name in enumerate(GUIDED_STEPS, start=1)
+            (name, value)
+            for other in range(1, len(GUIDED_STEPS) + 1)
             if other != step
-            for name in STEP_FORMS[step_name].base_fields
-            if name in data
+            for name in self._step_form(other).input_names()
+            for value in data.getlist(name)
         ]
         context = self.get_context_data(
             form=form,
@@ -119,10 +128,11 @@ class RelationGuidedCreateView(RelationCreateView):
         messages: list[str] = []
         try:
             with transaction.atomic():
-                gift, event = create_inline_objects(user, step_forms["gift"], occasion_form)
+                inline = create_inline_objects(
+                    user, step_forms["recipient"], step_forms["gift"], occasion_form
+                )
                 plan_form = RelationForm(
-                    build_relation_data(user, step_forms["recipient"], occasion_form, gift, event),
-                    user=user,
+                    build_relation_data(user, inline, occasion_form), user=user
                 )
                 if plan_form.is_valid():
                     return self.form_valid(plan_form)
