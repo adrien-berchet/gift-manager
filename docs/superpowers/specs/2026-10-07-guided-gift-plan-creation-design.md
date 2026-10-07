@@ -1,6 +1,6 @@
 # Guided Gift Plan Creation — Design
 
-Implements idea `docs/ideas/0016-guided-gift-plan-creation.md`.
+Implements idea `docs/ideas/implemented/0016-guided-gift-plan-creation.md`.
 
 ## Goal
 
@@ -41,8 +41,10 @@ small step form, so errors appear on the relevant step.
 Every step carries a link to `relation_create`, labelled "Use an empty full form" (the guided
 selections are not carried over). When the user has already entered something, following the
 link asks for confirmation that the entered data will be discarded. The existing
-unsaved-changes prompt is reused if it covers the hidden step state; otherwise a dedicated
-confirm is used.
+unsaved-changes prompt is reused (native `confirm` dialogs are not allowed by the frontend
+contracts): `unsaved-changes.js` honours `data-unsaved-always-dirty` (answers carried as hidden
+inputs), `data-unsaved-no-save` (no "Save" action) and `data-unsaved-body` (message). The same
+prompt protects closing the panel on a later step.
 
 ### Final save
 

@@ -430,7 +430,9 @@
 
     // Auto-initialize forms after HTMX swaps
     document.body.addEventListener("htmx:afterSwap", function (e) {
-        const target = e.detail.target;
+        // An outerHTML swap reports the replaced (detached) element as the target: the new
+        // content is what the event itself is dispatched on.
+        const target = e.detail.target?.isConnected ? e.detail.target : e.target;
 
         // Find forms in the swapped content
         const forms = target.querySelectorAll("form[data-form-type]");

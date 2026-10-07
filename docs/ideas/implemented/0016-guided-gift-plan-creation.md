@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -70,4 +70,4 @@ Recommended starting context:
 
 ## Open Questions
 
-- Default status for a guided plan?
+- ~~Default status for a guided plan?~~ Resolved: `Idea`.

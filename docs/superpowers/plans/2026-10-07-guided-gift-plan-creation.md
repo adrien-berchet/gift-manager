@@ -129,7 +129,7 @@
 
 **Files:**
 - Create: `gift_manager/tests/e2e/test_guided_plan.py`
-- Modify: `locale/fr/LC_MESSAGES/django.po` (+ compiled `.mo` if tracked), `docs/ideas/0016-guided-gift-plan-creation.md` (status), `docs/ideas/README.md`, `docs/ai/architecture.md` (one bullet under Patterns)
+- Modify: `locale/fr/LC_MESSAGES/django.po` (+ compiled `.mo` if tracked), `docs/ideas/implemented/0016-guided-gift-plan-creation.md` (status), `docs/ideas/README.md`, `docs/ai/architecture.md` (one bullet under Patterns)
 
 - [ ] **Step 1: Write the e2e test** (pattern of `tests/e2e/test_relation_reaction.py`: `login`, `seed_data_e2e`, `@pytest.mark.django_db(transaction=True)`, `@pytest.mark.frontend`, `@pytest.mark.e2e`). Tests:
   - `test_guided_flow_creates_plan_with_new_gift_and_event`: open `/relations/`, click "Guided", pick a recipient, Next, type a new gift name, Next, type a new event name + date, add a note, click "Create gift plan"; expect the panel to close and the plan to exist in the DB (status Idea, new gift and event, due date = event date).

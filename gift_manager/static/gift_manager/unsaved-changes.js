@@ -239,7 +239,9 @@
         document.body.addEventListener("htmx:afterSwap", function (event) {
             pruneDisconnectedForms();
 
-            const target = event.detail?.target;
+            // An outerHTML swap reports the replaced (detached) element as the target: the new
+            // content is what the event itself is dispatched on.
+            const target = event.detail?.target?.isConnected ? event.detail.target : event.target;
             if (!target) {
                 return;
             }
