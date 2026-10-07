@@ -1,0 +1,76 @@
+{% load i18n %}
+
+<form method="post"
+      id="relation-guided-form"
+      action="{{ form_action_url }}"
+      {% if form_surface == "offcanvas" %}
+      hx-post="{{ form_action_url }}"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      {% endif %}
+      class="{% if form_surface == 'page' %}page-form{% else %}offcanvas-form{% endif %} relation-form relation-guided-form"
+      data-form-type="{{ form_type }}">
+  {% csrf_token %}
+  <input type="hidden" name="step" value="{{ step }}">
+  {% for name, value in carried %}
+  <input type="hidden" name="{{ name }}" value="{{ value }}">
+  {% endfor %}
+  {# First submit button in the form: it is the one Enter triggers, whatever the visible order #}
+  <button type="submit" name="nav" value="next" hidden tabindex="-1" aria-hidden="true"></button>
+
+  <nav aria-label="{% trans 'Progress' %}">
+    <ol class="guided-steps list-unstyled d-flex gap-3 mb-3">
+      {% for item in steps %}
+      <li class="guided-step guided-step--{{ item.state }}{% if item.state == 'current' %} fw-semibold{% elif item.state == 'todo' %} text-muted{% endif %}"
+          {% if item.state == "current" %}aria-current="step"{% endif %}>
+        <span class="badge rounded-pill {% if item.state == 'todo' %}text-bg-secondary{% else %}text-bg-primary{% endif %}">{{ item.number }}</span>
+        {{ item.label }}
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+
+  <div class="form-fields">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/guided_step_fields.html" %}
+  </div>
+
+  <div class="{% if form_surface == 'page' %}page-form-actions{% else %}panel-form-actions{% endif %}"{% if form_surface != 'page' %} data-panel-title="{% trans 'New gift plan' %}"{% endif %}>
+    {% if form_surface == "page" %}
+    <a href="{{ cancel_url }}" class="btn btn-secondary">
+      <i class="fas fa-times me-1" aria-hidden="true"></i>
+      {% trans "Cancel" %}
+    </a>
+    {% else %}
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="offcanvas" aria-label="{% trans 'Cancel' %}">
+      <i class="fas fa-times me-1" aria-hidden="true"></i>
+      {% trans "Cancel" %}
+    </button>
+    {% endif %}
+    {% if step > 1 %}
+    <button type="submit" name="nav" value="back" formnovalidate class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>
+      {% trans "Back" %}
+    </button>
+    {% endif %}
+    <button type="submit" name="nav" value="next" class="btn btn-primary">
+      {% if is_last_step %}
+      <i class="fas fa-save me-1" aria-hidden="true"></i>
+      {% trans "Create gift plan" %}
+      {% else %}
+      {% trans "Next" %}
+      <i class="fas fa-arrow-right ms-1" aria-hidden="true"></i>
+      {% endif %}
+    </button>
+  </div>
+
+  <p class="mt-3 mb-0">
+    <a href="{{ full_form_url }}"
+       class="small"
+       {% if form_surface == "offcanvas" %}data-action="create"{% endif %}>
+      {% trans "Use an empty full form" %}
+    </a>
+  </p>
+</form>

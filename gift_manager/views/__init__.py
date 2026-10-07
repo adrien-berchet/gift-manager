@@ -99,6 +99,7 @@ from .relation import relation_quick_action_undo
 from .relation import relation_reaction
 from .relation import surprise_default_hint
 from .relation import update_relation_status
+from .relation_guided import RelationGuidedCreateView
 
 # Reminder views
 from .reminders import DigestUnsubscribeView
@@ -167,6 +168,7 @@ __all__ = [
     "RelationCreateView",
     "RelationDeleteView",
     "RelationDetailView",
+    "RelationGuidedCreateView",
     "RelationListView",
     "RelationStatusDetailView",
     "RelationStatusListView",
