@@ -60,6 +60,7 @@ class _NewObjectStepForm(_GuidedStepForm):
     new_defaults: dict = {}
     choose_message = None
     both_message = None
+    name_message = None  # shown when the block holds values but no identifying field
 
     def __init__(self, data=None, *, user, initial_values=None, **kwargs):
         super().__init__(data, user=user, **kwargs)
@@ -122,16 +123,22 @@ class _NewObjectStepForm(_GuidedStepForm):
             if name not in self.visible_new_fields
         ]
 
+    def _holds_value(self, bound) -> bool:
+        """Whether a sub-form field holds something other than empty or its default."""
+        value = bound.value()
+        return value not in (None, "", [], ()) and value != self.new_defaults.get(bound.name)
+
+    @property
+    def has_new_values(self) -> bool:
+        """Whether anything was typed in the new-object block, identifying field included."""
+        return any(self._holds_value(self.new_form[name]) for name in self.new_form.fields)
+
     @property
     def details_open(self) -> bool:
         """Whether "More details" should start open: it has errors or non-default values."""
         if self.new_requested and self.new_form.errors:
             return True
-        return any(
-            bound.value() not in (None, "", [], ())
-            and bound.value() != self.new_defaults.get(bound.name)
-            for bound in self.new_detail_fields()
-        )
+        return any(self._holds_value(bound) for bound in self.new_detail_fields())
 
     def clean(self) -> dict:
         cleaned_data = super().clean()
@@ -140,8 +147,10 @@ class _NewObjectStepForm(_GuidedStepForm):
         existing = cleaned_data.get(self.chooser_name)
         if existing and self.new_requested:
             self.add_error(self.chooser_name, self.both_message)
-        elif not existing and not self.new_requested and self.choose_message:
-            self.add_error(self.chooser_name, self.choose_message)
+        elif not existing and not self.new_requested:
+            message = self.choose_message or (self.has_new_values and self.name_message)
+            if message:
+                self.add_error(self.chooser_name, message)
         return cleaned_data
 
     def is_valid(self) -> bool:
@@ -217,6 +226,7 @@ class GuidedOccasionForm(_NewObjectStepForm):
     visible_new_fields = ("name", "date")
     new_defaults = {"schedule_type": Event.ScheduleType.ONE_TIME}
     both_message = gettext_lazy("Choose an existing event or enter a new one, not both.")
+    name_message = gettext_lazy("Enter a name for the new event.")
 
     event = forms.ModelChoiceField(
         label=gettext_lazy("Event"),
@@ -243,8 +253,29 @@ class GuidedOccasionForm(_NewObjectStepForm):
             required=False,
             initial="true" if plan_form.initial.get("is_surprise") else "false",
         )
-        if data is None and kwargs.get("initial_values") is not None:
-            self._prefill(self, kwargs["initial_values"], prefix="")
+        # Marks which recipient the surprise value above was chosen for, so that a carried value
+        # is not applied to another recipient (it would hide or expose the plan wrongly)
+        self.fields["surprise_for"] = forms.CharField(
+            required=False, widget=forms.HiddenInput, initial=recipient_value
+        )
+        values = kwargs.get("initial_values")
+        if data is None and values is not None:
+            self._prefill(self, values, prefix="")
+            if values.get("surprise_for") != recipient_value:
+                self.initial.pop("is_surprise", None)
+            self.initial["surprise_for"] = recipient_value
+
+    @property
+    def plan_details_open(self) -> bool:
+        """Whether the plan's "More details" should start open (errors or non-default values)."""
+        if any(self[name].errors for name in ("status", "url", "price")):
+            return True
+        if self["url"].value() or self["price"].value() not in (None, ""):
+            return True
+        return any(
+            str(self[name].value() or "") != str(self.fields[name].initial or "")
+            for name in ("status", "is_surprise")
+        )
 
     def clean(self) -> dict:
         cleaned_data = super().clean()

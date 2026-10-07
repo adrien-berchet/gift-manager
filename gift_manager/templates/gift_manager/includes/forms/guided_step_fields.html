@@ -13,7 +13,8 @@
   {% include "gift_manager/includes/forms/guided_new_object.html" with heading=new_heading %}
   {% include "gift_manager/includes/forms/field.html" with field=step_form.due_date %}
   {% include "gift_manager/includes/forms/field.html" with field=step_form.comment %}
-  <details class="form-collapsible guided-plan-details mb-3"{% if step_form.status.errors or step_form.url.errors or step_form.price.errors or step_form.url.value or step_form.price.value %} open{% endif %}>
+  {% include "gift_manager/includes/forms/field.html" with field=step_form.surprise_for %}
+  <details class="form-collapsible guided-plan-details mb-3"{% if step_form.plan_details_open %} open{% endif %}>
     <summary class="form-label">{% trans "More details" %}</summary>
     <div class="pt-2">
       {% include "gift_manager/includes/forms/field.html" with field=step_form.status %}

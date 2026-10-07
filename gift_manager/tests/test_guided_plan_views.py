@@ -188,6 +188,7 @@ class TestSteps:
             nav="back",
             recipient=_recipient(linked),
             gift=gift.pk,
+            surprise_for=_recipient(linked),
             **_plan_fields(idea_status),
         )
         carried = dict(back.context["carried"])
@@ -196,6 +197,36 @@ class TestSteps:
         again = _post(authenticated_client, url, 2, gift=gift.pk, **carried)
         assert again.context["step"] == 3
         assert again.context["step_form"].initial["is_surprise"] == "false"
+
+    def test_stale_surprise_is_dropped_when_the_recipient_changes(
+        self, authenticated_client, url, user, idea_status
+    ):
+        plain = PersonFactory(shared_with=[user])
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        gift = GiftFactory(shared_with=[user])
+
+        # Step 3 was filled for a recipient without a surprise default ("No" chosen)...
+        back = _post(
+            authenticated_client,
+            url,
+            3,
+            nav="back",
+            recipient=_recipient(plain),
+            gift=gift.pk,
+            surprise_for=_recipient(plain),
+            **_plan_fields(idea_status),
+        )
+        carried = dict(back.context["carried"])
+        # ...then the recipient is changed back in step 1 and the user moves forward again
+        carried["recipient"] = _recipient(linked)
+        step_two = _post(authenticated_client, url, 1, **carried)
+        carried = dict(step_two.context["carried"])
+        step_three = _post(authenticated_client, url, 2, gift=gift.pk, **carried)
+
+        assert step_three.context["step"] == 3
+        form = step_three.context["step_form"]
+        assert "is_surprise" not in form.initial
+        assert form.fields["is_surprise"].initial == "true"
 
 
 class TestFinalSubmit:

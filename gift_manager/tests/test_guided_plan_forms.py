@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from django.urls import reverse
+from django.utils import translation
 
 from gift_manager.forms import decode_email
 from gift_manager.guided_plan import GuidedGiftForm
@@ -296,13 +297,14 @@ class TestOccasionForm:
         assert not form.is_valid()
         assert "date" in form.new_form.errors
 
-    def test_occasion_form_new_event_details_without_name_are_ignored(self, user):
+    def test_occasion_form_new_event_details_without_name_are_rejected_and_kept(self, user):
         form = GuidedOccasionForm(
             {"new_event-comment": "x", "status": _idea_status().pk, "is_surprise": "false"},
             user=user,
         )
 
-        assert form.is_valid(), form.errors
+        assert not form.is_valid()
+        assert "event" in form.errors
         assert not form.new_requested
         assert form.new_form.initial["comment"] == "x"
 
@@ -390,6 +392,97 @@ class TestOccasionForm:
 
         assert {"recipient", "new_person-first_name", "new_person-groups"} <= set(names)
         assert "new_person-interests" in names
+
+
+class TestOccasionPlanDetails:
+    def test_occasion_form_ignores_carried_surprise_for_another_recipient(self, user):
+        other = PersonFactory(shared_with=[user])
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+
+        form = GuidedOccasionForm(
+            user=user,
+            recipient_value=f"person:{linked.person_id}",
+            initial_values={"is_surprise": "false", "surprise_for": f"person:{other.person_id}"},
+        )
+
+        assert "is_surprise" not in form.initial
+        assert form.fields["is_surprise"].initial == "true"
+        assert form.initial["surprise_for"] == f"person:{linked.person_id}"
+
+    def test_occasion_form_keeps_carried_surprise_for_the_same_recipient(self, user):
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        value = f"person:{linked.person_id}"
+
+        form = GuidedOccasionForm(
+            user=user,
+            recipient_value=value,
+            initial_values={"is_surprise": "false", "surprise_for": value},
+        )
+
+        assert form.initial["is_surprise"] == "false"
+
+    def test_occasion_form_ignores_carried_surprise_without_recipient_marker(self, user):
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+
+        form = GuidedOccasionForm(
+            user=user,
+            recipient_value=f"person:{linked.person_id}",
+            initial_values={"is_surprise": "false"},
+        )
+
+        assert "is_surprise" not in form.initial
+
+    def test_occasion_form_event_date_without_name_is_rejected(self, user):
+        form = GuidedOccasionForm(
+            {
+                "new_event-date": "2030-05-04",
+                "status": _idea_status().pk,
+                "is_surprise": "false",
+            },
+            user=user,
+        )
+
+        assert not form.is_valid()
+        assert "event" in form.errors
+
+    def test_occasion_form_default_schedule_alone_is_not_a_new_event(self, user):
+        form = GuidedOccasionForm(
+            {
+                "new_event-schedule_type": "one_time",
+                "status": _idea_status().pk,
+                "is_surprise": "false",
+            },
+            user=user,
+        )
+
+        assert form.is_valid(), form.errors
+
+    def test_plan_details_closed_for_defaults(self, user):
+        _idea_status()
+
+        assert not GuidedOccasionForm(user=user).plan_details_open
+
+    def test_plan_details_open_for_a_non_default_status(self, user):
+        planned, _ = RelationStatus.objects.get_or_create(
+            status_en="Planned", defaults={"status": "Planned"}
+        )
+        _idea_status()
+
+        form = GuidedOccasionForm(user=user, initial_values={"status": str(planned.pk)})
+
+        assert form.plan_details_open
+
+    def test_plan_details_open_for_a_non_default_surprise(self, user):
+        _idea_status()
+        value = ""
+
+        form = GuidedOccasionForm(
+            user=user,
+            recipient_value=value,
+            initial_values={"is_surprise": "true", "surprise_for": value},
+        )
+
+        assert form.plan_details_open
 
 
 def _forms(user, *, recipient, gift, occasion):
@@ -565,3 +658,25 @@ class TestBuildRelationData:
         assert data["recipient"] == inline.recipient_value
         assert data["recipient"].startswith("person:")
         assert data["status"] == _idea_status().pk
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        (
+            GuidedRecipientForm.both_message,
+            "Choisissez un destinataire existant ou saisissez une nouvelle personne, pas les deux.",
+        ),
+        (
+            GuidedGiftForm.both_message,
+            "Choisissez un cadeau existant ou saisissez-en un nouveau, pas les deux.",
+        ),
+        (
+            GuidedOccasionForm.both_message,
+            "Choisissez un événement existant ou saisissez-en un nouveau, pas les deux.",
+        ),
+    ],
+)
+def test_french_messages_are_exactly_translated(message, expected):
+    with translation.override("fr"):
+        assert str(message) == expected
