@@ -407,12 +407,17 @@
             return;
         }
 
+        const formData = options.form?.dataset || {};
+
         if (body) {
-            body.textContent = options.body || CONFIG.messages.modalBody;
+            body.textContent = formData.unsavedBody || options.body || CONFIG.messages.modalBody;
         }
 
         if (saveBtn) {
-            saveBtn.classList.toggle("d-none", !options.allowSave);
+            saveBtn.classList.toggle(
+                "d-none",
+                !options.allowSave || formData.unsavedNoSave === "true"
+            );
         }
 
         bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -449,7 +454,10 @@
             return;
         }
 
-        updateFormState(form, !snapshotsEqual(state.original, snapshotForm(form)));
+        // Forms flagged data-unsaved-always-dirty hold input the snapshot cannot see (answers
+        // carried between steps as hidden fields), so leaving them always needs confirmation.
+        const alwaysDirty = form.dataset.unsavedAlwaysDirty === "true";
+        updateFormState(form, alwaysDirty || !snapshotsEqual(state.original, snapshotForm(form)));
     }
 
     function refreshForms(container) {

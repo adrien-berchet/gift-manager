@@ -293,20 +293,26 @@ class TestEntryPoints:
 
         assert f'href="{url}"' in response.content.decode()
 
-    def test_pages_load_the_guided_plan_script(self, authenticated_client):
-        response = authenticated_client.get(reverse("gift_manager:home"))
-
-        assert "guided-plan.js" in response.content.decode()
-
-    def test_full_form_link_asks_for_confirmation_in_the_offcanvas(self, authenticated_client, url):
+    def test_full_form_link_is_a_create_link_in_the_offcanvas(self, authenticated_client, url):
         content = authenticated_client.get(url, **HTMX).content.decode()
 
-        assert "data-guided-full-form" in content
-        assert 'data-confirm-message="' in content
-        assert 'data-action="create"' in content
+        link = re.search(r"<a[^>]*relations/create/[^>]*>", content).group(0)
+        assert 'data-action="create"' in link
 
     def test_full_form_link_is_a_plain_link_on_the_page(self, authenticated_client, url):
         content = authenticated_client.get(url).content.decode()
 
-        link = re.search(r"<a[^>]*data-guided-full-form[^>]*>", content).group(0)
+        link = re.search(r"<a[^>]*relations/create/[^>]*>", content).group(0)
         assert 'data-action="create"' not in link
+
+    def test_later_steps_are_flagged_as_holding_unsaved_input(
+        self, authenticated_client, url, person
+    ):
+        first = authenticated_client.get(url, **HTMX).content.decode()
+        second = _post(
+            authenticated_client, url, 1, htmx=True, recipient=_recipient(person)
+        ).content.decode()
+
+        assert "data-unsaved-always-dirty" not in first
+        assert 'data-unsaved-always-dirty="true"' in second
+        assert 'data-unsaved-no-save="true"' in second
