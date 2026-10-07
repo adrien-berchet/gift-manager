@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-07 07:50+0000\n"
+"POT-Creation-Date: 2026-10-07 09:17+0000\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -26,31 +26,31 @@ msgstr "Anglais"
 msgid "French"
 msgstr "Français"
 
-#: GiftManager/views.py:69 GiftManager/views.py:186
+#: GiftManager/views.py:76 GiftManager/views.py:193
 msgid "This account is disabled. Please contact an administrator."
 msgstr "Ce compte est désactivé. Veuillez contacter un administrateur."
 
-#: GiftManager/views.py:102
+#: GiftManager/views.py:109
 msgid "Use the email address this invitation was sent to."
 msgstr "Utilisez l'adresse email à laquelle cette invitation a été envoyée."
 
-#: GiftManager/views.py:132
+#: GiftManager/views.py:139
 msgid "Your account has been successfully deactivated."
 msgstr "Votre compte a été désactivé avec succès."
 
-#: GiftManager/views.py:161
+#: GiftManager/views.py:168
 msgid "Your account has been successfully deleted."
 msgstr "Votre compte a été supprimé avec succès."
 
-#: GiftManager/views.py:176
+#: GiftManager/views.py:183
 msgid "No inactive user found for reactivation."
 msgstr "Cet utilisateur inactif n'a pas été trouvé pour être réactivé."
 
-#: GiftManager/views.py:181
+#: GiftManager/views.py:188
 msgid "This user does not exist."
 msgstr "Cet utilisateur n'existe pas."
 
-#: GiftManager/views.py:197
+#: GiftManager/views.py:204
 msgid "Your account has been successfully reactivated."
 msgstr "Votre compte a été réactivé avec succès."
 
@@ -538,8 +538,8 @@ msgid "owner"
 msgstr "propriétaire"
 
 #: gift_manager/models.py:421 gift_manager/templates/gift_manager/base.html:391
-#: gift_manager/templates/gift_manager/profile_detail.html:176
-#: gift_manager/templates/gift_manager/profile_detail.html:196
+#: gift_manager/templates/gift_manager/profile_detail.html:181
+#: gift_manager/templates/gift_manager/profile_detail.html:201
 msgid "List"
 msgstr "Liste"
 
@@ -907,7 +907,7 @@ msgstr "Réactiver le compte"
 #: gift_manager/templates/gift_manager/includes/person_group_management_grid.html:86
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:33
 #: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html:23
-#: gift_manager/templates/gift_manager/profile_detail.html:348
+#: gift_manager/templates/gift_manager/profile_detail.html:353
 #: gift_manager/templates/gift_manager/send_invitation.html:23
 #: gift_manager/templates/gift_manager/send_invitation.html:51
 #: gift_manager/templates/gift_manager/share_objects.html:288
@@ -949,29 +949,27 @@ msgstr "Supprimer mon compte utilisateur"
 
 #: gift_manager/templates/account/login.html:5
 #: gift_manager/templates/account/login.html:9
-#: gift_manager/templates/account/login.html:33
+#: gift_manager/templates/account/login.html:32
 #: gift_manager/templates/allauth/layouts/base.html:71
 #: gift_manager/templates/gift_manager/base.html:202
 #: gift_manager/templates/gift_manager/home.html:1137
 msgid "Sign In"
 msgstr "Connexion"
 
-#: gift_manager/templates/account/login.html:13
+#: gift_manager/templates/account/login.html:12
 #, python-format
 msgid ""
 "If you have not created an account yet, please <a "
 "href=\"%(signup_url)s\">sign up</a> first."
-msgstr "Si vous n'avez pas encore de compte, veuillez d'abord <a href=\"%(signup_url)s\">vous inscrire</a>."
+msgstr ""
+"Si vous n'avez pas encore de compte, veuillez d'abord <a "
+"href=\"%(signup_url)s\">vous inscrire</a>."
 
-#: gift_manager/templates/account/login.html:35
-msgid "Forgot your password?"
-msgstr "Mot de passe oublié ?"
-
-#: gift_manager/templates/account/login.html:45
+#: gift_manager/templates/account/login.html:43
 msgid "Sign in with a passkey"
 msgstr "Se connecter avec une clé d'accès"
 
-#: gift_manager/templates/account/login.html:50
+#: gift_manager/templates/account/login.html:48
 msgid "Send me a sign-in code"
 msgstr "M'envoyer un code de connexion"
 
@@ -1205,7 +1203,7 @@ msgstr "Confirmer"
 #: gift_manager/templates/gift_manager/includes/offcanvas_base.html:86
 #: gift_manager/templates/gift_manager/includes/person_group_management_grid.html:78
 #: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:13
-#: gift_manager/templates/gift_manager/profile_detail.html:337
+#: gift_manager/templates/gift_manager/profile_detail.html:342
 msgid "Close"
 msgstr "Fermer"
 
@@ -1317,8 +1315,8 @@ msgid "Card view"
 msgstr "Vue en cartes"
 
 #: gift_manager/templates/gift_manager/base.html:393
-#: gift_manager/templates/gift_manager/profile_detail.html:183
-#: gift_manager/templates/gift_manager/profile_detail.html:203
+#: gift_manager/templates/gift_manager/profile_detail.html:188
+#: gift_manager/templates/gift_manager/profile_detail.html:208
 msgid "Cards"
 msgstr "Cartes"
 
@@ -1357,9 +1355,9 @@ msgstr "Supprimer"
 #: gift_manager/templates/gift_manager/confirm_remove_friend.html:4
 #: gift_manager/templates/gift_manager/confirm_remove_friend.html:9
 #: gift_manager/templates/gift_manager/confirm_remove_friend.html:18
-#: gift_manager/templates/gift_manager/profile_detail.html:302
-#: gift_manager/templates/gift_manager/profile_detail.html:336
-#: gift_manager/templates/gift_manager/profile_detail.html:350
+#: gift_manager/templates/gift_manager/profile_detail.html:307
+#: gift_manager/templates/gift_manager/profile_detail.html:341
+#: gift_manager/templates/gift_manager/profile_detail.html:355
 msgid "Remove friend"
 msgstr "Supprimer cet ami"
 
@@ -2961,11 +2959,13 @@ msgid ""
 msgstr "Voulez-vous vraiment retirer <strong>%(name)s</strong> de vos amis ?"
 
 #: gift_manager/templates/gift_manager/includes/remove_friend_confirmation.html:6
-#: gift_manager/templates/gift_manager/profile_detail.html:344
+#: gift_manager/templates/gift_manager/profile_detail.html:349
 msgid ""
 "You will both lose access to the objects shared through this friendship. "
 "Existing owners keep their access."
-msgstr "Vous perdrez tous les deux l'accès aux objets partagés via cette amitié. Les propriétaires existants conservent leur accès."
+msgstr ""
+"Vous perdrez tous les deux l'accès aux objets partagés via cette amitié. Les "
+"propriétaires existants conservent leur accès."
 
 #: gift_manager/templates/gift_manager/includes/repeat_gift_hint.html:7
 #, python-format
@@ -3261,95 +3261,95 @@ msgid "Remove from group"
 msgstr "Retirer du groupe"
 
 #: gift_manager/templates/gift_manager/profile_detail.html:6
-#: gift_manager/templates/gift_manager/profile_detail.html:148
+#: gift_manager/templates/gift_manager/profile_detail.html:153
 msgid "My Profile"
 msgstr "Mon profil"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:150
+#: gift_manager/templates/gift_manager/profile_detail.html:155
 msgid "User name:"
 msgstr "Nom d'utilisateur :"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:154
+#: gift_manager/templates/gift_manager/profile_detail.html:159
 msgid "Email address:"
 msgstr "Adresse email :"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:156
+#: gift_manager/templates/gift_manager/profile_detail.html:161
 msgid "Update"
 msgstr "Modifier"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:162
+#: gift_manager/templates/gift_manager/profile_detail.html:167
 msgid "Display Preferences"
 msgstr "Préférences d'affichage"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:163
+#: gift_manager/templates/gift_manager/profile_detail.html:168
 msgid "Choose how you want to view lists by default on different screen sizes."
 msgstr ""
 "Choisissez comment vous souhaitez afficher les listes par défaut sur des "
 "écrans de différentes tailles."
 
-#: gift_manager/templates/gift_manager/profile_detail.html:170
+#: gift_manager/templates/gift_manager/profile_detail.html:175
 msgid "Desktop / Large Screens"
 msgstr "Ordinateur / Grands écrans"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:190
+#: gift_manager/templates/gift_manager/profile_detail.html:195
 msgid "Mobile / Small Screens"
 msgstr "Mobile / Petits écrans"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:212
-#: gift_manager/templates/gift_manager/profile_detail.html:245
+#: gift_manager/templates/gift_manager/profile_detail.html:217
+#: gift_manager/templates/gift_manager/profile_detail.html:250
 msgid "Save Preferences"
 msgstr "Enregistrer les préférences"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:220
+#: gift_manager/templates/gift_manager/profile_detail.html:225
 msgid "Reminders"
 msgstr "Rappels"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:252
-#: gift_manager/templates/gift_manager/profile_detail.html:255
+#: gift_manager/templates/gift_manager/profile_detail.html:257
+#: gift_manager/templates/gift_manager/profile_detail.html:260
 msgid "Calendar feed"
 msgstr "Flux de calendrier"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:261
+#: gift_manager/templates/gift_manager/profile_detail.html:266
 msgid "Generate a new link"
 msgstr "Générer un nouveau lien"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:267
+#: gift_manager/templates/gift_manager/profile_detail.html:272
 msgid "Disable"
 msgstr "Désactiver"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:275
+#: gift_manager/templates/gift_manager/profile_detail.html:280
 msgid "Enable calendar feed"
 msgstr "Activer le flux de calendrier"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:284
+#: gift_manager/templates/gift_manager/profile_detail.html:289
 msgid "My Friends"
 msgstr "Mes amis"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:286
+#: gift_manager/templates/gift_manager/profile_detail.html:291
 msgid "Invite friend"
 msgstr "Inviter un ami"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:308
+#: gift_manager/templates/gift_manager/profile_detail.html:313
 msgid "You don't have any friend yet."
 msgstr "Vous n'avez aucun ami pour l'instant."
 
-#: gift_manager/templates/gift_manager/profile_detail.html:314
+#: gift_manager/templates/gift_manager/profile_detail.html:319
 msgid "Account management"
 msgstr "Gestion du compte"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:315
+#: gift_manager/templates/gift_manager/profile_detail.html:320
 msgid "Manage your account:"
 msgstr "Gérez votre compte :"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:318
+#: gift_manager/templates/gift_manager/profile_detail.html:323
 msgid "Deactivate my account"
 msgstr "Désactiver mon compte"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:321
+#: gift_manager/templates/gift_manager/profile_detail.html:326
 msgid "Delete my account"
 msgstr "Supprimer mon compte"
 
-#: gift_manager/templates/gift_manager/profile_detail.html:341
+#: gift_manager/templates/gift_manager/profile_detail.html:346
 #, python-format
 msgid "Are you sure you want to remove %(name)s from your friends?"
 msgstr "Voulez-vous vraiment retirer %(name)s de vos amis ?"
@@ -4108,6 +4108,11 @@ msgstr "Vous êtes maintenant ami avec {}"
 msgid "Display preferences saved successfully."
 msgstr "Préférences d'affichage enregistrées avec succès"
 
+#: gift_manager/views/profile.py:395
+#, python-brace-format
+msgid "{username} was removed from your friends."
+msgstr "{username} a été retiré de vos amis."
+
 #: gift_manager/views/relation.py:220 gift_manager/views/relation.py:707
 msgid "gift plan"
 msgstr "projet de cadeau"
@@ -4277,6 +4282,9 @@ msgstr "Sélection d'amis invalide."
 #: gift_manager/views/sharing.py:605
 msgid "Invalid object selection."
 msgstr "Sélection d'éléments invalide."
+
+#~ msgid "Forgot your password?"
+#~ msgstr "Mot de passe oublié ?"
 
 #~ msgid "Login"
 #~ msgstr "Authentification"

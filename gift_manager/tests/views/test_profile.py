@@ -7,6 +7,7 @@ import pytest
 from allauth.account.models import EmailAddress
 from allauth.account.signals import email_confirmed
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.core.cache import cache
 from django.test import Client
 from django.test import override_settings
@@ -792,6 +793,9 @@ class TestRemoveFriendView:
         # Verify that redirection works
         assert response.status_code == 302
         assert reverse("gift_manager:profile_detail") in response.url
+
+        flashed = [str(m) for m in get_messages(response.wsgi_request)]
+        assert any("was removed from your friends" in m for m in flashed)
 
         # Verify that the friend has been removed from both sides
         self.profile1.refresh_from_db()

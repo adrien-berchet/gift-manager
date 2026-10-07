@@ -134,3 +134,23 @@ class TestLoginPage:
 
         assert response.status_code == 200
         assert "form-error-summary" in response.content.decode()
+
+    def test_remember_checkbox_uses_bootstrap_class(self, client):
+        content = client.get(reverse("account_login")).content.decode()
+
+        assert "form-check-input" in content
+
+    def test_successful_login_redirects(self, client):
+        user = User.objects.create_user(
+            username="loginuser", email="login@example.com", password="TestPassword123!"
+        )
+        EmailAddress.objects.create(
+            user=user, email="login@example.com", verified=True, primary=True
+        )
+
+        response = client.post(
+            reverse("account_login"), {"login": "loginuser", "password": "TestPassword123!"}
+        )
+
+        assert response.status_code == 302
+        assert "_auth_user_id" in client.session

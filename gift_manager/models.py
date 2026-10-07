@@ -588,7 +588,7 @@ class Invitation(models.Model):
     def expires_at(self):
         """Return the expiry datetime, or None when invitations do not expire."""
         expiry_days = getattr(settings, "INVITATION_EXPIRY_DAYS", None)
-        if expiry_days is None:
+        if expiry_days is None or self.created_at is None:
             return None
         return self.created_at + timedelta(days=expiry_days)
 

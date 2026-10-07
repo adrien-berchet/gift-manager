@@ -294,7 +294,7 @@
         {% if profile.friends.all %}
             <ul class="list-group list-group-flush mt-3 friends-list">
                 {% for friend in profile.friends.all %}
-                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-0">
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-2">
                         <div>
                             <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ friend.user.username }}</div>
                             <div class="text-muted small">{{ friend.user.email|decode_email }}</div>

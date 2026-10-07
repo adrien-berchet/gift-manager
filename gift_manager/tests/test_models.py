@@ -22,6 +22,7 @@ from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
+from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -129,6 +130,22 @@ class TestInvitation:
         return InvitationFactory(
             sender=sender, recipient_email=encode_email("recipient@example.com")
         )
+
+    @override_settings(INVITATION_EXPIRY_DAYS=7)
+    def test_expires_at_uses_configured_expiry(self, invitation):
+        """expires_at is created_at plus the configured number of days."""
+        assert invitation.expires_at == invitation.created_at + timedelta(days=7)
+
+    @override_settings(INVITATION_EXPIRY_DAYS=None)
+    def test_expires_at_is_none_without_expiry_setting(self, invitation):
+        """Invitations never expire when no expiry is configured."""
+        assert invitation.expires_at is None
+        assert not invitation.is_expired()
+
+    @override_settings(INVITATION_EXPIRY_DAYS=7)
+    def test_expires_at_is_none_for_unsaved_invitation(self, sender):
+        """An unsaved invitation has no created_at, so it has no expiry yet."""
+        assert Invitation(sender=sender).expires_at is None
 
     def test_invitation_creation(self, invitation):
         """Test creating an invitation."""

@@ -207,7 +207,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
     context_object_name = "profile"
 
     def get_object(self, *args):
-        return Profile.objects.get(user=self.request.user)
+        return Profile.objects.prefetch_related("friends__user").get(user=self.request.user)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -390,6 +390,10 @@ class RemoveFriendView(LoginRequiredMixin, View):
 
             self._cleanup_former_friend_permissions(request.user, friend)
 
+        messages.success(
+            request,
+            gettext("{username} was removed from your friends.").format(username=friend.username),
+        )
         return redirect("gift_manager:profile_detail")
 
     def _cleanup_former_friend_permissions(self, user, friend) -> None:
