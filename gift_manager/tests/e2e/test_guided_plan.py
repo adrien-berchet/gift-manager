@@ -203,7 +203,7 @@ class TestGuidedPlanFullData:
         panel.locator("#id_new_event-recurrence").select_option("yearly")
         open_details(panel, "More gift plan details")
         panel.locator("#id_status").select_option(label="Planned")
-        panel.locator("#id_is_surprise").select_option("false")
+        panel.locator("#id_is_surprise").uncheck()
         panel.get_by_role("button", name="Create gift plan").click()
 
         expect(panel).to_be_hidden()
@@ -276,6 +276,8 @@ class TestGuidedPlanFullData:
         expect(plan_section.locator("#id_comment")).to_have_count(1)
         expect(event_section.get_by_text("Event comment")).to_have_count(1)
         expect(plan_section.get_by_text("Gift plan comment")).to_have_count(1)
+        expect(plan_section.locator("#id_status")).to_be_visible()
+        expect(plan_section.locator("#id_is_surprise")).to_be_hidden()
         expect(panel.locator("li[aria-current='step']")).to_contain_text("Event and gift plan")
 
 

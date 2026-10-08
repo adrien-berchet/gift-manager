@@ -175,14 +175,17 @@ class TestSteps:
         assert sorted(initial["groups"]) == group_ids
         assert sorted(initial["interests"]) == tag_ids
 
-    def test_surprise_no_survives_back_and_next(self, authenticated_client, url, user, idea_status):
+    def test_unchecked_surprise_survives_back_and_next(
+        self, authenticated_client, url, user, idea_status
+    ):
         linked = PersonFactory(shared_with=[user], user_link=UserFactory())
         gift = GiftFactory(shared_with=[user])
 
         first = _post(authenticated_client, url, 2, recipient=_recipient(linked), gift=gift.pk)
         assert first.context["step"] == 3
-        assert first.context["step_form"].fields["is_surprise"].initial == "true"
+        assert first.context["step_form"].fields["is_surprise"].initial is True
 
+        # A browser sends nothing for an unchecked checkbox: only the recipient marker travels
         back = _post(
             authenticated_client,
             url,
@@ -191,14 +194,14 @@ class TestSteps:
             recipient=_recipient(linked),
             gift=gift.pk,
             surprise_for=_recipient(linked),
-            **_plan_fields(idea_status),
+            status=idea_status.pk,
         )
         carried = dict(back.context["carried"])
-        assert carried["is_surprise"] == "false"
+        assert "is_surprise" not in carried
 
         again = _post(authenticated_client, url, 2, gift=gift.pk, **carried)
         assert again.context["step"] == 3
-        assert again.context["step_form"].initial["is_surprise"] == "false"
+        assert again.context["step_form"].initial["is_surprise"] is False
 
     def test_stale_surprise_is_dropped_when_the_recipient_changes(
         self, authenticated_client, url, user, idea_status
@@ -228,7 +231,7 @@ class TestSteps:
         assert step_three.context["step"] == 3
         form = step_three.context["step_form"]
         assert "is_surprise" not in form.initial
-        assert form.fields["is_surprise"].initial == "true"
+        assert form.fields["is_surprise"].initial is True
 
 
 class TestFinalSubmit:
@@ -788,7 +791,7 @@ class TestModeMarkup:
         )
 
         assert response.context["step"] == 3
-        assert response.context["step_form"].fields["is_surprise"].initial == "false"
+        assert response.context["step_form"].fields["is_surprise"].initial is False
 
 
 class TestInvalidStepResponses:
@@ -943,3 +946,42 @@ class TestTamperedMultiValuedInputs:
         person = Person.objects.get(first_name="Anna")
         assert set(person.groups.all()) == set(groups)
         assert set(person.interests.all()) == set(tags)
+
+
+class TestStatusAndSurpriseMarkup:
+    def _plan_part(self, client, url):
+        content = client.get(url, {"step": 3}, **HTMX).content.decode()
+        return content.split("guided-section--plan", 1)[1]
+
+    def test_status_is_visible_without_opening_the_details(self, authenticated_client, url):
+        plan_part = self._plan_part(authenticated_client, url)
+
+        assert plan_part.index('name="status"') < plan_part.index("More gift plan details")
+        assert plan_part.index('name="due_date"') < plan_part.index('name="status"')
+
+    def test_link_price_and_surprise_stay_in_the_details(self, authenticated_client, url):
+        plan_part = self._plan_part(authenticated_client, url)
+
+        for name in ("url", "price", "is_surprise"):
+            assert plan_part.index("More gift plan details") < plan_part.index(f'name="{name}"')
+
+    def test_surprise_is_a_checkbox_like_in_the_full_form(self, authenticated_client, url):
+        plan_part = self._plan_part(authenticated_client, url)
+
+        tag = re.search(r'<input[^>]*name="is_surprise"[^>]*>', plan_part).group(0)
+        assert 'type="checkbox"' in tag
+        assert 'class="form-check-input"' in tag
+        assert 'for="id_is_surprise">Surprise</label>' in plan_part
+
+    def test_surprise_checkbox_is_checked_for_a_linked_recipient(
+        self, authenticated_client, url, user
+    ):
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client, url, 2, htmx=True, recipient=_recipient(linked), gift=gift.pk
+        )
+
+        tag = re.search(r'<input[^>]*name="is_surprise"[^>]*>', response.content.decode()).group(0)
+        assert " checked" in tag

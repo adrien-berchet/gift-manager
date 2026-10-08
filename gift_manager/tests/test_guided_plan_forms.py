@@ -350,14 +350,14 @@ class TestOccasionForm:
         form = GuidedOccasionForm(user=user)
 
         assert form.fields["status"].initial == idea.pk
-        assert form.fields["is_surprise"].initial == "false"
+        assert form.fields["is_surprise"].initial is False
 
     def test_occasion_form_surprise_default_for_linked_recipient(self, user):
         person = PersonFactory(shared_with=[user], user_link=UserFactory())
 
         form = GuidedOccasionForm(user=user, recipient_value=f"person:{person.person_id}")
 
-        assert form.fields["is_surprise"].initial == "true"
+        assert form.fields["is_surprise"].initial is True
 
     def test_occasion_form_accepts_plan_details(self, user):
         planned, _ = RelationStatus.objects.get_or_create(
@@ -406,7 +406,7 @@ class TestOccasionPlanDetails:
         )
 
         assert "is_surprise" not in form.initial
-        assert form.fields["is_surprise"].initial == "true"
+        assert form.fields["is_surprise"].initial is True
         assert form.initial["surprise_for"] == f"person:{linked.person_id}"
 
     def test_occasion_form_keeps_carried_surprise_for_the_same_recipient(self, user):
@@ -419,7 +419,7 @@ class TestOccasionPlanDetails:
             initial_values={"is_surprise": "false", "surprise_for": value},
         )
 
-        assert form.initial["is_surprise"] == "false"
+        assert form.initial["is_surprise"] is False
 
     def test_occasion_form_ignores_carried_surprise_without_recipient_marker(self, user):
         linked = PersonFactory(shared_with=[user], user_link=UserFactory())
@@ -463,7 +463,7 @@ class TestOccasionPlanDetails:
 
         assert not GuidedOccasionForm(user=user).plan_details_open
 
-    def test_plan_details_open_for_a_non_default_status(self, user):
+    def test_a_non_default_status_does_not_open_the_plan_details(self, user):
         planned, _ = RelationStatus.objects.get_or_create(
             status_en="Planned", defaults={"status": "Planned"}
         )
@@ -471,7 +471,18 @@ class TestOccasionPlanDetails:
 
         form = GuidedOccasionForm(user=user, initial_values={"status": str(planned.pk)})
 
-        assert form.plan_details_open
+        assert not form.plan_details_open
+
+    def test_an_unchecked_surprise_is_remembered_for_the_same_recipient(self, user):
+        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        value = f"person:{linked.person_id}"
+
+        form = GuidedOccasionForm(
+            user=user, recipient_value=value, initial_values={"surprise_for": value}
+        )
+
+        assert form.fields["is_surprise"].initial is True
+        assert form.initial["is_surprise"] is False
 
     def test_plan_details_open_for_a_non_default_surprise(self, user):
         _idea_status()

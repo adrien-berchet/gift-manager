@@ -98,10 +98,13 @@ when the mode is "new".
 
 ### Plan details (step 3)
 
-Due date (blank → the chosen event's next occurrence, or the new event's date) and notes
-(`comment`) are visible. "More details" holds the plan's status (default `Idea`), link and price
-overrides, and the surprise flag (default as in the full form via `default_surprise_for`;
-only shown where it can apply, like `SurpriseFieldMixin`).
+Due date (blank → the chosen event's next occurrence, or the new event's date), status (default
+`Idea`) and the comment are visible. "More gift plan details" holds the link and price overrides and
+the surprise **checkbox**, rendered with the same partial as the full form. Its default comes from
+`default_surprise_for`, as in the full form. Because an unchecked checkbox posts nothing, a hidden
+`surprise_for` marker (the recipient the value was chosen for) travels with it: with the same
+recipient an absent checkbox means "unchecked" when the step is shown again; with another recipient
+the carried value is dropped and the default applies.
 
 ### "Use an empty full form"
 

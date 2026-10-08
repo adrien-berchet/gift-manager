@@ -314,14 +314,12 @@ class GuidedOccasionForm(_NewObjectStepForm):
         self.fields["comment"].label = gettext_lazy("Gift plan comment")
         status = self.fields["status"]
         status.empty_label = None
+        status.widget.attrs["class"] = "form-select"
         status.initial = RelationStatus.get_default_pk()
-        self.fields["is_surprise"] = forms.TypedChoiceField(
+        self.fields["is_surprise"] = forms.BooleanField(
             label=gettext_lazy("Surprise"),
-            choices=[("false", gettext_lazy("No")), ("true", gettext_lazy("Yes"))],
-            coerce=lambda value: value == "true",
-            empty_value=False,
             required=False,
-            initial="true" if plan_form.initial.get("is_surprise") else "false",
+            initial=bool(plan_form.initial.get("is_surprise")),
         )
         # Marks which recipient the surprise value above was chosen for, so that a carried value
         # is not applied to another recipient (it would hide or expose the plan wrongly)
@@ -333,19 +331,19 @@ class GuidedOccasionForm(_NewObjectStepForm):
             self._prefill(self, values, prefix="")
             if values.get("surprise_for") != recipient_value:
                 self.initial.pop("is_surprise", None)
+            elif "is_surprise" not in values:
+                # An unchecked checkbox posts nothing: the marker shows this step was filled
+                self.initial["is_surprise"] = False
             self.initial["surprise_for"] = recipient_value
 
     @property
     def plan_details_open(self) -> bool:
         """Whether the plan's "More details" should start open (errors or non-default values)."""
-        if any(self[name].errors for name in ("status", "url", "price")):
+        if any(self[name].errors for name in ("url", "price")):
             return True
         if self["url"].value() or self["price"].value() not in (None, ""):
             return True
-        return any(
-            str(self[name].value() or "") != str(self.fields[name].initial or "")
-            for name in ("status", "is_surprise")
-        )
+        return bool(self["is_surprise"].value()) != bool(self.fields["is_surprise"].initial)
 
     def clean(self) -> dict:
         cleaned_data = super().clean()
