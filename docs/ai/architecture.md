@@ -60,6 +60,16 @@
   `MESSAGES_DISPLAY_LEVEL` up (env var, default `info`,
   see `.env.example`). HTMX responses must not queue messages: they carry their feedback in
   `HX-Trigger` events (`showNotification`, `showWarning`) so nothing is left to show on a later page.
+- Toast rule: do not confirm success when the result is already visible, i.e. the response
+  re-renders the affected content (row, cell, badge, list) or redirects to a page that shows it.
+  Keep toasts for errors, warnings, Undo, deletions and removals (the row disappears), and results
+  with no visible change. Intentionally kept success toasts: deletions and bulk deletions, removing
+  a person from a group, removing a friend, cancelling an invitation, Undo and its result,
+  settings saved without a page change (reminder and display preferences), calendar feed link
+  regeneration, archiving and sharing from touch gestures, and a completed sharing wizard.
+  Removed because visible: create and update confirmations, sharing row changes, inline edits,
+  bulk status updates (unless items were skipped), invitations sent, gift plans repeated for an
+  event, a friendship accepted and a disabled calendar feed.
 
 ## Risk Areas
 

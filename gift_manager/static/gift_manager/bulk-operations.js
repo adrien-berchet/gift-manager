@@ -972,14 +972,16 @@
 
                 const skippedCount =
                     (result.permission_denied?.length || 0) + (result.failed?.length || 0);
-                const notificationType = skippedCount > 0 ? "warning" : "success";
 
                 this.clearSelection();
                 if (statusSelect) {
                     statusSelect.value = "";
                 }
                 this.triggerListUpdate();
-                this.showNotification(result.message || labels.completed, notificationType);
+                // A full success is visible in the refreshed list; report skipped items only
+                if (skippedCount > 0) {
+                    this.showNotification(result.message || labels.completed, "warning");
+                }
             } catch (error) {
                 console.error("[BulkOperations] Bulk status update error:", error);
                 this.showNotification(`${labels.failure} ${error.message}`, "error");

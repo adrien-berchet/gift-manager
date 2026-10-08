@@ -12,7 +12,6 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
-from django.utils.translation import ngettext
 from django.views.decorators.http import require_http_methods
 
 from gift_manager.forms import EventForm
@@ -199,17 +198,8 @@ def event_plan_again(request, pk):
     if request.method == "POST":
         relation_ids = parse_uuids(request.POST.getlist("relations"))
         created = repeat_plans(request.user, event, relation_ids)
-        if created:
-            messages.success(
-                request,
-                ngettext(
-                    "%(count)d gift plan created as an idea.",
-                    "%(count)d gift plans created as ideas.",
-                    len(created),
-                )
-                % {"count": len(created)},
-            )
-        else:
+        # The event page lists the new plans, so only the empty outcome needs a message
+        if not created:
             messages.info(request, gettext("No gift plan was created."))
         return redirect("gift_manager:event_detail", pk=event.event_id)
 

@@ -348,8 +348,7 @@
                 cell.textContent = newValue;
                 cell.classList.add(INLINE_EDITING_CONFIG.classes.success);
 
-                // Show success notification
-                showNotification(data.message || 'Field updated successfully', 'success');
+                // No success toast: the cell already shows the new value
 
                 document.dispatchEvent(new CustomEvent('inline-edit:success', {
                     detail: {

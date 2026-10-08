@@ -63,7 +63,6 @@ class DisableCalendarFeedView(LoginRequiredMixin, View):
 
     def post(self, request, *args, **kwargs):
         request.user.profile.clear_calendar_token()
-        messages.success(request, gettext("Your calendar feed has been disabled."))
         return redirect("gift_manager:profile_detail")
 
 

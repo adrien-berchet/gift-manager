@@ -447,10 +447,6 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
             logger.exception("Error in BaseCreateView.form_valid")
             raise
 
-    def get_success_message(self):
-        """Return success message for create operations."""
-        return gettext("{} created successfully").format(gettext(self.object_type))
-
 
 class EditPermissionMixin:
     """Mixin to add shared user permissions to UpdateView forms."""
@@ -614,7 +610,7 @@ class EditPermissionMixin:
         permission_value = request.POST.get("permission")
 
         try:
-            user, username = get_user(request.POST.get("user_id"))
+            user, _username = get_user(request.POST.get("user_id"))
 
             # If the permission is "not_shared", redirect to the share removal method
             if permission_value == "not_shared":
@@ -632,11 +628,6 @@ class EditPermissionMixin:
                 SharingService.grant(request.user, self.object, user, new_permission)
             warning = surprise_sharing_warning(self.object, [user])
 
-            permission_label = PermissionLevel.get_label(new_permission)
-            message = gettext("Permission for '{username}' changed to '{permission_level}'").format(
-                username=username, permission_level=permission_label
-            )
-
             if self.is_htmx:
                 # Return HTML partial for HTMX with trigger for notification
 
@@ -651,14 +642,13 @@ class EditPermissionMixin:
                         "update_url": request.path,
                     },
                 )
-                triggers = {"showSuccess": message}
                 if warning:
-                    triggers["showNotification"] = {"message": warning, "type": "warning"}
-                response["HX-Trigger"] = json.dumps(triggers)
+                    response["HX-Trigger"] = json.dumps(
+                        {"showNotification": {"message": warning, "type": "warning"}}
+                    )
                 return response
 
-            # Fallback for non-HTMX requests
-            messages.success(request, message)
+            # Fallback for non-HTMX requests: the page shows the updated permission
             if warning:
                 messages.warning(request, warning)
             return self.get(request)
@@ -673,7 +663,7 @@ class EditPermissionMixin:
     def _handle_remove_share(self, request) -> HttpResponse:
         """Remove an existing sharing."""
         try:
-            user, username = get_user(request.POST.get("user_id"))
+            user, _username = get_user(request.POST.get("user_id"))
 
             # Remove the permission
             with PermissionService.locked_for_permission_change(self.object):
@@ -685,14 +675,9 @@ class EditPermissionMixin:
                 )
                 PermissionService.delete_permission(user, self.object)
 
-            message = gettext("Sharing with '{username}' removed successfully").format(
-                username=username
-            )
-
             if self.is_htmx:
-                # Return HTML partial for HTMX with trigger for notification
-
-                response = render(
+                # The re-rendered row shows the removed sharing
+                return render(
                     request,
                     "gift_manager/includes/permission_row_partial.html",
                     {
@@ -703,11 +688,8 @@ class EditPermissionMixin:
                         "update_url": request.path,
                     },
                 )
-                response["HX-Trigger"] = json.dumps({"showSuccess": message})
-                return response
 
-            # Fallback for non-HTMX requests
-            messages.success(request, message)
+            # Fallback for non-HTMX requests: the page shows the removed sharing
             return self.get(request)
 
         except User.DoesNotExist:
@@ -718,7 +700,7 @@ class EditPermissionMixin:
         """Share the object with a new user."""
         try:
             permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
-            user, username = get_user(request.POST.get("user_id"))
+            user, _username = get_user(request.POST.get("user_id"))
 
             # Create or update the permission
             with PermissionService.locked_for_permission_change(self.object):
@@ -730,10 +712,6 @@ class EditPermissionMixin:
                 )
                 SharingService.grant(request.user, self.object, user, permission)
             warning = surprise_sharing_warning(self.object, [user])
-
-            message = gettext("Object shared with '{username}' successfully").format(
-                username=username
-            )
 
             if self.is_htmx:
                 # Return HTML partial for HTMX with trigger for notification
@@ -749,14 +727,13 @@ class EditPermissionMixin:
                         "update_url": request.path,
                     },
                 )
-                triggers = {"showSuccess": message}
                 if warning:
-                    triggers["showNotification"] = {"message": warning, "type": "warning"}
-                response["HX-Trigger"] = json.dumps(triggers)
+                    response["HX-Trigger"] = json.dumps(
+                        {"showNotification": {"message": warning, "type": "warning"}}
+                    )
                 return response
 
-            # Fallback for non-HTMX requests
-            messages.success(request, message)
+            # Fallback for non-HTMX requests: the page shows the updated permission
             if warning:
                 messages.warning(request, warning)
             return self.get(request)
@@ -861,10 +838,6 @@ class BaseUpdateView(
             f"gift_manager:{self.detail_url_name}",
             kwargs={"pk": getattr(self.object, self.pk_name)},
         )
-
-    def get_success_message(self):
-        """Return success message for update operations."""
-        return gettext("{} updated successfully").format(gettext(self.object_type))
 
 
 class DeleteSharedMixin:
