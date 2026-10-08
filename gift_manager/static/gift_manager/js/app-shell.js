@@ -14,6 +14,10 @@
             const navbarHeight = navbar.offsetHeight;
             document.body.style.paddingTop = navbarHeight + 'px';
         }
+        // Keep content clear of the mobile bottom bar (display:none on desktop gives 0)
+        const bottomNav = document.getElementById('bottom-nav');
+        const bottomHeight = bottomNav ? bottomNav.offsetHeight : 0;
+        document.body.style.paddingBottom = bottomHeight ? bottomHeight + 'px' : '';
     }
 
     // Adjust on page load

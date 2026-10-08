@@ -1878,6 +1878,7 @@ h4, h5, h6 {
 
 @media print {
     .navbar,
+    .bottom-nav,
     .fixed-action-bar,
     .btn,
     .theme-toggle {

@@ -1,12 +1,13 @@
 <!DOCTYPE html>
 {% load i18n %}
 {% load static %}
+{% load navigation_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Gift Manager{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'gift_manager/images/gift.png' %}">
     <!-- Google Fonts - Inter -->
@@ -71,7 +72,8 @@
     <a class="skip-link" href="#navigation">{% trans "Skip to navigation" %}</a>
     <div id="sr-live-region" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-    <nav class="navbar navbar-expand-lg fixed-top" id="navigation">
+    {% nav_section request as current_section %}
+    <nav class="navbar navbar-expand-lg fixed-top" id="navigation" aria-label="{% trans 'Top navigation' %}">
         <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
                 <img src="{% static 'gift_manager/images/gift.png' %}" alt="{% trans 'Gift' %}" height="28">
@@ -85,28 +87,28 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}">
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="nav-link {% if current_section == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}">
                             <i class="fas fa-house me-1" aria-hidden="true"></i>{% trans "Dashboard" %}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %}active{% endif %}" href="{% url 'gift_manager:relations' %}">
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="nav-link {% if current_section == 'gift_plans' %}active{% endif %}" href="{% url 'gift_manager:relations' %}">
                             <i class="fas fa-hand-holding-heart me-1" aria-hidden="true"></i>{% trans "Gift Plans" %}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="nav-link {% if current_section == 'recipients' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
                             <i class="fas fa-users me-1" aria-hidden="true"></i>{% trans "Recipients" %}
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}">
+                    <li class="nav-item d-none d-lg-block">
+                        <a class="nav-link {% if current_section == 'gifts' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}">
                             <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Gifts" %}
                         </a>
                     </li>
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if 'gift_tag' in request.resolver_match.url_name or 'event' in request.resolver_match.url_name or 'relation_status' in request.resolver_match.url_name or request.resolver_match.url_name == 'share_objects' %}active{% endif %}"
+                        <a class="nav-link dropdown-toggle {% if current_section == 'more' %}active{% endif %}"
                            href="#"
                            id="navbarMoreDropdown"
                            role="button"
@@ -304,6 +306,41 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <!-- Mobile bottom navigation (hidden from the lg breakpoint up) -->
+    <nav class="bottom-nav d-lg-none" id="bottom-nav" aria-label="{% trans 'Main navigation' %}">
+        <a class="bottom-nav-item {% if current_section == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}"{% if current_section == 'home' %} aria-current="page"{% endif %}>
+            <i class="fas fa-house" aria-hidden="true"></i><span>{% trans "Dashboard" %}</span>
+        </a>
+        <a class="bottom-nav-item {% if current_section == 'gift_plans' %}active{% endif %}" href="{% url 'gift_manager:relations' %}"{% if current_section == 'gift_plans' %} aria-current="page"{% endif %}>
+            <i class="fas fa-hand-holding-heart" aria-hidden="true"></i><span>{% trans "Gift Plans" %}</span>
+        </a>
+        <button type="button" class="bottom-nav-create" id="bottom-nav-create" data-bs-toggle="offcanvas" data-bs-target="#quickCreateSheet" aria-controls="quickCreateSheet" aria-label="{% trans 'Create' %}">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+        </button>
+        <a class="bottom-nav-item {% if current_section == 'recipients' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}"{% if current_section == 'recipients' %} aria-current="page"{% endif %}>
+            <i class="fas fa-users" aria-hidden="true"></i><span>{% trans "Recipients" %}</span>
+        </a>
+        <a class="bottom-nav-item {% if current_section == 'gifts' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}"{% if current_section == 'gifts' %} aria-current="page"{% endif %}>
+            <i class="fas fa-gift" aria-hidden="true"></i><span>{% trans "Gifts" %}</span>
+        </a>
+    </nav>
+    <div class="offcanvas offcanvas-bottom d-lg-none quick-create-sheet" tabindex="-1" id="quickCreateSheet" aria-labelledby="quickCreateSheetLabel">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5" id="quickCreateSheetLabel">{% trans "Create" %}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="offcanvas-body">
+            <ul class="list-unstyled mb-0 quick-create-list">
+                <li><a href="{% url 'gift_manager:relation_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-hand-holding-heart" aria-hidden="true"></i>{% trans "New gift plan" %}</a></li>
+                <li><a href="{% url 'gift_manager:gift_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-gift" aria-hidden="true"></i>{% trans "New gift" %}</a></li>
+                <li><a href="{% url 'gift_manager:person_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-user-plus" aria-hidden="true"></i>{% trans "New person" %}</a></li>
+                <li><a href="{% url 'gift_manager:event_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "New event" %}</a></li>
+            </ul>
         </div>
     </div>
     {% endif %}

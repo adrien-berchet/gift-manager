@@ -1,5 +1,7 @@
 """Regression coverage for clipped cards and controls on narrow phone screens."""
 
+import re
+
 import pytest
 from playwright.sync_api import expect
 
@@ -223,3 +225,94 @@ def test_edit_panel_validation_errors_still_receive_focus(phone_page, live_serve
     expect(errors).to_be_in_viewport()
     page.evaluate("() => new Promise(resolve => setTimeout(resolve, 1200))")
     expect(errors).to_be_focused()
+
+
+def test_bottom_nav_on_phone(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 390, "height": 812})
+    page.goto(f"{live_server.url}/en/gifts/")
+
+    bar = page.locator("#bottom-nav")
+    expect(bar).to_be_visible()
+    expect(bar.locator("a.bottom-nav-item")).to_have_count(4)
+    expect(bar.locator("a.active")).to_have_text("Gifts")
+    expect(bar.locator("a.active")).to_have_attribute("aria-current", "page")
+
+    for target in bar.locator("a, button").all():
+        box = target.bounding_box()
+        assert box["width"] >= 44 and box["height"] >= 44
+
+    # Content must not be hidden behind the bar
+    bar_height = bar.bounding_box()["height"]
+    assert page.evaluate("parseFloat(getComputedStyle(document.body).paddingBottom)") >= bar_height
+
+    page.locator("#bottom-nav-create").click()
+    sheet = page.locator("#quickCreateSheet")
+    expect(sheet).to_be_visible()
+    expect(sheet.locator("a[data-action='create']")).to_have_count(4)
+    # All four actions are visible without scrolling inside the sheet
+    body = sheet.locator(".offcanvas-body")
+    metrics = body.evaluate("""el => [el.scrollHeight, el.clientHeight,
+        getComputedStyle(el.parentElement).height, getComputedStyle(el.parentElement).maxHeight]""")
+    assert metrics[0] <= metrics[1] + 1, metrics
+    for link in sheet.locator("a[data-action='create']").all():
+        expect(link).to_be_in_viewport(ratio=1)
+    sheet.get_by_role("link", name="New gift", exact=True).click()
+    expect(page.locator("#editPanel")).to_be_visible()
+
+
+def test_bottom_nav_hidden_on_desktop(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 1280, "height": 800})
+    page.goto(f"{live_server.url}/en/gifts/")
+    expect(page.locator("#bottom-nav")).to_be_hidden()
+    expect(page.get_by_role("link", name="Gift Plans").first).to_be_visible()
+
+
+OVERFLOW_OFFENDERS_JS = """() => [...document.querySelectorAll('body *')]
+    .filter(el => el.getBoundingClientRect().right > innerWidth + 1 &&
+        !el.closest('.offcanvas, .modal, .toast-container') && el.offsetParent !== null)
+    .slice(0, 8)
+    .map(el => {
+        const box = el.getBoundingClientRect();
+        return `${el.tagName}.${el.className} w=${Math.round(box.width)} r=${Math.round(box.right)}`;
+    })"""
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+@pytest.mark.parametrize("width", [320, 340, 357])
+def test_recipients_page_has_no_horizontal_scroll(phone_page, live_server, width, language):
+    page = phone_page
+    page.set_viewport_size({"width": width, "height": 812})
+    page.goto(f"{live_server.url}/{language}/recipients/")
+    expect(page.locator("#bottom-nav")).to_be_visible()
+
+    scroll_width = page.evaluate("document.documentElement.scrollWidth")
+    assert scroll_width <= width, (scroll_width, page.evaluate(OVERFLOW_OFFENDERS_JS))
+
+
+def test_quick_create_sheet_spans_wide_phones(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 430, "height": 932})
+    page.goto(f"{live_server.url}/en/gifts/")
+    page.locator("#bottom-nav-create").click()
+    sheet = page.locator("#quickCreateSheet")
+    expect(sheet).to_be_visible()
+    expect(sheet).not_to_have_class(re.compile(r"showing"))
+    # The page keeps a scrollbar gutter, so compare with the bar rather than the viewport
+    assert sheet.bounding_box()["width"] == pytest.approx(
+        page.locator("#bottom-nav").bounding_box()["width"], abs=1
+    )
+
+
+def test_bottom_nav_active_tab_is_distinct_in_dark_mode(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 390, "height": 812})
+    page.goto(f"{live_server.url}/en/gifts/")
+    page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+
+    colors = page.evaluate("""() => {
+        const color = selector => getComputedStyle(document.querySelector(selector)).color;
+        return [color('#bottom-nav a.active'), color('#bottom-nav a:not(.active)')];
+    }""")
+    assert colors[0] != colors[1], colors

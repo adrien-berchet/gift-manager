@@ -545,3 +545,142 @@
         opacity: 1;
     }
 }
+
+/* =========================================================================
+   Mobile bottom navigation (below the lg breakpoint)
+   ========================================================================= */
+
+.bottom-nav {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1030;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    background: var(--bs-body-bg);
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.bottom-nav-item,
+.bottom-nav-create {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 56px;
+    padding: 0.25rem 0;
+    font-size: 0.7rem;
+    color: var(--bs-secondary-color);
+    text-decoration: none;
+    background: none;
+    border: 0;
+}
+
+.bottom-nav-item i {
+    margin-bottom: 0.15rem;
+    font-size: 1.15rem;
+}
+
+.bottom-nav-item.active {
+    color: var(--bs-primary);
+    font-weight: 600;
+}
+
+.bottom-nav-create i {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    font-size: 1.1rem;
+    color: #fff;
+    background: var(--bs-primary);
+    border-radius: 50%;
+}
+
+.bottom-nav-item:focus-visible,
+.bottom-nav-create:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: -2px;
+}
+
+.quick-create-list a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 48px;
+    padding: 0.5rem 0.75rem;
+    color: var(--bs-body-color);
+    text-decoration: none;
+    border-radius: var(--bs-border-radius);
+}
+
+.quick-create-list a i {
+    flex-shrink: 0;
+    width: 1.5rem;
+    text-align: center;
+}
+
+.quick-create-list a:hover,
+.quick-create-list a:active,
+.quick-create-list a:focus-visible {
+    background-color: var(--bs-tertiary-bg);
+}
+
+/* Without JavaScript the bar still must not hide the end of the page;
+   app-shell.js replaces this with the measured height */
+@media (max-width: 991.98px) {
+    body:has(#bottom-nav) {
+        padding-bottom: calc(56px + env(safe-area-inset-bottom));
+    }
+}
+
+/* theme.css colors every dark-mode link light blue with a higher specificity */
+[data-theme="dark"] .bottom-nav-item {
+    color: var(--bs-secondary-color);
+}
+
+[data-theme="dark"] .bottom-nav-item.active {
+    color: var(--bs-primary);
+}
+
+[data-theme="dark"] .quick-create-list a {
+    color: var(--bs-body-color);
+}
+
+.offcanvas.quick-create-sheet {
+    /* modern-ux.css gives every offcanvas a 400px width; the sheet spans the screen */
+    width: 100%;
+    /* Fit the four actions instead of Bootstrap's 30vh default */
+    height: auto;
+    max-height: 85vh;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Recipient view switcher: let the segmented buttons shrink instead of
+   forcing a minimum page width (~353px) on very narrow phones */
+@media (max-width: 576px) {
+    #recipient-view-switcher {
+        display: flex;
+        width: 100%;
+    }
+
+    #recipient-view-switcher .btn {
+        flex: 1 1 0;
+        min-width: 0;
+        padding-right: 0.25rem;
+        padding-left: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    #recipient-view-switcher .badge {
+        margin-left: 0.25rem !important;
+    }
+}
