@@ -239,7 +239,9 @@
         document.body.addEventListener("htmx:afterSwap", function (event) {
             pruneDisconnectedForms();
 
-            const target = event.detail?.target;
+            // An outerHTML swap reports the replaced (detached) element as the target: the new
+            // content is what the event itself is dispatched on.
+            const target = event.detail?.target?.isConnected ? event.detail.target : event.target;
             if (!target) {
                 return;
             }
@@ -407,12 +409,17 @@
             return;
         }
 
+        const formData = options.form?.dataset || {};
+
         if (body) {
-            body.textContent = options.body || CONFIG.messages.modalBody;
+            body.textContent = formData.unsavedBody || options.body || CONFIG.messages.modalBody;
         }
 
         if (saveBtn) {
-            saveBtn.classList.toggle("d-none", !options.allowSave);
+            saveBtn.classList.toggle(
+                "d-none",
+                !options.allowSave || formData.unsavedNoSave === "true"
+            );
         }
 
         bootstrap.Modal.getOrCreateInstance(modal).show();
@@ -449,7 +456,10 @@
             return;
         }
 
-        updateFormState(form, !snapshotsEqual(state.original, snapshotForm(form)));
+        // Forms flagged data-unsaved-always-dirty hold input the snapshot cannot see (answers
+        // carried between steps as hidden fields), so leaving them always needs confirmation.
+        const alwaysDirty = form.dataset.unsavedAlwaysDirty === "true";
+        updateFormState(form, alwaysDirty || !snapshotsEqual(state.original, snapshotForm(form)));
     }
 
     function refreshForms(container) {
@@ -588,6 +598,9 @@
             return;
         }
 
+        // Saved or discarded: the carried input no longer needs protecting, even if the form
+        // stays in the DOM (e.g. inside a closed panel)
+        delete form.dataset.unsavedAlwaysDirty;
         state.original = snapshotForm(form);
         updateFormState(form, false);
         submittingForms.delete(form);

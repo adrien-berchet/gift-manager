@@ -1,0 +1,433 @@
+"""Step forms and helpers of the guided gift plan creation flow.
+
+The guided flow collects a gift plan in three steps (recipient, gift, occasion). Each step form
+offers an existing object or a new one. A new object is the object's own model form
+(``PersonForm``, ``GiftForm``, ``EventForm``) embedded as a prefixed sub-form, validated only when
+its identifying field is filled. The final save re-validates every step, creates the new objects,
+and hands the assembled data to ``RelationForm`` so the plan matches one created with the full
+form.
+"""
+
+from typing import NamedTuple
+
+from django import forms
+from django.utils.translation import gettext_lazy
+
+from gift_manager.forms import BaseFormMixin
+from gift_manager.forms import EventForm
+from gift_manager.forms import GiftForm
+from gift_manager.forms import PersonForm
+from gift_manager.forms import RelationForm
+from gift_manager.forms import build_recipient_choices
+from gift_manager.forms import resolve_recipient_choice
+from gift_manager.models import Event
+from gift_manager.models import Gift
+from gift_manager.models import GiftTag
+from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
+from gift_manager.models import RelationStatus
+from gift_manager.services import PermissionService
+
+GUIDED_STEPS = ("recipient", "gift", "occasion")
+
+PLAN_FIELD_NAMES = ("due_date", "comment", "status", "url", "price")
+
+
+class _GuidedStepForm(BaseFormMixin, forms.Form):
+    """Base class of the step forms: a plain form that knows the creating user."""
+
+    def __init__(self, data=None, *, user, **kwargs):
+        self.user = user
+        super().__init__(data, **kwargs)
+
+
+class _NewObjectStepForm(_GuidedStepForm):
+    """A step offering an existing object (the chooser field) or a new one (``new_form``).
+
+    The posted *mode* (``<chooser>_mode``: existing, new or none) decides the path and only that
+    path is validated. ``new_form`` is bound to the posted data only in "new" mode; otherwise it is
+    unbound, prefilled with whatever was typed, and never validated. ``initial_values`` prefills an
+    unbound step (own fields and ``new_form``) from previously posted values. When no valid mode is
+    posted, it is inferred from what is filled (the chooser first, then the identifying field).
+    """
+
+    chooser_name: str
+    new_form_class: type[forms.ModelForm]
+    new_prefix: str
+    identifying_field: str
+    visible_new_fields: tuple[str, ...]
+    new_defaults: dict = {}
+    mode_labels: dict  # value -> label, in display order ("existing" is dropped if unavailable)
+    fallback_mode = "new"  # the default mode when there is nothing existing to choose from
+    choose_message = None  # shown when "existing" is chosen with nothing selected
+
+    def __init__(self, data=None, *, user, initial_values=None, **kwargs):
+        super().__init__(data, user=user, **kwargs)
+        values = data if data is not None else initial_values
+        self.mode_name = f"{self.chooser_name}_mode"
+        self.mode_choices_all = list(self.mode_labels.items())
+        existing_available = self._has_existing()
+        self.mode_choices = [
+            (value, label)
+            for value, label in self.mode_choices_all
+            if value != "existing" or existing_available
+        ]
+        self.show_mode_choice = len(self.mode_choices) > 1
+        self.default_mode = "existing" if existing_available else self.fallback_mode
+        self.mode = self._resolve_mode(values)
+        self.new_requested = data is not None and self.mode == "new"
+        self.fields[self.mode_name] = forms.CharField(
+            required=False, widget=forms.HiddenInput, initial=self.mode
+        )
+        self.new_form = self._build_new_form(data, values)
+        if data is None:
+            if values is not None:
+                self._prefill(self, values, prefix="")
+            self.initial[self.mode_name] = self.mode
+
+    def _has_existing(self) -> bool:
+        """Whether the user has an existing object to choose from in this step."""
+        raise NotImplementedError
+
+    @property
+    def existing_offered(self) -> bool:
+        """Whether the "existing" path is offered (the chooser panel is rendered)."""
+        return any(value == "existing" for value, _ in self.mode_choices)
+
+    def _resolve_mode(self, values) -> str:
+        offered = {value for value, _ in self.mode_choices}
+        if values is None:
+            return self.default_mode
+        mode = values.get(self.mode_name)
+        if mode in offered:
+            return mode
+        if values.get(self.chooser_name):
+            return "existing"
+        if (values.get(f"{self.new_prefix}-{self.identifying_field}") or "").strip():
+            return "new"
+        return self.default_mode
+
+    def _new_form_kwargs(self) -> dict:
+        return {}
+
+    def _configure_new_form(self, form: forms.ModelForm) -> None:
+        """Hook: scope the sub-form's choices to what the user can access."""
+
+    def _build_new_form(self, data, values) -> forms.ModelForm:
+        if self.new_requested:
+            form = self.new_form_class(data, prefix=self.new_prefix, **self._new_form_kwargs())
+            self._configure_new_form(form)
+            return self._relax_browser_validation(form)
+        form = self.new_form_class(prefix=self.new_prefix, **self._new_form_kwargs())
+        self._configure_new_form(form)
+        self._relax_browser_validation(form)
+        form.initial.update(self.new_defaults)
+        if values is not None:
+            self._prefill(form, values, prefix=self.new_prefix)
+        return form
+
+    @staticmethod
+    def _relax_browser_validation(form: forms.ModelForm) -> forms.ModelForm:
+        """Keep the browser from blocking a step because of an unused new-object block.
+
+        The block is hidden unless "new" is chosen, and a hidden required input would stop the
+        browser from submitting; the server validates the sub-form when it is requested.
+        """
+        form.use_required_attribute = False
+        return form
+
+    @staticmethod
+    def _prefill(form, values, *, prefix: str) -> None:
+        """Copy the posted ``values`` of ``form``'s fields into its initial data."""
+        for name, field in form.fields.items():
+            key = f"{prefix}-{name}" if prefix else name
+            if key in values:
+                form.initial[name] = field.widget.value_from_datadict(values, {}, key)
+
+    @classmethod
+    def all_input_names(cls) -> list[str]:
+        """Return every input name of the step (own fields, the mode, the prefixed sub-form's).
+
+        Static, so that carrying a step's values needs no form instance (and no queries).
+        """
+        return [
+            *cls.base_fields,
+            f"{cls.chooser_name}_mode",
+            *(f"{cls.new_prefix}-{name}" for name in cls.new_form_class.base_fields),
+        ]
+
+    def input_names(self) -> list[str]:
+        """Return the input names of this step (see ``all_input_names``)."""
+        return self.all_input_names()
+
+    def new_visible_fields(self) -> list:
+        return [self.new_form[name] for name in self.visible_new_fields]
+
+    def new_detail_fields(self) -> list:
+        return [
+            self.new_form[name]
+            for name in self.new_form.fields
+            if name not in self.visible_new_fields
+        ]
+
+    def _holds_value(self, bound) -> bool:
+        """Whether a sub-form field holds something other than empty or its default."""
+        value = bound.value()
+        return value not in (None, "", [], ()) and value != self.new_defaults.get(bound.name)
+
+    @property
+    def details_open(self) -> bool:
+        """Whether "More details" should start open: it has errors or non-default values."""
+        if self.new_requested and self.new_form.errors:
+            return True
+        return any(self._holds_value(bound) for bound in self.new_detail_fields())
+
+    def clean(self) -> dict:
+        cleaned_data = super().clean()
+        if self.mode != "existing":
+            # The chooser is not used in this mode: ignore whatever it still holds
+            self.errors.pop(self.chooser_name, None)
+            cleaned_data[self.chooser_name] = None
+        elif self.chooser_name not in self.errors and not cleaned_data.get(self.chooser_name):
+            if self.choose_message:
+                self.add_error(self.chooser_name, self.choose_message)
+        return cleaned_data
+
+    def is_valid(self) -> bool:
+        step_valid = super().is_valid()
+        new_valid = not self.new_requested or self.new_form.is_valid()
+        return step_valid and new_valid
+
+
+class GuidedRecipientForm(_NewObjectStepForm):
+    """Step 1: an existing person or group, or a new person."""
+
+    chooser_name = "recipient"
+    new_form_class = PersonForm
+    new_prefix = "new_person"
+    identifying_field = "first_name"
+    visible_new_fields = ("first_name",)
+    mode_labels = {
+        "existing": gettext_lazy("Existing recipient"),
+        "new": gettext_lazy("New person"),
+    }
+    choose_message = gettext_lazy("Select a recipient.")
+
+    recipient = forms.ChoiceField(
+        label=gettext_lazy("Recipient"),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    def __init__(self, data=None, *, user, **kwargs):
+        super().__init__(data, user=user, **kwargs)
+        self.fields["recipient"].choices = self._choices
+
+    def _has_existing(self) -> bool:
+        self._choices = build_recipient_choices(self.user)
+        return len(self._choices) > 1
+
+    def _new_form_kwargs(self) -> dict:
+        return {"user": self.user}
+
+    def clean_recipient(self) -> str:
+        value = self.cleaned_data["recipient"]
+        if value:
+            resolve_recipient_choice(value, self.user)
+        return value
+
+
+class GuidedGiftForm(_NewObjectStepForm):
+    """Step 2: an existing gift, or a new one."""
+
+    chooser_name = "gift"
+    new_form_class = GiftForm
+    new_prefix = "new_gift"
+    identifying_field = "name"
+    visible_new_fields = ("name",)
+    mode_labels = {
+        "existing": gettext_lazy("Existing gift"),
+        "new": gettext_lazy("New gift"),
+    }
+    choose_message = gettext_lazy("Select a gift.")
+
+    gift = forms.ModelChoiceField(
+        label=gettext_lazy("Gift"),
+        queryset=Gift.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    def __init__(self, data=None, *, user, **kwargs):
+        super().__init__(data, user=user, **kwargs)
+        self.fields["gift"].queryset = Gift.objects.accessible_by(user).order_by("name")
+
+    def _has_existing(self) -> bool:
+        return Gift.objects.accessible_by(self.user).exists()
+
+    def _configure_new_form(self, form: forms.ModelForm) -> None:
+        form.fields["tags"].queryset = GiftTag.objects.accessible_by(self.user).order_by("name")
+
+
+class GuidedOccasionForm(_NewObjectStepForm):
+    """Step 3: the event (existing or new), the due date and the plan's own details."""
+
+    chooser_name = "event"
+    new_form_class = EventForm
+    new_prefix = "new_event"
+    identifying_field = "name"
+    visible_new_fields = ("name", "date")
+    new_defaults = {"schedule_type": Event.ScheduleType.ONE_TIME}
+    mode_labels = {
+        "existing": gettext_lazy("Existing event"),
+        "new": gettext_lazy("New event"),
+        "none": gettext_lazy("No event"),
+    }
+    fallback_mode = "none"
+
+    event = forms.ModelChoiceField(
+        label=gettext_lazy("Event"),
+        queryset=Event.objects.none(),
+        required=False,
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+
+    def _has_existing(self) -> bool:
+        return Event.objects.accessible_by(self.user).exists()
+
+    @classmethod
+    def all_input_names(cls) -> list[str]:
+        return [*super().all_input_names(), *PLAN_FIELD_NAMES, "is_surprise", "surprise_for"]
+
+    def _configure_new_form(self, form: forms.ModelForm) -> None:
+        # The step also holds the gift plan's own fields: say which "name", "date", "comment"
+        form.fields["name"].label = gettext_lazy("Event name")
+        form.fields["date"].label = gettext_lazy("Event date")
+        form.fields["comment"].label = gettext_lazy("Event comment")
+
+    def __init__(self, data=None, *, user, recipient_value: str = "", **kwargs):
+        super().__init__(data, user=user, **kwargs)
+        self.fields["event"].queryset = Event.objects.accessible_by(user).order_by("name")
+        plan_form = RelationForm(initial={"recipient": recipient_value}, user=user)
+        for name in PLAN_FIELD_NAMES:
+            self.fields[name] = plan_form.fields[name]
+        self.fields["comment"].label = gettext_lazy("Gift plan comment")
+        status = self.fields["status"]
+        status.empty_label = None
+        status.widget.attrs["class"] = "form-select"
+        status.initial = RelationStatus.get_default_pk()
+        self.fields["is_surprise"] = forms.BooleanField(
+            label=gettext_lazy("Surprise"),
+            required=False,
+            initial=bool(plan_form.initial.get("is_surprise")),
+        )
+        # Marks which recipient the surprise value above was chosen for, so that a carried value
+        # is not applied to another recipient (it would hide or expose the plan wrongly)
+        self.fields["surprise_for"] = forms.CharField(
+            required=False, widget=forms.HiddenInput, initial=recipient_value
+        )
+        values = kwargs.get("initial_values")
+        if data is None and values is not None:
+            self._prefill(self, values, prefix="")
+            if values.get("surprise_for") != recipient_value:
+                self.initial.pop("is_surprise", None)
+            elif "is_surprise" not in values:
+                # An unchecked checkbox posts nothing: the marker shows this step was filled
+                self.initial["is_surprise"] = False
+            self.initial["surprise_for"] = recipient_value
+
+    @property
+    def plan_details_open(self) -> bool:
+        """Whether the plan's "More details" should start open (errors or non-default values)."""
+        if any(self[name].errors for name in ("url", "price")):
+            return True
+        if self["url"].value() or self["price"].value() not in (None, ""):
+            return True
+        return bool(self["is_surprise"].value()) != bool(self.fields["is_surprise"].initial)
+
+    def clean(self) -> dict:
+        cleaned_data = super().clean()
+        if self.errors or cleaned_data.get("due_date"):
+            return cleaned_data
+        event = cleaned_data.get("event")
+        if event:
+            cleaned_data["due_date"] = event.next_occurrence()
+        elif self.new_requested and self.new_form.is_valid():
+            new_event = self.new_form.instance
+            cleaned_data["due_date"] = (
+                new_event.next_occurrence() or self.new_form.cleaned_data.get("date")
+            )
+        return cleaned_data
+
+
+STEP_FORMS = {
+    "recipient": GuidedRecipientForm,
+    "gift": GuidedGiftForm,
+    "occasion": GuidedOccasionForm,
+}
+
+
+class InlineObjects(NamedTuple):
+    """The recipient, gift and event of a guided plan, chosen or newly created."""
+
+    recipient_value: str
+    gift: Gift
+    event: Event | None
+
+
+def _save_owned(form: forms.ModelForm, user, object_attr: str) -> Person | Gift | Event:
+    """Save a validated model form, owned by ``user`` (mirrors ``BaseCreateView.form_valid``)."""
+    if not form.is_valid():
+        raise forms.ValidationError(
+            [message for errors in form.errors.values() for message in errors]
+        )
+    instance = form.save(commit=False)
+    if hasattr(instance, "user_link"):
+        instance.user_link = user
+    instance.save()
+    form.save_m2m()
+    PermissionService.create_or_update_permission(
+        user, instance, permission_level=PermissionLevel.OWNER, object_attr=object_attr
+    )
+    return instance
+
+
+def create_inline_objects(user, recipient_form, gift_form, occasion_form) -> InlineObjects:
+    """Return the chosen or newly created recipient, gift and event of validated step forms.
+
+    New objects come from the steps' ``new_form`` sub-forms and are owned by ``user``. Call it
+    inside the caller's transaction so that nothing is left behind when the plan is rejected.
+    """
+    if recipient_form.new_requested:
+        person = _save_owned(recipient_form.new_form, user, "person")
+        recipient_value = f"person:{person.person_id}"
+    else:
+        recipient_value = recipient_form.cleaned_data["recipient"]
+
+    if gift_form.new_requested:
+        gift = _save_owned(gift_form.new_form, user, "gift")
+    else:
+        gift = gift_form.cleaned_data["gift"]
+
+    if occasion_form.new_requested:
+        event = _save_owned(occasion_form.new_form, user, "event")
+    else:
+        event = occasion_form.cleaned_data["event"]
+    return InlineObjects(recipient_value, gift, event)
+
+
+def build_relation_data(user, inline: InlineObjects, occasion_form) -> dict:  # noqa: ARG001
+    """Return the POST-like data ``RelationForm`` needs to create the guided plan."""
+    cleaned = occasion_form.cleaned_data
+    due_date = cleaned["due_date"]
+    return {
+        "recipient": inline.recipient_value,
+        "gift": inline.gift.pk,
+        "event": inline.event.pk if inline.event else "",
+        "due_date": due_date.isoformat() if due_date else "",
+        "comment": cleaned["comment"],
+        "status": cleaned["status"].pk,
+        "url": cleaned["url"],
+        "price": cleaned["price"],
+        "is_surprise": bool(cleaned["is_surprise"]),
+    }

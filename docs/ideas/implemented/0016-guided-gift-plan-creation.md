@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -27,9 +27,10 @@ the form.
 ## Possible Scope
 
 - Three-step offcanvas flow with progress indication and back navigation.
-- Inline creation of a gift (name only) and an event (name and date).
-- Sensible defaults for status (`Idea` or `Planned`) and due date from the
-  event.
+- Inline creation of a person, a gift and an event with all of their data (name first, the
+  rest under "More details"); creating a group inline is excluded.
+- Sensible defaults for status (`Idea`, changeable in step 3) and due date from the
+  event; the plan's link, price and surprise flag can be set in step 3.
 - A link to "Use the full form".
 
 ## Out Of Scope
@@ -70,4 +71,4 @@ Recommended starting context:
 
 ## Open Questions
 
-- Default status for a guided plan?
+- ~~Default status for a guided plan?~~ Resolved: `Idea`.

@@ -43,6 +43,16 @@
   use `Relation.objects.hidden_surprises_for(user)` or go through `accessible_by`;
   `tests/test_surprise_surfaces.py` pins every surface. Losing access to a plan (the
   `RelationPermission` row is deleted) releases the claim the user held.
+- Guided gift plan creation (`views/relation_guided.py`, `gift_manager/guided_plan.py`) renders one
+  server-side step per request; answers of other steps travel as hidden inputs. The final save
+  re-validates every step, creates inline gifts/events in the same transaction as the plan, and goes
+  through `RelationForm` and `RelationCreateView.form_valid`, so guided and full-form plans match.
+  New recipients, gifts and events embed the real `PersonForm`/`GiftForm`/`EventForm` as prefixed
+  sub-forms (`new_person`, `new_gift`, `new_event`), validated only in "new" mode, so their full data and validation rules apply (inline groups and sharing are not
+  offered). Each step posts an explicit mode (`recipient_mode`, `gift_mode`, `event_mode`: existing, new or
+  none); CSS shows only the chosen panel and the choice is skipped when the user has nothing existing to pick.
+  Hidden carried answers are invisible to `unsaved-changes.js`; the form opts in with
+  `data-unsaved-always-dirty` (plus `data-unsaved-no-save`, `data-unsaved-body`).
 - Flash messages (`django.contrib.messages`) are shown as toasts over every full page: `base.html`
   emits them as JSON (`#flash-messages`, plus a `<noscript>` alert) and `app-shell.js` passes them to
   `showNotification`, which hides them after 5 seconds. They come from the lazy `flash_messages`

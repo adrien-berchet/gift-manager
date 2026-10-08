@@ -1,0 +1,2 @@
+- Code, comments, docstrings in English; every new user-facing string translated in `locale/fr/LC_MESSAGES/django.po` (glossary: gift plan = "projet de cadeau"); no native `confirm` dialogs.
+            "existing": "Événement existant",

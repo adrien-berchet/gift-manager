@@ -569,3 +569,39 @@ select[multiple] option:checked {
         background-size: 12px 10px;
     }
 }
+
+/* Guided gift plan: choose between an existing object and a new one.
+   Both panels stay visible where :has() is not supported. */
+.guided-choice {
+    border: 0;
+    min-width: 0;
+    padding: 0;
+}
+
+.guided-choice-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+/* The radios stay in the form (and focusable) but only their labels are drawn */
+.guided-choice-options input[type="radio"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.guided-choice-options input[type="radio"]:focus-visible + label {
+    outline: 2px solid var(--color-primary, #0d6efd);
+    outline-offset: 2px;
+}
+
+.guided-choice:has(input[value="existing"]:checked) .guided-panel--new,
+.guided-choice:has(input[value="new"]:checked) .guided-panel--existing,
+.guided-choice:has(input[value="none"]:checked) .guided-panel {
+    display: none;
+}

@@ -190,6 +190,11 @@ urlpatterns = [
         name="relation_create",
     ),
     path(
+        "relations/guided/",
+        views.RelationGuidedCreateView.as_view(),
+        name="relation_guided_create",
+    ),
+    path(
         "relations/repeat-gift-hint/",
         views.repeat_gift_hint,
         name="repeat_gift_hint",
