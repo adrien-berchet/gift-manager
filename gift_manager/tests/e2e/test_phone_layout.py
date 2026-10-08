@@ -265,3 +265,19 @@ def test_bottom_nav_hidden_on_desktop(phone_page, live_server):
     page.goto(f"{live_server.url}/en/gifts/")
     expect(page.locator("#bottom-nav")).to_be_hidden()
     expect(page.get_by_role("link", name="Gift Plans").first).to_be_visible()
+
+
+@pytest.mark.parametrize("width", [320, 340, 357])
+def test_recipients_page_has_no_horizontal_scroll(phone_page, live_server, width):
+    page = phone_page
+    page.set_viewport_size({"width": width, "height": 812})
+    page.goto(f"{live_server.url}/en/recipients/")
+    expect(page.locator("#bottom-nav")).to_be_visible()
+
+    offenders = page.evaluate("""() => [...document.querySelectorAll('body *')]
+        .filter(el => el.getBoundingClientRect().right > innerWidth + 1 &&
+            !el.closest('.offcanvas, .modal, .toast-container') && el.offsetParent !== null)
+        .slice(0, 8)
+        .map(el => el.tagName + '.' + el.className + ' w=' + Math.round(el.getBoundingClientRect().width) + ' r=' + Math.round(el.getBoundingClientRect().right))""")
+    scroll_width = page.evaluate("document.documentElement.scrollWidth")
+    assert scroll_width <= width, (scroll_width, offenders)

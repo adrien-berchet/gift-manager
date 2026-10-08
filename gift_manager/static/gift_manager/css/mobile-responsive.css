@@ -624,3 +624,24 @@
     max-height: 85vh;
     padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Recipient view switcher: let the segmented buttons shrink instead of
+   forcing a minimum page width (~353px) on very narrow phones */
+@media (max-width: 576px) {
+    #recipient-view-switcher {
+        display: flex;
+        width: 100%;
+    }
+
+    #recipient-view-switcher .btn {
+        flex: 1 1 0;
+        min-width: 0;
+        padding-right: 0.25rem;
+        padding-left: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    #recipient-view-switcher .badge {
+        margin-left: 0.25rem !important;
+    }
+}
