@@ -4441,6 +4441,10 @@ msgstr "Sélection d'éléments invalide."
 msgid "Main navigation"
 msgstr "Navigation principale"
 
+#: gift_manager/templates/gift_manager/base.html
+msgid "Top navigation"
+msgstr "Navigation supérieure"
+
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""
 #~ "Choisissez un destinataire ou saisissez le prénom d'une nouvelle personne."
