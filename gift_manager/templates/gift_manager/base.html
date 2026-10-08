@@ -6,7 +6,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}Gift Manager{% endblock %}</title>
     <link rel="icon" type="image/png" href="{% static 'gift_manager/images/gift.png' %}">
     <!-- Google Fonts - Inter -->
@@ -85,22 +85,22 @@
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 {% if user.is_authenticated %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
+                    <li class="nav-item d-none d-lg-block">
                         <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}">
                             <i class="fas fa-house me-1" aria-hidden="true"></i>{% trans "Dashboard" %}
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item d-none d-lg-block">
                         <a class="nav-link {% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %}active{% endif %}" href="{% url 'gift_manager:relations' %}">
                             <i class="fas fa-hand-holding-heart me-1" aria-hidden="true"></i>{% trans "Gift Plans" %}
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item d-none d-lg-block">
                         <a class="nav-link {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}">
                             <i class="fas fa-users me-1" aria-hidden="true"></i>{% trans "Recipients" %}
                         </a>
                     </li>
-                    <li class="nav-item">
+                    <li class="nav-item d-none d-lg-block">
                         <a class="nav-link {% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}">
                             <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Gifts" %}
                         </a>
@@ -304,6 +304,41 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <!-- Mobile bottom navigation (hidden from the lg breakpoint up) -->
+    <nav class="bottom-nav d-lg-none" id="bottom-nav" aria-label="{% trans 'Main navigation' %}">
+        <a class="bottom-nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'gift_manager:home' %}"{% if request.resolver_match.url_name == 'home' %} aria-current="page"{% endif %}>
+            <i class="fas fa-house" aria-hidden="true"></i><span>{% trans "Dashboard" %}</span>
+        </a>
+        <a class="bottom-nav-item {% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %}active{% endif %}" href="{% url 'gift_manager:relations' %}"{% if request.resolver_match.url_name == 'relations' or request.resolver_match.url_name == 'relation_detail' or request.resolver_match.url_name == 'relation_edit' %} aria-current="page"{% endif %}>
+            <i class="fas fa-hand-holding-heart" aria-hidden="true"></i><span>{% trans "Gift Plans" %}</span>
+        </a>
+        <button type="button" class="bottom-nav-create" id="bottom-nav-create" data-bs-toggle="offcanvas" data-bs-target="#quickCreateSheet" aria-controls="quickCreateSheet" aria-label="{% trans 'Create' %}">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+        </button>
+        <a class="bottom-nav-item {% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %}active{% endif %}" href="{% url 'gift_manager:recipients' %}"{% if request.resolver_match.url_name == 'recipients' or request.resolver_match.url_name == 'persons' or request.resolver_match.url_name == 'person_detail' or request.resolver_match.url_name == 'person_edit' or request.resolver_match.url_name == 'person_create' or 'person_group' in request.resolver_match.url_name or request.resolver_match.url_name == 'add_child_groups_to_group' %} aria-current="page"{% endif %}>
+            <i class="fas fa-users" aria-hidden="true"></i><span>{% trans "Recipients" %}</span>
+        </a>
+        <a class="bottom-nav-item {% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %}active{% endif %}" href="{% url 'gift_manager:gifts' %}"{% if request.resolver_match.url_name == 'gifts' or request.resolver_match.url_name == 'gift_detail' or request.resolver_match.url_name == 'gift_edit' or request.resolver_match.url_name == 'gift_create' %} aria-current="page"{% endif %}>
+            <i class="fas fa-gift" aria-hidden="true"></i><span>{% trans "Gifts" %}</span>
+        </a>
+    </nav>
+    <div class="offcanvas offcanvas-bottom d-lg-none quick-create-sheet" tabindex="-1" id="quickCreateSheet" aria-labelledby="quickCreateSheetLabel">
+        <div class="offcanvas-header">
+            <h2 class="offcanvas-title h5" id="quickCreateSheetLabel">{% trans "Create" %}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="offcanvas-body">
+            <ul class="list-unstyled mb-0 quick-create-list">
+                <li><a href="{% url 'gift_manager:relation_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-hand-holding-heart" aria-hidden="true"></i>{% trans "New gift plan" %}</a></li>
+                <li><a href="{% url 'gift_manager:gift_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-gift" aria-hidden="true"></i>{% trans "New gift" %}</a></li>
+                <li><a href="{% url 'gift_manager:person_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-user-plus" aria-hidden="true"></i>{% trans "New person" %}</a></li>
+                <li><a href="{% url 'gift_manager:event_create' %}" data-action="create" data-bs-dismiss="offcanvas"><i class="fas fa-calendar-plus" aria-hidden="true"></i>{% trans "New event" %}</a></li>
+            </ul>
         </div>
     </div>
     {% endif %}

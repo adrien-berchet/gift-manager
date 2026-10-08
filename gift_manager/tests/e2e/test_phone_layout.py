@@ -223,3 +223,38 @@ def test_edit_panel_validation_errors_still_receive_focus(phone_page, live_serve
     expect(errors).to_be_in_viewport()
     page.evaluate("() => new Promise(resolve => setTimeout(resolve, 1200))")
     expect(errors).to_be_focused()
+
+
+def test_bottom_nav_on_phone(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 390, "height": 812})
+    page.goto(f"{live_server.url}/en/gifts/")
+
+    bar = page.locator("#bottom-nav")
+    expect(bar).to_be_visible()
+    expect(bar.locator("a.bottom-nav-item")).to_have_count(4)
+    expect(bar.locator("a.active")).to_have_text("Gifts")
+    expect(bar.locator("a.active")).to_have_attribute("aria-current", "page")
+
+    for target in bar.locator("a, button").all():
+        box = target.bounding_box()
+        assert box["width"] >= 44 and box["height"] >= 44
+
+    # Content must not be hidden behind the bar
+    bar_height = bar.bounding_box()["height"]
+    assert page.evaluate("parseFloat(getComputedStyle(document.body).paddingBottom)") >= bar_height
+
+    page.locator("#bottom-nav-create").click()
+    sheet = page.locator("#quickCreateSheet")
+    expect(sheet).to_be_visible()
+    expect(sheet.locator("a[data-action='create']")).to_have_count(4)
+    sheet.get_by_role("link", name="New gift", exact=True).click()
+    expect(page.locator("#editPanel")).to_be_visible()
+
+
+def test_bottom_nav_hidden_on_desktop(phone_page, live_server):
+    page = phone_page
+    page.set_viewport_size({"width": 1280, "height": 800})
+    page.goto(f"{live_server.url}/en/gifts/")
+    expect(page.locator("#bottom-nav")).to_be_hidden()
+    expect(page.get_by_role("link", name="Gift Plans").first).to_be_visible()
