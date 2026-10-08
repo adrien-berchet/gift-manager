@@ -554,7 +554,9 @@ class TestEntryPoints:
         assert 'data-action="create"' in link
 
     def test_full_form_link_is_a_plain_link_on_the_page(self, authenticated_client, url):
-        content = authenticated_client.get(url).content.decode()
+        page = authenticated_client.get(url).content.decode()
+        # The navigation's quick-create sheet also links to the form, as a create link
+        content = page.split("<main", 1)[1]
 
         link = re.search(r"<a[^>]*relations/create/[^>]*>", content).group(0)
         assert 'data-action="create"' not in link
