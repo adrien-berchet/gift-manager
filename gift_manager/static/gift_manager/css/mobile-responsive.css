@@ -618,6 +618,9 @@
     text-decoration: none;
 }
 
-.quick-create-sheet {
+.offcanvas.quick-create-sheet {
+    /* Fit the four actions instead of Bootstrap's 30vh default */
+    height: auto;
+    max-height: 85vh;
     padding-bottom: env(safe-area-inset-bottom);
 }

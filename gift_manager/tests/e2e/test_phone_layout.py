@@ -248,6 +248,13 @@ def test_bottom_nav_on_phone(phone_page, live_server):
     sheet = page.locator("#quickCreateSheet")
     expect(sheet).to_be_visible()
     expect(sheet.locator("a[data-action='create']")).to_have_count(4)
+    # All four actions are visible without scrolling inside the sheet
+    body = sheet.locator(".offcanvas-body")
+    metrics = body.evaluate("""el => [el.scrollHeight, el.clientHeight,
+        getComputedStyle(el.parentElement).height, getComputedStyle(el.parentElement).maxHeight]""")
+    assert metrics[0] <= metrics[1] + 1, metrics
+    for link in sheet.locator("a[data-action='create']").all():
+        expect(link).to_be_in_viewport(ratio=1)
     sheet.get_by_role("link", name="New gift", exact=True).click()
     expect(page.locator("#editPanel")).to_be_visible()
 
