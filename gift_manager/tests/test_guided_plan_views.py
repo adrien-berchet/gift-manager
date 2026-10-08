@@ -789,3 +789,157 @@ class TestModeMarkup:
 
         assert response.context["step"] == 3
         assert response.context["step_form"].fields["is_surprise"].initial == "false"
+
+
+class TestInvalidStepResponses:
+    def test_invalid_htmx_step_returns_422_with_a_notification(
+        self, authenticated_client, url, person
+    ):
+        response = _post(authenticated_client, url, 1, htmx=True, recipient="")
+
+        assert response.status_code == 422
+        assert "showNotification" in response["HX-Trigger"]
+        assert response.context["step"] == 1
+
+    def test_invalid_step_without_htmx_stays_200(self, authenticated_client, url, person):
+        response = _post(authenticated_client, url, 1, recipient="")
+
+        assert response.status_code == 200
+        assert "HX-Trigger" not in response
+
+    def test_valid_htmx_step_stays_200(self, authenticated_client, url, person):
+        response = _post(authenticated_client, url, 1, htmx=True, recipient=_recipient(person))
+
+        assert response.status_code == 200
+        assert response.context["step"] == 2
+
+    def test_rejected_plan_returns_422_for_htmx(
+        self, authenticated_client, url, person, user, idea_status
+    ):
+        gift = GiftFactory(shared_with=[user])
+
+        with patch("gift_manager.views.relation_guided.RelationForm.is_valid", return_value=False):
+            response = _post(
+                authenticated_client,
+                url,
+                3,
+                htmx=True,
+                recipient=_recipient(person),
+                gift=gift.pk,
+                **_plan_fields(idea_status),
+            )
+
+        assert response.status_code == 422
+        assert response.context["step"] == 3
+
+    def test_invalid_step_found_at_the_final_submit_returns_422_for_htmx(
+        self, authenticated_client, url, user, idea_status
+    ):
+        stranger = PersonFactory()
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client,
+            url,
+            3,
+            htmx=True,
+            recipient=_recipient(stranger),
+            gift=gift.pk,
+            **_plan_fields(idea_status),
+        )
+
+        assert response.status_code == 422
+        assert response.context["step"] == 1
+
+
+class TestSingleErrorSummary:
+    def test_step_three_shows_one_summary_for_event_and_plan_errors(
+        self, authenticated_client, url, person, user, idea_status
+    ):
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client,
+            url,
+            3,
+            htmx=True,
+            recipient=_recipient(person),
+            gift=gift.pk,
+            event_mode="new",
+            **{"new_event-schedule_type": "one_time", "url": "not a url"},
+            **_plan_fields(idea_status),
+        )
+
+        content = response.content.decode()
+        assert content.count("form-error-summary") == 1
+        assert "Enter a valid URL" in content
+        assert 'href="#id_new_event-name"' in content
+        assert 'href="#id_url"' in content
+
+
+class TestTamperedMultiValuedInputs:
+    def test_tampered_inaccessible_tag_for_a_new_gift_is_rejected(
+        self, authenticated_client, url, person, idea_status
+    ):
+        foreign_tag = GiftTagFactory()
+
+        response = _post(
+            authenticated_client,
+            url,
+            3,
+            recipient=_recipient(person),
+            gift_mode="new",
+            **{"new_gift-name": "Scarf", "new_gift-tags": [foreign_tag.pk]},
+            **_plan_fields(idea_status),
+        )
+
+        assert response.context["step"] == 2
+        assert "tags" in response.context["step_form"].new_form.errors
+        assert not Gift.objects.filter(name="Scarf").exists()
+
+    def test_tampered_inaccessible_interest_for_a_new_person_is_rejected(
+        self, authenticated_client, url, user, idea_status
+    ):
+        foreign_tag = GiftTagFactory()
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client,
+            url,
+            3,
+            gift=gift.pk,
+            recipient_mode="new",
+            **_new_person(**{"new_person-interests": [foreign_tag.pk]}),
+            **_plan_fields(idea_status),
+        )
+
+        assert response.context["step"] == 1
+        assert "interests" in response.context["step_form"].new_form.errors
+        assert not Person.objects.filter(first_name="Anna").exists()
+
+    def test_multi_valued_inputs_reach_the_final_save(
+        self, authenticated_client, url, user, idea_status
+    ):
+        groups = [_owned(user, PersonGroupFactory()) for _ in range(2)]
+        tags = [_owned(user, GiftTagFactory()) for _ in range(2)]
+        gift = GiftFactory(shared_with=[user])
+
+        response = _post(
+            authenticated_client,
+            url,
+            3,
+            gift=gift.pk,
+            recipient_mode="new",
+            **_new_person(
+                **{
+                    "new_person-groups": [group.pk for group in groups],
+                    "new_person-interests": [tag.pk for tag in tags],
+                }
+            ),
+            **_plan_fields(idea_status),
+        )
+
+        assert response.status_code == 302
+        person = Person.objects.get(first_name="Anna")
+        assert set(person.groups.all()) == set(groups)
+        assert set(person.interests.all()) == set(tags)

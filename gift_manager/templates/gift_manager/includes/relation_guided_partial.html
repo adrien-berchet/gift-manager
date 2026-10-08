@@ -36,25 +36,7 @@
   </nav>
 
   <div class="form-fields">
-    {% include "gift_manager/includes/forms/errors.html" %}
-    {% if step_form.new_requested and step_form.new_form.errors %}
-    <div class="alert alert-danger form-error-summary" role="alert" tabindex="-1">
-      <div class="fw-semibold">
-        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
-        {% trans "Please correct the errors below." %}
-      </div>
-      <ul class="mb-0 mt-2">
-        {% for error in step_form.new_form.non_field_errors %}
-        <li>{{ error }}</li>
-        {% endfor %}
-        {% for field in step_form.new_form %}
-          {% for error in field.errors %}
-          <li>{{ field.label }}: {{ error }}</li>
-          {% endfor %}
-        {% endfor %}
-      </ul>
-    </div>
-    {% endif %}
+    {% include "gift_manager/includes/forms/guided_errors.html" %}
     {% include "gift_manager/includes/forms/guided_step_fields.html" %}
   </div>
 

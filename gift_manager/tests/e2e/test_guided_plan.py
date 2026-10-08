@@ -332,3 +332,26 @@ class TestGuidedPlanChoice:
         expect(panel).to_be_hidden()
         plan = Relation.objects.get(gift__name="No Event Gift")
         assert plan.event is None
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestGuidedPlanErrors:
+    def test_validation_error_focuses_the_summary_and_keeps_the_input_protected(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        panel = open_guided_flow(page, live_server)
+        choose_mode(panel, "New person")
+        panel.locator("#id_new_person-first_name").fill("Anna")
+        open_details(panel)
+        panel.locator("#id_new_person-birthday_day").select_option("31")
+        panel.locator("#id_new_person-birthday_month").select_option("2")
+
+        click_next(panel)
+
+        summary = panel.locator(".form-error-summary").first
+        expect(summary).to_be_visible()
+        expect(summary).to_be_focused()
+        panel.get_by_role("button", name="Cancel").click()
+        expect(page.locator("#unsaved-changes-modal")).to_be_visible()

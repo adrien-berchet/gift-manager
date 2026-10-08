@@ -2,10 +2,12 @@
 
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
 
+from gift_manager.forms import build_recipient_choices
 from gift_manager.forms import decode_email
 from gift_manager.guided_plan import GuidedGiftForm
 from gift_manager.guided_plan import GuidedOccasionForm
@@ -657,3 +659,26 @@ class TestBuildRelationData:
         assert data["recipient"] == inline.recipient_value
         assert data["recipient"].startswith("person:")
         assert data["status"] == _idea_status().pk
+
+
+class TestFollowUps:
+    def test_default_status_is_created_when_missing(self, user):
+        RelationStatus.objects.all().delete()
+
+        form = GuidedOccasionForm(user=user)
+
+        assert form.fields["status"].initial == RelationStatus.objects.get(status_en="Idea").pk
+
+    def test_recipient_choices_are_built_once(self, user):
+        with patch(
+            "gift_manager.guided_plan.build_recipient_choices", wraps=build_recipient_choices
+        ) as spy:
+            GuidedRecipientForm(user=user)
+
+        assert spy.call_count == 1
+
+    @pytest.mark.parametrize(
+        "form_class", [GuidedRecipientForm, GuidedGiftForm, GuidedOccasionForm]
+    )
+    def test_static_input_names_match_the_instance_names(self, user, form_class):
+        assert set(form_class.all_input_names()) == set(form_class(user=user).input_names())

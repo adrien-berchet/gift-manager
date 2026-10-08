@@ -135,6 +135,11 @@ The step form follows the offcanvas `hx-post` / `outerHTML` pattern with a `data
 `outerHTML` swap, so every step form is initialized and tracked. Keyboard navigation relies on
 native controls; Enter submits "Next" (the first submit button is a hidden default "Next").
 
+An invalid step answers HTMX requests with 422 (and an error notification), like the other forms of
+the app, so the shell focuses the first error and the typed input stays protected by the unsaved
+changes prompt. Non-HTMX requests keep answering 200. A step shows a single error summary covering
+the step's own errors and those of its new object.
+
 ### Entry points
 
 A "Guided" button next to the existing "new plan" buttons on the plan list and home page.

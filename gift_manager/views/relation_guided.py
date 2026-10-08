@@ -50,7 +50,7 @@ class RelationGuidedCreateView(RelationCreateView):
         if step < len(GUIDED_STEPS):
             form = self._step_form(step, request.POST)
             if not form.is_valid():
-                return self._render_step(step, form)
+                return self._render_step(step, form, invalid=True)
             return self._render_step(step + 1, self._initial_form(step + 1, request.POST))
         return self._finish()
 
@@ -88,14 +88,18 @@ class RelationGuidedCreateView(RelationCreateView):
         """Return an unbound form of ``step`` showing the values already entered in ``data``."""
         return self._step_form(step, initial_values=data)
 
-    def _render_step(self, step: int, form: forms.Form) -> HttpResponse:
-        """Render ``step`` with ``form``; the other steps' answers become hidden inputs."""
+    def _render_step(self, step: int, form: forms.Form, *, invalid: bool = False) -> HttpResponse:
+        """Render ``step`` with ``form``; the other steps' answers become hidden inputs.
+
+        An invalid step answers HTMX requests with 422, like every other form of the app: the
+        shell then swaps it in, focuses the first error and keeps the typed input protected.
+        """
         data = self._posted()
         carried = [
             (name, value)
             for other in range(1, len(GUIDED_STEPS) + 1)
             if other != step
-            for name in self._step_form(other).input_names()
+            for name in STEP_FORMS[GUIDED_STEPS[other - 1]].all_input_names()
             for value in data.getlist(name)
         ]
         context = self.get_context_data(
@@ -113,7 +117,20 @@ class RelationGuidedCreateView(RelationCreateView):
             is_last_step=step == len(GUIDED_STEPS),
             carried=carried,
         )
-        return self.render_to_response(context)
+        response = self.render_to_response(context)
+        if invalid and self.is_htmx:
+            response.status_code = 422
+            response["HX-Trigger"] = self.build_hx_trigger_header(
+                [
+                    {
+                        "showNotification": {
+                            "message": gettext("Please correct the errors below."),
+                            "type": "error",
+                        }
+                    }
+                ]
+            )
+        return response
 
     def _finish(self) -> HttpResponse:
         """Create the plan (and inline gift/event) from the answers of all three steps."""
@@ -124,7 +141,7 @@ class RelationGuidedCreateView(RelationCreateView):
         }
         for number, name in enumerate(GUIDED_STEPS, start=1):
             if not step_forms[name].is_valid():
-                return self._render_step(number, step_forms[name])
+                return self._render_step(number, step_forms[name], invalid=True)
 
         occasion_form = step_forms["occasion"]
         messages: list[str] = []
@@ -145,4 +162,4 @@ class RelationGuidedCreateView(RelationCreateView):
             messages = exc.messages
         for message in messages or [gettext("The gift plan could not be created.")]:
             occasion_form.add_error(None, message)
-        return self._render_step(len(GUIDED_STEPS), occasion_form)
+        return self._render_step(len(GUIDED_STEPS), occasion_form, invalid=True)

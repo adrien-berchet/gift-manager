@@ -30,8 +30,6 @@ from gift_manager.services import PermissionService
 
 GUIDED_STEPS = ("recipient", "gift", "occasion")
 
-DEFAULT_STATUS_NAME = "Idea"
-
 PLAN_FIELD_NAMES = ("due_date", "comment", "status", "url", "price")
 
 
@@ -146,9 +144,21 @@ class _NewObjectStepForm(_GuidedStepForm):
             if key in values:
                 form.initial[name] = field.widget.value_from_datadict(values, {}, key)
 
+    @classmethod
+    def all_input_names(cls) -> list[str]:
+        """Return every input name of the step (own fields, the mode, the prefixed sub-form's).
+
+        Static, so that carrying a step's values needs no form instance (and no queries).
+        """
+        return [
+            *cls.base_fields,
+            f"{cls.chooser_name}_mode",
+            *(f"{cls.new_prefix}-{name}" for name in cls.new_form_class.base_fields),
+        ]
+
     def input_names(self) -> list[str]:
-        """Return every input name of the step (own fields, then the prefixed sub-form's)."""
-        return [*self.fields, *(self.new_form.add_prefix(name) for name in self.new_form.fields)]
+        """Return the input names of this step (see ``all_input_names``)."""
+        return self.all_input_names()
 
     def new_visible_fields(self) -> list:
         return [self.new_form[name] for name in self.visible_new_fields]
@@ -211,10 +221,11 @@ class GuidedRecipientForm(_NewObjectStepForm):
 
     def __init__(self, data=None, *, user, **kwargs):
         super().__init__(data, user=user, **kwargs)
-        self.fields["recipient"].choices = build_recipient_choices(user)
+        self.fields["recipient"].choices = self._choices
 
     def _has_existing(self) -> bool:
-        return len(build_recipient_choices(self.user)) > 1
+        self._choices = build_recipient_choices(self.user)
+        return len(self._choices) > 1
 
     def _new_form_kwargs(self) -> dict:
         return {"user": self.user}
@@ -284,6 +295,10 @@ class GuidedOccasionForm(_NewObjectStepForm):
     def _has_existing(self) -> bool:
         return Event.objects.accessible_by(self.user).exists()
 
+    @classmethod
+    def all_input_names(cls) -> list[str]:
+        return [*super().all_input_names(), *PLAN_FIELD_NAMES, "is_surprise", "surprise_for"]
+
     def _configure_new_form(self, form: forms.ModelForm) -> None:
         # The step also holds the gift plan's own fields: say which "name", "date", "comment"
         form.fields["name"].label = gettext_lazy("Event name")
@@ -299,8 +314,7 @@ class GuidedOccasionForm(_NewObjectStepForm):
         self.fields["comment"].label = gettext_lazy("Gift plan comment")
         status = self.fields["status"]
         status.empty_label = None
-        idea = RelationStatus.objects.filter(status_en=DEFAULT_STATUS_NAME).first()
-        status.initial = idea.pk if idea else None
+        status.initial = RelationStatus.get_default_pk()
         self.fields["is_surprise"] = forms.TypedChoiceField(
             label=gettext_lazy("Surprise"),
             choices=[("false", gettext_lazy("No")), ("true", gettext_lazy("Yes"))],
