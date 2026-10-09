@@ -159,6 +159,7 @@
                         return `<a href="${safeResolvedUrl}"
                                   class="btn ${config.class} btn-sm quick-action-btn"
                                   title="${safeTooltip}"
+                                  aria-label="${escapeAttribute(config.title)}"
                                   data-action="${actionName}"
                                   data-entity-id="${safeId}"
                                   data-permission-level="${userPermission}"
@@ -187,6 +188,7 @@
                         return `<button class="btn ${config.class} btn-sm quick-action-btn"
                                        disabled
                                        title="${safeTooltip}"
+                                       aria-label="${escapeAttribute(config.title)}"
                                        data-action="${actionName}"
                                        data-entity-id="${safeId}"
                                        data-permission-level="${userPermission}"

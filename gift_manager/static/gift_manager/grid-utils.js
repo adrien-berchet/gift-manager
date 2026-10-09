@@ -284,6 +284,7 @@
                     return `<a href="${safeResolvedUrl}"
                               class="btn ${config.class} btn-sm quick-action-btn"
                               title="${title}"
+                              aria-label="${title}"
                               data-action="${actionName}"
                               data-entity-id="${safeId}"
                               ${config.action === 'detail' ? 'data-detail-url="' + safeResolvedUrl + '"' : ''}

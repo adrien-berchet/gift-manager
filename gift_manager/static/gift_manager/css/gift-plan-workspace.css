@@ -260,7 +260,7 @@
         repeat(auto-fill, minmax(min(100%, var(--gift-plan-section-card-min-width)), 1fr));
     grid-auto-rows: 1fr;
     align-items: stretch;
-    gap: 0.75rem;
+    gap: var(--card-grid-gap);
 }
 
 /* The paginated variant keeps rows stable without tying cards to a page. */
@@ -323,17 +323,23 @@
 .gift-plan-card {
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: var(--card-gap);
     min-width: 0;
-    padding: 0.75rem;
+    padding: var(--card-padding);
     border: 1px solid var(--border-color);
-    border-left-width: 3px;
-    border-radius: var(--radius-md);
+    border-left-width: var(--card-accent-width);
+    border-radius: var(--card-radius);
     background: var(--surface-card);
     color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--card-shadow);
+    transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     height: 100%;
     overflow: hidden;
+}
+
+.gift-plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover);
 }
 
 .gift-plan-card--overdue {
@@ -373,8 +379,8 @@
 
 .gift-plan-card-title {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 700;
+    font-size: var(--card-title-size);
+    font-weight: var(--card-title-weight);
     line-height: 1.25;
     min-width: 0;
 }
