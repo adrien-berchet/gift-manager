@@ -97,3 +97,51 @@ def test_grid_card_view_has_no_horizontal_overflow_on_mobile(
         page.goto(f"{live_server.url}/en/{route}/", wait_until="networkidle")
         page.wait_for_selector('[data-view="card"] .gridjs-tbody .gridjs-tr')
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1")
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+def test_grid_card_rows_and_actions_are_compact(
+    logged_in_page: Page, live_server, seed_data_e2e, theme
+):
+    """Card rows ignore list-view striping and action buttons use the compact style."""
+    page = logged_in_page
+    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    _set_theme(page, theme)
+    page.wait_for_selector(".gridjs-tbody .gridjs-tr")
+    page.evaluate(
+        "document.querySelectorAll('[data-view]:not(.view-toggle-btn)')"
+        ".forEach(el => el.setAttribute('data-view', 'card'))"
+    )
+    page.wait_for_timeout(400)
+    cards = page.locator('[data-view="card"] .gridjs-tbody .gridjs-tr')
+    assert cards.count() >= 2
+
+    # Even and odd cards: no zebra background on any cell.
+    backgrounds = cards.evaluate_all(
+        """cards => cards.flatMap(card => [...card.querySelectorAll('.gridjs-td')]
+            .map(td => getComputedStyle(td).backgroundColor))"""
+    )
+    assert set(backgrounds) == {"rgba(0, 0, 0, 0)"}
+
+    buttons = cards.first.locator(".quick-action-btn")
+    assert buttons.count() >= 3
+    sizes = buttons.evaluate_all(
+        """btns => btns.map(b => ({
+            action: b.dataset.action,
+            height: b.getBoundingClientRect().height,
+            width: b.getBoundingClientRect().width,
+            label: getComputedStyle(b.querySelector('.btn-text')).display,
+        }))"""
+    )
+    for size in sizes:
+        assert size["height"] <= 32
+        if size["action"] == "create":  # Give keeps its label
+            assert size["label"] != "none"
+        else:
+            assert size["label"] == "none"
+            assert size["width"] <= 32
+    # All actions fit on a single row.
+    tops = buttons.evaluate_all(
+        "btns => new Set(btns.map(b => Math.round(b.getBoundingClientRect().top))).size"
+    )
+    assert tops == 1
