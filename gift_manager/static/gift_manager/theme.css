@@ -83,6 +83,19 @@
     --radius-xl: 1rem;
     --radius-full: 9999px;
 
+    /* Shared card appearance (gift plan cards and Grid.js card view) */
+    --card-radius: var(--radius-md);
+    --card-padding: 0.75rem;
+    --card-gap: 0.55rem;
+    --card-grid-gap: 0.75rem;
+    --card-accent-width: 3px;
+    --card-accent-color: var(--color-primary);
+    --card-shadow: var(--shadow-sm);
+    --card-shadow-hover: var(--shadow-md);
+    --card-title-size: 1rem;
+    --card-title-weight: 700;
+    --card-meta-size: 0.8125rem;
+
     /* Spacing Scale */
     --space-1: 0.25rem;
     --space-2: 0.5rem;
@@ -1506,17 +1519,19 @@ h4, h5, h6 {
     [data-view="card"] .gridjs-tbody {
         display: flex;
         flex-direction: column;
-        gap: var(--space-3);
+        gap: var(--card-grid-gap);
     }
 
     [data-view="card"] .gridjs-tr {
         display: flex;
         flex-direction: column;
+        gap: var(--card-gap);
         background: var(--surface-card);
         border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        padding: var(--space-4);
-        box-shadow: var(--shadow-sm);
+        border-left-width: var(--card-accent-width);
+        border-radius: var(--card-radius);
+        padding: var(--card-padding);
+        box-shadow: var(--card-shadow);
         margin-bottom: 0;
     }
 
@@ -1524,15 +1539,14 @@ h4, h5, h6 {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        padding: var(--space-2) 0;
-        border-bottom: 1px solid var(--border-color);
+        padding: 0;
+        border: none;
         background: transparent;
         width: 100%;
     }
 
     [data-view="card"] .gridjs-td:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
+        padding-top: 0.125rem;
     }
 
     [data-view="card"] .gridjs-td::before {
@@ -1758,7 +1772,7 @@ h4, h5, h6 {
     [data-view="card"] .gridjs-tbody {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-3);
+        gap: var(--card-grid-gap);
     }
 
     [data-view="card"] .gridjs-tr {
@@ -2539,49 +2553,51 @@ h4, h5, h6 {
     overflow: visible;
 }
 
-/* Responsive grid layout for cards */
+/* Responsive grid layout for cards (same as .gift-plan-card-grid) */
 [data-view="card"] .gridjs-tbody {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-    gap: var(--space-5);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: var(--card-grid-gap);
     background: transparent;
     overflow: visible;
     padding-top: 4px;
 }
 
-/* Individual card styling - modern and clean */
+/* Individual card: same look as .gift-plan-card */
 [data-view="card"] .gridjs-tr {
     display: flex;
     flex-direction: column;
     min-width: 0;
     background: var(--surface-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-xl, 16px);
-    padding: 0;
-    gap: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-left-width: var(--card-accent-width);
+    border-left-color: var(--card-accent-color);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+    gap: var(--card-gap);
+    color: var(--text-primary);
+    box-shadow: var(--card-shadow);
     transition: transform var(--transition-fast), box-shadow var(--transition-fast);
     overflow: hidden;
 }
 
 [data-view="card"] .gridjs-tr:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--card-shadow-hover);
 }
 
-/* Card cells */
+/* Card cells (label + value rows) */
 [data-view="card"] .gridjs-td {
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-3) var(--space-4);
-    border-bottom: 1px solid var(--border-color);
-    border-top: none;
-    border-left: none;
-    border-right: none;
+    padding: 0;
+    border: none;
     background: transparent;
-    gap: var(--space-3);
+    color: var(--text-secondary);
+    font-size: var(--card-meta-size);
+    gap: var(--space-2);
     box-sizing: border-box;
     order: 0;
     min-width: 0;
@@ -2602,16 +2618,18 @@ h4, h5, h6 {
     }
 }
 
-/* First cell (Name/Title) - make it stand out */
+/* First cell (Name/Title) - same typography as .gift-plan-card-title */
 [data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%);
-    padding: var(--space-4);
-    border-bottom: 1px solid var(--border-color);
+    background: transparent;
+    padding: 0;
+    border: none;
+    color: var(--text-primary);
 }
 
 [data-view="card"] .gridjs-td:first-child > * {
-    font-size: var(--text-lg);
-    font-weight: 600;
+    font-size: var(--card-title-size);
+    font-weight: var(--card-title-weight);
+    line-height: 1.25;
     color: var(--text-primary);
 }
 
@@ -2627,6 +2645,11 @@ h4, h5, h6 {
     min-width: 90px;
 }
 
+/* The title cell and the selection checkbox cell carry no label */
+[data-view="card"] .gridjs-td:first-child::before {
+    display: none;
+}
+
 /* Comment/Description fields - grow to fill available space */
 [data-view="card"] .gridjs-td[data-label*="omment"],
 [data-view="card"] .gridjs-td[data-label*="ommentaire"],
@@ -2634,8 +2657,7 @@ h4, h5, h6 {
     flex-grow: 1;
     align-items: flex-start;
     order: 1;
-    color: var(--text-secondary);
-    line-height: 1.5;
+    line-height: 1.35;
 }
 
 /* Groups/Email fields - also grow to fill space when no comment field exists */
@@ -2646,20 +2668,17 @@ h4, h5, h6 {
     align-items: flex-start;
 }
 
-/* Status field - move to bottom section */
+/* Status and due date - bottom section, no background band */
 [data-view="card"] .gridjs-td[data-label*="tatus"],
 [data-view="card"] .gridjs-td[data-label*="tat"] {
     order: 10;
     margin-top: auto;
-    background: var(--color-gray-50);
 }
 
-/* Due date field - move to bottom section */
 [data-view="card"] .gridjs-td[data-label*="ue"],
 [data-view="card"] .gridjs-td[data-label*="ate"],
 [data-view="card"] .gridjs-td[data-label*="échéance"] {
     order: 11;
-    background: var(--color-gray-50);
 }
 
 /* Hide label for hidden columns and action column */
@@ -2670,65 +2689,35 @@ h4, h5, h6 {
     display: none;
 }
 
-/* Action buttons in card view - always at the very bottom */
-/* Target by data-label to ensure correct positioning regardless of column order */
+/* Action buttons in card view - footer at the very bottom, right aligned */
 [data-view="card"] .gridjs-td[data-label*="ction"],
 [data-view="card"] .gridjs-td[data-label*="Actions"],
 [data-view="card"] .gridjs-td:last-child {
     order: 999;
-    justify-content: center;
-    padding: var(--space-3) var(--space-4);
+    justify-content: flex-end;
+    padding: 0.125rem 0 0;
     margin-top: auto;
-    background: var(--color-gray-50);
-    border-top: 1px solid var(--border-color);
-    border-bottom: none;
-    border-left: none;
-    border-right: none;
-}
-
-/* Dark mode adjustments for cards */
-[data-theme="dark"] [data-view="card"] .gridjs-tr {
-    background-color: var(--surface-card);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-color: var(--border-color);
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-tr:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.2);
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td {
-    color: var(--text-primary);
-    border-bottom-color: var(--border-color);
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td::before {
-    color: var(--text-muted);
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td:first-child {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, transparent 100%);
-    border-bottom-color: var(--border-color);
-}
-
-[data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="tatus"],
-[data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="tat"],
-[data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="ue"],
-[data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="ate"],
-[data-theme="dark"] [data-view="card"] .gridjs-td[data-label*="échéance"],
-[data-theme="dark"] [data-view="card"] .gridjs-td:last-child {
-    background: var(--surface-elevated);
+    background: transparent;
+    border: none;
 }
 
 [data-view="card"] .gridjs-td:last-child .action-buttons-cell {
     display: flex;
-    justify-content: center;
-    gap: var(--space-2);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.375rem;
     width: 100%;
 }
 
 [data-view="card"] .gridjs-td:last-child .action-buttons-cell .btn {
-    flex: 1;
+    flex: 0 1 auto;
+}
+
+/* Dark mode: tokens already adapt; only the shadows need a stronger value */
+[data-theme="dark"] [data-view="card"] .gridjs-tr {
+    background-color: var(--surface-card);
+    border-color: var(--border-color);
+    border-left-color: var(--card-accent-color);
 }
 
 /* ==========================================================================
