@@ -118,4 +118,6 @@ class TestPersonGroupRemoveMember(BaseE2ETest):
 
         expect(page.locator("#persons-tab")).to_contain_text("[1]")
         expect(page.locator("#persons-grid tbody tr", has_text="Freshly")).to_be_visible()
+        # The new row is visible in the refreshed grid, so no success toast repeats it
+        assert page.locator(".toast").count() == 0
         self._assert_not_reloaded(page)

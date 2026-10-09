@@ -71,7 +71,7 @@ status and notes to reflect the move.
 | 0017 | Extract Inline Scripts And Styles From The Base Template | Implemented | Frontend | base.html inline code moved to static files; moved to `implemented/`. |
 | 0018 | Unify Delete Confirmation | Implemented | Frontend | Single shared delete flow; moved to `implemented/`. |
 | 0019 | Scope Form Loading State To Form Submissions | Implemented | Frontend | Only form submissions lock a form, and controls unlock when the request ends; moved to `implemented/`. |
-| 0020 | Remove Redundant Toasts | Proposed | Frontend | Drop toasts and flash messages that repeat a visible result or a page navigation. |
+| 0020 | Remove Redundant Toasts | Implemented | Frontend | Drop toasts and flash messages that repeat a visible result or a page navigation; moved to `implemented/`. |
 
 ## Working With Ideas
 

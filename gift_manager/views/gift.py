@@ -204,11 +204,7 @@ class GiftCreateView(
             ],
         }
         response = render(self.request, self.gift_plan_template_name, context)
-        triggers = ["list:update"]
-        success_message = self.get_success_message()
-        if success_message:
-            triggers.append({"showNotification": {"message": success_message, "type": "success"}})
-        response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
+        response["HX-Trigger"] = self.build_hx_trigger_header(["list:update"])
         return response
 
 
