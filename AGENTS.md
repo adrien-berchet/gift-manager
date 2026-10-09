@@ -25,6 +25,8 @@ Useful references:
 - Canonical cross-agent skills live under `skills/`.
 - When asked to add or document a future improvement idea, read and follow
   `skills/add-idea/SKILL.md`.
+- When asked to review a branch, PR, or merge candidate, read and follow
+  `skills/deep-code-review/SKILL.md`.
 - Agent-specific discovery entries may link to a canonical skill. Keep the
   canonical skill as the single source of truth rather than copying it.
 
