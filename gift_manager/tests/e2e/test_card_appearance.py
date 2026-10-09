@@ -145,3 +145,39 @@ def test_grid_card_rows_and_actions_are_compact(
         "btns => new Set(btns.map(b => Math.round(b.getBoundingClientRect().top))).size"
     )
     assert tops == 1
+
+
+def test_grid_card_fields_stack_tightly_with_touch_sized_actions_on_phone(
+    logged_in_page: Page, live_server, seed_data_e2e
+):
+    """On phones each value sits right under its label and actions are tap-sized."""
+    page = logged_in_page
+    page.set_viewport_size({"width": 360, "height": 800})
+    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    page.wait_for_selector('[data-view="card"] .gridjs-tbody .gridjs-td[data-label]')
+    page.wait_for_timeout(400)
+
+    heights = page.evaluate(
+        """() => [...document.querySelectorAll(
+            '[data-view="card"] .gridjs-tr .gridjs-td[data-label]:not(:last-child)')]
+            .filter(td => td.offsetParent !== null)
+            .map(td => td.getBoundingClientRect().height)"""
+    )
+    assert heights
+    # Label (~15px) + value (<=2 lines): a stretched label would push this well beyond.
+    assert max(heights) < 90, heights
+
+    buttons = page.locator('[data-view="card"] .gridjs-tbody .gridjs-tr').first.locator(
+        ".quick-action-btn"
+    )
+    expect(buttons.first).to_be_visible()
+    sizes = buttons.evaluate_all(
+        """btns => btns.map(b => {
+            const r = b.getBoundingClientRect();
+            return {width: r.width, height: r.height};
+        })"""
+    )
+    assert sizes
+    for size in sizes:
+        assert size["height"] >= 44
+        assert size["width"] >= 44

@@ -2630,6 +2630,12 @@ h4, h5, h6 {
         align-items: flex-start;
         gap: var(--space-1);
     }
+
+    /* Stacked label above value: the label is a heading, not a fixed-width column */
+    [data-view="card"] .gridjs-td:not(:last-child)::before {
+        min-width: 0;
+        margin-bottom: 0;
+    }
 }
 
 /* First cell (Name/Title) - same typography as .gift-plan-card-title */
@@ -2656,7 +2662,8 @@ h4, h5, h6 {
     font-size: 0.7rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    flex: 0 0 4.75rem;
+    flex: 0 0 auto;
+    min-width: 4.75rem;
 }
 
 /* The title cell and the selection checkbox cell carry no label */
@@ -2822,6 +2829,34 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td .quick-action-btn.btn-primary .btn-text,
 [data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info .btn-text {
     display: inline !important;
+}
+
+/* Touch-friendly action buttons on phones and tablets */
+@media (max-width: 768px), (pointer: coarse) {
+    [data-view="card"] .quick-actions-container {
+        gap: 0.5rem;
+    }
+
+    [data-view="card"] .gridjs-td .quick-action-btn {
+        flex-basis: 2.75rem;
+        width: 2.75rem;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        padding: 0.4rem;
+        border-radius: 0.6rem;
+    }
+
+    [data-view="card"] .gridjs-td .quick-action-btn i {
+        font-size: 0.95rem;
+    }
+
+    [data-view="card"] .gridjs-td .quick-action-btn.btn-primary,
+    [data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info {
+        flex-basis: auto;
+        width: auto;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.875rem;
+    }
 }
 
 /* Dark mode: tokens already adapt; only the shadows need a stronger value */
