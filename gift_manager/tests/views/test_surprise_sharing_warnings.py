@@ -264,5 +264,5 @@ def test_saving_the_plan_form_through_htmx_warns_in_a_notification(client, surpr
 
     triggers = json.loads(response["HX-Trigger"])
     assert recipient.username in triggers["showWarning"]["message"]
-    assert "showNotification" in triggers  # the usual success notification is kept
+    assert "showNotification" not in triggers  # a visible save has no success toast
     assert _warnings(response) == []  # nothing is left queued for a later page load

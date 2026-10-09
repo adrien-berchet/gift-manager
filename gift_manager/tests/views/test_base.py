@@ -157,7 +157,7 @@ class TestBaseCreateView:
         assert "HX-Redirect" not in response
         assert "offcanvas:close" not in triggers
         assert "list:update" in triggers
-        assert triggers["showNotification"]["type"] == "success"
+        assert "showNotification" not in triggers
         assert 'id="relation-form"' in content
         assert f'action="{plan_url}"' in content
         assert f'hx-post="{plan_url}"' in content
@@ -817,3 +817,15 @@ class TestDeleteSharedMixin:
         # The person should be completely deleted
         with pytest.raises(Person.DoesNotExist):
             self.person_not_shared.refresh_from_db()
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_delete_keeps_confirmation_toast(self):
+        """The deleted row disappears, so a deletion still confirms with a toast."""
+        url = reverse("gift_manager:person_delete", kwargs={"pk": self.person_not_shared.person_id})
+
+        response = self.client.post(url, HTTP_HX_REQUEST="true")
+
+        assert response.status_code == 200
+        triggers = json.loads(response["HX-Trigger"])
+        assert triggers["showNotification"]["type"] == "success"
+        assert "list:update" in triggers

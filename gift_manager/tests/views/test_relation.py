@@ -648,7 +648,7 @@ class TestRelationUpdateView:
         triggers = json.loads(response["HX-Trigger"])
         assert "list:update" in triggers
         assert "offcanvas:close" in triggers
-        assert triggers["showNotification"]["type"] == "success"
+        assert "showNotification" not in triggers
 
         self.relation.refresh_from_db()
         assert self.relation.comment == "Updated from the edit panel"

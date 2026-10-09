@@ -220,14 +220,14 @@ class TestSendInvitationView:
 
     @override_settings(USE_I18N=False)
     @patch("gift_manager.views.profile.send_mail")
-    def test_post_shows_success_message_and_pending_invitation(self, mock_send_mail):
-        """After sending, the page confirms and lists the pending invitation."""
+    def test_post_lists_pending_invitation_without_success_message(self, mock_send_mail):
+        """After sending, the pending list shows the invitation, so no toast repeats it."""
         url = reverse("gift_manager:send_invitation")
 
         response = self.client.post(url, {"recipient_email": "new@example.com"}, follow=True)
 
         content = response.content.decode()
-        assert "Invitation sent to new@example.com." in content
+        assert "Invitation sent to new@example.com." not in content
         assert "Pending invitations" in content
         assert [i.email for i in response.context["pending_invitations"]] == ["new@example.com"]
 

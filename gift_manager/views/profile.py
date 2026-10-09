@@ -287,9 +287,6 @@ class SendInvitationView(LoginRequiredMixin, View):
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[recipient_email],
         )
-        messages.success(
-            request, gettext("Invitation sent to {email}.").format(email=recipient_email)
-        )
         return redirect("gift_manager:send_invitation")
 
 
@@ -320,9 +317,6 @@ class AcceptInvitationView(View):
                     gettext("This invitation can only be accepted by the invited email address."),
                 )
                 return redirect("gift_manager:profile_detail")
-            messages.success(
-                request, gettext("You are now friend with {}").format(invitation.sender.username)
-            )
             return redirect("gift_manager:profile_detail")
         # Otherwise, redirect to the registration with the token
         # (to be handled in the registration process)
