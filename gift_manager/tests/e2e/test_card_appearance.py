@@ -75,6 +75,8 @@ def test_grid_card_matches_gift_plan_card(logged_in_page: Page, live_server, see
     page.wait_for_timeout(400)  # let the box-shadow/transform transitions settle
     grid_style = grid_card.evaluate(CARD_STYLE_JS)
 
+    # borderLeftColor is intentionally not compared: gift plan cards color the accent by
+    # urgency, while list-page cards use a neutral primary accent.
     for key in (
         "borderRadius",
         "borderTopWidth",
@@ -99,13 +101,14 @@ def test_grid_card_view_has_no_horizontal_overflow_on_mobile(
         assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1")
 
 
+@pytest.mark.parametrize("route", ["gifts", "persons", "events"])
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_grid_card_rows_and_actions_are_compact(
-    logged_in_page: Page, live_server, seed_data_e2e, theme
+    logged_in_page: Page, live_server, seed_data_e2e, theme, route
 ):
     """Card rows ignore list-view striping and action buttons use the compact style."""
     page = logged_in_page
-    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    page.goto(f"{live_server.url}/en/{route}/", wait_until="networkidle")
     _set_theme(page, theme)
     page.wait_for_selector(".gridjs-tbody .gridjs-tr")
     page.evaluate(
@@ -124,18 +127,23 @@ def test_grid_card_rows_and_actions_are_compact(
     assert set(backgrounds) == {"rgba(0, 0, 0, 0)"}
 
     buttons = cards.first.locator(".quick-action-btn")
-    assert buttons.count() >= 3
+    assert buttons.count() >= 2
     sizes = buttons.evaluate_all(
         """btns => btns.map(b => ({
             action: b.dataset.action,
+            ariaLabel: b.getAttribute('aria-label'),
             height: b.getBoundingClientRect().height,
             width: b.getBoundingClientRect().width,
             label: getComputedStyle(b.querySelector('.btn-text')).display,
         }))"""
     )
+    # Give keeps its label; on pages without Give the Details action is the labeled one.
+    has_give = any(size["action"] == "create" for size in sizes)
+    labeled_action = "create" if has_give else "detail"
     for size in sizes:
+        assert size["ariaLabel"], "icon-only actions need an accessible name"
         assert size["height"] <= 32
-        if size["action"] == "create":  # Give keeps its label
+        if size["action"] == labeled_action:
             assert size["label"] != "none"
         else:
             assert size["label"] == "none"

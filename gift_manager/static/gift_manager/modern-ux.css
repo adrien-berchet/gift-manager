@@ -408,7 +408,7 @@
 }
 
 [data-view="card"] .gridjs-td:last-child .quick-action-btn {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
 }
 
 /* List Item Enhancements */
