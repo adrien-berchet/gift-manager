@@ -2,6 +2,7 @@
 
 {% load permission_tags %}
 {% load i18n %}
+{% load l10n %}
 {% load static %}
 {% load custom_filters %}
 
@@ -57,23 +58,25 @@
         '', // Checkbox column placeholder - Index 0
         "{{ item.name|escapejs }}",                                    // Index 1
         "{{ item.comment|default:''|escapejs }}",                      // Index 2
+        "{{ item.url|safe_http_url|escapejs }}",                       // Index 3
+        {% if item.price != None %}{% localize off %}"{{ item.price }}"{% endlocalize %}{% else %}""{% endif %}, // Index 4
         {% if item.tags_info %}
-    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}], // Index 3
+    [{% for tag in item.tags_info %}{ id: "{{ tag.id }}", name: "{{ tag.name|escapejs }}", url: "{% url 'gift_manager:gift_tag_detail' tag.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}], // Index 5
     {% else %}
-    [],                                                                // Index 3
+    [],                                                                // Index 5
         {% endif %}
-    "{{ item.gift_id }}",                                              // Index 4
-        "{% url 'gift_manager:gift_relation_create' item.gift_id %}", // Index 5
-        "{% url 'gift_manager:gift_detail' item.gift_id %}",          // Index 6
-        "{% url 'gift_manager:gift_edit' item.gift_id %}",            // Index 7
-        "{% url 'gift_manager:gift_delete' item.gift_id %}"           // Index 8
+    "{{ item.gift_id }}",                                              // Index 6
+        "{% url 'gift_manager:gift_relation_create' item.gift_id %}", // Index 7
+        "{% url 'gift_manager:gift_detail' item.gift_id %}",          // Index 8
+        "{% url 'gift_manager:gift_edit' item.gift_id %}",            // Index 9
+        "{% url 'gift_manager:gift_delete' item.gift_id %}"           // Index 10
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
 
     // Define columns (checkbox column first, managed by Grid.js)
     const columns = [
-        GridUtils.createCheckboxColumn(4),
+        GridUtils.createCheckboxColumn(6),
         {
             id: 'name',
             name: '{{ column_names.name|escapejs }}',
@@ -86,6 +89,52 @@
             name: '{{ column_names.comment|escapejs }}',
             sort: {
                 compare: GridUtils.sortString()
+            }
+        },
+        {
+            id: 'url',
+            name: '{{ column_names.url|escapejs }}',
+            sort: {
+                compare: GridUtils.sortString()
+            },
+            formatter: (cell) => {
+                if (!cell) return '';
+                const href = GridUtils.safeUrl(cell);
+                if (!href) return '';
+                let host = cell;
+                try {
+                    host = new URL(href).hostname;
+                } catch (error) {
+                    // Keep the raw URL as the label when it cannot be parsed
+                }
+                return gridjs.html(
+                    `<a href="${GridUtils.escapeAttribute(href)}" target="_blank" rel="noopener noreferrer nofollow">${GridUtils.escapeHtml(host)}</a>`
+                );
+            }
+        },
+        {
+            id: 'price',
+            name: '{{ column_names.price|escapejs }}',
+            sort: {
+                // Numeric sort, gifts without a price go last
+                compare: (a, b) => {
+                    const left = a === '' ? Infinity : parseFloat(a);
+                    const right = b === '' ? Infinity : parseFloat(b);
+                    return left === right ? 0 : (left > right ? 1 : -1);
+                }
+            },
+            formatter: (cell) => {
+                if (cell === '' || cell === null || cell === undefined) return '';
+                const amount = parseFloat(cell);
+                if (Number.isNaN(amount)) return '';
+                try {
+                    return new Intl.NumberFormat(document.documentElement.lang || undefined, {
+                        style: 'currency',
+                        currency: '{{ request.user.profile.currency|default:"EUR"|escapejs }}'
+                    }).format(amount);
+                } catch (error) {
+                    return amount.toFixed(2);
+                }
             }
         },
         {
@@ -104,13 +153,13 @@
             width: '360px',
             sort: false,
             formatter: PermissionUtils.permissionAwareActionFormatter({
-                give: (row) => row.cells[5].data,
-                details: (row) => row.cells[6].data,
-                edit: (row) => row.cells[7].data,
-                delete: (row) => row.cells[8].data,
+                give: (row) => row.cells[7].data,
+                details: (row) => row.cells[8].data,
+                edit: (row) => row.cells[9].data,
+                delete: (row) => row.cells[10].data,
                 share: () => "{% url 'gift_manager:share_objects' %}"
             }, ['give', 'details', 'edit', 'delete', 'share'], {
-                idResolver: (row) => row.cells[4].data
+                idResolver: (row) => row.cells[6].data
             }, userPermissions)
         }
     ];
@@ -140,7 +189,7 @@
                     { columnSelector: 'th:nth-child(2)' }  // Name
                 ]
             },
-            idFieldIndex: 4
+            idFieldIndex: 6
         });
 
 } catch (error) {

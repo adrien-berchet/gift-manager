@@ -189,3 +189,48 @@ def test_grid_card_fields_stack_tightly_with_touch_sized_actions_on_phone(
     for size in sizes:
         assert size["height"] >= 44
         assert size["width"] >= 44
+
+
+def test_gift_cards_share_one_layout_even_when_fields_are_empty(
+    logged_in_page: Page, live_server, seed_data_e2e
+):
+    """Every gift card lists all fields in the same order, empty ones show a placeholder."""
+    from decimal import Decimal
+
+    GiftFactory(
+        name="Full gift",
+        comment="Hand-knitted",
+        url="https://shop.example.com/scarf",
+        price=Decimal("12.50"),
+        shared_with=[seed_data_e2e.alice],
+    )
+    GiftFactory(name="Bare gift", comment="", url="", price=None, shared_with=[seed_data_e2e.alice])
+
+    page = logged_in_page
+    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    page.wait_for_selector(".gridjs-tbody .gridjs-tr")
+    # Use the real view toggle so the card labels are attached like for a user.
+    page.evaluate("document.querySelector('button[data-view=\"card\"]').click()")
+    page.wait_for_selector('[data-view="card"] .gridjs-td[data-label]')
+    page.wait_for_timeout(400)
+
+    layouts = page.evaluate(
+        """() => [...document.querySelectorAll('[data-view="card"] .gridjs-tbody .gridjs-tr')]
+            .map(card => [...card.querySelectorAll('.gridjs-td[data-label]')].map(td => ({
+                label: td.dataset.label,
+                alignItems: getComputedStyle(td).alignItems,
+                displayed: getComputedStyle(td).display !== 'none',
+                empty: td.textContent.trim() === '',
+                placeholder: getComputedStyle(td, '::after').content,
+            })))"""
+    )
+    assert len(layouts) >= 2
+    labels = [[cell["label"] for cell in card] for card in layouts]
+    assert labels[0] == ["Gift name", "Comment", "Link", "Price", "Tags", "Actions"]
+    assert all(card_labels == labels[0] for card_labels in labels)
+    for card in layouts:
+        for cell in card:
+            assert cell["displayed"], f"{cell['label']} is hidden"
+            assert cell["alignItems"] == "baseline"  # label and value share a baseline
+            if cell["empty"]:
+                assert cell["placeholder"] == '"—"'

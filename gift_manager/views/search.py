@@ -148,6 +148,8 @@ class GiftSearchView(HTMXListSearchView):
                     "gift_id": str(gift.gift_id),
                     "name": gift.name,
                     "comment": gift.comment or "",
+                    "url": gift.url,
+                    "price": str(gift.price) if gift.price is not None else "",
                     "tags_info": tags_info,
                 }
             )

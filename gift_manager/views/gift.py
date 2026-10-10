@@ -52,6 +52,8 @@ class GiftListView(
         self.column_names = {
             "name": gettext("Gift name"),
             "comment": gettext("Comment"),
+            "url": gettext("Link"),
+            "price": gettext("Price"),
             "tags": gettext("Tags"),
         }
 
@@ -113,9 +115,11 @@ class GiftListView(
                     ),
                     distinct=True,
                 ),
-            ).values("gift_id", "name", "comment", "tags_info")
+            ).values("gift_id", "name", "comment", "url", "price", "tags_info")
         # For SQLite and other databases, use a simpler approach
-        return base_queryset.prefetch_related("tags").values("gift_id", "name", "comment")
+        return base_queryset.prefetch_related("tags").values(
+            "gift_id", "name", "comment", "url", "price"
+        )
 
     def get_fallback_columns(self):
         """Get column definitions for fallback table."""

@@ -2606,9 +2606,11 @@ h4, h5, h6 {
     white-space: normal;
 }
 
-/* Hide rows without a value instead of showing a dangling label */
-[data-view="card"] .gridjs-td:empty {
-    display: none;
+/* Every labeled field stays visible so all cards share one layout: empty values get a
+   muted placeholder (the checkbox and actions cells carry no data-label, so they are skipped) */
+[data-view="card"] .gridjs-td[data-label]:empty::after {
+    content: "\2014";
+    color: var(--text-muted);
 }
 
 /* The list-view zebra striping and hover highlight must not leak into cards */
@@ -2671,22 +2673,11 @@ h4, h5, h6 {
     display: none;
 }
 
-/* Comment/Description fields - grow to fill available space */
+/* Comment/Description fields keep their column order so every card reads the same way */
 [data-view="card"] .gridjs-td[data-label*="omment"],
 [data-view="card"] .gridjs-td[data-label*="ommentaire"],
 [data-view="card"] .gridjs-td[data-label*="escription"] {
-    flex-grow: 1;
-    align-items: flex-start;
-    order: 1;
     line-height: 1.35;
-}
-
-/* Groups/Email fields - also grow to fill space when no comment field exists */
-[data-view="card"] .gridjs-td[data-label*="roup"],
-[data-view="card"] .gridjs-td[data-label*="roupe"],
-[data-view="card"] .gridjs-td[data-label*="mail"] {
-    flex-grow: 1;
-    align-items: flex-start;
 }
 
 /* Status and due date - bottom section, no background band */
