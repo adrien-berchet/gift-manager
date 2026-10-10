@@ -264,6 +264,10 @@ msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 msgid "Gift"
 msgstr "Cadeau"
 
+#: gift_manager/views/gift.py
+msgid "Price"
+msgstr "Prix"
+
 #: gift_manager/forms.py:839 gift_manager/forms.py:900
 #: gift_manager/forms.py:949 gift_manager/forms.py:1036
 #: gift_manager/forms.py:1096 gift_manager/forms.py:1232

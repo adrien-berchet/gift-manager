@@ -216,6 +216,8 @@ class BaseE2ETest:
         action_btn = item.locator(f"[data-action='{action}'], .btn-{action}").first
         expect(action_btn).to_be_visible(timeout=self.ajax_timeout)
         expect(action_btn).to_be_enabled(timeout=self.ajax_timeout)
+        # Centre the button so a fixed bottom nav on phones never covers the click point.
+        action_btn.evaluate("el => el.scrollIntoView({block: 'center', behavior: 'instant'})")
         action_btn.click()
 
     def get_create_button(self, page: Page):
