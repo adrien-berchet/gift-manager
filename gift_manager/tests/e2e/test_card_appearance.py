@@ -234,3 +234,47 @@ def test_gift_cards_share_one_layout_even_when_fields_are_empty(
             assert cell["alignItems"] == "baseline"  # label and value share a baseline
             if cell["empty"]:
                 assert cell["placeholder"] == '"—"'
+
+
+@pytest.mark.parametrize(
+    ("viewport", "extra_lines"),
+    [({"width": 1280, "height": 900}, 0), ({"width": 360, "height": 800}, 1)],
+    ids=["desktop", "phone"],
+)
+def test_card_comment_is_clamped_to_three_lines(
+    logged_in_page: Page, live_server, seed_data_e2e, viewport, extra_lines
+):
+    """A very long comment is cut after three lines instead of growing the card."""
+    long_comment = " ".join(["Wordy wool scarf in a very long description"] * 40)
+    GiftFactory(name="Wordy gift", comment=long_comment, shared_with=[seed_data_e2e.alice])
+
+    page = logged_in_page
+    page.set_viewport_size(viewport)
+    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    page.wait_for_selector(".gridjs-tbody .gridjs-tr")
+    if viewport["width"] > 768:  # phones already default to the card view
+        page.evaluate("document.querySelector('button[data-view=\"card\"]').click()")
+    page.wait_for_selector('[data-view="card"] .gridjs-td[data-label]')
+    page.wait_for_timeout(400)
+
+    metrics = page.evaluate(
+        """() => {
+            const cell = [...document.querySelectorAll(
+                '[data-view="card"] .gridjs-td[data-label="Comment"]')]
+                .find(td => td.textContent.includes('Wordy'));
+            const style = getComputedStyle(cell);
+            const height = cell.getBoundingClientRect().height;
+            cell.style.webkitLineClamp = 'none';
+            const unclampedHeight = cell.getBoundingClientRect().height;
+            cell.style.webkitLineClamp = '';
+            return {
+                height,
+                unclampedHeight,
+                lineHeight: parseFloat(style.lineHeight),
+                padding: parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
+            };
+        }"""
+    )
+    max_height = metrics["lineHeight"] * (3 + extra_lines) + metrics["padding"] + 1
+    assert metrics["height"] <= max_height, metrics
+    assert metrics["unclampedHeight"] > metrics["height"] * 2, "the long comment should be cut"

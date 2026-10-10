@@ -95,6 +95,7 @@
     --card-title-size: 1rem;
     --card-title-weight: 700;
     --card-meta-size: 0.8125rem;
+    --card-comment-lines: 3;
 
     /* Spacing Scale */
     --space-1: 0.25rem;
@@ -2673,11 +2674,49 @@ h4, h5, h6 {
     display: none;
 }
 
-/* Comment/Description fields keep their column order so every card reads the same way */
+/* Comment/Description fields keep their column order so every card reads the same way.
+   Long text is cut after --card-comment-lines lines so a card never grows without bound.
+   The value is a bare text node, so the cell itself becomes the clamped box and the label is
+   pulled out of the flow (keeping the clamp for the text alone). */
 [data-view="card"] .gridjs-td[data-label*="omment"],
 [data-view="card"] .gridjs-td[data-label*="ommentaire"],
 [data-view="card"] .gridjs-td[data-label*="escription"] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: var(--card-comment-lines);
+    line-clamp: var(--card-comment-lines);
+    position: relative;
+    overflow: hidden;
+    padding-left: 4.75rem;
     line-height: 1.35;
+}
+
+[data-view="card"] .gridjs-td[data-label*="omment"]::before,
+[data-view="card"] .gridjs-td[data-label*="ommentaire"]::before,
+[data-view="card"] .gridjs-td[data-label*="escription"]::before {
+    position: absolute;
+    top: 0.2rem;
+    left: 0;
+    /* Same line box height as the value so label and text share a baseline */
+    line-height: calc(var(--card-meta-size) * 1.35);
+}
+
+/* Phones stack the label above the value: it then takes part in the flow and uses one line */
+@media (max-width: 576px) {
+    [data-view="card"] .gridjs-td[data-label*="omment"]:not(:last-child),
+    [data-view="card"] .gridjs-td[data-label*="ommentaire"]:not(:last-child),
+    [data-view="card"] .gridjs-td[data-label*="escription"]:not(:last-child) {
+        padding-left: 0;
+        -webkit-line-clamp: calc(var(--card-comment-lines) + 1);
+        line-clamp: calc(var(--card-comment-lines) + 1);
+    }
+
+    [data-view="card"] .gridjs-td[data-label*="omment"]:not(:last-child)::before,
+    [data-view="card"] .gridjs-td[data-label*="ommentaire"]:not(:last-child)::before,
+    [data-view="card"] .gridjs-td[data-label*="escription"]:not(:last-child)::before {
+        position: static;
+        line-height: normal;
+    }
 }
 
 /* Status and due date - bottom section, no background band */
