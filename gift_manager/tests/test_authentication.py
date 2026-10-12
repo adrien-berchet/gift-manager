@@ -140,6 +140,27 @@ class TestLoginPage:
 
         assert "form-check-input" in content
 
+    def test_remember_checkbox_rendered_and_labeled_en_and_fr(self, client):
+        # English
+        client.cookies.load({"django_language": "en"})
+        response_en = client.get(reverse("account_login"))
+        content_en = response_en.content.decode()
+        assert '<input type="checkbox" name="remember"' in content_en
+        assert 'class="form-check-input"' in content_en
+        assert 'id="id_remember"' in content_en
+        assert '<label class="form-check-label" for="id_remember">' in content_en
+        assert "Remember Me" in content_en
+
+        # French
+        client.cookies.load({"django_language": "fr"})
+        response_fr = client.get(reverse("account_login"))
+        content_fr = response_fr.content.decode()
+        assert '<input type="checkbox" name="remember"' in content_fr
+        assert 'class="form-check-input"' in content_fr
+        assert 'id="id_remember"' in content_fr
+        assert '<label class="form-check-label" for="id_remember">' in content_fr
+        assert "Se souvenir de moi" in content_fr
+
     def test_successful_login_redirects(self, client):
         user = User.objects.create_user(
             username="loginuser", email="login@example.com", password="TestPassword123!"
@@ -154,3 +175,46 @@ class TestLoginPage:
 
         assert response.status_code == 302
         assert "_auth_user_id" in client.session
+
+    def test_login_without_remember_expires_at_browser_close(self, client):
+        user = User.objects.create_user(
+            username="unremembered", email="unremembered@example.com", password="TestPassword123!"
+        )
+        EmailAddress.objects.create(
+            user=user, email="unremembered@example.com", verified=True, primary=True
+        )
+
+        response = client.post(
+            reverse("account_login"),
+            {"login": "unremembered", "password": "TestPassword123!"},
+        )
+
+        assert response.status_code == 302
+        assert client.session.get_expire_at_browser_close() is True
+        from django.conf import settings
+
+        session_cookie = response.cookies[settings.SESSION_COOKIE_NAME]
+        assert session_cookie["max-age"] == ""
+        assert session_cookie["expires"] == ""
+
+    def test_login_with_remember_persists_session(self, client):
+        user = User.objects.create_user(
+            username="remembered", email="remembered@example.com", password="TestPassword123!"
+        )
+        EmailAddress.objects.create(
+            user=user, email="remembered@example.com", verified=True, primary=True
+        )
+
+        response = client.post(
+            reverse("account_login"),
+            {"login": "remembered", "password": "TestPassword123!", "remember": "on"},
+        )
+
+        assert response.status_code == 302
+        assert client.session.get_expire_at_browser_close() is False
+        from django.conf import settings
+
+        assert client.session.get_expiry_age() == settings.SESSION_COOKIE_AGE
+        session_cookie = response.cookies[settings.SESSION_COOKIE_NAME]
+        assert session_cookie["max-age"] == settings.SESSION_COOKIE_AGE
+        assert session_cookie["expires"] != ""
