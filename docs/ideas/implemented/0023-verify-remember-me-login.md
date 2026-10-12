@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -87,5 +87,9 @@ None identified.
 ## Open Questions
 
 - Should the box be checked by default, or stay unchecked as it is now?
+  - Resolved: Kept unchecked by default to protect users on shared or public devices.
 - Should `ACCOUNT_SESSION_REMEMBER` be set explicitly, or should the default
   prompt stay?
+  - Resolved: Explicitly set `ACCOUNT_SESSION_REMEMBER = None` in
+    `GiftManager/settings/base.py` to document and guarantee opt-in checkbox
+    behavior independently of library defaults.

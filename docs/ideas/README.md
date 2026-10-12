@@ -74,7 +74,8 @@ status and notes to reflect the move.
 | 0020 | Remove Redundant Toasts | Implemented | Frontend | Drop toasts and flash messages that repeat a visible result or a page navigation; moved to `implemented/`. |
 | 0021 | Unify Card Appearance Across Pages | Implemented | Frontend | Shared card tokens make advanced-page card views match gift plan cards. Moved to `implemented/`. |
 | 0022 | Complete Gift Plan Visibility And Bounded Sections | Proposed | Gift Plans | Ensure every accessible plan shows in the workspace and cap section height so the last section is reachable. |
-| 0023 | Verify The Remember Me Login Checkbox | Proposed | Accounts | Test that the checkbox controls session persistence, with tests for both cases. |
+| 0023 | Verify The Remember Me Login Checkbox | Implemented | Accounts | Test that the checkbox controls session persistence, with tests for both cases. Moved to `implemented/`. |
+
 
 ## Working With Ideas
 
