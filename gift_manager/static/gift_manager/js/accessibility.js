@@ -489,8 +489,18 @@ class AccessibilityManager {
             this.enhanceNewContent(target);
         });
 
+        // A request replaced by a newer one (hx-sync="this:replace") is aborted on purpose:
+        // htmx reports it as unsuccessful, but it is not an error. Capture runs before htmx
+        // aborts the request from its own listener on the element.
+        const replacedRequests = new WeakSet();
+        document.addEventListener('htmx:abort', (e) => {
+            replacedRequests.add(e.target);
+            queueMicrotask(() => replacedRequests.delete(e.target));
+        }, true);
+
         // Monitor form submissions
         document.body.addEventListener('htmx:afterRequest', (e) => {
+            if (!e.detail.successful && replacedRequests.has(e.detail.elt)) return;
             if (e.detail.successful) {
                 const xhr = e.detail.xhr;
                 const triggerElement = e.detail.elt;

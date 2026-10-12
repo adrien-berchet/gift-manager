@@ -14,7 +14,7 @@
       data-form-type="{{ form_type }}">
   {% csrf_token %}
 
-  <div class="form-fields">
+  <div class="form-fields" tabindex="-1">
     <h2 class="h5 mb-1">{{ relation.gift }}</h2>
     <p class="text-muted mb-3">{{ relation.recipient_name }}</p>
 

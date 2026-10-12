@@ -164,6 +164,7 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "email2*", "username*", "password1*", "passwo
 ACCOUNT_CHANGE_EMAIL = True
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 1
 ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_SESSION_REMEMBER = None  # None = ask user via "Remember Me" checkbox
 ACCOUNT_RATE_LIMITS = {
     # Limit login attempts
     "login_failed": "5/5m",
