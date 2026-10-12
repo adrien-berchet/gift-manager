@@ -16,7 +16,7 @@
       data-form-type="{{ form_type|default:'gift' }}">
   {% csrf_token %}
 
-  <div class="form-fields">
+  <div class="form-fields" tabindex="-1">
     {% include "gift_manager/includes/forms/errors.html" %}
     {% include "gift_manager/includes/forms/gift_fields.html" %}
     {% include "gift_manager/includes/forms/sharing_section.html" %}

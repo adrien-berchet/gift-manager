@@ -71,11 +71,27 @@
         });
 
         // List update event handler
+        const refreshAfterSettle = new WeakSet();
         document.addEventListener('list:update', function(e) {
             lastListUpdateAt = Date.now();
             // Trigger HTMX refresh of list containers
             const listContainers = document.querySelectorAll('[data-list-container]');
+            const settlingClass = htmx.config?.settlingClass || 'htmx-settling';
             listContainers.forEach(container => {
+                // A container just swapped in by a previous refresh only gets its hx-trigger
+                // listeners when htmx settles it: refresh it then, or the event is lost.
+                if (container.classList.contains(settlingClass)) {
+                    if (refreshAfterSettle.has(container)) return;
+                    refreshAfterSettle.add(container);
+                    container.addEventListener('htmx:afterSettle', function onSettle(event) {
+                        // afterSettle bubbles: ignore swaps settling inside the container
+                        if (event.target !== container) return;
+                        container.removeEventListener('htmx:afterSettle', onSettle);
+                        refreshAfterSettle.delete(container);
+                        htmx.trigger(container, 'refresh');
+                    });
+                    return;
+                }
                 htmx.trigger(container, 'refresh');
             });
         });

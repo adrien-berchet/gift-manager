@@ -348,6 +348,9 @@
         activeInput.className = "gift-plan-date-picker-source";
         activeInput.setAttribute("aria-hidden", "true");
         activeInput.setAttribute("tabindex", "-1");
+        // Flatpickr focuses its input after a day is picked. WebKit then scrolls the page
+        // towards this hidden input even with preventScroll, so keep focus where it is.
+        activeInput.focus = function () {};
         document.body.appendChild(activeInput);
 
         activePicker = window.flatpickr(activeInput, {

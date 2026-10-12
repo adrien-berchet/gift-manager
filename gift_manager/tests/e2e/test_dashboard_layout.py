@@ -679,6 +679,74 @@ class TestDashboardLayout:
         expect(page.locator("#dashboard-live")).to_contain_text("Dashboard Refresh Kite")
 
     @pytest.mark.django_db(transaction=True)
+    @pytest.mark.parametrize("second_update", ["while_loading", "while_swapping"])
+    def test_latest_list_update_wins_over_a_stale_refresh(
+        self, page: Page, live_server, seed_data_e2e, second_update
+    ):
+        """A refresh requested while another loads or swaps must not be lost to the stale one."""
+        relation = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(name="Dashboard Race Kite"),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=timezone.localdate() + timedelta(days=1),
+            shared_with=[seed_data_e2e.alice],
+        )
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}/", wait_until="networkidle")
+        page.wait_for_function("typeof window.htmx?.process === 'function'")
+        card = page.locator("#dashboard-live .gift-plan-card", has_text="Dashboard Race Kite")
+        expect(card).to_be_visible()
+        page.evaluate(
+            """() => {
+                window.__announcements = [];
+                const manager = window.accessibilityManager;
+                const announce = manager.announceToScreenReader.bind(manager);
+                manager.announceToScreenReader = (message) => {
+                    window.__announcements.push(message);
+                    announce(message);
+                };
+            }"""
+        )
+
+        # Hold the first refresh response back: it renders the plan before its status change.
+        held = []
+
+        def hold_first_refresh(route):
+            if held or route.request.headers.get("hx-request") != "true":
+                route.continue_()
+                return
+            held.append((route, route.fetch()))
+
+        page.route(f"{live_server.url}/en/", hold_first_refresh)
+        page.evaluate("document.dispatchEvent(new CustomEvent('list:update'))")
+        for _ in range(100):  # the route callback runs while Playwright waits
+            if held:
+                break
+            page.wait_for_timeout(50)
+        assert len(held) == 1
+
+        relation.status = seed_data_e2e.statuses["given"]
+        relation.save(update_fields=["status"])
+        if second_update == "while_loading":
+            page.evaluate("document.dispatchEvent(new CustomEvent('list:update'))")
+        else:
+            page.evaluate(
+                """() => document.addEventListener('htmx:afterSwap', (event) => {
+                    if (event.detail.target.id !== 'dashboard-live') return;
+                    document.dispatchEvent(new CustomEvent('list:update'));
+                }, { once: true })"""
+            )
+        stale_route, stale_response = held[0]
+        stale_route.fulfill(response=stale_response)
+
+        expect(card).to_have_count(0)
+        page.wait_for_timeout(300)  # the stale response must not bring the card back
+        expect(card).to_have_count(0)
+        assert "An error occurred. Please try again." not in page.evaluate("window.__announcements")
+        page.unroute_all(behavior="ignoreErrors")
+
+    @pytest.mark.django_db(transaction=True)
     def test_incomplete_action_cards_use_gift_plan_card_layout(
         self, page: Page, live_server, client, seed_data_e2e
     ):

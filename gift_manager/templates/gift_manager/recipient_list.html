@@ -103,6 +103,8 @@
      data-list-container
      hx-get="{{ request.get_full_path }}"
      hx-trigger="refresh"
+     hx-sync="this:replace"
+     hx-disinherit="hx-sync"
      hx-select="#recipient-view-switcher"
      hx-target="this"
      hx-swap="outerHTML">
@@ -146,6 +148,8 @@
      data-list-container
      hx-get="{{ request.get_full_path }}"
      hx-trigger="refresh"
+     hx-sync="this:replace"
+     hx-disinherit="hx-sync"
      hx-select="#recipient-list-live"
      hx-target="this"
      hx-swap="outerHTML">

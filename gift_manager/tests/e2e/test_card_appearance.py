@@ -44,6 +44,18 @@ def _set_theme(page: Page, theme: str):
     page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
 
 
+def _wait_for_transitions(locator):
+    """Wait until theme/view-switch transitions on the element have finished.
+
+    A fixed delay is not enough on slow CI runners, where computed styles can still be
+    mid-transition (e.g. a box-shadow with a fraction of its final alpha).
+    """
+    locator.evaluate(
+        "el => new Promise(r => requestAnimationFrame(() => "
+        "Promise.all(el.getAnimations().map(a => a.finished)).then(r, r)))"
+    )
+
+
 @pytest.mark.parametrize("theme", ["light", "dark"])
 def test_grid_card_matches_gift_plan_card(logged_in_page: Page, live_server, seed_data_e2e, theme):
     """The Grid.js card view and the gift plan card share container styling."""
@@ -60,7 +72,7 @@ def test_grid_card_matches_gift_plan_card(logged_in_page: Page, live_server, see
     _set_theme(page, theme)
     plan_card = page.locator(".gift-plan-card").first
     expect(plan_card).to_be_visible()
-    page.wait_for_timeout(400)  # let theme transitions settle
+    _wait_for_transitions(plan_card)
     plan_style = plan_card.evaluate(CARD_STYLE_JS)
 
     page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
@@ -72,7 +84,7 @@ def test_grid_card_matches_gift_plan_card(logged_in_page: Page, live_server, see
     )
     grid_card = page.locator('[data-view="card"] .gridjs-tbody .gridjs-tr').first
     expect(grid_card).to_be_visible()
-    page.wait_for_timeout(400)  # let the box-shadow/transform transitions settle
+    _wait_for_transitions(grid_card)
     grid_style = grid_card.evaluate(CARD_STYLE_JS)
 
     # borderLeftColor is intentionally not compared: gift plan cards color the accent by
