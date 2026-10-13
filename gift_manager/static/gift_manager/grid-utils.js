@@ -1781,9 +1781,115 @@
         return columns * Math.max(minCardRows, Math.min(maxCardRows, cardRows));
     }
 
+    // Grid.js 6 store statuses (Init, Loading, Loaded, Rendered, Error)
+    var GRID_STATUS_LOADING = 1;
+    var GRID_STATUS_RENDERED = 3;
+    var GRID_STATUS_ERROR = 4;
+    // Never block page size updates forever if a render does not report its end
+    var GRID_RENDER_TIMEOUT_MS = 5000;
+
+    function isGridRenderSettled(state) {
+        return Boolean(state) &&
+            (state.status === GRID_STATUS_RENDERED || state.status === GRID_STATUS_ERROR);
+    }
+
     /**
-     * Enable dynamic page size adjustment on window resize.
-     * Recalculates optimal page size and updates the grid with a debounced handler.
+     * Wait on the Grid.js store until isDone(state) holds, then run callback (once).
+     * Falls back to the DOM mutation heuristic when the store is not available.
+     */
+    function waitForGridState(grid, isDone, callback) {
+        var store = grid.config && grid.config.store;
+        var container = grid._containerId ? document.getElementById(grid._containerId) : null;
+        if (!store || typeof store.subscribe !== 'function') {
+            if (container) {
+                waitForGridRenderComplete(container, callback);
+            } else {
+                setTimeout(callback, 0);
+            }
+            return;
+        }
+
+        var finished = false;
+        var unsubscribe = null;
+        var safetyTimer = null;
+        function finish() {
+            if (finished) return;
+            finished = true;
+            clearTimeout(safetyTimer);
+            if (unsubscribe) unsubscribe();
+            // Let Preact commit the rendered rows before the callback reads them
+            setTimeout(callback, 0);
+        }
+
+        unsubscribe = store.subscribe(function (state) {
+            if (isDone(state)) finish();
+        });
+        safetyTimer = setTimeout(finish, GRID_RENDER_TIMEOUT_MS);
+        if (isDone(store.getState())) finish();
+    }
+
+    /**
+     * Run callback once the grid is not processing data. Calling forceRender() while
+     * Grid.js still processes a render makes it fail and show its error message. That includes
+     * a pipeline update (sort, search...) whose throttled processing has not started yet, so
+     * the grid must also stay quiet for longer than the processing throttle.
+     */
+    function whenGridRendered(grid, callback) {
+        var config = grid.config || {};
+        var store = config.store;
+        var pipeline = config.pipeline;
+        if (!store || typeof store.subscribe !== 'function') {
+            waitForGridState(grid, isGridRenderSettled, callback);
+            return;
+        }
+
+        var quietMs = (config.processingThrottleMs || 100) + 50;
+        var finished = false;
+        var quietTimer = null;
+        var unsubscribe = null;
+        var safetyTimer = null;
+
+        function finish() {
+            if (finished) return;
+            finished = true;
+            clearTimeout(quietTimer);
+            clearTimeout(safetyTimer);
+            if (unsubscribe) unsubscribe();
+            if (pipeline && typeof pipeline.off === 'function') pipeline.off('updated', restartQuietPeriod);
+            callback();
+        }
+
+        function restartQuietPeriod() {
+            clearTimeout(quietTimer);
+            if (!isGridRenderSettled(store.getState())) return;
+            quietTimer = setTimeout(function () {
+                if (isGridRenderSettled(store.getState())) finish();
+            }, quietMs);
+        }
+
+        unsubscribe = store.subscribe(restartQuietPeriod);
+        if (pipeline && typeof pipeline.on === 'function') pipeline.on('updated', restartQuietPeriod);
+        safetyTimer = setTimeout(finish, GRID_RENDER_TIMEOUT_MS);
+        restartQuietPeriod();
+    }
+
+    /**
+     * Force a render and run callback once that render has finished.
+     */
+    function forceRenderAndWait(grid, callback) {
+        // The store still reports the previous render until the new one starts loading
+        var started = false;
+        waitForGridState(grid, function (state) {
+            if (state && state.status === GRID_STATUS_LOADING) started = true;
+            return started && isGridRenderSettled(state);
+        }, callback);
+        grid.forceRender();
+    }
+
+    /**
+     * Enable dynamic page size adjustment on window resize and view mode changes.
+     * Updates are serialized so a new render never starts while one is in progress, and the
+     * container is marked aria-busy while the page size is being updated.
      *
      * @param {Object} grid - The Grid.js instance
      * @param {Object} [options] - Options passed to calculateOptimalPageSize
@@ -1795,47 +1901,63 @@
         var container = document.getElementById(containerId);
         if (!container) return;
 
-        // remeasure: run once more after rendering, so a card view sized from
-        // estimates is corrected with the real card dimensions
-        function applyOptimalPageSize(remeasure) {
+        var updating = false;
+        // null when no update is requested, otherwise whether to measure again after it:
+        // a card view sized from estimates is then corrected with the real card dimensions
+        var pendingRemeasure = null;
+
+        function requestPageSizeUpdate(remeasure) {
+            pendingRemeasure = Boolean(pendingRemeasure) || remeasure;
+            if (updating) return;
+            updating = true;
+            container.setAttribute('aria-busy', 'true');
+            whenGridRendered(grid, runPendingUpdate);
+        }
+
+        function runPendingUpdate() {
+            if (pendingRemeasure === null) {
+                updating = false;
+                container.removeAttribute('aria-busy');
+                return;
+            }
+            var remeasure = pendingRemeasure;
+            pendingRemeasure = null;
+
             var newLimit = calculateOptimalPageSize(containerId, options);
             var currentLimit = (grid.config.pagination && grid.config.pagination.limit) || 10;
-            if (newLimit === currentLimit) return;
+            if (newLimit === currentLimit) {
+                runPendingUpdate();
+                return;
+            }
 
             grid.updateConfig({
                 pagination: { enabled: true, limit: newLimit }
-            }).forceRender();
-
-            waitForGridRenderComplete(container, function () {
+            });
+            forceRenderAndWait(grid, function () {
                 var dataLength = Array.isArray(grid.config.data) ? grid.config.data.length : 0;
                 updatePaginationVisibility(grid, dataLength);
                 document.dispatchEvent(new CustomEvent('grid:refreshed', {
                     detail: { containerId: containerId }
                 }));
-                if (remeasure) applyOptimalPageSize(false);
+                if (remeasure && pendingRemeasure === null) pendingRemeasure = false;
+                whenGridRendered(grid, runPendingUpdate);
             });
         }
 
         window.addEventListener('resize', function () {
             if (resizeTimeout) clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(function () {
-                applyOptimalPageSize(false);
+                requestPageSizeUpdate(false);
             }, 250);
         });
 
         // Cards and table rows have different sizes, so switching views changes the page size
         container.addEventListener('grid:viewchange', function () {
-            applyOptimalPageSize(true);
+            requestPageSizeUpdate(true);
         });
 
         // The initial page size was computed before the view mode was applied
-        if (container.querySelector('.gridjs-tbody')) {
-            applyOptimalPageSize(true);
-        } else {
-            waitForGridRenderComplete(container, function () {
-                applyOptimalPageSize(true);
-            });
-        }
+        requestPageSizeUpdate(true);
     }
 
     /**

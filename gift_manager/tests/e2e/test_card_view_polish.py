@@ -65,10 +65,21 @@ def _own(user, *objects):
         create_or_update_permission(user, obj, permission_level=PermissionLevel.OWNER)
 
 
+def _wait_for_grid(page: Page, grid: str):
+    """Wait until the grid rows are rendered and no page size update re-renders them."""
+    page.wait_for_selector(f'#{grid}:not([aria-busy="true"]) .gridjs-tbody .gridjs-tr')
+
+
+def _set_view(page: Page, grid: str, view: str):
+    """Switch the view mode; the page size update it triggers re-renders the rows."""
+    _wait_for_grid(page, grid)
+    page.evaluate(f"window.FilterPanel.setView('{grid}', '{view}')")
+    _wait_for_grid(page, grid)
+
+
 def _open_list(page: Page, live_server, path: str, grid: str, view: str, language: str = "en"):
     page.goto(f"{live_server.url}/{language}/{path}/", wait_until="networkidle")
-    page.wait_for_selector(f"#{grid} .gridjs-tbody .gridjs-tr")
-    page.evaluate(f"window.FilterPanel.setView('{grid}', '{view}')")
+    _set_view(page, grid, view)
     if view == "card":
         page.wait_for_selector(f'#{grid}[data-view="card"] .gridjs-td[data-label]')
     page.evaluate("document.fonts.ready")
@@ -299,7 +310,7 @@ def test_gift_plan_due_date_and_status_read_as_dashboard_badges(
         <= 1
     )
 
-    page.evaluate("window.FilterPanel.setView('relation-grid', 'list')")
+    _set_view(page, "relation-grid", "list")
     due = page.locator("#relation-grid .gridjs-tr", has_text="Late plan gift").locator(
         ".grid-due-date"
     )
@@ -463,8 +474,7 @@ def test_card_pages_fill_complete_rows(logged_in_page: Page, live_server, seed_d
     assert layout["cards"] % layout["columns"] == 0, layout
 
     # Going back to the table restores a row-based page size
-    page.evaluate("window.FilterPanel.setView('gift-grid', 'list')")
-    page.wait_for_timeout(500)
+    _set_view(page, "gift-grid", "list")
     assert page.locator("#gift-grid .gridjs-tbody .gridjs-tr").count() >= 5
 
 
@@ -492,8 +502,7 @@ def test_group_cards_show_the_member_count(logged_in_page: Page, live_server, se
     """Each group card of the recipients page lists how many members the group has."""
     page = logged_in_page
     page.goto(f"{live_server.url}/en/recipients/?view=groups", wait_until="networkidle")
-    page.wait_for_selector("#person-group-grid .gridjs-tbody .gridjs-tr")
-    page.evaluate("window.FilterPanel.setView('person-group-grid', 'card')")
+    _set_view(page, "person-group-grid", "card")
     page.wait_for_selector('#person-group-grid[data-view="card"] .gridjs-td[data-label]')
 
     counts = page.locator("#person-group-grid .gridjs-tbody .gridjs-tr").evaluate_all(
