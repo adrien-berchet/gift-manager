@@ -221,6 +221,7 @@
 </script>
 {% endif %}
 {% if show_advanced_list %}
+<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
@@ -298,7 +299,7 @@
                 {% else %}
                 null,
                 {% endif %}
-                "{{ item.comment|escapejs }}",
+                "{{ item.comment|default:''|escapejs }}",
                 "{{ item.status }}",
                 "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
                 {% if item.due_date %}{ iso: "{{ item.due_date|date:'Y-m-d' }}", display: "{{ item.due_date|date }}" }{% else %}null{% endif %},
@@ -327,7 +328,9 @@
         const columns = [
             GridUtils.createCheckboxColumn(9),
             {
+                id: 'gift',
                 name: '{{ column_names.gift__name|escapejs }}',
+                attributes: { 'data-card-role': 'title', 'data-card-icon': 'gift' },
                 sort: {
                     compare: GridUtils.sortByProperty('name')
                 },
@@ -337,7 +340,12 @@
                 }
             },
             {
+                id: 'recipient',
                 name: '{{ column_names.related_object|escapejs }}',
+                // Same marker as the dashboard card: a person or a group of people
+                attributes: (cell) => ({
+                    'data-card-icon': cell && cell.recipientType === 'group' ? 'group' : 'recipient'
+                }),
                 sort: {
                     compare: GridUtils.sortByProperty('text')
                 },
@@ -355,7 +363,9 @@
                 }
             },
             {
+                id: 'event',
                 name: '{{ column_names.event|escapejs }}',
+                attributes: { 'data-card-icon': 'event' },
                 sort: {
                     compare: GridUtils.sortByProperty('name')
                 },
@@ -379,12 +389,15 @@
             {
                 id: 'comment',
                 name: '{{ column_names.comment|escapejs }}',
+                attributes: { 'data-card-icon': 'comment' },
                 sort: {
                     compare: GridUtils.sortString()
                 }
             },
             {
+                id: 'status',
                 name: '{{ column_names.status__status|escapejs }}',
+                attributes: { 'data-card-icon': 'status' },
                 formatter: function (cell, row) {
                     const statusPk = row.cells[5].data;
                     const statusLabel = row.cells[6].data;
@@ -433,7 +446,9 @@
                 hidden: true
             },
             {
+                id: 'due_date',
                 name: '{{ column_names.due_date|escapejs }}',
+                attributes: { 'data-card-icon': 'due-date' },
                 sort: {
                     compare: GridUtils.sortDateObject()
                 },
@@ -450,7 +465,13 @@
                             </span>
                         `);
                     }
-                    return GridUtils.dateObjectFormatter(cell);
+                    if (!cell) return '';
+                    // Same urgency colors as the dashboard due badge (styled in card view only)
+                    const urgencyKey = String(rowState.urgencyKey || 'unknown').replace(/[^a-z_]/g, '');
+                    return gridjs.html(
+                        `<span class="grid-due-date gift-plan-due-badge gift-plan-due-badge--${urgencyKey}">`
+                        + `${GridUtils.escapeHtml(GridUtils.dateObjectFormatter(cell))}</span>`
+                    );
                 }
             },
             {

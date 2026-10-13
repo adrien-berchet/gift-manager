@@ -96,6 +96,22 @@
     --card-title-weight: 700;
     --card-meta-size: 0.8125rem;
     --card-comment-lines: 3;
+    /* Width of the field label column in Grid.js cards (icon + label) */
+    --card-label-width: 5.5rem;
+    /* Field icon tones: one hue per kind of information, shared by the dashboard and gift plan
+       cards, the Grid.js card view and the recipient gift plan cards. Kept away from the
+       red/amber urgency colors and from the status colors. */
+    --field-tone-neutral: var(--text-muted);
+    --field-tone-gift: var(--color-primary);
+    --field-tone-comment: #6d28d9;
+    --field-tone-link: #0369a1;
+    --field-tone-email: #0369a1;
+    --field-tone-price: #a16207;
+    --field-tone-tags: #0f766e;
+    --field-tone-event: #be185d;
+    --field-tone-person: var(--color-info-hover);
+    --field-tone-group: var(--color-success-hover);
+    --field-tone-due-date: #c2410c;
 
     /* Spacing Scale */
     --space-1: 0.25rem;
@@ -146,6 +162,16 @@
    ========================================================================== */
 
 [data-theme="dark"] {
+    --field-tone-neutral: var(--text-secondary);
+    --field-tone-comment: #c4b5fd;
+    --field-tone-link: #38bdf8;
+    --field-tone-email: #38bdf8;
+    --field-tone-price: #facc15;
+    --field-tone-tags: #5eead4;
+    --field-tone-event: #f472b6;
+    --field-tone-person: #93c5fd;
+    --field-tone-group: #6ee7b7;
+    --field-tone-due-date: #fb923c;
     --color-primary: #a5b4fc;
     --color-primary-hover: #c7d2fe;
     --color-primary-light: #312e81;
@@ -1161,8 +1187,9 @@ html .navbar-nav .nav-link.active {
     background-color: var(--surface-card);
 }
 
-/* Remove bottom border on last row to avoid doubling with wrapper border */
-.gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+/* Remove bottom border on last row to avoid doubling with wrapper border (list view only:
+   in the card view it would drop the title rule of the last card) */
+.gridjs-wrapper .gridjs-tr:last-child .gridjs-td:not([data-view="card"] *) {
     border-bottom: none;
 }
 
@@ -1176,7 +1203,7 @@ html .navbar-nav .nav-link.active {
     border-color: var(--border-color-hover);
 }
 
-[data-theme="dark"] .gridjs-wrapper .gridjs-tr:last-child .gridjs-td {
+[data-theme="dark"] .gridjs-wrapper .gridjs-tr:last-child .gridjs-td:not([data-view="card"] *) {
     border-bottom: none;
 }
 
@@ -1895,6 +1922,7 @@ h4, h5, h6 {
     .navbar,
     .bottom-nav,
     .fixed-action-bar,
+    .grid-action-bar,
     .btn,
     .theme-toggle {
         display: none !important;
@@ -2537,10 +2565,17 @@ h4, h5, h6 {
    Card View (Simple Mobile-First Design)
    ========================================================================== */
 
+/* Switching views re-renders the page with the new view's page size (grid-utils.js):
+   the rows of the previous page size are not shown meanwhile */
+.grid-page-resizing .gridjs-tbody {
+    visibility: hidden;
+}
+
 /* Container with card view mode */
 [data-view="card"] .gridjs-wrapper {
     background: transparent;
     border: none;
+    box-shadow: none;
     overflow: visible;
 }
 
@@ -2612,6 +2647,11 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td[data-label]:empty::after {
     content: "\2014";
     color: var(--text-muted);
+    /* Inline-editable cells otherwise draw a hidden edit hint in ::after */
+    position: static;
+    display: inline;
+    opacity: 1;
+    font-size: inherit;
 }
 
 /* The list-view zebra striping and hover highlight must not leak into cards */
@@ -2624,6 +2664,29 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td > * {
     min-width: 0;
     max-width: 100%;
+}
+
+/* "No records" message: a plain line across the card grid, not an empty card */
+[data-view="card"] .gridjs-tr:has(> .gridjs-message),
+[data-view="card"] .gridjs-tr:has(> .gridjs-message):hover {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Specific enough to beat the title (first cell) and action bar (last cell) rules */
+[data-view="card"] .gridjs-tr > .gridjs-td.gridjs-message {
+    order: 0;
+    justify-content: center;
+    padding: var(--space-6) 0;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: normal;
+    cursor: default;
 }
 
 @media (max-width: 576px) {
@@ -2666,7 +2729,7 @@ h4, h5, h6 {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     flex: 0 0 auto;
-    min-width: 4.75rem;
+    min-width: var(--card-label-width);
 }
 
 /* The title cell and the selection checkbox cell carry no label */
@@ -2678,6 +2741,7 @@ h4, h5, h6 {
    Long text is cut after --card-comment-lines lines so a card never grows without bound.
    The value is a bare text node, so the cell itself becomes the clamped box and the label is
    pulled out of the flow (keeping the clamp for the text alone). */
+[data-view="card"] .gridjs-td[data-card-icon="comment"],
 [data-view="card"] .gridjs-td[data-label*="omment"],
 [data-view="card"] .gridjs-td[data-label*="ommentaire"],
 [data-view="card"] .gridjs-td[data-label*="escription"] {
@@ -2687,10 +2751,11 @@ h4, h5, h6 {
     line-clamp: var(--card-comment-lines);
     position: relative;
     overflow: hidden;
-    padding-left: 4.75rem;
+    padding-left: var(--card-label-width);
     line-height: 1.35;
 }
 
+[data-view="card"] .gridjs-td[data-card-icon="comment"]::before,
 [data-view="card"] .gridjs-td[data-label*="omment"]::before,
 [data-view="card"] .gridjs-td[data-label*="ommentaire"]::before,
 [data-view="card"] .gridjs-td[data-label*="escription"]::before {
@@ -2703,6 +2768,7 @@ h4, h5, h6 {
 
 /* Phones stack the label above the value: it then takes part in the flow and uses one line */
 @media (max-width: 576px) {
+    [data-view="card"] .gridjs-td[data-card-icon="comment"]:not(:last-child),
     [data-view="card"] .gridjs-td[data-label*="omment"]:not(:last-child),
     [data-view="card"] .gridjs-td[data-label*="ommentaire"]:not(:last-child),
     [data-view="card"] .gridjs-td[data-label*="escription"]:not(:last-child) {
@@ -2711,6 +2777,7 @@ h4, h5, h6 {
         line-clamp: calc(var(--card-comment-lines) + 1);
     }
 
+    [data-view="card"] .gridjs-td[data-card-icon="comment"]:not(:last-child)::before,
     [data-view="card"] .gridjs-td[data-label*="omment"]:not(:last-child)::before,
     [data-view="card"] .gridjs-td[data-label*="ommentaire"]:not(:last-child)::before,
     [data-view="card"] .gridjs-td[data-label*="escription"]:not(:last-child)::before {
@@ -2764,129 +2831,265 @@ h4, h5, h6 {
     flex: 0 1 auto;
 }
 
-/* Card action buttons: same compact style as the gift plan card actions.
-   Give / the first detail action keeps its label, other actions are icon-only. */
-[data-view="card"] .quick-actions-container {
-    --card-action-primary-bg: #4338ca;
-    --card-action-primary-hover-bg: #312e81;
-    --card-action-bg: #e2e8f0;
-    --card-action-hover-bg: #cbd5e1;
-    --card-action-border: #64748b;
-    --card-action-text: #0f172a;
-    --card-action-danger-text: #b91c1c;
-    display: flex;
+/* Card action bar: the shared grid action bar (modern-ux.css), wrapping when a card is narrow
+   and always showing the labels of the main actions */
+[data-view="card"] .grid-action-bar {
     flex-wrap: wrap;
     justify-content: flex-end;
-    align-items: center;
-    gap: 0.375rem;
     width: 100%;
+    max-width: none;
+    opacity: 1;
 }
 
-[data-theme="dark"] [data-view="card"] .quick-actions-container {
-    --card-action-primary-bg: #4f46e5;
-    --card-action-primary-hover-bg: #4338ca;
-    --card-action-bg: #334155;
-    --card-action-hover-bg: #475569;
-    --card-action-border: #94a3b8;
-    --card-action-text: #f8fafc;
-    --card-action-danger-text: #fca5a5;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3rem;
-    flex: 0 0 1.75rem;
-    width: 1.75rem;
-    min-width: 1.75rem;
-    min-height: 1.75rem;
-    padding: 0.28rem;
-    border: 1px solid var(--card-action-border);
-    border-radius: 0.45rem;
-    background-color: var(--card-action-bg);
-    color: var(--card-action-text);
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    box-shadow: none;
-    transform: none;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn:hover,
-[data-view="card"] .gridjs-td .quick-action-btn:focus {
-    background-color: var(--card-action-hover-bg);
-    border-color: var(--card-action-border);
-    color: var(--card-action-text);
-    box-shadow: none;
-    transform: none;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn i {
-    margin: 0;
-    font-size: 0.72rem;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn.btn-danger {
-    color: var(--card-action-danger-text);
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn .btn-text {
-    display: none !important;
-    margin: 0 !important;
-}
-
-/* Labeled primary action: Give, or Details when the page has no Give */
-[data-view="card"] .gridjs-td .quick-action-btn.btn-primary,
-[data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info {
-    flex: 0 0 auto;
-    width: auto;
-    padding: 0.28rem 0.58rem;
-    background-color: var(--card-action-primary-bg);
-    border-color: var(--card-action-primary-bg);
-    color: #ffffff;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn.btn-primary:hover,
-[data-view="card"] .gridjs-td .quick-action-btn.btn-primary:focus,
-[data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info:hover,
-[data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info:focus {
-    background-color: var(--card-action-primary-hover-bg);
-    border-color: var(--card-action-primary-hover-bg);
-    color: #ffffff;
-}
-
-[data-view="card"] .gridjs-td .quick-action-btn.btn-primary .btn-text,
-[data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info .btn-text {
+[data-view="card"] .grid-action-bar .grid-action--labeled .btn-text {
     display: inline !important;
 }
 
-/* Touch-friendly action buttons on phones and tablets */
-@media (max-width: 768px), (pointer: coarse) {
-    [data-view="card"] .quick-actions-container {
-        gap: 0.5rem;
-    }
+/* An open overflow menu must not be clipped by the card */
+[data-view="card"] .gridjs-tr:has(.grid-action-menu .dropdown-menu.show) {
+    overflow: visible;
+}
 
-    [data-view="card"] .gridjs-td .quick-action-btn {
-        flex-basis: 2.75rem;
-        width: 2.75rem;
-        min-width: 2.75rem;
-        min-height: 2.75rem;
-        padding: 0.4rem;
-        border-radius: 0.6rem;
-    }
+/* --------------------------------------------------------------------------
+   Card fields declared by the page columns (attributes in the column definitions):
+   data-card-role="title" for the card title, data-card-icon for the field icon.
+   -------------------------------------------------------------------------- */
 
-    [data-view="card"] .gridjs-td .quick-action-btn i {
-        font-size: 0.95rem;
-    }
+/* Solid Font Awesome glyphs for the labels drawn in ::before. The alias only covers the
+   private use area, so the label text keeps the page font. Same file as the stylesheet
+   loaded in base.html. */
+@font-face {
+    font-family: "Grid Card Icons";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: block;
+    src: url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/webfonts/fa-solid-900.woff2") format("woff2");
+    unicode-range: U+E000-F8FF;
+}
 
-    [data-view="card"] .gridjs-td .quick-action-btn.btn-primary,
-    [data-view="card"] .gridjs-td .quick-actions-container:not(:has(.btn-primary)) .quick-action-btn.btn-info {
-        flex-basis: auto;
-        width: auto;
-        padding: 0.4rem 0.9rem;
-        font-size: 0.875rem;
+[data-view="card"] .gridjs-td[data-card-icon] {
+    /* Fields keep their column order; the action bar alone is pinned to the bottom */
+    order: 0;
+    margin-top: 0;
+}
+
+[data-view="card"] .gridjs-td[data-card-icon] {
+    /* Fields without a tone of their own (status) use the dashboard meta row icon tone; the
+       label text stays muted */
+    --card-field-icon-color: var(--field-tone-neutral);
+    --card-field-label-color: var(--text-muted);
+}
+
+/* Icon and label share one pseudo-element: a two-tone background clipped to the text paints the
+   icon and the label in their own colors. Every icon glyph is narrower than 1.3em, and the
+   en space after it keeps the label beyond that boundary. */
+[data-view="card"] .gridjs-td[data-card-icon]::before {
+    content: var(--card-field-icon, "") attr(data-label);
+    font-family: "Grid Card Icons", var(--font-sans);
+    min-width: var(--card-label-width);
+    background-image: linear-gradient(
+        to right,
+        var(--card-field-icon-color) 0 1.3em,
+        var(--card-field-label-color) 1.3em
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+}
+
+/* High contrast modes drop the gradient, so paint the icon and label with the system text color */
+@media (forced-colors: active) {
+    [data-view="card"] .gridjs-td[data-card-icon]::before {
+        background-image: none;
+        color: CanvasText;
+        -webkit-text-fill-color: CanvasText;
     }
+}
+
+[data-view="card"] .gridjs-td[data-card-icon="gift"] { --card-field-icon: "\f06b\2002"; --card-field-icon-color: var(--field-tone-gift); }
+[data-view="card"] .gridjs-td[data-card-icon="event"] { --card-field-icon: "\f783\2002"; --card-field-icon-color: var(--field-tone-event); }
+[data-view="card"] .gridjs-td[data-card-icon="comment"] { --card-field-icon: "\f075\2002"; --card-field-icon-color: var(--field-tone-comment); }
+[data-view="card"] .gridjs-td[data-card-icon="link"] { --card-field-icon: "\f0c1\2002"; --card-field-icon-color: var(--field-tone-link); }
+[data-view="card"] .gridjs-td[data-card-icon="price"] { --card-field-icon: "\f51e\2002"; --card-field-icon-color: var(--field-tone-price); }
+[data-view="card"] .gridjs-td[data-card-icon="tags"] { --card-field-icon: "\f02b\2002"; --card-field-icon-color: var(--field-tone-tags); }
+[data-view="card"] .gridjs-td[data-card-icon="schedule"] { --card-field-icon: "\f073\2002"; --card-field-icon-color: var(--field-tone-event); }
+[data-view="card"] .gridjs-td[data-card-icon="birthday"] { --card-field-icon: "\f1fd\2002"; --card-field-icon-color: var(--field-tone-event); }
+[data-view="card"] .gridjs-td[data-card-icon="recipient"] { --card-field-icon: "\f007\2002"; --card-field-icon-color: var(--field-tone-person); }
+[data-view="card"] .gridjs-td[data-card-icon="person"] { --card-field-icon: "\f007\2002"; --card-field-icon-color: var(--field-tone-person); }
+[data-view="card"] .gridjs-td[data-card-icon="family-name"] { --card-field-icon: "\f2c2\2002"; --card-field-icon-color: var(--field-tone-person); }
+[data-view="card"] .gridjs-td[data-card-icon="email"] { --card-field-icon: "\f0e0\2002"; --card-field-icon-color: var(--field-tone-email); }
+[data-view="card"] .gridjs-td[data-card-icon="group"] { --card-field-icon: "\f5fd\2002"; --card-field-icon-color: var(--field-tone-group); }
+[data-view="card"] .gridjs-td[data-card-icon="members"] { --card-field-icon: "\f0c0\2002"; --card-field-icon-color: var(--field-tone-group); }
+[data-view="card"] .gridjs-td[data-card-icon="status"] { --card-field-icon: "\f042\2002"; }
+[data-view="card"] .gridjs-td[data-card-icon="due-date"] { --card-field-icon: "\f017\2002"; --card-field-icon-color: var(--field-tone-due-date); }
+
+/* Card title: same typography as .gift-plan-card-title, led by the entity icon, and opens the
+   details on click (filter-panel.js) */
+[data-view="card"] .gridjs-td[data-card-role="title"] {
+    order: -1;
+    flex-direction: row;
+    align-items: baseline;
+    padding: 0 0 0.65rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: var(--card-title-size);
+    font-weight: var(--card-title-weight);
+    line-height: 1.25;
+    cursor: pointer;
+}
+
+[data-view="card"] .gridjs-td[data-card-role="title"]:hover {
+    color: var(--color-primary-hover);
+}
+
+[data-view="card"] .gridjs-td[data-card-role="title"]::before {
+    display: inline;
+    content: var(--card-field-icon, "");
+    min-width: 0;
+    background: none;
+    color: var(--card-field-icon-color);
+    -webkit-text-fill-color: currentColor;
+    font-size: 0.85em;
+    font-weight: 900;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+[data-view="card"] .gridjs-td[data-card-role="title"] a {
+    color: inherit;
+    text-decoration: none;
+}
+
+[data-view="card"] .gridjs-td[data-card-role="title"] a:hover {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+}
+
+/* Selection checkbox: sits in the card header, next to the title, instead of its own row */
+[data-view="card"] .gridjs-tr {
+    position: relative;
+}
+
+[data-view="card"].selection-mode-active .gridjs-table .gridjs-tr:has([data-card-role="title"]) > .gridjs-td[data-column-id="checkbox"]:not(.gridjs-message) {
+    position: absolute;
+    /* Above the positioned inline-editable cells */
+    z-index: 1;
+    top: var(--card-padding);
+    right: var(--card-padding);
+    display: flex;
+    width: auto;
+    padding: 0;
+    border: none;
+}
+
+[data-view="card"] .gridjs-td[data-column-id="checkbox"] .form-check {
+    min-height: 0;
+    margin: 0;
+}
+
+[data-view="card"].selection-mode-active .gridjs-td[data-card-role="title"] {
+    padding-right: 2rem;
+}
+
+/* An empty comment has nothing to clamp: it uses the regular label + placeholder row */
+[data-view="card"] .gridjs-td[data-card-icon="comment"]:empty {
+    display: flex;
+    padding-left: 0;
+    overflow: visible;
+    -webkit-line-clamp: none;
+    line-clamp: none;
+}
+
+[data-view="card"] .gridjs-td[data-card-icon="comment"]:empty::before {
+    position: static;
+    line-height: inherit;
+}
+
+/* The field icon already tells a person from a group, as on the dashboard card: the type
+   badge stays for screen readers only */
+[data-view="card"] .gridjs-td[data-card-icon="recipient"] .recipient-type-badge,
+[data-view="card"] .gridjs-td[data-card-icon="group"] .recipient-type-badge {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Badge-like values (status select, due badge) are centered on the label line */
+@media (min-width: 577px) {
+    [data-view="card"] .gridjs-td[data-card-icon="status"],
+    [data-view="card"] .gridjs-td[data-card-icon="due-date"] {
+        align-items: center;
+    }
+}
+
+/* Gift plan status: the editable select reads as the dashboard status badge */
+[data-view="card"] .gridjs-td[data-card-icon="status"] .gift-plan-status-select {
+    width: auto;
+    min-height: 1.75rem;
+    padding: 0.2rem 1.75rem 0.2rem 0.6rem;
+    background-position: right 0.55rem center;
+    background-size: 10px 8px;
+    font-size: 0.75rem;
+    line-height: 1.1;
+}
+
+/* Due date: dashboard urgency badge in cards, plain text in the list view */
+[data-view="list"] .grid-due-date {
+    display: inline;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    white-space: normal;
+}
+
+/* Tags: compact chips on one wrapping line, like .gift-plan-tag-badge */
+[data-view="card"] .grid-tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+[data-view="card"] .grid-tag-list .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    padding: 0.18rem 0.45rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-full);
+    background-color: var(--surface-elevated) !important;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1.1;
+    text-decoration: none;
+    text-transform: none;
+}
+
+[data-view="card"] .grid-tag-list .badge::before {
+    content: "\f02b";
+    font: var(--fa-font-solid);
+    font-size: 0.6rem;
+    color: var(--field-tone-tags);
+}
+
+[data-view="card"] .grid-tag-list a.badge:hover,
+[data-view="card"] .grid-tag-list a.badge:focus-visible {
+    border-color: var(--color-primary);
+    color: var(--color-primary-hover);
 }
 
 /* Dark mode: tokens already adapt; only the shadows need a stronger value */

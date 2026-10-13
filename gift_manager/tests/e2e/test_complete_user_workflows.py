@@ -95,8 +95,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
             self.close_panel(page, "detailPanel")
 
         # Step 4: Delete the person
-        delete_btn = jonathan_row.locator("[data-action='delete']")
-        delete_btn.click()
+        self.click_row_action(jonathan_row, "delete")
         self.wait_for_modal(page)
 
         modal = page.locator("#confirmModal")
@@ -218,8 +217,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
 
         # Find and delete our test gift
         gift_row = self.get_list_items(page).filter(has_text="Workflow Test Gift").first
-        delete_btn = gift_row.locator("[data-action='delete']")
-        delete_btn.click()
+        self.click_row_action(gift_row, "delete")
         self.wait_for_modal(page)
 
         modal = page.locator("#confirmModal")
@@ -461,8 +459,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
             self.get_list_items(page).filter(has_text=re.compile(r"Error Test\s*User")).first
         )
         if error_test_row.count() > 0:
-            delete_btn = error_test_row.locator("[data-action='delete']")
-            delete_btn.click()
+            self.click_row_action(error_test_row, "delete")
             self.wait_for_modal(page)
 
             modal = page.locator("#confirmModal")
@@ -567,8 +564,7 @@ class TestCompleteUserWorkflows(BaseE2ETest):
         expect(self.get_list_items(page).filter(has_text="Accessibility Test")).to_be_visible()
 
         # Step 4: Test modal accessibility
-        delete_button = self.get_list_items(page).first.locator("[data-action='delete']").first
-        expect(delete_button).to_be_visible(timeout=self.ajax_timeout)
+        delete_button = self.reveal_row_action(self.get_list_items(page).first, "delete")
         delete_button.focus()
         expect(delete_button).to_be_focused()
 

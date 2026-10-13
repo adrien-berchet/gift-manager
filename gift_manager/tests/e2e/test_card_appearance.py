@@ -141,24 +141,30 @@ def test_grid_card_rows_and_actions_are_compact(
     buttons = cards.first.locator(".quick-action-btn")
     assert buttons.count() >= 2
     sizes = buttons.evaluate_all(
-        """btns => btns.map(b => ({
-            action: b.dataset.action,
-            ariaLabel: b.getAttribute('aria-label'),
-            height: b.getBoundingClientRect().height,
-            width: b.getBoundingClientRect().width,
-            label: getComputedStyle(b.querySelector('.btn-text')).display,
-        }))"""
+        """btns => btns.map(b => {
+            const text = b.querySelector('.btn-text');
+            return {
+                labeled: b.classList.contains('grid-action--labeled'),
+                primary: b.classList.contains('btn-primary'),
+                actionType: b.dataset.actionType,
+                ariaLabel: b.getAttribute('aria-label'),
+                height: b.getBoundingClientRect().height,
+                width: b.getBoundingClientRect().width,
+                label: text ? getComputedStyle(text).display : null,
+            };
+        })"""
     )
-    # Give keeps its label; on pages without Give the Details action is the labeled one.
-    has_give = any(size["action"] == "create" for size in sizes)
-    labeled_action = "create" if has_give else "detail"
+    # Like the dashboard card: Edit is the only primary action (a lock when it is not allowed)
+    # and, with Give, keeps its label; the other actions are icon-only.
+    assert [size["actionType"] for size in sizes if size["primary"]] in ([], ["edit"])
     for size in sizes:
         assert size["ariaLabel"], "icon-only actions need an accessible name"
         assert size["height"] <= 32
-        if size["action"] == labeled_action:
+        if size["labeled"]:
+            assert size["actionType"] in ("edit", "give")
             assert size["label"] != "none"
         else:
-            assert size["label"] == "none"
+            assert size["label"] is None
             assert size["width"] <= 32
     # All actions fit on a single row.
     tops = buttons.evaluate_all(

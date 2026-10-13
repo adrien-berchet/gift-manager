@@ -276,9 +276,9 @@ td.gridjs-td.bulk-select-cell {
     margin-top: 0;
 }
 
-/* Hide checkbox column by default */
+/* Hide checkbox column by default (not the "no records" message, which spans every column) */
 .gridjs-table th:first-child,
-.gridjs-table td:first-child {
+.gridjs-table td:first-child:not(.gridjs-message) {
     display: none;
 }
 

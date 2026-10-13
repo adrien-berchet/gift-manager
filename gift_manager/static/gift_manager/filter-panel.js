@@ -307,6 +307,15 @@
     }
 
     /**
+     * View a grid starts with: the saved preference or the screen-size-based default
+     * @param {string} gridId - The ID of the grid container
+     * @returns {string} 'list' or 'card'
+     */
+    function getInitialView(gridId) {
+        return localStorage.getItem('view-preference-' + gridId) || getDefaultView();
+    }
+
+    /**
      * Initialize view toggle (list/card) for a grid
      * @param {string} gridId - The ID of the grid container
      */
@@ -318,9 +327,7 @@
             return;
         }
 
-        // Get saved preference or use screen-size-based default
-        const savedView = localStorage.getItem('view-preference-' + gridId);
-        const initialView = savedView || getDefaultView();
+        const initialView = getInitialView(gridId);
 
         // Apply initial view
         setGridView(gridId, initialView);
@@ -375,14 +382,52 @@
         gridContainer.classList.add('grid-view-' + view);
 
         // Set data attribute for CSS targeting
+        const previousView = gridContainer.getAttribute('data-view');
         gridContainer.setAttribute('data-view', view);
+        if (previousView !== view) {
+            gridContainer.dispatchEvent(new CustomEvent('grid:viewchange', { detail: { view: view } }));
+        }
 
         // For card view, add data-label attributes to cells
         if (view === 'card') {
             addCardLabels(gridContainer);
             // Also set up observer to add labels when Grid.js re-renders
             observeGridChanges(gridContainer);
+            setupCardTitleDetails(gridContainer);
         }
+    }
+
+    // Long enough to tell a single click from the double click that starts inline editing
+    const CARD_TITLE_CLICK_DELAY = 250;
+
+    /**
+     * Open the row details when a card title is clicked, like the dashboard card title.
+     * A double click keeps starting inline editing on editable titles, so the single click
+     * waits until no second click followed. Keyboard users reach the Details button directly.
+     * @param {Element} container - The grid container
+     */
+    function setupCardTitleDetails(container) {
+        if (container._cardTitleDetails) return;
+        container._cardTitleDetails = true;
+
+        let pendingClick = null;
+        container.addEventListener('click', function(event) {
+            if (container.getAttribute('data-view') !== 'card') return;
+            const title = event.target.closest('.gridjs-td[data-card-role="title"]');
+            // Links in the title (e.g. a gift plan's gift) and inline-edit inputs keep their behavior
+            if (!title || event.target.closest('a, button, input, select, textarea')) return;
+
+            clearTimeout(pendingClick);
+            if (event.detail > 1) return;
+
+            const detailAction = title.closest('.gridjs-tr')?.querySelector('[data-action="detail"]');
+            if (!detailAction) return;
+            pendingClick = setTimeout(function() {
+                if (title.isConnected && !title.querySelector('input, textarea')) {
+                    detailAction.click();
+                }
+            }, CARD_TITLE_CLICK_DELAY);
+        });
     }
 
     /**
@@ -525,6 +570,7 @@
     // Expose to global scope
     window.FilterPanel = {
         init: initFilterPanel,
-        setView: setGridView
+        setView: setGridView,
+        getInitialView: getInitialView
     };
 })();

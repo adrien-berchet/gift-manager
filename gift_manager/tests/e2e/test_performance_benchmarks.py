@@ -203,10 +203,9 @@ class TestPerformanceBenchmarks(BaseE2ETest):
             .first
         )
         if perf_test_row.count() > 0:
-            delete_btn = perf_test_row.locator("[data-action='delete']").first
-            if delete_btn.count() == 0 or not delete_btn.is_visible():
+            if perf_test_row.locator("[data-action='delete']").count() == 0:
                 return
-            delete_btn.click()
+            self.click_row_action(perf_test_row, "delete")
             self.wait_for_modal(page)
             self.confirm_modal_action(page)
             self.wait_for_ajax_complete(page)

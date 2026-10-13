@@ -78,6 +78,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 reports/
+# pytest-playwright screenshots and videos of failed browser tests
+test-results/
 pip-audit-report.json
 bandit-report.json
 

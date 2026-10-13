@@ -784,6 +784,31 @@
     box-shadow: inset 3px 0 0 var(--color-danger);
 }
 
+/* Cards show the urgency on their accent border, like the dashboard gift plan cards, instead of
+   tinting every field row */
+#relation-grid[data-view="card"] .gridjs-tr td.gridjs-td,
+#relation-grid[data-view="card"] .gridjs-tr:hover td.gridjs-td {
+    background-color: transparent;
+    box-shadow: none;
+}
+
+#relation-grid[data-view="card"] .gridjs-tr.gift-plan-grid-row--overdue {
+    --card-accent-color: var(--color-danger);
+}
+
+#relation-grid[data-view="card"] .gridjs-tr.gift-plan-grid-row--due_soon,
+#relation-grid[data-view="card"] .gridjs-tr.gift-plan-grid-row--needs_details {
+    --card-accent-color: var(--color-warning);
+}
+
+#relation-grid[data-view="card"] .gridjs-tr.gift-plan-grid-row--later {
+    --card-accent-color: var(--color-info);
+}
+
+#relation-grid[data-view="card"] .gridjs-tr.gift-plan-grid-row--completed {
+    --card-accent-color: var(--color-success);
+}
+
 .gift-plan-missing-data-badge {
     display: inline-flex;
     align-items: center;

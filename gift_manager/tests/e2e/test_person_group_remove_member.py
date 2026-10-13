@@ -57,7 +57,7 @@ class TestPersonGroupRemoveMember(BaseE2ETest):
         grid = page.locator("#persons-grid")
         leaving_row = grid.locator("tbody tr", has_text="Leaving")
         expect(leaving_row).to_be_visible()
-        leaving_row.locator('[data-action="delete"]').click()
+        self.click_row_action(leaving_row, "delete")
 
         self.wait_for_modal(page)
         expect(page.locator("#modalBody")).to_contain_text("Remove Leaving Member")
@@ -88,7 +88,7 @@ class TestPersonGroupRemoveMember(BaseE2ETest):
         expect(page.locator("#gifts-tab")).to_contain_text("[2]")
 
         doomed_row = page.locator("#gifts-grid tbody tr", has_text="Doomed gift")
-        doomed_row.locator('[data-action="delete"]').click()
+        self.click_row_action(doomed_row, "delete")
         self.wait_for_modal(page)
         page.locator("#confirmAction").click()
 

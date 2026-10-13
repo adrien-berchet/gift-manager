@@ -275,7 +275,7 @@ body.has-fixed-action-bar {
 .recipient-icon--person {
     background-color: var(--color-info-light);
     border-color: rgba(59, 130, 246, 0.35);
-    color: var(--color-info-hover);
+    color: var(--field-tone-person);
 }
 
 .recipient-type-badge--group,
@@ -283,7 +283,7 @@ body.has-fixed-action-bar {
 .recipient-icon--group {
     background-color: var(--color-success-light);
     border-color: rgba(16, 185, 129, 0.35);
-    color: var(--color-success-hover);
+    color: var(--field-tone-group);
 }
 
 .recipient-membership-badge {
@@ -297,7 +297,7 @@ body.has-fixed-action-bar {
 [data-theme="dark"] .recipient-icon--person {
     background-color: rgba(59, 130, 246, 0.18);
     border-color: rgba(147, 197, 253, 0.35);
-    color: #93c5fd;
+    color: var(--field-tone-person);
 }
 
 [data-theme="dark"] .recipient-type-badge--group,
@@ -305,7 +305,7 @@ body.has-fixed-action-bar {
 [data-theme="dark"] .recipient-icon--group {
     background-color: rgba(16, 185, 129, 0.18);
     border-color: rgba(110, 231, 183, 0.35);
-    color: #6ee7b7;
+    color: var(--field-tone-group);
 }
 
 [data-theme="dark"] .recipient-plan-count,
@@ -314,6 +314,28 @@ body.has-fixed-action-bar {
     border-color: #475569;
     color: #cbd5e1;
 }
+
+/* Field icons: the same hue for the same kind of information on every page (tokens in theme.css).
+   The extra specificity wins over generic icon color rules (meta rows, dark-theme inheritance). */
+.fas.field-icon--comment { color: var(--field-tone-comment); }
+.fas.field-icon--link { color: var(--field-tone-link); }
+.fas.field-icon--email { color: var(--field-tone-email); }
+.fas.field-icon--price { color: var(--field-tone-price); }
+.fas.field-icon--tags { color: var(--field-tone-tags); }
+.fas.field-icon--event { color: var(--field-tone-event); }
+.fas.field-icon--person { color: var(--field-tone-person); }
+.fas.field-icon--group { color: var(--field-tone-group); }
+.fas.field-icon--due-date { color: var(--field-tone-due-date); }
+
+[data-theme="dark"] .fas.field-icon--comment { color: var(--field-tone-comment); }
+[data-theme="dark"] .fas.field-icon--link { color: var(--field-tone-link); }
+[data-theme="dark"] .fas.field-icon--email { color: var(--field-tone-email); }
+[data-theme="dark"] .fas.field-icon--price { color: var(--field-tone-price); }
+[data-theme="dark"] .fas.field-icon--tags { color: var(--field-tone-tags); }
+[data-theme="dark"] .fas.field-icon--event { color: var(--field-tone-event); }
+[data-theme="dark"] .fas.field-icon--person { color: var(--field-tone-person); }
+[data-theme="dark"] .fas.field-icon--group { color: var(--field-tone-group); }
+[data-theme="dark"] .fas.field-icon--due-date { color: var(--field-tone-due-date); }
 
 /* Gift plan status, due date, and tag badges */
 .gift-plan-status-badge,

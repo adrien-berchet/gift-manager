@@ -14,31 +14,6 @@
         OWNER: 30,
     };
 
-    function escapeHtml(value) {
-        if (window.GridUtils?.escapeHtml) return window.GridUtils.escapeHtml(value);
-        const replacements = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-        };
-        return String(value ?? "").replace(/[&<>"']/g, (character) => replacements[character]);
-    }
-
-    function escapeAttribute(value) {
-        if (window.GridUtils?.escapeAttribute) return window.GridUtils.escapeAttribute(value);
-        return escapeHtml(value);
-    }
-
-    function safeUrl(value) {
-        if (window.GridUtils?.safeUrl) return window.GridUtils.safeUrl(value);
-        const url = String(value ?? "").trim();
-        if (/^(https?:|mailto:|#)/i.test(url)) return escapeAttribute(url);
-        if (url.startsWith("/") && !url.startsWith("//")) return escapeAttribute(url);
-        return "#";
-    }
-
     /**
      * Create permission-aware action buttons formatter for Grid.js
      *
@@ -49,62 +24,9 @@
      * @returns {Function} Grid.js formatter function
      */
     function permissionAwareActionFormatter(urls, actions, options = {}, permissions = {}) {
-        const actionConfig = {
-            give: {
-                class: "btn-primary",
-                icon: "fa-hand-holding-heart",
-                title: "Give",
-                action: "create",
-                requiredPermission: PERMISSION_LEVELS.EDITOR,
-            },
-            details: {
-                class: "btn-info",
-                icon: "fa-eye",
-                title: "Details",
-                action: "detail",
-                requiredPermission: PERMISSION_LEVELS.VIEWER,
-            },
-            edit: {
-                class: "btn-warning",
-                icon: "fa-edit",
-                title: "Edit",
-                action: "edit",
-                requiredPermission: PERMISSION_LEVELS.EDITOR,
-            },
-            delete: {
-                class: "btn-danger",
-                icon: "fa-trash",
-                title: "Delete",
-                action: "delete",
-                requiredPermission: PERMISSION_LEVELS.OWNER,
-            },
-            duplicate: {
-                class: "btn-secondary",
-                icon: "fa-copy",
-                title: "Duplicate",
-                action: "create",
-                requiredPermission: PERMISSION_LEVELS.VIEWER,
-            },
-            share: {
-                class: "btn-success",
-                icon: "fa-share-alt",
-                title: "Share",
-                action: "share",
-                requiredPermission: PERMISSION_LEVELS.EDITOR,
-            },
-            expand: {
-                class: "btn-outline-secondary",
-                icon: "fa-chevron-down",
-                title: "Expand",
-                action: "expand",
-                requiredPermission: PERMISSION_LEVELS.VIEWER,
-            },
-        };
-
         return function (cell, row) {
             const id = options.idResolver ? options.idResolver(row) : cell;
             const userPermission = permissions[id] || PERMISSION_LEVELS.NONE;
-            const safeId = escapeAttribute(id);
 
             // Debug logging - only log when permission is NONE (might indicate a problem)
             if (userPermission === PERMISSION_LEVELS.NONE) {
@@ -115,97 +37,14 @@
                 );
             }
 
-            const resolveUrl = (urlTemplate, actionId) => {
-                if (typeof urlTemplate === "function") return urlTemplate(row);
-                return urlTemplate ? urlTemplate.replace("{id}", actionId || id) : null;
-            };
-
-            const shouldDisplay = (action) => {
-                if (typeof action === "string") return true;
-                return !action.condition || action.condition(row);
-            };
-
-            const buttons = actions
-                .filter(shouldDisplay)
-                .map((action) => {
-                    const actionType = typeof action === "string" ? action : action.type;
-                    const urlTemplate = urls[actionType];
-                    const config = actionConfig[actionType];
-
-                    if (!urlTemplate || !config) return null;
-
-                    const url = resolveUrl(
-                        urlTemplate,
-                        typeof action === "object" ? action.id : null
-                    );
-                    if (!url) return null;
-                    const safeResolvedUrl = safeUrl(url);
-                    const actionName = escapeAttribute(config.action);
-                    const title = escapeAttribute(config.title);
-
-                    // Check if user has required permission
-                    const hasPermission = userPermission >= config.requiredPermission;
-                    const isEnabled = hasPermission;
-
-                    // Generate tooltip message
-                    let tooltip = config.title;
-                    if (!hasPermission) {
-                        tooltip = `You do not have permission to ${config.title.toLowerCase()} this object`;
-                    }
-                    const safeTooltip = escapeAttribute(tooltip);
-
-                    // Create button HTML
-                    if (isEnabled) {
-                        return `<a href="${safeResolvedUrl}"
-                                  class="btn ${config.class} btn-sm quick-action-btn"
-                                  title="${safeTooltip}"
-                                  aria-label="${escapeAttribute(config.title)}"
-                                  data-action="${actionName}"
-                                  data-entity-id="${safeId}"
-                                  data-permission-level="${userPermission}"
-                                  ${
-                                      config.action === "detail"
-                                          ? 'data-detail-url="' + safeResolvedUrl + '"'
-                                          : ""
-                                  }
-                                  ${config.action === "edit" ? 'data-edit-url="' + safeResolvedUrl + '"' : ""}
-                                  ${
-                                      config.action === "delete"
-                                          ? 'data-delete-url="' + safeResolvedUrl + '"'
-                                          : ""
-                                  }
-                                  ${
-                                      config.action === "expand"
-                                          ? 'data-detail-url="' + safeResolvedUrl + '"'
-                                          : ""
-                                  }
-                                  data-bs-toggle="tooltip"
-                                  data-bs-placement="top">
-                            <i class="fas ${config.icon}"></i>
-                            <span class="btn-text d-none d-lg-inline ms-1">${escapeHtml(config.title)}</span>
-                        </a>`;
-                    } else {
-                        return `<button class="btn ${config.class} btn-sm quick-action-btn"
-                                       disabled
-                                       title="${safeTooltip}"
-                                       aria-label="${escapeAttribute(config.title)}"
-                                       data-action="${actionName}"
-                                       data-entity-id="${safeId}"
-                                       data-permission-level="${userPermission}"
-                                       data-bs-toggle="tooltip"
-                                       data-bs-placement="top"
-                                       style="opacity: 0.5;">
-                            <i class="fas ${config.icon}"></i>
-                            <span class="btn-text d-none d-lg-inline ms-1">${escapeHtml(config.title)}</span>
-                        </button>`;
-                    }
-                })
-                .filter(Boolean);
-
             return gridjs.html(
-                `<div class="quick-actions-container" data-permission-level="${escapeAttribute(userPermission)}">${buttons.join(
-                    ""
-                )}</div>`
+                window.GridActions.renderActionBar({
+                    urls,
+                    actions,
+                    row,
+                    id,
+                    permissionLevel: userPermission,
+                })
             );
         };
     }
@@ -252,8 +91,11 @@
             expand: PERMISSION_LEVELS.VIEWER,
         };
 
-        // Update action buttons
-        const actionButtons = container.querySelectorAll("[data-action][data-entity-id]");
+        // Update action buttons. Grid action bars are skipped: their formatter reads the live
+        // permissions object at render time and already shows locked or hidden actions.
+        const actionButtons = container.querySelectorAll(
+            "[data-action][data-entity-id]:not(.grid-action-bar *)"
+        );
         actionButtons.forEach((button) => {
             const entityId = button.dataset.entityId;
             const action = button.dataset.action;

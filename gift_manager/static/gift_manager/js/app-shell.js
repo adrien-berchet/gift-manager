@@ -551,7 +551,9 @@
              */
             function open(url, trigger) {
                 if (!url) return Promise.resolve();
-                lastTrigger = trigger || null;
+                // An item of a closed overflow menu cannot take focus back: use its toggle
+                const menuToggle = trigger?.closest?.('.dropdown')?.querySelector('[data-bs-toggle="dropdown"]');
+                lastTrigger = menuToggle || trigger || null;
                 hideDetailPanel(trigger);
                 return fetch(url, {
                     headers: {

@@ -71,6 +71,7 @@ def get_person_group_grid_column_names():
     """Return translated column labels for the group management grid."""
     return {
         "name": gettext("Group name"),
+        "member_count": gettext("Members"),
     }
 
 
@@ -113,7 +114,14 @@ def get_person_group_management_context(
 
     context = {
         "column_names": get_person_group_grid_column_names(),
-        "data": [{"group_id": group.group_id, "name": group.name} for group in all_groups],
+        "data": [
+            {
+                "group_id": group.group_id,
+                "name": group.name,
+                "member_count": len(_get_prefetched_group_members(group)),
+            }
+            for group in all_groups
+        ],
         "tree_data": tree_data,
         "has_hierarchy": has_hierarchy,
     }

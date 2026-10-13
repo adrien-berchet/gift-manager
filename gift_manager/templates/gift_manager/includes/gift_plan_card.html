@@ -75,7 +75,7 @@
 
         {% if card.relation.event %}
         <div class="gift-plan-card-meta-row">
-            <i class="fas fa-calendar-alt" aria-hidden="true"></i>
+            <i class="fas fa-calendar-alt field-icon--event" aria-hidden="true"></i>
             <a href="{% url 'gift_manager:event_detail' card.relation.event.event_id %}">
                 {{ card.relation.event.name }}
             </a>
@@ -97,7 +97,7 @@
         {% for tag in tags %}
         <a href="{% url 'gift_manager:gift_tag_detail' tag.tag_id %}"
            class="gift-plan-tag-badge">
-            <i class="fas fa-tag" aria-hidden="true"></i>{{ tag.name }}
+            <i class="fas fa-tag field-icon--tags" aria-hidden="true"></i>{{ tag.name }}
         </a>
         {% endfor %}
     </div>
@@ -107,9 +107,9 @@
     {% include "gift_manager/includes/link_price_display.html" with url=card.relation.effective_url price=card.relation.effective_price currency=request.user.profile.currency compact=True %}
 
     {% if card.relation.comment %}
-    <p class="gift-plan-note">{{ card.relation.comment|truncatechars:160 }}</p>
+    <p class="gift-plan-note"><i class="fas fa-comment field-icon--comment me-1" aria-hidden="true"></i>{{ card.relation.comment|truncatechars:160 }}</p>
     {% else %}
-    <p class="gift-plan-note gift-plan-note--empty">{% trans "No notes yet." %}</p>
+    <p class="gift-plan-note gift-plan-note--empty"><i class="fas fa-comment field-icon--comment me-1" aria-hidden="true"></i>{% trans "No notes yet." %}</p>
     {% endif %}
 
     <div class="gift-plan-card-actions{% if not card.has_contextual_edit_action %} gift-plan-card-actions--compact{% endif %}">

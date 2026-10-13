@@ -34,6 +34,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
@@ -60,7 +61,8 @@
         "{{ item.event_id }}",                                         // Index 4
         "{% url 'gift_manager:event_detail' item.event_id %}",        // Index 5
         "{% url 'gift_manager:event_edit' item.event_id %}",          // Index 6
-        "{% url 'gift_manager:event_delete' item.event_id %}"         // Index 7
+        "{% url 'gift_manager:event_delete' item.event_id %}",        // Index 7
+        {% if item.is_birthday %}true{% else %}false{% endif %}        // Index 8
             ]{% if not forloop.last %}, {% endif %}
     {% endfor %}
         ];
@@ -71,6 +73,7 @@
         {
             id: 'name',
             name: '{{ column_names.name|escapejs }}',
+            attributes: { 'data-card-role': 'title', 'data-card-icon': 'event' },
             sort: {
                 compare: GridUtils.sortString()
             }
@@ -78,6 +81,7 @@
         {
             id: 'comment',
             name: '{{ column_names.comment|escapejs }}',
+            attributes: { 'data-card-icon': 'comment' },
             sort: {
                 compare: GridUtils.sortString()
             }
@@ -85,6 +89,10 @@
         {
             id: 'schedule',
             name: '{{ column_names.schedule|escapejs }}',
+            // Birthdays get their own icon; header cells receive no row
+            attributes: (cell, row) => ({
+                'data-card-icon': row && row.cells[8].data ? 'birthday' : 'schedule'
+            }),
             sort: {
                 compare: GridUtils.sortString()
             }
@@ -93,6 +101,7 @@
         { name: 'event_detail_url', hidden: true },
         { name: 'event_edit_url', hidden: true },
         { name: 'event_delete_url', hidden: true },
+        { name: 'event_is_birthday', hidden: true },
         {
             id: 'actions',
             name: '{% trans "Actions"|escapejs %}',

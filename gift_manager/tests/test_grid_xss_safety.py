@@ -83,6 +83,10 @@ assert(statusForm.includes("&lt;script&gt;alert(1)&lt;/script&gt;"), "status for
 assert(statusForm.includes("abc&quot; autofocus onfocus=&quot;alert(1)"), "status forms should escape relation IDs");
 
 vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/grid-actions.js", "utf8"),
+  context
+);
+vm.runInContext(
   fs.readFileSync("gift_manager/static/gift_manager/permission-utils.js", "utf8"),
   context
 );
@@ -103,6 +107,10 @@ const fallbackContext = {
   console,
 };
 vm.createContext(fallbackContext);
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/grid-actions.js", "utf8"),
+  fallbackContext
+);
 vm.runInContext(
   fs.readFileSync("gift_manager/static/gift_manager/permission-utils.js", "utf8"),
   fallbackContext

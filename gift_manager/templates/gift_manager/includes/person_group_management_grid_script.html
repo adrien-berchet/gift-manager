@@ -18,7 +18,9 @@
     [
         '',
         {% for col, name in column_names.items %}
-    {% if col != "groups" %}
+    {% if col == "member_count" %}
+    {{ item.member_count|default:0 }}{% if not forloop.last %}, {% endif %}
+    {% elif col != "groups" %}
     "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
     {% else %}
     {% if item.grouped_groups %}
@@ -41,9 +43,18 @@
     const columns = [
         GridUtils.createCheckboxColumn(groupIdIdx),
         {% for col, name in column_names.items %}
-    {% if col != "groups" %}
+    {% if col == "member_count" %}
     {
         name: '{{ name|escapejs }}',
+        attributes: { 'data-card-icon': 'members' },
+        sort: {
+            compare: (a, b) => a - b
+        }
+    } {% if not forloop.last %}, {% endif %}
+    {% elif col != "groups" %}
+    {
+        name: '{{ name|escapejs }}',
+        {% if col == "name" %}attributes: { 'data-card-role': 'title', 'data-card-icon': 'group' },{% endif %}
             sort: {
             compare: GridUtils.sortString()
         }
@@ -51,6 +62,7 @@
     {% else %}
     {
         name: '{{ name|escapejs }}',
+        attributes: { 'data-card-icon': 'group' },
             formatter: GridUtils.multiLinkFormatter()
     } {% if not forloop.last %}, {% endif %}
     {% endif %}
