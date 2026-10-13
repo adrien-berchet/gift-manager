@@ -28,6 +28,7 @@
         {
             id: 'first_name',
             name: '{{ column_names.first_name|escapejs }}',
+            attributes: { 'data-card-role': 'title', 'data-card-icon': 'person' },
             sort: {
                 compare: GridUtils.sortString()
             },
@@ -40,14 +41,20 @@
         {
             id: 'family_name',
             name: '{{ column_names.family_name|escapejs }}',
+            attributes: { 'data-card-icon': 'family-name' },
             sort: {
                 compare: GridUtils.sortString()
             }
         },
-        { id: 'email', name: '{{ column_names.email_address|escapejs }}' },
+        {
+            id: 'email',
+            name: '{{ column_names.email_address|escapejs }}',
+            attributes: { 'data-card-icon': 'email' }
+        },
         {
             id: 'groups',
             name: '{{ column_names.groups|escapejs }}',
+            attributes: { 'data-card-icon': 'group' },
             formatter: GridUtils.multiLinkFormatter()
         },
         { name: 'person_id', hidden: true },

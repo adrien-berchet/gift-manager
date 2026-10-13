@@ -35,6 +35,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
@@ -80,6 +81,7 @@
         {
             id: 'name',
             name: '{{ column_names.name|escapejs }}',
+            attributes: { 'data-card-role': 'title', 'data-card-icon': 'gift' },
             sort: {
                 compare: GridUtils.sortString()
             }
@@ -87,6 +89,7 @@
         {
             id: 'comment',
             name: '{{ column_names.comment|escapejs }}',
+            attributes: { 'data-card-icon': 'comment' },
             sort: {
                 compare: GridUtils.sortString()
             }
@@ -94,6 +97,7 @@
         {
             id: 'url',
             name: '{{ column_names.url|escapejs }}',
+            attributes: { 'data-card-icon': 'link' },
             sort: {
                 compare: GridUtils.sortString()
             },
@@ -115,6 +119,7 @@
         {
             id: 'price',
             name: '{{ column_names.price|escapejs }}',
+            attributes: { 'data-card-icon': 'price' },
             sort: {
                 // Numeric sort, gifts without a price go last
                 compare: (a, b) => {
@@ -140,6 +145,7 @@
         {
             id: 'tags',
             name: '{{ column_names.tags|escapejs }}',
+            attributes: { 'data-card-icon': 'tags' },
             formatter: GridUtils.badgeFormatter()
         },
         { name: 'gift_id', hidden: true },

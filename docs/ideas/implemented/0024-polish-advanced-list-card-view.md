@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -166,13 +166,31 @@ Recommended starting context:
 - Related to 0009 (Close Translation And Locale Gaps) for the untranslated
   action titles.
 
+## Implementation Decisions
+
+- The action bar applies to every grid that uses `actionButtonsFormatter` or
+  `permissionAwareActionFormatter` (also people, groups, group detail, and status
+  pages), so the same action looks the same everywhere.
+- `grid-actions.js` holds the single action configuration and the bar markup.
+- Edit is the only primary button; Give is a soft `btn-outline-primary` button.
+  Both keep their label in card view and from the `lg` breakpoint in list view;
+  Details, Duplicate, and the menu toggle are icon-only with a tooltip.
+- Share and Delete live in a Bootstrap dropdown with a fixed Popper strategy,
+  which escapes the clipping of the Grid.js wrapper and of the card. Actions the
+  user may not use are hidden from the menu; Edit becomes a disabled lock.
+- Card field icons are declared per column with Grid.js `attributes`
+  (`data-card-icon`, and `data-card-role="title"` for the title) and drawn in
+  the label `::before` from a Font Awesome alias limited to the private use area.
+- Empty rows keep their placeholder; the relation status select is styled as a
+  compact badge, the due date uses the dashboard urgency badge, and overdue or
+  soon plans color the card accent like the dashboard card.
+- Field icons are colored by kind of information (`--field-tone-*` tokens in
+  `theme.css`, `.field-icon--*` classes in `main.css`), with the same colors on
+  the list cards, the dashboard and gift plan cards, and the recipient gift plan
+  cards. The price icon is `fa-coins` everywhere, so it no longer looks like a tag.
+- The recipients page (people and groups) also declares its card fields.
+
 ## Open Questions
 
-- Which buttons count as important enough to keep a text label (edit and give
-  for sure; details?), and at which breakpoint does the text collapse to
-  icon-only?
-- Does the overflow dropdown render correctly inside Grid.js cells (clipping by
-  `overflow` on the wrapper, z-index over neighboring cards and rows), or does
-  it need `data-bs-boundary`/popper configuration or a body-attached menu?
 - Should the dashboard gift plan card adopt the same overflow menu later, for
   symmetry?

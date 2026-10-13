@@ -122,7 +122,7 @@
             row.dataset.entityType = this.entityType;
 
             // Add swipe action URLs based on available action buttons
-            const actionButtons = row.querySelectorAll('.quick-action-btn');
+            const actionButtons = row.querySelectorAll('.quick-action-btn, .grid-action-menu-item');
 
             actionButtons.forEach(button => {
                 const action = button.dataset.action;

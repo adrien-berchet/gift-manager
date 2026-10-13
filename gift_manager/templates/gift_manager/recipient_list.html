@@ -227,6 +227,7 @@
 
 {% block extra_js %}
 {% if recipient_view == "people" %}
+<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>
@@ -237,6 +238,7 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 {% include "gift_manager/includes/person_management_grid_script.html" with data=person_grid_data column_names=person_column_names user_permissions_json=person_user_permissions_json %}
 {% elif recipient_view == "groups" %}
+<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/permission-utils.js' %}"></script>
 <script src="{% static 'gift_manager/filter-panel.js' %}"></script>

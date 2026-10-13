@@ -168,6 +168,10 @@ def test_recipient_groups_view_embeds_group_management_grid(client):
     assert str(group.group_id) in content
     assert group.name in content
     assert response.context["person_group_tree_data"][0]["member_count"] == 1
+    # The grid shows the member count too, only counting members the user can see
+    assert response.context["person_group_grid_data"][0]["member_count"] == 1
+    assert "member_count" in response.context["person_group_column_names"]
+    assert "'data-card-icon': 'members'" in content
     assert "Ada Lovelace" not in content
     assert "Hidden Member" not in content
     assert "2 members" not in content

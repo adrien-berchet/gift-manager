@@ -213,8 +213,27 @@ class BaseE2ETest:
     ) -> None:
         """Click a quick action button for a specific list item."""
         item = self.get_list_items(page, list_selector).nth(item_index)
-        action_btn = item.locator(f"[data-action='{action}'], .btn-{action}").first
+        self.click_row_action(item, action)
+
+    def reveal_row_action(self, row, action: str):
+        """Return the visible action of a row, opening its overflow menu if needed.
+
+        Share and Delete live in the overflow menu.
+        """
+        action_btn = row.locator(f"[data-action='{action}'], .btn-{action}").first
+        expect(action_btn).to_be_attached(timeout=self.ajax_timeout)
+        in_menu = action_btn.evaluate("el => Boolean(el.closest('.grid-action-menu'))")
+        if in_menu and not action_btn.is_visible():
+            toggle = row.locator(".grid-action-menu-toggle").first
+            # Centre the toggle so a fixed bottom nav on phones never covers the click point.
+            toggle.evaluate("el => el.scrollIntoView({block: 'center', behavior: 'instant'})")
+            toggle.click()
         expect(action_btn).to_be_visible(timeout=self.ajax_timeout)
+        return action_btn
+
+    def click_row_action(self, row, action: str) -> None:
+        """Click a row action, from the overflow menu when needed."""
+        action_btn = self.reveal_row_action(row, action)
         expect(action_btn).to_be_enabled(timeout=self.ajax_timeout)
         # Centre the button so a fixed bottom nav on phones never covers the click point.
         action_btn.evaluate("el => el.scrollIntoView({block: 'center', behavior: 'instant'})")

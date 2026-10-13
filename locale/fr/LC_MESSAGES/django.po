@@ -2728,6 +2728,18 @@ msgstr "Sélectionner toutes les lignes"
 msgid "Select row"
 msgstr "Sélectionner la ligne"
 
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:21
+msgid "Expand"
+msgstr "Déplier"
+
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:26
+msgid "More actions"
+msgstr "Plus d'actions"
+
+#: gift_manager/templates/gift_manager/includes/grid-translations.html:27
+msgid "You do not have permission to edit this item"
+msgstr "Vous n'avez pas la permission de modifier cet élément"
+
 #: gift_manager/templates/gift_manager/includes/link_price_display.html:13
 msgid "Open link"
 msgstr "Ouvrir le lien"

@@ -189,7 +189,6 @@ class TestPersonGroupDetailActions(BaseE2ETest):
             expanded_wide,
         )
         assert expanded_wide["nonActions"] >= expanded_narrow["nonActions"] + 160
-        assert expanded_narrow["action"] >= compact_wide["action"] + 80
 
         for layout in (compact_narrow, compact_wide, expanded_narrow, expanded_wide):
             assert abs(layout["action"] - layout["measuredAction"]) <= 1

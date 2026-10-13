@@ -694,3 +694,227 @@
         display: none !important;
     }
 }
+
+/* ==========================================================================
+   Grid row action bar (grid-actions.js)
+   Same buttons as the dashboard gift plan card (.gift-plan-card-actions): quiet utility
+   buttons, one primary Edit action, and an overflow menu for Share and Delete.
+   ========================================================================== */
+
+.grid-action-bar {
+    --grid-action-primary-bg: #4338ca;
+    --grid-action-primary-hover-bg: #312e81;
+    --grid-action-soft-bg: #eef2ff;
+    --grid-action-soft-border: #4338ca;
+    --grid-action-soft-text: #312e81;
+    --grid-action-bg: #e2e8f0;
+    --grid-action-border: #64748b;
+    --grid-action-hover-bg: #cbd5e1;
+    --grid-action-text: #0f172a;
+    --grid-action-disabled-bg: #f8fafc;
+    --grid-action-disabled-border: #cbd5e1;
+    --grid-action-disabled-text: #64748b;
+    --grid-action-danger-text: #b91c1c;
+    gap: 0.375rem;
+}
+
+[data-theme="dark"] .grid-action-bar {
+    --grid-action-primary-bg: #4f46e5;
+    --grid-action-primary-hover-bg: #4338ca;
+    --grid-action-soft-bg: #312e81;
+    --grid-action-soft-border: #a5b4fc;
+    --grid-action-soft-text: #e0e7ff;
+    --grid-action-bg: #334155;
+    --grid-action-border: #94a3b8;
+    --grid-action-hover-bg: #475569;
+    --grid-action-text: #f8fafc;
+    --grid-action-disabled-bg: #0f172a;
+    --grid-action-disabled-border: #334155;
+    --grid-action-disabled-text: #94a3b8;
+    --grid-action-danger-text: #fca5a5;
+}
+
+/* Full strength like the dashboard card: no dimmed resting state (an opacity below 1 would also
+   trap the overflow menu in the bar's stacking context) */
+.grid-action-bar.quick-actions-container {
+    opacity: 1;
+}
+
+.grid-action-bar .btn.grid-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    flex: 0 0 1.75rem;
+    width: 1.75rem;
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    padding: 0.25rem;
+    border: 1px solid var(--grid-action-border);
+    border-radius: 0.45rem;
+    background-color: var(--grid-action-bg);
+    color: var(--grid-action-text);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: none;
+    transform: none;
+}
+
+.grid-action-bar .btn.grid-action--labeled {
+    flex-basis: auto;
+    width: auto;
+    padding: 0.28rem 0.58rem;
+}
+
+.grid-action-bar .btn.grid-action i {
+    margin: 0;
+    font-size: 0.72rem;
+}
+
+.grid-action-bar .btn.grid-action .btn-text {
+    margin: 0;
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+.grid-action-bar .btn.grid-action:hover,
+.grid-action-bar .btn.grid-action:focus-visible,
+.grid-action-bar .btn.grid-action.show {
+    background-color: var(--grid-action-hover-bg);
+    border-color: var(--grid-action-border);
+    color: var(--grid-action-text);
+    box-shadow: none;
+    transform: none;
+}
+
+.grid-action-bar .btn.grid-action.btn-primary {
+    background-color: var(--grid-action-primary-bg);
+    border-color: var(--grid-action-primary-bg);
+    color: #ffffff;
+}
+
+.grid-action-bar .btn.grid-action.btn-primary:hover,
+.grid-action-bar .btn.grid-action.btn-primary:focus-visible {
+    background-color: var(--grid-action-primary-hover-bg);
+    border-color: var(--grid-action-primary-hover-bg);
+    color: #ffffff;
+}
+
+.grid-action-bar .btn.grid-action.btn-outline-primary {
+    background-color: var(--grid-action-soft-bg);
+    border-color: var(--grid-action-soft-border);
+    color: var(--grid-action-soft-text);
+}
+
+.grid-action-bar .btn.grid-action.btn-outline-primary:hover,
+.grid-action-bar .btn.grid-action.btn-outline-primary:focus-visible {
+    background-color: var(--grid-action-primary-hover-bg);
+    border-color: var(--grid-action-primary-hover-bg);
+    color: #ffffff;
+}
+
+/* Unavailable actions stay readable and keep their tooltip, like the dashboard lock button */
+.grid-action-bar .btn.grid-action:disabled {
+    background-color: var(--grid-action-disabled-bg);
+    border-color: var(--grid-action-disabled-border);
+    color: var(--grid-action-disabled-text);
+    opacity: 1;
+    pointer-events: auto;
+    cursor: not-allowed;
+}
+
+/* The row holding an open overflow menu: no transform (the card hover lift) or will-change
+   (swipeable rows), which would anchor the fixed menu to the row and trap it in the row's
+   stacking context, and raised above the following rows */
+.gridjs-tr:has(.grid-action-menu .dropdown-menu.show) {
+    position: relative;
+    z-index: 3;
+    transform: none;
+    will-change: auto;
+}
+
+.grid-action-menu-list {
+    /* Above sticky list tools and neighboring cards, below the navbar and offcanvas panels */
+    z-index: 1025;
+    min-width: 9rem;
+    padding: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.grid-action-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 0.35rem;
+}
+
+.grid-action-menu-item i {
+    color: var(--text-muted);
+}
+
+.grid-action-menu-item--danger,
+.grid-action-menu-item--danger i {
+    color: var(--color-danger-hover);
+}
+
+.grid-action-menu-item--danger:hover,
+.grid-action-menu-item--danger:focus {
+    background-color: var(--color-danger-light);
+    color: var(--color-danger-hover);
+}
+
+[data-theme="dark"] .grid-action-menu-item--danger,
+[data-theme="dark"] .grid-action-menu-item--danger i {
+    color: #fca5a5;
+}
+
+[data-theme="dark"] .grid-action-menu-item--danger:hover,
+[data-theme="dark"] .grid-action-menu-item--danger:focus {
+    background-color: rgba(239, 68, 68, 0.18);
+    color: #fecaca;
+}
+
+/* Touch-friendly action buttons on phones and tablets: tap-sized in cards, a bit larger in
+   table rows (where the column width must not jump between breakpoints, so the gap is kept) */
+@media (max-width: 768px), (pointer: coarse) {
+    .grid-action-bar .btn.grid-action {
+        flex-basis: 2.25rem;
+        width: 2.25rem;
+        min-width: 2.25rem;
+        min-height: 2.25rem;
+    }
+
+    [data-view="card"] .grid-action-bar {
+        gap: 0.5rem;
+    }
+
+    [data-view="card"] .grid-action-bar .btn.grid-action {
+        flex-basis: 2.75rem;
+        width: 2.75rem;
+        min-width: 2.75rem;
+        min-height: 2.75rem;
+        padding: 0.4rem;
+        border-radius: 0.6rem;
+    }
+
+    [data-view="card"] .grid-action-bar .btn.grid-action i {
+        font-size: 0.95rem;
+    }
+
+    .grid-action-bar .btn.grid-action--labeled,
+    [data-view="card"] .grid-action-bar .btn.grid-action--labeled {
+        flex-basis: auto;
+        width: auto;
+    }
+
+    [data-view="card"] .grid-action-bar .btn.grid-action--labeled {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.875rem;
+    }
+
+    .grid-action-menu-item {
+        min-height: 2.75rem;
+    }
+}

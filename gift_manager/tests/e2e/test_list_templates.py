@@ -769,8 +769,8 @@ class TestPersonListPermissions:
 
         action_cell = page.locator("#person-grid .gridjs-tbody tr:first-child td:last-child")
         html = action_cell.inner_html()
-        assert "fa-edit" in html or "btn-warning" in html, "Owner: edit button missing"
-        assert "fa-trash" in html or "btn-danger" in html, "Owner: delete button missing"
+        assert "fa-pen" in html, "Owner: edit button missing"
+        assert "fa-trash" in html, "Owner: delete button missing"
 
     def test_viewer_has_limited_actions(self, page: Page, live_server, seed_data_e2e):
         """Bob (viewer on some) sees limited action buttons."""
@@ -784,7 +784,7 @@ class TestPersonListPermissions:
         # Check first row's action cell - should have details at minimum
         action_cell = page.locator("#person-grid .gridjs-tbody tr:first-child td:last-child")
         html = action_cell.inner_html()
-        assert "fa-eye" in html or "btn-info" in html, "Details button missing for viewer"
+        assert "fa-eye" in html, "Details button missing for viewer"
 
     def test_viewer_cannot_use_edit_on_viewer_items(self, page: Page, live_server, seed_data_e2e):
         """Bob's edit button is disabled on items where he only has VIEWER permission.
@@ -801,9 +801,7 @@ class TestPersonListPermissions:
         for i in range(rows.count()):
             row_text = rows.nth(i).inner_text()
             if "Mom" in row_text:
-                edit_btn = rows.nth(i).locator(
-                    "td:last-child button[data-action='edit'], td:last-child a[data-action='edit']"
-                )
+                edit_btn = rows.nth(i).locator("td:last-child [data-action-type='edit']")
                 if edit_btn.count() > 0:
                     # Viewer's edit button should be disabled
                     assert (
@@ -1994,8 +1992,8 @@ class TestGiftListFeatures:
 
         action = page.locator("#gift-grid .gridjs-tbody tr:first-child td:last-child")
         html = action.inner_html()
-        assert "fa-edit" in html or "btn-warning" in html
-        assert "fa-trash" in html or "btn-danger" in html
+        assert "fa-pen" in html
+        assert "fa-trash" in html
 
 
 # ===========================================================================
@@ -2090,7 +2088,7 @@ class TestStatusListMinimalFeatures:
         action = page.locator("#status-grid .gridjs-tbody tr:first-child td:last-child")
         if action.is_visible():
             html = action.inner_html()
-            assert "fa-eye" in html or "btn-info" in html or "detail" in html.lower()
+            assert "fa-eye" in html or "detail" in html.lower()
 
     def test_pagination_present(self, page: Page, live_server, seed_data_e2e):
         """Pagination footer is attached."""
@@ -2259,8 +2257,8 @@ class TestPermissionAwareUI:
 
         action = page.locator("#person-grid .gridjs-tbody tr:first-child td:last-child")
         html = action.inner_html()
-        assert "fa-edit" in html or "btn-warning" in html
-        assert "fa-trash" in html or "btn-danger" in html
+        assert "fa-pen" in html
+        assert "fa-trash" in html
 
     def test_owner_sees_share_button(self, page: Page, live_server, seed_data_e2e):
         """Alice sees the share button on persons."""
@@ -2270,7 +2268,7 @@ class TestPermissionAwareUI:
 
         action = page.locator("#person-grid .gridjs-tbody tr:first-child td:last-child")
         html = action.inner_html()
-        assert "fa-share" in html or "btn-success" in html, "Owner should see share btn"
+        assert "fa-share" in html, "Owner should see share btn"
 
     def test_bob_sees_fewer_persons(self, page: Page, live_server, seed_data_e2e):
         """Bob sees only persons he has permissions on (Mom, Dad, Best Friend)."""
@@ -2310,7 +2308,7 @@ class TestPermissionAwareUI:
             row_text = rows.nth(i).inner_text()
             if "Best Friend" in row_text:
                 action_html = rows.nth(i).locator("td:last-child").inner_html()
-                assert "fa-edit" in action_html or "btn-warning" in action_html, (
+                assert "fa-pen" in action_html, (
                     "Editor should see edit button on EDITOR-permission items"
                 )
                 break
