@@ -168,6 +168,40 @@ class TestGroupGiftHistory:
         assert response.status_code == 200
         assert "Team gift" in response.content.decode()
 
+    def test_lists_given_plans_of_its_members(self, client, user):
+        group = PersonGroupFactory()
+        _share(user, group)
+        member = PersonFactory(first_name="Ada", family_name="Member")
+        member.groups.add(group)
+        _share(user, member)
+        _plan(user, member, gift=GiftFactory(name="Member gift"))
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert "Member gift" in content
+        assert "recipient-type-badge--person" in content
+        assert "Ada Member" in content
+
+    def test_lists_given_plans_of_members_of_child_groups(self, client, user):
+        group = PersonGroupFactory()
+        child = PersonGroupFactory()
+        child.parent_groups.add(group)
+        _share(user, group)
+        member = PersonFactory()
+        member.groups.add(child)
+        _share(user, member)
+        _plan(user, member, gift=GiftFactory(name="Nested gift"))
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        assert "Nested gift" in response.content.decode()
+
     def test_group_without_access_is_not_found(self, client):
         group = PersonGroupFactory()
 

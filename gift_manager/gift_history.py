@@ -23,6 +23,7 @@ class HistoryEntry:
 
     relation: Relation
     group_name: str | None
+    person_name: str | None
 
 
 @dataclass(frozen=True)
@@ -63,8 +64,9 @@ def person_history_queryset(user, person: Person) -> QuerySet:
 
 
 def group_history_queryset(user, group: PersonGroup) -> QuerySet:
-    """Return the plans targeted at a group directly."""
-    return _base_queryset(user).filter(group=group)
+    """Return the plans targeted at a group, or at one of its members (nested groups included)."""
+    groups = [group, *group.get_descendants()]
+    return _base_queryset(user).filter(Q(group=group) | Q(person__groups__in=groups))
 
 
 def build_gift_history(relations, visible_group_ids: set[int]) -> list[HistoryYear]:
@@ -78,7 +80,10 @@ def build_gift_history(relations, visible_group_ids: set[int]) -> list[HistoryYe
             if relation.group_id is not None and relation.group_id in visible_group_ids
             else None
         )
-        by_year.setdefault(history_year(relation), []).append(HistoryEntry(relation, group_name))
+        person_name = str(relation.person) if relation.person_id is not None else None
+        by_year.setdefault(history_year(relation), []).append(
+            HistoryEntry(relation, group_name, person_name)
+        )
 
     years = sorted(by_year, key=lambda year: (year is None, -(year or 0)))
     return [

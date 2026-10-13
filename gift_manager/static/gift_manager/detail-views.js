@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {HTMLElement} button - The detail button that was clicked
      */
     function handleDetailView(button) {
-        const detailUrl = button.dataset.detailUrl;
+        const detailUrl = button.dataset.detailUrl || button.getAttribute('href');
         if (!detailUrl) {
             console.error('Detail button missing data-detail-url attribute');
             return;
