@@ -307,6 +307,15 @@
     }
 
     /**
+     * View a grid starts with: the saved preference or the screen-size-based default
+     * @param {string} gridId - The ID of the grid container
+     * @returns {string} 'list' or 'card'
+     */
+    function getInitialView(gridId) {
+        return localStorage.getItem('view-preference-' + gridId) || getDefaultView();
+    }
+
+    /**
      * Initialize view toggle (list/card) for a grid
      * @param {string} gridId - The ID of the grid container
      */
@@ -318,9 +327,7 @@
             return;
         }
 
-        // Get saved preference or use screen-size-based default
-        const savedView = localStorage.getItem('view-preference-' + gridId);
-        const initialView = savedView || getDefaultView();
+        const initialView = getInitialView(gridId);
 
         // Apply initial view
         setGridView(gridId, initialView);
@@ -563,6 +570,7 @@
     // Expose to global scope
     window.FilterPanel = {
         init: initFilterPanel,
-        setView: setGridView
+        setView: setGridView,
+        getInitialView: getInitialView
     };
 })();

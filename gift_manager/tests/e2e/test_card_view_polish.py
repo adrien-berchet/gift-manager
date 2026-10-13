@@ -12,6 +12,7 @@ from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import UserFactory
 
 pytestmark = [pytest.mark.frontend, pytest.mark.django_db(transaction=True)]
 
@@ -521,3 +522,116 @@ def test_group_cards_show_the_member_count(logged_in_page: Page, live_server, se
     }
     assert {name: value and value[0] for name, value in counts.items()} == expected
     assert all("Members" in value[1] for value in counts.values()), counts
+
+
+@pytest.mark.parametrize("view", ["card", "list"])
+@pytest.mark.parametrize(("path", "grid"), [*PAGES, ("persons", "person-grid")])
+def test_empty_list_shows_the_no_records_message(
+    page: Page, client, live_server, settings, path, grid, view
+):
+    """A user without any entity sees the "no records" message instead of an empty grid."""
+    client.force_login(UserFactory())
+    page.context.add_cookies(
+        [
+            {
+                "name": settings.SESSION_COOKIE_NAME,
+                "value": client.cookies[settings.SESSION_COOKIE_NAME].value,
+                "url": live_server.url,
+            }
+        ]
+    )
+    page.goto(f"{live_server.url}/en/{path}/", wait_until="networkidle")
+    _set_view(page, grid, view)
+    page.wait_for_timeout(300)  # past the deferred empty state check
+
+    message = page.locator(f"#{grid} .gridjs-notfound, #{grid} .grid-empty-state")
+    expect(message.first).to_be_visible()
+    expect(message.first).to_contain_text("No")
+    # In the card view, the message is not drawn as an (empty) card
+    assert page.locator(f"#{grid} .gridjs-tbody .gridjs-tr:not(:has(.gridjs-message))").count() == 0
+    if view == "card":
+        style = message.first.evaluate(
+            "el => { const s = getComputedStyle(el.closest('.gridjs-tr') || el);"
+            " return [s.borderTopStyle, s.boxShadow]; }"
+        )
+        assert style == ["none", "none"], style
+
+
+def test_field_labels_stay_visible_in_forced_colors(logged_in_page: Page, live_server):
+    """High contrast modes drop the gradient that paints the label, so it must not stay transparent."""
+    page = logged_in_page
+    page.emulate_media(forced_colors="active")
+    cards = _open_list(page, live_server, "gifts", "gift-grid", "card")
+
+    fills = cards.first.evaluate(
+        """card => [...card.querySelectorAll('.gridjs-td[data-card-icon][data-label]')]
+            .filter(td => getComputedStyle(td).display !== 'none')
+            .map(td => getComputedStyle(td, '::before').webkitTextFillColor)"""
+    )
+    assert fills
+    assert "rgba(0, 0, 0, 0)" not in fills, fills
+
+
+def test_switching_to_cards_never_shows_an_incomplete_page(
+    logged_in_page: Page, live_server, seed_data_e2e
+):
+    """The rows of the list page size are not shown as cards while the card page renders."""
+    page = logged_in_page
+    page.set_viewport_size({"width": 1600, "height": 1000})
+    for index in range(60):
+        _own(seed_data_e2e.alice, GiftFactory(name=f"Switch gift {index:02d}"))
+    _open_list(page, live_server, "gifts", "gift-grid", "list")
+
+    page.evaluate(
+        """() => {
+            const grid = document.getElementById('gift-grid');
+            window.visibleCounts = [];
+            const record = () => {
+                const tbody = grid.querySelector('.gridjs-tbody');
+                if (tbody && getComputedStyle(tbody).visibility === 'visible') {
+                    window.visibleCounts.push(tbody.querySelectorAll('.gridjs-tr').length);
+                }
+            };
+            new MutationObserver(record).observe(grid, {
+                childList: true, subtree: true, attributes: true, attributeFilter: ['class'],
+            });
+            window.FilterPanel.setView('gift-grid', 'card');
+            record();
+        }"""
+    )
+    _wait_for_grid(page, "gift-grid")
+    layout = page.evaluate(CARD_GRID_JS, "gift-grid")
+    assert layout["cards"] % layout["columns"] == 0, layout
+    counts = [count for count in page.evaluate("window.visibleCounts") if count]
+    assert set(counts) == {layout["cards"]}, counts
+
+
+def test_loading_the_card_view_never_shows_an_incomplete_page(
+    logged_in_page: Page, live_server, seed_data_e2e
+):
+    """The first page is sized for cards, not first rendered with the list page size."""
+    page = logged_in_page
+    page.set_viewport_size({"width": 1600, "height": 1000})
+    for index in range(60):
+        _own(seed_data_e2e.alice, GiftFactory(name=f"Load gift {index:02d}"))
+    page.add_init_script(
+        """
+        // Already cleared at login: the saved card view preference applies
+        sessionStorage.setItem('viewPreferencesCleared', 'true');
+        localStorage.setItem('view-preference-gift-grid', 'card');
+        window.visibleCounts = [];
+        new MutationObserver(() => {
+            const tbody = document.querySelector('#gift-grid .gridjs-tbody');
+            if (tbody && getComputedStyle(tbody).visibility === 'visible') {
+                window.visibleCounts.push(tbody.querySelectorAll('.gridjs-tr').length);
+            }
+        }).observe(document, { childList: true, subtree: true, attributes: true });
+        """
+    )
+    page.goto(f"{live_server.url}/en/gifts/", wait_until="networkidle")
+    _wait_for_grid(page, "gift-grid")
+
+    layout = page.evaluate(CARD_GRID_JS, "gift-grid")
+    assert layout["cards"] % layout["columns"] == 0, layout
+    counts = [count for count in page.evaluate("window.visibleCounts") if count]
+    assert set(counts) == {layout["cards"]}, counts

@@ -1787,6 +1787,7 @@
     var GRID_STATUS_ERROR = 4;
     // Never block page size updates forever if a render does not report its end
     var GRID_RENDER_TIMEOUT_MS = 5000;
+    var MAX_RENDER_RETRIES = 2;
 
     function isGridRenderSettled(state) {
         return Boolean(state) &&
@@ -1829,6 +1830,22 @@
     }
 
     /**
+     * Record when the grid last processed or was asked to process data, so waiting for a
+     * quiet grid does not delay updates of a grid that has long been idle.
+     */
+    function trackGridActivity(grid) {
+        if (grid._lastGridActivityAt !== undefined) return;
+        grid._lastGridActivityAt = Date.now();
+        function touch() {
+            grid._lastGridActivityAt = Date.now();
+        }
+        grid.config.store.subscribe(touch);
+        if (grid.config.pipeline && typeof grid.config.pipeline.on === 'function') {
+            grid.config.pipeline.on('updated', touch);
+        }
+    }
+
+    /**
      * Run callback once the grid is not processing data. Calling forceRender() while
      * Grid.js still processes a render makes it fail and show its error message. That includes
      * a pipeline update (sort, search...) whose throttled processing has not started yet, so
@@ -1842,6 +1859,7 @@
             waitForGridState(grid, isGridRenderSettled, callback);
             return;
         }
+        trackGridActivity(grid);
 
         var quietMs = (config.processingThrottleMs || 100) + 50;
         var finished = false;
@@ -1862,9 +1880,15 @@
         function restartQuietPeriod() {
             clearTimeout(quietTimer);
             if (!isGridRenderSettled(store.getState())) return;
+            // A grid that has been quiet for long enough is updated right away
+            var remainingMs = quietMs - (Date.now() - grid._lastGridActivityAt);
+            if (remainingMs <= 0) {
+                finish();
+                return;
+            }
             quietTimer = setTimeout(function () {
                 if (isGridRenderSettled(store.getState())) finish();
-            }, quietMs);
+            }, remainingMs);
         }
 
         unsubscribe = store.subscribe(restartQuietPeriod);
@@ -1901,6 +1925,15 @@
         var container = document.getElementById(containerId);
         if (!container) return;
 
+        // Know how long the grid has been idle when a view switch or resize comes
+        if (grid.config && grid.config.store && typeof grid.config.store.subscribe === 'function') {
+            trackGridActivity(grid);
+        }
+
+        function currentPageLimit() {
+            return (grid.config.pagination && grid.config.pagination.limit) || 10;
+        }
+
         var updating = false;
         // null when no update is requested, otherwise whether to measure again after it:
         // a card view sized from estimates is then corrected with the real card dimensions
@@ -1911,21 +1944,32 @@
             if (updating) return;
             updating = true;
             container.setAttribute('aria-busy', 'true');
-            whenGridRendered(grid, runPendingUpdate);
+            // Measuring only needs rendered rows; the quiet grid is only needed to re-render
+            waitForGridState(grid, isGridRenderSettled, runPendingUpdate);
+        }
+
+        function finishUpdate() {
+            updating = false;
+            container.removeAttribute('aria-busy');
+            container.classList.remove('grid-page-resizing');
         }
 
         function runPendingUpdate() {
-            if (pendingRemeasure === null) {
-                updating = false;
-                container.removeAttribute('aria-busy');
+            if (pendingRemeasure === null ||
+                    calculateOptimalPageSize(containerId, options) === currentPageLimit()) {
+                pendingRemeasure = null;
+                finishUpdate();
                 return;
             }
+            whenGridRendered(grid, applyPendingUpdate);
+        }
+
+        function applyPendingUpdate() {
             var remeasure = pendingRemeasure;
             pendingRemeasure = null;
 
             var newLimit = calculateOptimalPageSize(containerId, options);
-            var currentLimit = (grid.config.pagination && grid.config.pagination.limit) || 10;
-            if (newLimit === currentLimit) {
+            if (newLimit === currentPageLimit()) {
                 runPendingUpdate();
                 return;
             }
@@ -1933,14 +1977,35 @@
             grid.updateConfig({
                 pagination: { enabled: true, limit: newLimit }
             });
+            // Nothing to paginate: the next render uses the new limit, and a forced render of
+            // an empty grid would drop its "no records" message (Grid.js bug)
+            if (Array.isArray(grid.config.data) && grid.config.data.length === 0) {
+                runPendingUpdate();
+                return;
+            }
+            if (remeasure && pendingRemeasure === null) pendingRemeasure = false;
+            renderPageWithRetry(MAX_RENDER_RETRIES);
+        }
+
+        // Grid.js may process the data a second time right after a forced render, and that
+        // overlapping processing can fail on slow devices: render again if it ended in an error
+        function renderPageWithRetry(retriesLeft) {
             forceRenderAndWait(grid, function () {
+                container.classList.remove('grid-page-resizing');
                 var dataLength = Array.isArray(grid.config.data) ? grid.config.data.length : 0;
                 updatePaginationVisibility(grid, dataLength);
                 document.dispatchEvent(new CustomEvent('grid:refreshed', {
                     detail: { containerId: containerId }
                 }));
-                if (remeasure && pendingRemeasure === null) pendingRemeasure = false;
-                whenGridRendered(grid, runPendingUpdate);
+                whenGridRendered(grid, function () {
+                    var store = grid.config.store;
+                    var failed = store && store.getState().status === GRID_STATUS_ERROR;
+                    if (failed && retriesLeft > 0) {
+                        renderPageWithRetry(retriesLeft - 1);
+                    } else {
+                        runPendingUpdate();
+                    }
+                });
             });
         }
 
@@ -1953,6 +2018,11 @@
 
         // Cards and table rows have different sizes, so switching views changes the page size
         container.addEventListener('grid:viewchange', function () {
+            // Until the new page is rendered, the rows of the previous view's page size are
+            // drawn in the new view: hide them instead of showing an incomplete page
+            if (calculateOptimalPageSize(containerId, options) !== currentPageLimit()) {
+                container.classList.add('grid-page-resizing');
+            }
             requestPageSizeUpdate(true);
         });
 
@@ -2014,7 +2084,21 @@
 
         // Calculate page size if dynamic sizing enabled
         if (features.dynamicPageSize && !pagination.limit) {
+            // Size the first page for the view it is shown in (the filter panel applies the view
+            // after the grid is created), so a card view does not start with a list page size
+            var gridContainer = document.getElementById(gridId);
+            if (gridContainer && !gridContainer.hasAttribute('data-view') &&
+                    features.filterPanel !== false && window.FilterPanel &&
+                    typeof FilterPanel.getInitialView === 'function' &&
+                    document.getElementById(gridId + '-view-options')) {
+                gridContainer.setAttribute('data-view', FilterPanel.getInitialView(gridId));
+            }
             pagination.limit = calculateOptimalPageSize(gridId);
+            // Card heights are only estimated until the cards are rendered: keep the first
+            // page hidden until enableDynamicPageSize has measured them
+            if (gridContainer && gridContainer.getAttribute('data-view') === 'card') {
+                gridContainer.classList.add('grid-page-resizing');
+            }
         }
 
         // Track initialization state

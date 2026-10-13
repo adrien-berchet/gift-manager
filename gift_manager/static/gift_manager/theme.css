@@ -1922,6 +1922,7 @@ h4, h5, h6 {
     .navbar,
     .bottom-nav,
     .fixed-action-bar,
+    .grid-action-bar,
     .btn,
     .theme-toggle {
         display: none !important;
@@ -2564,10 +2565,17 @@ h4, h5, h6 {
    Card View (Simple Mobile-First Design)
    ========================================================================== */
 
+/* Switching views re-renders the page with the new view's page size (grid-utils.js):
+   the rows of the previous page size are not shown meanwhile */
+.grid-page-resizing .gridjs-tbody {
+    visibility: hidden;
+}
+
 /* Container with card view mode */
 [data-view="card"] .gridjs-wrapper {
     background: transparent;
     border: none;
+    box-shadow: none;
     overflow: visible;
 }
 
@@ -2656,6 +2664,29 @@ h4, h5, h6 {
 [data-view="card"] .gridjs-td > * {
     min-width: 0;
     max-width: 100%;
+}
+
+/* "No records" message: a plain line across the card grid, not an empty card */
+[data-view="card"] .gridjs-tr:has(> .gridjs-message),
+[data-view="card"] .gridjs-tr:has(> .gridjs-message):hover {
+    grid-column: 1 / -1;
+    padding: 0;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+}
+
+/* Specific enough to beat the title (first cell) and action bar (last cell) rules */
+[data-view="card"] .gridjs-tr > .gridjs-td.gridjs-message {
+    order: 0;
+    justify-content: center;
+    padding: var(--space-6) 0;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: normal;
+    cursor: default;
 }
 
 @media (max-width: 576px) {
@@ -2865,6 +2896,15 @@ h4, h5, h6 {
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
+}
+
+/* High contrast modes drop the gradient, so paint the icon and label with the system text color */
+@media (forced-colors: active) {
+    [data-view="card"] .gridjs-td[data-card-icon]::before {
+        background-image: none;
+        color: CanvasText;
+        -webkit-text-fill-color: CanvasText;
+    }
 }
 
 [data-view="card"] .gridjs-td[data-card-icon="gift"] { --card-field-icon: "\f06b\2002"; --card-field-icon-color: var(--field-tone-gift); }

@@ -387,6 +387,11 @@
     min-width: max-content;
 }
 
+/* The "no records" message is both the first and the last cell of its row */
+.gridjs-wrapper .gridjs-td.gridjs-message {
+    text-align: center;
+}
+
 /* Ensure action buttons don't wrap */
 .gridjs-td:last-child {
     white-space: nowrap;
