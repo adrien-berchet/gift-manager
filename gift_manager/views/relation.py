@@ -10,8 +10,12 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import BooleanField
 from django.db.models import Case
 from django.db.models import CharField
+from django.db.models import Exists
+from django.db.models import F
+from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import TextField
 from django.db.models import Value
@@ -246,6 +250,7 @@ class RelationStatusListView(BaseListView):
 class RelationStatusDetailView(BaseDetailView):
     model = RelationStatus
     template_name = "gift_manager/relation_status_detail.html"
+    htmx_template_name = "gift_manager/includes/relation_status_detail_partial.html"
     context_object_name = "status"
     pk_name = "pk"  # RelationStatus uses default 'id' field, not 'status_id'
 
@@ -269,8 +274,23 @@ class RelationStatusDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .with_related_objects()
             .filter(status=self.object)
+            .annotate(can_edit=self.get_can_edit_expression())
+            .order_by(F("due_date").asc(nulls_last=True), "gift__name")
         )
         return context
+
+    def get_can_edit_expression(self):
+        """Return whether the user may edit each relation, matching the edit view's check."""
+        user = self.request.user
+        if user.is_superuser:
+            return Value(value=True, output_field=BooleanField())
+        return Exists(
+            RelationPermission.objects.filter(
+                relation=OuterRef("pk"),
+                user=user,
+                permission_type__gte=PermissionLevel.EDITOR,
+            )
+        )
 
 
 class RelationListView(PermissionContextMixin, BaseListView):
