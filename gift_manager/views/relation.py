@@ -12,6 +12,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Case
 from django.db.models import CharField
+from django.db.models import F
 from django.db.models import Prefetch
 from django.db.models import TextField
 from django.db.models import Value
@@ -246,6 +247,7 @@ class RelationStatusListView(BaseListView):
 class RelationStatusDetailView(BaseDetailView):
     model = RelationStatus
     template_name = "gift_manager/relation_status_detail.html"
+    htmx_template_name = "gift_manager/includes/relation_status_detail_partial.html"
     context_object_name = "status"
     pk_name = "pk"  # RelationStatus uses default 'id' field, not 'status_id'
 
@@ -269,6 +271,7 @@ class RelationStatusDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .with_related_objects()
             .filter(status=self.object)
+            .order_by(F("due_date").asc(nulls_last=True), "gift__name")
         )
         return context
 

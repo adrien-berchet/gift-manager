@@ -653,3 +653,67 @@ class TestRelationUpdateView:
         self.relation.refresh_from_db()
         assert self.relation.comment == "Updated from the edit panel"
         assert self.relation.status == self.new_status
+
+
+@pytest.mark.django_db
+class TestRelationStatusDetailView:
+    """Tests for the relation status detail view."""
+
+    @pytest.fixture(autouse=True)
+    def setup(self, user, django_user_model):
+        self.user = user
+        self.client = Client()
+        self.client.force_login(user)
+        self.status = RelationStatus.objects.create(status="Wrapped")
+        other_status = RelationStatus.objects.create(status="Unwrapped")
+
+        self.matching = [
+            RelationFactory(status=self.status, gift__name=f"Matching gift {i}") for i in range(2)
+        ]
+        self.other_status_relation = RelationFactory(status=other_status, gift__name="Other gift")
+        self.inaccessible = RelationFactory(status=self.status, gift__name="Hidden gift")
+        for relation in [*self.matching, self.other_status_relation]:
+            create_or_update_permission(user, relation, permission_level=PermissionLevel.OWNER)
+        stranger = django_user_model.objects.create_user(username="stranger", password="x")
+        create_or_update_permission(
+            stranger, self.inaccessible, permission_level=PermissionLevel.OWNER
+        )
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_detail_panel_lists_accessible_gift_plans_with_status(self):
+        """The details panel shows every accessible gift plan with the selected status."""
+        response = self.client.get(
+            reverse("gift_manager:relation_status_detail", kwargs={"pk": self.status.pk}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assert [t.name for t in response.templates][0] == (
+            "gift_manager/includes/relation_status_detail_partial.html"
+        )
+        content = response.content.decode("utf-8")
+        assert "Wrapped" in content
+        for relation in self.matching:
+            assert relation.gift.name in content
+            assert (
+                reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id})
+                in content
+            )
+        assert "Other gift" not in content
+        assert "Hidden gift" not in content
+        # Statuses are a global lookup table: no edit/delete actions for the status itself.
+        assert 'data-edit-url="#"' not in content
+        assert 'data-delete-url="#"' not in content
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_detail_panel_shows_empty_state(self):
+        """The details panel explains when no gift plan has the selected status."""
+        empty_status = RelationStatus.objects.create(status="Empty")
+
+        response = self.client.get(
+            reverse("gift_manager:relation_status_detail", kwargs={"pk": empty_status.pk}),
+            HTTP_HX_REQUEST="true",
+        )
+
+        assert response.status_code == 200
+        assert "No gift plans with this status" in response.content.decode("utf-8")

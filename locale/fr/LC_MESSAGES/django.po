@@ -3652,6 +3652,10 @@ msgstr "Mise à jour groupée des statuts terminée"
 msgid "Missing due date"
 msgstr "Échéance manquante"
 
+#: gift_manager/templates/gift_manager/includes/relation_status_detail_partial.html:6
+msgid "Gift Plan status"
+msgstr "Statut du projet de cadeau"
+
 #: gift_manager/templates/gift_manager/relation_status_detail.html:5
 #: gift_manager/templates/gift_manager/relation_status_detail.html:8
 msgid "Gift Plan status details"
