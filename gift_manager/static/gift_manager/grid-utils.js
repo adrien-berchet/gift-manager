@@ -852,21 +852,47 @@
         })
         .then(response => response.text())
         .then(html => {
-            // Extract the data array using bracket counting (more robust than regex for nested arrays)
-            const dataArrayStr = extractDataArray(html);
+            let extractedData = null;
+            let extractedPermissions = null;
 
-            if (dataArrayStr) {
+            // Try to extract json_script elements first
+            try {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const gridDataEl = doc.getElementById('grid-data');
+                if (gridDataEl && gridDataEl.textContent) {
+                    extractedData = JSON.parse(gridDataEl.textContent);
+                }
+            } catch (domErr) {
+                console.warn(`[${entityType}List] DOMParser error on refreshed page:`, domErr);
+            }
+
+            // Fallback for pages that have not yet migrated to json_script
+            if (!extractedData) {
+                const dataArrayStr = extractDataArray(html);
+                if (dataArrayStr) {
+                    try {
+                        extractedData = new Function('return ' + dataArrayStr)();
+                    } catch (e) {
+                        console.warn(`[${entityType}List] Error evaluating legacy dataArrayStr:`, e);
+                    }
+                }
+            }
+            if (!extractedPermissions) {
+                const permissionsStr = extractPermissions(html);
+                if (permissionsStr) {
+                    try {
+                        extractedPermissions = new Function('return ' + permissionsStr)();
+                    } catch (e) {
+                        console.warn(`[${entityType}List] Error evaluating legacy permissionsStr:`, e);
+                    }
+                }
+            }
+
+            if (extractedData) {
                 try {
-                    // Use Function constructor to safely evaluate the array
-                    // This handles the complex object structures in the data
-                    const extractedData = new Function('return ' + dataArrayStr)();
-
-                    // Also extract and update permissions if available
-                    const permissionsStr = extractPermissions(html);
-                    if (permissionsStr) {
+                    if (extractedPermissions) {
                         try {
-                            const extractedPermissions = new Function('return ' + permissionsStr)();
-
                             // Update global permissions variable IN PLACE
                             // We need to modify the existing object, not replace it,
                             // because the formatter has a closure reference to it

@@ -1,7 +1,6 @@
 """Performance optimization mixins for views."""
 
 import logging
-from typing import Any
 
 from django.db.models import Prefetch
 from django.db.models import QuerySet
@@ -123,49 +122,3 @@ class QueryOptimizationMixin:
             "child_tags",
             Prefetch("gifts", queryset=Gift.objects.prefetch_related("tags")),
         )
-
-
-class BatchOperationMixin:
-    """Mixin to optimize batch operations."""
-
-    def perform_batch_operation(self, operation: str, object_ids: list[str]) -> dict[str, Any]:
-        """Perform batch operation with optimization."""
-        results = {"success": [], "errors": [], "total": len(object_ids)}
-
-        if operation == "delete":
-            results.update(self.batch_delete(object_ids))
-        elif operation == "update":
-            results.update(self.batch_update(object_ids))
-        else:
-            results["errors"].append(f"Unknown operation: {operation}")
-
-        return results
-
-    def batch_delete(self, object_ids: list[str]) -> dict[str, Any]:
-        """Optimized batch delete operation."""
-        try:
-            # Use bulk delete for efficiency
-            queryset = self.get_queryset().filter(pk__in=object_ids)
-            deleted_count, _ = queryset.delete()
-
-            return {"success": object_ids[:deleted_count], "deleted_count": deleted_count}
-        except Exception as e:
-            logger.error(f"Batch delete error: {e}")
-            return {"errors": [str(e)]}
-
-    def batch_update(
-        self, object_ids: list[str], update_data: dict[str, Any] = None
-    ) -> dict[str, Any]:
-        """Optimized batch update operation."""
-        if not update_data:
-            return {"errors": ["No update data provided"]}
-
-        try:
-            # Use bulk update for efficiency
-            queryset = self.get_queryset().filter(pk__in=object_ids)
-            updated_count = queryset.update(**update_data)
-
-            return {"success": object_ids[:updated_count], "updated_count": updated_count}
-        except Exception as e:
-            logger.error(f"Batch update error: {e}")
-            return {"errors": [str(e)]}

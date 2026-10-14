@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib import admin
 from django.urls import path
 
 from . import views
@@ -25,7 +24,6 @@ app_name = "gift_manager"
 urlpatterns = [
     path("", views.home, name="home"),
     path("api/search/", views.global_search, name="global_search"),
-    path("admin/", admin.site.urls),
     path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
     path("send-invitation/", views.SendInvitationView.as_view(), name="send_invitation"),
     path(

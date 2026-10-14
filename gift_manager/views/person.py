@@ -16,7 +16,6 @@ from gift_manager.forms import PersonForm
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
-from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
@@ -113,7 +112,6 @@ def populate_person_grid_group_info(data, user, accessible_groups=None) -> None:
 class PersonListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
-    BatchOperationMixin,
     PermissionContextMixin,
     BaseListView,
 ):
