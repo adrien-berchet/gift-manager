@@ -73,7 +73,7 @@ status and notes to reflect the move.
 | 0019 | Scope Form Loading State To Form Submissions | Implemented | Frontend | Only form submissions lock a form, and controls unlock when the request ends; moved to `implemented/`. |
 | 0020 | Remove Redundant Toasts | Implemented | Frontend | Drop toasts and flash messages that repeat a visible result or a page navigation; moved to `implemented/`. |
 | 0021 | Unify Card Appearance Across Pages | Implemented | Frontend | Shared card tokens make advanced-page card views match gift plan cards. Moved to `implemented/`. |
-| 0022 | Complete Gift Plan Visibility And Bounded Sections | Proposed | Gift Plans | Ensure every accessible plan shows in the workspace and cap section height so the last section is reachable. |
+| 0022 | Complete Gift Plan Visibility And Bounded Sections | Implemented | Gift Plans | No plan was missing; workspace sections now page two rows of cards each so the last section is reachable. Moved to `implemented/`. |
 | 0023 | Verify The Remember Me Login Checkbox | Implemented | Accounts | Test that the checkbox controls session persistence, with tests for both cases. Moved to `implemented/`. |
 | 0024 | Polish The Advanced List Card View | Implemented | Frontend | Per-field card icons, dashboard-consistent action buttons in card and list views, overflow menu for delete and share. Moved to `implemented/`. |
 

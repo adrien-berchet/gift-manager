@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -47,7 +47,9 @@ Completed) takes a lot of scrolling.
 ## Out Of Scope
 
 - Changing the urgency grouping rules or section order.
-- Changing card appearance (see idea 0021).
+- Changing card appearance (see idea 0021). In the end, paged sections adopted the
+  dashboard's compact paged card layout (fixed card height, single-line titles),
+  which was accepted.
 - Changes to the advanced Grid.js list.
 - Server-side pagination of the whole page, unless the first slice proves it is
   required.
@@ -111,3 +113,24 @@ Recommended starting context:
 - What section cap should be used (cards per page, number of pages)?
 - Should the cap be per section, or should only the sections after the first be
   collapsed by default?
+
+## Resolution
+
+- No plan was actually missing: on the development data, every plan accessible
+  to each user rendered exactly once. Surprise plans addressed to the user stay
+  hidden by design. The report came from long sections, not from a query bug.
+  `test_workspace_renders_every_accessible_gift_plan_once` guards this across
+  every status, person and group recipients, with and without event and due
+  date, and owned and shared plans.
+- Bounding pattern: in-section pagination with previous/next controls and a
+  page counter, like the dashboard. All cards are still rendered; the client
+  hides the cards outside the current page
+  (`static/gift_manager/js/gift-plan-group-pagination.js`).
+- Cap: two rows per page, with as many columns as the width allows; the number
+  of pages is not limited. A short last page keeps both rows reserved so paging
+  never moves the layout.
+- Every section is paged on its own. The focused view (`?focus=`, used by the
+  dashboard's "View all" links) shows its single section unpaged.
+- The recipient filter pages only the matching cards and restarts on page one.
+  The current page survives resizes and the workspace refresh after quick
+  actions and undo.

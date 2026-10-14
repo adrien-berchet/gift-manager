@@ -1,10 +1,15 @@
 """Gift-plan workspace section pagination end-to-end tests."""
 
+from datetime import timedelta
+
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import PermissionLevel
+from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import RelationFactory
 
@@ -174,3 +179,99 @@ class TestRelationWorkspacePagination:
         for index in range(cards.count()):
             expect(cards.nth(index)).to_be_attached()
             assert cards.nth(index).get_attribute("hidden") is None
+
+    def test_quick_action_and_undo_work_beyond_the_first_page(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Quick actions, undo and the following refresh keep working on a later page."""
+        today = timezone.localdate()
+        for index in range(12):
+            RelationFactory(
+                person=seed_data_e2e.persons["dad"],
+                gift=GiftFactory(name=f"Soon filler {index:02d}"),
+                event=seed_data_e2e.events["christmas"],
+                status=seed_data_e2e.statuses["planned"],
+                due_date=today + timedelta(days=1),
+                comment="",
+                shared_with=[seed_data_e2e.alice],
+            )
+        # The latest due date sorts this plan onto the last page of "Due soon".
+        target = RelationFactory(
+            person=seed_data_e2e.persons["dad"],
+            gift=GiftFactory(name="Last page target"),
+            event=seed_data_e2e.events["christmas"],
+            status=seed_data_e2e.statuses["planned"],
+            due_date=today + timedelta(days=7),
+            comment="",
+        )
+        create_or_update_permission(
+            seed_data_e2e.alice, target, permission_level=PermissionLevel.OWNER
+        )
+        page.set_viewport_size({"width": 1280, "height": 900})
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}{reverse('gift_manager:relations')}", wait_until="networkidle")
+
+        section = page.locator("#gift-plan-group-due_soon")
+        card = section.locator(".gift-plan-card", has_text="Last page target")
+        expect(card).to_be_hidden()
+        while section.locator("[data-gift-plan-group-page='next']").is_enabled():
+            section.locator("[data-gift-plan-group-page='next']").click()
+        last_status = section_metrics(page, "due_soon")["status"]
+        assert last_status.split(" / ")[0] == last_status.split(" / ")[1] != "1"
+        expect(card).to_be_visible()
+
+        card.locator("[data-action='quick-purchased']").click()
+        toast = page.locator(".toast", has_text="marked as purchased")
+        expect(toast).to_be_visible()
+        expect(card.locator(".gift-plan-status-badge")).to_have_text("Purchased")
+        target.refresh_from_db()
+        assert target.status == seed_data_e2e.statuses["purchased"]
+        # The refreshed workspace stays on the page the user was looking at.
+        assert section_metrics(page, "due_soon")["status"] == last_status
+        expect(card).to_be_visible()
+
+        toast.get_by_role("button", name="Undo").click()
+        expect(page.locator(".toast", has_text="Change undone")).to_be_visible()
+        expect(card.locator(".gift-plan-status-badge")).to_have_text("Planned")
+        target.refresh_from_db()
+        assert target.status == seed_data_e2e.statuses["planned"]
+        assert section_metrics(page, "due_soon")["status"] == last_status
+        expect(card).to_be_visible()
+
+    @pytest.mark.mobile
+    def test_sections_page_on_phone_width(self, page: Page, live_server, seed_data_e2e):
+        """On a phone, sections show one column of two cards and paging keeps the layout."""
+        create_idea_plans(seed_data_e2e, person_key="dad", prefix="Phone idea", count=6)
+        page.set_viewport_size({"width": 390, "height": 844})
+        login(page, live_server.url)
+        page.goto(f"{live_server.url}{reverse('gift_manager:relations')}", wait_until="networkidle")
+
+        metrics = section_metrics(page, "ideas")
+        assert metrics["columns"] == 1
+        assert len(metrics["shownTitles"]) == 2
+        assert metrics["paginationHidden"] is False
+        assert page.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth"), (
+            "the workspace overflows horizontally"
+        )
+
+        section = page.locator("#gift-plan-group-ideas")
+        pagination = section.locator("[data-gift-plan-group-pagination]")
+        pagination.scroll_into_view_if_needed()
+        expect(pagination).to_be_visible()
+
+        def layout():
+            return section.evaluate(
+                """section => ({
+                    height: section.getBoundingClientRect().height,
+                    paginationTop: section
+                        .querySelector('[data-gift-plan-group-pagination]')
+                        .getBoundingClientRect().top + window.scrollY,
+                })"""
+            )
+
+        first = layout()
+        while section.locator("[data-gift-plan-group-page='next']").is_enabled():
+            section.locator("[data-gift-plan-group-page='next']").click()
+            current = layout()
+            assert abs(current["height"] - first["height"]) <= 1, (first, current)
+            assert abs(current["paginationTop"] - first["paginationTop"]) <= 1, (first, current)
