@@ -717,3 +717,88 @@ class TestRelationStatusDetailView:
 
         assert response.status_code == 200
         assert "No gift plans with this status" in response.content.decode("utf-8")
+
+    def status_detail_url(self, status=None):
+        return reverse(
+            "gift_manager:relation_status_detail", kwargs={"pk": (status or self.status).pk}
+        )
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_detail_panel_links_back_to_the_status(self):
+        """Gift plan details opened from the panel offer a way back to the status."""
+        response = self.client.get(self.status_detail_url(), HTTP_HX_REQUEST="true")
+
+        content = response.content.decode("utf-8")
+        relation = self.matching[0]
+        relation_url = reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id})
+        assert f'data-detail-url="{relation_url}?back={self.status_detail_url()}"' in content
+        assert 'aria-label="View gift plan details"' in content
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_detail_panel_shows_edit_only_for_editable_gift_plans(self):
+        """Read-only gift plans are listed without an edit action."""
+        read_only = self.matching[1]
+        create_or_update_permission(self.user, read_only, permission_level=PermissionLevel.VIEWER)
+
+        response = self.client.get(self.status_detail_url(), HTTP_HX_REQUEST="true")
+
+        content = response.content.decode("utf-8")
+        assert read_only.gift.name in content
+        editable_edit_url = reverse(
+            "gift_manager:relation_edit", kwargs={"pk": self.matching[0].relation_id}
+        )
+        read_only_edit_url = reverse(
+            "gift_manager:relation_edit", kwargs={"pk": read_only.relation_id}
+        )
+        assert f'data-edit-url="{editable_edit_url}"' in content
+        assert 'aria-label="Edit gift plan"' in content
+        assert read_only_edit_url not in content
+
+    def test_gift_plans_are_ordered_by_due_date_then_gift_name(self):
+        """Dated plans come first, soonest first, then undated plans; ties sort by gift name."""
+        status = RelationStatus.objects.create(status="Ordered")
+        today = timezone.localdate()
+        specs = [
+            ("Undated", None),
+            ("Later", today + timedelta(days=10)),
+            ("Soon B", today + timedelta(days=2)),
+            ("Soon A", today + timedelta(days=2)),
+        ]
+        for name, due_date in specs:
+            relation = RelationFactory(status=status, gift__name=name, due_date=due_date)
+            create_or_update_permission(self.user, relation, permission_level=PermissionLevel.OWNER)
+
+        response = self.client.get(self.status_detail_url(status), HTTP_HX_REQUEST="true")
+
+        names = [relation.gift.name for relation in response.context["relations"]]
+        assert names == ["Soon A", "Soon B", "Later", "Undated"]
+
+    @override_settings(USE_I18N=False)
+    def test_full_page_renders_status_page_with_gift_plans(self):
+        """Non-HTMX requests still render the full status page."""
+        response = self.client.get(self.status_detail_url())
+
+        assert response.status_code == 200
+        template_names = [t.name for t in response.templates]
+        assert template_names[0] == "gift_manager/relation_status_detail.html"
+        assert "gift_manager/includes/relation_status_detail_partial.html" not in template_names
+        content = response.content.decode("utf-8")
+        assert "Gift Plan status details" in content
+        for relation in self.matching:
+            assert relation.gift.name in content
+        assert "Hidden gift" not in content
+
+    @override_settings(USE_I18N=False)
+    def test_htmx_detail_panel_shows_edit_to_superusers(self):
+        """Superusers can edit every plan, matching the edit view's permission check."""
+        read_only = self.matching[1]
+        create_or_update_permission(self.user, read_only, permission_level=PermissionLevel.VIEWER)
+        self.user.is_superuser = True
+        self.user.save(update_fields=["is_superuser"])
+
+        response = self.client.get(self.status_detail_url(), HTTP_HX_REQUEST="true")
+
+        read_only_edit_url = reverse(
+            "gift_manager:relation_edit", kwargs={"pk": read_only.relation_id}
+        )
+        assert f'data-edit-url="{read_only_edit_url}"' in response.content.decode("utf-8")
