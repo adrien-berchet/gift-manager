@@ -730,49 +730,8 @@
             }
         });
 
-        // Handle detail view buttons
-        document.addEventListener('click', function(e) {
-            if (e.target.matches('[data-action="detail"]') || e.target.closest('[data-action="detail"]')) {
-                e.preventDefault();
-                const button = e.target.matches('[data-action="detail"]') ? e.target : e.target.closest('[data-action="detail"]');
-                const detailUrl = button.getAttribute('href') || button.dataset.detailUrl;
-
-                if (detailUrl) {
-                    // Show loading state
-                    showOffcanvasLoading('detailPanel');
-
-                    // Show the panel first (reuse existing instance to avoid state corruption)
-                    const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('detailPanel'));
-                    modalInstance.show();
-
-                    // Load detail content
-                    fetch(detailUrl, {
-                        headers: {
-                            'HX-Request': 'true',
-                            'X-CSRFToken': getCookie('csrftoken')
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}`);
-                        }
-                        return response.text();
-                    })
-                    .then(html => {
-                        document.getElementById('detailContent').innerHTML = html;
-                        hideOffcanvasLoading('detailPanel');
-                    })
-                    .catch(error => {
-                        console.error('Error loading details:', error);
-                        const errorMessage = error.message.includes('403')
-                            ? i18n.permissionDenied
-                            : i18n.loadDetailsFailed;
-                        showOffcanvasError(errorMessage, 'detailPanel');
-                    });
-                }
-            }
-        });
-
+        // Detail view buttons are handled by detail-views.js, which loads the content through
+        // HTMX so that the partial's own hx-* elements (such as the gift history) get processed.
 
         // Helper functions for offcanvas loading states
         function showOffcanvasLoading(target) {

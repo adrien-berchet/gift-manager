@@ -2616,6 +2616,10 @@ msgstr "Sans date"
 msgid "Gift plan for this group directly"
 msgstr "Projet de cadeau directement destiné à ce groupe"
 
+#: gift_manager/templates/gift_manager/includes/gift_history_partial.html:34
+msgid "Gift plan for this group member"
+msgstr "Projet de cadeau destiné à un membre de ce groupe"
+
 #: gift_manager/templates/gift_manager/includes/gift_history_partial.html:35
 #: gift_manager/views/common.py:123
 msgid "Awaiting reaction"

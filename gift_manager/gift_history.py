@@ -19,10 +19,15 @@ from gift_manager.statuses import is_given_status
 
 @dataclass(frozen=True)
 class HistoryEntry:
-    """One gift plan of the history, with the group name only when the viewer may see it."""
+    """One gift plan of the history, with the name of the recipient it was planned for.
+
+    ``group_name`` is set only when the viewer may see the group. Neither name is set for
+    the recipient whose history is shown.
+    """
 
     relation: Relation
     group_name: str | None
+    person_name: str | None
 
 
 @dataclass(frozen=True)
@@ -63,22 +68,43 @@ def person_history_queryset(user, person: Person) -> QuerySet:
 
 
 def group_history_queryset(user, group: PersonGroup) -> QuerySet:
-    """Return the plans targeted at a group directly."""
-    return _base_queryset(user).filter(group=group)
+    """Return the plans targeted at a group, or at one of its members (nested groups included)."""
+    groups = [group, *group.get_descendants()]
+    return _base_queryset(user).filter(Q(group=group) | Q(person__groups__in=groups))
 
 
-def build_gift_history(relations, visible_group_ids: set[int]) -> list[HistoryYear]:
-    """Group the plans that were given by year, newest year first; other plans are left out."""
+def build_gift_history(
+    relations,
+    visible_group_ids: set[int],
+    *,
+    person: Person | None = None,
+    group: PersonGroup | None = None,
+) -> list[HistoryYear]:
+    """Group the plans that were given by year, newest year first; other plans are left out.
+
+    ``person`` or ``group`` is the recipient whose history is shown: plans addressed to it
+    directly carry no recipient name.
+    """
     by_year: dict[int | None, list[HistoryEntry]] = {}
     for relation in relations:
         if not is_given_status(relation.status):
             continue
         group_name = (
             relation.group.name
-            if relation.group_id is not None and relation.group_id in visible_group_ids
+            if relation.group_id is not None
+            and relation.group_id in visible_group_ids
+            and (group is None or relation.group_id != group.pk)
             else None
         )
-        by_year.setdefault(history_year(relation), []).append(HistoryEntry(relation, group_name))
+        person_name = (
+            str(relation.person)
+            if relation.person_id is not None
+            and (person is None or relation.person_id != person.pk)
+            else None
+        )
+        by_year.setdefault(history_year(relation), []).append(
+            HistoryEntry(relation, group_name, person_name)
+        )
 
     years = sorted(by_year, key=lambda year: (year is None, -(year or 0)))
     return [

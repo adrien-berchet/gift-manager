@@ -137,6 +137,14 @@ class TestPersonGiftHistory:
         assert "Club gift" in content
         assert "Hidden club" not in content
 
+    def test_viewed_person_is_not_badged(self, client, user):
+        _plan(user, self.person, gift=GiftFactory(name="Direct gift"))
+
+        response = client.get(_history_url(self.person))
+
+        assert "Direct gift" in response.content.decode()
+        assert "recipient-type-badge--person" not in response.content.decode()
+
     def test_query_count_is_bounded(self, client, user):
         def count_queries():
             with CaptureQueriesContext(connection) as queries:
@@ -167,6 +175,73 @@ class TestGroupGiftHistory:
 
         assert response.status_code == 200
         assert "Team gift" in response.content.decode()
+
+    def test_lists_given_plans_of_its_members(self, client, user):
+        group = PersonGroupFactory()
+        _share(user, group)
+        member = PersonFactory(first_name="Ada", family_name="Member")
+        member.groups.add(group)
+        _share(user, member)
+        _plan(user, member, gift=GiftFactory(name="Member gift"))
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert "Member gift" in content
+        assert "recipient-type-badge--person" in content
+        assert "Ada Member" in content
+
+    def test_lists_given_plans_of_members_of_child_groups(self, client, user):
+        group = PersonGroupFactory()
+        child = PersonGroupFactory()
+        child.parent_groups.add(group)
+        _share(user, group)
+        member = PersonFactory()
+        member.groups.add(child)
+        _share(user, member)
+        _plan(user, member, gift=GiftFactory(name="Nested gift"))
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        assert "Nested gift" in response.content.decode()
+
+    def test_viewed_group_is_not_badged(self, client, user):
+        group = PersonGroupFactory(name="Viewed team")
+        _share(user, group)
+        relation = GroupRelationFactory(
+            group=group, status=_status("Given"), gift=GiftFactory(name="Team gift")
+        )
+        _share(user, relation)
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        content = response.content.decode()
+        assert "Team gift" in content
+        assert "recipient-type-badge--group" not in content
+
+    def test_member_of_nested_groups_plan_is_listed_once(self, client, user):
+        group = PersonGroupFactory()
+        child = PersonGroupFactory()
+        child.parent_groups.add(group)
+        _share(user, group)
+        member = PersonFactory()
+        member.groups.add(group, child)
+        _share(user, member)
+        _plan(user, member, gift=GiftFactory(name="Shared member gift"))
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        entries = [entry for year in response.context["history"] for entry in year.entries]
+        assert [entry.relation.gift.name for entry in entries] == ["Shared member gift"]
 
     def test_group_without_access_is_not_found(self, client):
         group = PersonGroupFactory()
