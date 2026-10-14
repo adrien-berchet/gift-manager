@@ -1303,7 +1303,8 @@ class TestRelationListGridLoading:
                     cardGap: parseFloat(cardStyles.gap),
                     cardPadding: parseFloat(cardStyles.paddingTop),
                     titleFontSize: parseFloat(titleStyles.fontSize),
-                    titleLineClamp: getComputedStyle(title.querySelector('a')).webkitLineClamp,
+                    titleWhiteSpace: getComputedStyle(title.querySelector('a')).whiteSpace,
+                    titleTextOverflow: getComputedStyle(title.querySelector('a')).textOverflow,
                     noteLineClamp: noteStyles.webkitLineClamp,
                     targetHeights: targetCards.map((targetCard) => (
                         targetCard.getBoundingClientRect().height
@@ -1336,12 +1337,14 @@ class TestRelationListGridLoading:
         )
 
         assert layout["alignItems"] == "stretch"
-        assert layout["gridAutoRows"] == "1fr"
+        # Paginated sections use a fixed row height, like the dashboard, so pages stay stable.
+        assert layout["gridAutoRows"] not in ("auto", "none", "0px")
         assert layout["gridGap"] <= 12
         assert layout["cardGap"] <= 9
         assert layout["cardPadding"] <= 12
         assert layout["titleFontSize"] <= 16
-        assert layout["titleLineClamp"] == "2"
+        assert layout["titleWhiteSpace"] == "nowrap"
+        assert layout["titleTextOverflow"] == "ellipsis"
         assert layout["noteLineClamp"] == "2"
         assert len(layout["targetHeights"]) == 2
         assert max(layout["targetHeights"]) - min(layout["targetHeights"]) <= 1

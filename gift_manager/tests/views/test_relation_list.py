@@ -113,6 +113,94 @@ class TestRelationList:
         assert "gift-plan-urgency-section--due_soon" in content
         assert "gift-plan-urgency-section--ideas" not in content
 
+    def test_workspace_renders_every_accessible_gift_plan_once(
+        self, event_factory, group_factory, relation_factory
+    ):
+        """Every accessible plan gets exactly one card, whatever its bucket or recipient."""
+        status_model = self.relation.status.__class__
+        planned, _ = status_model.objects.get_or_create(status="Planned")
+        given, _ = status_model.objects.get_or_create(status="Given")
+        idea, _ = status_model.objects.get_or_create(status="Idea")
+        today = timezone.localdate()
+        event = event_factory(name="Anniversary")
+        bucket_plans = [
+            {"status": planned, "due_date": today - timedelta(days=2), "event": event},
+            {"status": planned, "due_date": today + timedelta(days=2), "event": event},
+            {"status": planned, "due_date": today + timedelta(days=40), "event": event},
+            {"status": planned, "due_date": None, "event": None},
+            {"status": idea, "due_date": None, "event": None},
+            {"status": given, "due_date": today - timedelta(days=40), "event": event},
+        ]
+        relations = [self.relation]
+        relations.extend(
+            relation_factory(shared_with=[self.user], **fields) for fields in bucket_plans
+        )
+        relations.append(
+            relation_factory(
+                person=None,
+                group=group_factory(),
+                status=planned,
+                due_date=today + timedelta(days=3),
+                event=event,
+                shared_with=[self.user],
+            )
+        )
+        relations.extend(
+            relation_factory(status=idea, due_date=None, event=None, shared_with=[self.user])
+            for _ in range(30)
+        )
+        hidden_relation = relation_factory()
+
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        rendered_ids = [
+            card["relation"].relation_id
+            for group in response.context["workspace_groups"]
+            for card in group["cards"]
+        ]
+        assert len(rendered_ids) == len(relations)
+        assert set(rendered_ids) == {relation.relation_id for relation in relations}
+        assert hidden_relation.relation_id not in rendered_ids
+        assert [group["key"] for group in response.context["workspace_groups"]] == [
+            "overdue",
+            "due_soon",
+            "needs_details",
+            "later",
+            "ideas",
+            "completed",
+        ]
+        assert response.context["workspace_summary"]["total"] == len(relations)
+        content = response.content.decode()
+        assert content.count('<article class="gift-plan-card ') == len(relations)
+
+    def test_workspace_sections_are_paginated(self):
+        """Each urgency section pages its cards so later sections stay reachable."""
+        response = self.client.get(reverse("gift_manager:relations"))
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert 'data-gift-plan-group-paginated="ideas"' in content
+        assert "gift-plan-card-grid gift-plan-card-grid--paginated" in content
+        assert "data-gift-plan-group-pagination hidden" in content
+        assert 'data-gift-plan-group-page="previous"' in content
+        assert 'data-gift-plan-group-page="next"' in content
+        assert "js/gift-plan-group-pagination.js" in content
+
+    def test_workspace_focus_shows_the_whole_section_without_pagination(self):
+        """A focused section is alone on the page, so it lists all of its cards."""
+        self.relation.due_date = None
+        self.relation.save()
+
+        response = self.client.get(reverse("gift_manager:relations"), {"focus": "ideas"})
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "gift-plan-urgency-section--ideas" in content
+        assert "data-gift-plan-group-paginated" not in content
+        assert "gift-plan-card-grid--paginated" not in content
+        assert "data-gift-plan-group-pagination" not in content
+
     def test_ideas_group_exposes_recipient_filter_options(self, person_factory, relation_factory):
         """The Ideas section offers a recipient filter built from its own cards."""
         self.relation.due_date = None

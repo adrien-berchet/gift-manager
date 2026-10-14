@@ -83,6 +83,7 @@
         {% for group in workspace_groups %}
         <section class="gift-plan-urgency-section gift-plan-urgency-section--{{ group.key }}"
                  id="gift-plan-group-{{ group.key }}"
+                 {% if not workspace_focus %}data-gift-plan-group-paginated="{{ group.key }}"{% endif %}
                  aria-labelledby="gift-plan-group-{{ group.key }}-heading">
             <div class="gift-plan-urgency-heading">
                 <div>
@@ -112,11 +113,32 @@
                 </div>
             </div>
 
-            <div class="gift-plan-card-grid">
+            <div class="gift-plan-card-grid{% if not workspace_focus %} gift-plan-card-grid--paginated{% endif %}"
+                 data-gift-plan-group-list>
                 {% for card in group.cards %}
                 {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
                 {% endfor %}
             </div>
+            {% if not workspace_focus %}
+            <div class="gift-plan-group-pagination" data-gift-plan-group-pagination hidden>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-gift-plan-group-page="previous"
+                        aria-label="{% trans 'Previous page' %}">
+                    <i class="fas fa-chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="gift-plan-group-page-status"
+                      data-gift-plan-group-page-status
+                      aria-live="polite"
+                      aria-atomic="true">1 / 1</span>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary"
+                        data-gift-plan-group-page="next"
+                        aria-label="{% trans 'Next page' %}">
+                    <i class="fas fa-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+            {% endif %}
             {% if group.recipient_options %}
             <p class="gift-plan-group-empty-filtered" data-group-empty-message="{{ group.key }}">
                 {% trans "No gift plans match this recipient." %}
@@ -160,6 +182,7 @@
 {% if show_workspace %}
 <script src="{% static 'gift_manager/js/gift-plan-quick-actions.js' %}"></script>
 <script src="{% static 'gift_manager/js/gift-plan-recipient-filter.js' %}"></script>
+<script src="{% static 'gift_manager/js/gift-plan-group-pagination.js' %}"></script>
 {% endif %}
 {% if show_workspace %}
 <script>

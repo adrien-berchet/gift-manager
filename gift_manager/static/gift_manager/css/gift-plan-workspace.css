@@ -238,6 +238,43 @@
     text-align: center;
 }
 
+.gift-plan-group-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.gift-plan-group-pagination[hidden] {
+    display: none !important;
+}
+
+/* Visible live region: undo the global off-screen [aria-live] announcer styling. */
+.gift-plan-group-page-status[aria-live] {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
+
+.gift-plan-group-page-status {
+    min-width: 3.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.gift-plan-group-pagination .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+}
+
 .gift-plan-group-count {
     display: inline-flex;
     align-items: center;
