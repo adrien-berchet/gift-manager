@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count
+from django.db.models import Max
 from django.db.models import Model
 from django.db.models import Q
 from django.db.models import Sum
@@ -250,21 +251,13 @@ class PermissionService:
         Returns:
             int: The effective permission level
         """
-        direct_permission = PersonGroupPermission.objects.filter(user=user, group=group).first()
-        direct_level = (
-            direct_permission.permission_type if direct_permission else PermissionLevel.NONE
+        ancestors = PersonGroup.hierarchy_subquery([group], ancestors=True)
+        level = (
+            PersonGroupPermission.objects.filter(user=user)
+            .filter(Q(group=group) | Q(group__in=ancestors, inherit_permissions=True))
+            .aggregate(level=Max("permission_type"))["level"]
         )
-
-        ancestors = group.get_ancestors()
-        inherited_permissions = PersonGroupPermission.objects.filter(
-            user=user, group__in=ancestors, inherit_permissions=True
-        )
-
-        inherited_level = PermissionLevel.NONE
-        if inherited_permissions.exists():
-            inherited_level = max(p.permission_type for p in inherited_permissions)
-
-        return max(direct_level, inherited_level)
+        return PermissionLevel.NONE if level is None else level
 
     @classmethod
     def get_permission_label(cls, obj, user, filter_name, case="lower") -> str:

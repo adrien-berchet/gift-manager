@@ -129,17 +129,9 @@ class GiftTagExplorerView(LoginRequiredMixin, View):
                     .order_by("name")
                 )
 
-                # Get the gifts associated with the selected tag
-                accessible_tag_ids = set(
-                    GiftTag.objects.accessible_by(request.user).values_list("pk", flat=True)
-                )
-                descendants = [
-                    tag for tag in selected_tag.get_descendants() if tag.pk in accessible_tag_ids
-                ]
-                all_tags_ids = [selected_tag.pk] + [tag.pk for tag in descendants]
+                # The gifts of the selected tag and of its accessible descendants
                 context["gifts"] = (
-                    Gift.objects.accessible_by(request.user)
-                    .filter(Q(tags__in=all_tags_ids))
+                    selected_tag.get_all_gifts(request.user)
                     .prefetch_related(
                         Prefetch(
                             "tags",

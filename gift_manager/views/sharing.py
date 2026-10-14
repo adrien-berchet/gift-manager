@@ -425,12 +425,10 @@ class ShareObjectsView(LoginRequiredMixin, View):
         )
 
         # Collect all groups to share (including children if requested)
-        all_groups_to_share = set()
-        for group in groups:
-            all_groups_to_share.add(group)
-            if share_children:
-                # Add all descendant groups
-                all_groups_to_share.update(group.get_descendants())
+        all_groups_to_share = set(groups)
+        if share_children:
+            descendants = PersonGroup.hierarchy_subquery(groups)
+            all_groups_to_share.update(PersonGroup.objects.filter(pk__in=descendants))
 
         # Deterministic order so concurrent shares take the row locks in the same order
         all_groups_to_share = sorted(all_groups_to_share, key=lambda group: group.pk)

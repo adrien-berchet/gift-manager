@@ -131,3 +131,81 @@ def test_number_of_queries_does_not_grow_with_hidden_plans(recipient, collaborat
         _surprise_for_person(recipient, collaborator)
 
     assert count_queries() == one_plan
+
+
+def test_member_deep_below_the_target_group_is_hidden(recipient, collaborator):
+    target = PersonGroupFactory()
+    group = target
+    for _ in range(3):
+        child = PersonGroupFactory()
+        child.parent_groups.add(group)
+        group = child
+    PersonFactory(user_link=recipient, groups=[group])
+    relation = GroupRelationFactory(group=target, is_surprise=True)
+    _share(relation, recipient)
+    _share(relation, collaborator)
+
+    assert not _visible(relation, recipient)
+    assert _visible(relation, collaborator)
+
+
+def test_member_reaching_the_target_through_a_diamond_is_hidden(recipient):
+    target = PersonGroupFactory()
+    left = PersonGroupFactory()
+    right = PersonGroupFactory()
+    bottom = PersonGroupFactory()
+    left.parent_groups.add(target)
+    right.parent_groups.add(target)
+    bottom.parent_groups.add(left, right)
+    PersonFactory(user_link=recipient, groups=[bottom])
+    relation = GroupRelationFactory(group=target, is_surprise=True)
+    _share(relation, recipient)
+
+    assert not _visible(relation, recipient)
+
+
+def test_recipient_in_two_groups_is_hidden_from_plans_for_either(recipient):
+    first = PersonGroupFactory()
+    second = PersonGroupFactory()
+    unrelated = PersonGroupFactory()
+    PersonFactory(user_link=recipient, groups=[first, second])
+    hidden = [GroupRelationFactory(group=group, is_surprise=True) for group in (first, second)]
+    visible = GroupRelationFactory(group=unrelated, is_surprise=True)
+    for relation in [*hidden, visible]:
+        _share(relation, recipient)
+
+    assert not any(_visible(relation, recipient) for relation in hidden)
+    assert _visible(visible, recipient)
+
+
+def test_stored_group_cycle_does_not_break_surprise_hiding(recipient, collaborator):
+    first = PersonGroupFactory()
+    second = PersonGroupFactory()
+    # Bypass the model validation to simulate legacy data
+    second.parent_groups.add(first)
+    first.parent_groups.add(second)
+    PersonFactory(user_link=recipient, groups=[second])
+    relation = GroupRelationFactory(group=first, is_surprise=True)
+    _share(relation, recipient)
+    _share(relation, collaborator)
+
+    assert not _visible(relation, recipient)
+    assert _visible(relation, collaborator)
+
+
+def test_surprise_hiding_costs_one_query_whatever_the_depth(recipient):
+    target = PersonGroupFactory()
+    group = target
+    for _ in range(4):
+        child = PersonGroupFactory()
+        child.parent_groups.add(group)
+        group = child
+    PersonFactory(user_link=recipient, groups=[group])
+    relation = GroupRelationFactory(group=target, is_surprise=True)
+    _share(relation, recipient)
+
+    with CaptureQueriesContext(connection) as captured:
+        visible = _visible(relation, recipient)
+
+    assert not visible
+    assert len(captured.captured_queries) == 1

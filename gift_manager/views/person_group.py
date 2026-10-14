@@ -423,11 +423,12 @@ class PersonGroupDetailView(BaseDetailView):
         context = super().get_context_data(**kwargs)
 
         accessible_groups = PersonGroup.objects.accessible_by(self.request.user)
-        accessible_group_ids = set(accessible_groups.values_list("pk", flat=True))
-        accessible_descendants = [
-            group for group in self.object.get_descendants() if group.pk in accessible_group_ids
-        ]
-        accessible_nested_groups = [self.object, *accessible_descendants]
+        # The group and its descendants the user can access
+        nested_groups = PersonGroup.hierarchy_subquery([self.object], include_start=True)
+        accessible_nested_groups = PersonGroup.objects.filter(
+            Q(pk=self.object.pk)
+            | (Q(pk__in=nested_groups) & Q(pk__in=accessible_groups.values("pk")))
+        )
         accessible_people = Person.objects.accessible_by(self.request.user)
 
         # Hierarchy information
@@ -437,11 +438,13 @@ class PersonGroupDetailView(BaseDetailView):
         context["child_groups"] = accessible_groups.filter(parent_groups=self.object).order_by(
             "name"
         )
-        context["ancestors_path"] = [
-            group
-            for group in self.object.get_primary_ancestors_path()
-            if group.pk in accessible_group_ids
-        ]
+        ancestors_path = self.object.get_primary_ancestors_path()
+        accessible_path_ids = set(
+            accessible_groups.filter(pk__in=[group.pk for group in ancestors_path]).values_list(
+                "pk", flat=True
+            )
+        )
+        context["ancestors_path"] = [g for g in ancestors_path if g.pk in accessible_path_ids]
 
         # Direct members only
         context["members"] = (

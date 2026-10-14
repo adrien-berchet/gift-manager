@@ -22,6 +22,7 @@ from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import GiftTag
 from gift_manager.models import GiftTagPermission
+from gift_manager.models import HierarchicalDAGMixin
 from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
@@ -205,8 +206,8 @@ class TestInvitation:
 
 
 @pytest.mark.django_db
-class TestUserPermissionManager:
-    """Tests for the UserPermissionManager."""
+class TestAccessibleByMethod:
+    """Tests for the accessible_by query method."""
 
     def test_accessible_by_for_person(self, user, person):
         """Test the accessible_by method for Person model."""
@@ -2275,3 +2276,225 @@ class TestRelationStatusDefaultPk:
 
         # Should not create a duplicate
         assert RelationStatus.objects.filter(status=RelationStatus.DEFAULT_STATUS).count() == 1
+
+
+class TestHierarchicalDAGMixinConfiguration:
+    """Tests that HierarchicalDAGMixin raises NotImplementedError when configuration is missing."""
+
+    def test_unconfigured_mixin_raises_not_implemented(self):
+        class IncompleteDAG(HierarchicalDAGMixin):
+            pk = 1
+
+        obj = IncompleteDAG()
+
+        with pytest.raises(NotImplementedError, match="must define 'parent_rel_name'"):
+            obj._get_parent_rel_name()
+
+        with pytest.raises(NotImplementedError, match="must define 'child_rel_name'"):
+            obj._get_child_rel_name()
+
+        with pytest.raises(NotImplementedError, match="must define 'cycle_error_message'"):
+            obj._get_cycle_error_message()
+
+
+@pytest.mark.django_db
+class TestHierarchyQueryCounts:
+    """Tests verifying that hierarchy traversals execute bounded queries without full-table scans."""
+
+    @staticmethod
+    def _chain(factory, parent_rel_name, depth):
+        """Create a chain root -> ... -> leaf of ``depth + 1`` nodes, plus unrelated nodes."""
+        nodes = [factory(name="Node 0")]
+        for level in range(1, depth + 1):
+            node = factory(name=f"Node {level}")
+            getattr(node, parent_rel_name).add(nodes[-1])
+            nodes.append(node)
+        for i in range(10):
+            factory(name=f"Unrelated {i}")
+        return nodes
+
+    @pytest.mark.parametrize(
+        ("factory", "parent_rel_name"),
+        [
+            (PersonGroupFactory, "parent_groups"),
+            (lambda name: GiftTag.objects.create(name=name), "parent_tags"),
+        ],
+        ids=["group", "tag"],
+    )
+    @pytest.mark.parametrize("depth", [1, 4])
+    def test_descendants_use_one_recursive_query(
+        self, django_assert_num_queries, factory, parent_rel_name, depth
+    ):
+        """get_descendants runs one recursive query whatever the depth."""
+        nodes = self._chain(factory, parent_rel_name, depth)
+
+        with django_assert_num_queries(1) as captured:
+            descendants = nodes[0].get_descendants(use_cache=False)
+
+        assert set(descendants) == set(nodes[1:])
+        assert "WITH RECURSIVE" in captured.captured_queries[0]["sql"]
+
+    @pytest.mark.parametrize(
+        ("factory", "parent_rel_name"),
+        [
+            (PersonGroupFactory, "parent_groups"),
+            (lambda name: GiftTag.objects.create(name=name), "parent_tags"),
+        ],
+        ids=["group", "tag"],
+    )
+    @pytest.mark.parametrize("depth", [1, 4])
+    def test_ancestors_use_one_recursive_query(
+        self, django_assert_num_queries, factory, parent_rel_name, depth
+    ):
+        """get_ancestors runs one recursive query whatever the depth."""
+        nodes = self._chain(factory, parent_rel_name, depth)
+
+        with django_assert_num_queries(1) as captured:
+            ancestors = nodes[-1].get_ancestors(use_cache=False)
+
+        assert set(ancestors) == set(nodes[:-1])
+        assert "WITH RECURSIVE" in captured.captured_queries[0]["sql"]
+
+    def test_traversal_terminates_on_existing_cycle(self):
+        """A cycle already stored in the database does not loop and never returns the node."""
+        first = PersonGroupFactory(name="First")
+        second = PersonGroupFactory(name="Second")
+        # Bypass the model validation to simulate legacy data
+        second.parent_groups.add(first)
+        first.parent_groups.add(second)
+
+        assert first.get_descendants(use_cache=False) == [second]
+        assert first.get_ancestors(use_cache=False) == [second]
+
+    def test_diamond_hierarchy_returns_each_node_once(self):
+        """A node reachable through several parents is returned once."""
+        root = PersonGroupFactory(name="Root")
+        left = PersonGroupFactory(name="Left")
+        right = PersonGroupFactory(name="Right")
+        bottom = PersonGroupFactory(name="Bottom")
+        left.parent_groups.add(root)
+        right.parent_groups.add(root)
+        bottom.parent_groups.add(left, right)
+
+        descendants = root.get_descendants(use_cache=False)
+        ancestors = bottom.get_ancestors(use_cache=False)
+
+        assert sorted(g.pk for g in descendants) == sorted([left.pk, right.pk, bottom.pk])
+        assert sorted(g.pk for g in ancestors) == sorted([root.pk, left.pk, right.pk])
+
+    def test_accessible_by_with_cascading_permission_uses_one_query(
+        self, user, django_assert_num_queries
+    ):
+        """Cascading group permissions resolve inside a single query, at any depth."""
+        nodes = self._chain(PersonGroupFactory, "parent_groups", 4)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=nodes[1],
+            permission_type=PermissionLevel.VIEWER,
+            inherit_permissions=True,
+        )
+
+        with django_assert_num_queries(1):
+            accessible = set(PersonGroup.objects.accessible_by(user))
+
+        assert accessible == set(nodes[1:])
+
+    def test_accessible_by_ignores_stale_hierarchy_cache(self, user):
+        """Access granted through a cascading permission follows the live hierarchy."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.VIEWER,
+            inherit_permissions=True,
+        )
+        assert child in PersonGroup.objects.accessible_by(user)
+
+        # Detach the child without going through the signals that clear the cache
+        PersonGroup.parent_groups.through.objects.filter(from_persongroup=child).delete()
+        cache.set(f"persongroup_descendants_{parent.pk}", [child], 3600)
+
+        assert child not in PersonGroup.objects.accessible_by(user)
+
+    def test_person_group_primary_ancestors_path_query_count(self, django_assert_num_queries):
+        """get_primary_ancestors_path steps along parent relations without table scans."""
+        root = PersonGroupFactory(name="Root")
+        mid = PersonGroupFactory(name="Mid")
+        leaf = PersonGroupFactory(name="Leaf")
+        mid.parent_groups.add(root)
+        leaf.parent_groups.add(mid)
+
+        for i in range(10):
+            PersonGroupFactory(name=f"Unrelated {i}")
+
+        # Step 1: leaf -> mid (1 query)
+        # Step 2: mid -> root (1 query)
+        # Step 3: root -> no parent (1 query)
+        with django_assert_num_queries(3) as captured:
+            path = leaf.get_primary_ancestors_path()
+        assert path == [root, mid]
+        for query in captured.captured_queries:
+            assert "WHERE" in query["sql"]
+            assert "parent_groups" in query["sql"]
+
+    def test_gift_tag_primary_ancestors_path_query_count(self, django_assert_num_queries):
+        """GiftTag.get_primary_ancestors_path steps along parent relations without table scans."""
+        root = GiftTag.objects.create(name="Root")
+        mid = GiftTag.objects.create(name="Mid")
+        leaf = GiftTag.objects.create(name="Leaf")
+        mid.parent_tags.add(root)
+        leaf.parent_tags.add(mid)
+
+        for i in range(10):
+            GiftTag.objects.create(name=f"Unrelated {i}")
+
+        with django_assert_num_queries(3) as captured:
+            path = leaf.get_primary_ancestors_path()
+        assert path == [root, mid]
+        for query in captured.captured_queries:
+            assert "WHERE" in query["sql"]
+            assert "parent_tags" in query["sql"]
+
+    def test_accessible_by_ignores_non_cascading_and_other_users_permissions(self, user):
+        """Only the user's own cascading permissions open the descendants."""
+        other_user = UserFactory()
+        nodes = self._chain(PersonGroupFactory, "parent_groups", 2)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=nodes[0],
+            permission_type=PermissionLevel.VIEWER,
+            inherit_permissions=False,
+        )
+        PersonGroupPermission.objects.create(
+            user=other_user,
+            group=nodes[0],
+            permission_type=PermissionLevel.OWNER,
+            inherit_permissions=True,
+        )
+
+        assert set(PersonGroup.objects.accessible_by(user)) == {nodes[0]}
+        assert set(PersonGroup.objects.accessible_by(other_user)) == set(nodes)
+
+    def test_accessible_by_terminates_on_existing_cycle(self, user):
+        """A cycle stored in the database does not break cascading permissions."""
+        first = PersonGroupFactory(name="First")
+        second = PersonGroupFactory(name="Second")
+        second.parent_groups.add(first)
+        first.parent_groups.add(second)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=first,
+            permission_type=PermissionLevel.VIEWER,
+            inherit_permissions=True,
+        )
+
+        assert set(PersonGroup.objects.accessible_by(user)) == {first, second}
+
+    def test_hierarchy_subquery_requires_a_single_column(self):
+        """The start of a hierarchy subquery must select exactly one column."""
+        with pytest.raises(ValueError, match="exactly one column"):
+            PersonGroup.hierarchy_subquery(PersonGroup.objects.all())
+        with pytest.raises(ValueError, match="exactly one column"):
+            PersonGroup.hierarchy_subquery(PersonGroup.objects.values("pk", "name"))

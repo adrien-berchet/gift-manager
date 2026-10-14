@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.cache import cache
+from django.core.exceptions import EmptyResultSet
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
 from django.core.validators import MinValueValidator
@@ -76,6 +77,22 @@ class PermissionLevel:
         return label
 
 
+class BaseObjectPermission(models.Model):
+    """Abstract base model for object-level permissions."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    permission_type = models.IntegerField(
+        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
+    )
+
+    class Meta:
+        abstract = True
+
+    def __str__(self):
+        target = getattr(self, self.filter_name)
+        return f"{self.user} - {target} -> {PermissionLevel.get_label(self.permission_type)}"
+
+
 def date_in_year(year: int, month: int, day: int) -> date_class:
     """Return the date of a yearly occurrence in a given year.
 
@@ -99,17 +116,6 @@ class UserPermissionQuerySet(models.QuerySet):
     def accessible_by(self, user):
         """Return all objects accessible by a user (shared with the user)."""
         return self.filter(Q(shared_with=user))
-
-
-class UserPermissionManager(models.Manager):
-    """Base manager for models with user permissions."""
-
-    def get_queryset(self):
-        return UserPermissionQuerySet(self.model, using=self._db)
-
-    def accessible_by(self, user):
-        """Return all objects accessible by a user (shared with the user)."""
-        return self.get_queryset().accessible_by(user)
 
 
 class PersonQuerySet(UserPermissionQuerySet):
@@ -155,25 +161,6 @@ class PersonQuerySet(UserPermissionQuerySet):
             complete_name=Concat("family_name", Value(" "), "first_name", output_field=TextField())
         )
 
-
-class PersonManager(models.Manager):
-    """Manager for Person model with additional query methods."""
-
-    def get_queryset(self):
-        return PersonQuerySet(self.model, using=self._db)
-
-    def accessible_by(self, user):
-        """Return all persons accessible by a user (user_link or shared_with)."""
-        return self.get_queryset().accessible_by(user)
-
-    def with_groups_annotated(self, user=None):
-        """Return persons with groups information annotated for Grid.js."""
-        return self.get_queryset().with_groups_annotated(user)
-
-    def with_complete_name(self):
-        """Return persons with complete_name annotation (family_name + first_name)."""
-        return self.get_queryset().with_complete_name()
-
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -181,6 +168,10 @@ class PersonManager(models.Manager):
             .with_groups_annotated(user)
             .values("person_id", "first_name", "family_name", "email_address", "groups_info")
         )
+
+
+class PersonManager(models.Manager.from_queryset(PersonQuerySet)):
+    """Manager for Person model with additional query methods."""
 
 
 class GiftQuerySet(UserPermissionQuerySet):
@@ -214,21 +205,6 @@ class GiftQuerySet(UserPermissionQuerySet):
         # For SQLite and other databases, use a simpler approach
         return self.prefetch_related("tags")
 
-
-class GiftManager(models.Manager):
-    """Manager for Gift model with additional query methods."""
-
-    def get_queryset(self):
-        return GiftQuerySet(self.model, using=self._db)
-
-    def accessible_by(self, user):
-        """Return all objects accessible by a user (shared with the user)."""
-        return self.get_queryset().accessible_by(user)
-
-    def with_tags_annotated(self, user=None):
-        """Return gifts with tags information annotated for Grid.js."""
-        return self.get_queryset().with_tags_annotated(user)
-
     def for_list_display(self, user):
         """Return queryset optimized for list display with all necessary annotations."""
         return (
@@ -238,6 +214,10 @@ class GiftManager(models.Manager):
         )
 
 
+class GiftManager(models.Manager.from_queryset(GiftQuerySet)):
+    """Manager for Gift model with additional query methods."""
+
+
 class EventQuerySet(UserPermissionQuerySet):
     """QuerySet for Event model: global events are visible to every user."""
 
@@ -245,12 +225,22 @@ class EventQuerySet(UserPermissionQuerySet):
         """Return all events accessible by a user (global or shared with the user)."""
         return self.filter(Q(is_global=True) | Q(shared_with=user)).distinct()
 
+    def for_list_display(self, user):
+        """Return queryset optimized for list display."""
+        return self.accessible_by(user).only(
+            "event_id",
+            "name",
+            "comment",
+            "schedule_type",
+            "date",
+            "recurrence",
+            "is_global",
+            "is_birthday",
+        )
 
-class EventManager(UserPermissionManager):
+
+class EventManager(models.Manager.from_queryset(EventQuerySet)):
     """Manager for Event model with additional query methods."""
-
-    def get_queryset(self):
-        return EventQuerySet(self.model, using=self._db)
 
     def get_birthday_event(self):
         """Return the global Birthday event, creating it when it is missing.
@@ -274,19 +264,6 @@ class EventManager(UserPermissionManager):
                 event = self.get(is_birthday=True)
         return event
 
-    def for_list_display(self, user):
-        """Return queryset optimized for list display."""
-        return self.accessible_by(user).only(
-            "event_id",
-            "name",
-            "comment",
-            "schedule_type",
-            "date",
-            "recurrence",
-            "is_global",
-            "is_birthday",
-        )
-
 
 def recipient_groups_for(user) -> RawSQL:
     """Return a subquery of the pks of the groups that ``user`` is a recipient of.
@@ -296,29 +273,10 @@ def recipient_groups_for(user) -> RawSQL:
     recursive query embedded in the caller's statement, so reading plans costs no extra query
     whatever the depth of the hierarchy.
     """
-    quote = connection.ops.quote_name
-    membership = Person.groups.through._meta  # noqa: SLF001
-    hierarchy = PersonGroup.parent_groups.through._meta  # noqa: SLF001
-    person_meta = Person._meta  # noqa: SLF001
-    person_fk = quote(membership.get_field("person").column)
-    group_fk = quote(membership.get_field("persongroup").column)
-    child_fk = quote(hierarchy.get_field("from_persongroup").column)
-    parent_fk = quote(hierarchy.get_field("to_persongroup").column)
-    sql = f"""
-        WITH RECURSIVE recipient_groups(group_id) AS (
-            SELECT membership.{group_fk}
-            FROM {quote(membership.db_table)} AS membership
-            JOIN {quote(person_meta.db_table)} AS person
-              ON person.{quote(person_meta.pk.column)} = membership.{person_fk}
-            WHERE person.{quote(person_meta.get_field("user_link").column)} = %s
-            UNION
-            SELECT hierarchy.{parent_fk}
-            FROM {quote(hierarchy.db_table)} AS hierarchy
-            JOIN recipient_groups ON hierarchy.{child_fk} = recipient_groups.group_id
-        )
-        SELECT group_id FROM recipient_groups
-    """  # noqa: S608 - identifiers come from model metadata, the user pk is a parameter
-    return RawSQL(sql, [user.pk])  # noqa: S611 - see the comment on ``sql``
+    memberships = Person.groups.through.objects.filter(person__user_link=user)
+    return PersonGroup.hierarchy_subquery(
+        memberships.values("persongroup_id"), ancestors=True, include_start=True
+    )
 
 
 class RelationQuerySet(UserPermissionQuerySet):
@@ -366,29 +324,6 @@ class RelationQuerySet(UserPermissionQuerySet):
             )
         )
 
-
-class RelationManager(models.Manager):
-    """Manager for Relation model with additional query methods."""
-
-    def get_queryset(self):
-        return RelationQuerySet(self.model, using=self._db)
-
-    def accessible_by(self, user):
-        """Return all objects accessible by a user (shared with the user)."""
-        return self.get_queryset().accessible_by(user)
-
-    def hidden_surprises_for(self, user):
-        """Return the surprise plans hidden from a user (see the queryset method)."""
-        return self.get_queryset().hidden_surprises_for(user)
-
-    def with_related_objects(self):
-        """Return relations with all related objects selected."""
-        return self.get_queryset().with_related_objects()
-
-    def with_related_object_name(self):
-        """Return relations with related_object annotation (person or group name)."""
-        return self.get_queryset().with_related_object_name()
-
     def for_list_display(self, user):
         """Return queryset optimized for list display with all annotations."""
         return (
@@ -409,6 +344,10 @@ class RelationManager(models.Manager):
                 "due_date",
             )
         )
+
+
+class RelationManager(models.Manager.from_queryset(RelationQuerySet)):
+    """Manager for Relation model with additional query methods."""
 
 
 class Profile(models.Model):
@@ -740,47 +679,35 @@ class Person(models.Model):
         self.email_address = encode_email(value)
 
 
-class PersonPermission(models.Model):
+class PersonPermission(BaseObjectPermission):
     """Model for permissions on a person."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     person = models.ForeignKey(Person, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
 
     class Meta:
         unique_together = ("user", "person")
-
-    def __str__(self):
-        return f"{self.user} - {self.person} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
     def filter_name(self):
         return "person"
 
 
-class PersonGroupManager(UserPermissionManager):
-    """Manager for PersonGroup model with hierarchy query methods."""
+class PersonGroupQuerySet(UserPermissionQuerySet):
+    """QuerySet for PersonGroup model with hierarchy query methods."""
 
     def accessible_by(self, user):
         """Return groups accessible directly or through inherited parent permissions."""
-        queryset = self.get_queryset()
         if not user or not user.is_authenticated:
-            return queryset.none()
+            return self.none()
 
-        inherited_group_ids = set()
-        inherited_permissions = (
-            PersonGroupPermission.objects.filter(user=user, inherit_permissions=True)
-            .select_related("group")
-            .order_by("group_id")
-        )
-        for permission in inherited_permissions:
-            inherited_group_ids.update(
-                descendant.pk for descendant in permission.group.get_descendants()
-            )
+        # The descendants of the groups shared with a cascading permission, resolved in the
+        # same statement so the live hierarchy is used whatever its depth
+        cascading_groups = PersonGroupPermission.objects.filter(
+            user=user, inherit_permissions=True
+        ).values("group_id")
+        inherited_groups = self.model.hierarchy_subquery(cascading_groups)
 
-        return queryset.filter(Q(shared_with=user) | Q(pk__in=inherited_group_ids)).distinct()
+        return self.filter(Q(shared_with=user) | Q(pk__in=inherited_groups)).distinct()
 
     def root_groups_for_user(self, user):
         """Return all root groups (without parents) accessible by a user."""
@@ -798,8 +725,196 @@ class PersonGroupManager(UserPermissionManager):
         return self.prefetch_related("parent_groups", "child_groups")
 
 
-class PersonGroup(models.Model):
+class PersonGroupManager(models.Manager.from_queryset(PersonGroupQuerySet)):
+    """Manager for PersonGroup model with hierarchy query methods."""
+
+
+class HierarchicalDAGMixin:
+    """Mixin for models structured as a directed acyclic graph (DAG).
+
+    Provides cached recursive queries for descendants and ancestors, path-to-root,
+    cycle detection, and cache invalidation.
+    """
+
+    parent_rel_name = None
+    child_rel_name = None
+    cycle_error_message = None
+
+    @classmethod
+    def _get_parent_rel_name(cls) -> str:
+        if not cls.parent_rel_name:
+            msg = f"{cls.__name__} must define 'parent_rel_name'."
+            raise NotImplementedError(msg)
+        return cls.parent_rel_name
+
+    @classmethod
+    def _get_child_rel_name(cls) -> str:
+        if not cls.child_rel_name:
+            msg = f"{cls.__name__} must define 'child_rel_name'."
+            raise NotImplementedError(msg)
+        return cls.child_rel_name
+
+    @classmethod
+    def _get_cycle_error_message(cls) -> str:
+        if not cls.cycle_error_message:
+            msg = f"{cls.__name__} must define 'cycle_error_message'."
+            raise NotImplementedError(msg)
+        return cls.cycle_error_message
+
+    @classmethod
+    def hierarchy_subquery(cls, start, *, ancestors=False, include_start=False) -> RawSQL:
+        """Return a subquery of the pks reachable from ``start`` in the hierarchy.
+
+        ``start`` is a queryset of the pks to start from (``.values(...)`` on one column), or an
+        iterable of nodes of this model (an empty one reaches nothing). The result holds their
+        descendants, or their ancestors when ``ancestors`` is True, and the starting pks
+        themselves when ``include_start`` is True. It is a recursive query embedded
+        in the caller's statement, so it costs no extra query whatever the depth; ``UNION``
+        drops the rows already found, so a cycle stored in the database cannot loop. On such a
+        cycle the descendants (or ancestors) of a node include the node itself.
+        """
+        manager = cls._default_manager
+        if not isinstance(start, models.QuerySet):
+            start = manager.filter(pk__in=[node.pk for node in start]).values("pk")
+        if len(start.query.values_select) != 1:
+            msg = "The start of a hierarchy subquery must select exactly one column."
+            raise ValueError(msg)
+        quote = connection.ops.quote_name
+        field = cls._meta.get_field(cls._get_parent_rel_name())
+        child_fk = quote(field.m2m_column_name())
+        parent_fk = quote(field.m2m_reverse_name())
+        from_fk, to_fk = (child_fk, parent_fk) if ancestors else (parent_fk, child_fk)
+        edges = quote(field.m2m_db_table())
+        # The compiled start query keeps its values as parameters (S608 below)
+        try:
+            start_sql, start_params = start.query.sql_with_params()
+        except EmptyResultSet:
+            # Django compiles no SQL for a start known to be empty: use a valid empty one
+            empty = manager.filter(pk__isnull=True).values("pk")
+            start_sql, start_params = empty.query.sql_with_params()
+        if include_start:
+            anchor = f"SELECT start_nodes.* FROM ({start_sql}) AS start_nodes"  # noqa: S608
+        else:
+            anchor = (
+                f"SELECT edge.{to_fk} FROM {edges} AS edge "  # noqa: S608
+                f"WHERE edge.{from_fk} IN ({start_sql})"
+            )
+        sql = f"""
+            WITH RECURSIVE hierarchy_nodes(node_id) AS (
+                {anchor}
+                UNION
+                SELECT edge.{to_fk}
+                FROM {edges} AS edge
+                JOIN hierarchy_nodes ON edge.{from_fk} = hierarchy_nodes.node_id
+            )
+            SELECT node_id FROM hierarchy_nodes
+        """  # noqa: S608 - identifiers come from model metadata, values are parameters
+        return RawSQL(sql, start_params)  # noqa: S611 - see the comment on ``sql``
+
+    def get_children(self):
+        """Returns all direct child objects."""
+        return getattr(self, self._get_child_rel_name()).all()
+
+    def get_descendants(self, use_cache=True):
+        """Returns all descendant objects (recursively), in a single query.
+
+        Args:
+            use_cache: If True, use cached results when available (default: True)
+        """
+        return self._get_hierarchy_nodes("descendants", use_cache=use_cache)
+
+    def get_ancestors(self, use_cache=True):
+        """Returns all parent objects (up to the root), in a single query.
+
+        Args:
+            use_cache: If True, use cached results when available (default: True)
+        """
+        return self._get_hierarchy_nodes("ancestors", use_cache=use_cache)
+
+    def _get_hierarchy_nodes(self, kind: str, *, use_cache: bool) -> list:
+        cache_key = f"{self._meta.model_name}_{kind}_{self.pk}"
+        if use_cache:
+            cached_result = cache.get(cache_key)
+            if cached_result is not None:
+                return cached_result
+
+        manager = type(self)._default_manager  # noqa: SLF001
+        nodes = self.hierarchy_subquery([self], ancestors=kind == "ancestors")
+        # A cycle stored in the database would bring the node back
+        result = list(manager.filter(pk__in=nodes).exclude(pk=self.pk))
+
+        if use_cache:
+            cache.set(cache_key, result, 3600)
+        return result
+
+    def get_primary_ancestors_path(self):
+        """Returns a specific path of ancestors (for breadcrumbs).
+
+        Follows parents step-by-step from child to root, avoiding full-table scans.
+        """
+        parent_rel_name = self._get_parent_rel_name()
+        ancestors = []
+        current = self
+        visited = {self.pk}
+
+        while True:
+            parents = list(getattr(current, parent_rel_name).all())
+            if not parents:
+                break
+
+            next_parent = None
+            for parent in parents:
+                if parent.pk not in visited:
+                    next_parent = parent
+                    visited.add(parent.pk)
+                    break
+
+            if not next_parent:
+                break
+
+            ancestors.append(next_parent)
+            current = next_parent
+
+        ancestors.reverse()
+        return ancestors
+
+    def has_cycle_with(self, potential_parent):
+        """Checks if adding a parent would create a cycle."""
+        if potential_parent == self:
+            return True
+        return self in potential_parent.get_ancestors()
+
+    def clear_hierarchy_cache(self):
+        """Clear cached hierarchy data for this object and related objects."""
+        model_name = self._meta.model_name
+        cache.delete(f"{model_name}_descendants_{self.pk}")
+        cache.delete(f"{model_name}_ancestors_{self.pk}")
+
+        for ancestor in self.get_ancestors(use_cache=False):
+            cache.delete(f"{model_name}_descendants_{ancestor.pk}")
+
+        for descendant in self.get_descendants(use_cache=False):
+            cache.delete(f"{model_name}_ancestors_{descendant.pk}")
+
+    def clean(self):
+        """Custom validation to avoid cycles."""
+        super().clean()
+        if self.pk:
+            parent_rel = getattr(self, self._get_parent_rel_name())
+            cycle_error = self._get_cycle_error_message()
+            for parent in parent_rel.all():
+                if self.has_cycle_with(parent):
+                    raise ValidationError(cycle_error)
+
+
+class PersonGroup(HierarchicalDAGMixin, models.Model):
     """Model for a group of persons."""
+
+    parent_rel_name = "parent_groups"
+    child_rel_name = "child_groups"
+    cycle_error_message = gettext_lazy(
+        "Adding this parent would create a cycle in the group hierarchy."
+    )
 
     group_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False)
@@ -824,161 +939,6 @@ class PersonGroup(models.Model):
     def get_absolute_url(self) -> str:
         return reverse("gift_manager:person_group_edit", kwargs={"pk": self.pk})
 
-    def get_children(self):
-        """Returns all direct child groups."""
-        return self.child_groups.all()
-
-    def get_descendants(self, use_cache=True):
-        """Returns all descendant groups (recursively).
-
-        Optimized to fetch all groups in a single query, then traverse
-        the hierarchy purely in memory to avoid N+1 queries.
-
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        # Check cache first
-        cache_key = f"persongroup_descendants_{self.pk}"
-        if use_cache:
-            cached_result = cache.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-
-        # Fetch ALL groups with child relationships in ONE query
-        # This avoids N+1 queries regardless of hierarchy depth
-        all_groups_qs = PersonGroup.objects.prefetch_related("child_groups").all()
-        all_groups = {group.pk: group for group in all_groups_qs}
-
-        # Build a child lookup: parent_pk -> [child_pks]
-        child_lookup = {}
-        for group in all_groups.values():
-            child_lookup[group.pk] = [child.pk for child in group.child_groups.all()]
-
-        # Traverse the hierarchy in memory
-        descendants = set()
-        to_process = list(child_lookup.get(self.pk, []))
-        processed_ids = {self.pk}
-
-        while to_process:
-            current_pk = to_process.pop(0)
-            if current_pk in processed_ids:
-                continue
-
-            processed_ids.add(current_pk)
-            if current_pk in all_groups:
-                descendants.add(all_groups[current_pk])
-                # Add children to process
-                to_process.extend(child_lookup.get(current_pk, []))
-
-        result = list(descendants)
-
-        # Cache the result for 1 hour
-        if use_cache:
-            cache.set(cache_key, result, 3600)
-
-        return result
-
-    def get_ancestors(self, use_cache=True):
-        """Returns all parent groups (up to the root).
-
-        Optimized to fetch all groups in a single query, then traverse
-        the hierarchy purely in memory to avoid N+1 queries.
-
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        # Check cache first
-        cache_key = f"persongroup_ancestors_{self.pk}"
-        if use_cache:
-            cached_result = cache.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-
-        # Fetch ALL groups with parent relationships in ONE query
-        # This avoids N+1 queries regardless of hierarchy depth
-        all_groups_qs = PersonGroup.objects.prefetch_related("parent_groups").all()
-        all_groups = {group.pk: group for group in all_groups_qs}
-
-        # Build a parent lookup: child_pk -> [parent_pks]
-        parent_lookup = {}
-        for group in all_groups.values():
-            parent_lookup[group.pk] = [parent.pk for parent in group.parent_groups.all()]
-
-        # Traverse the hierarchy in memory
-        ancestors = set()
-        to_process = list(parent_lookup.get(self.pk, []))
-        processed_ids = {self.pk}
-
-        while to_process:
-            current_pk = to_process.pop(0)
-            if current_pk in processed_ids:
-                continue
-
-            processed_ids.add(current_pk)
-            if current_pk in all_groups:
-                ancestors.add(all_groups[current_pk])
-                # Add parents to process
-                to_process.extend(parent_lookup.get(current_pk, []))
-
-        result = list(ancestors)
-
-        # Cache the result for 1 hour
-        if use_cache:
-            cache.set(cache_key, result, 3600)
-
-        return result
-
-    def get_primary_ancestors_path(self):
-        """Returns a specific path of ancestors (for breadcrumbs).
-
-        Optimized to fetch all groups in a single query, then traverse
-        purely in memory to avoid N+1 queries.
-        """
-        # Fetch ALL groups with parent relationships in ONE query
-        all_groups_qs = PersonGroup.objects.prefetch_related("parent_groups").all()
-        all_groups = {group.pk: group for group in all_groups_qs}
-
-        # Build a parent lookup: child_pk -> [parent_pks]
-        parent_lookup = {}
-        for group in all_groups.values():
-            parent_lookup[group.pk] = [parent.pk for parent in group.parent_groups.all()]
-
-        # Arbitrarily choosing the first parent at each level
-        ancestors = []
-        current_pk = self.pk
-        visited = {self.pk}
-
-        while True:
-            parent_pks = parent_lookup.get(current_pk, [])
-            if not parent_pks:
-                break
-
-            # Take the first parent that doesn't create a cycle
-            next_parent_pk = None
-            for parent_pk in parent_pks:
-                if parent_pk not in visited:
-                    next_parent_pk = parent_pk
-                    visited.add(parent_pk)
-                    break
-
-            if not next_parent_pk:
-                break
-
-            if next_parent_pk in all_groups:
-                ancestors.append(all_groups[next_parent_pk])
-            current_pk = next_parent_pk
-
-        ancestors.reverse()
-        return ancestors
-
-    def has_cycle_with(self, potential_parent):
-        """Checks if adding a parent would create a cycle."""
-        if potential_parent == self:
-            return True
-
-        # Check if we are already an ancestor of the potential parent
-        return self in potential_parent.get_ancestors()
-
     def get_all_members(self, include_nested=False):
         """Returns all persons in this group.
 
@@ -991,46 +951,15 @@ class PersonGroup(models.Model):
         if not include_nested:
             return self.person_set.all()
 
-        # Get all descendant groups
-        descendant_groups = [self, *self.get_descendants()]
-
-        # Return all persons that belong to any of these groups
-        return Person.objects.filter(groups__in=descendant_groups).distinct()
-
-    def clear_hierarchy_cache(self):
-        """Clear cached hierarchy data for this group and related groups."""
-        # Clear cache for this group
-        cache.delete(f"persongroup_descendants_{self.pk}")
-        cache.delete(f"persongroup_ancestors_{self.pk}")
-
-        # Clear cache for all ancestors (since their descendants changed)
-        for ancestor in self.get_ancestors(use_cache=False):
-            cache.delete(f"persongroup_descendants_{ancestor.pk}")
-
-        # Clear cache for all descendants (since their ancestors changed)
-        for descendant in self.get_descendants(use_cache=False):
-            cache.delete(f"persongroup_ancestors_{descendant.pk}")
-
-    def clean(self):
-        """Custom validation to avoid cycles."""
-        if self.pk:
-            for parent in self.parent_groups.all():
-                if self.has_cycle_with(parent):
-                    raise ValidationError(
-                        gettext_lazy(
-                            "Adding this parent would create a cycle in the group hierarchy."
-                        )
-                    )
+        # The live hierarchy, like the surprise hiding that relies on it
+        descendants = self.hierarchy_subquery([self], include_start=True)
+        return Person.objects.filter(groups__in=descendants).distinct()
 
 
-class PersonGroupPermission(models.Model):
+class PersonGroupPermission(BaseObjectPermission):
     """Model for permissions on a group."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     group = models.ForeignKey(PersonGroup, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
     inherit_permissions = models.BooleanField(
         default=False,
         help_text="If true, this permission level cascades to all child groups",
@@ -1039,15 +968,14 @@ class PersonGroupPermission(models.Model):
     class Meta:
         unique_together = ("user", "group")
 
-    def __str__(self):
-        return f"{self.user} - {self.group} -> {PermissionLevel.get_label(self.permission_type)}"
-
     @classproperty
     def filter_name(self):
         return "group"
 
 
-class GiftTagManager(models.Manager):
+class GiftTagQuerySet(UserPermissionQuerySet):
+    """QuerySet for GiftTag model with hierarchy query methods."""
+
     def accessible_by(self, user):
         """Return all tags accessible by a user."""
         return self.filter(Q(is_public=True) | Q(shared_with=user)).distinct()
@@ -1068,8 +996,18 @@ class GiftTagManager(models.Manager):
         return self.prefetch_related("parent_tags", "child_tags")
 
 
-class GiftTag(models.Model):
+class GiftTagManager(models.Manager.from_queryset(GiftTagQuerySet)):
+    """Manager for GiftTag model with hierarchy query methods."""
+
+
+class GiftTag(HierarchicalDAGMixin, models.Model):
     """Model for a gift tag."""
+
+    parent_rel_name = "parent_tags"
+    child_rel_name = "child_tags"
+    cycle_error_message = gettext_lazy(
+        "Adding this parent would create a cycle in the tag hierarchy."
+    )
 
     tag_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     name = models.TextField(unique=False, null=False, db_index=True)
@@ -1088,216 +1026,27 @@ class GiftTag(models.Model):
     def __str__(self):
         return f"{self.name}"
 
-    def get_children(self):
-        """Returns all direct child tags."""
-        return self.child_tags.all()
-
-    def get_descendants(self, use_cache=True):
-        """Returns all descendant tags (recursively).
-
-        Optimized to fetch all descendants in a single query using prefetch_related,
-        then traverse the hierarchy in memory to avoid N+1 queries.
-
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        # Check cache first
-        cache_key = f"gifttag_descendants_{self.pk}"
-        if use_cache:
-            cached_result = cache.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-
-        # Fetch all potentially needed tags upfront to avoid multiple queries
-        # We'll prefetch child_tags for efficient traversal
-        all_tags = {self.pk: self}
-        descendants = set()
-        to_process = list(self.child_tags.prefetch_related("child_tags").all())
-        processed_ids = {self.pk}
-
-        # Build cache of all tags we'll need
-        for tag in to_process:
-            all_tags[tag.pk] = tag
-
-        while to_process:
-            current = to_process.pop(0)
-            if current.pk in processed_ids:
-                continue
-
-            processed_ids.add(current.pk)
-            descendants.add(current)
-
-            # Get children from prefetched data
-            children = list(current.child_tags.all())
-            for child in children:
-                if child.pk not in processed_ids:
-                    if child.pk not in all_tags:
-                        all_tags[child.pk] = child
-                        # Prefetch for next level
-                        child = GiftTag.objects.prefetch_related("child_tags").get(pk=child.pk)
-                    to_process.append(child)
-
-        result = list(descendants)
-
-        # Cache the result for 1 hour
-        if use_cache:
-            cache.set(cache_key, result, 3600)
-
-        return result
-
-    def get_ancestors(self, use_cache=True):
-        """Returns all parent tags (up to the root).
-
-        Optimized to fetch all ancestors in a single query using prefetch_related,
-        then traverse the hierarchy in memory to avoid N+1 queries.
-
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        # Check cache first
-        cache_key = f"gifttag_ancestors_{self.pk}"
-        if use_cache:
-            cached_result = cache.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-
-        # Fetch all potentially needed tags upfront to avoid multiple queries
-        all_tags = {self.pk: self}
-        ancestors = set()
-        to_process = list(self.parent_tags.prefetch_related("parent_tags").all())
-        processed_ids = {self.pk}
-
-        # Build cache of all tags we'll need
-        for tag in to_process:
-            all_tags[tag.pk] = tag
-
-        while to_process:
-            current = to_process.pop(0)
-            if current.pk in processed_ids:
-                continue
-
-            processed_ids.add(current.pk)
-            ancestors.add(current)
-
-            # Get parents from prefetched data
-            parents = list(current.parent_tags.all())
-            for parent in parents:
-                if parent.pk not in processed_ids:
-                    if parent.pk not in all_tags:
-                        all_tags[parent.pk] = parent
-                        # Prefetch for next level
-                        parent = GiftTag.objects.prefetch_related("parent_tags").get(pk=parent.pk)
-                    to_process.append(parent)
-
-        result = list(ancestors)
-
-        # Cache the result for 1 hour
-        if use_cache:
-            cache.set(cache_key, result, 3600)
-
-        return result
-
-    def get_primary_ancestors_path(self):
-        """Returns a specific path of ancestors (for breadcrumbs).
-
-        Optimized to prefetch parent_tags to avoid N+1 queries.
-        """
-        # Arbitrarily choosing the first parent at each level
-        ancestors = []
-        current = self
-        visited = {self.pk}
-
-        # Prefetch parent_tags for the initial tag
-        if not hasattr(self, "_prefetched_objects_cache"):
-            current = GiftTag.objects.prefetch_related("parent_tags").get(pk=self.pk)
-
-        while True:
-            parents = list(current.parent_tags.all())
-            if not parents:
-                break
-
-            # Take the first parent that doesn't create a cycle
-            next_parent = None
-            for parent in parents:
-                if parent.pk not in visited:
-                    next_parent = parent
-                    visited.add(parent.pk)
-                    break
-
-            if not next_parent:
-                break
-
-            ancestors.append(next_parent)
-            # Prefetch for next iteration
-            current = GiftTag.objects.prefetch_related("parent_tags").get(pk=next_parent.pk)
-
-        ancestors.reverse()
-        return ancestors
-
-    def has_cycle_with(self, potential_parent):
-        """Checks if adding a parent would create a cycle."""
-        if potential_parent == self:
-            return True
-
-        # Check if we are already an ancestor of the potential parent
-        return self in potential_parent.get_ancestors()
-
     def get_all_gifts(self, user=None):
         """Returns gifts associated with this tag and descendants, optionally user-filtered."""
+        tags = GiftTag.objects.filter(pk__in=self.hierarchy_subquery([self], include_start=True))
         if user is None:
-            tags = [self, *self.get_descendants()]
             return Gift.objects.filter(tags__in=tags).distinct()
 
-        accessible_tag_ids = set(GiftTag.objects.accessible_by(user).values_list("pk", flat=True))
-        if self.pk not in accessible_tag_ids:
+        accessible_tags = GiftTag.objects.accessible_by(user)
+        if not accessible_tags.filter(pk=self.pk).exists():
             return Gift.objects.none()
 
-        tags = [
-            self,
-            *[tag for tag in self.get_descendants() if tag.pk in accessible_tag_ids],
-        ]
+        tags = tags.filter(pk__in=accessible_tags.values("pk"))
         return Gift.objects.accessible_by(user).filter(tags__in=tags).distinct()
 
-    def clear_hierarchy_cache(self):
-        """Clear cached hierarchy data for this tag and related tags."""
-        # Clear cache for this tag
-        cache.delete(f"gifttag_descendants_{self.pk}")
-        cache.delete(f"gifttag_ancestors_{self.pk}")
 
-        # Clear cache for all ancestors (since their descendants changed)
-        for ancestor in self.get_ancestors(use_cache=False):
-            cache.delete(f"gifttag_descendants_{ancestor.pk}")
-
-        # Clear cache for all descendants (since their ancestors changed)
-        for descendant in self.get_descendants(use_cache=False):
-            cache.delete(f"gifttag_ancestors_{descendant.pk}")
-
-    def clean(self):
-        """Custom validation to avoid cycles."""
-        if self.pk:
-            for parent in self.parent_tags.all():
-                if self.has_cycle_with(parent):
-                    raise ValidationError(
-                        gettext_lazy(
-                            "Adding this parent would create a cycle in the tag hierarchy."
-                        )
-                    )
-
-
-class GiftTagPermission(models.Model):
+class GiftTagPermission(BaseObjectPermission):
     """Model for permissions on a gift tag."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     gift_tag = models.ForeignKey(GiftTag, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
 
     class Meta:
         unique_together = ("user", "gift_tag")
-
-    def __str__(self) -> str:
-        return f"{self.user} - {self.gift_tag} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
     def filter_name(self):
@@ -1348,20 +1097,13 @@ class Gift(models.Model):
         return f"{self.name}"
 
 
-class GiftPermission(models.Model):
+class GiftPermission(BaseObjectPermission):
     """Model for permissions on a gift."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     gift = models.ForeignKey(Gift, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
 
     class Meta:
         unique_together = ("user", "gift")
-
-    def __str__(self):
-        return f"{self.user} - {self.gift} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
     def filter_name(self):
@@ -1583,20 +1325,13 @@ class Event(models.Model):
         return next_yearly_occurrence(self.date.month, self.date.day, today)
 
 
-class EventPermission(models.Model):
+class EventPermission(BaseObjectPermission):
     """Model for permissions on an event."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
 
     class Meta:
         unique_together = ("user", "event")
-
-    def __str__(self):
-        return f"{self.user} - {self.event} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
     def filter_name(self):
@@ -1848,20 +1583,13 @@ class Relation(models.Model):
         return self.group_id is not None
 
 
-class RelationPermission(models.Model):
+class RelationPermission(BaseObjectPermission):
     """Model for permissions on a relation."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
     relation = models.ForeignKey(Relation, on_delete=models.CASCADE)
-    permission_type = models.IntegerField(
-        choices=PermissionLevel.CHOICES, default=PermissionLevel.VIEWER
-    )
 
     class Meta:
         unique_together = ("user", "relation")
-
-    def __str__(self):
-        return f"{self.user} - {self.relation} -> {PermissionLevel.get_label(self.permission_type)}"
 
     @classproperty
     def filter_name(self):

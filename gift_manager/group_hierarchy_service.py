@@ -10,6 +10,7 @@ from collections.abc import Iterable
 
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.db.models import Q
 from django.utils.translation import gettext
 
 from gift_manager.models import PermissionLevel
@@ -44,17 +45,18 @@ class GroupHierarchyService:
 
     @staticmethod
     def _editable_group_pks(actor, groups: list[PersonGroup]) -> set[int]:
-        pks = {group.pk for group in groups}
         grants = PersonGroupPermission.objects.filter(
             user=actor, permission_type__gte=PermissionLevel.EDITOR
-        ).select_related("group")
-        editable = set()
-        for grant in grants:
-            if grant.group_id in pks:
-                editable.add(grant.group_id)
-            if grant.inherit_permissions:
-                editable.update(d.pk for d in grant.group.get_descendants() if d.pk in pks)
-        return editable
+        )
+        # Editable directly, or as a descendant of a group with a cascading editor grant
+        inherited = PersonGroup.hierarchy_subquery(
+            grants.filter(inherit_permissions=True).values("group_id")
+        )
+        return set(
+            PersonGroup.objects.filter(pk__in=[group.pk for group in groups])
+            .filter(Q(pk__in=grants.values("group_id")) | Q(pk__in=inherited))
+            .values_list("pk", flat=True)
+        )
 
     @classmethod
     def _editable_object_pks(cls, actor, objs: list) -> set[int]:

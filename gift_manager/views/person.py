@@ -240,15 +240,15 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         # Get all groups this person belongs to
         person_groups = list(self.object.groups.all())
 
-        # Get all ancestor groups (parent groups) for inheritance
-        all_groups_with_ancestors = set(person_groups)
-        ancestor_groups_only = set()
-        for group in person_groups:
-            ancestors = group.get_ancestors()
-            all_groups_with_ancestors.update(ancestors)
-            # Only expose ancestors reached through groups the user can see
-            if group.pk in visible_group_ids:
-                ancestor_groups_only.update(a for a in ancestors if a.pk in visible_group_ids)
+        # The person's groups and all their ancestors, for the inherited plans
+        all_groups_with_ancestors = PersonGroup.hierarchy_subquery(
+            person_groups, ancestors=True, include_start=True
+        )
+        # Only expose ancestors reached through groups the user can see
+        visible_groups = [g for g in person_groups if g.pk in visible_group_ids]
+        ancestor_groups_only = PersonGroup.objects.filter(
+            pk__in=PersonGroup.hierarchy_subquery(visible_groups, ancestors=True)
+        ).filter(pk__in=visible_group_ids)
 
         # Add groups to context for display, limited to the groups the user can see
         context["direct_groups"] = [g for g in person_groups if g.pk in visible_group_ids]
