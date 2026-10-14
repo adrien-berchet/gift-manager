@@ -23,13 +23,10 @@ HISTORY_TEMPLATE = "gift_manager/includes/gift_history_partial.html"
 REPEAT_HINT_TEMPLATE = "gift_manager/includes/repeat_gift_hint.html"
 
 
-def _render_history(request, relations) -> HttpResponse:
+def _render_history(request, relations, *, person=None, group=None) -> HttpResponse:
     visible_group_ids = VisibleMetadata.for_request(request).group_ids
-    return render(
-        request,
-        HISTORY_TEMPLATE,
-        {"history": build_gift_history(relations, visible_group_ids)},
-    )
+    history = build_gift_history(relations, visible_group_ids, person=person, group=group)
+    return render(request, HISTORY_TEMPLATE, {"history": history})
 
 
 @login_required
@@ -39,7 +36,7 @@ def person_gift_history(request, pk):
     person = get_object_or_404(
         Person.objects.accessible_by(request.user).prefetch_related("groups"), person_id=pk
     )
-    return _render_history(request, person_history_queryset(request.user, person))
+    return _render_history(request, person_history_queryset(request.user, person), person=person)
 
 
 @login_required
@@ -47,7 +44,7 @@ def person_gift_history(request, pk):
 def person_group_gift_history(request, pk):
     """Return the gift history of a group the user can access."""
     group = get_object_or_404(PersonGroup.objects.accessible_by(request.user), group_id=pk)
-    return _render_history(request, group_history_queryset(request.user, group))
+    return _render_history(request, group_history_queryset(request.user, group), group=group)
 
 
 @login_required

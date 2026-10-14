@@ -31,7 +31,7 @@
                     {% endif %}
                     {% if entry.person_name %}
                     <span class="badge recipient-type-badge recipient-type-badge--person"
-                          title="{{ relation.recipient_type_label }}">
+                          title="{% trans 'Gift plan for this group member' %}">
                         <i class="fas fa-user me-1" aria-hidden="true"></i>{{ entry.person_name }}
                     </span>
                     {% endif %}
