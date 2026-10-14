@@ -517,6 +517,14 @@
         display: none !important;
     }
 
+    /* Visible live region: undo the global off-screen [aria-live] announcer styling. */
+    .dashboard-action-page-status[aria-live] {
+        position: static;
+        width: auto;
+        height: auto;
+        overflow: visible;
+    }
+
     .dashboard-action-page-status {
         min-width: 3.5rem;
         color: var(--text-secondary);
