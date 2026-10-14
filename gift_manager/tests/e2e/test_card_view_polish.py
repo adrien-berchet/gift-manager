@@ -208,6 +208,45 @@ def test_overflow_menu_is_keyboard_operable_and_not_clipped(
     expect(toggle).to_be_focused()
 
 
+def test_card_menu_stays_next_to_its_toggle(logged_in_page: Page, live_server):
+    """Opening the menu of a hovered (lifted) card must not leave the menu anchored to the card.
+
+    The lift is a transitioned transform: while it animated back to none, the fixed menu was
+    positioned against the card, then jumped across the page once the transform was gone.
+    """
+    page = logged_in_page
+    rows = _open_list(page, live_server, "gifts", "gift-grid", "card")
+    row = rows.first
+    toggle = row.locator(".grid-action-menu-toggle")
+    menu = row.locator(".grid-action-menu-list")
+    toggle.hover()
+    page.wait_for_timeout(400)
+
+    toggle.click()
+    expect(menu).to_be_visible()
+    row_transform_when_shown = row.evaluate("row => getComputedStyle(row).transform")
+    offsets = []
+    for _ in range(6):
+        offsets.append(
+            menu.evaluate(
+                """menu => {
+                    const m = menu.getBoundingClientRect();
+                    const t = menu.parentElement
+                        .querySelector('.grid-action-menu-toggle')
+                        .getBoundingClientRect();
+                    return [Math.round(m.right - t.right), Math.round(m.top - t.bottom)];
+                }"""
+            )
+        )
+        page.wait_for_timeout(100)
+
+    assert row_transform_when_shown == "none"
+    assert all(offset == offsets[0] for offset in offsets), offsets
+    right_gap, top_gap = offsets[0]
+    assert abs(right_gap) <= 24, offsets
+    assert 0 <= top_gap <= 8, offsets
+
+
 def test_delete_from_the_menu_uses_the_confirmation_flow(logged_in_page: Page, live_server):
     page = logged_in_page
     rows = _open_list(page, live_server, "gifts", "gift-grid", "card")
@@ -337,6 +376,45 @@ def test_card_title_opens_details_and_double_click_still_edits(logged_in_page: P
     title.click()
     expect(page.locator("#detailPanel")).to_be_visible()
     expect(page.locator("#detailContent")).to_contain_text("Scarf")
+
+
+def test_opening_advanced_tools_keeps_the_rendered_rows(logged_in_page: Page, live_server):
+    """Without saved filters, activating the advanced tools must not re-render the grid.
+
+    A needless re-render replaced the rows while the user (or a test) was already using
+    them, e.g. right after entering selection mode.
+    """
+    page = logged_in_page
+    rows = _open_list(page, live_server, "gifts", "gift-grid", "card")
+    rows.first.evaluate("row => { window.__firstRow = row; }")
+
+    page.locator("details.advanced-list-tools").first.evaluate("el => { el.open = true; }")
+    page.locator("[id^='toggle-selection-']").first.click()
+    expect(rows.first.locator(".bulk-select-item")).to_be_visible()
+    page.wait_for_timeout(500)
+
+    assert rows.first.evaluate("row => row === window.__firstRow && row.isConnected")
+
+
+def test_opening_advanced_tools_restores_a_saved_search(
+    logged_in_page: Page, live_server, seed_data_e2e
+):
+    """A search saved by a previous visit is still applied when the tools activate."""
+    _own(seed_data_e2e.alice, GiftFactory(name="Saved search target"))
+    page = logged_in_page
+    rows = _open_list(page, live_server, "gifts", "gift-grid", "card")
+    assert rows.count() > 1
+    page.evaluate(
+        """() => localStorage.setItem('filter-state-gift-grid', JSON.stringify({
+            search: 'saved search target', columnFilters: [], timestamp: Date.now(),
+        }))"""
+    )
+    rows = _open_list(page, live_server, "gifts", "gift-grid", "card")
+
+    page.locator("details.advanced-list-tools").first.evaluate("el => { el.open = true; }")
+
+    expect(rows).to_have_count(1)
+    expect(rows.first).to_contain_text("Saved search target")
 
 
 def test_selection_checkbox_sits_in_the_card_header(logged_in_page: Page, live_server):

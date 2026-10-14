@@ -43,8 +43,11 @@
         // Set up filter event handlers
         setupFilterEventHandlers(gridId, grid, originalData, filterState);
 
-        // Apply initial filters
-        applyFilters(grid, originalData, filterState);
+        // Apply saved filters. Without any, the grid already shows the unfiltered data, and
+        // re-rendering it would replace rows the user may already be interacting with.
+        if (filterState.search || filterState.columnFilters.size > 0) {
+            applyFilters(grid, originalData, filterState);
+        }
     }
 
     /**

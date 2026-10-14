@@ -832,11 +832,14 @@
 
 /* The row holding an open overflow menu: no transform (the card hover lift) or will-change
    (swipeable rows), which would anchor the fixed menu to the row and trap it in the row's
-   stacking context, and raised above the following rows */
+   stacking context, and raised above the following rows. The transform is dropped at once:
+   animating it back to none would keep the row as the menu's containing block while the menu
+   is positioned, so the menu would jump away once the animation ends */
 .gridjs-tr:has(.grid-action-menu .dropdown-menu.show) {
     position: relative;
     z-index: 3;
     transform: none;
+    transition: none;
     will-change: auto;
 }
 
