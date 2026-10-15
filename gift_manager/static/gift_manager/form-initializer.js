@@ -346,27 +346,11 @@
                 // Disable select during update
                 this.disabled = true;
 
-                // Get CSRF token
-                function getCookie(name) {
-                    let cookieValue = null;
-                    if (document.cookie && document.cookie !== "") {
-                        const cookies = document.cookie.split(";");
-                        for (let i = 0; i < cookies.length; i++) {
-                            const cookie = cookies[i].trim();
-                            if (cookie.substring(0, name.length + 1) === name + "=") {
-                                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                                break;
-                            }
-                        }
-                    }
-                    return cookieValue;
-                }
-
                 // Send update request
                 const formData = new FormData();
                 formData.append("user_id", userId);
                 formData.append("permission_level", permissionValue);
-                formData.append("csrfmiddlewaretoken", getCookie("csrftoken"));
+                formData.append("csrfmiddlewaretoken", window.GMUtils.getCsrfToken(form));
 
                 fetch(form.action, {
                     method: "POST",
@@ -384,8 +368,8 @@
                     })
                     .then((data) => {
                         // A surprise plan is hidden from the person it was just shared with
-                        if (data.warning && window.showNotification) {
-                            window.showNotification(data.warning, "warning");
+                        if (data.warning) {
+                            window.GMUtils.showNotification(data.warning, "warning");
                         }
                         // Show success feedback (optional)
                         if (statusSpan) {
@@ -409,13 +393,10 @@
                             statusSpan.style.display = "inline-block";
                         }
                         // Show notification
-                        if (window.showNotification) {
-                            window.showNotification(
-                                (window.GiftManager?.i18n?.permissionUpdateFailed) ||
-                                    "Error updating permission. Please try again.",
-                                "error"
-                            );
-                        }
+                        const errorMsg =
+                            (window.GiftManager?.i18n?.permissionUpdateFailed) ||
+                            "Error updating permission. Please try again.";
+                        window.GMUtils.showNotification(errorMsg, "error");
                     })
                     .finally(() => {
                         // Re-enable select

@@ -35,30 +35,19 @@
     }
 
     function escapeHtml(value) {
-        const replacements = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;'
-        };
-        return String(value ?? '').replace(/[&<>"']/g, character => replacements[character]);
+        return window.GMUtils.escapeHtml(value);
     }
 
     function escapeAttribute(value) {
-        return escapeHtml(value);
+        return window.GMUtils.escapeAttribute(value);
     }
 
     function sanitizeUrl(value) {
-        const url = String(value ?? '').trim();
-        if (!url) return '';
-        if (/^(https?:|mailto:|#)/i.test(url)) return url;
-        if (url.startsWith('/') && !url.startsWith('//')) return url;
-        return '#';
+        return window.GMUtils.sanitizeUrl(value);
     }
 
     function safeUrl(value) {
-        return escapeAttribute(sanitizeUrl(value));
+        return window.GMUtils.safeUrl(value);
     }
 
     function linkHtml(url, text, attrs = '') {
@@ -118,18 +107,7 @@
     }
 
     function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+        return window.GMUtils.getCookie(name);
     }
 
     async function parseStatusError(response) {

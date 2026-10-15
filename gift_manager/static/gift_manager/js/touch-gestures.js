@@ -601,21 +601,11 @@
         },
 
         getCsrfToken: function () {
-            const cookies = document.cookie.split(";");
-            for (let cookie of cookies) {
-                const [name, value] = cookie.trim().split("=");
-                if (name === "csrftoken") {
-                    return decodeURIComponent(value);
-                }
-            }
-            return "";
+            return window.GMUtils.getCsrfToken();
         },
 
         showNotification: function (message, type) {
-            if (window.showNotification) {
-                window.showNotification(message, type);
-            } else {
-            }
+            return window.GMUtils.showNotification(message, type);
         },
     };
 

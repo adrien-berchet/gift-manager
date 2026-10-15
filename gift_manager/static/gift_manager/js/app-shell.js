@@ -5,7 +5,7 @@
 (function () {
     const config = window.GiftManager || {};
     const i18n = config.i18n || {};
-    const getCookie = config.getCookie;
+    const getCookie = window.GMUtils.getCookie;
 
     // Dynamically adjust body padding to match navbar height
     function adjustBodyPadding() {
@@ -165,9 +165,7 @@
         });
 
         function escapeNotificationHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = String(text || '');
-            return div.innerHTML;
+            return window.GMUtils.escapeHtml(text);
         }
 
         let toastCounter = 0;
@@ -220,6 +218,10 @@
                 toastElement.remove();
             });
         };
+
+        if (window.GMUtils && typeof window.GMUtils.flushNotifications === 'function') {
+            window.GMUtils.flushNotifications();
+        }
 
         // Flash messages queued by the server (django.contrib.messages) are shown as toasts,
         // which disappear on their own; the page renders them as JSON in #flash-messages

@@ -115,28 +115,15 @@
     });
 
     function escapeHtml(value) {
-        if (window.GridUtils?.escapeHtml) return window.GridUtils.escapeHtml(value);
-        const replacements = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-        };
-        return String(value ?? "").replace(/[&<>"']/g, (character) => replacements[character]);
+        return window.GMUtils.escapeHtml(value);
     }
 
     function escapeAttribute(value) {
-        if (window.GridUtils?.escapeAttribute) return window.GridUtils.escapeAttribute(value);
-        return escapeHtml(value);
+        return window.GMUtils.escapeAttribute(value);
     }
 
     function safeUrl(value) {
-        if (window.GridUtils?.safeUrl) return window.GridUtils.safeUrl(value);
-        const url = String(value ?? "").trim();
-        if (/^(https?:|mailto:|#)/i.test(url)) return escapeAttribute(url);
-        if (url.startsWith("/") && !url.startsWith("//")) return escapeAttribute(url);
-        return "#";
+        return window.GMUtils.safeUrl(value);
     }
 
     function translate(key, fallback) {

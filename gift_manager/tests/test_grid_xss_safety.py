@@ -24,6 +24,7 @@ const vm = require("vm");
 
 const context = {
   window: {},
+  document: { cookie: "" },
   gridjs: { html: (value) => value },
   console,
   setTimeout,
@@ -31,6 +32,10 @@ const context = {
 };
 vm.createContext(context);
 
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/js/core-utils.js", "utf8"),
+  context
+);
 vm.runInContext(
   fs.readFileSync("gift_manager/static/gift_manager/grid-utils.js", "utf8"),
   context
@@ -103,10 +108,15 @@ assert(actionsHtml.includes('data-entity-id="&lt;img'), "permission action IDs s
 
 const fallbackContext = {
   window: {},
+  document: { cookie: "" },
   gridjs: { html: (value) => value },
   console,
 };
 vm.createContext(fallbackContext);
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/js/core-utils.js", "utf8"),
+  fallbackContext
+);
 vm.runInContext(
   fs.readFileSync("gift_manager/static/gift_manager/grid-actions.js", "utf8"),
   fallbackContext
@@ -159,6 +169,10 @@ const context = {
 };
 vm.createContext(context);
 
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/js/core-utils.js", "utf8"),
+  context
+);
 vm.runInContext(
   fs.readFileSync("gift_manager/static/gift_manager/grid-utils.js", "utf8"),
   context
@@ -221,7 +235,7 @@ function assert(condition, message) {
     )
 
 
-def _render_hostile_link_in_browser(grid_utils: str, payload: str) -> dict:
+def _render_hostile_link_in_browser(core_utils: str, grid_utils: str, payload: str) -> dict:
     """Render a hostile link label in Chromium and report what the DOM did.
 
     Returns {"skip": reason} when Chromium is unavailable.
@@ -251,6 +265,7 @@ def _render_hostile_link_in_browser(grid_utils: str, payload: str) -> dict:
                 </html>
                 """,
             )
+            page.add_script_tag(content=core_utils)
             page.add_script_tag(content=grid_utils)
 
             safe_html = page.evaluate(
@@ -274,12 +289,15 @@ def _render_hostile_link_in_browser(grid_utils: str, payload: str) -> dict:
 def test_grid_html_helpers_render_hostile_values_safely_in_browser():
     """Hostile formatter values should render as text in a real browser DOM."""
     payload = '<img src=x onerror="window.__xssExecuted = true">'
+    core_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/js/core-utils.js").read_text()
     grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/grid-utils.js").read_text()
 
     # Sync Playwright refuses to start on a thread that already runs an asyncio loop,
     # which is the case once other Playwright/live-server fixtures ran in this session.
     with ThreadPoolExecutor(max_workers=1) as executor:
-        result = executor.submit(_render_hostile_link_in_browser, grid_utils, payload).result()
+        result = executor.submit(
+            _render_hostile_link_in_browser, core_utils, grid_utils, payload
+        ).result()
 
     if "skip" in result:
         pytest.skip(result["skip"])

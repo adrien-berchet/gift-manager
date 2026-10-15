@@ -579,70 +579,7 @@
     // =========================================================================
 
     function showNotification(message, type = 'success', options = {}) {
-        const { duration = null, icon = null, action = null } = options;
-
-        // Use existing notification system if available
-        if (typeof window.showNotification === 'function' && window.showNotification !== showNotification) {
-            return window.showNotification(message, type, duration);
-        }
-
-        // Create container if needed
-        let container = document.getElementById('notifications-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'notifications-container';
-            container.className = 'notifications-container';
-            document.body.appendChild(container);
-        }
-
-        // Determine icon based on type
-        const icons = {
-            success: 'fa-check-circle',
-            info: 'fa-info-circle',
-            warning: 'fa-exclamation-triangle',
-            danger: 'fa-times-circle',
-            error: 'fa-times-circle'
-        };
-
-        const actualIcon = icon || icons[type] || icons.info;
-
-        // Create notification
-        const notification = document.createElement('div');
-        notification.className = `notification notification-${type} animate-slide-in`;
-        notification.innerHTML = `
-            <div class="notification-icon">
-                <i class="fas ${actualIcon}"></i>
-            </div>
-            <div class="notification-content">
-                <div class="notification-message">${message}</div>
-                ${action ? `<a href="${action.url}" class="notification-action">${action.text}</a>` : ''}
-            </div>
-            <button type="button" class="notification-close" aria-label="Close">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        container.appendChild(notification);
-
-        // Animate in
-        requestAnimationFrame(() => {
-            notification.classList.add('show');
-        });
-
-        // Close button
-        notification.querySelector('.notification-close').addEventListener('click', () => {
-            dismissNotification(notification);
-        });
-
-        // Auto dismiss
-        const autoDuration = duration || (type === 'danger' ? 10000 : type === 'warning' ? 8000 : 5000);
-        setTimeout(() => dismissNotification(notification), autoDuration);
-    }
-
-    function dismissNotification(notification) {
-        notification.classList.remove('show');
-        notification.classList.add('hide');
-        setTimeout(() => notification.remove(), 300);
+        return window.GMUtils.showNotification(message, type, options);
     }
 
     // =========================================================================
@@ -742,7 +679,6 @@
 
         // Notifications
         showNotification,
-        dismissNotification,
 
         // Utilities
         getTranslation,
