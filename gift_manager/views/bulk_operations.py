@@ -115,9 +115,9 @@ class BulkOperationView(LoginRequiredMixin, View):
         model = self.ENTITY_MODELS[entity_type]
         results = {
             "success": True,
-            "deleted": [],
+            PermissionService.DELETE_RESULT_DELETED: [],
             "failed": [],
-            "shared_removed": [],
+            PermissionService.DELETE_RESULT_UNSHARED: [],
             "permission_denied": [],
         }
 
@@ -127,8 +127,8 @@ class BulkOperationView(LoginRequiredMixin, View):
                     self._handle_bulk_delete_item(request, model, entity_type, entity_id, results)
 
                 # Generate success message
-                deleted_count = len(results["deleted"])
-                shared_removed_count = len(results["shared_removed"])
+                deleted_count = len(results[PermissionService.DELETE_RESULT_DELETED])
+                shared_removed_count = len(results[PermissionService.DELETE_RESULT_UNSHARED])
                 failed_count = len(results["failed"])
                 permission_denied_count = len(results["permission_denied"])
 
@@ -191,19 +191,7 @@ class BulkOperationView(LoginRequiredMixin, View):
             model.objects.accessible_by(request.user),
             **{uuid_field: entity_id},
         )
-
-        permission_level = PermissionService.get_effective_permission(obj, request.user)
-        if permission_level < PermissionLevel.EDITOR:
-            return "permission_denied"
-
-        if PermissionService.has_other_access_holder(obj, request.user):
-            PermissionService.lock_object(obj)
-            PermissionService.assert_can_leave_object(request.user, obj)
-            PermissionService.delete_permission(request.user, obj)
-            return "shared_removed"
-
-        obj.delete()
-        return "deleted"
+        return PermissionService.delete_or_leave(request.user, obj)
 
     def handle_bulk_share(
         self, request: HttpRequest, entity_type: str, entity_ids: list[str]

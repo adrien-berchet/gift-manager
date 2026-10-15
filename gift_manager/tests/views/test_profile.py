@@ -16,6 +16,7 @@ from django.utils import timezone
 
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
+from gift_manager.invitations import INVITATION_TOKEN_SESSION_KEY
 from gift_manager.models import Gift
 from gift_manager.models import Invitation
 from gift_manager.models import PermissionLevel
@@ -25,7 +26,6 @@ from gift_manager.permissions import create_or_update_permission
 from gift_manager.permissions import get_permission
 from gift_manager.services import PermissionService
 from gift_manager.views import ProfileDetailView
-from gift_manager.views.profile import INVITATION_TOKEN_SESSION_KEY
 
 
 @pytest.mark.django_db

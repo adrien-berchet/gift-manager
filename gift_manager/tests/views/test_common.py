@@ -10,6 +10,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
+from gift_manager.gift_plan_cards import DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP
 from gift_manager.models import Event
 from gift_manager.models import GiftTagPermission
 from gift_manager.models import PermissionLevel
@@ -24,7 +25,6 @@ from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.views import get_user
 from gift_manager.views import home
-from gift_manager.views.common import DASHBOARD_MAX_RENDERED_ACTIONS_PER_GROUP
 
 
 @pytest.mark.django_db

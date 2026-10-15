@@ -1,7 +1,7 @@
 """Reminder digest: what needs a user's attention in the coming days.
 
 The digest reuses the dashboard rules instead of re-implementing urgency: overdue and
-due-soon gift plans come from ``_build_gift_plan_action_groups`` (with the user's lookahead
+due-soon gift plans come from ``build_gift_plan_action_groups`` (with the user's lookahead
 as the "due soon" window) and birthdays from ``build_upcoming_birthdays``. Everything is read
 through ``accessible_by(user)`` at build time, so nothing the user lost access to can leak.
 """
@@ -19,11 +19,11 @@ from django.utils import timezone
 
 from gift_manager.birthdays import PLAN_COVERAGE_DAYS
 from gift_manager.birthdays import build_upcoming_birthdays
+from gift_manager.gift_plan_cards import build_gift_plan_action_groups
 from gift_manager.models import Event
 from gift_manager.models import Relation
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_terminal_status
-from gift_manager.views.common import _build_gift_plan_action_groups
 
 UNSUBSCRIBE_SALT = "gift_manager.digest_unsubscribe"
 # Daily, weekly and monthly events would show up in every digest: only the ones that really
@@ -149,7 +149,7 @@ def build_digest(user, today: date | None = None, lookahead_days: int | None = N
     )
     groups = {
         group["key"]: [item["relation"] for item in group["items"]]
-        for group in _build_gift_plan_action_groups(
+        for group in build_gift_plan_action_groups(
             plans, user=user, today=today, now=now, due_soon_days=lookahead_days
         )
     }

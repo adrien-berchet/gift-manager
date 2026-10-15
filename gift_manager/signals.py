@@ -5,7 +5,7 @@ from allauth.account.signals import email_confirmed
 from django.dispatch import receiver
 
 from gift_manager.adapters import ensure_user_email_encoded
-from gift_manager.views.profile import accept_pending_invitation_for_verified_email
+from gift_manager.invitations import accept_pending_invitation_for_verified_email
 
 
 @receiver(email_confirmed, sender=EmailAddress)

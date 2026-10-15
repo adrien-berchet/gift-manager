@@ -53,6 +53,9 @@ class PermissionService:
         PermissionLevel.OWNER,
     }
 
+    DELETE_RESULT_DELETED = "deleted"
+    DELETE_RESULT_UNSHARED = "shared_removed"
+
     @staticmethod
     def get_permission_model(obj) -> type[Model] | None:
         """Get the permission model for the given object."""
@@ -168,6 +171,47 @@ class PermissionService:
 
         if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
             raise PermissionDenied(gettext("At least one owner is required."))
+
+    @classmethod
+    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False) -> str:
+        """Delete an object, or remove actor's access if it is shared with other users.
+
+        Args:
+            actor: The user requesting the deletion or leave.
+            obj: The model instance to delete or leave.
+            is_leave_request: If True, actor explicitly requested to leave access (does not
+                require editor permission, but still enforces assert_can_leave_object).
+
+        Returns:
+            "shared_removed" if actor's access was removed while other users retain access.
+            "deleted" if the object was completely deleted.
+
+        Raises:
+            PermissionDenied: If actor lacks permission to delete the object or leave access.
+        """
+        cls.lock_object(obj)
+
+        if is_leave_request:
+            cls.assert_can_leave_object(actor, obj)
+            cls.delete_permission(actor, obj)
+            return cls.DELETE_RESULT_UNSHARED
+
+        if cls.has_other_access_holder(obj, actor):
+            permission = cls.get_effective_permission(obj, actor)
+            if permission < PermissionLevel.EDITOR:
+                raise PermissionDenied(
+                    gettext("Use the leave access action to remove your own access.")
+                )
+            cls.assert_can_leave_object(actor, obj)
+            cls.delete_permission(actor, obj)
+            return cls.DELETE_RESULT_UNSHARED
+
+        permission = cls.get_effective_permission(obj, actor)
+        if permission < PermissionLevel.EDITOR:
+            raise PermissionDenied(gettext("You do not have permission to delete this object."))
+
+        obj.delete()
+        return cls.DELETE_RESULT_DELETED
 
     @classmethod
     def has_other_access_holder(cls, obj, user) -> bool:

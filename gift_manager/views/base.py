@@ -864,41 +864,16 @@ class DeleteSharedMixin:
         """
         with transaction.atomic():
             self.object = self.get_object()
-            # Leaving or deleting can remove the last owner's access: serialize with other
-            # permission changes (the row lock is held until the transaction ends)
-            PermissionService.lock_object(self.object)
             success_url = self.get_success_url()
+            action = PermissionService.delete_or_leave(
+                request.user, self.object, is_leave_request=self.is_leave_access_request()
+            )
 
-            if self.is_leave_access_request():
-                # If shared, only remove the sharing with the current user
-                PermissionService.assert_can_leave_object(request.user, self.object)
-                PermissionService.delete_permission(request.user, self.object)
-
-                success_message = gettext(
-                    "You no longer have access to this {}, but it remains shared with other users"
-                ).format(gettext(self.get_display_object_type()).lower())
-            elif PermissionService.has_other_access_holder(self.object, request.user):
-                permission = PermissionService.get_effective_permission(self.object, request.user)
-                if permission < PermissionLevel.EDITOR:
-                    raise PermissionDenied(
-                        gettext("Use the leave access action to remove your own access.")
-                    )
-
-                PermissionService.assert_can_leave_object(request.user, self.object)
-                PermissionService.delete_permission(request.user, self.object)
-
+            if action == PermissionService.DELETE_RESULT_UNSHARED:
                 success_message = gettext(
                     "You no longer have access to this {}, but it remains shared with other users"
                 ).format(gettext(self.get_display_object_type()).lower())
             else:
-                permission = PermissionService.get_effective_permission(self.object, request.user)
-                if permission < PermissionLevel.EDITOR:
-                    raise PermissionDenied(
-                        gettext("You do not have permission to delete this object.")
-                    )
-
-                # If not shared, completely delete the object
-                self.object.delete()
                 success_message = gettext("{} successfully deleted").format(
                     gettext(self.get_display_object_type())
                 )
