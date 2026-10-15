@@ -5,6 +5,7 @@ from django import forms
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
+from django.db.models import Model
 from django.db.models import Q
 from django.db.models import QuerySet
 from django.utils import formats
@@ -598,14 +599,15 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         child_groups = self.cleaned_data.get("child_groups")
 
         if not self.instance or not self.instance.pk:
-            # For new groups, no cycle check needed
-            # (assuming the new group hasn't been saved yet, so it can't be an ancestor of anyone)
             return child_groups
 
-        # Making C a child of this group P creates a cycle when C is already an ancestor of P
-        ancestors = self.instance.get_ancestors()
         for child in child_groups:
-            if child in ancestors:
+            if child.pk == self.instance.pk:
+                raise forms.ValidationError(gettext_lazy("A group cannot be a child of itself."))
+
+        ancestor_ids = {a.pk for a in self.instance.get_ancestors()}
+        for child in child_groups:
+            if child.pk in ancestor_ids:
                 raise forms.ValidationError(
                     gettext_lazy(
                         "Adding '%(child)s' as a child would create a cycle in the group "
@@ -613,10 +615,6 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
                     )
                     % {"child": child.name}
                 )
-
-            # Also self cannot be child of self
-            if child == self.instance:
-                raise forms.ValidationError(gettext_lazy("A group cannot be a child of itself."))
 
         return child_groups
 
@@ -802,13 +800,15 @@ class RelationReassignmentMixin:
             return super().save(commit=commit)
 
 
-class PersonRelationForm(
+class BaseRelationScopedForm(
     SurpriseFieldMixin,
     GiftDefaultsPlaceholderMixin,
     RelationReassignmentMixin,
     BaseFormMixin,
     forms.ModelForm,
 ):
+    """Base form providing shared fields, widgets, and access scoping for gift plans."""
+
     class Meta:
         model = Relation
         fields = ["gift", "comment", "url", "price", "event", "status", "due_date", "is_surprise"]
@@ -829,99 +829,73 @@ class PersonRelationForm(
         }
 
     def __init__(self, *args, **kwargs):
-        self.person_id = kwargs.pop("person_id", None)
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
-        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
-        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
-        self.fields["event"].required = False
-
-    def _surprise_recipient(self) -> Person | None:
-        if not (self.person_id and self.user and self.user.is_authenticated):
-            return None
-        return Person.objects.accessible_by(self.user).filter(person_id=self.person_id).first()
-
-    def clean(self):
-        cleaned_data = super().clean()
-        # Ensure that the group is None
-        self.instance.group = None
-
-        # Define the person if the person_id is given
-        if self.person_id:
-            try:
-                queryset = (
-                    Person.objects.accessible_by(self.user)
-                    if self.user and self.user.is_authenticated
-                    else Person.objects.none()
-                )
-                self.instance.person = queryset.get(person_id=self.person_id)
-            except (DjangoValidationError, Person.DoesNotExist):
-                raise forms.ValidationError(
-                    gettext_lazy("The specified person does not exist.")
-                ) from None
-
-        return cleaned_data
+        if "gift" in self.fields:
+            self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
+        if "event" in self.fields:
+            self.fields["event"].queryset = _accessible_or_none(Event, self.user)
+            self.fields["event"].required = False
 
 
-class PersonGroupRelationForm(
-    SurpriseFieldMixin,
-    GiftDefaultsPlaceholderMixin,
-    RelationReassignmentMixin,
-    BaseFormMixin,
-    forms.ModelForm,
-):
-    class Meta:
-        model = Relation
-        fields = ["gift", "comment", "url", "price", "event", "status", "due_date", "is_surprise"]
-        widgets = {
-            "comment": forms.Textarea(attrs={"rows": 3}),
-            **link_price_widgets(),
-            # ISO format: an <input type="date"> ignores values in the locale's format
-            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-        }
-        labels = {
-            "gift": gettext_lazy("Gift"),
-            "comment": gettext_lazy("Comment"),
-            **LINK_PRICE_LABELS,
-            "event": gettext_lazy("Event"),
-            "status": gettext_lazy("Status"),
-            "due_date": gettext_lazy("Due date"),
-            "is_surprise": gettext_lazy("Surprise"),
-        }
+class BaseRecipientBoundRelationForm(BaseRelationScopedForm):
+    """Base form for gift plans bound to a specific recipient type (person or group)."""
+
+    recipient_param: str
+    recipient_model: type[Model]
+    recipient_attr: str
+    other_recipient_attr: str
+    recipient_error_message: str
 
     def __init__(self, *args, **kwargs):
-        self.group_id = kwargs.pop("group_id", None)
-        self.user = kwargs.pop("user", None)
+        self.recipient_id = kwargs.pop(self.recipient_param, None)
         super().__init__(*args, **kwargs)
-        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
-        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
-        self.fields["event"].required = False
 
-    def _surprise_recipient(self) -> PersonGroup | None:
-        if not (self.group_id and self.user and self.user.is_authenticated):
+    def _surprise_recipient(self) -> Model | None:
+        if not (self.recipient_id and self.user and self.user.is_authenticated):
             return None
-        return PersonGroup.objects.accessible_by(self.user).filter(group_id=self.group_id).first()
+        return (
+            self.recipient_model.objects.accessible_by(self.user)
+            .filter(**{self.recipient_param: self.recipient_id})
+            .first()
+        )
 
     def clean(self):
         cleaned_data = super().clean()
-        # Ensure person is None since this is a group relation form
-        self.instance.person = None
+        setattr(self.instance, self.other_recipient_attr, None)
 
-        # Set the group from the group_id parameter
-        if self.group_id:
+        if self.recipient_id:
             try:
                 queryset = (
-                    PersonGroup.objects.accessible_by(self.user)
+                    self.recipient_model.objects.accessible_by(self.user)
                     if self.user and self.user.is_authenticated
-                    else PersonGroup.objects.none()
+                    else self.recipient_model.objects.none()
                 )
-                self.instance.group = queryset.get(group_id=self.group_id)
-            except (DjangoValidationError, PersonGroup.DoesNotExist):
-                raise forms.ValidationError(
-                    gettext_lazy("The specified person group does not exist.")
-                ) from None
+                setattr(
+                    self.instance,
+                    self.recipient_attr,
+                    queryset.get(**{self.recipient_param: self.recipient_id}),
+                )
+            except (DjangoValidationError, self.recipient_model.DoesNotExist):
+                raise forms.ValidationError(self.recipient_error_message) from None
 
         return cleaned_data
+
+
+class PersonRelationForm(BaseRecipientBoundRelationForm):
+    recipient_param = "person_id"
+    recipient_model = Person
+    recipient_attr = "person"
+    other_recipient_attr = "group"
+    recipient_error_message = gettext_lazy("The specified person does not exist.")
+
+
+class PersonGroupRelationForm(BaseRecipientBoundRelationForm):
+    recipient_param = "group_id"
+    recipient_model = PersonGroup
+    recipient_attr = "group"
+    other_recipient_attr = "person"
+    recipient_error_message = gettext_lazy("The specified person group does not exist.")
 
 
 class GiftForm(BaseFormMixin, forms.ModelForm):
@@ -984,13 +958,7 @@ class GiftTagForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class GiftRelationForm(
-    SurpriseFieldMixin,
-    GiftDefaultsPlaceholderMixin,
-    RelationReassignmentMixin,
-    BaseFormMixin,
-    forms.ModelForm,
-):
+class GiftRelationForm(BaseRelationScopedForm):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,
@@ -998,8 +966,7 @@ class GiftRelationForm(
         help_text=gettext_lazy("Choose the person or group this gift plan is for."),
     )
 
-    class Meta:
-        model = Relation
+    class Meta(BaseRelationScopedForm.Meta):
         fields = [
             "recipient",
             "comment",
@@ -1010,30 +977,13 @@ class GiftRelationForm(
             "due_date",
             "is_surprise",
         ]
-        widgets = {
-            # ISO format: an <input type="date"> ignores values in the locale's format
-            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-            "comment": forms.Textarea(attrs={"rows": 3}),
-            **link_price_widgets(),
-        }
-        labels = {
-            "comment": gettext_lazy("Comment"),
-            **LINK_PRICE_LABELS,
-            "event": gettext_lazy("Event"),
-            "status": gettext_lazy("Status"),
-            "due_date": gettext_lazy("Due date"),
-            "is_surprise": gettext_lazy("Surprise"),
-        }
 
     def __init__(self, *args, **kwargs):
         self.gift_id = kwargs.pop("gift_id", None)
-        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["recipient"].choices = build_recipient_choices(self.user)
         if self.instance and self.instance.pk:
             self.initial["recipient"] = self.instance.recipient_key
-        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
-        self.fields["event"].required = False
         if self.gift_id and self.user and self.user.is_authenticated:
             with contextlib.suppress(DjangoValidationError):
                 self.set_gift_placeholders(
@@ -1175,13 +1125,7 @@ class RelationReactionForm(BaseFormMixin, forms.ModelForm):
         return cleaned_data
 
 
-class RelationForm(
-    SurpriseFieldMixin,
-    GiftDefaultsPlaceholderMixin,
-    RelationReassignmentMixin,
-    BaseFormMixin,
-    forms.ModelForm,
-):
+class RelationForm(BaseRelationScopedForm):
     recipient = forms.ChoiceField(
         label=gettext_lazy("Recipient"),
         required=True,
@@ -1191,48 +1135,22 @@ class RelationForm(
     reaction_rating = build_reaction_rating_field()
     reaction_note = build_reaction_note_field()
 
-    class Meta:
-        model = Relation
+    class Meta(BaseRelationScopedForm.Meta):
         fields = [
             "recipient",
-            "gift",
-            "comment",
-            "url",
-            "price",
-            "event",
-            "status",
-            "due_date",
-            "is_surprise",
+            *BaseRelationScopedForm.Meta.fields,
             *REACTION_FIELD_NAMES,
         ]
-        widgets = {
-            "comment": forms.Textarea(attrs={"rows": 3}),
-            **link_price_widgets(),
-            # ISO format: an <input type="date"> ignores values in the locale's format
-            "due_date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
-        }
-        labels = {
-            "gift": gettext_lazy("Gift"),
-            "comment": gettext_lazy("Comment"),
-            **LINK_PRICE_LABELS,
-            "event": gettext_lazy("Event"),
-            "status": gettext_lazy("Status"),
-            "due_date": gettext_lazy("Due date"),
-            "is_surprise": gettext_lazy("Surprise"),
-        }
 
     def __init__(self, *args, **kwargs):
         hide_person = kwargs.pop("hide_person", False)
         hide_group = kwargs.pop("hide_group", False)
-        self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         self.fields["recipient"].choices = build_recipient_choices(
             self.user,
             include_persons=not hide_person,
             include_groups=not hide_group,
         )
-        self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
-        self.fields["event"].queryset = _accessible_or_none(Event, self.user)
         if self.instance and self.instance.pk:
             self.initial["recipient"] = self.instance.recipient_key
         self.rateable_status_ids = {

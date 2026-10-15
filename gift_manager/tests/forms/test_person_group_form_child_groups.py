@@ -177,3 +177,50 @@ def test_check_deep_cycle_simultaneous_add(group_setup):
     assert "Cycle: Group -> Child -> ... -> Parent -> Group" in error_msg
     assert g2.name in error_msg
     assert g1.name in error_msg
+
+
+@pytest.mark.django_db
+def test_cannot_be_child_of_itself(group_setup):
+    """Test that selecting a group as its own child raises the specific error message."""
+    user = group_setup["user"]
+    g2 = group_setup["g2"]
+
+    data = {
+        "name": "Group 2",
+        "parent_groups": [],
+        "child_groups": [g2.pk],
+        "persons": [],
+    }
+    form = PersonGroupForm(data=data, instance=g2, user=user)
+    form.fields["child_groups"].queryset = PersonGroup.objects.all()
+
+    assert not form.is_valid()
+    assert "child_groups" in form.errors
+    assert "A group cannot be a child of itself." in form.errors["child_groups"][0]
+
+
+@pytest.mark.django_db
+def test_clean_child_groups_queries_ancestors_once_for_multiple_children(
+    group_setup, django_assert_num_queries
+):
+    """Validation of N child groups should query the ancestors only once, not per child."""
+    user = group_setup["user"]
+    g2 = group_setup["g2"]
+
+    extra_groups = [PersonGroup.objects.create(name=f"Extra {i}") for i in range(5)]
+    for group in extra_groups:
+        create_or_update_permission(user, group, permission_level=PermissionLevel.EDITOR)
+
+    data = {
+        "name": "Group 2",
+        "parent_groups": [],
+        "child_groups": [g.pk for g in extra_groups],
+        "persons": [],
+    }
+    form = PersonGroupForm(data=data, instance=g2, user=user)
+
+    # Calling clean_child_groups directly to isolate the ancestor query count:
+    form.cleaned_data = {"child_groups": extra_groups}
+    with django_assert_num_queries(1):
+        cleaned = form.clean_child_groups()
+    assert cleaned == extra_groups
