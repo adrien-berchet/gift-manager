@@ -438,13 +438,7 @@ class PersonGroupDetailView(BaseDetailView):
         context["child_groups"] = accessible_groups.filter(parent_groups=self.object).order_by(
             "name"
         )
-        ancestors_path = self.object.get_primary_ancestors_path()
-        accessible_path_ids = set(
-            accessible_groups.filter(pk__in=[group.pk for group in ancestors_path]).values_list(
-                "pk", flat=True
-            )
-        )
-        context["ancestors_path"] = [g for g in ancestors_path if g.pk in accessible_path_ids]
+        context["ancestors_path"] = self.object.get_primary_ancestors_path(within=accessible_groups)
 
         # Direct members only
         context["members"] = (

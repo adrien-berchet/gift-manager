@@ -8,7 +8,6 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.postgres.aggregates import JSONBAgg
-from django.core.cache import cache
 from django.core.exceptions import EmptyResultSet
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator
@@ -732,8 +731,8 @@ class PersonGroupManager(models.Manager.from_queryset(PersonGroupQuerySet)):
 class HierarchicalDAGMixin:
     """Mixin for models structured as a directed acyclic graph (DAG).
 
-    Provides cached recursive queries for descendants and ancestors, path-to-root,
-    cycle detection, and cache invalidation.
+    Provides recursive queries for descendants and ancestors, path-to-root and cycle
+    detection. The hierarchy is always read from the database, so nothing goes stale.
     """
 
     parent_rel_name = None
@@ -815,42 +814,26 @@ class HierarchicalDAGMixin:
         """Returns all direct child objects."""
         return getattr(self, self._get_child_rel_name()).all()
 
-    def get_descendants(self, use_cache=True):
-        """Returns all descendant objects (recursively), in a single query.
+    def get_descendants(self) -> list:
+        """Returns all descendant objects (recursively), in a single query."""
+        return self._get_hierarchy_nodes(ancestors=False)
 
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        return self._get_hierarchy_nodes("descendants", use_cache=use_cache)
+    def get_ancestors(self) -> list:
+        """Returns all parent objects (up to the root), in a single query."""
+        return self._get_hierarchy_nodes(ancestors=True)
 
-    def get_ancestors(self, use_cache=True):
-        """Returns all parent objects (up to the root), in a single query.
-
-        Args:
-            use_cache: If True, use cached results when available (default: True)
-        """
-        return self._get_hierarchy_nodes("ancestors", use_cache=use_cache)
-
-    def _get_hierarchy_nodes(self, kind: str, *, use_cache: bool) -> list:
-        cache_key = f"{self._meta.model_name}_{kind}_{self.pk}"
-        if use_cache:
-            cached_result = cache.get(cache_key)
-            if cached_result is not None:
-                return cached_result
-
+    def _get_hierarchy_nodes(self, *, ancestors: bool) -> list:
         manager = type(self)._default_manager  # noqa: SLF001
-        nodes = self.hierarchy_subquery([self], ancestors=kind == "ancestors")
+        nodes = self.hierarchy_subquery([self], ancestors=ancestors)
         # A cycle stored in the database would bring the node back
-        result = list(manager.filter(pk__in=nodes).exclude(pk=self.pk))
+        return list(manager.filter(pk__in=nodes).exclude(pk=self.pk))
 
-        if use_cache:
-            cache.set(cache_key, result, 3600)
-        return result
-
-    def get_primary_ancestors_path(self):
+    def get_primary_ancestors_path(self, within=None) -> list:
         """Returns a specific path of ancestors (for breadcrumbs).
 
-        Follows parents step-by-step from child to root, avoiding full-table scans.
+        Follows parents step-by-step from child to root, avoiding full-table scans. When
+        ``within`` (a queryset of this model, e.g. the ones a user can access) is given, the
+        ancestors outside it are left out of the path.
         """
         parent_rel_name = self._get_parent_rel_name()
         ancestors = []
@@ -876,25 +859,18 @@ class HierarchicalDAGMixin:
             current = next_parent
 
         ancestors.reverse()
-        return ancestors
+        if within is None or not ancestors:
+            return ancestors
+        kept = set(
+            within.filter(pk__in=[node.pk for node in ancestors]).values_list("pk", flat=True)
+        )
+        return [node for node in ancestors if node.pk in kept]
 
     def has_cycle_with(self, potential_parent):
         """Checks if adding a parent would create a cycle."""
         if potential_parent == self:
             return True
         return self in potential_parent.get_ancestors()
-
-    def clear_hierarchy_cache(self):
-        """Clear cached hierarchy data for this object and related objects."""
-        model_name = self._meta.model_name
-        cache.delete(f"{model_name}_descendants_{self.pk}")
-        cache.delete(f"{model_name}_ancestors_{self.pk}")
-
-        for ancestor in self.get_ancestors(use_cache=False):
-            cache.delete(f"{model_name}_descendants_{ancestor.pk}")
-
-        for descendant in self.get_descendants(use_cache=False):
-            cache.delete(f"{model_name}_ancestors_{descendant.pk}")
 
     def clean(self):
         """Custom validation to avoid cycles."""
@@ -1635,46 +1611,3 @@ def release_claim_of_hidden_recipient(sender, instance, created, **kwargs):
         Relation.objects.filter(pk=instance.pk).update(claimed_by=None, claimed_at=None)
         instance.claimed_by = None
         instance.claimed_at = None
-
-
-# Signal handlers for GiftTag cache invalidation
-@receiver(post_save, sender=GiftTag)
-def clear_gifttag_cache_on_save(sender, instance, **kwargs):
-    """Clear hierarchy cache when a GiftTag is saved."""
-    instance.clear_hierarchy_cache()
-
-
-@receiver(models.signals.m2m_changed, sender=GiftTag.parent_tags.through)
-def clear_gifttag_cache_on_parent_change(sender, instance, action, **kwargs):
-    """Clear hierarchy cache when parent_tags relationship changes."""
-    if action in ["post_add", "post_remove", "post_clear"]:
-        _clear_hierarchy_cache_for_model(GiftTag, "gifttag")
-
-
-# Signal handlers for PersonGroup cache invalidation
-@receiver(post_save, sender=PersonGroup)
-def clear_persongroup_cache_on_save(sender, instance, **kwargs):
-    """Clear hierarchy cache when a PersonGroup is saved."""
-    instance.clear_hierarchy_cache()
-
-
-@receiver(models.signals.m2m_changed, sender=PersonGroup.parent_groups.through)
-def clear_persongroup_cache_on_parent_change(sender, instance, action, **kwargs):
-    """Clear hierarchy cache when parent_groups relationship changes."""
-    if action in ["post_add", "post_remove", "post_clear"]:
-        _clear_hierarchy_cache_for_model(PersonGroup, "persongroup")
-
-
-def _clear_hierarchy_cache_for_model(model, cache_prefix: str) -> None:
-    """Clear all hierarchy cache entries for a tree/DAG model after relationship changes."""
-    object_ids = model.objects.values_list("pk", flat=True)
-    keys = [
-        key
-        for object_id in object_ids
-        for key in (
-            f"{cache_prefix}_descendants_{object_id}",
-            f"{cache_prefix}_ancestors_{object_id}",
-        )
-    ]
-    if keys:
-        cache.delete_many(keys)

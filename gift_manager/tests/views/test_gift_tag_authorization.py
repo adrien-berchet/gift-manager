@@ -374,6 +374,27 @@ def test_detail_hides_private_ancestors_and_inaccessible_descendant_gift_counts(
 
 @pytest.mark.django_db
 @override_settings(USE_I18N=False)
+def test_detail_breadcrumb_skips_a_private_ancestor_in_the_middle(authenticated_client):
+    """Accessible ancestors above a private one stay in the breadcrumb, in order."""
+    root = GiftTag.objects.create(name="Public Root", is_public=True)
+    private_middle = GiftTag.objects.create(name="Secret Middle")
+    parent = GiftTag.objects.create(name="Public Parent", is_public=True)
+    tag = GiftTag.objects.create(name="Public Tag", is_public=True)
+    private_middle.parent_tags.add(root)
+    parent.parent_tags.add(private_middle)
+    tag.parent_tags.add(parent)
+
+    response = authenticated_client.get(
+        reverse("gift_manager:gift_tag_detail", kwargs={"pk": tag.tag_id})
+    )
+
+    assert response.status_code == 200
+    assert response.context["ancestors_path"] == [root, parent]
+    assert b"Secret Middle" not in response.content
+
+
+@pytest.mark.django_db
+@override_settings(USE_I18N=False)
 def test_inline_gift_tag_update_private_uuid_returns_not_found(authenticated_client):
     """Inline edits must not update or expose inaccessible private tags."""
     private_tag = GiftTag.objects.create(name="Secret Tag")

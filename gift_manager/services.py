@@ -182,7 +182,7 @@ class PermissionService:
         if isinstance(obj, PersonGroup):
             return (
                 PersonGroupPermission.objects.filter(
-                    group__in=obj.get_ancestors(use_cache=False),
+                    group__in=PersonGroup.hierarchy_subquery([obj], ancestors=True),
                     inherit_permissions=True,
                 )
                 .exclude(user=user)
@@ -218,7 +218,7 @@ class PermissionService:
         if isinstance(obj, PersonGroup):
             owner_ids.update(
                 PersonGroupPermission.objects.filter(
-                    group__in=obj.get_ancestors(use_cache=False),
+                    group__in=PersonGroup.hierarchy_subquery([obj], ancestors=True),
                     inherit_permissions=True,
                     permission_type=PermissionLevel.OWNER,
                 ).values_list("user_id", flat=True)

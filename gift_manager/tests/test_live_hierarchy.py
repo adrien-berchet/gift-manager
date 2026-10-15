@@ -1,11 +1,10 @@
-"""Hierarchy-dependent paths follow the live group tree, in a constant number of queries.
+"""Hierarchy-dependent paths follow the live tree, in a constant number of queries.
 
-Each test poisons the hierarchy cache with a stale value: the code under test must ignore it
-and resolve the tree with a recursive query instead of one query per group.
+The code under test must resolve the tree with a recursive query instead of one query per
+group or tag.
 """
 
 import pytest
-from django.core.cache import cache
 from django.urls import reverse
 
 from gift_manager.gift_history import group_history_queryset
@@ -34,11 +33,6 @@ def _child_of(parent, **kwargs):
     return child
 
 
-def _poison(kind, node):
-    """Store a stale (empty) hierarchy for ``node`` in the cache."""
-    cache.set(f"{node._meta.model_name}_{kind}_{node.pk}", [], 3600)
-
-
 def _tag_child_of(parent, **kwargs):
     child = GiftTagFactory(**kwargs)
     child.parent_tags.add(parent)
@@ -54,7 +48,6 @@ def _tag_tree(user):
     for name, tag in (("root", root), ("grandchild", grandchild), ("private", private)):
         gifts[name] = GiftFactory(name=f"Gift on {name}", shared_with=[user])
         gifts[name].tags.add(tag)
-    _poison("descendants", root)
     return root, gifts
 
 
@@ -87,7 +80,6 @@ class TestPersonHistory:
         second = PersonGroupFactory()
         person = PersonFactory(groups=[first, second])
         plans = [GroupRelationFactory(group=group, shared_with=[user]) for group in (root, second)]
-        _poison("ancestors", first)
 
         with django_assert_num_queries(1):
             history = set(person_history_queryset(user, person))
@@ -106,7 +98,6 @@ class TestEditableGroups:
         viewer_only = _child_of(PersonGroupFactory())
         _grant(actor, root, PermissionLevel.EDITOR, inherit=True)
         _grant(actor, viewer_only.parent_groups.get(), PermissionLevel.VIEWER, inherit=True)
-        _poison("descendants", root)
 
         with django_assert_num_queries(1):
             editable = GroupHierarchyService.editable_pks(
@@ -125,7 +116,6 @@ class TestEffectiveGroupPermission:
         child = _child_of(_child_of(root))
         _grant(user, root, PermissionLevel.OWNER, inherit=True)
         _grant(user, child, PermissionLevel.VIEWER)
-        _poison("ancestors", child)
 
         with django_assert_num_queries(1):
             level = PermissionService.get_effective_permission_for_group(child, user)
@@ -155,7 +145,6 @@ class TestShareChildGroups:
             create_or_update_permission(
                 owner, group, permission_level=PermissionLevel.OWNER, object_attr="group"
             )
-        _poison("descendants", root)
         client.force_login(owner)
 
         response = client.post(
@@ -179,7 +168,6 @@ class TestPersonDetailAncestors:
         group = _child_of(root, shared_with=[viewer])
         person = PersonFactory(groups=[group], shared_with=[viewer])
         plan = GroupRelationFactory(group=root, shared_with=[viewer])
-        _poison("ancestors", group)
         client.force_login(viewer)
 
         response = client.get(
@@ -197,7 +185,6 @@ class TestGroupHistory:
         root = PersonGroupFactory()
         member = PersonFactory(groups=[_child_of(_child_of(root))])
         plan = RelationFactory(person=member, shared_with=[user])
-        _poison("descendants", root)
 
         assert plan in group_history_queryset(user, root)
 
@@ -237,7 +224,6 @@ class TestGroupDetailNestedContent:
             name: GroupRelationFactory(group=group, shared_with=[viewer])
             for name, group in (("grandchild", grandchild), ("private", private))
         }
-        _poison("descendants", root)
         client.force_login(viewer)
 
         response = client.get(reverse("gift_manager:person_group_detail", args=[root.group_id]))

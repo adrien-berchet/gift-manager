@@ -90,14 +90,16 @@ class GroupHierarchyService:
             return []
         grants = list(
             PersonGroupPermission.objects.filter(
-                group__in=[parent, *parent.get_ancestors(use_cache=False)],
+                group__in=PersonGroup.hierarchy_subquery(
+                    [parent], ancestors=True, include_start=True
+                ),
                 inherit_permissions=True,
             ).select_related("user")
         )
         grants = [grant for grant in grants if not grant.user.is_superuser]
         if not grants:
             return []
-        affected = [child, *child.get_descendants(use_cache=False)]
+        affected = [child, *child.get_descendants()]
         return [
             group
             for group in affected

@@ -229,7 +229,6 @@ class GiftTagUpdateView(PermissionUpdateMixin, BaseUpdateView):
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
         current_tag = self.get_object()
-        # get_descendants() is now cached and optimized
         descendants = current_tag.get_descendants()
         excluded_ids = [current_tag.pk] + [tag.pk for tag in descendants]
         form.fields["parent_tags"].queryset = (
@@ -275,13 +274,9 @@ class GiftTagDetailView(BaseDetailView):
             .filter(parent_tags=self.object)
             .order_by("name")
         )
-        # get_ancestors() is now cached and optimized
-        accessible_tag_ids = set(
-            GiftTag.objects.accessible_by(self.request.user).values_list("pk", flat=True)
+        context["ancestors_path"] = self.object.get_primary_ancestors_path(
+            within=GiftTag.objects.accessible_by(self.request.user)
         )
-        context["ancestors_path"] = [
-            tag for tag in self.object.get_primary_ancestors_path() if tag.pk in accessible_tag_ids
-        ]
 
         # Usage statistics
         direct_gifts_count = context["gifts"].count()

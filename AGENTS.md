@@ -80,7 +80,8 @@ docker compose exec web python manage.py migrate
 
 - Keep business rules in services or model/query helpers, not templates.
 - Use `PermissionService` and the permission facade instead of duplicating access logic.
-- Group and tag hierarchies need cycle checks and cache invalidation.
+- Group and tag hierarchies need cycle checks. Traverse them with `hierarchy_subquery`
+  (one recursive query) rather than per-node loops; they are not cached.
 - HTMX views should return partial templates for HTMX requests and full templates for normal requests.
 - Template partials live in `gift_manager/templates/gift_manager/includes/`.
 - Static JavaScript lives under `gift_manager/static/gift_manager/`.

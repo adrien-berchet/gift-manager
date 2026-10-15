@@ -12,6 +12,7 @@ from django.db import IntegrityError
 from django.db import connection
 from django.db import transaction
 from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.translation import override
 
@@ -1330,73 +1331,19 @@ class TestPersonGroupHierarchy:
         with pytest.raises(ValidationError):
             a.clean()
 
-    def test_clear_hierarchy_cache(self):
-        """Test clear_hierarchy_cache clears related caches."""
+    def test_parent_removal_updates_hierarchy(self):
+        """Removing a parent is reflected in descendants and ancestors."""
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
         child.parent_groups.add(parent)
 
-        # Populate caches
-        parent.get_descendants(use_cache=True)
-        child.get_ancestors(use_cache=True)
-
-        # Verify caches exist
-        assert cache.get(f"persongroup_descendants_{parent.pk}") is not None
-        assert cache.get(f"persongroup_ancestors_{child.pk}") is not None
-
-        # Clear caches
-        child.clear_hierarchy_cache()
-
-        # Verify caches are cleared
-        assert cache.get(f"persongroup_descendants_{child.pk}") is None
-        assert cache.get(f"persongroup_ancestors_{child.pk}") is None
-
-    def test_get_descendants_caching(self):
-        """Test get_descendants uses and respects cache."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        # First call should populate cache
-        descendants1 = parent.get_descendants(use_cache=True)
-        assert len(descendants1) == 1
-
-        # Second call should use cache (verify cache key exists)
-        cache_key = f"persongroup_descendants_{parent.pk}"
-        assert cache.get(cache_key) is not None
-
-        # Call with use_cache=False should bypass cache
-        # (we can't easily verify this, but at least it shouldn't error)
-        descendants2 = parent.get_descendants(use_cache=False)
-        assert len(descendants2) == 1
-
-    def test_get_ancestors_caching(self):
-        """Test get_ancestors uses and respects cache."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        # First call should populate cache
-        ancestors1 = child.get_ancestors(use_cache=True)
-        assert len(ancestors1) == 1
-
-        # Verify cache key exists
-        cache_key = f"persongroup_ancestors_{child.pk}"
-        assert cache.get(cache_key) is not None
-
-    def test_parent_removal_clears_stale_hierarchy_caches(self):
-        """Removing a parent clears cache entries that reference the old relationship."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        assert child in parent.get_descendants(use_cache=True)
-        assert parent in child.get_ancestors(use_cache=True)
+        assert child in parent.get_descendants()
+        assert parent in child.get_ancestors()
 
         child.parent_groups.remove(parent)
 
-        assert child not in parent.get_descendants(use_cache=True)
-        assert parent not in child.get_ancestors(use_cache=True)
+        assert child not in parent.get_descendants()
+        assert parent not in child.get_ancestors()
 
     def test_circular_reference_handling(self):
         """Test that circular references don't cause infinite loops."""
@@ -1866,71 +1813,6 @@ class TestPersonGroupManagerMethods:
 
 
 @pytest.mark.django_db
-class TestPersonGroupCacheHits:
-    """Tests for cache hit scenarios in PersonGroup hierarchy methods."""
-
-    def test_get_descendants_cache_hit(self):
-        """Test get_descendants returns cached result on second call."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        cache_key = f"persongroup_descendants_{parent.pk}"
-
-        # Clear any existing cache
-        cache.delete(cache_key)
-
-        # First call - populates cache
-        descendants1 = parent.get_descendants(use_cache=True)
-        assert len(descendants1) == 1
-
-        # Verify cache was set
-        cached = cache.get(cache_key)
-        assert cached is not None
-
-        # Second call should hit cache
-        descendants2 = parent.get_descendants(use_cache=True)
-        assert len(descendants2) == 1
-        assert descendants1 == descendants2
-
-    def test_get_ancestors_cache_hit(self):
-        """Test get_ancestors returns cached result on second call."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        cache_key = f"persongroup_ancestors_{child.pk}"
-
-        # Clear any existing cache
-        cache.delete(cache_key)
-
-        # First call - populates cache
-        ancestors1 = child.get_ancestors(use_cache=True)
-        assert len(ancestors1) == 1
-
-        # Verify cache was set
-        cached = cache.get(cache_key)
-        assert cached is not None
-
-        # Second call should hit cache
-        ancestors2 = child.get_ancestors(use_cache=True)
-        assert len(ancestors2) == 1
-        assert ancestors1 == ancestors2
-
-    def test_remove_parent_clears_stale_descendant_cache(self):
-        """Removing a parent relation invalidates the old parent's descendants cache."""
-        parent = PersonGroupFactory(name="Parent")
-        child = PersonGroupFactory(name="Child")
-        child.parent_groups.add(parent)
-
-        assert child in parent.get_descendants(use_cache=True)
-
-        child.parent_groups.remove(parent)
-
-        assert child not in parent.get_descendants(use_cache=True)
-
-
-@pytest.mark.django_db
 class TestPersonGroupPrimaryAncestorsPathBranches:
     """Tests for branch coverage in get_primary_ancestors_path."""
 
@@ -1999,41 +1881,8 @@ class TestGiftTagManagerMethods:
 
 
 @pytest.mark.django_db
-class TestGiftTagCacheAndBranches:
-    """Tests for GiftTag cache hits and branch coverage."""
-
-    def test_get_ancestors_cache_hit(self):
-        """Test get_ancestors returns cached result on second call."""
-        parent = GiftTag.objects.create(name="Electronics")
-        child = GiftTag.objects.create(name="Phones")
-        child.parent_tags.add(parent)
-
-        cache_key = f"gifttag_ancestors_{child.pk}"
-        cache.delete(cache_key)
-
-        # First call - populates cache
-        ancestors1 = child.get_ancestors(use_cache=True)
-        assert len(ancestors1) == 1
-
-        # Verify cache was set
-        cached = cache.get(cache_key)
-        assert cached is not None
-
-        # Second call should hit cache
-        ancestors2 = child.get_ancestors(use_cache=True)
-        assert len(ancestors2) == 1
-
-    def test_remove_parent_clears_stale_descendant_cache(self):
-        """Removing a parent tag relation invalidates the old parent's descendants cache."""
-        parent = GiftTag.objects.create(name="Parent")
-        child = GiftTag.objects.create(name="Child")
-        child.parent_tags.add(parent)
-
-        assert child in parent.get_descendants(use_cache=True)
-
-        child.parent_tags.remove(parent)
-
-        assert child not in parent.get_descendants(use_cache=True)
+class TestGiftTagBranches:
+    """Tests for GiftTag branch coverage."""
 
     def test_get_primary_ancestors_path_no_prefetch(self):
         """Test get_primary_ancestors_path when _prefetched_objects_cache doesn't exist."""
@@ -2102,43 +1951,22 @@ class TestGiftTagCacheAndBranches:
 
 
 @pytest.mark.django_db
-class TestGiftTagClearHierarchyCache:
-    """Tests for GiftTag.clear_hierarchy_cache method."""
+class TestGiftTagHierarchyUpdates:
+    """Tests that GiftTag hierarchy reads follow relationship changes."""
 
-    def test_clear_hierarchy_cache(self):
-        """Test clear_hierarchy_cache clears related caches."""
+    def test_parent_removal_updates_hierarchy(self):
+        """Removing a parent is reflected in tag descendants and ancestors."""
         parent = GiftTag.objects.create(name="Parent")
         child = GiftTag.objects.create(name="Child")
         child.parent_tags.add(parent)
 
-        # Populate caches
-        parent.get_descendants(use_cache=True)
-        child.get_ancestors(use_cache=True)
-
-        # Verify caches exist
-        assert cache.get(f"gifttag_descendants_{parent.pk}") is not None
-        assert cache.get(f"gifttag_ancestors_{child.pk}") is not None
-
-        # Clear caches
-        child.clear_hierarchy_cache()
-
-        # Verify caches are cleared for child
-        assert cache.get(f"gifttag_descendants_{child.pk}") is None
-        assert cache.get(f"gifttag_ancestors_{child.pk}") is None
-
-    def test_parent_removal_clears_stale_hierarchy_caches(self):
-        """Removing a parent clears cached tag descendants and ancestors."""
-        parent = GiftTag.objects.create(name="Parent")
-        child = GiftTag.objects.create(name="Child")
-        child.parent_tags.add(parent)
-
-        assert child in parent.get_descendants(use_cache=True)
-        assert parent in child.get_ancestors(use_cache=True)
+        assert child in parent.get_descendants()
+        assert parent in child.get_ancestors()
 
         child.parent_tags.remove(parent)
 
-        assert child not in parent.get_descendants(use_cache=True)
-        assert parent not in child.get_ancestors(use_cache=True)
+        assert child not in parent.get_descendants()
+        assert parent not in child.get_ancestors()
 
 
 @pytest.mark.django_db
@@ -2329,7 +2157,7 @@ class TestHierarchyQueryCounts:
         nodes = self._chain(factory, parent_rel_name, depth)
 
         with django_assert_num_queries(1) as captured:
-            descendants = nodes[0].get_descendants(use_cache=False)
+            descendants = nodes[0].get_descendants()
 
         assert set(descendants) == set(nodes[1:])
         assert "WITH RECURSIVE" in captured.captured_queries[0]["sql"]
@@ -2350,7 +2178,7 @@ class TestHierarchyQueryCounts:
         nodes = self._chain(factory, parent_rel_name, depth)
 
         with django_assert_num_queries(1) as captured:
-            ancestors = nodes[-1].get_ancestors(use_cache=False)
+            ancestors = nodes[-1].get_ancestors()
 
         assert set(ancestors) == set(nodes[:-1])
         assert "WITH RECURSIVE" in captured.captured_queries[0]["sql"]
@@ -2363,8 +2191,8 @@ class TestHierarchyQueryCounts:
         second.parent_groups.add(first)
         first.parent_groups.add(second)
 
-        assert first.get_descendants(use_cache=False) == [second]
-        assert first.get_ancestors(use_cache=False) == [second]
+        assert first.get_descendants() == [second]
+        assert first.get_ancestors() == [second]
 
     def test_diamond_hierarchy_returns_each_node_once(self):
         """A node reachable through several parents is returned once."""
@@ -2376,8 +2204,8 @@ class TestHierarchyQueryCounts:
         right.parent_groups.add(root)
         bottom.parent_groups.add(left, right)
 
-        descendants = root.get_descendants(use_cache=False)
-        ancestors = bottom.get_ancestors(use_cache=False)
+        descendants = root.get_descendants()
+        ancestors = bottom.get_ancestors()
 
         assert sorted(g.pk for g in descendants) == sorted([left.pk, right.pk, bottom.pk])
         assert sorted(g.pk for g in ancestors) == sorted([root.pk, left.pk, right.pk])
@@ -2399,7 +2227,7 @@ class TestHierarchyQueryCounts:
 
         assert accessible == set(nodes[1:])
 
-    def test_accessible_by_ignores_stale_hierarchy_cache(self, user):
+    def test_accessible_by_follows_hierarchy_changes_made_without_signals(self, user):
         """Access granted through a cascading permission follows the live hierarchy."""
         parent = PersonGroupFactory(name="Parent")
         child = PersonGroupFactory(name="Child")
@@ -2412,9 +2240,8 @@ class TestHierarchyQueryCounts:
         )
         assert child in PersonGroup.objects.accessible_by(user)
 
-        # Detach the child without going through the signals that clear the cache
+        # Detach the child with a queryset delete, which sends no m2m_changed signal
         PersonGroup.parent_groups.through.objects.filter(from_persongroup=child).delete()
-        cache.set(f"persongroup_descendants_{parent.pk}", [child], 3600)
 
         assert child not in PersonGroup.objects.accessible_by(user)
 
@@ -2498,3 +2325,88 @@ class TestHierarchyQueryCounts:
             PersonGroup.hierarchy_subquery(PersonGroup.objects.all())
         with pytest.raises(ValueError, match="exactly one column"):
             PersonGroup.hierarchy_subquery(PersonGroup.objects.values("pk", "name"))
+
+
+HIERARCHY_MODELS = [
+    pytest.param(PersonGroupFactory, "parent_groups", id="group"),
+    pytest.param(lambda: GiftTag.objects.create(name="Tag"), "parent_tags", id="tag"),
+]
+
+
+@pytest.mark.django_db
+class TestHierarchyIsNotCached:
+    """The hierarchy is always read from the database: no cache to keep in sync."""
+
+    @pytest.mark.parametrize(("factory", "parent_rel_name"), HIERARCHY_MODELS)
+    def test_results_are_not_stored_in_the_cache(self, factory, parent_rel_name):
+        parent, child = factory(), factory()
+        getattr(child, parent_rel_name).add(parent)
+
+        assert parent.get_descendants() == [child]
+        assert child.get_ancestors() == [parent]
+
+        model_name = parent._meta.model_name
+        assert cache.get(f"{model_name}_descendants_{parent.pk}") is None
+        assert cache.get(f"{model_name}_ancestors_{child.pk}") is None
+
+    @pytest.mark.parametrize(("factory", "parent_rel_name"), HIERARCHY_MODELS)
+    def test_changes_made_without_signals_are_seen(self, factory, parent_rel_name):
+        parent, child = factory(), factory()
+        edges = getattr(child, parent_rel_name)
+        edges.add(parent)
+        assert parent.get_descendants() == [child]
+
+        # A queryset delete on the link table sends no m2m_changed signal
+        edges.through.objects.all().delete()
+
+        assert parent.get_descendants() == []
+        assert child.get_ancestors() == []
+
+    @pytest.mark.parametrize(("factory", "parent_rel_name"), HIERARCHY_MODELS)
+    def test_saving_a_node_runs_no_hierarchy_query(
+        self, django_assert_num_queries, factory, parent_rel_name
+    ):
+        parent, child = factory(), factory()
+        getattr(child, parent_rel_name).add(parent)
+
+        with django_assert_num_queries(1):
+            child.save()
+
+    @pytest.mark.parametrize(("factory", "parent_rel_name"), HIERARCHY_MODELS)
+    def test_linking_nodes_only_touches_the_link_table(self, factory, parent_rel_name):
+        parent, child = factory(), factory()
+        edges = getattr(child, parent_rel_name)
+
+        with CaptureQueriesContext(connection) as captured:
+            edges.add(parent)
+            edges.remove(parent)
+
+        link_table = edges.through._meta.db_table
+        assert all(link_table in query["sql"] for query in captured.captured_queries)
+
+
+@pytest.mark.django_db
+class TestPrimaryAncestorsPathWithin:
+    """The breadcrumb path can be limited to the ancestors inside a queryset."""
+
+    @pytest.mark.parametrize(("factory", "parent_rel_name"), HIERARCHY_MODELS)
+    def test_ancestors_outside_the_queryset_are_left_out_in_order(
+        self, django_assert_num_queries, factory, parent_rel_name
+    ):
+        root, hidden, parent, node = factory(), factory(), factory(), factory()
+        getattr(hidden, parent_rel_name).add(root)
+        getattr(parent, parent_rel_name).add(hidden)
+        getattr(node, parent_rel_name).add(parent)
+        within = type(node).objects.exclude(pk=hidden.pk)
+
+        assert node.get_primary_ancestors_path() == [root, hidden, parent]
+        # One query per level walked (3 parents and the root's empty parents), one to filter
+        with django_assert_num_queries(5):
+            path = node.get_primary_ancestors_path(within=within)
+        assert path == [root, parent]
+
+    def test_root_path_needs_no_filter_query(self, django_assert_num_queries):
+        root = PersonGroupFactory()
+
+        with django_assert_num_queries(1):
+            assert root.get_primary_ancestors_path(within=PersonGroup.objects.all()) == []

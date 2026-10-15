@@ -577,7 +577,6 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         # We need to ensure no selected child is an ancestor of any selected parent.
         children_set = set(child_groups)
         for parent in parent_groups:
-            # We can use get_ancestors() which is cached/optimized on the model
             parent_ancestors = set(parent.get_ancestors())
             cycle_children = children_set.intersection(parent_ancestors)
 
@@ -603,25 +602,10 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
             # (assuming the new group hasn't been saved yet, so it can't be an ancestor of anyone)
             return child_groups
 
-        # Checking if 'self' is an ancestor of the potential child
-        # If 'self' IS an ancestor of 'child', then 'child' is a descendant of 'self'.
-        # Making 'child' a child of 'self' is fine (it's redundant but not a cycle unless child is
-        # also an ancestor).
-        # Wait. A cycle is formed if A -> B -> ... -> A.
-        # If we make C a child of P (P -> C), we must ensure C is not an ancestor of P.
-        # self.instance is P. child is C.
-        # We need to check if P (self) is in C.get_descendants() ?? No.
-        # We need to check if C is an ancestor of P.
-        # P.has_cycle_with(ancestor) checks "if ancestor == self OR self in
-        # ancestor.get_ancestors()"
-        # Here we are adding children.
-        # Cycle if: P -> C implies we cannot have C -> ... -> P.
-        # So we check if P is already in C's descendants? No, that means C is an ancestor of P.
-        # Essentially, creating P -> C is invalid if C is already an ancestor of P.
-
+        # Making C a child of this group P creates a cycle when C is already an ancestor of P
+        ancestors = self.instance.get_ancestors()
         for child in child_groups:
-            # Check if 'child' is an ancestor of 'self' (the group we are editing)
-            if child in self.instance.get_ancestors():
+            if child in ancestors:
                 raise forms.ValidationError(
                     gettext_lazy(
                         "Adding '%(child)s' as a child would create a cycle in the group "
