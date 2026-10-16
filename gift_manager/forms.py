@@ -541,12 +541,23 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         """Validate that adding parent groups won't create a cycle."""
         parent_groups = self.cleaned_data.get("parent_groups")
 
-        if not self.instance or not self.instance.pk:
-            # For new groups, no cycle check needed
+        if not self.instance or not self.instance.pk or not parent_groups:
+            # For new groups or empty selection, no cycle check needed
             return parent_groups
 
         for parent in parent_groups:
-            if self.instance.has_cycle_with(parent):
+            if parent.pk == self.instance.pk:
+                raise forms.ValidationError(
+                    gettext_lazy(
+                        "Adding '%(parent)s' as a parent would create a cycle in the group "
+                        "hierarchy."
+                    )
+                    % {"parent": parent.name}
+                )
+
+        descendant_ids = {d.pk for d in self.instance.get_descendants()}
+        for parent in parent_groups:
+            if parent.pk in descendant_ids:
                 raise forms.ValidationError(
                     gettext_lazy(
                         "Adding '%(parent)s' as a parent would create a cycle in the group "
@@ -563,34 +574,50 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         parent_groups = cleaned_data.get("parent_groups", [])
         child_groups = cleaned_data.get("child_groups", [])
 
-        # Check for direct intersection: a group cannot be both a parent and a child
-        intersection = set(parent_groups).intersection(set(child_groups))
-        if intersection:
-            names = ", ".join([g.name for g in intersection])
-            raise forms.ValidationError(
-                gettext_lazy("The following groups cannot be both parent and child: %(names)s")
-                % {"names": names}
+        if parent_groups and child_groups:
+            # Check for direct intersection: a group cannot be both a parent and a child
+            intersection = set(parent_groups).intersection(set(child_groups))
+            if intersection:
+                names = ", ".join([g.name for g in intersection])
+                raise forms.ValidationError(
+                    gettext_lazy("The following groups cannot be both parent and child: %(names)s")
+                    % {"names": names}
+                )
+
+            # Check for deep/indirect cycles via new relationships in a single query:
+            # Scenario: Adding Parent P and Child C, where C is already an ancestor of P.
+            # This creates G -> C -> ... -> P -> G (Cycle).
+            # We need to ensure no selected child is an ancestor of any selected parent.
+            parent_subquery_start = (
+                parent_groups.order_by().values("pk")
+                if isinstance(parent_groups, QuerySet)
+                else parent_groups
+            )
+            child_pks = {c.pk for c in child_groups}
+            has_cycle = (
+                PersonGroup.objects.filter(pk__in=child_pks)
+                .filter(
+                    pk__in=PersonGroup.hierarchy_subquery(parent_subquery_start, ancestors=True)
+                )
+                .exists()
             )
 
-        # Check for deep/indirect cycles via new relationships
-        # Scenario: Adding Parent P and Child C, where C is already an ancestor of P.
-        # This creates G -> C -> ... -> P -> G (Cycle).
-        # We need to ensure no selected child is an ancestor of any selected parent.
-        children_set = set(child_groups)
-        for parent in parent_groups:
-            parent_ancestors = set(parent.get_ancestors())
-            cycle_children = children_set.intersection(parent_ancestors)
+            if has_cycle:
+                children_set = set(child_groups)
+                for parent in parent_groups:
+                    parent_ancestors = set(parent.get_ancestors())
+                    cycle_children = children_set.intersection(parent_ancestors)
 
-            if cycle_children:
-                names = ", ".join([c.name for c in cycle_children])
-                raise forms.ValidationError(
-                    gettext_lazy(
-                        "Cannot add parent '%(parent)s' and child(ren) '%(children)s' "
-                        "simultaneously because the child(ren) are ancestors of the parent "
-                        "(Cycle: Group -> Child -> ... -> Parent -> Group)."
-                    )
-                    % {"parent": parent.name, "children": names}
-                )
+                    if cycle_children:
+                        names = ", ".join([c.name for c in cycle_children])
+                        raise forms.ValidationError(
+                            gettext_lazy(
+                                "Cannot add parent '%(parent)s' and child(ren) '%(children)s' "
+                                "simultaneously because the child(ren) are ancestors of the parent "
+                                "(Cycle: Group -> Child -> ... -> Parent -> Group)."
+                            )
+                            % {"parent": parent.name, "children": names}
+                        )
 
         return cleaned_data
 
@@ -598,7 +625,7 @@ class PersonGroupForm(BaseFormMixin, forms.ModelForm):
         """Validate that adding child groups won't create a cycle."""
         child_groups = self.cleaned_data.get("child_groups")
 
-        if not self.instance or not self.instance.pk:
+        if not self.instance or not self.instance.pk or not child_groups:
             return child_groups
 
         for child in child_groups:

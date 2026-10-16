@@ -200,6 +200,38 @@ def test_cannot_be_child_of_itself(group_setup):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    "parent_key",
+    [
+        pytest.param("g1", id="itself"),
+        pytest.param("g2", id="direct-child"),
+        pytest.param("g3", id="indirect-descendant"),
+    ],
+)
+def test_cannot_add_itself_or_a_descendant_as_parent(group_setup, parent_key):
+    """Selecting the group itself or any of its descendants as a parent is a cycle."""
+    user = group_setup["user"]
+    g1 = group_setup["g1"]
+    parent = group_setup[parent_key]
+
+    data = {
+        "name": "Group 1",
+        "parent_groups": [parent.pk],
+        "child_groups": [],
+        "persons": [],
+    }
+    form = PersonGroupForm(data=data, instance=g1, user=user)
+    # The field queryset already hides these choices: bypass it to reach clean_parent_groups
+    form.fields["parent_groups"].queryset = PersonGroup.objects.all()
+
+    assert not form.is_valid()
+    assert "parent_groups" in form.errors
+    error_msg = form.errors["parent_groups"][0]
+    assert "would create a cycle" in error_msg
+    assert parent.name in error_msg
+
+
+@pytest.mark.django_db
 def test_clean_child_groups_queries_ancestors_once_for_multiple_children(
     group_setup, django_assert_num_queries
 ):
@@ -224,3 +256,43 @@ def test_clean_child_groups_queries_ancestors_once_for_multiple_children(
     with django_assert_num_queries(1):
         cleaned = form.clean_child_groups()
     assert cleaned == extra_groups
+
+
+@pytest.mark.django_db
+def test_clean_parent_groups_queries_descendants_once_for_multiple_parents(
+    group_setup, django_assert_num_queries
+):
+    """Validation of N parent groups should query the descendants only once, not per parent."""
+    user = group_setup["user"]
+    g2 = group_setup["g2"]
+
+    extra_groups = [PersonGroup.objects.create(name=f"ExtraParent {i}") for i in range(5)]
+    for group in extra_groups:
+        create_or_update_permission(user, group, permission_level=PermissionLevel.EDITOR)
+
+    form = PersonGroupForm(instance=g2, user=user)
+    form.cleaned_data = {"parent_groups": extra_groups}
+    with django_assert_num_queries(1):
+        cleaned = form.clean_parent_groups()
+    assert cleaned == extra_groups
+
+
+@pytest.mark.django_db
+def test_clean_cross_field_cycle_check_queries_once_for_multiple_parents_and_children(
+    group_setup, django_assert_num_queries
+):
+    """Cross-field cycle check should query reachable ancestors in 1 subquery, not per parent."""
+    g2 = group_setup["g2"]
+
+    extra_parents = [PersonGroup.objects.create(name=f"ExtraParent {i}") for i in range(5)]
+    extra_children = [PersonGroup.objects.create(name=f"ExtraChild {i}") for i in range(5)]
+
+    form = PersonGroupForm(instance=g2, user=None)
+    form.cleaned_data = {
+        "parent_groups": extra_parents,
+        "child_groups": extra_children,
+    }
+    with django_assert_num_queries(1):
+        cleaned = form.clean()
+    assert cleaned["parent_groups"] == extra_parents
+    assert cleaned["child_groups"] == extra_children
