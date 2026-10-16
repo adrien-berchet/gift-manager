@@ -233,6 +233,36 @@ class TestHierarchyQueryCounts:
         with pytest.raises(ValueError, match="exactly one column"):
             PersonGroup.hierarchy_subquery(PersonGroup.objects.values("pk", "name"))
 
+    def test_hierarchy_subquery_accepts_ordered_distinct_start(self, user):
+        """Ordering on a distinct queryset does not inject extra columns into the subquery."""
+        parent = PersonGroupFactory(name="Parent")
+        child = PersonGroupFactory(name="Child")
+        child.parent_groups.add(parent)
+        PersonGroupPermission.objects.create(
+            user=user,
+            group=parent,
+            permission_type=PermissionLevel.VIEWER,
+            inherit_permissions=False,
+        )
+
+        start = PersonGroup.objects.accessible_by(user).order_by("name").values("pk")
+        descendants = PersonGroup.hierarchy_subquery(start)
+        assert set(PersonGroup.objects.filter(pk__in=descendants)) == {child}
+
+        with_start = PersonGroup.hierarchy_subquery(start, include_start=True)
+        assert set(PersonGroup.objects.filter(pk__in=with_start)) == {parent, child}
+
+    def test_hierarchy_subquery_accepts_sliced_start(self):
+        """Sliced start querysets are accepted without reordering errors."""
+        groups = [PersonGroupFactory(name=f"Group {i}") for i in range(5)]
+        start = (
+            PersonGroup.objects.filter(pk__in=[g.pk for g in groups])
+            .order_by("pk")
+            .values("pk")[:3]
+        )
+        subquery = PersonGroup.hierarchy_subquery(start, include_start=True)
+        assert set(PersonGroup.objects.filter(pk__in=subquery)) == set(groups[:3])
+
 
 HIERARCHY_MODELS = [
     pytest.param(PersonGroupFactory, "parent_groups", id="group"),

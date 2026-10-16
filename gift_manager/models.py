@@ -775,6 +775,8 @@ class HierarchicalDAGMixin:
         manager = cls._default_manager
         if not isinstance(start, models.QuerySet):
             start = manager.filter(pk__in=[node.pk for node in start]).values("pk")
+        if not start.query.is_sliced:
+            start = start.order_by()
         if len(start.query.values_select) != 1:
             msg = "The start of a hierarchy subquery must select exactly one column."
             raise ValueError(msg)
