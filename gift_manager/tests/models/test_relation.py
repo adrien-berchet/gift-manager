@@ -5,18 +5,13 @@ from datetime import datetime
 import pytest
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db import connection
 from django.db import transaction
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
-
-requires_postgresql = pytest.mark.skipif(
-    connection.vendor == "sqlite",
-    reason="PostgreSQL-specific features (JSONB) not available in SQLite",
-)
+from gift_manager.tests.utils import requires_postgresql
 
 
 @pytest.mark.django_db

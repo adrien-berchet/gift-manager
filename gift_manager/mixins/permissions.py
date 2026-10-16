@@ -33,7 +33,6 @@ class PermissionContextMixin:
         if not self.request.user.is_authenticated:
             return {
                 "user_permissions": {},
-                "user_permissions_json": "{}",
                 "permission_levels": PermissionLevel.CHOICES,
             }
 
@@ -54,7 +53,6 @@ class PermissionContextMixin:
 
         return {
             "user_permissions": permissions,
-            "user_permissions_json": json.dumps(permissions),
             "permission_levels": PermissionLevel.CHOICES,
         }
 

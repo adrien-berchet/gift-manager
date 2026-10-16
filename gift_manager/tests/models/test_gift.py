@@ -3,16 +3,11 @@ import uuid
 from datetime import datetime
 
 import pytest
-from django.db import connection
 
 from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import PermissionLevel
-
-requires_postgresql = pytest.mark.skipif(
-    connection.vendor == "sqlite",
-    reason="PostgreSQL-specific features (JSONB) not available in SQLite",
-)
+from gift_manager.tests.utils import requires_postgresql
 
 
 @pytest.mark.django_db

@@ -157,14 +157,16 @@ class TestPersonGroupListView:
         assert len(tree_data) == 1
         assert tree_data[0]["member_count"] == 1
 
-    def test_management_context_can_skip_permission_json(self):
+    def test_management_context_can_skip_permissions(self):
         """The list view can keep the permission mapping already built by its mixin."""
         group = PersonGroupFactory(name="Group")
         create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
 
         context = get_person_group_management_context(self.user, include_permissions=False)
+        assert "user_permissions" not in context
 
-        assert "user_permissions_json" not in context
+        context_with = get_person_group_management_context(self.user, include_permissions=True)
+        assert "user_permissions" in context_with
 
     def test_list_view_reuses_permission_context(self):
         """The management helper does not recompute permissions after the mixin."""
