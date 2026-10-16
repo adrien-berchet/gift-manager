@@ -12,6 +12,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.views.person import get_person_grid_column_names
+from gift_manager.views.person import get_person_grid_data
 from gift_manager.views.person import get_person_grid_queryset
 from gift_manager.views.person import populate_person_grid_group_info
 from gift_manager.views.person_group import get_person_group_management_context
@@ -56,9 +57,8 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             person_permission_context = self.get_permission_context(person_grid_data)
             context["person_grid_data"] = person_grid_data
             context["person_column_names"] = person_column_names
-            context["person_user_permissions_json"] = person_permission_context[
-                "user_permissions_json"
-            ]
+            context["user_permissions"] = person_permission_context["user_permissions"]
+            context["grid_data"] = get_person_grid_data(person_grid_data)
             context["recipients"] = []
             context["person_count"] = len(person_grid_data)
             context["group_count"] = accessible_groups.count()
@@ -74,7 +74,8 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             context["person_group_column_names"] = group_context["column_names"]
             context["person_group_tree_data"] = group_context["tree_data"]
             context["person_group_has_hierarchy"] = group_context["has_hierarchy"]
-            context["person_group_user_permissions_json"] = group_context["user_permissions_json"]
+            context["user_permissions"] = group_context.get("user_permissions", {})
+            context["grid_data"] = group_context["grid_data"]
             context["recipients"] = []
             context["person_count"] = accessible_persons.count()
             context["group_count"] = len(group_context["data"])

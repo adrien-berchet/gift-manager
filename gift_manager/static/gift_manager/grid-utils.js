@@ -833,7 +833,7 @@
             let extractedData = null;
             let extractedPermissions = null;
 
-            // Try to extract json_script elements first
+            // Extract json_script elements
             try {
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
@@ -841,30 +841,12 @@
                 if (gridDataEl && gridDataEl.textContent) {
                     extractedData = JSON.parse(gridDataEl.textContent);
                 }
+                const permEl = doc.getElementById('user-permissions');
+                if (permEl && permEl.textContent) {
+                    extractedPermissions = JSON.parse(permEl.textContent);
+                }
             } catch (domErr) {
                 console.warn(`[${entityType}List] DOMParser error on refreshed page:`, domErr);
-            }
-
-            // Fallback for pages that have not yet migrated to json_script
-            if (!extractedData) {
-                const dataArrayStr = extractDataArray(html);
-                if (dataArrayStr) {
-                    try {
-                        extractedData = new Function('return ' + dataArrayStr)();
-                    } catch (e) {
-                        console.warn(`[${entityType}List] Error evaluating legacy dataArrayStr:`, e);
-                    }
-                }
-            }
-            if (!extractedPermissions) {
-                const permissionsStr = extractPermissions(html);
-                if (permissionsStr) {
-                    try {
-                        extractedPermissions = new Function('return ' + permissionsStr)();
-                    } catch (e) {
-                        console.warn(`[${entityType}List] Error evaluating legacy permissionsStr:`, e);
-                    }
-                }
             }
 
             if (extractedData) {
@@ -949,164 +931,6 @@
             // Fallback to page reload on fetch error
             setTimeout(() => window.location.reload(), 300);
         });
-    }
-
-    /**
-     * Extract the data array from HTML using bracket counting
-     * This is more robust than regex for nested arrays
-     * @param {string} html - The HTML content
-     * @returns {string|null} - The data array string or null if not found
-     */
-    function extractDataArray(html) {
-        // Find the start of the data declaration
-        const startMarker = 'const data = [';
-        const startIndex = html.indexOf(startMarker);
-
-        if (startIndex === -1) {
-            console.warn('[extractDataArray] Could not find "const data = [" marker');
-            return null;
-        }
-
-        // Start counting brackets from the opening bracket
-        const arrayStartIndex = startIndex + startMarker.length - 1; // Position of '['
-        let bracketCount = 1;
-        let i = arrayStartIndex + 1;
-        let inString = false;
-        let stringChar = null;
-        let escapeNext = false;
-
-        while (i < html.length && bracketCount > 0) {
-            const char = html[i];
-
-            if (escapeNext) {
-                escapeNext = false;
-                i++;
-                continue;
-            }
-
-            if (char === '\\' && inString) {
-                escapeNext = true;
-                i++;
-                continue;
-            }
-
-            if ((char === '"' || char === "'") && !inString) {
-                inString = true;
-                stringChar = char;
-            } else if (char === stringChar && inString) {
-                inString = false;
-                stringChar = null;
-            } else if (!inString) {
-                if (char === '[') {
-                    bracketCount++;
-                } else if (char === ']') {
-                    bracketCount--;
-                }
-            }
-
-            i++;
-        }
-
-        if (bracketCount === 0) {
-            // Found the matching closing bracket
-            const arrayStr = html.substring(arrayStartIndex, i);
-            return arrayStr;
-        }
-
-        console.warn('[extractDataArray] Could not find matching closing bracket');
-        return null;
-    }
-
-    /**
-     * Extract the userPermissions object from HTML
-     * @param {string} html - The HTML content
-     * @returns {string|null} - The permissions object string or null if not found
-     */
-    function extractPermissions(html) {
-        // Look for window.userPermissions = { FIRST (the actual JSON object)
-        // This is important because the template has:
-        //   window.userPermissions = {...};
-        //   const userPermissions = window.userPermissions;
-        // We need to match the first line, not the second
-        const primaryMarker = 'window.userPermissions = {';
-        const primaryIndex = html.indexOf(primaryMarker);
-
-        if (primaryIndex !== -1) {
-            // Found the actual JSON object assignment
-            // Position at the opening brace
-            const objStart = primaryIndex + 'window.userPermissions = '.length;
-            return extractObjectFromPosition(html, objStart);
-        }
-
-        // Fallback: try const userPermissions = { (might be used in some templates)
-        const altMarker = 'const userPermissions = {';
-        const altIndex = html.indexOf(altMarker);
-        if (altIndex !== -1) {
-            const objStart = altIndex + 'const userPermissions = '.length;
-            return extractObjectFromPosition(html, objStart);
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract a JSON object starting from a position in HTML
-     * @param {string} html - The HTML content
-     * @param {number} startPos - Starting position of the object
-     * @returns {string|null} - The object string or null if not found
-     */
-    function extractObjectFromPosition(html, startPos) {
-        // Find the opening brace
-        if (html[startPos] !== '{') {
-            console.warn('[extractObjectFromPosition] Expected { at position', startPos);
-            return null;
-        }
-
-        let braceCount = 1;
-        let i = startPos + 1;
-        let inString = false;
-        let stringChar = null;
-        let escapeNext = false;
-
-        while (i < html.length && braceCount > 0) {
-            const char = html[i];
-
-            if (escapeNext) {
-                escapeNext = false;
-                i++;
-                continue;
-            }
-
-            if (char === '\\' && inString) {
-                escapeNext = true;
-                i++;
-                continue;
-            }
-
-            if ((char === '"' || char === "'") && !inString) {
-                inString = true;
-                stringChar = char;
-            } else if (char === stringChar && inString) {
-                inString = false;
-                stringChar = null;
-            } else if (!inString) {
-                if (char === '{') {
-                    braceCount++;
-                } else if (char === '}') {
-                    braceCount--;
-                }
-            }
-
-            i++;
-        }
-
-        if (braceCount === 0) {
-            const objStr = html.substring(startPos, i);
-            return objStr;
-        }
-
-        console.warn('[extractPermissions] Could not find matching closing brace');
-        return null;
     }
 
     /**

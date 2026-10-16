@@ -109,6 +109,38 @@ def populate_person_grid_group_info(data, user, accessible_groups=None) -> None:
             item["groups_info"] = groups_by_person.get(item["person_id"], [])
 
 
+def get_person_grid_data(items) -> list:
+    """Format person items into rows for Grid.js."""
+    rows = []
+    for item in items:
+        person_id = str(item.get("person_id") or "")
+        groups_info = [
+            {
+                "id": str(group["id"]),
+                "name": str(group["name"]),
+                "url": reverse("gift_manager:person_group_detail", args=[group["id"]]),
+            }
+            for group in item.get("groups_info") or []
+        ]
+        raw_email = item.get("email_address")
+        email = decode_email(raw_email) if raw_email else ""
+        rows.append(
+            [
+                "",  # Checkbox placeholder - Index 0
+                item.get("first_name") or "",  # Index 1
+                item.get("family_name") or "",  # Index 2
+                email or "",  # Index 3
+                groups_info,  # Index 4
+                person_id,  # Index 5
+                reverse("gift_manager:person_relation_create", args=[person_id]),  # Index 6
+                reverse("gift_manager:person_detail", args=[person_id]),  # Index 7
+                reverse("gift_manager:person_edit", args=[person_id]),  # Index 8
+                reverse("gift_manager:person_delete", args=[person_id]),  # Index 9
+            ]
+        )
+    return rows
+
+
 class PersonListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
@@ -125,16 +157,21 @@ class PersonListView(
         super().__init__(*args, **kwargs)
         self.column_names = get_person_grid_column_names()
 
+    def get_grid_data(self, items) -> list:
+        """Format person items into rows for Grid.js."""
+        return get_person_grid_data(items)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        populate_person_grid_group_info(context.get("data", []), self.request.user)
+        items = context.get("data", [])
+        populate_person_grid_group_info(items, self.request.user)
         context["unique_groups"] = (
             PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
             .distinct()
             .order_by("name")
         )
-
+        context["grid_data"] = self.get_grid_data(items)
         return context
 
     def _populate_group_info_fallback(self, data) -> None:

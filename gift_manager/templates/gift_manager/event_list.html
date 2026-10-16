@@ -42,10 +42,12 @@
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
+{{ user_permissions|json_script:"user-permissions" }}
 <script>
     (function () {
         // Get permission data from template (stored globally for refresh updates)
-        window.userPermissions = {{ user_permissions_json|safe }};
+        const permEl = document.getElementById('user-permissions');
+        window.userPermissions = permEl ? JSON.parse(permEl.textContent) : {};
         const userPermissions = window.userPermissions;
 
         // Prepare data for Grid.js

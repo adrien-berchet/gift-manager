@@ -19,26 +19,17 @@
 <script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
+{{ grid_data|json_script:"grid-data" }}
 <script>
-    {% load custom_filters %}
     (function () {
         // Calculate column indices for clarity
-        const numDataColumns = {{ column_names.items| length }};
+        const numDataColumns = {{ column_names.items|length }};
         const statusPkIdx = numDataColumns;      // Index of status_pk
         const detailUrlIdx = numDataColumns + 1; // Index of detail URL
 
         // Prepare data for Grid.js
-        const data = [
-            {% for item in data %}
-            [
-                {% for col, name in column_names.items %}
-                    "{{ item|get_item:col|replace_none:''|escapejs }}"{% if not forloop.last %}, {% endif %}
-                {% endfor %},
-                "{{ item.pk }}",  // cells[numDataColumns]
-                "{% url 'gift_manager:relation_status_detail' item.pk %}"  // cells[numDataColumns + 1]
-            ]{% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        ];
+        const dataEl = document.getElementById('grid-data');
+        const data = dataEl ? JSON.parse(dataEl.textContent) : [];
 
         // Build columns dynamically
         const columns = [

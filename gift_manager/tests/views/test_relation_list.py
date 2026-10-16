@@ -492,8 +492,8 @@ class TestRelationList:
         assert row["urgency_key"] == "overdue"
         assert row["needs_attention"] is True
         assert row["attention_label"] == "Overdue"
-        assert 'urgencyKey: "overdue"' in content
-        assert "needsAttention: true" in content
+        assert '"urgencyKey": "overdue"' in content
+        assert '"needsAttention": true' in content
         assert "data-grid-row-state" in content
         assert "rowStateMarkers" in content
 
@@ -518,9 +518,9 @@ class TestRelationList:
         assert row["missing_due_date_label"] == ""
         assert row["has_missing_event"] is False
         assert row["missing_event_label"] == ""
-        assert 'urgencyKey: "ideas"' in content
-        assert "needsAttention: false" in content
-        assert "missingData: false" in content
+        assert '"urgencyKey": "ideas"' in content
+        assert '"needsAttention": false' in content
+        assert '"missingData": false' in content
 
     def test_workspace_separates_open_ideas_from_needs_details(self, event_factory, gift_factory):
         """Open-ended ideas should not appear in the actionable details bucket."""
@@ -579,10 +579,10 @@ class TestRelationList:
         assert row["missing_due_date_label"] == "Missing due date"
         assert row["has_missing_event"] is False
         assert row["missing_event_label"] == ""
-        assert "missingData: true" in content
-        assert 'missingDataLabel: "Missing due date"' in content
-        assert "missingDueDate: true" in content
-        assert "missingEvent: false" in content
+        assert '"missingData": true' in content
+        assert '"missingDataLabel": "Missing due date"' in content
+        assert '"missingDueDate": true' in content
+        assert '"missingEvent": false' in content
         assert "gift-plan-missing-data-badge" in content
         assert "fa-triangle-exclamation" in content
 
@@ -631,9 +631,9 @@ class TestRelationList:
         assert row["missing_due_date_label"] == "Missing due date"
         assert row["has_missing_event"] is True
         assert row["missing_event_label"] == "Missing event"
-        assert "missingDueDate: true" in content
-        assert "missingEvent: true" in content
-        assert 'missingEventLabel: "Missing event"' in content
+        assert '"missingDueDate": true' in content
+        assert '"missingEvent": true' in content
+        assert '"missingEventLabel": "Missing event"' in content
 
     def test_advanced_grid_marks_planned_rows_without_event_as_missing_data(self):
         """Active gift plans with due dates should still show missing event data."""
@@ -656,9 +656,9 @@ class TestRelationList:
         assert row["missing_due_date_label"] == ""
         assert row["has_missing_event"] is True
         assert row["missing_event_label"] == "Missing event"
-        assert "missingDueDate: false" in content
-        assert "missingEvent: true" in content
-        assert 'missingEventLabel: "Missing event"' in content
+        assert '"missingDueDate": false' in content
+        assert '"missingEvent": true' in content
+        assert '"missingEventLabel": "Missing event"' in content
 
     def test_advanced_grid_does_not_mark_terminal_rows_without_due_date(self):
         """Terminal gift plans should not ask for a due date."""

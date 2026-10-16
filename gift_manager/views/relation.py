@@ -29,6 +29,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import conditional_escape
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
@@ -78,6 +79,7 @@ from gift_manager.plan_repeat import parse_duplicate_source
 from gift_manager.services import PermissionService
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
+from gift_manager.templatetags.custom_filters import event_display_name
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -222,6 +224,25 @@ class RelationStatusListView(BaseListView):
     def get_queryset(self):
         """Return RelationStatus."""
         return RelationStatus.objects.values("pk", *self.column_names).order_by("pk")
+
+    def get_grid_data(self, items) -> list:
+        """Format status rows for Grid.js."""
+        rows = []
+        for item in items:
+            pk = str(item["pk"])
+            rows.append(
+                [
+                    item.get("status") or "",
+                    pk,
+                    reverse("gift_manager:relation_status_detail", args=[pk]),
+                ]
+            )
+        return rows
+
+    def get_context_data(self, **kwargs) -> dict:
+        context = super().get_context_data(**kwargs)
+        context["grid_data"] = self.get_grid_data(context.get("data", []))
+        return context
 
 
 class RelationStatusDetailView(BaseDetailView):
@@ -546,16 +567,108 @@ class RelationListView(PermissionContextMixin, BaseListView):
             row.update(self.get_advanced_list_row_state(relation, today))
         return rows
 
+    def get_grid_data(self, items, statuses=None) -> list:
+        status_map = {stat.pk: stat.status for stat in (statuses or [])}
+        rows = []
+        for item in items:
+            relation_id = str(item.get("relation_id") or "")
+            gift_id = item.get("gift__gift_id")
+            gift_data = (
+                {
+                    "id": str(gift_id),
+                    "name": item.get("gift__name") or "",
+                    "url": reverse("gift_manager:gift_detail", args=[gift_id]),
+                }
+                if gift_id
+                else None
+            )
+
+            person_id = item.get("person__person_id")
+            group_id = item.get("group__group_id")
+            recipient_url = None
+            if person_id:
+                recipient_url = reverse("gift_manager:person_detail", args=[person_id])
+            elif group_id:
+                recipient_url = reverse("gift_manager:person_group_detail", args=[group_id])
+
+            recipient_data = {
+                "text": item.get("related_object") or "",
+                "recipientType": item.get("recipient_type") or "",
+                "personId": str(person_id) if person_id else None,
+                "groupId": str(group_id) if group_id else None,
+                "url": recipient_url,
+            }
+
+            event_id = item.get("event__event_id")
+            if event_id:
+                raw_event_name = item.get("event__name") or ""
+                event_name = event_display_name(raw_event_name, item.get("event__is_birthday"))
+                event_data = {
+                    "id": str(event_id),
+                    "name": event_name,
+                    "url": reverse("gift_manager:event_detail", args=[event_id]),
+                }
+            else:
+                event_data = None
+
+            due_date = item.get("due_date")
+            if due_date:
+                due_date_data = {
+                    "iso": due_date.strftime("%Y-%m-%d"),
+                    "display": date_format(due_date),
+                }
+            else:
+                due_date_data = None
+
+            status_pk = item.get("status")
+            status_label = status_map.get(status_pk, "")
+
+            attention_data = {
+                "urgencyKey": item.get("urgency_key") or "unknown",
+                "needsAttention": bool(item.get("needs_attention")),
+                "label": item.get("attention_label") or "",
+                "missingData": bool(item.get("has_missing_data")),
+                "missingDataLabel": item.get("missing_data_label") or "",
+                "missingDueDate": bool(item.get("has_missing_due_date")),
+                "missingDueDateLabel": item.get("missing_due_date_label") or "",
+                "missingEvent": bool(item.get("has_missing_event")),
+                "missingEventLabel": item.get("missing_event_label") or "",
+            }
+
+            rows.append(
+                [
+                    "",  # Checkbox placeholder
+                    gift_data,
+                    recipient_data,
+                    event_data,
+                    item.get("comment") or "",
+                    str(status_pk) if status_pk is not None else "",
+                    status_label,
+                    due_date_data,
+                    attention_data,
+                    relation_id,
+                    reverse("gift_manager:relation_detail", args=[relation_id]),
+                    reverse("gift_manager:relation_edit", args=[relation_id]),
+                    reverse("gift_manager:relation_delete", args=[relation_id]),
+                    reverse("gift_manager:relation_create") + f"?duplicate_of={relation_id}",
+                ]
+            )
+        return rows
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["show_workspace"] = self.show_workspace
         context["show_advanced_list"] = self.show_advanced_list
-        context["relation_statuses"] = RelationStatus.objects.all()
+        relation_statuses = list(RelationStatus.objects.all())
+        context["relation_statuses"] = relation_statuses
 
         if self.show_advanced_list:
             data_rows = self.add_advanced_list_row_state(list(context["data"]))
             context["data"] = data_rows
             context["object_list"] = data_rows
+            context["grid_data"] = self.get_grid_data(data_rows, relation_statuses)
+        else:
+            context["grid_data"] = []
 
         if self.show_workspace:
             workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())

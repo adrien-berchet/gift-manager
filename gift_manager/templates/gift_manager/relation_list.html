@@ -253,8 +253,9 @@
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
+{{ grid_data|json_script:"grid-data" }}
+{{ user_permissions|json_script:"user-permissions" }}
 <script>
-    {% load custom_filters %}
     {% trans "Status" as bulk_status_label %}
     {% trans "Choose status" as bulk_status_choose_label %}
     {% trans "Apply status" as bulk_status_apply_label %}
@@ -297,55 +298,13 @@
         }
 
         // Get permission data from template
-        window.userPermissions = {{ user_permissions_json|safe }};
+        const permEl = document.getElementById('user-permissions');
+        window.userPermissions = permEl ? JSON.parse(permEl.textContent) : {};
         const userPermissions = window.userPermissions;
 
         // Prepare data for Grid.js
-        const data = [
-            {% for item in data %}
-            [
-                '', // Checkbox column placeholder
-                {% if item.gift__gift_id %}
-                { id: "{{ item.gift__gift_id }}", name: "{{ item.gift__name|escapejs }}", url: "{% url 'gift_manager:gift_detail' item.gift__gift_id %}" },
-                {% else %}
-                null,
-                {% endif %}
-                {
-                    text: "{{ item.related_object|escapejs }}",
-                    recipientType: "{{ item.recipient_type|escapejs }}",
-                    personId: {% if item.person__person_id %} "{{item.person__person_id}}" {% else %} null {% endif %},
-                    groupId: {% if item.group__group_id %} "{{item.group__group_id}}" {% else %} null {% endif %},
-                    url: {% if item.person__person_id %} "{% url 'gift_manager:person_detail' item.person__person_id %}" {% elif item.group__group_id %} "{% url 'gift_manager:person_group_detail' item.group__group_id %}" {% else %} null {% endif %}
-                },
-                {% if item.event__event_id %}
-                { id: "{{ item.event__event_id }}", name: "{{ item.event__name|event_display_name:item.event__is_birthday|escapejs }}", url: "{% url 'gift_manager:event_detail' item.event__event_id %}" },
-                {% else %}
-                null,
-                {% endif %}
-                "{{ item.comment|default:''|escapejs }}",
-                "{{ item.status }}",
-                "{% for stat in relation_statuses %}{% if item.status == stat.pk %}{{ stat.status|escapejs }}{% endif %}{% endfor %}",
-                {% if item.due_date %}{ iso: "{{ item.due_date|date:'Y-m-d' }}", display: "{{ item.due_date|date }}" }{% else %}null{% endif %},
-                {
-                    urgencyKey: "{{ item.urgency_key|default:'unknown'|escapejs }}",
-                    needsAttention: {% if item.needs_attention %}true{% else %}false{% endif %},
-                    label: "{{ item.attention_label|default:''|escapejs }}",
-                    missingData: {% if item.has_missing_data %}true{% else %}false{% endif %},
-                    missingDataLabel: "{{ item.missing_data_label|default:''|escapejs }}",
-                    missingDueDate: {% if item.has_missing_due_date %}true{% else %}false{% endif %},
-                    missingDueDateLabel: "{{ item.missing_due_date_label|default:''|escapejs }}",
-                    missingEvent: {% if item.has_missing_event %}true{% else %}false{% endif %},
-                    missingEventLabel: "{{ item.missing_event_label|default:''|escapejs }}"
-                },
-                "{{item.relation_id}}",
-                "{% url 'gift_manager:relation_detail' item.relation_id %}",
-                "{% url 'gift_manager:relation_edit' item.relation_id %}",
-                "{% url 'gift_manager:relation_delete' item.relation_id %}",
-                "{% url 'gift_manager:relation_create' %}?duplicate_of={{ item.relation_id }}"
-            ]
-            {% if not forloop.last %}, {% endif %}
-            {% endfor %}
-        ];
+        const dataEl = document.getElementById('grid-data');
+        const data = dataEl ? JSON.parse(dataEl.textContent) : [];
 
         // Define columns
         const columns = [
