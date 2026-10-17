@@ -74,7 +74,8 @@
 ## Risk Areas
 
 - Permission changes can create privacy regressions. Test owner, editor, viewer, and no-access paths.
-- Hierarchy changes can create stale caches or cycles.
+- Hierarchy changes can create cycles. Hierarchies are read with recursive queries, never
+  cached; avoid per-node loops over `get_ancestors()` / `get_descendants()`.
 - Grid.js and JSONB-related queries need PostgreSQL.
 - E2E tests depend on live-server behavior, static assets, and Playwright browser setup.
 - User-facing strings need translation updates.

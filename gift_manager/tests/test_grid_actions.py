@@ -19,11 +19,12 @@ const vm = require("vm");
 
 const context = {
   window: { gridTranslations: TRANSLATIONS },
+  document: { cookie: "" },
   gridjs: { html: (value) => value },
   console: { log: console.log, warn: () => {} },
 };
 vm.createContext(context);
-for (const file of ["grid-utils.js", "grid-actions.js", "permission-utils.js"]) {
+for (const file of ["js/core-utils.js", "grid-utils.js", "grid-actions.js", "permission-utils.js"]) {
   vm.runInContext(fs.readFileSync(`gift_manager/static/gift_manager/${file}`, "utf8"), context);
 }
 const { window } = context;

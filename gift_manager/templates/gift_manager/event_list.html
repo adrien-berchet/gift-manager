@@ -1,9 +1,7 @@
 {% extends "gift_manager/base.html" %}
 
-{% load permission_tags %}
 {% load i18n %}
 {% load static %}
-{% load custom_filters %}
 
 {% block extra_head %}
 <link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
@@ -43,29 +41,18 @@
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
+{{ grid_data|json_script:"grid-data" }}
+{{ user_permissions|json_script:"user-permissions" }}
 <script>
     (function () {
         // Get permission data from template (stored globally for refresh updates)
-        window.userPermissions = {{ user_permissions_json|safe }};
+        const permEl = document.getElementById('user-permissions');
+        window.userPermissions = permEl ? JSON.parse(permEl.textContent) : {};
         const userPermissions = window.userPermissions;
 
         // Prepare data for Grid.js
-        // Include placeholder (empty string) for checkbox column as first element
-        const data = [
-            {% for item in data %}
-    [
-        '', // Checkbox column placeholder - Index 0
-        "{{ item.name|escapejs }}",                                    // Index 1
-        "{{ item.comment|default:''|escapejs }}",                      // Index 2
-        "{{ item.date_summary|escapejs }}",                            // Index 3
-        "{{ item.event_id }}",                                         // Index 4
-        "{% url 'gift_manager:event_detail' item.event_id %}",        // Index 5
-        "{% url 'gift_manager:event_edit' item.event_id %}",          // Index 6
-        "{% url 'gift_manager:event_delete' item.event_id %}",        // Index 7
-        {% if item.is_birthday %}true{% else %}false{% endif %}        // Index 8
-            ]{% if not forloop.last %}, {% endif %}
-    {% endfor %}
-        ];
+        const dataEl = document.getElementById('grid-data');
+        const data = dataEl ? JSON.parse(dataEl.textContent) : [];
 
     // Define columns (checkbox column first, managed by Grid.js)
     const columns = [

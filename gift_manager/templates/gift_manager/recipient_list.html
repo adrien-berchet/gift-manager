@@ -126,9 +126,9 @@
 </div>
 
 {% if recipient_view == "people" %}
-{% include "gift_manager/includes/person_management_grid.html" with data=person_grid_data column_names=person_column_names user_permissions_json=person_user_permissions_json %}
+{% include "gift_manager/includes/person_management_grid.html" with data=person_grid_data column_names=person_column_names %}
 {% elif recipient_view == "groups" %}
-{% include "gift_manager/includes/person_group_management_grid.html" with data=person_group_grid_data column_names=person_group_column_names user_permissions_json=person_group_user_permissions_json has_hierarchy=person_group_has_hierarchy tree_data=person_group_tree_data %}
+{% include "gift_manager/includes/person_group_management_grid.html" with data=person_group_grid_data column_names=person_group_column_names has_hierarchy=person_group_has_hierarchy tree_data=person_group_tree_data %}
 {% else %}
 <div class="recipient-toolbar d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
   <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -236,7 +236,7 @@
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
-{% include "gift_manager/includes/person_management_grid_script.html" with data=person_grid_data column_names=person_column_names user_permissions_json=person_user_permissions_json %}
+{% include "gift_manager/includes/person_management_grid_script.html" with data=person_grid_data column_names=person_column_names grid_data=grid_data user_permissions=user_permissions %}
 {% elif recipient_view == "groups" %}
 <script src="{% static 'gift_manager/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/grid-utils.js' %}"></script>
@@ -247,7 +247,7 @@
 <script src="{% static 'gift_manager/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
-{% include "gift_manager/includes/person_group_management_grid_script.html" with data=person_group_grid_data column_names=person_group_column_names user_permissions_json=person_group_user_permissions_json %}
+{% include "gift_manager/includes/person_group_management_grid_script.html" with data=person_group_grid_data column_names=person_group_column_names grid_data=grid_data user_permissions=user_permissions %}
 {% else %}
 <script>
 (function () {

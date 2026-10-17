@@ -394,57 +394,15 @@
         });
     }
 
-    /**
-     * Get CSRF token from cookies or meta tag
-     */
     function getCsrfToken() {
-        // Try to get from meta tag first
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        if (metaTag) {
-            return metaTag.getAttribute('content');
-        }
-
-        // Try to get from cookie
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const [name, value] = cookie.trim().split('=');
-            if (name === 'csrftoken') {
-                return value;
-            }
-        }
-
-        return '';
+        return window.GMUtils.getCsrfToken();
     }
 
     /**
      * Show notification (integrates with existing notification system)
      */
     function showNotification(message, type) {
-        // Try to use existing notification system
-        if (window.showNotification && typeof window.showNotification === 'function') {
-            window.showNotification(message, type);
-            return;
-        }
-
-        // Fallback: create simple notification
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
-        notification.style.top = '20px';
-        notification.style.right = '20px';
-        notification.style.zIndex = '9999';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-
-        document.body.appendChild(notification);
-
-        // Auto-remove after timeout
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.parentNode.removeChild(notification);
-            }
-        }, INLINE_EDITING_CONFIG.feedbackTimeout);
+        return window.GMUtils.showNotification(message, type);
     }
 
     // Expose to global scope

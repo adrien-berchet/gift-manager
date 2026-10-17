@@ -8,6 +8,7 @@ Validates: Requirements 4.5, 5.5, 6.5
 """
 
 import json
+import re
 
 from django.test import Client
 from django.urls import reverse
@@ -74,9 +75,7 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         return entity
 
     @given(
-        entity_type=st.sampled_from(
-            ["person", "gift", "event", "relation", "persongroup", "gifttag"]
-        ),
+        entity_type=st.sampled_from(["person", "gift", "event", "relation", "persongroup"]),
         permission_level=st.sampled_from(
             [
                 PermissionLevel.NONE,
@@ -101,63 +100,47 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
             "person": "gift_manager:persons",
             "gift": "gift_manager:gifts",
             "event": "gift_manager:events",
-            "relation": "gift_manager:relations",
+            "relation": "gift_manager:relation_advanced_list",
             "persongroup": "gift_manager:person_groups",
-            "gifttag": "gift_manager:gift_tags",
         }
 
         list_url = list_urls.get(entity_type)
         if not list_url:
             return
 
-        try:
-            # Get the list view response
-            response = self.client.get(reverse(list_url))
+        response = self.client.get(reverse(list_url))
+        self.assertEqual(response.status_code, 200)
 
-            # Skip if view doesn't work (might not be implemented yet)
-            if response.status_code != 200:
-                return
+        content = response.content.decode()
 
-            content = response.content.decode()
+        # Check that permission data is included via #user-permissions json_script
+        match = re.search(r'<script id="user-permissions"[^>]*>(.*?)</script>', content, re.DOTALL)
+        self.assertIsNotNone(match, f"Missing user-permissions json_script on {list_url}")
+        permissions = json.loads(match.group(1))
 
-            # Check that permission data is included in the response
-            assert_text_in_rendered("user_permissions_json", content)
+        uuid_fields = {
+            "person": "person_id",
+            "gift": "gift_id",
+            "event": "event_id",
+            "relation": "relation_id",
+            "persongroup": "group_id",
+        }
+        field_name = uuid_fields.get(entity_type)
+        entity_id = str(getattr(entity, field_name, entity.pk))
+        if permission_level > PermissionLevel.NONE:
+            self.assertIn(entity_id, permissions)
+            self.assertEqual(permissions[entity_id], permission_level)
+        else:
+            self.assertNotIn(entity_id, permissions)
 
-            # Extract permission data from the response
-            # Look for the JavaScript variable containing permissions
-            if "userPermissions" in content:
-                # Find the permissions JSON in the JavaScript
-                start_marker = "userPermissions = "
-                start_idx = content.find(start_marker)
-                if start_idx != -1:
-                    start_idx += len(start_marker)
-                    end_idx = content.find(";", start_idx)
-                    if end_idx != -1:
-                        permissions_json = content[start_idx:end_idx].strip()
-                        try:
-                            permissions = json.loads(permissions_json)
-                            entity_id = str(getattr(entity, "pk", ""))
+        # Check for permission-aware JavaScript utilities
+        if permission_level < PermissionLevel.EDITOR:
+            assert_text_in_rendered("PermissionUtils", content)
+            assert_text_in_rendered("permissionAwareActionFormatter", content)
 
-                            # Verify permission level is correctly reflected
-                            if entity_id in permissions:
-                                self.assertEqual(permissions[entity_id], permission_level)
-                        except json.JSONDecodeError:
-                            pass  # Skip if JSON parsing fails
-
-            # Check for permission-aware JavaScript utilities
-            if permission_level < PermissionLevel.EDITOR:
-                # For users with limited permissions, check that permission utilities are loaded
-                assert_text_in_rendered("PermissionUtils", content)
-                assert_text_in_rendered("permissionAwareActionFormatter", content)
-
-            # Verify that disabled actions have appropriate styling/attributes
-            if permission_level < PermissionLevel.OWNER:
-                # Should include permission-based CSS
-                assert_text_in_rendered("permission-ui.css", content)
-
-        except Exception:
-            # Skip test if there are issues with the view
-            pass
+        # Verify that disabled actions have appropriate styling/attributes
+        if permission_level < PermissionLevel.OWNER:
+            assert_text_in_rendered("permission-ui.css", content)
 
     @given(
         permission_level=st.sampled_from(

@@ -1,3 +1,7 @@
+import pytest
+from django.db import connection
+
+
 def assert_text_in_rendered(text: str, rendered: str, *, expect: bool = True) -> None:
     """Check if text presence in rendered matches expected.
 
@@ -14,3 +18,9 @@ def assert_text_in_rendered(text: str, rendered: str, *, expect: bool = True) ->
     """
     is_present = text in rendered
     assert is_present == expect
+
+
+requires_postgresql = pytest.mark.skipif(
+    connection.vendor == "sqlite",
+    reason="PostgreSQL-specific features (JSONB) not available in SQLite",
+)

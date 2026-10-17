@@ -6,9 +6,7 @@
     let activePopover = null;
 
     function escapeHtml(value) {
-        const div = document.createElement("div");
-        div.textContent = String(value || "");
-        return div.innerHTML;
+        return window.GMUtils.escapeHtml(value);
     }
 
     function closePopover() {

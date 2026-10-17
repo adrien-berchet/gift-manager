@@ -258,9 +258,7 @@
         }
 
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            return window.GMUtils.escapeHtml(text);
         }
 
         function safeSearchUrl(url) {
@@ -269,7 +267,7 @@
                 if (parsed.origin !== window.location.origin) {
                     return '#';
                 }
-                return escapeHtml(parsed.pathname + parsed.search + parsed.hash);
+                return window.GMUtils.safeUrl(parsed.pathname + parsed.search + parsed.hash);
             } catch (error) {
                 return '#';
             }

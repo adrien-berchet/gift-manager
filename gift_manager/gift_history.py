@@ -61,15 +61,14 @@ def _base_queryset(user) -> QuerySet:
 
 def person_history_queryset(user, person: Person) -> QuerySet:
     """Return the plans for a person, directly or through one of their groups (ancestors too)."""
-    groups = set(person.groups.all())
-    for group in list(groups):
-        groups.update(group.get_ancestors())
+    memberships = Person.groups.through.objects.filter(person=person).values("persongroup_id")
+    groups = PersonGroup.hierarchy_subquery(memberships, ancestors=True, include_start=True)
     return _base_queryset(user).filter(Q(person=person) | Q(group__in=groups))
 
 
 def group_history_queryset(user, group: PersonGroup) -> QuerySet:
     """Return the plans targeted at a group, or at one of its members (nested groups included)."""
-    groups = [group, *group.get_descendants()]
+    groups = PersonGroup.hierarchy_subquery([group], include_start=True)
     return _base_queryset(user).filter(Q(group=group) | Q(person__groups__in=groups))
 
 

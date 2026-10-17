@@ -11,28 +11,12 @@
     let pendingScrollPosition = null;
     let pendingScrollTimer = null;
 
-    function getCookie(name) {
-        if (!document.cookie) return null;
-
-        const cookies = document.cookie.split(";");
-        for (let i = 0; i < cookies.length; i += 1) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === `${name}=`) {
-                return decodeURIComponent(cookie.substring(name.length + 1));
-            }
-        }
-        return null;
-    }
-
     function getCsrfToken(form) {
-        const input = form.querySelector('input[name="csrfmiddlewaretoken"]');
-        return (input && input.value) || getCookie("csrftoken") || "";
+        return window.GMUtils.getCsrfToken(form);
     }
 
     function escapeHtml(value) {
-        const div = document.createElement("div");
-        div.textContent = String(value || "");
-        return div.innerHTML;
+        return window.GMUtils.escapeHtml(value);
     }
 
     function parseHxTriggerEvents(headerValue) {
@@ -180,9 +164,7 @@
     }
 
     function notifyError(message) {
-        if (typeof window.showNotification === "function") {
-            window.showNotification(message, "error");
-        }
+        window.GMUtils.showNotification(message, "error");
     }
 
     function getQuickActionUrl(form) {

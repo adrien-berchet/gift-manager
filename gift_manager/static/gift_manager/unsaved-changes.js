@@ -50,15 +50,7 @@
     };
 
     function escapeHtml(value) {
-        const replacements = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-        };
-
-        return String(value ?? "").replace(/[&<>"']/g, (character) => replacements[character]);
+        return window.GMUtils.escapeHtml(value);
     }
 
     const trackedForms = new Set();

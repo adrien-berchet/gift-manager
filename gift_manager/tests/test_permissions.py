@@ -5,8 +5,10 @@ from unittest.mock import patch
 # import attr
 import pytest
 from django.contrib.auth.models import User
+from django.core.exceptions import PermissionDenied
 
 from gift_manager.models import EventPermission
+from gift_manager.models import Gift
 from gift_manager.models import GiftPermission
 from gift_manager.models import Person
 from gift_manager.models import PersonGroupPermission
@@ -18,6 +20,9 @@ from gift_manager.permissions import delete_permission
 from gift_manager.permissions import get_permission
 from gift_manager.permissions import get_permission_label
 from gift_manager.permissions import get_permission_model
+from gift_manager.services import PermissionService
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import UserFactory
 
 
 class TestPermissionLevel:
@@ -505,3 +510,96 @@ class TestDeletePermission:
             mock_permission_obj.delete.assert_called_once()
             mock_obj.shared_with.remove.assert_not_called()
             assert result is True
+
+
+@pytest.mark.django_db
+class TestDeleteOrLeave:
+    """Direct tests for PermissionService.delete_or_leave."""
+
+    def test_leave_request_unshares_when_other_access_holder_exists(self):
+        owner = UserFactory()
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            owner, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.VIEWER
+        )
+
+        result = PermissionService.delete_or_leave(actor, gift, is_leave_request=True)
+
+        assert result == PermissionService.DELETE_RESULT_UNSHARED
+        assert Gift.objects.filter(pk=gift.pk).exists()
+        assert actor not in gift.shared_with.all()
+        assert owner in gift.shared_with.all()
+
+    def test_shared_object_with_editor_permission_unshares(self):
+        owner = UserFactory()
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            owner, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.EDITOR
+        )
+
+        result = PermissionService.delete_or_leave(actor, gift)
+
+        assert result == PermissionService.DELETE_RESULT_UNSHARED
+        assert Gift.objects.filter(pk=gift.pk).exists()
+        assert actor not in gift.shared_with.all()
+
+    def test_shared_object_with_viewer_permission_rejects_delete_and_requires_leave(self):
+        owner = UserFactory()
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            owner, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.VIEWER
+        )
+
+        with pytest.raises(PermissionDenied, match="leave access action"):
+            PermissionService.delete_or_leave(actor, gift)
+
+        assert Gift.objects.filter(pk=gift.pk).exists()
+        assert actor in gift.shared_with.all()
+
+    def test_sole_editor_deletes_object(self):
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.EDITOR
+        )
+
+        result = PermissionService.delete_or_leave(actor, gift)
+
+        assert result == PermissionService.DELETE_RESULT_DELETED
+        assert not Gift.objects.filter(pk=gift.pk).exists()
+
+    def test_sole_viewer_denied_deletion(self):
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.VIEWER
+        )
+
+        with pytest.raises(PermissionDenied, match="permission to delete"):
+            PermissionService.delete_or_leave(actor, gift)
+
+        assert Gift.objects.filter(pk=gift.pk).exists()
+
+    def test_sole_owner_cannot_leave(self):
+        actor = UserFactory()
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            actor, gift, permission_level=PermissionLevel.OWNER
+        )
+
+        with pytest.raises(PermissionDenied, match="At least one owner is required"):
+            PermissionService.delete_or_leave(actor, gift, is_leave_request=True)
+
+        assert Gift.objects.filter(pk=gift.pk).exists()

@@ -1,9 +1,6 @@
 """Relation-related views."""
 
 import uuid
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
@@ -32,6 +29,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
+from django.utils.formats import date_format
 from django.utils.html import conditional_escape
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
@@ -49,10 +47,18 @@ from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
 from gift_manager.forms import RelationReactionForm
 from gift_manager.forms import resolve_recipient_choice
-from gift_manager.gift_plan_actions import ACTION_STATUS_SLUGS
-from gift_manager.gift_plan_actions import build_gift_plan_quick_actions
+from gift_manager.gift_plan_actions import QUICK_ACTION_UNDO_MAX_AGE
+from gift_manager.gift_plan_actions import QUICK_ACTION_UNDO_SALT
+from gift_manager.gift_plan_actions import REACTION_PROMPT_ACTIONS
+from gift_manager.gift_plan_actions import UNDOABLE_QUICK_ACTIONS
+from gift_manager.gift_plan_actions import apply_relation_quick_action
+from gift_manager.gift_plan_actions import available_relation_quick_action_names
+from gift_manager.gift_plan_actions import build_quick_action_undo
+from gift_manager.gift_plan_actions import gift_plan_has_missing_due_date
 from gift_manager.gift_plan_actions import gift_plan_has_missing_event
-from gift_manager.gift_plan_actions import gift_plan_requires_planning_fields
+from gift_manager.gift_plan_actions import gift_plan_urgency_key
+from gift_manager.gift_plan_actions import relation_undo_state
+from gift_manager.gift_plan_actions import restore_relation_from_undo
 from gift_manager.gift_plan_cards import build_gift_plan_card
 from gift_manager.gift_plan_cards import gift_plan_status_class
 from gift_manager.mixins.permissions import PermissionContextMixin
@@ -71,42 +77,15 @@ from gift_manager.plan_repeat import duplicate_initial
 from gift_manager.plan_repeat import duplicate_plan_url
 from gift_manager.plan_repeat import parse_duplicate_source
 from gift_manager.services import PermissionService
-from gift_manager.sharing_service import RelationExposureDenied
-from gift_manager.sharing_service import SharingService
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
-from gift_manager.statuses import is_idea_status
-from gift_manager.statuses import is_terminal_status
-from gift_manager.statuses import relation_status_slug
+from gift_manager.templatetags.custom_filters import event_display_name
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import HTMXResponseMixin
-
-
-def gift_plan_urgency_key(relation, *, today=None, window_days=7) -> str:
-    """Return the urgency bucket for a gift plan."""
-    today = today or timezone.localdate()
-    if is_terminal_status(relation.status):
-        urgency_key = "completed"
-    elif relation.due_date is None:
-        urgency_key = "ideas" if is_idea_status(relation.status) else "needs_details"
-    elif relation.due_date < today:
-        urgency_key = "overdue"
-    elif relation.due_date <= today + timedelta(days=window_days):
-        urgency_key = "due_soon"
-    elif gift_plan_requires_planning_fields(relation) and relation.event_id is None:
-        urgency_key = "needs_details"
-    else:
-        urgency_key = "later"
-    return urgency_key
-
-
-def gift_plan_has_missing_due_date(relation) -> bool:
-    """Return whether an active gift plan is missing a due date."""
-    return gift_plan_requires_planning_fields(relation) and relation.due_date is None
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -245,6 +224,25 @@ class RelationStatusListView(BaseListView):
     def get_queryset(self):
         """Return RelationStatus."""
         return RelationStatus.objects.values("pk", *self.column_names).order_by("pk")
+
+    def get_grid_data(self, items) -> list:
+        """Format status rows for Grid.js."""
+        rows = []
+        for item in items:
+            pk = str(item["pk"])
+            rows.append(
+                [
+                    item.get("status") or "",
+                    pk,
+                    reverse("gift_manager:relation_status_detail", args=[pk]),
+                ]
+            )
+        return rows
+
+    def get_context_data(self, **kwargs) -> dict:
+        context = super().get_context_data(**kwargs)
+        context["grid_data"] = self.get_grid_data(context.get("data", []))
+        return context
 
 
 class RelationStatusDetailView(BaseDetailView):
@@ -569,16 +567,108 @@ class RelationListView(PermissionContextMixin, BaseListView):
             row.update(self.get_advanced_list_row_state(relation, today))
         return rows
 
+    def get_grid_data(self, items, statuses=None) -> list:
+        status_map = {stat.pk: stat.status for stat in (statuses or [])}
+        rows = []
+        for item in items:
+            relation_id = str(item.get("relation_id") or "")
+            gift_id = item.get("gift__gift_id")
+            gift_data = (
+                {
+                    "id": str(gift_id),
+                    "name": item.get("gift__name") or "",
+                    "url": reverse("gift_manager:gift_detail", args=[gift_id]),
+                }
+                if gift_id
+                else None
+            )
+
+            person_id = item.get("person__person_id")
+            group_id = item.get("group__group_id")
+            recipient_url = None
+            if person_id:
+                recipient_url = reverse("gift_manager:person_detail", args=[person_id])
+            elif group_id:
+                recipient_url = reverse("gift_manager:person_group_detail", args=[group_id])
+
+            recipient_data = {
+                "text": item.get("related_object") or "",
+                "recipientType": item.get("recipient_type") or "",
+                "personId": str(person_id) if person_id else None,
+                "groupId": str(group_id) if group_id else None,
+                "url": recipient_url,
+            }
+
+            event_id = item.get("event__event_id")
+            if event_id:
+                raw_event_name = item.get("event__name") or ""
+                event_name = event_display_name(raw_event_name, item.get("event__is_birthday"))
+                event_data = {
+                    "id": str(event_id),
+                    "name": event_name,
+                    "url": reverse("gift_manager:event_detail", args=[event_id]),
+                }
+            else:
+                event_data = None
+
+            due_date = item.get("due_date")
+            if due_date:
+                due_date_data = {
+                    "iso": due_date.strftime("%Y-%m-%d"),
+                    "display": date_format(due_date),
+                }
+            else:
+                due_date_data = None
+
+            status_pk = item.get("status")
+            status_label = status_map.get(status_pk, "")
+
+            attention_data = {
+                "urgencyKey": item.get("urgency_key") or "unknown",
+                "needsAttention": bool(item.get("needs_attention")),
+                "label": item.get("attention_label") or "",
+                "missingData": bool(item.get("has_missing_data")),
+                "missingDataLabel": item.get("missing_data_label") or "",
+                "missingDueDate": bool(item.get("has_missing_due_date")),
+                "missingDueDateLabel": item.get("missing_due_date_label") or "",
+                "missingEvent": bool(item.get("has_missing_event")),
+                "missingEventLabel": item.get("missing_event_label") or "",
+            }
+
+            rows.append(
+                [
+                    "",  # Checkbox placeholder
+                    gift_data,
+                    recipient_data,
+                    event_data,
+                    item.get("comment") or "",
+                    str(status_pk) if status_pk is not None else "",
+                    status_label,
+                    due_date_data,
+                    attention_data,
+                    relation_id,
+                    reverse("gift_manager:relation_detail", args=[relation_id]),
+                    reverse("gift_manager:relation_edit", args=[relation_id]),
+                    reverse("gift_manager:relation_delete", args=[relation_id]),
+                    reverse("gift_manager:relation_create") + f"?duplicate_of={relation_id}",
+                ]
+            )
+        return rows
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["show_workspace"] = self.show_workspace
         context["show_advanced_list"] = self.show_advanced_list
-        context["relation_statuses"] = RelationStatus.objects.all()
+        relation_statuses = list(RelationStatus.objects.all())
+        context["relation_statuses"] = relation_statuses
 
         if self.show_advanced_list:
             data_rows = self.add_advanced_list_row_state(list(context["data"]))
             context["data"] = data_rows
             context["object_list"] = data_rows
+            context["grid_data"] = self.get_grid_data(data_rows, relation_statuses)
+        else:
+            context["grid_data"] = []
 
         if self.show_workspace:
             workspace_groups = self.get_workspace_groups(self.get_workspace_queryset())
@@ -785,14 +875,6 @@ class RelationDetailView(BaseDetailView):
         return context
 
 
-def _get_relation_status_by_slug(status_slug: str) -> RelationStatus:
-    """Return a relation status by canonical slug."""
-    for status in RelationStatus.objects.all():
-        if relation_status_slug(status) == status_slug:
-            return status
-    raise RelationStatus.DoesNotExist
-
-
 def _relation_quick_action_response(
     message: str, *extra_events, undo: dict | None = None
 ) -> HttpResponse:
@@ -812,133 +894,6 @@ def _relation_quick_action_response(
     return response
 
 
-QUICK_ACTION_UNDO_SALT = "gift_manager.relation_quick_action_undo"
-QUICK_ACTION_UNDO_MAX_AGE = 300
-UNDOABLE_QUICK_ACTIONS = {"given", "purchased", "abandoned", "set_date"}
-
-
-def _relation_undo_state(relation, *, field: str) -> dict:
-    """Return the JSON-safe values an undo token tracks for a relation."""
-    if field == "due_date":
-        return {"due_date": relation.due_date.isoformat() if relation.due_date else None}
-    changed_at = relation.status_changed_at
-    return {
-        "status": relation.status_id,
-        "status_changed_at": changed_at.isoformat() if changed_at else None,
-        # A reaction saved meanwhile must block the undo: it would stay on the reverted plan
-        "reaction_rating": relation.reaction_rating,
-        "reaction_note": relation.reaction_note,
-    }
-
-
-def _build_quick_action_undo(relation, user, action: str, previous: dict) -> dict:
-    """Return the notification payload that lets the user revert a quick action."""
-    field = "due_date" if action == "set_date" else "status"
-    token = signing.dumps(
-        {
-            "relation": str(relation.relation_id),
-            "user": user.pk,
-            "field": field,
-            "previous": previous,
-            "current": _relation_undo_state(relation, field=field),
-        },
-        salt=QUICK_ACTION_UNDO_SALT,
-    )
-    return {
-        "url": reverse(
-            "gift_manager:relation_quick_action_undo", kwargs={"pk": relation.relation_id}
-        ),
-        "token": token,
-        "label": gettext("Undo"),
-    }
-
-
-def _available_relation_quick_action_names(relation) -> set[str]:
-    """Return POST-capable quick action names for the relation's current card bucket."""
-    urgency_key = gift_plan_urgency_key(relation)
-    actions = build_gift_plan_quick_actions(relation, urgency_key, can_edit=True)
-    return {action["name"] for action in actions if action["kind"] != "edit"}
-
-
-def _set_relation_quick_action_due_date(relation, due_date_value: str | None) -> None:
-    """Set a relation due date from a quick-action date value."""
-    if not due_date_value:
-        raise ValueError
-    relation.due_date = date.fromisoformat(due_date_value)
-    relation.save(update_fields=["due_date"])
-
-
-def _set_relation_quick_action_status(relation, action: str) -> None:
-    """Set a relation status for a status quick action."""
-    relation.status = _get_relation_status_by_slug(ACTION_STATUS_SLUGS[action])
-    relation.save(update_fields=["status"])
-
-
-def _set_relation_quick_action_plan(
-    relation,
-    user,
-    *,
-    event_id: str | None,
-    due_date_value: str | None,
-) -> None:
-    """Set concrete planning fields and mark an idea as planned."""
-    if not event_id or not due_date_value:
-        raise ValueError
-
-    try:
-        due_date = date.fromisoformat(due_date_value)
-        event = Event.objects.accessible_by(user).get(event_id=event_id)
-    except (Event.DoesNotExist, ValidationError, ValueError) as exc:
-        raise ValueError from exc
-
-    previous_related_ids = SharingService.relation_related_ids(relation)
-    relation.status = _get_relation_status_by_slug("planned")
-    relation.event = event
-    relation.due_date = due_date
-    with transaction.atomic():
-        # The new event is shown to everyone the gift plan is shared with
-        SharingService.cascade_relation_reassignment(user, relation, previous_related_ids)
-        relation.save(update_fields=["status", "event", "due_date"])
-
-
-def _apply_relation_quick_action(relation, user, action: str, post_data) -> str:
-    """Apply a validated quick action and return its success message."""
-    if action == "plan":
-        try:
-            _set_relation_quick_action_plan(
-                relation,
-                user,
-                event_id=post_data.get("event"),
-                due_date_value=post_data.get("due_date"),
-            )
-        except ValueError as exc:
-            msg = gettext("Choose a valid event and due date.")
-            raise ValueError(msg) from exc
-        except RelationExposureDenied as exc:
-            raise ValueError(str(exc.message)) from exc
-        return gettext("Gift plan marked as planned.")
-
-    if action == "set_date":
-        try:
-            _set_relation_quick_action_due_date(relation, post_data.get("due_date"))
-        except ValueError as exc:
-            msg = gettext("Choose a valid due date.")
-            raise ValueError(msg) from exc
-        return gettext("Due date updated.")
-
-    _set_relation_quick_action_status(relation, action)
-    messages = {
-        "given": gettext("Gift plan marked as given."),
-        "purchased": gettext("Gift plan marked as purchased."),
-        "planned": gettext("Gift plan marked as planned."),
-        "abandoned": gettext("Gift plan abandoned."),
-    }
-    return messages[action]
-
-
-REACTION_PROMPT_ACTIONS = {"given", "abandoned"}
-
-
 @login_required
 @require_POST
 def relation_quick_action(request, pk):
@@ -948,16 +903,16 @@ def relation_quick_action(request, pk):
         return JsonResponse({"error": gettext("You cannot edit this gift plan.")}, status=403)
 
     action = request.POST.get("action")
-    if action not in _available_relation_quick_action_names(relation):
+    if action not in available_relation_quick_action_names(relation):
         return JsonResponse(
             {"error": gettext("This quick action is not available for this gift plan.")},
             status=400,
         )
 
     field = "due_date" if action == "set_date" else "status"
-    previous = _relation_undo_state(relation, field=field)
+    previous = relation_undo_state(relation, field=field)
     try:
-        message = _apply_relation_quick_action(relation, request.user, action, request.POST)
+        message = apply_relation_quick_action(relation, request.user, action, request.POST)
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))
     except RelationStatus.DoesNotExist:
@@ -966,7 +921,7 @@ def relation_quick_action(request, pk):
             status=400,
         )
     undo = (
-        _build_quick_action_undo(relation, request.user, action, previous)
+        build_quick_action_undo(relation, request.user, action, previous)
         if action in UNDOABLE_QUICK_ACTIONS
         else None
     )
@@ -976,28 +931,6 @@ def relation_quick_action(request, pk):
             message, {"reaction:prompt": {"url": prompt_url}}, undo=undo
         )
     return _relation_quick_action_response(message, undo=undo)
-
-
-def _restore_relation_from_undo(relation, payload: dict) -> bool:
-    """Restore the previous values when the relation still matches the undone state."""
-    field = payload["field"]
-    if _relation_undo_state(relation, field=field) != payload["current"]:
-        return False
-
-    previous = payload["previous"]
-    if field == "due_date":
-        updates = {
-            "due_date": date.fromisoformat(previous["due_date"]) if previous["due_date"] else None
-        }
-    else:
-        changed_at = previous["status_changed_at"]
-        updates = {
-            "status_id": previous["status"],
-            "status_changed_at": datetime.fromisoformat(changed_at) if changed_at else None,
-        }
-    # A queryset update keeps status_changed_at: save() would stamp it with now().
-    Relation.objects.filter(pk=relation.pk).update(**updates)
-    return True
 
 
 @login_required
@@ -1022,7 +955,7 @@ def relation_quick_action_undo(request, pk):
     with transaction.atomic():
         # Lock the row so a concurrent edit cannot slip in between the check and the restore.
         relation = Relation.objects.select_for_update().get(pk=relation.pk)
-        if not _restore_relation_from_undo(relation, payload):
+        if not restore_relation_from_undo(relation, payload):
             return JsonResponse(
                 {"error": gettext("This gift plan changed since, so the change was not undone.")},
                 status=409,

@@ -1,5 +1,6 @@
 """Card view polish of the gifts, events, and gift plan lists: field icons and action bar."""
 
+import re
 from datetime import date
 from datetime import timedelta
 
@@ -79,7 +80,7 @@ def _set_view(page: Page, grid: str, view: str):
 
 
 def _open_list(page: Page, live_server, path: str, grid: str, view: str, language: str = "en"):
-    page.goto(f"{live_server.url}/{language}/{path}/", wait_until="networkidle")
+    page.goto(f"{live_server.url}/{language}/{path}/")
     _set_view(page, grid, view)
     if view == "card":
         page.wait_for_selector(f'#{grid}[data-view="card"] .gridjs-td[data-label]')
@@ -365,6 +366,7 @@ def test_card_title_opens_details_and_double_click_still_edits(logged_in_page: P
     title = page.locator(
         f'#gift-grid .gridjs-tr[data-entity-id="{entity_id}"] .gridjs-td[data-card-role="title"]'
     )
+    expect(title).to_have_class(re.compile(r"\binline-editable\b"))
 
     title.dblclick()
     expect(title.locator("input, textarea")).to_be_visible()

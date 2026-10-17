@@ -17,7 +17,6 @@ from django.views.decorators.http import require_http_methods
 from gift_manager.forms import EventForm
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
-from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
@@ -40,7 +39,6 @@ from gift_manager.views.base import QueryStringPrefillMixin
 class EventListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
-    BatchOperationMixin,
     PermissionContextMixin,
     BaseListView,
 ):
@@ -61,6 +59,30 @@ class EventListView(
     def get_queryset(self):
         """Return Events for the current user or shared with the user."""
         return Event.objects.for_list_display(self.request.user).order_by("name")
+
+    def get_grid_data(self, items) -> list:
+        rows = []
+        for item in items:
+            event_id = str(item.event_id)
+            rows.append(
+                [
+                    "",  # Checkbox column placeholder - Index 0
+                    item.name,  # Index 1
+                    item.comment or "",  # Index 2
+                    item.date_summary,  # Index 3
+                    event_id,  # Index 4
+                    reverse("gift_manager:event_detail", args=[event_id]),  # Index 5
+                    reverse("gift_manager:event_edit", args=[event_id]),  # Index 6
+                    reverse("gift_manager:event_delete", args=[event_id]),  # Index 7
+                    bool(item.is_birthday),  # Index 8
+                ]
+            )
+        return rows
+
+    def get_context_data(self, **kwargs) -> dict:
+        context = super().get_context_data(**kwargs)
+        context["grid_data"] = self.get_grid_data(context.get("data", []))
+        return context
 
     def get_fallback_columns(self):
         """Get column definitions for fallback table."""

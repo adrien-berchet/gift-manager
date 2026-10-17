@@ -42,9 +42,11 @@ def opt_in(user, frequency=Profile.DIGEST_DAILY, **profile_fields):
     return user
 
 
-def overdue_plan(user, days=3, **kwargs):
+def overdue_plan(user, days=3, today=None, **kwargs):
+    # Tests that mock the run date must pass it, or the plan drifts with the real clock
+    today = today or timezone.localdate()
     return RelationFactory(
-        due_date=timezone.localdate() - timedelta(days=days),
+        due_date=today - timedelta(days=days),
         status=RelationStatusFactory(status="Planned"),
         shared_with=[user],
         **kwargs,
@@ -316,7 +318,7 @@ class TestSentTracking:
 @pytest.mark.django_db
 class TestFrequency:
     def test_weekly_digest_is_sent_on_mondays(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=MONDAY)
         opt_in(user, Profile.DIGEST_WEEKLY)
 
         with mock.patch("django.utils.timezone.localdate", return_value=MONDAY):
@@ -325,7 +327,7 @@ class TestFrequency:
         assert len(mail.outbox) == 1
 
     def test_weekly_digest_is_not_sent_on_other_days(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=TUESDAY)
         opt_in(user, Profile.DIGEST_WEEKLY)
 
         with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):
@@ -334,7 +336,7 @@ class TestFrequency:
         assert mail.outbox == []
 
     def test_include_weekly_ignores_the_weekday(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=TUESDAY)
         opt_in(user, Profile.DIGEST_WEEKLY)
 
         with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):
@@ -343,7 +345,7 @@ class TestFrequency:
         assert len(mail.outbox) == 1
 
     def test_missed_monday_digest_is_sent_later_in_the_week(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=TUESDAY)
         opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY - timedelta(days=7))
 
         with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):
@@ -354,7 +356,7 @@ class TestFrequency:
         assert user.profile.last_digest_sent_on == TUESDAY
 
     def test_digest_sent_this_week_is_not_sent_again_later_in_the_week(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=SATURDAY)
         opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY)
 
         with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
@@ -363,7 +365,7 @@ class TestFrequency:
         assert mail.outbox == []
 
     def test_catch_up_reaches_the_end_of_the_week(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=SATURDAY)
         opt_in(user, Profile.DIGEST_WEEKLY, last_digest_sent_on=MONDAY - timedelta(days=7))
 
         with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
@@ -372,7 +374,7 @@ class TestFrequency:
         assert len(mail.outbox) == 1
 
     def test_user_who_never_got_a_digest_waits_for_monday(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=SATURDAY)
         opt_in(user, Profile.DIGEST_WEEKLY)
 
         with mock.patch("django.utils.timezone.localdate", return_value=SATURDAY):
@@ -383,7 +385,7 @@ class TestFrequency:
     def test_catch_up_does_not_apply_to_daily_or_disabled_users(self, user):
         other = UserFactory()
         for account in (user, other):
-            overdue_plan(account)
+            overdue_plan(account, today=TUESDAY)
         opt_in(user, Profile.DIGEST_OFF, last_digest_sent_on=MONDAY - timedelta(days=7))
         opt_in(other, Profile.DIGEST_DAILY, last_digest_sent_on=TUESDAY)
 
@@ -393,7 +395,7 @@ class TestFrequency:
         assert mail.outbox == []
 
     def test_daily_digest_is_sent_any_day(self, user):
-        overdue_plan(user)
+        overdue_plan(user, today=TUESDAY)
         opt_in(user)
 
         with mock.patch("django.utils.timezone.localdate", return_value=TUESDAY):

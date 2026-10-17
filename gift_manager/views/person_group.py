@@ -59,12 +59,38 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
     def get_queryset(self):
         return get_person_group_grid_queryset(self.request.user)
 
+    def get_grid_data(self, items) -> list:
+        """Format person group items into rows for Grid.js."""
+        return get_person_group_grid_data(items)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update(
-            get_person_group_management_context(self.request.user, include_permissions=False)
+        group_context = get_person_group_management_context(
+            self.request.user, include_permissions=False
         )
+        context.update(group_context)
         return context
+
+
+def get_person_group_grid_data(items) -> list:
+    """Format person group items into rows for Grid.js."""
+    rows = []
+    for item in items:
+        group_id = str(item.get("group_id") or "")
+        member_count = item.get("member_count") or 0
+        rows.append(
+            [
+                "",  # Checkbox placeholder - Index 0
+                item.get("name") or "",  # Index 1
+                member_count,  # Index 2
+                group_id,  # Index 3
+                reverse("gift_manager:person_group_relation_create", args=[group_id]),  # Index 4
+                reverse("gift_manager:person_group_detail", args=[group_id]),  # Index 5
+                reverse("gift_manager:person_group_edit", args=[group_id]),  # Index 6
+                reverse("gift_manager:person_group_delete", args=[group_id]),  # Index 7
+            ]
+        )
+    return rows
 
 
 def get_person_group_grid_column_names():
@@ -112,16 +138,19 @@ def get_person_group_management_context(
         for group in all_groups
     )
 
+    group_rows = [
+        {
+            "group_id": group.group_id,
+            "name": group.name,
+            "member_count": len(_get_prefetched_group_members(group)),
+        }
+        for group in all_groups
+    ]
+
     context = {
         "column_names": get_person_group_grid_column_names(),
-        "data": [
-            {
-                "group_id": group.group_id,
-                "name": group.name,
-                "member_count": len(_get_prefetched_group_members(group)),
-            }
-            for group in all_groups
-        ],
+        "data": group_rows,
+        "grid_data": get_person_group_grid_data(group_rows),
         "tree_data": tree_data,
         "has_hierarchy": has_hierarchy,
     }
@@ -131,7 +160,7 @@ def get_person_group_management_context(
             str(group.group_id): PermissionService.get_effective_permission(group, user)
             for group in all_groups
         }
-        context["user_permissions_json"] = json.dumps(permissions)
+        context["user_permissions"] = permissions
 
     return context
 
@@ -423,11 +452,12 @@ class PersonGroupDetailView(BaseDetailView):
         context = super().get_context_data(**kwargs)
 
         accessible_groups = PersonGroup.objects.accessible_by(self.request.user)
-        accessible_group_ids = set(accessible_groups.values_list("pk", flat=True))
-        accessible_descendants = [
-            group for group in self.object.get_descendants() if group.pk in accessible_group_ids
-        ]
-        accessible_nested_groups = [self.object, *accessible_descendants]
+        # The group and its descendants the user can access
+        nested_groups = PersonGroup.hierarchy_subquery([self.object], include_start=True)
+        accessible_nested_groups = PersonGroup.objects.filter(
+            Q(pk=self.object.pk)
+            | (Q(pk__in=nested_groups) & Q(pk__in=accessible_groups.values("pk")))
+        )
         accessible_people = Person.objects.accessible_by(self.request.user)
 
         # Hierarchy information
@@ -437,11 +467,7 @@ class PersonGroupDetailView(BaseDetailView):
         context["child_groups"] = accessible_groups.filter(parent_groups=self.object).order_by(
             "name"
         )
-        context["ancestors_path"] = [
-            group
-            for group in self.object.get_primary_ancestors_path()
-            if group.pk in accessible_group_ids
-        ]
+        context["ancestors_path"] = self.object.get_primary_ancestors_path(within=accessible_groups)
 
         # Direct members only
         context["members"] = (

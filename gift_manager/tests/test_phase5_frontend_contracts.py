@@ -1,6 +1,8 @@
 """Static frontend contract tests for Phase 5 UX fixes."""
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 from django.template.loader import render_to_string
@@ -9,6 +11,7 @@ from django.utils.translation import override
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE_ROOT = PROJECT_ROOT / "gift_manager/templates/gift_manager"
 STATIC_ROOT = PROJECT_ROOT / "gift_manager/static/gift_manager"
+NODE_BIN = shutil.which("node")
 
 
 def read(path: Path) -> str:
@@ -431,7 +434,7 @@ def test_global_search_modal_fits_the_visible_area_on_phones():
 def test_base_template_delegates_behaviour_to_static_scripts():
     content = read(TEMPLATE_ROOT / "base.html")
 
-    for script in ("app-bootstrap", "theme-toggle", "global-search", "app-shell"):
+    for script in ("core-utils", "app-bootstrap", "theme-toggle", "global-search", "app-shell"):
         assert f"{{% static 'gift_manager/js/{script}.js' %}}" in content
         assert (STATIC_ROOT / f"js/{script}.js").exists()
     assert "{% static 'gift_manager/css/base-layout.css' %}" in content
@@ -440,6 +443,11 @@ def test_base_template_delegates_behaviour_to_static_scripts():
     assert "function getCookie" not in content
     assert "window.showNotification" not in content
     assert content.count("<script>") <= 3
+    assert (
+        content.index("js/core-utils.js")
+        < content.index("js/app-bootstrap.js")
+        < content.index("js/app-shell.js")
+    )
 
 
 def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contract():
@@ -594,3 +602,106 @@ def test_native_confirm_dialogs_are_limited_to_fallback_and_group_move():
         if re.search(r"(?<![\w.])confirm\(", text) or "window.confirm(" in text:
             offenders.append(rel)
     assert offenders == []
+
+
+def test_core_utils_contract():
+    script = read(STATIC_ROOT / "js/core-utils.js")
+
+    assert "window.GMUtils = GMUtils" in script
+    for fn in (
+        "escapeHtml",
+        "escapeAttribute",
+        "sanitizeUrl",
+        "safeUrl",
+        "getCookie",
+        "getCsrfToken",
+        "showNotification",
+        "flushNotifications",
+    ):
+        assert fn in script
+
+    if NODE_BIN is None:
+        return
+
+    node_script = r"""
+const fs = require("fs");
+const vm = require("vm");
+
+const events = [];
+let cookieString = "csrftoken=abc123token; sessionid=xyz";
+const context = {
+  window: {},
+  document: {
+    get cookie() { return cookieString; },
+    set cookie(val) { cookieString = val; },
+    querySelector: (sel) => {
+      if (sel === 'input[name="csrfmiddlewaretoken"]') {
+        return { value: "doc-token" };
+      }
+      return null;
+    },
+    dispatchEvent: (ev) => { events.push(ev); },
+  },
+  CustomEvent: function(type, opts) { this.type = type; this.detail = opts ? opts.detail : {}; },
+  console,
+};
+vm.createContext(context);
+vm.runInContext(
+  fs.readFileSync("gift_manager/static/gift_manager/js/core-utils.js", "utf8"),
+  context
+);
+
+const { window } = context;
+const GMUtils = window.GMUtils;
+function assert(cond, msg) { if (!cond) throw new Error(msg); }
+
+// HTML escaping
+const payload = '<img src=x onerror="alert(1)">';
+assert(GMUtils.escapeHtml(payload) === '&lt;img src=x onerror=&quot;alert(1)&quot;&gt;', "escapeHtml");
+assert(GMUtils.escapeAttribute("a&b'c") === 'a&amp;b&#39;c', "escapeAttribute");
+
+// URL sanitization
+assert(GMUtils.sanitizeUrl("javascript:alert(1)") === '#', "rejects javascript:");
+assert(GMUtils.sanitizeUrl("//evil.com/phish") === '#', "rejects protocol-relative");
+assert(GMUtils.sanitizeUrl("/gifts/123/?foo=1#bar") === '/gifts/123/?foo=1#bar', "accepts local relative");
+assert(GMUtils.sanitizeUrl("https://example.com/gifts") === 'https://example.com/gifts', "accepts https");
+assert(
+  GMUtils.safeUrl('https://example.com/test?a="b"') === 'https://example.com/test?a=&quot;b&quot;',
+  "safeUrl escapes attribute"
+);
+
+// Cookie and CSRF
+assert(GMUtils.getCookie("csrftoken") === "abc123token", "parses cookie");
+assert(GMUtils.getCookie("nonexistent") === null, "returns null for missing cookie");
+// Cookie token takes precedence to prevent 403s from stale form inputs across tabs
+const mockForm = {
+  querySelector: (sel) => (sel === 'input[name="csrfmiddlewaretoken"]' ? { value: "form-token" } : null),
+};
+assert(GMUtils.getCsrfToken(mockForm) === "abc123token", "cookie token preferred over form input");
+
+// When cookie is missing, fall back to explicit form input, then document input
+context.document.cookie = "";
+assert(GMUtils.getCsrfToken(mockForm) === "form-token", "fallback to form input when cookie absent");
+assert(GMUtils.getCsrfToken() === "doc-token", "fallback to document input when no form");
+
+// Early notification queueing and flush (stub only queues, never dispatches DOM event)
+GMUtils.showNotification("Early alert", "warning");
+assert(events.length === 0, "early stub queues without DOM dispatch to avoid recursion");
+
+const received = [];
+window.showNotification = (msg, type) => { received.push({ msg, type }); };
+GMUtils.flushNotifications();
+assert(received.length === 1, "queued notification flushed");
+assert(received[0].msg === "Early alert" && received[0].type === "warning", "flushed content matches");
+
+// Subsequent showNotification calls delegate directly to window.showNotification
+GMUtils.showNotification("Direct alert", "success");
+assert(received.length === 2 && received[1].msg === "Direct alert", "delegates to window.showNotification");
+"""
+
+    subprocess.run(  # noqa: S603 - fixed Node.js test harness with no shell.
+        [NODE_BIN, "-e", node_script],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+    )

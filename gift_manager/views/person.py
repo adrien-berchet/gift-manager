@@ -16,7 +16,6 @@ from gift_manager.forms import PersonForm
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
-from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
@@ -110,10 +109,41 @@ def populate_person_grid_group_info(data, user, accessible_groups=None) -> None:
             item["groups_info"] = groups_by_person.get(item["person_id"], [])
 
 
+def get_person_grid_data(items) -> list:
+    """Format person items into rows for Grid.js."""
+    rows = []
+    for item in items:
+        person_id = str(item.get("person_id") or "")
+        groups_info = [
+            {
+                "id": str(group["id"]),
+                "name": str(group["name"]),
+                "url": reverse("gift_manager:person_group_detail", args=[group["id"]]),
+            }
+            for group in item.get("groups_info") or []
+        ]
+        raw_email = item.get("email_address")
+        email = decode_email(raw_email) if raw_email else ""
+        rows.append(
+            [
+                "",  # Checkbox placeholder - Index 0
+                item.get("first_name") or "",  # Index 1
+                item.get("family_name") or "",  # Index 2
+                email or "",  # Index 3
+                groups_info,  # Index 4
+                person_id,  # Index 5
+                reverse("gift_manager:person_relation_create", args=[person_id]),  # Index 6
+                reverse("gift_manager:person_detail", args=[person_id]),  # Index 7
+                reverse("gift_manager:person_edit", args=[person_id]),  # Index 8
+                reverse("gift_manager:person_delete", args=[person_id]),  # Index 9
+            ]
+        )
+    return rows
+
+
 class PersonListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
-    BatchOperationMixin,
     PermissionContextMixin,
     BaseListView,
 ):
@@ -127,16 +157,21 @@ class PersonListView(
         super().__init__(*args, **kwargs)
         self.column_names = get_person_grid_column_names()
 
+    def get_grid_data(self, items) -> list:
+        """Format person items into rows for Grid.js."""
+        return get_person_grid_data(items)
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        populate_person_grid_group_info(context.get("data", []), self.request.user)
+        items = context.get("data", [])
+        populate_person_grid_group_info(items, self.request.user)
         context["unique_groups"] = (
             PersonGroup.objects.accessible_by(self.request.user)
             .values("name")
             .distinct()
             .order_by("name")
         )
-
+        context["grid_data"] = self.get_grid_data(items)
         return context
 
     def _populate_group_info_fallback(self, data) -> None:
@@ -242,15 +277,15 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         # Get all groups this person belongs to
         person_groups = list(self.object.groups.all())
 
-        # Get all ancestor groups (parent groups) for inheritance
-        all_groups_with_ancestors = set(person_groups)
-        ancestor_groups_only = set()
-        for group in person_groups:
-            ancestors = group.get_ancestors()
-            all_groups_with_ancestors.update(ancestors)
-            # Only expose ancestors reached through groups the user can see
-            if group.pk in visible_group_ids:
-                ancestor_groups_only.update(a for a in ancestors if a.pk in visible_group_ids)
+        # The person's groups and all their ancestors, for the inherited plans
+        all_groups_with_ancestors = PersonGroup.hierarchy_subquery(
+            person_groups, ancestors=True, include_start=True
+        )
+        # Only expose ancestors reached through groups the user can see
+        visible_groups = [g for g in person_groups if g.pk in visible_group_ids]
+        ancestor_groups_only = PersonGroup.objects.filter(
+            pk__in=PersonGroup.hierarchy_subquery(visible_groups, ancestors=True)
+        ).filter(pk__in=visible_group_ids)
 
         # Add groups to context for display, limited to the groups the user can see
         context["direct_groups"] = [g for g in person_groups if g.pk in visible_group_ids]

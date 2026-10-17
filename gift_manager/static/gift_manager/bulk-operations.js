@@ -1094,26 +1094,11 @@
         },
 
         getCSRFToken() {
-            // Prefer cookie token (always in sync with session) over form tokens
-            // which may be from stale/mismatched form contexts
-            return (
-                document.cookie
-                    .split("; ")
-                    .find((c) => c.startsWith("csrftoken="))
-                    ?.split("=")[1] ||
-                document.querySelector("[name=csrfmiddlewaretoken]")?.value ||
-                document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-                ""
-            );
+            return window.GMUtils.getCsrfToken();
         },
 
         escapeHtml(value) {
-            return String(value ?? "")
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#39;");
+            return window.GMUtils.escapeHtml(value);
         },
 
         triggerListUpdate() {
@@ -1121,12 +1106,7 @@
         },
 
         showNotification(message, type = "info") {
-            // Trigger notification event for the main notification system
-            document.dispatchEvent(
-                new CustomEvent("showNotification", {
-                    detail: { message, type },
-                })
-            );
+            return window.GMUtils.showNotification(message, type);
         },
     };
 

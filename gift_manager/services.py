@@ -7,6 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.db.models import Count
+from django.db.models import Max
 from django.db.models import Model
 from django.db.models import Q
 from django.db.models import Sum
@@ -51,6 +52,9 @@ class PermissionService:
         PermissionLevel.EDITOR,
         PermissionLevel.OWNER,
     }
+
+    DELETE_RESULT_DELETED = "deleted"
+    DELETE_RESULT_UNSHARED = "shared_removed"
 
     @staticmethod
     def get_permission_model(obj) -> type[Model] | None:
@@ -169,6 +173,47 @@ class PermissionService:
             raise PermissionDenied(gettext("At least one owner is required."))
 
     @classmethod
+    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False) -> str:
+        """Delete an object, or remove actor's access if it is shared with other users.
+
+        Args:
+            actor: The user requesting the deletion or leave.
+            obj: The model instance to delete or leave.
+            is_leave_request: If True, actor explicitly requested to leave access (does not
+                require editor permission, but still enforces assert_can_leave_object).
+
+        Returns:
+            "shared_removed" if actor's access was removed while other users retain access.
+            "deleted" if the object was completely deleted.
+
+        Raises:
+            PermissionDenied: If actor lacks permission to delete the object or leave access.
+        """
+        cls.lock_object(obj)
+
+        if is_leave_request:
+            cls.assert_can_leave_object(actor, obj)
+            cls.delete_permission(actor, obj)
+            return cls.DELETE_RESULT_UNSHARED
+
+        if cls.has_other_access_holder(obj, actor):
+            permission = cls.get_effective_permission(obj, actor)
+            if permission < PermissionLevel.EDITOR:
+                raise PermissionDenied(
+                    gettext("Use the leave access action to remove your own access.")
+                )
+            cls.assert_can_leave_object(actor, obj)
+            cls.delete_permission(actor, obj)
+            return cls.DELETE_RESULT_UNSHARED
+
+        permission = cls.get_effective_permission(obj, actor)
+        if permission < PermissionLevel.EDITOR:
+            raise PermissionDenied(gettext("You do not have permission to delete this object."))
+
+        obj.delete()
+        return cls.DELETE_RESULT_DELETED
+
+    @classmethod
     def has_other_access_holder(cls, obj, user) -> bool:
         """Return whether someone besides user has effective access to obj."""
         if obj.shared_with.exclude(id=user.id).exists():
@@ -181,7 +226,7 @@ class PermissionService:
         if isinstance(obj, PersonGroup):
             return (
                 PersonGroupPermission.objects.filter(
-                    group__in=obj.get_ancestors(use_cache=False),
+                    group__in=PersonGroup.hierarchy_subquery([obj], ancestors=True),
                     inherit_permissions=True,
                 )
                 .exclude(user=user)
@@ -217,7 +262,7 @@ class PermissionService:
         if isinstance(obj, PersonGroup):
             owner_ids.update(
                 PersonGroupPermission.objects.filter(
-                    group__in=obj.get_ancestors(use_cache=False),
+                    group__in=PersonGroup.hierarchy_subquery([obj], ancestors=True),
                     inherit_permissions=True,
                     permission_type=PermissionLevel.OWNER,
                 ).values_list("user_id", flat=True)
@@ -250,21 +295,13 @@ class PermissionService:
         Returns:
             int: The effective permission level
         """
-        direct_permission = PersonGroupPermission.objects.filter(user=user, group=group).first()
-        direct_level = (
-            direct_permission.permission_type if direct_permission else PermissionLevel.NONE
+        ancestors = PersonGroup.hierarchy_subquery([group], ancestors=True)
+        level = (
+            PersonGroupPermission.objects.filter(user=user)
+            .filter(Q(group=group) | Q(group__in=ancestors, inherit_permissions=True))
+            .aggregate(level=Max("permission_type"))["level"]
         )
-
-        ancestors = group.get_ancestors()
-        inherited_permissions = PersonGroupPermission.objects.filter(
-            user=user, group__in=ancestors, inherit_permissions=True
-        )
-
-        inherited_level = PermissionLevel.NONE
-        if inherited_permissions.exists():
-            inherited_level = max(p.permission_type for p in inherited_permissions)
-
-        return max(direct_level, inherited_level)
+        return PermissionLevel.NONE if level is None else level
 
     @classmethod
     def get_permission_label(cls, obj, user, filter_name, case="lower") -> str:

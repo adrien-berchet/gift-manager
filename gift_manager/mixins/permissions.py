@@ -33,7 +33,6 @@ class PermissionContextMixin:
         if not self.request.user.is_authenticated:
             return {
                 "user_permissions": {},
-                "user_permissions_json": "{}",
                 "permission_levels": PermissionLevel.CHOICES,
             }
 
@@ -54,7 +53,6 @@ class PermissionContextMixin:
 
         return {
             "user_permissions": permissions,
-            "user_permissions_json": json.dumps(permissions),
             "permission_levels": PermissionLevel.CHOICES,
         }
 
@@ -276,103 +274,6 @@ class SingleObjectPermissionMixin:
                 )
 
         return context
-
-
-class BulkPermissionMixin:
-    """Mixin to handle bulk operations with permission checking."""
-
-    def check_bulk_permissions(self, objects, required_permission=PermissionLevel.EDITOR):
-        """Check permissions for bulk operations.
-
-        Args:
-            objects: List of objects to check
-            required_permission: Minimum permission level required
-
-        Returns:
-            Tuple of (allowed_objects, denied_objects)
-        """
-        if not self.request.user.is_authenticated:
-            return [], list(objects)
-
-        allowed = []
-        denied = []
-
-        for obj in objects:
-            try:
-                permission = PermissionService.get_effective_permission(obj, self.request.user)
-                if permission >= required_permission:
-                    allowed.append(obj)
-                else:
-                    denied.append(obj)
-            except (AttributeError, TypeError):
-                # Object doesn't support permissions - deny by default
-                denied.append(obj)
-
-        return allowed, denied
-
-    def filter_by_permission(self, queryset, required_permission=PermissionLevel.VIEWER):
-        """Filter queryset to only include objects user has permission for.
-
-        Args:
-            queryset: Django queryset to filter
-            required_permission: Minimum permission level required
-
-        Returns:
-            Filtered queryset
-        """
-        if not self.request.user.is_authenticated:
-            return queryset.none()
-
-        # For objects with shared_with relationship, filter by that
-        if hasattr(queryset.model, "shared_with"):
-            return queryset.filter(shared_with=self.request.user)
-
-        # For other objects, we'd need to check permissions individually
-        # This is less efficient but more accurate
-        allowed_ids = []
-        for obj in queryset:
-            try:
-                permission = PermissionService.get_permission(obj, self.request.user)
-                if permission >= required_permission:
-                    # Get the primary key
-                    pk = getattr(obj, "pk", None)
-                    if pk:
-                        allowed_ids.append(pk)
-            except (AttributeError, TypeError):
-                continue
-
-        return queryset.filter(pk__in=allowed_ids)
-
-
-class PermissionRequiredMixin:
-    """Mixin to require specific permission level for view access."""
-
-    required_permission = PermissionLevel.VIEWER
-    permission_denied_message = "You do not have permission to access this object."
-
-    def dispatch(self, request, *args, **kwargs):
-        """Check permissions before processing the request."""
-        # Get the object if this is a detail/edit/delete view
-        if hasattr(self, "get_object"):
-            try:
-                obj = self.get_object()
-                if request.user.is_authenticated:
-                    permission = PermissionService.get_effective_permission(obj, request.user)
-                    if permission < self.required_permission:
-                        from django.contrib import messages
-                        from django.shortcuts import redirect
-
-                        messages.error(request, self.permission_denied_message)
-                        return redirect("gift_manager:index")
-                else:
-                    from django.contrib.auth.views import redirect_to_login
-
-                    return redirect_to_login(request.get_full_path())
-            except (AttributeError, TypeError):
-                # Object doesn't support permissions - allow access
-                pass
-
-        return super().dispatch(request, *args, **kwargs)
 
 
 class PermissionUpdateMixin:

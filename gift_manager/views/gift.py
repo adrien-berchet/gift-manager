@@ -15,7 +15,6 @@ from gift_manager.forms import GiftForm
 from gift_manager.forms import GiftRelationForm
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
-from gift_manager.mixins.performance import BatchOperationMixin
 from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
@@ -26,6 +25,7 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import PERMISSION_LEVELS
+from gift_manager.templatetags.custom_filters import safe_http_url
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -37,7 +37,6 @@ from gift_manager.views.base import QueryStringPrefillMixin
 class GiftListView(
     FallbackModeListMixin,
     QueryOptimizationMixin,
-    BatchOperationMixin,
     PermissionContextMixin,
     BaseListView,
 ):
@@ -57,9 +56,40 @@ class GiftListView(
             "tags": gettext("Tags"),
         }
 
+    def get_grid_data(self, items) -> list:
+        rows = []
+        for item in items:
+            gift_id = str(item["gift_id"])
+            tags_info = [
+                {
+                    "id": str(tag["id"]),
+                    "name": str(tag["name"]),
+                    "url": reverse("gift_manager:gift_tag_detail", args=[tag["id"]]),
+                }
+                for tag in item.get("tags_info") or []
+            ]
+            price = item.get("price")
+            rows.append(
+                [
+                    "",  # Checkbox placeholder - Index 0
+                    item.get("name") or "",  # Index 1
+                    item.get("comment") or "",  # Index 2
+                    safe_http_url(item.get("url")),  # Index 3
+                    f"{price}" if price is not None else "",  # Index 4
+                    tags_info,  # Index 5
+                    gift_id,  # Index 6
+                    reverse("gift_manager:gift_relation_create", args=[gift_id]),  # Index 7
+                    reverse("gift_manager:gift_detail", args=[gift_id]),  # Index 8
+                    reverse("gift_manager:gift_edit", args=[gift_id]),  # Index 9
+                    reverse("gift_manager:gift_delete", args=[gift_id]),  # Index 10
+                ]
+            )
+        return rows
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         self._populate_tag_info_fallback(context.get("data", []))
+        context["grid_data"] = self.get_grid_data(context.get("data", []))
         context["unique_tags"] = (
             GiftTag.objects.accessible_by(self.request.user)
             .values("name")

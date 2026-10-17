@@ -76,6 +76,7 @@ status and notes to reflect the move.
 | 0022 | Complete Gift Plan Visibility And Bounded Sections | Implemented | Gift Plans | No plan was missing; workspace sections now page two rows of cards each so the last section is reachable. Moved to `implemented/`. |
 | 0023 | Verify The Remember Me Login Checkbox | Implemented | Accounts | Test that the checkbox controls session persistence, with tests for both cases. Moved to `implemented/`. |
 | 0024 | Polish The Advanced List Card View | Implemented | Frontend | Per-field card icons, dashboard-consistent action buttons in card and list views, overflow menu for delete and share. Moved to `implemented/`. |
+| 0025 | Measure And Reduce Static Asset Load Cost | Proposed | Frontend | Move-only cleanup of the static asset folders, then measured fixes (vendor assets, `defer`, per-page assets) instead of bundling. |
 
 
 ## Working With Ideas

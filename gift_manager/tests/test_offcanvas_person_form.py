@@ -195,7 +195,10 @@ class TestOffcanvasPersonForm:
 
         assert response.status_code == 200
         assert not (response.context["form"]["groups"].value() or [])
-        assert f'value="{inaccessible_group.pk}"' not in response.content.decode()
+        assert inaccessible_group.name not in response.content.decode()
+        assert (
+            f'value="{inaccessible_group.pk}"' not in response.context["form"]["groups"].as_widget()
+        )
 
     def test_form_has_data_form_type_attribute(self, client_logged_in, person):
         """Test that form has data-form-type attribute for FormInitializer."""

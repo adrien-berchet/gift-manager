@@ -14,14 +14,14 @@ from django.utils.translation import gettext
 from django.views.generic import View
 
 from gift_manager.adapters import ensure_user_email_encoded
+from gift_manager.invitations import get_request_pending_invitation
+from gift_manager.invitations import invitation_matches_email
+from gift_manager.invitations import store_pending_invitation_token
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
-from gift_manager.views.profile import get_request_pending_invitation
-from gift_manager.views.profile import invitation_matches_email
-from gift_manager.views.profile import store_pending_invitation_token
 
 
 def is_self_deactivated(user) -> bool:

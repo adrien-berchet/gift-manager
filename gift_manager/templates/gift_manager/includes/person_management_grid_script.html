@@ -1,27 +1,15 @@
-{% load custom_filters %}
 {% load i18n %}
+{{ grid_data|json_script:"grid-data" }}
+{{ user_permissions|json_script:"user-permissions" }}
 
 <script>
     (function () {
-        window.userPermissions = {{ user_permissions_json|safe }};
+        const permEl = document.getElementById('user-permissions');
+        window.userPermissions = permEl ? JSON.parse(permEl.textContent) : {};
         const userPermissions = window.userPermissions;
 
-        const data = [
-            {% for item in data %}
-    [
-        '',
-        "{{ item.first_name|escapejs }}",
-        "{{ item.family_name|escapejs }}",
-        "{{ item.email_address|decode_email|default:''|escapejs }}",
-        {% if item.groups_info %}[{% for group in item.groups_info %}{ id: "{{ group.id }}", name: "{{ group.name|escapejs }}", url: "{% url 'gift_manager:person_group_detail' group.id %}" } {% if not forloop.last %}, {% endif %} {% endfor %}]{% else %} []{% endif %},
-    "{{ item.person_id }}",
-        "{% url 'gift_manager:person_relation_create' item.person_id %}",
-        "{% url 'gift_manager:person_detail' item.person_id %}",
-        "{% url 'gift_manager:person_edit' item.person_id %}",
-        "{% url 'gift_manager:person_delete' item.person_id %}"
-            ]{% if not forloop.last %}, {% endif %}
-    {% endfor %}
-            ];
+        const dataEl = document.getElementById('grid-data');
+        const data = dataEl ? JSON.parse(dataEl.textContent) : [];
 
     const columns = [
         GridUtils.createCheckboxColumn(5),

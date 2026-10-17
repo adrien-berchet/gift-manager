@@ -567,7 +567,7 @@ class EditPermissionMixin:
 
         return surprise_sharing_warning(self.object, granted_users)
 
-    def post(self, request, *args, **kwargs):  # noqa: PLR0911
+    def post(self, request, *args, **kwargs):
         self.object = self.get_object()
         self.is_htmx = request.headers.get("HX-Request") == "true"
 
@@ -585,58 +585,37 @@ class EditPermissionMixin:
 
         # HTMX permission change (no explicit action parameter)
         if self.is_htmx and "permission" in request.POST:
-            permission_value = request.POST.get("permission")
-            if permission_value == "not_shared":
-                return self._handle_remove_share(request)
-
-            # Check if user is already shared
-            user_id = request.POST.get("user_id")
-            try:
-                user = User.objects.get(id=user_id)
-            except (User.DoesNotExist, ValueError, TypeError):
-                logger.warning("User not found for permission update: %s", user_id)
-                return self._handle_error(request, gettext("User not found."))
-            is_shared = self.object.shared_with.filter(id=user.id).exists()
-
-            if is_shared:
-                return self._handle_update_permission(request)
-            return self._handle_share_with(request)
+            return self._handle_update_permission(request)
 
         # For other cases, call the parent post method
         return super().post(request, *args, **kwargs)
 
-    def _handle_update_permission(self, request) -> HttpResponse:
-        """Update an existing permission."""
-        permission_value = request.POST.get("permission")
-
+    def _handle_grant_permission(self, request, permission_level: int) -> HttpResponse:
+        """Grant or update sharing permission for a user."""
         try:
             user, _username = get_user(request.POST.get("user_id"))
+        except (User.DoesNotExist, ValueError, TypeError):
+            logger.warning("User not found for permission change: %s", request.POST.get("user_id"))
+            return self._handle_error(request, gettext("User not found."))
 
-            # If the permission is "not_shared", redirect to the share removal method
-            if permission_value == "not_shared":
-                return self._handle_remove_share(request)
-
-            # Update the permission
-            new_permission = int(permission_value)
+        try:
             with PermissionService.locked_for_permission_change(self.object):
                 PermissionService.assert_can_manage_permission(
                     request.user,
                     self.object,
                     user,
-                    new_permission,
+                    permission_level,
                 )
-                SharingService.grant(request.user, self.object, user, new_permission)
+                SharingService.grant(request.user, self.object, user, permission_level)
             warning = surprise_sharing_warning(self.object, [user])
 
             if self.is_htmx:
-                # Return HTML partial for HTMX with trigger for notification
-
                 response = render(
                     request,
                     "gift_manager/includes/permission_row_partial.html",
                     {
                         "shared_user": user,
-                        "permission": new_permission,
+                        "permission": permission_level,
                         "permission_levels": PERMISSION_LEVELS,
                         "is_shared": True,
                         "update_url": request.path,
@@ -648,102 +627,71 @@ class EditPermissionMixin:
                     )
                 return response
 
-            # Fallback for non-HTMX requests: the page shows the updated permission
             if warning:
                 messages.warning(request, warning)
             return self.get(request)
 
-        except User.DoesNotExist:
-            logger.warning("User not found for permission update: %s", request.POST.get("user_id"))
-            return self._handle_error(request, gettext("User not found."))
         except (ValueError, TypeError) as e:
             logger.warning("Invalid permission value: %s", e)
             return self._handle_error(request, gettext("Invalid permission value."))
+
+    def _handle_update_permission(self, request) -> HttpResponse:
+        """Update an existing permission."""
+        permission_value = request.POST.get("permission")
+        if permission_value == "not_shared":
+            return self._handle_remove_share(request)
+
+        try:
+            new_permission = int(permission_value)
+        except (ValueError, TypeError) as e:
+            logger.warning("Invalid permission value: %s", e)
+            return self._handle_error(request, gettext("Invalid permission value."))
+
+        return self._handle_grant_permission(request, new_permission)
 
     def _handle_remove_share(self, request) -> HttpResponse:
         """Remove an existing sharing."""
         try:
             user, _username = get_user(request.POST.get("user_id"))
-
-            # Remove the permission
-            with PermissionService.locked_for_permission_change(self.object):
-                PermissionService.assert_can_manage_permission(
-                    request.user,
-                    self.object,
-                    user,
-                    None,
-                )
-                PermissionService.delete_permission(user, self.object)
-
-            if self.is_htmx:
-                # The re-rendered row shows the removed sharing
-                return render(
-                    request,
-                    "gift_manager/includes/permission_row_partial.html",
-                    {
-                        "shared_user": user,
-                        "permission": None,
-                        "permission_levels": PERMISSION_LEVELS,
-                        "is_shared": False,
-                        "update_url": request.path,
-                    },
-                )
-
-            # Fallback for non-HTMX requests: the page shows the removed sharing
-            return self.get(request)
-
-        except User.DoesNotExist:
+        except (User.DoesNotExist, ValueError, TypeError):
             logger.warning("User not found for share removal: %s", request.POST.get("user_id"))
             return self._handle_error(request, gettext("User not found."))
+
+        with PermissionService.locked_for_permission_change(self.object):
+            PermissionService.assert_can_manage_permission(
+                request.user,
+                self.object,
+                user,
+                None,
+            )
+            PermissionService.delete_permission(user, self.object)
+
+        if self.is_htmx:
+            # The re-rendered row shows the removed sharing
+            return render(
+                request,
+                "gift_manager/includes/permission_row_partial.html",
+                {
+                    "shared_user": user,
+                    "permission": None,
+                    "permission_levels": PERMISSION_LEVELS,
+                    "is_shared": False,
+                    "update_url": request.path,
+                },
+            )
+
+        # Fallback for non-HTMX requests: the page shows the removed sharing
+        return self.get(request)
 
     def _handle_share_with(self, request) -> HttpResponse:
         """Share the object with a new user."""
         try:
             permission = int(request.POST.get("permission", PermissionLevel.VIEWER))
-            user, _username = get_user(request.POST.get("user_id"))
-
-            # Create or update the permission
-            with PermissionService.locked_for_permission_change(self.object):
-                PermissionService.assert_can_manage_permission(
-                    request.user,
-                    self.object,
-                    user,
-                    permission,
-                )
-                SharingService.grant(request.user, self.object, user, permission)
-            warning = surprise_sharing_warning(self.object, [user])
-
-            if self.is_htmx:
-                # Return HTML partial for HTMX with trigger for notification
-
-                response = render(
-                    request,
-                    "gift_manager/includes/permission_row_partial.html",
-                    {
-                        "shared_user": user,
-                        "permission": permission,
-                        "permission_levels": PERMISSION_LEVELS,
-                        "is_shared": True,
-                        "update_url": request.path,
-                    },
-                )
-                if warning:
-                    response["HX-Trigger"] = json.dumps(
-                        {"showNotification": {"message": warning, "type": "warning"}}
-                    )
-                return response
-
-            # Fallback for non-HTMX requests: the page shows the updated permission
-            if warning:
-                messages.warning(request, warning)
-            return self.get(request)
-
-        except User.DoesNotExist:
-            logger.warning("User not found for sharing: %s", request.POST.get("user_id"))
-            return self._handle_error(request, gettext("User not found."))
         except (ValueError, TypeError) as e:
             logger.warning("Invalid permission value for sharing: %s", e)
             return self._handle_error(request, gettext("Invalid permission value."))
+
+        return self._handle_grant_permission(request, permission)
 
     def _handle_error(self, request, error_message: str) -> HttpResponse:
         """Handle errors by returning appropriate response.
@@ -864,41 +812,16 @@ class DeleteSharedMixin:
         """
         with transaction.atomic():
             self.object = self.get_object()
-            # Leaving or deleting can remove the last owner's access: serialize with other
-            # permission changes (the row lock is held until the transaction ends)
-            PermissionService.lock_object(self.object)
             success_url = self.get_success_url()
+            action = PermissionService.delete_or_leave(
+                request.user, self.object, is_leave_request=self.is_leave_access_request()
+            )
 
-            if self.is_leave_access_request():
-                # If shared, only remove the sharing with the current user
-                PermissionService.assert_can_leave_object(request.user, self.object)
-                PermissionService.delete_permission(request.user, self.object)
-
-                success_message = gettext(
-                    "You no longer have access to this {}, but it remains shared with other users"
-                ).format(gettext(self.get_display_object_type()).lower())
-            elif PermissionService.has_other_access_holder(self.object, request.user):
-                permission = PermissionService.get_effective_permission(self.object, request.user)
-                if permission < PermissionLevel.EDITOR:
-                    raise PermissionDenied(
-                        gettext("Use the leave access action to remove your own access.")
-                    )
-
-                PermissionService.assert_can_leave_object(request.user, self.object)
-                PermissionService.delete_permission(request.user, self.object)
-
+            if action == PermissionService.DELETE_RESULT_UNSHARED:
                 success_message = gettext(
                     "You no longer have access to this {}, but it remains shared with other users"
                 ).format(gettext(self.get_display_object_type()).lower())
             else:
-                permission = PermissionService.get_effective_permission(self.object, request.user)
-                if permission < PermissionLevel.EDITOR:
-                    raise PermissionDenied(
-                        gettext("You do not have permission to delete this object.")
-                    )
-
-                # If not shared, completely delete the object
-                self.object.delete()
                 success_message = gettext("{} successfully deleted").format(
                     gettext(self.get_display_object_type())
                 )

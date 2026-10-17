@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Model
 from django.db.models import TextField
 from django.db.models import Value
 from django.db.models.functions import Concat
@@ -358,6 +359,33 @@ class ShareObjectsView(LoginRequiredMixin, View):
             "relation_ids": request.POST.getlist("relations"),
         }
 
+    def _share_simple_entities(
+        self,
+        model: type[Model],
+        uuid_field: str,
+        ids: list[str],
+        friends: Sequence[User],
+        permission_level: int,
+        *,
+        actor: User,
+        object_label: str,
+    ) -> int:
+        """Share selected entities of a simple type with selected friends."""
+        objects = self._get_shareable_objects(
+            actor,
+            model,
+            uuid_field,
+            ids,
+            permission_level,
+            object_label=object_label,
+        )
+
+        for obj in objects:
+            for friend in friends:
+                self._share_object_with_friend(friend, obj, permission_level)
+
+        return len(objects)
+
     def _share_persons(
         self,
         person_ids: list[str],
@@ -366,31 +394,16 @@ class ShareObjectsView(LoginRequiredMixin, View):
         *,
         actor: User,
     ) -> int:
-        """Share selected persons with selected friends.
-
-        Args:
-            person_ids: List of person IDs to share
-            friends: Sequence of friends to share with
-            permission_level: Permission level to apply
-            actor: User performing the share
-
-        Returns:
-            Number of shared persons
-        """
-        persons = self._get_shareable_objects(
-            actor,
+        """Share selected persons with selected friends."""
+        return self._share_simple_entities(
             Person,
             "person_id",
             person_ids,
+            friends,
             permission_level,
+            actor=actor,
             object_label="persons",
         )
-
-        for person in persons:
-            for friend in friends:
-                self._share_object_with_friend(friend, person, permission_level)
-
-        return len(persons)
 
     def _share_person_groups(
         self,
@@ -425,12 +438,10 @@ class ShareObjectsView(LoginRequiredMixin, View):
         )
 
         # Collect all groups to share (including children if requested)
-        all_groups_to_share = set()
-        for group in groups:
-            all_groups_to_share.add(group)
-            if share_children:
-                # Add all descendant groups
-                all_groups_to_share.update(group.get_descendants())
+        all_groups_to_share = set(groups)
+        if share_children:
+            descendants = PersonGroup.hierarchy_subquery(groups)
+            all_groups_to_share.update(PersonGroup.objects.filter(pk__in=descendants))
 
         # Deterministic order so concurrent shares take the row locks in the same order
         all_groups_to_share = sorted(all_groups_to_share, key=lambda group: group.pk)
@@ -462,31 +473,16 @@ class ShareObjectsView(LoginRequiredMixin, View):
         *,
         actor: User,
     ) -> int:
-        """Share selected gifts with selected friends.
-
-        Args:
-            gift_ids: List of gift IDs to share
-            friends: Sequence of friends to share with
-            permission_level: Permission level to apply
-            actor: User performing the share
-
-        Returns:
-            Number of shared gifts
-        """
-        gifts = self._get_shareable_objects(
-            actor,
+        """Share selected gifts with selected friends."""
+        return self._share_simple_entities(
             Gift,
             "gift_id",
             gift_ids,
+            friends,
             permission_level,
+            actor=actor,
             object_label="gifts",
         )
-
-        for gift in gifts:
-            for friend in friends:
-                self._share_object_with_friend(friend, gift, permission_level)
-
-        return len(gifts)
 
     def _share_events(
         self,
@@ -496,31 +492,16 @@ class ShareObjectsView(LoginRequiredMixin, View):
         *,
         actor: User,
     ) -> int:
-        """Share selected events with selected friends.
-
-        Args:
-            event_ids: List of event IDs to share
-            friends: Sequence of friends to share with
-            permission_level: Permission level to apply
-            actor: User performing the share
-
-        Returns:
-            Number of shared events
-        """
-        events = self._get_shareable_objects(
-            actor,
+        """Share selected events with selected friends."""
+        return self._share_simple_entities(
             Event,
             "event_id",
             event_ids,
+            friends,
             permission_level,
+            actor=actor,
             object_label="events",
         )
-
-        for event in events:
-            for friend in friends:
-                self._share_object_with_friend(friend, event, permission_level)
-
-        return len(events)
 
     def _share_relations(
         self,

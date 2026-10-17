@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pytest
 from django.contrib.auth.models import User
+from django.contrib.messages import get_messages
 from django.test import Client
 from django.test import override_settings
 from django.urls import reverse
@@ -686,6 +687,30 @@ class TestEditPermissionMixin:
 
         assert response.status_code == 404
         assert self.person.shared_with.count() == 1
+
+    @pytest.mark.parametrize(
+        "action_payload",
+        [
+            {"update_permission": "1", "permission": str(PermissionLevel.VIEWER)},
+            {"share_with": "1", "permission": str(PermissionLevel.VIEWER)},
+            {"remove_share": "1"},
+        ],
+    )
+    @pytest.mark.parametrize("bad_user_id", ["999999", "abc", ""])
+    @override_settings(USE_I18N=False)
+    def test_sharing_actions_reject_invalid_or_unknown_user(
+        self, action_payload: dict[str, str], bad_user_id: str
+    ):
+        """Test sharing actions (update, share, remove) reject unknown, non-numeric, or missing user IDs."""
+        url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
+        data = dict(action_payload)
+        if bad_user_id:
+            data["user_id"] = bad_user_id
+
+        response = self.client.post(url, data)
+        assert response.status_code == 200
+        messages_list = list(get_messages(response.wsgi_request))
+        assert any("User not found." in str(m) for m in messages_list)
 
     @override_settings(USE_I18N=False)
     def test_gift_tag_update_does_not_reveal_inaccessible_tag(self):
