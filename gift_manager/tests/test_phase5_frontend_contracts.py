@@ -65,8 +65,8 @@ def test_htmx_forms_use_trigger_contract_without_inline_success_handler():
 
 
 def test_unsaved_changes_use_central_panel_safe_flow():
-    unsaved_changes = read(STATIC_ROOT / "unsaved-changes.js")
-    form_initializer = read(STATIC_ROOT / "form-initializer.js")
+    unsaved_changes = read(STATIC_ROOT / "js/unsaved-changes.js")
+    form_initializer = read(STATIC_ROOT / "js/form-initializer.js")
     offcanvas = read(TEMPLATE_ROOT / "includes/offcanvas_base.html")
     translations = read(TEMPLATE_ROOT / "includes/unsaved_changes_translations.html")
     styles = read(STATIC_ROOT / "css/unsaved-changes.css")
@@ -120,7 +120,7 @@ def test_unsaved_changes_translations_render_for_french_locale():
 
 
 def test_status_updates_use_shared_helper_and_revert_contract():
-    grid_utils = read(STATIC_ROOT / "grid-utils.js")
+    grid_utils = read(STATIC_ROOT / "js/grid-utils.js")
     status_templates = [
         TEMPLATE_ROOT / "relation_list.html",
         TEMPLATE_ROOT / "person_group_detail.html",
@@ -152,8 +152,8 @@ def test_status_updates_use_shared_helper_and_revert_contract():
 
 def test_bulk_relation_status_updates_are_scoped_and_refresh_lists():
     relation_list = read(TEMPLATE_ROOT / "relation_list.html")
-    bulk_operations = read(STATIC_ROOT / "bulk-operations.js")
-    bulk_styles = read(STATIC_ROOT / "bulk-operations.css")
+    bulk_operations = read(STATIC_ROOT / "js/bulk-operations.js")
+    bulk_styles = read(STATIC_ROOT / "css/bulk-operations.css")
 
     assert "enableBulkStatus: true" in relation_list
     assert "statusOptions: relationStatusOptions" in relation_list
@@ -171,8 +171,8 @@ def test_bulk_relation_status_updates_are_scoped_and_refresh_lists():
 
 
 def test_comment_columns_wrap_in_list_views():
-    grid_utils = read(STATIC_ROOT / "grid-utils.js")
-    theme_styles = read(STATIC_ROOT / "theme.css")
+    grid_utils = read(STATIC_ROOT / "js/grid-utils.js")
+    theme_styles = read(STATIC_ROOT / "css/theme.css")
     fallback_template = read(TEMPLATE_ROOT / "fallback/list_fallback.html")
     fallback_styles = read(STATIC_ROOT / "css/fallback-mode.css")
     comment_templates = [
@@ -300,9 +300,9 @@ def test_share_page_uses_bootstrap5_and_accessible_collapse_controls():
 def test_filter_panel_aria_state_is_rendered_and_synchronized():
     template = read(TEMPLATE_ROOT / "includes/filter_panel.html")
     visible_search_template = read(TEMPLATE_ROOT / "includes/list_search_control.html")
-    script = read(STATIC_ROOT / "filter-panel.js")
-    dynamic_filters = read(STATIC_ROOT / "dynamic-filters.js")
-    main_styles = read(STATIC_ROOT / "main.css")
+    script = read(STATIC_ROOT / "js/filter-panel.js")
+    dynamic_filters = read(STATIC_ROOT / "js/dynamic-filters.js")
+    main_styles = read(STATIC_ROOT / "css/main.css")
 
     assert 'aria-expanded="false"' in template
     assert 'aria-controls="{{ grid_id }}-filter-content"' in template
@@ -346,7 +346,7 @@ def test_base_renders_skip_link_and_static_live_region():
 
 
 def test_root_scrollbar_gutter_prevents_main_content_shift():
-    theme_styles = read(STATIC_ROOT / "theme.css")
+    theme_styles = read(STATIC_ROOT / "css/theme.css")
     html_styles = css_block(theme_styles, "html")
 
     assert "scrollbar-gutter: stable;" in html_styles
@@ -453,7 +453,7 @@ def test_base_template_delegates_behaviour_to_static_scripts():
 def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contract():
     template = read(TEMPLATE_ROOT / "includes/gift_plan_card.html")
     script = read(STATIC_ROOT / "js/gift-plan-quick-actions.js")
-    main_styles = read(STATIC_ROOT / "main.css")
+    main_styles = read(STATIC_ROOT / "css/main.css")
     styles = read(STATIC_ROOT / "css/gift-plan-workspace.css")
 
     assert "data-gift-plan-date-picker-button" in template
@@ -569,7 +569,7 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
 def test_delete_confirmation_uses_a_single_shared_flow():
     shell = read(STATIC_ROOT / "js/app-shell.js")
     touch = read(STATIC_ROOT / "js/touch-gestures.js")
-    detail = read(STATIC_ROOT / "detail-views.js")
+    detail = read(STATIC_ROOT / "js/detail-views.js")
 
     # One implementation owns loading, wiring, errors and reset
     assert "window.GiftManager.confirmDelete" in shell

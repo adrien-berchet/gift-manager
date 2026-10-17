@@ -32,7 +32,7 @@ def tracked_page(page: Page):
             <input name="search" class="no-track">
         </form>
     """)
-    script = Path(__file__).parents[2] / "static/gift_manager/unsaved-changes.js"
+    script = Path(__file__).parents[2] / "static/gift_manager/js/unsaved-changes.js"
     page.add_script_tag(path=script)
     return page
 

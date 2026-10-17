@@ -24,7 +24,7 @@ const context = {
   console: { log: console.log, warn: () => {} },
 };
 vm.createContext(context);
-for (const file of ["js/core-utils.js", "grid-utils.js", "grid-actions.js", "permission-utils.js"]) {
+for (const file of ["js/core-utils.js", "js/grid-utils.js", "js/grid-actions.js", "js/permission-utils.js"]) {
   vm.runInContext(fs.readFileSync(`gift_manager/static/gift_manager/${file}`, "utf8"), context);
 }
 const { window } = context;
@@ -168,7 +168,7 @@ def test_action_config_is_shared():
         "delete": "fa-trash",
     }
     sources = {
-        name: (PROJECT_ROOT / "gift_manager/static/gift_manager" / name).read_text()
+        name: (PROJECT_ROOT / "gift_manager/static/gift_manager/js" / name).read_text()
         for name in ("grid-utils.js", "permission-utils.js")
     }
     for name, source in sources.items():
