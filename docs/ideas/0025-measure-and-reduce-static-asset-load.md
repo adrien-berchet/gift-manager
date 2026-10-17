@@ -126,17 +126,53 @@ Notes:
 - No CSS or JS file remains directly under `static/gift_manager/`, and
   `static/css/` no longer exists. Every asset lives under
   `static/gift_manager/css/`, `static/gift_manager/js/` or
-  `static/gift_manager/vendor/`.
+  `static/gift_manager/vendor/`. (Done in slice 1)
 - No template or test references an old asset path, and
-  `python manage.py collectstatic --noinput` succeeds.
+  `python manage.py collectstatic --noinput` succeeds. (Done in slice 1)
 - The layout move changes no file contents. A rename-aware diff
-  (`git diff -M --stat`) shows only renames plus the reference updates.
+  (`git diff -M --stat`) shows only renames plus the reference updates. (Done in slice 1)
 - Pages look and behave the same. The unit and e2e suites pass on PostgreSQL
-  (`tox run -e py311`, `tox run -e e2e`).
+  (`tox run -e py311`, `tox run -e e2e`). (Done in slice 1)
 - A baseline measurement, with the method used, is recorded in this file or in
-  the pull request before any performance change.
+  the pull request before any performance change. (Done below)
 - Each performance change shows a measured improvement against that baseline,
   or is dropped.
+
+## Baseline Measurement (Production-Like Build)
+
+Measured on 2026-10-17 with a production-like environment:
+- `DEBUG = False`, `STORAGES` using WhiteNoise `CompressedManifestStaticFilesStorage`.
+- `collectstatic --clear` run with pre-compressed gzip/brotli manifests.
+- Seeded test dataset on PostgreSQL (port 5433) with an authenticated user session.
+- Measurement harness: Playwright (Chromium) capturing full request logs, categorized sizes, Navigation/Paint Timing APIs, and Chromium's `renderBlockingStatus`.
+- Profiles:
+  - **Desktop:** Unthrottled, viewport 1920x1080.
+  - **Mobile:** Throttled Fast 3G / Slow 4G (150ms RTT, 1.6 Mbps download, 750 kbps upload, 4x CPU slowdown), viewport 390x844 (iPhone 13 UA).
+
+### Results Matrix
+
+| Page | Profile | Total Requests | Total Bytes | Render-Blocking | FCP | DCL | Load |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Dashboard** (`/en/`) | Desktop | 45 | 1,368 KB | 20 | 388 ms | 379 ms | 592 ms |
+| **Dashboard** (`/en/`) | Mobile (4G) | 45 | 1,368 KB | 20 | 1,144 ms | 2,162 ms | 2,949 ms |
+| **Persons List** (`/en/persons/`) | Desktop | 56 | 1,350 KB | 24 | 76 ms | 89 ms | 96 ms |
+| **Persons List** (`/en/persons/`) | Mobile (4G) | 56 | 1,350 KB | 24 | 552 ms | 905 ms | 912 ms |
+| **Person Detail** (`/en/persons/<uuid>/`) | Desktop | 43 | 1,103 KB | 18 | 136 ms | 130 ms | 135 ms |
+| **Person Detail** (`/en/persons/<uuid>/`) | Mobile (4G) | 43 | 1,103 KB | 38 | 212 ms | 407 ms | 410 ms |
+
+### Request & Byte Breakdown (Dashboard Baseline)
+
+- **CDN Stylesheets:** 4 requests (353.0 KB: Bootstrap 5.3.3, FontAwesome 6.5.1, Flatpickr 4.6.13)
+- **CDN Scripts:** 4 requests (226.9 KB: Bootstrap bundle, HTMX 1.9.10, Grid.js 6.2.0, Flatpickr)
+- **Fonts:** 2 requests (200.0 KB: Google Fonts Inter woff2, FontAwesome webfonts)
+- **Local Stylesheets:** 16 requests (281.0 KB uncompressed body, all render-blocking in `<head>`)
+- **Local Scripts:** 17 requests (250.4 KB uncompressed body, at end of `<body>` without `defer`)
+- **Document (HTML):** 1 request (49.0 KB)
+- **Key Bottlenecks:**
+  - 18 to 24 render-blocking stylesheets loaded synchronously in `<head>` delay First Contentful Paint.
+  - Three external CDN domains (`cdn.jsdelivr.net`, `cdnjs.cloudflare.com`, `fonts.googleapis.com`) without preconnect/dns-prefetch hints incur separate DNS/TLS handshake penalties.
+  - Scripts at the bottom of `<body>` lack `defer`, preventing early parallel parsing and execution optimization.
+  - Every page unconditionally downloads styles and scripts that are only used in specific contexts (such as `reaction-fields.js`, `detail-views.*` on pure list/dashboard pages).
 
 ## Dependencies Or Related Ideas
 
@@ -144,11 +180,11 @@ Notes:
   the inline code that the layout move now touches and kept bundlers out of
   scope.
 
-## Open Questions
+## Open Questions & Decisions
 
-- Does the production host serve static files over HTTP/2? This decides how
-  much request count still matters.
-- Should vendor assets be self-hosted (fewer third-party domains, works on
-  restricted networks) or kept on CDNs with `preconnect` (less to maintain)?
-- What first-load target counts as good enough on mobile, so that the
-  performance slice has a clear stopping point?
+- **Does the production host serve static files over HTTP/2?**
+  Yes, HTTP/2 or HTTP/3 is supported (multiplexed connections; request count is less critical than byte weight).
+- **Should vendor assets be self-hosted or kept on CDNs with `preconnect`?**
+  Keep CDNs and add `preconnect` / `dns-prefetch` hints in `base.html` to reduce connection latency without increasing repo maintenance.
+- **What first-load target counts as good enough on mobile?**
+  FCP under 1s and DCL under 1.5s on throttled mobile 4G profiles for the main surfaces.
