@@ -12,7 +12,7 @@ USER_FACING_PATHS = (
     SOURCE_ROOT / "gift_manager" / "views" / "relation.py",
     SOURCE_ROOT / "gift_manager" / "views" / "search.py",
     SOURCE_ROOT / "gift_manager" / "views" / "bulk_operations.py",
-    SOURCE_ROOT / "gift_manager" / "static" / "gift_manager" / "bulk-operations.js",
+    SOURCE_ROOT / "gift_manager" / "static" / "gift_manager" / "js" / "bulk-operations.js",
 )
 
 LEGACY_USER_FACING_TERMS = (
