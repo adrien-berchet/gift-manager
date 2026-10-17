@@ -73,7 +73,7 @@ def test_basic_page_actions_stay_before_advanced_tools(authenticated_client, url
 
 
 def test_standard_grid_heavy_features_are_gated_by_advanced_controls():
-    grid_utils = Path("gift_manager/static/gift_manager/grid-utils.js").read_text()
+    grid_utils = Path("gift_manager/static/gift_manager/js/grid-utils.js").read_text()
 
     assert "function setupAdvancedControls" in grid_utils
     assert "function setupRowStateMarkers" in grid_utils

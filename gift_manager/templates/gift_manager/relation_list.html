@@ -5,12 +5,12 @@
 
 {% block extra_head %}
 {% if show_advanced_list %}
-<link rel="stylesheet" href="{% static 'gift_manager/custom-dropdowns.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/inline-editing.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/bulk-operations.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/real-time-search.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/dynamic-filters.css' %}">
-<link rel="stylesheet" href="{% static 'gift_manager/permission-ui.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/custom-dropdowns.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/inline-editing.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/bulk-operations.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/real-time-search.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/dynamic-filters.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/permission-ui.css' %}">
 {% endif %}
 <link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 {% endblock %}
@@ -244,14 +244,14 @@
 </script>
 {% endif %}
 {% if show_advanced_list %}
-<script src="{% static 'gift_manager/grid-actions.js' %}"></script>
-<script src="{% static 'gift_manager/grid-utils.js' %}"></script>
-<script src="{% static 'gift_manager/permission-utils.js' %}"></script>
-<script src="{% static 'gift_manager/filter-panel.js' %}"></script>
-<script src="{% static 'gift_manager/inline-editing.js' %}"></script>
-<script src="{% static 'gift_manager/bulk-operations.js' %}"></script>
-<script src="{% static 'gift_manager/real-time-search.js' %}"></script>
-<script src="{% static 'gift_manager/dynamic-filters.js' %}"></script>
+<script src="{% static 'gift_manager/js/grid-actions.js' %}"></script>
+<script src="{% static 'gift_manager/js/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/js/permission-utils.js' %}"></script>
+<script src="{% static 'gift_manager/js/filter-panel.js' %}"></script>
+<script src="{% static 'gift_manager/js/inline-editing.js' %}"></script>
+<script src="{% static 'gift_manager/js/bulk-operations.js' %}"></script>
+<script src="{% static 'gift_manager/js/real-time-search.js' %}"></script>
+<script src="{% static 'gift_manager/js/dynamic-filters.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}

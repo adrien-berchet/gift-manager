@@ -37,7 +37,7 @@ vm.runInContext(
   context
 );
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/grid-utils.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/grid-utils.js", "utf8"),
   context
 );
 
@@ -88,11 +88,11 @@ assert(statusForm.includes("&lt;script&gt;alert(1)&lt;/script&gt;"), "status for
 assert(statusForm.includes("abc&quot; autofocus onfocus=&quot;alert(1)"), "status forms should escape relation IDs");
 
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/grid-actions.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/grid-actions.js", "utf8"),
   context
 );
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/permission-utils.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/permission-utils.js", "utf8"),
   context
 );
 
@@ -118,11 +118,11 @@ vm.runInContext(
   fallbackContext
 );
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/grid-actions.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/grid-actions.js", "utf8"),
   fallbackContext
 );
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/permission-utils.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/permission-utils.js", "utf8"),
   fallbackContext
 );
 const fallbackFormatter = fallbackContext.window.PermissionUtils.permissionAwareActionFormatter(
@@ -174,7 +174,7 @@ vm.runInContext(
   context
 );
 vm.runInContext(
-  fs.readFileSync("gift_manager/static/gift_manager/grid-utils.js", "utf8"),
+  fs.readFileSync("gift_manager/static/gift_manager/js/grid-utils.js", "utf8"),
   context
 );
 
@@ -290,7 +290,7 @@ def test_grid_html_helpers_render_hostile_values_safely_in_browser():
     """Hostile formatter values should render as text in a real browser DOM."""
     payload = '<img src=x onerror="window.__xssExecuted = true">'
     core_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/js/core-utils.js").read_text()
-    grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/grid-utils.js").read_text()
+    grid_utils = (PROJECT_ROOT / "gift_manager/static/gift_manager/js/grid-utils.js").read_text()
 
     # Sync Playwright refuses to start on a thread that already runs an asyncio loop,
     # which is the case once other Playwright/live-server fixtures ran in this session.
