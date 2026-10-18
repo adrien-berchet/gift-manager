@@ -100,7 +100,7 @@ These refine the spec; Task 12 writes them back into the idea file.
   - `@dataclass(frozen=True) RecipientHistory`: `recipient: Person | PersonGroup`, `items: tuple[HistoryItem, ...]` (newest first), `planned_gift_ids: frozenset[int]` (gifts of direct, non-abandoned visible plans), `interest_tag_ids: frozenset[int]` (person interests the viewer can see, ancestors included; empty for a group), `ancestors: dict[int, frozenset[int]]`.
   - `build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientHistory` — at most 3 queries plus the tag map: history plans with `prefetch_related("gift__tags")`, interests, tag edges.
 
-- [ ] **Step 1: Write failing tests:**
+- [x] **Step 1: Write failing tests:**
   - `test_person_history_includes_own_and_group_plans`: plans for the person, for their group and for that group's parent appear; `is_direct` is true only for the person's own plan.
   - `test_group_history_includes_member_and_nested_member_plans`: a plan for a member of a child group appears with `is_direct=False`.
   - `test_plans_not_shared_with_viewer_are_absent`.
@@ -111,10 +111,10 @@ These refine the spec; Task 12 writes them back into the idea file.
   - `test_tag_ancestor_map_survives_cycle`: insert a cycle directly in the through table; the call returns.
   - `test_interest_tags_only_visible_ones`.
   - `test_query_count_is_bounded`: with 10 plans and 10 tags, `django_assert_max_num_queries(6)`.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_history.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `history.py`. Status from `relation.status` (already `select_related` by `_base_queryset`).
-- [ ] **Step 4: Run** the test file. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Build recipient history for suggestions`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_history.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `history.py`. Status from `relation.status` (already `select_related` by `_base_queryset`).
+- [x] **Step 4: Run** the test file. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Build recipient history for suggestions`.
 
 ---
 
