@@ -15,6 +15,7 @@
     </div>
     <div class="d-flex align-items-center gap-1">
         <form method="post"
+              data-form-type="suggestion-accept"
               action="{% if is_person %}{% url 'gift_manager:person_suggestion_accept' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_accept' recipient.group_id %}{% endif %}"
               hx-post="{% if is_person %}{% url 'gift_manager:person_suggestion_accept' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_accept' recipient.group_id %}{% endif %}"
               hx-target="closest [data-gift-suggestions]"
@@ -35,6 +36,7 @@
             </button>
         </form>
         <form method="post"
+              data-form-type="suggestion-dismiss"
               action="{% if is_person %}{% url 'gift_manager:person_suggestion_dismiss' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_dismiss' recipient.group_id %}{% endif %}"
               hx-post="{% if is_person %}{% url 'gift_manager:person_suggestion_dismiss' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_dismiss' recipient.group_id %}{% endif %}"
               hx-target="closest [data-gift-suggestions]"

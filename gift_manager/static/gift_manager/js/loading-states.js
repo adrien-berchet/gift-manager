@@ -139,8 +139,8 @@
                 const element = e.detail.elt;
                 const target = e.detail.target;
 
-                // Show loading state on the target element
-                if (target && target !== element) {
+                // Show loading state on the target element (only if target doesn't contain the triggering element)
+                if (target && target !== element && !target.contains(element)) {
                     this.showContentLoading(target);
                 }
 
@@ -156,7 +156,7 @@
                 const target = e.detail.target;
 
                 // Hide loading states
-                if (target && target !== element) {
+                if (target && target !== element && !target.contains(element)) {
                     this.hideContentLoading(target);
                 }
 
