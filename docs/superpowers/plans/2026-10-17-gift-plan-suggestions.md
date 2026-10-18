@@ -336,11 +336,11 @@ Payload shape (no other keys):
 
 Rules: invalid JSON or a missing/non-list `ideas` → `[]` (no exception). Per item, drop it unless it is a dict whose `name`, `description`, `reason` are strings and `tags` a list. Strip control characters and surrounding whitespace; drop when `name` is empty or longer than 120 characters or `reason` is empty; truncate `description` to 500 and `reason` to 200 characters. `tag_ids` = items of `tags` whose `casefold()` matches a key of `tags_by_name` (keys are casefolded visible tag names; first pk wins on duplicates), unknown names ignored. Drop when `normalized_name` is in `blocked_names` or repeats an earlier kept idea. Return at most `limit` ideas in input order.
 
-- [ ] **Step 1: Write failing tests:** `test_valid_ideas_are_parsed`, `test_invalid_json_returns_empty`, `test_wrong_types_are_dropped` (parametrised: name int, tags string, missing reason, item not a dict), `test_overlong_name_dropped_and_long_fields_truncated`, `test_unknown_tags_are_ignored`, `test_blocked_and_duplicate_names_dropped` (`"Lego Technic!"` blocked by `"lego technic"`; two ideas `"Puzzle"` / `"puzzle "` keep one), `test_limit_is_applied`, `test_html_is_kept_as_text` (`"<b>x</b>"` survives parsing; escaping happens at render, covered in Task 11).
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_validation.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `validation.py`.
-- [ ] **Step 4: Run** the test file. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Validate and de-duplicate AI gift ideas`.
+- [x] **Step 1: Write failing tests:** `test_valid_ideas_are_parsed`, `test_invalid_json_returns_empty`, `test_wrong_types_are_dropped` (parametrised: name int, tags string, missing reason, item not a dict), `test_overlong_name_dropped_and_long_fields_truncated`, `test_unknown_tags_are_ignored`, `test_blocked_and_duplicate_names_dropped` (`"Lego Technic!"` blocked by `"lego technic"`; two ideas `"Puzzle"` / `"puzzle "` keep one), `test_limit_is_applied`, `test_html_is_kept_as_text` (`"<b>x</b>"` survives parsing; escaping happens at render, covered in Task 11).
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_validation.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `validation.py`.
+- [x] **Step 4: Run** the test file. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Validate and de-duplicate AI gift ideas`.
 
 ---
 
