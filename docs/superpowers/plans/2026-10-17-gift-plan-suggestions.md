@@ -189,7 +189,7 @@ popularity(gift) = mean visible rating over all plans the user can access for th
   - `dismiss_gift(gift_uuid: uuid.UUID) -> None` — same 404 rule; `update_or_create` the catalogue row with `state=dismissed`, `normalized_name=normalize_gift_name(gift.name)`.
   - Private `_create_idea_plan(gift: Gift) -> Relation`: inside `transaction.atomic()`, lock the recipient row (`select_for_update` on the Person/PersonGroup) so concurrent accepts serialise; if a visible non-abandoned plan already links this gift to the recipient, return it; otherwise `Relation.objects.create(person|group=recipient, gift=gift, status_id=RelationStatus.get_default_pk(), is_surprise=default_surprise_for(recipient, user))` and grant the user OWNER with `object_attr="relation"`. Upsert the catalogue row with `state=accepted`.
 
-- [ ] **Step 1: Write failing tests:**
+- [x] **Step 1: Write failing tests:**
   - `test_first_page_has_five_without_ai_and_next_offset`: 7 eligible gifts → 5 candidates, `next_offset == 5`; `catalogue_page(5)` → 2 candidates, `next_offset is None`.
   - `test_first_page_has_three_when_ai_enabled`: service built with `ai_client=object()` → 3 candidates, `next_offset == 3`.
   - `test_gift_planned_for_recipient_is_excluded` / `test_gift_with_only_abandoned_plan_is_not_excluded`.
@@ -199,10 +199,10 @@ popularity(gift) = mean visible rating over all plans the user can access for th
   - `test_accept_twice_creates_one_plan`.
   - `test_accept_inaccessible_gift_is_404` (gift unshared after render) and `test_dismiss_inaccessible_gift_is_404`.
   - `test_dismissed_gift_never_returns`: dismiss, then new history making it the top match → still absent; another user still gets it.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_service.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `service.py` as above.
-- [ ] **Step 4: Run** the test file. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Add suggestion service with accept and dismiss`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_service.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `service.py` as above.
+- [x] **Step 4: Run** the test file. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Add suggestion service with accept and dismiss`.
 
 ---
 
