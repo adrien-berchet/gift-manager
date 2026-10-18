@@ -359,7 +359,7 @@ Rules: invalid JSON or a missing/non-list `ideas` → `[]` (no exception). Per i
 - `accept_suggestion`: `GiftSuggestion.objects.select_for_update().get(suggestion_id=..., user=user, source=ai, person|group=recipient)` else `Http404`; when already `accepted`, return the plan linking `suggestion.gift`; when `dismissed`, 404. Otherwise, in one transaction: create `Gift(name=suggestion.name, comment=suggestion.description)`, `gift.tags.set(tags still in VisibleMetadata(user).tag_ids)`, OWNER permission with `object_attr="gift"`, then `_create_idea_plan(gift)` (Task 4), then `state=accepted`, `gift=gift`.
 - `dismiss_suggestion`: same lookup, sets `state=dismissed` (idempotent).
 
-- [ ] **Step 1: Write failing tests** (service built with `FakeAIClient` returning canned ideas):
+- [x] **Step 1: Write failing tests** (service built with `FakeAIClient` returning canned ideas):
   - `test_first_ai_block_generates_once`: two `ai_block()` calls → one client call, two pending rows, one generation row with `succeeded=True`.
   - `test_more_ideas_adds_a_batch_and_keeps_previous`.
   - `test_ai_ideas_matching_existing_gift_planned_or_dismissed_are_dropped`: canned ideas `"Atlas"` (an accessible gift), `"Novel"` (planned), `"Kite"` (previously dismissed AI idea), `"Telescope"` → only `"Telescope"` stored.
@@ -370,10 +370,10 @@ Rules: invalid JSON or a missing/non-list `ideas` → `[]` (no exception). Per i
   - `test_accept_ai_idea_creates_gift_and_idea_plan`: gift owned by user (OWNER), comment = description, tags limited to visible ones (a tag unshared after generation is dropped), plan in `Idea`, row `accepted` and gone from `ai_block().ideas`.
   - `test_accept_twice_creates_one_plan` (AI variant: one Gift, one Relation).
   - `test_accept_other_users_suggestion_is_404`, `test_accept_dismissed_suggestion_is_404`, `test_dismissed_ai_idea_never_comes_back`: dismiss `"Kite"`, next batch from the fake client proposes `"kite"` → dropped.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_service.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `ai/strategy.py` and the service additions.
-- [ ] **Step 4: Run** `tox run -e py311 -- gift_manager/tests/suggestions/`. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Generate, store and accept AI gift ideas`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_service.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `ai/strategy.py` and the service additions.
+- [x] **Step 4: Run** `tox run -e py311 -- gift_manager/tests/suggestions/`. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Generate, store and accept AI gift ideas`.
 
 ---
 
