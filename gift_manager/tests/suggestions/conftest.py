@@ -35,3 +35,38 @@ def status():
         return instance
 
     return _status
+
+
+class FakeAIClient:
+    """Fake AI client for unit and integration tests."""
+
+    def __init__(self, canned_responses=None, error=None):
+        self.canned_responses = list(canned_responses or [])
+        self.error = error
+        self.calls = []
+        self.payload = None
+        self.system = None
+        self.schema = None
+
+    def generate(self, *, system: str, payload: dict, schema: dict) -> str:
+        import json
+
+        self.calls.append({"system": system, "payload": payload, "schema": schema})
+        self.payload = payload
+        self.system = system
+        self.schema = schema
+        if self.error:
+            raise self.error
+        if self.canned_responses:
+            res = self.canned_responses.pop(0)
+            if isinstance(res, Exception):
+                raise res
+            if isinstance(res, str):
+                return res
+            return json.dumps(res)
+        return json.dumps({"ideas": []})
+
+
+@pytest.fixture
+def fake_ai_client():
+    return FakeAIClient()

@@ -254,6 +254,25 @@ SITE_BASE_URL = os.environ.get("SITE_BASE_URL", "").rstrip("/")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 MIN_CRON_SECRET_LENGTH = 16
 
+# AI Gift Suggestions
+# Provider name: "" (disabled), "anthropic", or "openai"
+GIFT_SUGGESTIONS_AI_PROVIDER = os.environ.get("GIFT_SUGGESTIONS_AI_PROVIDER", "").strip().lower()
+GIFT_SUGGESTIONS_AI_API_KEY = os.environ.get("GIFT_SUGGESTIONS_AI_API_KEY", "")
+GIFT_SUGGESTIONS_AI_MODEL = os.environ.get(
+    "GIFT_SUGGESTIONS_AI_MODEL",
+    "claude-haiku-5-5" if GIFT_SUGGESTIONS_AI_PROVIDER == "anthropic" else "",
+)
+GIFT_SUGGESTIONS_AI_BASE_URL = os.environ.get("GIFT_SUGGESTIONS_AI_BASE_URL", "")
+try:
+    GIFT_SUGGESTIONS_AI_TIMEOUT = float(os.environ.get("GIFT_SUGGESTIONS_AI_TIMEOUT", "15.0"))
+except (TypeError, ValueError):
+    GIFT_SUGGESTIONS_AI_TIMEOUT = 15.0
+GIFT_SUGGESTIONS_AI_EFFORT = os.environ.get("GIFT_SUGGESTIONS_AI_EFFORT", "low")
+try:
+    GIFT_SUGGESTIONS_AI_DAILY_LIMIT = int(os.environ.get("GIFT_SUGGESTIONS_AI_DAILY_LIMIT", "20"))
+except (TypeError, ValueError):
+    GIFT_SUGGESTIONS_AI_DAILY_LIMIT = 20
+
 
 # Logging configuration
 LOGGING = {
