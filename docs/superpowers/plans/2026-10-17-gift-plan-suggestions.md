@@ -311,16 +311,16 @@ Payload shape (no other keys):
 - Scrub terms: first name, family name and full name of the recipient and of every person or group referenced by a history item (load them in one query each), every decoded email of those persons (`Person.email`), and the viewer's `username`, `first_name`, `last_name`; terms shorter than 2 characters skipped. `scrub_text` replaces each term case-insensitively on word boundaries with `"[name]"` and any e-mail-looking token (`\S+@\S+\.\S+`) with `"[email]"`. Apply to **every** string in the payload (gift names, tags, notes, comments, avoid list).
 - Caps: history ≤ 50 newest items; note and comment truncated to 300 characters; `available_tags` ≤ 200 names sorted case-insensitively; `avoid` ≤ 100 names.
 
-- [ ] **Step 1: Write failing tests:**
+- [x] **Step 1: Write failing tests:**
   - `test_payload_contains_no_names_emails_or_ids`: person "Marguerite Dupont" with email `marguerite@example.com`, a group "Famille Dupont", viewer username `adrien`; a reaction note `"Marguerite loved it, ask adrien"` and a gift named `"Album photo Marguerite"`. `json.dumps(payload)` contains none of `Marguerite`, `Dupont`, `marguerite@example.com`, `adrien`, `Famille`, any `pk`, `person_id`, `group_id`, `gift_id` or UUID string, and contains `[name]`.
   - `test_group_payload_labels_members`: two members → `"Member 1"`, `"Member 2"`; group name absent.
   - `test_ratings_and_notes_only_when_visible` (from `HistoryItem`).
   - `test_caps_are_applied`, `test_scrub_is_case_insensitive_and_word_bounded` (`"Ann"` scrubbed in `"ann's gift"`, not in `"annual"`), `test_short_terms_are_ignored`.
   - `test_schema_is_strict_compatible`: every object in `IDEAS_SCHEMA` has `additionalProperties: False` and `required` listing all its properties.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_prompt.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `prompt.py`.
-- [ ] **Step 4: Run** the test file. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Build an anonymised payload for AI gift ideas`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_prompt.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `prompt.py`.
+- [x] **Step 4: Run** the test file. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Build an anonymised payload for AI gift ideas`.
 
 ---
 
