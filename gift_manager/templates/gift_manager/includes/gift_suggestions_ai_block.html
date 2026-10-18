@@ -1,1 +1,26 @@
-{% comment %} AI suggestions block (populated in Phase B). {% endcomment %}
+{% load i18n %}
+<div data-gift-suggestions-ai class="gift-suggestions-ai-root mt-3">
+    {% if block.notice == "unavailable" %}
+        <p class="text-muted small" data-suggestion-notice>{% trans "New ideas are unavailable right now." %}</p>
+    {% elif block.notice == "limit" %}
+        <p class="text-muted small" data-suggestion-notice>{% trans "Daily limit for new ideas reached." %}</p>
+    {% endif %}
+
+    {% for idea in block.ideas %}
+        {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
+    {% endfor %}
+
+    {% if block.can_request_more %}
+        <div class="mt-2 text-center">
+            <button type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    data-suggestion-more-ideas
+                    hx-post="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+                    hx-target="closest [data-gift-suggestions-ai]"
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this">
+                <i class="fas fa-lightbulb me-1" aria-hidden="true"></i>{% trans "More ideas" %}
+            </button>
+        </div>
+    {% endif %}
+</div>

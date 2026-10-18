@@ -112,11 +112,14 @@ from .reminders import calendar_feed
 from .sharing import ShareObjectsView
 
 # Suggestions views
+from .suggestions import ideas_url_for
 from .suggestions import person_group_suggestion_accept
 from .suggestions import person_group_suggestion_dismiss
+from .suggestions import person_group_suggestion_ideas
 from .suggestions import person_group_suggestions
 from .suggestions import person_suggestion_accept
 from .suggestions import person_suggestion_dismiss
+from .suggestions import person_suggestion_ideas
 from .suggestions import person_suggestions
 from .suggestions import suggestions_url_for
 
@@ -195,13 +198,16 @@ __all__ = [
     "get_user",
     "global_search",
     "home",
+    "ideas_url_for",
     "person_gift_history",
     "person_group_gift_history",
     "person_group_suggestion_accept",
     "person_group_suggestion_dismiss",
+    "person_group_suggestion_ideas",
     "person_group_suggestions",
     "person_suggestion_accept",
     "person_suggestion_dismiss",
+    "person_suggestion_ideas",
     "person_suggestions",
     "relation_claim",
     "relation_comment_add",

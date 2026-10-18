@@ -11,7 +11,10 @@
                 <span class="badge bg-primary-subtle text-primary-emphasis">{% trans "New idea" %}</span>
             {% endif %}
         </div>
-        <p class="text-muted small mb-0">{{ candidate.reason_text }}</p>
+        {% if candidate.description %}
+            <p class="small text-secondary mb-1">{{ candidate.description }}</p>
+        {% endif %}
+        <p class="text-muted small mb-0">{{ candidate.reason_text|default:candidate.reason }}</p>
     </div>
     <div class="d-flex align-items-center gap-1">
         <form method="post"
@@ -24,9 +27,10 @@
             {% csrf_token %}
             {% if candidate.gift %}
                 <input type="hidden" name="gift" value="{{ candidate.gift.gift_id }}">
-            {% endif %}
-            {% if candidate.suggestion %}
+            {% elif candidate.suggestion %}
                 <input type="hidden" name="suggestion" value="{{ candidate.suggestion.suggestion_id }}">
+            {% elif candidate.suggestion_id %}
+                <input type="hidden" name="suggestion" value="{{ candidate.suggestion_id }}">
             {% endif %}
             {% if surface %}
                 <input type="hidden" name="surface" value="{{ surface }}">
@@ -45,9 +49,10 @@
             {% csrf_token %}
             {% if candidate.gift %}
                 <input type="hidden" name="gift" value="{{ candidate.gift.gift_id }}">
-            {% endif %}
-            {% if candidate.suggestion %}
+            {% elif candidate.suggestion %}
                 <input type="hidden" name="suggestion" value="{{ candidate.suggestion.suggestion_id }}">
+            {% elif candidate.suggestion_id %}
+                <input type="hidden" name="suggestion" value="{{ candidate.suggestion_id }}">
             {% endif %}
             {% if surface %}
                 <input type="hidden" name="surface" value="{{ surface }}">

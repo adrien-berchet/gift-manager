@@ -4537,6 +4537,18 @@ msgstr "Accepté"
 msgid "Dismissed"
 msgstr "Rejeté"
 
+msgid "More ideas"
+msgstr "Plus d'idées"
+
+msgid "New ideas are unavailable right now."
+msgstr "Les nouvelles idées sont indisponibles pour le moment."
+
+msgid "Daily limit for new ideas reached."
+msgstr "Limite quotidienne de nouvelles idées atteinte."
+
+msgid "Provide either gift or suggestion."
+msgstr "Fournissez soit un cadeau soit une suggestion."
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""

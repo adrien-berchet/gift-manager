@@ -13,6 +13,7 @@ from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
+from gift_manager.tests.suggestions.conftest import FakeAIClient
 
 pytestmark = pytest.mark.django_db
 
@@ -318,5 +319,308 @@ def test_section_is_translated_in_french(client, user):
         assert "Ajouter comme idée" in content
         assert "Parmi vos cadeaux" in content
         assert "Ignorer" in content
+    finally:
+        translation.activate(settings.LANGUAGE_CODE)
+
+
+def test_section_includes_ai_placeholder_only_when_enabled(client, user, monkeypatch):
+    person = PersonFactory()
+    _share(user, person)
+
+    url = reverse("gift_manager:person_suggestions", kwargs={"pk": person.person_id})
+
+    # 1. AI disabled -> no AI placeholder
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: None)
+    res_disabled = client.get(url)
+    assert res_disabled.status_code == 200
+    assert "data-gift-suggestions-ai" not in res_disabled.content.decode()
+
+    # 2. AI enabled -> AI placeholder with hx-get and loading
+    fake = FakeAIClient()
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+    res_enabled = client.get(url)
+    assert res_enabled.status_code == 200
+    content = res_enabled.content.decode()
+    assert "data-gift-suggestions-ai" in content
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    assert f'hx-get="{ideas_url}"' in content
+    assert 'hx-trigger="load"' in content
+    assert "Loading…" in content or "Chargement" in content
+
+
+def test_ideas_get_generates_once_and_renders(client, user, monkeypatch):
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Canned Idea",
+                "description": "A wonderful thought",
+                "reason": "Because they like it",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+
+    # First GET triggers generation
+    res1 = client.get(ideas_url)
+    assert res1.status_code == 200
+    content1 = res1.content.decode()
+    assert "data-gift-suggestions-ai" in content1
+    assert "Canned Idea" in content1
+    assert 'data-suggestion-source="ai"' in content1
+    assert "New idea" in content1
+    assert "data-suggestion-more-ideas" in content1
+    assert len(fake.calls) == 1
+
+    # Second GET does not trigger another call
+    res2 = client.get(ideas_url)
+    assert res2.status_code == 200
+    content2 = res2.content.decode()
+    assert "Canned Idea" in content2
+    assert len(fake.calls) == 1
+
+
+def test_more_ideas_post_adds_batch(client, user, monkeypatch):
+    person = PersonFactory()
+    _share(user, person)
+
+    batch1 = {"ideas": [{"name": "Idea One", "description": "D1", "reason": "R1", "tags": []}]}
+    batch2 = {"ideas": [{"name": "Idea Two", "description": "D2", "reason": "R2", "tags": []}]}
+    fake = FakeAIClient(canned_responses=[batch1, batch2])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+
+    # Initial GET generates batch 1
+    res1 = client.get(ideas_url)
+    assert res1.status_code == 200
+    assert "Idea One" in res1.content.decode()
+
+    # POST generates batch 2
+    res2 = client.post(ideas_url)
+    assert res2.status_code == 200
+    content2 = res2.content.decode()
+    assert "Idea One" in content2
+    assert "Idea Two" in content2
+    assert len(fake.calls) == 2
+
+
+def test_ai_failure_shows_notice_and_status_200(client, user, monkeypatch):
+    from gift_manager.suggestions.ai.client import AICompletionError
+
+    person = PersonFactory()
+    _share(user, person)
+
+    fake = FakeAIClient(error=AICompletionError("Provider unreachable"))
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    res = client.get(ideas_url)
+    assert res.status_code == 200
+    content = res.content.decode()
+    assert "data-suggestion-notice" in content
+    assert "New ideas are unavailable right now." in content
+
+
+def test_ai_idea_html_is_escaped(client, user, monkeypatch):
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "<script>alert('xss')</script>",
+                "description": "<b>Safe Bold</b>",
+                "reason": "<i>Italic</i>",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    res = client.get(ideas_url)
+    assert res.status_code == 200
+    content = res.content.decode()
+    assert "<script>alert('xss')</script>" not in content
+    assert (
+        "&lt;script&gt;alert(&#x27;xss&#x27;)&lt;/script&gt;" in content
+        or "&lt;script&gt;alert('xss')&lt;/script&gt;" in content
+    )
+
+
+def test_accept_ai_suggestion_creates_plan(client, user, monkeypatch):
+    from gift_manager.models import Gift
+    from gift_manager.models import GiftSuggestion
+    from gift_manager.statuses import is_idea_status
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Handmade Scarf",
+                "description": "Warm winter scarf",
+                "reason": "Loves winter clothing",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.get(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Handmade Scarf")
+    accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
+
+    # Accept via HTMX
+    res = client.post(accept_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.ACCEPTED
+    assert sugg.gift is not None
+    assert sugg.gift.name == "Handmade Scarf"
+
+    from gift_manager.models import Relation
+
+    gift = Gift.objects.get(name="Handmade Scarf")
+    plan = Relation.objects.filter(gift=gift).first()
+    assert plan is not None
+    assert plan.person == person
+    assert is_idea_status(plan.status)
+
+
+def test_dismiss_ai_suggestion(client, user, monkeypatch):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Flying Kite",
+                "description": "Outdoor toy",
+                "reason": "Spring fun",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.get(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Flying Kite")
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    res = client.post(dismiss_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.DISMISSED
+
+
+def test_post_with_gift_and_suggestion_is_400(client, user):
+    person = PersonFactory()
+    _share(user, person)
+
+    accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    fake_id = str(uuid.uuid4())
+
+    # Both provided -> 400
+    res_both = client.post(accept_url, {"gift": fake_id, "suggestion": fake_id})
+    assert res_both.status_code == 400
+
+    # Neither provided -> 400
+    res_neither = client.post(accept_url, {})
+    assert res_neither.status_code == 400
+
+    # Dismiss both -> 400
+    res_both_dismiss = client.post(dismiss_url, {"gift": fake_id, "suggestion": fake_id})
+    assert res_both_dismiss.status_code == 400
+
+    # Dismiss neither -> 400
+    res_neither_dismiss = client.post(dismiss_url, {})
+    assert res_neither_dismiss.status_code == 400
+
+
+def test_other_users_suggestion_is_404(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    other_user = UserFactory()
+    person = PersonFactory()
+    _share(user, person)
+    _share(other_user, person)
+
+    sugg = GiftSuggestion.objects.create(
+        user=other_user,
+        person=person,
+        source=GiftSuggestion.Source.AI,
+        name="Private Idea",
+        normalized_name="private idea",
+    )
+
+    accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
+    res = client.post(accept_url, {"suggestion": str(sugg.suggestion_id)})
+    assert res.status_code == 404
+
+
+def test_ideas_endpoint_for_inaccessible_recipient_is_404(client, user):
+    other_user = UserFactory()
+    inaccessible_person = PersonFactory()
+    _share(other_user, inaccessible_person)  # not shared with user
+
+    url = reverse(
+        "gift_manager:person_suggestion_ideas", kwargs={"pk": inaccessible_person.person_id}
+    )
+    res_get = client.get(url)
+    assert res_get.status_code == 404
+
+    res_post = client.post(url)
+    assert res_post.status_code == 404
+
+
+def test_ai_block_translated_in_french(client, user, monkeypatch):
+    from django.conf import settings
+    from django.utils import translation
+
+    try:
+        person = PersonFactory()
+        _share(user, person)
+
+        canned = {
+            "ideas": [
+                {
+                    "name": "Roman",
+                    "description": "Livre captivant",
+                    "reason": "Aime lire",
+                    "tags": [],
+                }
+            ]
+        }
+        fake = FakeAIClient(canned_responses=[canned])
+        monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+        url = f"/fr/persons/{person.person_id}/suggestions/ideas/"
+        res = client.get(url)
+        assert res.status_code == 200
+        content = res.content.decode()
+        assert "Nouvelle idée" in content
+        assert "Plus d'idées" in content
     finally:
         translation.activate(settings.LANGUAGE_CODE)

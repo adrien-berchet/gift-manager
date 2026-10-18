@@ -94,6 +94,11 @@ urlpatterns = [
         name="person_suggestions",
     ),
     path(
+        "persons/<uuid:pk>/suggestions/ideas/",
+        views.person_suggestion_ideas,
+        name="person_suggestion_ideas",
+    ),
+    path(
         "persons/<uuid:pk>/suggestions/accept/",
         views.person_suggestion_accept,
         name="person_suggestion_accept",
@@ -118,6 +123,11 @@ urlpatterns = [
         "person_groups/<uuid:pk>/suggestions/",
         views.person_group_suggestions,
         name="person_group_suggestions",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/ideas/",
+        views.person_group_suggestion_ideas,
+        name="person_group_suggestion_ideas",
     ),
     path(
         "person_groups/<uuid:pk>/suggestions/accept/",

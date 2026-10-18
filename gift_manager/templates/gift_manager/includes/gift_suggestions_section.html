@@ -1,5 +1,12 @@
 {% load i18n %}
 <div data-gift-suggestions class="gift-suggestions-root">
-    {% include "gift_manager/includes/gift_suggestions_ai_block.html" %}
     {% include "gift_manager/includes/gift_suggestions_catalogue_items.html" %}
+    {% if ai_enabled %}
+        <div data-gift-suggestions-ai
+             hx-get="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+             hx-trigger="load"
+             hx-swap="outerHTML">
+            <span class="text-muted small">{% trans "Loading…" %}</span>
+        </div>
+    {% endif %}
 </div>

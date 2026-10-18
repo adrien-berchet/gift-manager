@@ -179,3 +179,73 @@ class TestGiftSuggestions(BaseE2ETest):
         expect(detail_content.locator("[data-gift-suggestions]")).not_to_contain_text(
             "Studio Headphones"
         )
+
+    def test_accept_ai_idea_on_group_page(self, page: Page, live_server, test_user, monkeypatch):
+        """AI ideas load lazily on group detail page, can be accepted into group plans, and 'More ideas' works."""
+        from gift_manager.tests.factories import PersonGroupFactory
+        from gift_manager.tests.suggestions.conftest import FakeAIClient
+
+        group = PersonGroupFactory(name="Stargazers")
+        _share(test_user, group)
+
+        batch1 = {
+            "ideas": [
+                {
+                    "name": "Telescope",
+                    "description": "Astronomical telescope for night sky",
+                    "reason": "Great for group star watching",
+                    "tags": [],
+                }
+            ]
+        }
+        batch2 = {
+            "ideas": [
+                {
+                    "name": "Star Map",
+                    "description": "Glow in the dark constellation map",
+                    "reason": "Complements astronomy",
+                    "tags": [],
+                }
+            ]
+        }
+        fake = FakeAIClient(canned_responses=[batch1, batch2])
+        monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+        self.login_as_user(page, live_server, test_user)
+        page.goto(f"{live_server.url}/en/person_groups/{group.group_id}/")
+
+        # Suggestions section loads lazily via HTMX
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # AI block loads lazily inside suggestions
+        ai_item = suggestions.locator('[data-suggestion-source="ai"]').filter(has_text="Telescope")
+        expect(ai_item).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Accept Telescope
+        accept_btn = ai_item.locator("[data-suggestion-accept]")
+        expect(accept_btn).to_be_visible()
+        accept_btn.click()
+
+        # Surface 'page' responds with HX-Refresh: true; wait for page reload to complete
+        page.wait_for_load_state("networkidle", timeout=self.page_load_timeout)
+
+        # Telescope is now listed in group's gift plans tab
+        gifts_tab = page.locator("#gifts-tab")
+        expect(gifts_tab).to_contain_text(
+            "Gift Plans for this group [1]", timeout=self.ajax_timeout * 2
+        )
+        gifts_tab.click()
+
+        gifts_grid = page.locator("#gifts-grid")
+        expect(gifts_grid).to_be_visible(timeout=self.ajax_timeout * 2)
+        expect(gifts_grid).to_contain_text("Telescope")
+
+        # Now click 'More ideas' to load batch 2
+        more_btn = page.locator("[data-suggestion-more-ideas]")
+        expect(more_btn).to_be_visible(timeout=self.ajax_timeout * 2)
+        more_btn.click()
+
+        # Batch 2 idea 'Star Map' appears in AI block
+        star_map_item = page.locator('[data-suggestion-source="ai"]').filter(has_text="Star Map")
+        expect(star_map_item).to_be_visible(timeout=self.ajax_timeout * 2)
