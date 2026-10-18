@@ -4549,6 +4549,9 @@ msgstr "Limite quotidienne de nouvelles idées atteinte."
 msgid "Provide either gift or suggestion."
 msgstr "Fournissez soit un cadeau soit une suggestion."
 
+msgid "Suggestion not found."
+msgstr "Suggestion introuvable."
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""
