@@ -274,17 +274,17 @@ Behaviour:
 - `AnthropicClient(api_key, model, timeout, effort)`: lazy `import anthropic` in `__init__`; `anthropic.Anthropic(api_key=..., timeout=timeout, max_retries=0)`; `client.messages.create(model=..., max_tokens=4096, system=system, messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False, sort_keys=True)}], output_config={"format": {"type": "json_schema", "schema": schema}, "effort": effort})` (omit `effort` when empty); raise `AIError` when `stop_reason` is `"refusal"` or `"max_tokens"`; return the concatenated `text` blocks. Map `anthropic.RateLimitError`, `anthropic.APIStatusError`, `anthropic.APIConnectionError` (includes timeouts) to `AIError` (catch in that order; log status code only).
 - `OpenAIClient(api_key, model, base_url, timeout)`: lazy `import openai`; `openai.OpenAI(api_key=api_key or "unused", base_url=base_url or None, timeout=timeout, max_retries=0)`; `client.chat.completions.create(model=..., messages=[{"role": "system", ...}, {"role": "user", ...}], response_format={"type": "json_schema", "json_schema": {"name": "gift_ideas", "schema": schema, "strict": True}})`; raise `AIError` when `finish_reason != "stop"` or `message.refusal`; return `message.content`. Map `openai.RateLimitError`, `openai.APIStatusError`, `openai.APIConnectionError` to `AIError`.
 
-- [ ] **Step 1: Add dependencies:** `uv add anthropic openai`; set lower bounds to the resolved versions in `pyproject.toml`. Measure the added install size (`uv pip install --target <scratch> anthropic openai` then `du -sh`); if the total with the existing dependencies risks Vercel's `maxLambdaSize` of 15 MB (`vercel.json`), stop and report to the user before continuing.
-- [ ] **Step 2: Write failing tests** (patch `anthropic.Anthropic` / `openai.OpenAI` with `unittest.mock`; no network):
+- [x] **Step 1: Add dependencies:** `uv add anthropic openai`; set lower bounds to the resolved versions in `pyproject.toml`. Measure the added install size (`uv pip install --target <scratch> anthropic openai` then `du -sh`); if the total with the existing dependencies risks Vercel's `maxLambdaSize` of 15 MB (`vercel.json`), stop and report to the user before continuing.
+- [x] **Step 2: Write failing tests** (patch `anthropic.Anthropic` / `openai.OpenAI` with `unittest.mock`; no network):
   - `test_get_ai_client_disabled_without_provider`, `test_unknown_provider_disables`, `test_anthropic_without_key_disables`, `test_openai_without_model_disables`, `test_openai_base_url_allows_missing_key`, `test_anthropic_default_model_is_haiku` (`override_settings`).
   - `test_anthropic_request_shape`: asserts `max_retries=0`, the timeout, `model`, `output_config["format"]["schema"] is schema`, `effort == "low"`, user content is `json.dumps(payload, ensure_ascii=False, sort_keys=True)`.
   - `test_anthropic_refusal_and_max_tokens_raise_ai_error`, `test_anthropic_api_errors_become_ai_error` (parametrised over the three exception classes; build them with the SDK's constructors).
   - `test_openai_request_shape` (`response_format` name/strict, `base_url` passed), `test_openai_refusal_raises`, `test_openai_api_errors_become_ai_error`.
   - `test_api_key_never_logged` (`caplog` on a failing call does not contain the key).
-- [ ] **Step 3: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_clients.py`. Expected: FAIL.
-- [ ] **Step 4: Implement** the settings, the `.env.example` block (each variable commented, `GIFT_SUGGESTIONS_AI_MODEL=claude-haiku-5-5` as the example, a note that `openai` + `GIFT_SUGGESTIONS_AI_BASE_URL` targets OpenAI-compatible servers), and the three modules.
-- [ ] **Step 5: Run** the test file and `tox run -e lint`. Expected: PASS.
-- [ ] **Step 6: Commit** `Feat(suggestions): Add Anthropic and OpenAI clients for gift ideas`.
+- [x] **Step 3: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_ai_clients.py`. Expected: FAIL.
+- [x] **Step 4: Implement** the settings, the `.env.example` block (each variable commented, `GIFT_SUGGESTIONS_AI_MODEL=claude-haiku-5-5` as the example, a note that `openai` + `GIFT_SUGGESTIONS_AI_BASE_URL` targets OpenAI-compatible servers), and the three modules.
+- [x] **Step 5: Run** the test file and `tox run -e lint`. Expected: PASS.
+- [x] **Step 6: Commit** `Feat(suggestions): Add Anthropic and OpenAI clients for gift ideas`.
 
 ---
 
