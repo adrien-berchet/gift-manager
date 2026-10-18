@@ -403,10 +403,10 @@ Rules: invalid JSON or a missing/non-list `ideas` → `[]` (no exception). Per i
 **Files:**
 - Modify: `docs/ai/architecture.md`, `docs/ideas/0001-gift-plan-suggestions-for-recipient.md`, `docs/ideas/README.md`
 
-- [ ] **Step 1:** In `docs/ai/architecture.md`, add a short "Gift suggestions" entry: package layout, the privacy rule (history only through `accessible_by`, payload anonymised in `ai/prompt.py`), and where to switch providers.
-- [ ] **Step 2:** In the idea file, record the "Decisions Taken During Planning" (above), answer the three Open Questions with them, set status `Implemented`, and move it to `docs/ideas/implemented/`; update its row in `docs/ideas/README.md` (status, note "Moved to `implemented/`").
-- [ ] **Step 3:** Run `graft build` to refresh the context graph.
-- [ ] **Step 4: Commit** `Docs(suggestions): Document gift suggestions and close idea 0001`.
+- [x] **Step 1:** In `docs/ai/architecture.md`, add a short "Gift suggestions" entry: package layout, the privacy rule (history only through `accessible_by`, payload anonymised in `ai/prompt.py`), and where to switch providers.
+- [x] **Step 2:** In the idea file, record the "Decisions Taken During Planning" (above), answer the three Open Questions with them, set status `Implemented`, and move it to `docs/ideas/implemented/`; update its row in `docs/ideas/README.md` (status, note "Moved to `implemented/`").
+- [x] **Step 3:** Run `graft build` to refresh the context graph.
+- [x] **Step 4: Commit** `Docs(suggestions): Document gift suggestions and close idea 0001`.
 
 ---
 
