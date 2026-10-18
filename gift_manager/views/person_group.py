@@ -45,6 +45,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.suggestions import suggestions_url_for
 
 
 class PersonGroupListView(PermissionContextMixin, BaseListView):
@@ -520,6 +521,7 @@ class PersonGroupDetailView(BaseDetailView):
         context["gift_history_url"] = reverse(
             "gift_manager:person_group_gift_history", kwargs={"pk": self.object.group_id}
         )
+        context["suggestions_url"] = suggestions_url_for(self.object)
 
         # Member counts
         context["direct_member_count"] = context["members"].count()

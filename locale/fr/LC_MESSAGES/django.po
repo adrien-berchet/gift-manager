@@ -4469,6 +4469,75 @@ msgstr "Navigation principale"
 msgid "Top navigation"
 msgstr "Navigation supérieure"
 
+msgid "Suggestions"
+msgstr "Suggestions"
+
+msgid "From your gifts"
+msgstr "Parmi vos cadeaux"
+
+msgid "New idea"
+msgstr "Nouvelle idée"
+
+msgid "Add as idea"
+msgstr "Ajouter comme idée"
+
+msgid "Dismiss"
+msgstr "Ignorer"
+
+msgid "Show more"
+msgstr "Voir plus"
+
+msgid "No suggestions yet."
+msgstr "Aucune suggestion pour l'instant."
+
+msgid "Shares tags with gifts rated %(rating)s/5: %(tags)s"
+msgstr "Partage des tags avec des cadeaux notés %(rating)s/5 : %(tags)s"
+
+msgid "Shares tags with gifts liked by related recipients: %(tags)s"
+msgstr "Partage des tags avec des cadeaux appréciés par des destinataires proches : %(tags)s"
+
+msgid "Matches their interests: %(tags)s"
+msgstr "Correspond à leurs centres d'intérêt : %(tags)s"
+
+msgid "Rated %(rating)s/5 on average"
+msgstr "Noté %(rating)s/5 en moyenne"
+
+msgid "Shares tags with past favourites: %(tags)s"
+msgstr "Partage des tags avec des favoris passés : %(tags)s"
+
+msgid "Gift suggestion"
+msgstr "Suggestion de cadeau"
+
+msgid "Gift suggestions"
+msgstr "Suggestions de cadeaux"
+
+msgid "Gift suggestion generation"
+msgstr "Génération de suggestions de cadeaux"
+
+msgid "Gift suggestion generations"
+msgstr "Générations de suggestions de cadeaux"
+
+#: gift_manager/models.py:1632
+msgid "Catalogue"
+msgstr "Catalogue"
+
+#: gift_manager/models.py:1633
+msgid "AI"
+msgstr "IA"
+
+#: gift_manager/models.py:1636
+msgid "Pending"
+msgstr "En attente"
+
+#: gift_manager/models.py:1637
+msgid "Accepted"
+msgstr "Accepté"
+
+#: gift_manager/models.py:1638
+msgid "Dismissed"
+msgstr "Rejeté"
+
+
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""
 #~ "Choisissez un destinataire ou saisissez le prénom d'une nouvelle personne."

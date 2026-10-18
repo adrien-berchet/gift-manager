@@ -1,0 +1,58 @@
+{% load i18n %}
+<div class="d-flex align-items-start justify-content-between py-2 border-bottom"
+     data-gift-suggestion
+     data-suggestion-source="{{ candidate.source }}">
+    <div class="me-3">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="fw-semibold">{{ candidate.name }}</span>
+            {% if candidate.source == "catalogue" %}
+                <span class="badge bg-secondary-subtle text-secondary-emphasis">{% trans "From your gifts" %}</span>
+            {% else %}
+                <span class="badge bg-primary-subtle text-primary-emphasis">{% trans "New idea" %}</span>
+            {% endif %}
+        </div>
+        <p class="text-muted small mb-0">{{ candidate.reason_text }}</p>
+    </div>
+    <div class="d-flex align-items-center gap-1">
+        <form method="post"
+              action="{% if is_person %}{% url 'gift_manager:person_suggestion_accept' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_accept' recipient.group_id %}{% endif %}"
+              hx-post="{% if is_person %}{% url 'gift_manager:person_suggestion_accept' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_accept' recipient.group_id %}{% endif %}"
+              hx-target="closest [data-gift-suggestions]"
+              hx-swap="outerHTML"
+              hx-disabled-elt="this">
+            {% csrf_token %}
+            {% if candidate.gift %}
+                <input type="hidden" name="gift" value="{{ candidate.gift.gift_id }}">
+            {% endif %}
+            {% if candidate.suggestion %}
+                <input type="hidden" name="suggestion" value="{{ candidate.suggestion.suggestion_id }}">
+            {% endif %}
+            {% if surface %}
+                <input type="hidden" name="surface" value="{{ surface }}">
+            {% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-primary" data-suggestion-accept>
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add as idea" %}
+            </button>
+        </form>
+        <form method="post"
+              action="{% if is_person %}{% url 'gift_manager:person_suggestion_dismiss' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_dismiss' recipient.group_id %}{% endif %}"
+              hx-post="{% if is_person %}{% url 'gift_manager:person_suggestion_dismiss' recipient.person_id %}{% else %}{% url 'gift_manager:person_group_suggestion_dismiss' recipient.group_id %}{% endif %}"
+              hx-target="closest [data-gift-suggestions]"
+              hx-swap="outerHTML"
+              hx-disabled-elt="this">
+            {% csrf_token %}
+            {% if candidate.gift %}
+                <input type="hidden" name="gift" value="{{ candidate.gift.gift_id }}">
+            {% endif %}
+            {% if candidate.suggestion %}
+                <input type="hidden" name="suggestion" value="{{ candidate.suggestion.suggestion_id }}">
+            {% endif %}
+            {% if surface %}
+                <input type="hidden" name="surface" value="{{ surface }}">
+            {% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary" data-suggestion-dismiss>
+                {% trans "Dismiss" %}
+            </button>
+        </form>
+    </div>
+</div>

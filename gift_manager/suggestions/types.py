@@ -32,6 +32,7 @@ class SuggestionCandidate:
     reason: SuggestionReason | str
     tag_ids: frozenset[int]
     suggestion: "GiftSuggestion | None" = None
+    reason_text: str = ""
 
 
 @dataclass(frozen=True)
