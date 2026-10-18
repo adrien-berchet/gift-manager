@@ -152,7 +152,7 @@ popularity(gift) = mean visible rating over all plans the user can access for th
 - Reason: the code of the largest contribution — `interests` when interest tags contribute most, else `liked_tags` when direct items contribute most, else `related_liked_tags`; `popular` in fallback mode. `tag_names`: the two matching tags with the largest positive contribution; `rating`: the highest rating among contributing items (popularity rounded to one decimal for `popular`).
 - Copy (`describe_reason`): `"Shares tags with gifts rated %(rating)s/5: %(tags)s"`, `"Shares tags with gifts liked by related recipients: %(tags)s"`, `"Matches their interests: %(tags)s"`, `"Rated %(rating)s/5 on average"`. When `rating` is None for `liked_tags`, use `"Shares tags with past favourites: %(tags)s"`. Tags joined with `", "`.
 
-- [ ] **Step 1: Write failing tests** (each builds gifts, tags, plans and ratings with factories, then calls `CatalogueStrategy().suggest(context, limit=10)` with a context built from `build_recipient_history`):
+- [x] **Step 1: Write failing tests** (each builds gifts, tags, plans and ratings with factories, then calls `CatalogueStrategy().suggest(context, limit=10)` with a context built from `build_recipient_history`):
   - `test_liked_tags_rank_above_disliked_tags`: history plan tagged `A` rated 5, another tagged `B` rated 1; gift `GA` tagged `A` and gift `GAB` tagged `A`+`B` → order `[GA, GAB]`; gift `GB` tagged `B` absent.
   - `test_direct_history_outweighs_group_history`: same rating 5 on tag `A` via a direct plan and on tag `C` via a group plan → `A` gift first.
   - `test_abandoned_plan_tags_are_negative`.
@@ -165,10 +165,10 @@ popularity(gift) = mean visible rating over all plans the user can access for th
   - `test_hidden_tags_neither_score_nor_appear_in_reason`: candidate tagged with visible `A` and hidden `H`; history (visible plan) tagged `H` rated 5 and `A` rated 4 → score from `A` only, `reason.tag_names == ("A",)`.
   - `test_ratings_from_plans_not_shared_are_ignored`: another user's unshared plan rated 5 neither creates a profile nor popularity.
   - `test_describe_reason_formats_tags_and_rating`: `liked_tags` with `("Books", "Maps")`, rating 5 → `"Shares tags with gifts rated 5/5: Books, Maps"` (French is checked in Task 5).
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_catalogue.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** `types.py` and `catalogue.py` with the constants above.
-- [ ] **Step 4: Run** the test file. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Score catalogue gifts from recipient history`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/suggestions/test_catalogue.py`. Expected: FAIL.
+- [x] **Step 3: Implement** `types.py` and `catalogue.py` with the constants above.
+- [x] **Step 4: Run** the test file. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Score catalogue gifts from recipient history`.
 
 ---
 
