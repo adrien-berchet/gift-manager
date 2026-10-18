@@ -250,12 +250,12 @@ Behaviour:
 **Interfaces:**
 - Consumes: `BaseE2ETest`, `live_server`, `test_user`, `self.login_as_user` (see `tests/e2e/test_group_gift_history_panel.py`); markup hooks from Task 5.
 
-- [ ] **Step 1: Write the tests:**
+- [x] **Step 1: Write the tests:**
   - `test_accept_suggestion_on_person_page`: person with a `Given` plan tagged `Books` rated 5 and two unplanned gifts tagged `Books` (`"Novel"`, `"Atlas"`), all shared with `test_user`. Open the person detail page, wait for `[data-gift-suggestion]` containing `"Novel"`, click its `[data-suggestion-accept]`; after the reload the "Gift plans in progress" list contains `"Novel"` and the suggestions section no longer does.
   - `test_dismiss_suggestion_on_person_page`: dismiss `"Atlas"`; it disappears; after `page.reload()` it is still absent.
   - `test_accept_suggestion_in_detail_panel`: open the person from `/recipients/` with the details action (as in the group history e2e), accept → the panel refreshes and shows the new plan.
-- [ ] **Step 2: Run** `tox run -e e2e -- gift_manager/tests/e2e/test_gift_suggestions.py`. Expected: PASS (fix implementation, not tests, if a flow is broken; screenshot the section in light and dark theme and at phone width to confirm layout).
-- [ ] **Step 3: Commit** `Test(suggestions): Cover accept and dismiss in the browser`.
+- [x] **Step 2: Run** `tox run -e e2e -- gift_manager/tests/e2e/test_gift_suggestions.py`. Expected: PASS (fix implementation, not tests, if a flow is broken; screenshot the section in light and dark theme and at phone width to confirm layout).
+- [x] **Step 3: Commit** `Test(suggestions): Cover accept and dismiss in the browser`.
 
 ---
 
