@@ -227,7 +227,7 @@ Behaviour:
 - Placement: person partial — right column, right after the "Gift plans in progress" `detail-section`, before the abandoned include, with `full_page=full_page_detail`. Group partial — before the abandoned include at `includes/person_group_detail_partial.html:187`. Group full page — after the closing tag of `#group-detail-members` (outside the section `person-group-detail.js` swaps), with `full_page=True`.
 - Translations for every new string (French): Suggestions → Suggestions, From your gifts → Parmi vos cadeaux, New idea → Nouvelle idée, Add as idea → Ajouter comme idée, Dismiss → Ignorer, Show more → Voir plus, No suggestions yet. → Aucune suggestion pour l'instant., plus the Task 3 reason strings. Reuse an existing `Loading…` msgid.
 
-- [ ] **Step 1: Write failing tests** (Django `Client`, PostgreSQL):
+- [x] **Step 1: Write failing tests** (Django `Client`, PostgreSQL):
   - `test_person_detail_page_renders_placeholder` / `test_group_detail_page_renders_placeholder` (full page and `HX-Request` partial both contain `data-gift-suggestions-section` and the suggestions URL).
   - `test_suggestions_partial_lists_ranked_items_with_reason`.
   - `test_show_more_returns_next_items_only`.
@@ -235,10 +235,10 @@ Behaviour:
   - `test_reason_never_mentions_data_from_unshared_plans`: another user's unshared plan rated 5 with tag `Secret` (tag shared with the viewer) — response does not contain `Secret`.
   - `test_accept_htmx_returns_section_and_list_update_trigger`, `test_accept_full_page_surface_refreshes`, `test_accept_without_htmx_redirects_to_detail`, `test_dismiss_removes_item_from_section`, `test_post_with_malformed_uuid_is_404`, `test_get_on_accept_is_405`.
   - `test_section_is_translated_in_french` (`/fr/` prefixed URL, asserts `Ajouter comme idée`).
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_suggestions_views.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** views, URLs, context keys, templates, placement and translations; `msgfmt --check locale/fr/LC_MESSAGES/django.po -o /tmp/check.mo`, then compile.
-- [ ] **Step 4: Run** the test file plus `gift_manager/tests/views/test_gift_history.py`, `gift_manager/tests/views/test_person_group_detail.py`, `gift_manager/tests/test_locale_coverage.py`. Expected: PASS.
-- [ ] **Step 5: Commit** `Feat(suggestions): Show catalogue suggestions on recipient detail pages`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_suggestions_views.py`. Expected: FAIL.
+- [x] **Step 3: Implement** views, URLs, context keys, templates, placement and translations; `msgfmt --check locale/fr/LC_MESSAGES/django.po -o /tmp/check.mo`, then compile.
+- [x] **Step 4: Run** the test file plus `gift_manager/tests/views/test_gift_history.py`, `gift_manager/tests/views/test_person_group_detail.py`, `gift_manager/tests/test_locale_coverage.py`. Expected: PASS.
+- [x] **Step 5: Commit** `Feat(suggestions): Show catalogue suggestions on recipient detail pages`.
 
 ---
 
