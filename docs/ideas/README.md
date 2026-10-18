@@ -52,7 +52,7 @@ status and notes to reflect the move.
 
 | ID | Idea | Status | Area | Notes |
 | --- | --- | --- | --- | --- |
-| 0001 | Gift Plan Suggestions For A Recipient | Ready | Gift Plans | Catalogue scoring plus AI new-gift ideas per recipient, with persisted dismissals. |
+| 0001 | Gift Plan Suggestions For A Recipient | Implemented | Gift Plans | Catalogue scoring plus AI new-gift ideas per recipient, with persisted dismissals. Moved to `implemented/`. |
 | 0002 | Person Birthdays And Personal Occasions | Implemented | Recipients | Birthday on people, dashboard section and one-click plan creation. Moved to `implemented/`. |
 | 0003 | Reminders And Calendar Feed | Implemented | Notifications | Opt-in digest email via management command plus private .ics feed. Moved to `implemented/`. |
 | 0004 | Richer Gift Details (Link, Price, Image) | Implemented | Gifts | Optional URL and price on gifts and plans, with budget totals; image upload deferred. Moved to `implemented/`. |

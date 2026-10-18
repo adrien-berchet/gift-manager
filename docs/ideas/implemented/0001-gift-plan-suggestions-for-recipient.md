@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+Implemented
 
 Plan: `docs/superpowers/plans/2026-10-17-gift-plan-suggestions.md`
 
@@ -220,10 +220,21 @@ Constraints:
   suggestions (birthday vs Christmas), budget-aware suggestions, and a way to
   review or undo dismissed suggestions.
 
-## Open Questions
+## Open Questions (Answered)
 
-- Which LLM provider and model should be the default, and should a
-  self-hosted option be supported through the same adapter?
-- Should there be a per-user daily limit on AI generations to cap cost?
-- Should suggestions be private to the user who generated them, or visible to
-  other users who share the recipient (the first slice assumes private)?
+- **Which LLM provider and model should be the default, and should a self-hosted option be supported through the same adapter?**
+  Anthropic and OpenAI are both supported via `GIFT_SUGGESTIONS_AI_PROVIDER=anthropic|openai`, using official SDKs. The documented default Anthropic model is `claude-haiku-5-5`. Self-hosted or OpenAI-compatible endpoints are supported via `GIFT_SUGGESTIONS_AI_BASE_URL`.
+- **Should there be a per-user daily limit on AI generations to cap cost?**
+  Yes. Configured by `GIFT_SUGGESTIONS_AI_DAILY_LIMIT` (default 20 generations per user per day in the user's active timezone), counted via `GiftSuggestionGeneration` log records.
+- **Should suggestions be private to the user who generated them, or visible to other users who share the recipient?**
+  Private to the viewing user. Suggestions, dismissals, and daily limits are scoped strictly to `(user, recipient)`.
+
+## Decisions
+
+- **Catalogue generation:** Computed live on every request (cheap, deterministic, never stale). Only catalogue dismissals and acceptances are stored in `GiftSuggestion`.
+- **Interests:** A person's `interests` (gift tags from idea 0006) count as a positive scoring signal, weighted equivalently to a 4/5 rating on a direct plan.
+- **AI re-ranking:** AI re-ranking of catalogue candidates is deferred; catalogue ranking remains deterministic.
+- **AI providers:** Pluggable adapter architecture (`AIClient` protocol) supporting Anthropic and OpenAI. Defaults to `claude-haiku-5-5`.
+- **Daily cap:** `GIFT_SUGGESTIONS_AI_DAILY_LIMIT` defaults to 20 generations per user per day. Reaching the limit presents a discreet UI notice without making external API calls.
+- **Privacy & Anonymisation:** History and candidate queries are strictly bounded by `accessible_by(user)` and `VisibleMetadata`. AI payloads pseudonymise recipient and member labels (`Recipient`, `Recipient's group`, `Member N`), strip database IDs/UUIDs, and scrub known user/person names and email patterns.
+- **Plan creation:** Accepting a suggestion ("Add as idea") creates an `Idea` plan owned exclusively by the accepting user, defaulting the surprise flag via `plan_coordination.default_surprise_for`. For AI suggestions, a new `Gift` owned by the user is created first with visible tags.
