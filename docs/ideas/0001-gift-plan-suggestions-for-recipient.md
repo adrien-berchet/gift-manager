@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed
+Ready
+
+Plan: `docs/superpowers/plans/2026-10-17-gift-plan-suggestions.md`
 
 ## Summary
 
