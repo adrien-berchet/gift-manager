@@ -76,9 +76,10 @@
     width: 1rem;
     height: 1rem;
     border: 2px solid transparent;
-    border-top: 2px solid var(--color-primary, #0d6efd);
+    border-top: 2px solid currentColor;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+    color: inherit;
 }
 
 .btn.loading .loading-text {
@@ -86,10 +87,6 @@
 }
 
 /* Specific button loading states */
-.btn.loading[data-loading-type="submitting"]::after {
-    border-top-color: var(--color-primary, #0d6efd);
-}
-
 .btn.loading[data-loading-type="saving"]::after {
     border-top-color: var(--color-success);
 }
@@ -100,13 +97,6 @@
 
 .btn.loading[data-loading-type="processing"]::after {
     border-top-color: var(--color-warning);
-}
-
-.btn-primary.loading::after,
-.btn-success.loading::after,
-.btn-danger.loading::after,
-.btn-dark.loading::after {
-    border-top-color: #ffffff;
 }
 
 /* =========================================================================

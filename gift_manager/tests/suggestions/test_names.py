@@ -9,6 +9,10 @@ from gift_manager.suggestions.names import normalize_gift_name
         ("  Lego  Technic! ", "lego technic"),
         ("Écharpe en laine", "echarpe en laine"),
         ("Café-crème", "cafe creme"),
+        ("Cœur en chocolat", "coeur en chocolat"),
+        ("Lætitia", "laetitia"),
+        ("Книга", "книга"),
+        ("日本語の本", "日本語の本"),
         ("", ""),
     ],
 )

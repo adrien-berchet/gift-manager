@@ -325,3 +325,65 @@ class TestGiftSuggestions(BaseE2ETest):
             .filter(has_text="Fountain Pen")
         )
         expect(restored_pen).to_be_visible(timeout=self.ajax_timeout * 2)
+
+    def test_dismissed_panel_stacked_over_detail_modal_escape_isolation(
+        self, page: Page, live_server, test_user
+    ):
+        """When opening the dismissed panel from inside a detail modal, pressing Escape closes only the offcanvas."""
+        tag = GiftTagFactory(name="Art")
+        person = PersonFactory(first_name="Elena", family_name="Painter")
+        past_gift = GiftFactory(name="Easel", tags=[tag])
+        given_plan = RelationFactory(
+            person=person,
+            gift=past_gift,
+            status=_status("Given"),
+            reaction_rating=5,
+        )
+        canvas = GiftFactory(name="Oil Canvas", tags=[tag])
+        _share(test_user, tag, person, past_gift, given_plan, canvas)
+
+        self.login_as_user(page, live_server, test_user)
+        page.goto(f"{live_server.url}/recipients/?view=people")
+
+        # Open Elena's detail panel modal
+        details_button = page.locator(
+            f'[data-action="detail"][href*="{person.person_id}"], '
+            f'[data-action="detail"][data-detail-url*="{person.person_id}"]'
+        ).first
+        expect(details_button).to_be_visible(timeout=self.ajax_timeout * 2)
+        details_button.click()
+
+        detail_modal = page.locator("#detailPanel")
+        expect(detail_modal).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # In detail modal, suggestions load
+        detail_content = page.locator("#detailContent")
+        suggestions = detail_content.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Dismiss Oil Canvas
+        canvas_item = suggestions.locator("[data-gift-suggestion]").filter(has_text="Oil Canvas")
+        expect(canvas_item).to_be_visible()
+        canvas_item.locator("[data-suggestion-dismiss]").click()
+        expect(canvas_item).not_to_be_attached(timeout=self.ajax_timeout)
+
+        # Open dismissed suggestions panel from inside the modal
+        review_btn = suggestions.locator("[data-suggestions-review-dismissed]")
+        expect(review_btn).to_be_visible()
+        review_btn.click()
+
+        offcanvas_panel = page.locator("#dismissedSuggestionsPanel")
+        expect(offcanvas_panel).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Wait for dismissed item content to be loaded in the offcanvas
+        dismissed_canvas = offcanvas_panel.locator(
+            "#dismissedSuggestionsContent [data-dismissed-item]"
+        ).filter(has_text="Oil Canvas")
+        expect(dismissed_canvas).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Press Escape: should close the offcanvas panel, NOT the underlying detail modal
+        page.keyboard.press("Escape")
+
+        expect(offcanvas_panel).not_to_be_visible(timeout=self.ajax_timeout)
+        # Detail modal is still open and visible!
+        expect(detail_modal).to_be_visible()

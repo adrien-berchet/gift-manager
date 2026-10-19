@@ -1035,3 +1035,75 @@ def test_dismissed_panel_translated_in_french(client, user):
         assert "Nouvelle idée" in content
     finally:
         translation.activate(settings.LANGUAGE_CODE)
+
+
+def test_dismissed_panel_does_not_leak_unshared_tags_or_unshared_gifts(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    other_user = UserFactory()
+    person = PersonFactory()
+    _share(user, person)
+
+    public_tag = GiftTagFactory(name="Public Hobbies")
+    secret_tag = GiftTagFactory(name="Secret Private Medical")
+    _share(user, public_tag)
+    _share(other_user, secret_tag)  # user has no access to secret_tag
+
+    gift = GiftFactory(name="Shared Gift", tags=[public_tag, secret_tag])
+    _share(user, gift)
+
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift,
+        name=gift.name,
+        normalized_name="shared gift",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    # An unshared gift that was dismissed previously
+    unshared_gift = GiftFactory(name="Unshared Secret Gift")
+    _share(other_user, unshared_gift)  # not shared with user
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=unshared_gift,
+        name=unshared_gift.name,
+        normalized_name="unshared secret gift",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    url = reverse("gift_manager:person_suggestions_dismissed", kwargs={"pk": person.person_id})
+    res = client.get(url)
+    assert res.status_code == 200
+    content = res.content.decode()
+
+    # Public tag is visible, secret tag is not leaked
+    assert "Public Hobbies" in content
+    assert "Secret Private Medical" not in content
+
+    # Unshared gift is excluded
+    assert "Shared Gift" in content
+    assert "Unshared Secret Gift" not in content
+
+
+def test_dismiss_already_accepted_suggestion_is_404(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Already Accepted",
+        normalized_name="already accepted",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.ACCEPTED,
+    )
+
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+    res = client.post(dismiss_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
+    assert res.status_code == 404

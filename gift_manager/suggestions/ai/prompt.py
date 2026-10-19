@@ -129,17 +129,24 @@ def build_ai_payload(
 
     tag_names_by_id = dict(GiftTag.objects.filter(id__in=all_tag_ids).values_list("id", "name"))
 
-    member_labels: dict[int, str] = {}
+    member_labels: dict[Any, str] = {}
     history_payload = []
     for it in capped_items:
         if it.is_direct:
             label = "Recipient"
         elif isinstance(history.recipient, Person):
             label = "Recipient's group"
-        else:
+        elif it.person_id is not None:
             if it.person_id not in member_labels:
                 member_labels[it.person_id] = f"Member {len(member_labels) + 1}"
             label = member_labels[it.person_id]
+        elif it.group_id is not None:
+            subgroup_key = f"g_{it.group_id}"
+            if subgroup_key not in member_labels:
+                member_labels[subgroup_key] = f"Subgroup {len(member_labels) + 1}"
+            label = member_labels[subgroup_key]
+        else:
+            label = "Member"
 
         item_tags = [
             scrub_text(tag_names_by_id[tid], terms)
@@ -147,20 +154,17 @@ def build_ai_payload(
             if tid in tag_names_by_id
         ]
 
-        note_text = scrub_text(it.note[:300], terms) if it.note else ""
-        comment_text = scrub_text(it.comment[:300], terms) if it.comment else ""
+        entry = {
+            "recipient": label,
+            "gift": scrub_text(it.gift_name, terms),
+            "tags": item_tags,
+            "status": it.status_slug,
+            "rating": it.rating,
+        }
+        if it.note:
+            entry["note"] = scrub_text(it.note[:150], terms)
 
-        history_payload.append(
-            {
-                "recipient": label,
-                "gift": scrub_text(it.gift_name, terms),
-                "tags": item_tags,
-                "status": it.status_slug,
-                "rating": it.rating,
-                "note": note_text,
-                "comment": comment_text,
-            }
-        )
+        history_payload.append(entry)
 
     interests = [
         scrub_text(tag_names_by_id[tid], terms)

@@ -230,7 +230,7 @@ def test_ratings_and_notes_only_when_visible(user):
 
     history_item = payload["history"][0]
     assert history_item["rating"] is None
-    assert history_item["note"] == ""
+    assert history_item.get("note", "") == ""
 
 
 @pytest.mark.django_db
@@ -275,7 +275,7 @@ def test_caps_are_applied(user):
     )
 
     assert len(payload["history"]) == 50
-    assert len(payload["history"][0]["note"]) <= 300
-    assert len(payload["history"][0]["comment"]) <= 300
+    assert len(payload["history"][0]["note"]) <= 150
+    assert "comment" not in payload["history"][0]
     assert len(payload["available_tags"]) == 200
     assert len(payload["avoid"]) == 100

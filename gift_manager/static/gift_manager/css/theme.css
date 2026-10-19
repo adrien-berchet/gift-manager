@@ -602,15 +602,17 @@
 
 /* Dark mode text utilities */
 [data-theme="dark"] .text-muted {
-    color: #94a3b8 !important;
+    color: #94a3b8;
 }
 
 [data-theme="dark"] .text-secondary {
-    color: #cbd5e1 !important;
+    color: #cbd5e1;
 }
 
+[data-theme="dark"] .gift-suggestions-root .text-muted,
+[data-theme="dark"] .gift-suggestions-root .text-secondary,
 [data-theme="dark"] .gift-suggestion-description {
-    color: #cbd5e1 !important;
+    color: #cbd5e1;
 }
 
 /* Dark mode breadcrumbs */
@@ -1102,12 +1104,6 @@ html .navbar-nav .nav-link.active {
     transition: all var(--transition-fast);
 }
 
-.form-control-sm,
-.form-select-sm {
-    padding: var(--space-1) var(--space-2);
-    font-size: 0.875rem;
-    border-radius: var(--radius-sm);
-}
 
 .form-control:focus,
 .form-select:focus {
@@ -3607,4 +3603,14 @@ h4, h5, h6 {
 
 .dismissed-suggestions-container [data-dismissed-item] {
     transition: background-color var(--transition-fast, 0.2s);
+}
+
+.gift-suggestion-actions {
+    min-width: 110px;
+}
+
+@media (max-width: 360px) {
+    .gift-suggestion-actions {
+        min-width: 95px;
+    }
 }

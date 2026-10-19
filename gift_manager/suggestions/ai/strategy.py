@@ -106,15 +106,35 @@ class AIStrategy:
 
         tags_qs = GiftTag.objects.filter(pk__in=visible_tag_ids).values_list("pk", "name")
         tags_by_name: dict[str, int] = {}
-        available_tag_names_set: set[str] = set()
+        tags_name_by_pk: dict[int, str] = {}
 
         for pk, name in tags_qs:
             name_cf = name.casefold()
             if name_cf not in tags_by_name:
                 tags_by_name[name_cf] = pk
-            available_tag_names_set.add(name)
+            tags_name_by_pk[pk] = name
 
-        available_tag_names = sorted(available_tag_names_set, key=str.casefold)
+        metadata = VisibleMetadata(user)
+        relevant_tag_ids = set(context.history.interest_tag_ids)
+        for it in context.history.items:
+            relevant_tag_ids.update(it.tag_ids)
+
+        expanded_tag_ids = set(relevant_tag_ids)
+        for tid in relevant_tag_ids:
+            expanded_tag_ids.update(metadata.ancestor_tag_ids(tid))
+
+        if len(expanded_tag_ids) < 15:
+            root_tag_ids = set(
+                GiftTag.objects.filter(pk__in=visible_tag_ids, parent_tags__isnull=True)
+                .order_by("name")
+                .values_list("pk", flat=True)[:25]
+            )
+            expanded_tag_ids.update(root_tag_ids)
+
+        available_tag_names = sorted(
+            {tags_name_by_pk[pk] for pk in expanded_tag_ids if pk in tags_name_by_pk},
+            key=str.casefold,
+        )
         avoid_names = self._build_avoid_names(context)
         language = get_language() or "en"
 

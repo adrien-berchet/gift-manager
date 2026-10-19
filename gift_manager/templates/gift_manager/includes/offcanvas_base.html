@@ -141,7 +141,7 @@
             title="{% trans 'Close' %} (Esc)"
             data-keyboard-hint="Esc"></button>
   </div>
-  <div class="offcanvas-body" id="dismissedSuggestionsBody" role="main">
+  <div class="offcanvas-body" id="dismissedSuggestionsBody">
     <div class="content-container" id="dismissedSuggestionsContent">
       <div class="text-center py-4 text-muted">
         <i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>{% trans "Loading…" %}
@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enhanced offcanvas functionality
     const editPanel = document.getElementById('editPanel');
     const detailPanel = document.getElementById('detailPanel');
+    const dismissedPanel = document.getElementById('dismissedSuggestionsPanel');
 
     // Focus management for accessibility
     function setupFocusManagement(panel) {
@@ -186,8 +187,49 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Focus management only for editPanel — Bootstrap Modal handles focus for detailPanel natively
+    // Focus management for panels
     setupFocusManagement(editPanel);
+    setupFocusManagement(dismissedPanel);
+
+    if (dismissedPanel) {
+        // Reset content to spinner when opening so old recipient's data doesn't linger
+        dismissedPanel.addEventListener('show.bs.offcanvas', function() {
+            const content = document.getElementById('dismissedSuggestionsContent');
+            if (content) {
+                content.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>' + (window.gettext ? window.gettext('Loading…') : 'Loading…') + '</div>';
+            }
+        });
+
+        // Ensure backdrop z-index is higher than modal (1055) when stacked over a detail modal
+        dismissedPanel.addEventListener('shown.bs.offcanvas', function() {
+            const backdrop = document.querySelector('.offcanvas-backdrop');
+            if (backdrop) {
+                backdrop.style.zIndex = '1060';
+            }
+        });
+
+    // Ensure Escape closes only dismissedSuggestionsPanel when it is open over a modal,
+    // preventing the Escape keydown event from reaching Bootstrap's document-level modal dismiss listener.
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            const panel = document.getElementById('dismissedSuggestionsPanel');
+            if (panel && (panel.classList.contains('show') || panel.classList.contains('showing'))) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(panel) || bootstrap.Offcanvas.getOrCreateInstance(panel);
+                if (bsOffcanvas) {
+                    if (panel.classList.contains('showing')) {
+                        panel.addEventListener('shown.bs.offcanvas', function() {
+                            bsOffcanvas.hide();
+                        }, { once: true });
+                    } else {
+                        bsOffcanvas.hide();
+                    }
+                }
+            }
+        }
+    }, true);
+}
 
     // ---- Detail Panel: explicit close + backdrop cleanup ----
     if (detailPanel) {

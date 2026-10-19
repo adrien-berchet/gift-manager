@@ -6,6 +6,8 @@ from dataclasses import dataclass
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Prefetch
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -15,6 +17,7 @@ from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.models import Gift
 from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftSuggestionGeneration
+from gift_manager.models import GiftTag
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -286,22 +289,38 @@ class GiftSuggestionService:
 
     def dismissed_count(self) -> int:
         """Return count of dismissed suggestions for this recipient."""
-        return GiftSuggestion.objects.filter(
-            user=self.user,
-            state=GiftSuggestion.State.DISMISSED,
-            **self._recipient_filter(),
-        ).count()
+        accessible_gifts = Gift.objects.accessible_by(self.user)
+        return (
+            GiftSuggestion.objects.filter(
+                user=self.user,
+                state=GiftSuggestion.State.DISMISSED,
+                **self._recipient_filter(),
+            )
+            .filter(Q(gift__isnull=True) | Q(gift__in=accessible_gifts))
+            .count()
+        )
 
     def dismissed_suggestions(self) -> list[GiftSuggestion]:
         """Return all dismissed suggestions for this recipient."""
+        accessible_gifts = Gift.objects.accessible_by(self.user)
+        visible_tag_ids = VisibleMetadata(self.user).tag_ids
+        visible_gift_tags = Prefetch(
+            "gift__tags",
+            queryset=GiftTag.objects.filter(pk__in=visible_tag_ids),
+        )
+        visible_ai_tags = Prefetch(
+            "tags",
+            queryset=GiftTag.objects.filter(pk__in=visible_tag_ids),
+        )
         return list(
             GiftSuggestion.objects.filter(
                 user=self.user,
                 state=GiftSuggestion.State.DISMISSED,
                 **self._recipient_filter(),
             )
+            .filter(Q(gift__isnull=True) | Q(gift__in=accessible_gifts))
             .select_related("gift")
-            .prefetch_related("tags", "gift__tags")
+            .prefetch_related(visible_ai_tags, visible_gift_tags)
             .order_by("-updated_at", "-created_at")
         )
 
@@ -376,6 +395,13 @@ class GiftSuggestionService:
                 raise Http404(_("Suggestion not found."))
 
             if suggestion.state == GiftSuggestion.State.ACCEPTED:
+                if (
+                    suggestion.gift_id
+                    and not Gift.objects.accessible_by(self.user)
+                    .filter(pk=suggestion.gift_id)
+                    .exists()
+                ):
+                    raise Http404(_("Suggestion not found."))
                 plan = self._get_existing_plan(suggestion.gift)
                 if plan is not None:
                     return plan
@@ -416,6 +442,9 @@ class GiftSuggestionService:
                 )
             except GiftSuggestion.DoesNotExist:
                 raise Http404(_("Suggestion not found.")) from None
+
+            if suggestion.state == GiftSuggestion.State.ACCEPTED:
+                raise Http404(_("Suggestion not found."))
 
             if suggestion.state != GiftSuggestion.State.DISMISSED:
                 suggestion.state = GiftSuggestion.State.DISMISSED
