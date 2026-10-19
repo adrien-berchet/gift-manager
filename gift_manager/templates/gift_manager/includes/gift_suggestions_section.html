@@ -1,12 +1,22 @@
 {% load i18n %}
 <div data-gift-suggestions class="gift-suggestions-root">
-    {% include "gift_manager/includes/gift_suggestions_catalogue_items.html" %}
+    <div class="gift-suggestions-catalogue-block mb-4">
+        <h6 class="small text-uppercase text-muted fw-bold mb-2">
+            <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "From your catalogue" %}
+        </h6>
+        {% include "gift_manager/includes/gift_suggestions_catalogue_items.html" %}
+    </div>
     {% if ai_enabled %}
         <div data-gift-suggestions-ai
              hx-get="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
              hx-trigger="load"
              hx-swap="outerHTML">
-            <span class="text-muted small">{% trans "Loading…" %}</span>
+            <div class="gift-suggestions-ai-root">
+                <h6 class="small text-uppercase text-muted fw-bold mb-2">
+                    <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "New ideas" %}
+                </h6>
+                <span class="text-muted small">{% trans "Loading…" %}</span>
+            </div>
         </div>
     {% endif %}
 </div>

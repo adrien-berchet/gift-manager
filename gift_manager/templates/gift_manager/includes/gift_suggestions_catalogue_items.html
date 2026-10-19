@@ -3,7 +3,7 @@
     {% for candidate in candidates %}
         {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=candidate %}
     {% empty %}
-        <p class="text-muted small mb-0">{% trans "No suggestions yet." %}</p>
+        <p class="text-muted small mb-0">{% trans "No matching gifts in your catalogue." %}</p>
     {% endfor %}
     {% if next_offset is not None %}
         <div class="mt-2 text-center">

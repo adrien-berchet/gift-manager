@@ -1,5 +1,11 @@
 {% load i18n %}
-<div data-gift-suggestions-ai class="gift-suggestions-ai-root mt-3">
+<div data-gift-suggestions-ai class="gift-suggestions-ai-root">
+    <div class="d-flex align-items-center mb-2">
+        <h6 class="small text-uppercase text-muted fw-bold mb-0">
+            <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "New ideas" %}
+        </h6>
+    </div>
+
     {% if block.notice == "unavailable" %}
         <p class="text-muted small" data-suggestion-notice>{% trans "New ideas are unavailable right now." %}</p>
     {% elif block.notice == "limit" %}
@@ -8,6 +14,10 @@
 
     {% for idea in block.ideas %}
         {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
+    {% empty %}
+        {% if not block.notice %}
+            <p class="text-muted small mb-0">{% trans "No new ideas generated yet." %}</p>
+        {% endif %}
     {% endfor %}
 
     {% if block.can_request_more %}

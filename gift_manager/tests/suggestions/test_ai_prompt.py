@@ -88,7 +88,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
         viewer=user,
         available_tag_names=["Photo", "Jeux"],
         avoid_names=["Album photo Marguerite"],
-        count=2,
+        count=7,
         language="fr",
     )
 
@@ -116,7 +116,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
     assert "[email]" in dumped
     assert payload["recipient_type"] == "person"
     assert payload["language"] == "fr"
-    assert payload["count"] == 2
+    assert payload["count"] == 7
     assert len(payload["history"]) == 1
     assert payload["history"][0]["recipient"] == "Recipient"
     assert payload["history"][0]["rating"] == 5

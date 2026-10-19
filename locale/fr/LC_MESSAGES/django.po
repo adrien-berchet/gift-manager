@@ -4552,6 +4552,18 @@ msgstr "Fournissez soit un cadeau soit une suggestion."
 msgid "Suggestion not found."
 msgstr "Suggestion introuvable."
 
+msgid "From your catalogue"
+msgstr "Depuis votre catalogue"
+
+msgid "No matching gifts in your catalogue."
+msgstr "Aucun cadeau correspondant dans votre catalogue."
+
+msgid "New ideas"
+msgstr "Nouvelles idées"
+
+msgid "No new ideas generated yet."
+msgstr "Aucune nouvelle idée générée pour l'instant."
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""

@@ -602,11 +602,15 @@
 
 /* Dark mode text utilities */
 [data-theme="dark"] .text-muted {
-    color: #94a3b8;
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .text-secondary {
-    color: #cbd5e1;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .gift-suggestion-description {
+    color: #cbd5e1 !important;
 }
 
 /* Dark mode breadcrumbs */
@@ -1320,6 +1324,18 @@ html .navbar-nav .nav-link.active {
 /* Badge colors handled via --bs-*-rgb overrides in :root and [data-theme="dark"] */
 .badge.bg-warning {
     color: var(--text-inverse);
+}
+
+[data-theme="dark"] .badge.bg-primary-subtle {
+    background-color: rgba(99, 102, 241, 0.25) !important;
+    color: #c7d2fe !important;
+    border: 1px solid rgba(165, 180, 252, 0.3);
+}
+
+[data-theme="dark"] .badge.bg-secondary-subtle {
+    background-color: rgba(148, 163, 184, 0.2) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 /* ==========================================================================
