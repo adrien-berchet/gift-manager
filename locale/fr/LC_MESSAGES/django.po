@@ -4579,6 +4579,24 @@ msgstr "idée"
 msgid "ideas"
 msgstr "idées"
 
+msgid "Generate ideas:"
+msgstr "Générer des idées :"
+
+msgid "Add ideas:"
+msgstr "Ajouter des idées :"
+
+msgid "Number of ideas to generate"
+msgstr "Nombre d'idées à générer"
+
+msgid "Generate 1 idea"
+msgstr "Générer 1 idée"
+
+msgid "Generate 2 ideas"
+msgstr "Générer 2 idées"
+
+msgid "Generate 3 ideas"
+msgstr "Générer 3 idées"
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""

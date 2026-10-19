@@ -383,7 +383,7 @@ def test_ideas_get_does_not_generate_and_post_generates(client, user, monkeypatc
     content_post = res_post.content.decode()
     assert "Canned Idea" in content_post
     assert 'data-suggestion-source="ai"' in content_post
-    assert "More ideas" in content_post
+    assert "Add ideas" in content_post
     assert len(fake.calls) == 1
 
     # Second GET renders generated ideas without triggering another call
@@ -636,6 +636,6 @@ def test_ai_block_translated_in_french(client, user, monkeypatch):
         assert res_post.status_code == 200
         content_post = res_post.content.decode()
         assert "Roman" in content_post
-        assert "Plus d'idées" in content_post
+        assert "Ajouter des idées" in content_post
     finally:
         translation.activate(settings.LANGUAGE_CODE)

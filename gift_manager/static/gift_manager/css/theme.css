@@ -1102,6 +1102,13 @@ html .navbar-nav .nav-link.active {
     transition: all var(--transition-fast);
 }
 
+.form-control-sm,
+.form-select-sm {
+    padding: var(--space-1) var(--space-2);
+    font-size: 0.875rem;
+    border-radius: var(--radius-sm);
+}
+
 .form-control:focus,
 .form-select:focus {
     border-color: var(--color-primary);

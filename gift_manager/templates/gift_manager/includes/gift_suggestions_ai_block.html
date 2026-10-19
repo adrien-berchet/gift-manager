@@ -26,25 +26,44 @@
               hx-post="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
               hx-target="closest [data-gift-suggestions-ai]"
               hx-swap="outerHTML"
-              hx-disabled-elt="find button, find select"
+              hx-disabled-elt="find button"
               class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap">
             {% csrf_token %}
-            <label for="ai-idea-count-{{ recipient.pk }}" class="visually-hidden">{% trans "Number of ideas" %}</label>
-            <select name="count" id="ai-idea-count-{{ recipient.pk }}" class="form-select form-select-sm w-auto">
-                <option value="1">1 {% trans "idea" %}</option>
-                <option value="2" selected>2 {% trans "ideas" %}</option>
-                <option value="3">3 {% trans "ideas" %}</option>
-            </select>
-            <button type="submit"
-                    class="btn btn-sm btn-outline-primary"
-                    data-suggestion-more-ideas>
+            <span class="small text-muted">
                 <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
                 {% if block.ideas %}
-                    {% trans "More ideas" %}
+                    {% trans "Add ideas:" %}
                 {% else %}
-                    {% trans "Generate ideas" %}
+                    {% trans "Generate ideas:" %}
                 {% endif %}
-            </button>
+            </span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="{% trans "Number of ideas to generate" %}">
+                <button type="submit"
+                        name="count"
+                        value="1"
+                        class="btn btn-outline-primary"
+                        data-count="1"
+                        title="{% trans "Generate 1 idea" %}">
+                    +1
+                </button>
+                <button type="submit"
+                        name="count"
+                        value="2"
+                        class="btn btn-outline-primary"
+                        data-suggestion-more-ideas
+                        data-count="2"
+                        title="{% trans "Generate 2 ideas" %}">
+                    +2
+                </button>
+                <button type="submit"
+                        name="count"
+                        value="3"
+                        class="btn btn-outline-primary"
+                        data-count="3"
+                        title="{% trans "Generate 3 ideas" %}">
+                    +3
+                </button>
+            </div>
         </form>
     {% endif %}
 </div>
