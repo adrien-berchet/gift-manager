@@ -304,6 +304,10 @@ class TestGiftSuggestions(BaseE2ETest):
         dismissed_pen = content.locator("[data-dismissed-item]").filter(has_text="Fountain Pen")
         expect(dismissed_pen).to_be_visible(timeout=self.ajax_timeout * 2)
 
+        # Review button restores its label and is enabled
+        expect(review_btn).to_contain_text("Dismissed suggestions")
+        expect(review_btn).to_be_enabled()
+
         # Restore the suggestion
         restore_btn = dismissed_pen.locator('[data-action="restore"]')
         expect(restore_btn).to_be_visible()

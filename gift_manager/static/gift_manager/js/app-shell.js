@@ -273,13 +273,6 @@
             }
         }
 
-        function restoreLoadingState(trigger) {
-            if (trigger && trigger.tagName === 'BUTTON' && trigger.dataset.originalText) {
-                trigger.disabled = false;
-                trigger.innerHTML = trigger.dataset.originalText;
-                delete trigger.dataset.originalText;
-            }
-        }
 
         function resetPanelLoadingState(target) {
             const panel = document.getElementById(target);
@@ -413,9 +406,6 @@
                     dispatchManagedFormTriggerFallback(xhr);
                 }
             }
-
-            // Remove loading states from buttons
-            restoreLoadingState(e.detail.elt);
         });
 
         document.body.addEventListener('htmx:afterSwap', function(e) {
@@ -423,18 +413,6 @@
             if (xhr && (xhr.status === 400 || xhr.status === 422) && isManagedForm(e.detail.elt)) {
                 // outerHTML swaps leave target pointing at the detached old form.
                 focusFirstFormError(e.detail.elt);
-            }
-        });
-
-        // Enhanced HTMX configuration for modern UX
-        document.body.addEventListener('htmx:beforeRequest', function(e) {
-            // Add loading states to buttons and forms
-            const trigger = e.detail.elt;
-            if (trigger.tagName === 'BUTTON') {
-                trigger.disabled = true;
-                const originalText = trigger.innerHTML;
-                trigger.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + (trigger.dataset.loadingText || i18n.loading);
-                trigger.dataset.originalText = originalText;
             }
         });
 

@@ -146,7 +146,11 @@
 
                 // Show button loading state if triggered by button
                 if (element.tagName === 'BUTTON' || element.tagName === 'A') {
-                    this.showButtonLoading(element);
+                    const noLoading = element.hasAttribute('data-no-button-loading') ||
+                        (element.closest && element.closest('[data-no-button-loading]'));
+                    if (!noLoading) {
+                        this.showButtonLoading(element);
+                    }
                 }
             });
 
