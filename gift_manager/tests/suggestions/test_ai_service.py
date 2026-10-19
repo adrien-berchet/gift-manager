@@ -26,7 +26,7 @@ from gift_manager.tests.suggestions.conftest import FakeAIClient
 pytestmark = pytest.mark.django_db
 
 
-def test_first_ai_block_generates_once(user, share):
+def test_ai_block_does_not_auto_generate_and_request_more_ideas_generates(user, share):
     person = PersonFactory()
     share(user, person, level=PermissionLevel.VIEWER)
 
@@ -49,16 +49,20 @@ def test_first_ai_block_generates_once(user, share):
     client = FakeAIClient(canned_responses=[canned])
     service = GiftSuggestionService(user, person, ai_client=client)
 
+    # Initial ai_block returns empty block without triggering AI generation
     block1 = service.ai_block()
     assert isinstance(block1, AIBlock)
-    assert len(block1.ideas) == 2
+    assert len(block1.ideas) == 0
     assert block1.notice is None
     assert block1.can_request_more is True
-    assert len(client.calls) == 1
+    assert len(client.calls) == 0
+    assert GiftSuggestionGeneration.objects.filter(user=user, person=person).count() == 0
 
-    # Second call should not trigger another AI generation
-    block2 = service.ai_block()
+    # Explicit request_more_ideas triggers generation
+    block2 = service.request_more_ideas(count=2)
     assert len(block2.ideas) == 2
+    assert block2.notice is None
+    assert block2.can_request_more is True
     assert len(client.calls) == 1
 
     gen_rows = GiftSuggestionGeneration.objects.filter(user=user, person=person)
@@ -66,6 +70,24 @@ def test_first_ai_block_generates_once(user, share):
     gen = gen_rows.first()
     assert gen.succeeded is True
     assert gen.idea_count == 2
+
+    # Subsequent ai_block() returns the pending ideas without another generation
+    block3 = service.ai_block()
+    assert len(block3.ideas) == 2
+    assert len(client.calls) == 1
+
+
+def test_request_more_ideas_supports_custom_count_and_clamping(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    canned1 = {"ideas": [{"name": "Single Idea", "description": "D", "reason": "R", "tags": []}]}
+    client = FakeAIClient(canned_responses=[canned1])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    block = service.request_more_ideas(count=1)
+    assert len(block.ideas) == 1
+    assert len(client.calls) == 1
 
 
 def test_more_ideas_adds_a_batch_and_keeps_previous(user, share):
@@ -87,7 +109,7 @@ def test_more_ideas_adds_a_batch_and_keeps_previous(user, share):
     client = FakeAIClient(canned_responses=[batch1, batch2])
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block1 = service.ai_block()
+    block1 = service.request_more_ideas()
     assert len(block1.ideas) == 2
 
     block2 = service.request_more_ideas()
@@ -132,7 +154,7 @@ def test_ai_ideas_matching_existing_gift_planned_or_dismissed_are_dropped(user, 
     client = FakeAIClient(canned_responses=[canned])
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block = service.ai_block()
+    block = service.request_more_ideas()
     assert len(block.ideas) == 1
     assert block.ideas[0].name == "Telescope"
 
@@ -157,7 +179,7 @@ def test_ai_payload_has_no_identifiers(user, share, status):
 
     client = FakeAIClient(canned_responses=[{"ideas": []}])
     service = GiftSuggestionService(user, person, ai_client=client)
-    service.ai_block()
+    service.request_more_ideas()
 
     assert len(client.calls) == 1
     payload_str = str(client.payload)
@@ -182,7 +204,7 @@ def test_ai_error_falls_back_with_notice(user, share):
     client = FakeAIClient(error=AICompletionError("Provider unavailable"))
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block = service.ai_block()
+    block = service.request_more_ideas()
     assert block.notice == "unavailable"
     assert len(block.ideas) == 0
     assert block.can_request_more is False
@@ -274,7 +296,7 @@ def test_accept_ai_idea_creates_gift_and_idea_plan(user, share):
     client = FakeAIClient(canned_responses=[canned])
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block = service.ai_block()
+    block = service.request_more_ideas()
     assert len(block.ideas) == 1
     suggestion = block.ideas[0]
 
@@ -322,7 +344,7 @@ def test_accept_twice_creates_one_plan(user, share):
     client = FakeAIClient(canned_responses=[canned])
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block = service.ai_block()
+    block = service.request_more_ideas()
     suggestion_id = block.ideas[0].suggestion_id
 
     plan1 = service.accept_suggestion(suggestion_id)
@@ -389,7 +411,7 @@ def test_dismissed_ai_idea_never_comes_back(user, share):
     client = FakeAIClient(canned_responses=[batch1, batch2])
     service = GiftSuggestionService(user, person, ai_client=client)
 
-    block1 = service.ai_block()
+    block1 = service.request_more_ideas()
     assert len(block1.ideas) == 1
     kite_sugg = block1.ideas[0]
     assert kite_sugg.name == "Kite"
@@ -423,7 +445,7 @@ def test_accept_and_dismiss_for_group(user, share):
     client = FakeAIClient(canned_responses=[batch])
     service = GiftSuggestionService(user, group, ai_client=client)
 
-    block = service.ai_block()
+    block = service.request_more_ideas()
     assert len(block.ideas) == 2
     fondue_sugg = block.ideas[0]
     party_sugg = block.ideas[1]

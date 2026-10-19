@@ -4564,6 +4564,21 @@ msgstr "Nouvelles idées"
 msgid "No new ideas generated yet."
 msgstr "Aucune nouvelle idée générée pour l'instant."
 
+msgid "Ask for AI suggestions tailored to this recipient."
+msgstr "Demandez des suggestions de l'IA adaptées à ce destinataire."
+
+msgid "Generate ideas"
+msgstr "Générer des idées"
+
+msgid "Number of ideas"
+msgstr "Nombre d'idées"
+
+msgid "idea"
+msgstr "idée"
+
+msgid "ideas"
+msgstr "idées"
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""

@@ -190,17 +190,9 @@ class GiftSuggestionService:
         )
 
     def ai_block(self) -> AIBlock:
-        """Return the current block of AI suggestions, generating the first batch if needed."""
+        """Return the current block of AI suggestions without auto-generating."""
         if not self.ai_enabled:
             return AIBlock(ideas=[], notice=None, can_request_more=False)
-
-        rec_filter = self._recipient_filter()
-        has_generation = GiftSuggestionGeneration.objects.filter(
-            user=self.user, **rec_filter
-        ).exists()
-
-        if not has_generation:
-            return self.request_more_ideas()
 
         ideas = self._get_pending_ai_ideas()
         today_count = self._get_today_generations_count()
@@ -211,11 +203,12 @@ class GiftSuggestionService:
 
         return AIBlock(ideas=ideas, notice=notice, can_request_more=can_request_more)
 
-    def request_more_ideas(self) -> AIBlock:
+    def request_more_ideas(self, count: int = AI_BATCH_SIZE) -> AIBlock:
         """Generate another batch of AI ideas, subject to the daily limit."""
         if not self.ai_enabled:
             return AIBlock(ideas=[], notice=None, can_request_more=False)
 
+        count = max(1, min(count, 5))
         today_count = self._get_today_generations_count()
         daily_limit = getattr(settings, "GIFT_SUGGESTIONS_AI_DAILY_LIMIT", 20)
 
@@ -234,7 +227,7 @@ class GiftSuggestionService:
         try:
             strategy = AIStrategy(self.ai_client)
             ctx = self._ai_context()
-            candidates = strategy.suggest(ctx, limit=AI_BATCH_SIZE)
+            candidates = strategy.suggest(ctx, limit=count)
         except AIError:
             logger.warning(
                 "AI suggestion generation failed for user %s on recipient %s",

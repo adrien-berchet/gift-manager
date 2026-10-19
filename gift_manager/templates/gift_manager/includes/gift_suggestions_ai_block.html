@@ -16,21 +16,35 @@
         {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
     {% empty %}
         {% if not block.notice %}
-            <p class="text-muted small mb-0">{% trans "No new ideas generated yet." %}</p>
+            <p class="text-muted small mb-2">{% trans "Ask for AI suggestions tailored to this recipient." %}</p>
         {% endif %}
     {% endfor %}
 
     {% if block.can_request_more %}
-        <div class="mt-2 text-center">
-            <button type="button"
+        <form method="post"
+              action="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+              hx-post="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+              hx-target="closest [data-gift-suggestions-ai]"
+              hx-swap="outerHTML"
+              hx-disabled-elt="find button, find select"
+              class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap">
+            {% csrf_token %}
+            <label for="ai-idea-count-{{ recipient.pk }}" class="visually-hidden">{% trans "Number of ideas" %}</label>
+            <select name="count" id="ai-idea-count-{{ recipient.pk }}" class="form-select form-select-sm w-auto">
+                <option value="1">1 {% trans "idea" %}</option>
+                <option value="2" selected>2 {% trans "ideas" %}</option>
+                <option value="3">3 {% trans "ideas" %}</option>
+            </select>
+            <button type="submit"
                     class="btn btn-sm btn-outline-primary"
-                    data-suggestion-more-ideas
-                    hx-post="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
-                    hx-target="closest [data-gift-suggestions-ai]"
-                    hx-swap="outerHTML"
-                    hx-disabled-elt="this">
-                <i class="fas fa-lightbulb me-1" aria-hidden="true"></i>{% trans "More ideas" %}
+                    data-suggestion-more-ideas>
+                <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
+                {% if block.ideas %}
+                    {% trans "More ideas" %}
+                {% else %}
+                    {% trans "Generate ideas" %}
+                {% endif %}
             </button>
-        </div>
+        </form>
     {% endif %}
 </div>

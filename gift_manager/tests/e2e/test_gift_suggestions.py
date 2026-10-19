@@ -218,7 +218,12 @@ class TestGiftSuggestions(BaseE2ETest):
         suggestions = page.locator("[data-gift-suggestions]")
         expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
 
-        # AI block loads lazily inside suggestions
+        # AI block loads lazily inside suggestions with generate button
+        generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
+        expect(generate_btn).to_be_visible(timeout=self.ajax_timeout * 2)
+        generate_btn.click()
+
+        # Batch 1 'Telescope' appears in AI block
         ai_item = suggestions.locator('[data-suggestion-source="ai"]').filter(has_text="Telescope")
         expect(ai_item).to_be_visible(timeout=self.ajax_timeout * 2)
 

@@ -19,6 +19,7 @@ from django.views.decorators.http import require_POST
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.suggestions.catalogue import describe_reason
+from gift_manager.suggestions.service import AI_BATCH_SIZE
 from gift_manager.suggestions.service import GiftSuggestionService
 from gift_manager.views.base import HTMXResponseMixin
 
@@ -95,7 +96,14 @@ def _render_ai_block(request, recipient: Person | PersonGroup, block) -> HttpRes
 def _handle_ideas(request, recipient: Person | PersonGroup) -> HttpResponse:
     service = GiftSuggestionService(request.user, recipient)
     if request.method == "POST":
-        block = service.request_more_ideas()
+        count_raw = request.POST.get("count")
+        count = AI_BATCH_SIZE
+        if count_raw is not None:
+            try:
+                count = max(1, min(int(count_raw), 5))
+            except (ValueError, TypeError):
+                count = AI_BATCH_SIZE
+        block = service.request_more_ideas(count=count)
         return _render_ai_block(request, recipient, block)
     if request.method == "GET":
         block = service.ai_block()

@@ -348,7 +348,7 @@ def test_section_includes_ai_placeholder_only_when_enabled(client, user, monkeyp
     assert "Loading…" in content or "Chargement" in content
 
 
-def test_ideas_get_generates_once_and_renders(client, user, monkeypatch):
+def test_ideas_get_does_not_generate_and_post_generates(client, user, monkeypatch):
     person = PersonFactory()
     _share(user, person)
 
@@ -367,18 +367,26 @@ def test_ideas_get_generates_once_and_renders(client, user, monkeypatch):
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
 
-    # First GET triggers generation
+    # First GET does not trigger generation; renders empty prompt and generate button
     res1 = client.get(ideas_url)
     assert res1.status_code == 200
     content1 = res1.content.decode()
     assert "data-gift-suggestions-ai" in content1
-    assert "Canned Idea" in content1
-    assert 'data-suggestion-source="ai"' in content1
-    assert "New idea" in content1
+    assert "Ask for AI suggestions tailored to this recipient." in content1
+    assert "Generate ideas" in content1
     assert "data-suggestion-more-ideas" in content1
+    assert len(fake.calls) == 0
+
+    # POST triggers generation
+    res_post = client.post(ideas_url, data={"count": "1"})
+    assert res_post.status_code == 200
+    content_post = res_post.content.decode()
+    assert "Canned Idea" in content_post
+    assert 'data-suggestion-source="ai"' in content_post
+    assert "More ideas" in content_post
     assert len(fake.calls) == 1
 
-    # Second GET does not trigger another call
+    # Second GET renders generated ideas without triggering another call
     res2 = client.get(ideas_url)
     assert res2.status_code == 200
     content2 = res2.content.decode()
@@ -397,13 +405,13 @@ def test_more_ideas_post_adds_batch(client, user, monkeypatch):
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
 
-    # Initial GET generates batch 1
-    res1 = client.get(ideas_url)
+    # Initial POST generates batch 1
+    res1 = client.post(ideas_url, data={"count": "1"})
     assert res1.status_code == 200
     assert "Idea One" in res1.content.decode()
 
-    # POST generates batch 2
-    res2 = client.post(ideas_url)
+    # Second POST generates batch 2
+    res2 = client.post(ideas_url, data={"count": "1"})
     assert res2.status_code == 200
     content2 = res2.content.decode()
     assert "Idea One" in content2
@@ -421,7 +429,7 @@ def test_ai_failure_shows_notice_and_status_200(client, user, monkeypatch):
     monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
-    res = client.get(ideas_url)
+    res = client.post(ideas_url)
     assert res.status_code == 200
     content = res.content.decode()
     assert "data-suggestion-notice" in content
@@ -446,7 +454,7 @@ def test_ai_idea_html_is_escaped(client, user, monkeypatch):
     monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
-    res = client.get(ideas_url)
+    res = client.post(ideas_url)
     assert res.status_code == 200
     content = res.content.decode()
     assert "<script>alert('xss')</script>" not in content
@@ -478,7 +486,7 @@ def test_accept_ai_suggestion_creates_plan(client, user, monkeypatch):
     monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
-    client.get(ideas_url)
+    client.post(ideas_url)
 
     sugg = GiftSuggestion.objects.get(user=user, name="Handmade Scarf")
     accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
@@ -521,7 +529,7 @@ def test_dismiss_ai_suggestion(client, user, monkeypatch):
     monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
-    client.get(ideas_url)
+    client.post(ideas_url)
 
     sugg = GiftSuggestion.objects.get(user=user, name="Flying Kite")
     dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
@@ -617,10 +625,17 @@ def test_ai_block_translated_in_french(client, user, monkeypatch):
         monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
 
         url = f"/fr/persons/{person.person_id}/suggestions/ideas/"
-        res = client.get(url)
-        assert res.status_code == 200
-        content = res.content.decode()
-        assert "Nouvelle idée" in content
-        assert "Plus d'idées" in content
+        res_get = client.get(url)
+        assert res_get.status_code == 200
+        content_get = res_get.content.decode()
+        assert "Nouvelles idées" in content_get
+        assert "Générer des idées" in content_get
+        assert "Demandez des suggestions de l'IA adaptées à ce destinataire." in content_get
+
+        res_post = client.post(url, data={"count": "1"})
+        assert res_post.status_code == 200
+        content_post = res_post.content.decode()
+        assert "Roman" in content_post
+        assert "Plus d'idées" in content_post
     finally:
         translation.activate(settings.LANGUAGE_CODE)
