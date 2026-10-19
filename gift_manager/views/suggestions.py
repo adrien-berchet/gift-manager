@@ -26,6 +26,7 @@ from gift_manager.views.base import HTMXResponseMixin
 SUGGESTIONS_SECTION_TEMPLATE = "gift_manager/includes/gift_suggestions_section.html"
 CATALOGUE_ITEMS_TEMPLATE = "gift_manager/includes/gift_suggestions_catalogue_items.html"
 AI_BLOCK_TEMPLATE = "gift_manager/includes/gift_suggestions_ai_block.html"
+DISMISSED_PANEL_TEMPLATE = "gift_manager/includes/gift_suggestions_dismissed_panel.html"
 
 
 def suggestions_url_for(recipient: Person | PersonGroup) -> str:
@@ -40,6 +41,33 @@ def ideas_url_for(recipient: Person | PersonGroup) -> str:
     if isinstance(recipient, Person):
         return reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": recipient.person_id})
     return reverse("gift_manager:person_group_suggestion_ideas", kwargs={"pk": recipient.group_id})
+
+
+def dismissed_url_for(recipient: Person | PersonGroup) -> str:
+    """Return the dismissed suggestions URL for a recipient."""
+    if isinstance(recipient, Person):
+        return reverse(
+            "gift_manager:person_suggestions_dismissed", kwargs={"pk": recipient.person_id}
+        )
+    return reverse(
+        "gift_manager:person_group_suggestions_dismissed", kwargs={"pk": recipient.group_id}
+    )
+
+
+def restore_url_for(recipient: Person | PersonGroup) -> str:
+    """Return the restore suggestion URL for a recipient."""
+    if isinstance(recipient, Person):
+        return reverse("gift_manager:person_suggestion_restore", kwargs={"pk": recipient.person_id})
+    return reverse(
+        "gift_manager:person_group_suggestion_restore", kwargs={"pk": recipient.group_id}
+    )
+
+
+def purge_url_for(recipient: Person | PersonGroup) -> str:
+    """Return the purge suggestion URL for a recipient."""
+    if isinstance(recipient, Person):
+        return reverse("gift_manager:person_suggestion_purge", kwargs={"pk": recipient.person_id})
+    return reverse("gift_manager:person_group_suggestion_purge", kwargs={"pk": recipient.group_id})
 
 
 def _get_recipient_or_404(user, pk: uuid.UUID, *, is_person: bool) -> Person | PersonGroup:
@@ -72,6 +100,8 @@ def _render_suggestions(request, recipient: Person | PersonGroup) -> HttpRespons
         "next_offset": page.next_offset,
         "suggestions_url": suggestions_url_for(recipient),
         "ideas_url": ideas_url_for(recipient) if service.ai_enabled else "",
+        "dismissed_url": dismissed_url_for(recipient),
+        "dismissed_count": service.dismissed_count(),
         "surface": surface,
         "ai_enabled": service.ai_enabled,
     }
@@ -181,6 +211,85 @@ def _handle_dismiss(request, recipient: Person | PersonGroup) -> HttpResponse:
     return _render_suggestions(request, recipient)
 
 
+def _render_dismissed_panel(request, recipient: Person | PersonGroup) -> HttpResponse:
+    service = GiftSuggestionService(request.user, recipient)
+    items = service.dismissed_suggestions()
+    context = {
+        "recipient": recipient,
+        "is_person": isinstance(recipient, Person),
+        "items": items,
+        "restore_url": restore_url_for(recipient),
+        "purge_url": purge_url_for(recipient),
+    }
+    return render(request, DISMISSED_PANEL_TEMPLATE, context)
+
+
+def _handle_restore(request, recipient: Person | PersonGroup) -> HttpResponse:
+    gift_raw = request.POST.get("gift")
+    sugg_raw = request.POST.get("suggestion")
+
+    if (gift_raw and sugg_raw) or (not gift_raw and not sugg_raw):
+        return HttpResponseBadRequest(_("Provide either gift or suggestion."))
+
+    service = GiftSuggestionService(request.user, recipient)
+
+    if gift_raw:
+        try:
+            gift_uuid = uuid.UUID(gift_raw)
+        except (ValueError, TypeError):
+            raise Http404 from None
+        service.restore_gift(gift_uuid)
+    else:
+        try:
+            sugg_uuid = uuid.UUID(sugg_raw)
+        except (ValueError, TypeError):
+            raise Http404 from None
+        service.restore_suggestion(sugg_uuid)
+
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
+    if not is_htmx:
+        if isinstance(recipient, Person):
+            return redirect("gift_manager:person_detail", pk=recipient.person_id)
+        return redirect("gift_manager:person_group_detail", pk=recipient.group_id)
+
+    response = _render_dismissed_panel(request, recipient)
+    response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(["suggestions:refresh"])
+    return response
+
+
+def _handle_purge(request, recipient: Person | PersonGroup) -> HttpResponse:
+    gift_raw = request.POST.get("gift")
+    sugg_raw = request.POST.get("suggestion")
+
+    if (gift_raw and sugg_raw) or (not gift_raw and not sugg_raw):
+        return HttpResponseBadRequest(_("Provide either gift or suggestion."))
+
+    service = GiftSuggestionService(request.user, recipient)
+
+    if gift_raw:
+        try:
+            gift_uuid = uuid.UUID(gift_raw)
+        except (ValueError, TypeError):
+            raise Http404 from None
+        service.purge_gift(gift_uuid)
+    else:
+        try:
+            sugg_uuid = uuid.UUID(sugg_raw)
+        except (ValueError, TypeError):
+            raise Http404 from None
+        service.purge_suggestion(sugg_uuid)
+
+    is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
+    if not is_htmx:
+        if isinstance(recipient, Person):
+            return redirect("gift_manager:person_detail", pk=recipient.person_id)
+        return redirect("gift_manager:person_group_detail", pk=recipient.group_id)
+
+    response = _render_dismissed_panel(request, recipient)
+    response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(["suggestions:refresh"])
+    return response
+
+
 @login_required
 @require_GET
 def person_suggestions(request, pk: uuid.UUID) -> HttpResponse:
@@ -214,6 +323,30 @@ def person_suggestion_dismiss(request, pk: uuid.UUID) -> HttpResponse:
 
 @login_required
 @require_GET
+def person_suggestions_dismissed(request, pk: uuid.UUID) -> HttpResponse:
+    """Return the list of dismissed suggestions for a person."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=True)
+    return _render_dismissed_panel(request, recipient)
+
+
+@login_required
+@require_POST
+def person_suggestion_restore(request, pk: uuid.UUID) -> HttpResponse:
+    """Restore a dismissed suggestion for a person."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=True)
+    return _handle_restore(request, recipient)
+
+
+@login_required
+@require_POST
+def person_suggestion_purge(request, pk: uuid.UUID) -> HttpResponse:
+    """Permanently delete a dismissed suggestion record for a person."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=True)
+    return _handle_purge(request, recipient)
+
+
+@login_required
+@require_GET
 def person_group_suggestions(request, pk: uuid.UUID) -> HttpResponse:
     """Return catalogue and AI suggestions for a group."""
     recipient = _get_recipient_or_404(request.user, pk, is_person=False)
@@ -241,3 +374,27 @@ def person_group_suggestion_dismiss(request, pk: uuid.UUID) -> HttpResponse:
     """Dismiss a suggestion for a group."""
     recipient = _get_recipient_or_404(request.user, pk, is_person=False)
     return _handle_dismiss(request, recipient)
+
+
+@login_required
+@require_GET
+def person_group_suggestions_dismissed(request, pk: uuid.UUID) -> HttpResponse:
+    """Return the list of dismissed suggestions for a group."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=False)
+    return _render_dismissed_panel(request, recipient)
+
+
+@login_required
+@require_POST
+def person_group_suggestion_restore(request, pk: uuid.UUID) -> HttpResponse:
+    """Restore a dismissed suggestion for a group."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=False)
+    return _handle_restore(request, recipient)
+
+
+@login_required
+@require_POST
+def person_group_suggestion_purge(request, pk: uuid.UUID) -> HttpResponse:
+    """Permanently delete a dismissed suggestion record for a group."""
+    recipient = _get_recipient_or_404(request.user, pk, is_person=False)
+    return _handle_purge(request, recipient)

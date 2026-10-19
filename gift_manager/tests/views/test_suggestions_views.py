@@ -642,3 +642,396 @@ def test_ai_block_translated_in_french(client, user, monkeypatch):
         assert "Ajouter des idées" in content_post
     finally:
         translation.activate(settings.LANGUAGE_CODE)
+
+
+def test_suggestions_section_renders_dismissed_button_and_count(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    # Initially 0 dismissed: button present, no badge count
+    suggestions_url = reverse("gift_manager:person_suggestions", kwargs={"pk": person.person_id})
+    res0 = client.get(suggestions_url)
+    assert res0.status_code == 200
+    c0 = res0.content.decode()
+    assert "data-suggestions-review-dismissed" in c0
+    assert "data-dismissed-count" not in c0
+
+    # Dismiss a suggestion
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+        name="Board Game",
+        normalized_name="board game",
+    )
+
+    res1 = client.get(suggestions_url)
+    assert res1.status_code == 200
+    c1 = res1.content.decode()
+    assert "data-suggestions-review-dismissed" in c1
+    assert "data-dismissed-count" in c1
+    assert '<span class="badge bg-secondary ms-1" data-dismissed-count>1</span>' in c1
+
+
+def test_person_suggestions_dismissed_empty_state(client, user):
+    person = PersonFactory()
+    _share(user, person)
+
+    url = reverse("gift_manager:person_suggestions_dismissed", kwargs={"pk": person.person_id})
+    res = client.get(url)
+    assert res.status_code == 200
+    content = res.content.decode()
+    assert "data-dismissed-suggestions-container" in content
+    assert "data-dismissed-empty" in content
+    assert "No dismissed suggestions for this recipient." in content
+
+
+def test_person_suggestions_dismissed_lists_items(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    tag = GiftTagFactory(name="Sci-Fi")
+    _share(user, tag)
+
+    person = PersonFactory()
+    _share(user, person)
+
+    # 1 catalogue dismissal
+    gift = GiftFactory(name="Stellaris", tags=[tag])
+    _share(user, gift)
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift,
+        name=gift.name,
+        normalized_name="stellaris",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+        reason="Matches tag Sci-Fi",
+    )
+
+    # 1 AI dismissal
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Solar Telescope",
+        normalized_name="solar telescope",
+        description="Great for daytime astronomy",
+        reason="Loves space science",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    url = reverse("gift_manager:person_suggestions_dismissed", kwargs={"pk": person.person_id})
+    res = client.get(url)
+    assert res.status_code == 200
+    content = res.content.decode()
+
+    assert "data-dismissed-item" in content
+    assert "Stellaris" in content
+    assert "From your gifts" in content
+    assert "Solar Telescope" in content
+    assert "New idea" in content
+    assert "Great for daytime astronomy" in content
+    assert "Loves space science" in content
+    assert "Sci-Fi" in content
+    assert 'data-action="restore"' in content
+    assert 'data-action="purge"' in content
+
+
+def test_person_suggestion_restore_ai_idea(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Astronomy Binoculars",
+        normalized_name="astronomy binoculars",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    restore_url = reverse("gift_manager:person_suggestion_restore", kwargs={"pk": person.person_id})
+    res = client.post(
+        restore_url,
+        {"suggestion": str(sugg.suggestion_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    assert "suggestions:refresh" in res.headers.get("HX-Trigger", "")
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.PENDING
+
+    # Panel content re-rendered without the restored item
+    content = res.content.decode()
+    assert "Astronomy Binoculars" not in content
+    assert "data-dismissed-empty" in content
+
+
+def test_person_suggestion_restore_catalogue_idea(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    gift = GiftFactory(name="Vintage Camera")
+    _share(user, gift)
+
+    dismissal = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift,
+        name=gift.name,
+        normalized_name="vintage camera",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    restore_url = reverse("gift_manager:person_suggestion_restore", kwargs={"pk": person.person_id})
+    res = client.post(
+        restore_url,
+        {"gift": str(gift.gift_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    assert "suggestions:refresh" in res.headers.get("HX-Trigger", "")
+
+    # Dismissal record removed so catalogue scoring suggests it again
+    assert not GiftSuggestion.objects.filter(pk=dismissal.pk).exists()
+
+    content = res.content.decode()
+    assert "Vintage Camera" not in content
+    assert "data-dismissed-empty" in content
+
+
+def test_person_suggestion_purge_ai_idea(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Leather Journal",
+        normalized_name="leather journal",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    purge_url = reverse("gift_manager:person_suggestion_purge", kwargs={"pk": person.person_id})
+    res = client.post(
+        purge_url,
+        {"suggestion": str(sugg.suggestion_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    assert "suggestions:refresh" in res.headers.get("HX-Trigger", "")
+
+    # Record wiped from DB
+    assert not GiftSuggestion.objects.filter(pk=sugg.pk).exists()
+
+    content = res.content.decode()
+    assert "Leather Journal" not in content
+    assert "data-dismissed-empty" in content
+
+
+def test_person_suggestion_purge_catalogue_idea(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    gift = GiftFactory(name="Fountain Pen")
+    _share(user, gift)
+
+    dismissal = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift,
+        name=gift.name,
+        normalized_name="fountain pen",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    purge_url = reverse("gift_manager:person_suggestion_purge", kwargs={"pk": person.person_id})
+    res = client.post(
+        purge_url,
+        {"gift": str(gift.gift_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    assert "suggestions:refresh" in res.headers.get("HX-Trigger", "")
+    assert not GiftSuggestion.objects.filter(pk=dismissal.pk).exists()
+
+
+def test_restore_and_purge_validation_errors(client, user):
+    person = PersonFactory()
+    _share(user, person)
+
+    restore_url = reverse("gift_manager:person_suggestion_restore", kwargs={"pk": person.person_id})
+    purge_url = reverse("gift_manager:person_suggestion_purge", kwargs={"pk": person.person_id})
+    fake_id = str(uuid.uuid4())
+
+    # Both gift and suggestion -> 400
+    assert client.post(restore_url, {"gift": fake_id, "suggestion": fake_id}).status_code == 400
+    assert client.post(purge_url, {"gift": fake_id, "suggestion": fake_id}).status_code == 400
+
+    # Neither -> 400
+    assert client.post(restore_url, {}).status_code == 400
+    assert client.post(purge_url, {}).status_code == 400
+
+    # Malformed UUID -> 404
+    assert client.post(restore_url, {"gift": "bad-uuid"}).status_code == 404
+    assert client.post(purge_url, {"suggestion": "bad-uuid"}).status_code == 404
+
+
+def test_restore_and_purge_non_htmx_redirects(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    sugg1 = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Idea 1",
+        normalized_name="idea 1",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+    sugg2 = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Idea 2",
+        normalized_name="idea 2",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    restore_url = reverse("gift_manager:person_suggestion_restore", kwargs={"pk": person.person_id})
+    purge_url = reverse("gift_manager:person_suggestion_purge", kwargs={"pk": person.person_id})
+    expected_redirect = reverse("gift_manager:person_detail", kwargs={"pk": person.person_id})
+
+    res_restore = client.post(restore_url, {"suggestion": str(sugg1.suggestion_id)})
+    assert res_restore.status_code == 302
+    assert res_restore.url == expected_redirect
+
+    res_purge = client.post(purge_url, {"suggestion": str(sugg2.suggestion_id)})
+    assert res_purge.status_code == 302
+    assert res_purge.url == expected_redirect
+
+
+def test_person_group_suggestions_dismissed_flow(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    group = PersonGroupFactory()
+    _share(user, group)
+
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        group=group,
+        name="Board Game Night",
+        normalized_name="board game night",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    # GET dismissed panel
+    dismissed_url = reverse(
+        "gift_manager:person_group_suggestions_dismissed", kwargs={"pk": group.group_id}
+    )
+    res_list = client.get(dismissed_url)
+    assert res_list.status_code == 200
+    assert "Board Game Night" in res_list.content.decode()
+
+    # Restore
+    restore_url = reverse(
+        "gift_manager:person_group_suggestion_restore", kwargs={"pk": group.group_id}
+    )
+    res_restore = client.post(
+        restore_url,
+        {"suggestion": str(sugg.suggestion_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res_restore.status_code == 200
+    assert "suggestions:refresh" in res_restore.headers.get("HX-Trigger", "")
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.PENDING
+
+    # Purge another dismissed suggestion
+    sugg_to_purge = GiftSuggestion.objects.create(
+        user=user,
+        group=group,
+        name="Cooking Class",
+        normalized_name="cooking class",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+    purge_url = reverse("gift_manager:person_group_suggestion_purge", kwargs={"pk": group.group_id})
+    res_purge = client.post(
+        purge_url,
+        {"suggestion": str(sugg_to_purge.suggestion_id)},
+        HTTP_HX_REQUEST="true",
+    )
+    assert res_purge.status_code == 200
+    assert not GiftSuggestion.objects.filter(pk=sugg_to_purge.pk).exists()
+
+
+def test_dismissed_endpoints_for_inaccessible_recipient_is_404(client, user):
+    other_user = UserFactory()
+    inaccessible_person = PersonFactory()
+    _share(other_user, inaccessible_person)
+
+    pk = inaccessible_person.person_id
+    dismissed_url = reverse("gift_manager:person_suggestions_dismissed", kwargs={"pk": pk})
+    restore_url = reverse("gift_manager:person_suggestion_restore", kwargs={"pk": pk})
+    purge_url = reverse("gift_manager:person_suggestion_purge", kwargs={"pk": pk})
+
+    assert client.get(dismissed_url).status_code == 404
+    assert client.post(restore_url, {"suggestion": str(uuid.uuid4())}).status_code == 404
+    assert client.post(purge_url, {"suggestion": str(uuid.uuid4())}).status_code == 404
+
+
+def test_dismissed_panel_translated_in_french(client, user):
+    from django.conf import settings
+    from django.utils import translation
+
+    from gift_manager.models import GiftSuggestion
+
+    try:
+        person = PersonFactory()
+        _share(user, person)
+
+        GiftSuggestion.objects.create(
+            user=user,
+            person=person,
+            name="Roman",
+            normalized_name="roman",
+            description="Livre",
+            reason="Aime lire",
+            source=GiftSuggestion.Source.AI,
+            state=GiftSuggestion.State.DISMISSED,
+        )
+
+        url = f"/fr/persons/{person.person_id}/suggestions/dismissed/"
+        res = client.get(url)
+        assert res.status_code == 200
+        content = res.content.decode()
+
+        assert (
+            "Passez en revue les suggestions précédemment refusées pour ce destinataire." in content
+        )
+        assert "Restaurer" in content
+        assert "Supprimer définitivement" in content
+        assert "Nouvelle idée" in content
+    finally:
+        translation.activate(settings.LANGUAGE_CODE)

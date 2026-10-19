@@ -3597,3 +3597,14 @@ h4, h5, h6 {
 [data-theme="dark"] .gift-suggestions-ai-root .ai-status-loading {
     color: var(--color-primary);
 }
+
+/* Dismissed suggestions offcanvas panel */
+#dismissedSuggestionsPanel {
+    z-index: 1065;
+    max-width: 480px;
+    width: 100%;
+}
+
+.dismissed-suggestions-container [data-dismissed-item] {
+    transition: background-color var(--transition-fast, 0.2s);
+}

@@ -279,9 +279,84 @@ class GiftSuggestionService:
             **rec_filter,
             defaults={
                 "state": GiftSuggestion.State.DISMISSED,
+                "name": gift.name,
                 "normalized_name": normalize_gift_name(gift.name),
             },
         )
+
+    def dismissed_count(self) -> int:
+        """Return count of dismissed suggestions for this recipient."""
+        return GiftSuggestion.objects.filter(
+            user=self.user,
+            state=GiftSuggestion.State.DISMISSED,
+            **self._recipient_filter(),
+        ).count()
+
+    def dismissed_suggestions(self) -> list[GiftSuggestion]:
+        """Return all dismissed suggestions for this recipient."""
+        return list(
+            GiftSuggestion.objects.filter(
+                user=self.user,
+                state=GiftSuggestion.State.DISMISSED,
+                **self._recipient_filter(),
+            )
+            .select_related("gift")
+            .prefetch_related("tags", "gift__tags")
+            .order_by("-updated_at", "-created_at")
+        )
+
+    def restore_gift(self, gift_uuid: uuid.UUID) -> None:
+        """Restore a dismissed catalogue gift so it becomes eligible for suggestions again."""
+        gift = get_object_or_404(Gift.objects.accessible_by(self.user), gift_id=gift_uuid)
+        rec_filter = self._recipient_filter()
+        deleted, _ = GiftSuggestion.objects.filter(
+            user=self.user,
+            gift=gift,
+            source=GiftSuggestion.Source.CATALOGUE,
+            state=GiftSuggestion.State.DISMISSED,
+            **rec_filter,
+        ).delete()
+        if not deleted:
+            raise Http404(_("Suggestion not found."))
+
+    def restore_suggestion(self, suggestion_uuid: uuid.UUID) -> None:
+        """Restore a dismissed AI suggestion so it returns to pending ideas."""
+        rec_filter = self._recipient_filter()
+        with transaction.atomic():
+            try:
+                suggestion = GiftSuggestion.objects.select_for_update().get(
+                    suggestion_id=suggestion_uuid,
+                    user=self.user,
+                    source=GiftSuggestion.Source.AI,
+                    state=GiftSuggestion.State.DISMISSED,
+                    **rec_filter,
+                )
+            except GiftSuggestion.DoesNotExist:
+                raise Http404(_("Suggestion not found.")) from None
+
+            suggestion.state = GiftSuggestion.State.PENDING
+            suggestion.save(update_fields=["state", "updated_at"])
+
+    def purge_gift(self, gift_uuid: uuid.UUID) -> None:
+        """Completely purge a catalogue suggestion dismissal record."""
+        self.restore_gift(gift_uuid)
+
+    def purge_suggestion(self, suggestion_uuid: uuid.UUID) -> None:
+        """Completely purge an AI suggestion record from history so the AI can suggest it again."""
+        rec_filter = self._recipient_filter()
+        with transaction.atomic():
+            try:
+                suggestion = GiftSuggestion.objects.select_for_update().get(
+                    suggestion_id=suggestion_uuid,
+                    user=self.user,
+                    source=GiftSuggestion.Source.AI,
+                    state=GiftSuggestion.State.DISMISSED,
+                    **rec_filter,
+                )
+            except GiftSuggestion.DoesNotExist:
+                raise Http404(_("Suggestion not found.")) from None
+
+            suggestion.delete()
 
     def accept_suggestion(self, suggestion_uuid: uuid.UUID) -> Relation:
         """Accept an AI gift idea, create the Gift and Relation plan."""

@@ -4600,6 +4600,31 @@ msgstr "Générer 3 idées"
 msgid "Generating ideas with AI…"
 msgstr "Génération des idées avec l'IA…"
 
+msgid "Dismissed suggestions"
+msgstr "Suggestions refusées"
+
+msgid "Review suggestions you previously dismissed for this recipient. You can restore them to your active suggestions, or permanently delete them so the AI can suggest them again."
+msgstr "Passez en revue les suggestions précédemment refusées pour ce destinataire. Vous pouvez les restaurer dans vos suggestions actives, ou les supprimer définitivement pour permettre à l'IA de les proposer à nouveau."
+
+msgid "Restore"
+msgstr "Restaurer"
+
+msgid "Restore to active suggestions"
+msgstr "Restaurer dans les suggestions actives"
+
+msgid "Delete permanently"
+msgstr "Supprimer définitivement"
+
+msgid "Completely remove from history so the AI can suggest it again"
+msgstr "Supprimer définitivement de l'historique afin que l'IA puisse à nouveau le proposer"
+
+msgid "Are you sure you want to permanently delete this suggestion? The AI will be allowed to suggest it again."
+msgstr "Êtes-vous sûr de vouloir supprimer définitivement cette suggestion ? L'IA sera autorisée à la proposer à nouveau."
+
+msgid "No dismissed suggestions for this recipient."
+msgstr "Aucune suggestion refusée pour ce destinataire."
+
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""

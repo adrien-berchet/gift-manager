@@ -1,5 +1,9 @@
 {% load i18n %}
-<div data-gift-suggestions class="gift-suggestions-root">
+<div data-gift-suggestions
+     class="gift-suggestions-root"
+     hx-get="{{ suggestions_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+     hx-trigger="suggestions:refresh from:body"
+     hx-swap="outerHTML">
     <div class="gift-suggestions-catalogue-block mb-4">
         <h6 class="small text-uppercase text-muted fw-bold mb-2">
             <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "From your catalogue" %}
@@ -17,6 +21,24 @@
                 </h6>
                 <span class="text-muted small">{% trans "Loading…" %}</span>
             </div>
+        </div>
+    {% endif %}
+    {% if dismissed_url %}
+        <div class="gift-suggestions-footer pt-3 mt-3 border-top d-flex justify-content-between align-items-center">
+            <button type="button"
+                    class="btn btn-sm btn-link text-muted text-decoration-none p-0"
+                    data-bs-toggle="offcanvas"
+                    data-bs-target="#dismissedSuggestionsPanel"
+                    hx-get="{{ dismissed_url }}"
+                    hx-target="#dismissedSuggestionsContent"
+                    hx-swap="innerHTML"
+                    data-suggestions-review-dismissed>
+                <i class="fas fa-archive me-1" aria-hidden="true"></i>
+                {% trans "Dismissed suggestions" %}
+                {% if dismissed_count %}
+                    <span class="badge bg-secondary ms-1" data-dismissed-count>{{ dismissed_count }}</span>
+                {% endif %}
+            </button>
         </div>
     {% endif %}
 </div>

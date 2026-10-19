@@ -120,6 +120,35 @@
     </div>
   </div>
 </div>
+
+<!-- Dismissed Suggestions Panel - Slides in from right -->
+<div class="offcanvas offcanvas-end offcanvas-panel"
+     tabindex="-1"
+     id="dismissedSuggestionsPanel"
+     aria-labelledby="dismissedSuggestionsPanelLabel"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true"
+     role="dialog">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" id="dismissedSuggestionsPanelLabel">
+      <i class="fas fa-archive me-2 text-primary" aria-hidden="true"></i>
+      <span class="offcanvas-title-text">{% trans "Dismissed suggestions" %}</span>
+    </h5>
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Close' %}"
+            title="{% trans 'Close' %} (Esc)"
+            data-keyboard-hint="Esc"></button>
+  </div>
+  <div class="offcanvas-body" id="dismissedSuggestionsBody" role="main">
+    <div class="content-container" id="dismissedSuggestionsContent">
+      <div class="text-center py-4 text-muted">
+        <i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>{% trans "Loading…" %}
+      </div>
+    </div>
+  </div>
+</div>
 {% load static %}
 
 <!-- Unsaved Changes Protection -->

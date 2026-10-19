@@ -254,3 +254,74 @@ class TestGiftSuggestions(BaseE2ETest):
         # Batch 2 idea 'Star Map' appears in AI block
         star_map_item = page.locator('[data-suggestion-source="ai"]').filter(has_text="Star Map")
         expect(star_map_item).to_be_visible(timeout=self.ajax_timeout * 2)
+
+    def test_review_and_restore_dismissed_suggestions(self, page: Page, live_server, test_user):
+        """Dismissing a suggestion updates the badge count; opening the dismissed panel allows restoring it."""
+        tag = GiftTagFactory(name="Stationery")
+        person = PersonFactory(first_name="Diana", family_name="Writer")
+        past_gift = GiftFactory(name="Notebook", tags=[tag])
+        given_plan = RelationFactory(
+            person=person,
+            gift=past_gift,
+            status=_status("Given"),
+            reaction_rating=5,
+        )
+        pen = GiftFactory(name="Fountain Pen", tags=[tag])
+        _share(test_user, tag, person, past_gift, given_plan, pen)
+
+        self.login_as_user(page, live_server, test_user)
+        page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+        # Suggestions section loads lazily
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Fountain Pen is in suggestions
+        pen_item = suggestions.locator("[data-gift-suggestion]").filter(has_text="Fountain Pen")
+        expect(pen_item).to_be_visible()
+
+        # Dismiss Fountain Pen
+        dismiss_btn = pen_item.locator("[data-suggestion-dismiss]")
+        expect(dismiss_btn).to_be_visible()
+        dismiss_btn.click()
+
+        # Item is removed from the DOM
+        expect(pen_item).not_to_be_attached(timeout=self.ajax_timeout)
+
+        # Review button now has badge with count 1
+        review_btn = page.locator("[data-suggestions-review-dismissed]")
+        expect(review_btn).to_be_visible()
+        badge = review_btn.locator("[data-dismissed-count]")
+        expect(badge).to_have_text("1")
+
+        # Click to open dismissed suggestions offcanvas panel
+        review_btn.click()
+
+        panel = page.locator("#dismissedSuggestionsPanel")
+        expect(panel).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        content = panel.locator("#dismissedSuggestionsContent")
+        dismissed_pen = content.locator("[data-dismissed-item]").filter(has_text="Fountain Pen")
+        expect(dismissed_pen).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Restore the suggestion
+        restore_btn = dismissed_pen.locator('[data-action="restore"]')
+        expect(restore_btn).to_be_visible()
+        restore_btn.click()
+
+        # Panel content updates in-place to empty state
+        expect(dismissed_pen).not_to_be_attached(timeout=self.ajax_timeout)
+        expect(content.locator("[data-dismissed-empty]")).to_be_visible(timeout=self.ajax_timeout)
+
+        # Close the panel
+        panel.locator(".btn-close").click()
+        expect(panel).not_to_be_visible(timeout=self.ajax_timeout)
+
+        # Active suggestions section on the page reloaded via suggestions:refresh trigger
+        # Fountain Pen is back in the active suggestions
+        restored_pen = (
+            page.locator("[data-gift-suggestions]")
+            .locator("[data-gift-suggestion]")
+            .filter(has_text="Fountain Pen")
+        )
+        expect(restored_pen).to_be_visible(timeout=self.ajax_timeout * 2)
