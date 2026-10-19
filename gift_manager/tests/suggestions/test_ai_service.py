@@ -613,3 +613,41 @@ def test_concurrent_generation_requests_serialize_and_respect_limit(user, share)
         limited = [r for r in results if r.notice == "limit"]
         assert len(succeeded) == 2
         assert len(limited) == 2
+
+
+def test_overlapping_generation_requests_deduplicate_ideas(user, share):
+    """If another request or user action saves a gift/suggestion while AI is generating, it is deduplicated."""
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    batch = {
+        "ideas": [
+            {"name": "Parallel Idea", "description": "D1", "reason": "R1", "tags": []},
+            {"name": "Unique Idea", "description": "D2", "reason": "R2", "tags": []},
+        ]
+    }
+    client = FakeAIClient(canned_responses=[batch])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    # Simulate that while the AI was generating, another request created "Parallel Idea"
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Parallel Idea",
+        normalized_name="parallel idea",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.PENDING,
+    )
+
+    block = service.request_more_ideas(count=2)
+    # The existing "Parallel Idea" is kept, the duplicate from the AI is skipped, and "Unique Idea" is added
+    assert len(block.ideas) == 2
+    idea_names = [i.name for i in block.ideas]
+    assert idea_names.count("Parallel Idea") == 1
+    assert "Unique Idea" in idea_names
+    assert (
+        GiftSuggestion.objects.filter(
+            user=user, person=person, normalized_name="parallel idea"
+        ).count()
+        == 1
+    )

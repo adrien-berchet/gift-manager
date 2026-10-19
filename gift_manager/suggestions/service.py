@@ -252,7 +252,27 @@ class GiftSuggestionService:
             return AIBlock(ideas=ideas, notice="unavailable", can_request_more=False)
 
         with transaction.atomic():
+            # Re-fetch existing normalized names for this user and recipient to catch any suggestion
+            # created, accepted, or dismissed while the AI provider call was in flight.
+            existing_blocked = set(
+                GiftSuggestion.objects.filter(
+                    user=self.user,
+                    **rec_filter,
+                ).values_list("normalized_name", flat=True)
+            )
+            existing_blocked.update(
+                normalize_gift_name(name)
+                for name in Gift.objects.accessible_by(self.user).values_list("name", flat=True)
+                if name
+            )
+
+            created_count = 0
             for cand in candidates:
+                norm_name = normalize_gift_name(cand.name)
+                if not norm_name or norm_name in existing_blocked:
+                    continue
+                existing_blocked.add(norm_name)
+
                 sugg = GiftSuggestion.objects.create(
                     user=self.user,
                     source=GiftSuggestion.Source.AI,
@@ -260,16 +280,17 @@ class GiftSuggestionService:
                     name=cand.name,
                     description=cand.description,
                     reason=cand.reason if isinstance(cand.reason, str) else cand.reason_text,
-                    normalized_name=normalize_gift_name(cand.name),
+                    normalized_name=norm_name,
                     score=cand.score,
                     generation=generation,
                     **rec_filter,
                 )
                 if cand.tag_ids:
                     sugg.tags.set(cand.tag_ids)
+                created_count += 1
 
             generation.succeeded = True
-            generation.idea_count = len(candidates)
+            generation.idea_count = created_count
             generation.save(update_fields=["succeeded", "idea_count"])
 
         ideas = self._get_pending_ai_ideas()
