@@ -519,7 +519,7 @@ def test_ai_generation_with_tagged_history_and_interest_tags(user, share):
 
 
 def test_failed_generation_does_not_consume_daily_quota(user, share):
-    """Failed generations (e.g. provider error) do not consume the user's daily limit."""
+    """Failed generations (e.g. provider error) do not consume the user's daily limit once cooldown expires."""
     person = PersonFactory()
     share(user, person, level=PermissionLevel.VIEWER)
 
@@ -530,8 +530,16 @@ def test_failed_generation_does_not_consume_daily_quota(user, share):
         block = service.request_more_ideas()
         assert block.notice == "unavailable"
 
-        # The failed generation is recorded for telemetry, but does not count against quota
-        assert GiftSuggestionGeneration.objects.filter(user=user, person=person).count() == 1
+        # The failed generation is recorded for telemetry
+        gen = GiftSuggestionGeneration.objects.get(user=user, person=person)
+        assert gen.succeeded is False
+
+        # In-flight/recent cooldown counts it immediately
+        assert service._get_today_generations_count() == 1
+
+        # Once past the cooldown window, it no longer counts against the daily limit
+        gen.created_at = timezone.now() - datetime.timedelta(seconds=60)
+        gen.save(update_fields=["created_at"])
         assert service._get_today_generations_count() == 0
 
         # Now try with a working client - user still has their 1 generation available
@@ -545,3 +553,63 @@ def test_failed_generation_does_not_consume_daily_quota(user, share):
         assert success_block.notice is None
         assert len(success_block.ideas) == 1
         assert service_success._get_today_generations_count() == 1
+
+
+def test_in_flight_generation_counts_towards_daily_limit(user, share):
+    """In-flight generations count against the daily limit to prevent race conditions."""
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    # Simulate an in-flight generation (created just now, not yet succeeded)
+    GiftSuggestionGeneration.objects.create(
+        user=user,
+        person=person,
+        succeeded=False,
+        idea_count=0,
+    )
+
+    success_batch = {
+        "ideas": [{"name": "Valid Idea", "description": "D", "reason": "R", "tags": []}]
+    }
+    client = FakeAIClient(canned_responses=[success_batch])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    with override_settings(GIFT_SUGGESTIONS_AI_DAILY_LIMIT=1):
+        assert service._get_today_generations_count() == 1
+        block = service.request_more_ideas()
+        assert block.notice == "limit"
+        assert block.can_request_more is False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_generation_requests_serialize_and_respect_limit(user, share):
+    """Multiple concurrent requests serialize via row lock and strictly respect the daily limit."""
+    import concurrent.futures
+
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    success_batch = {
+        "ideas": [{"name": "Valid Idea", "description": "D", "reason": "R", "tags": []}]
+    }
+    client = FakeAIClient(canned_responses=[success_batch] * 6)
+
+    with override_settings(GIFT_SUGGESTIONS_AI_DAILY_LIMIT=2):
+
+        def worker():
+            from django.db import connections
+
+            try:
+                svc = GiftSuggestionService(user, person, ai_client=client)
+                return svc.request_more_ideas()
+            finally:
+                connections.close_all()
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+            futures = [executor.submit(worker) for _ in range(4)]
+            results = [f.result() for f in futures]
+
+        succeeded = [r for r in results if r.notice is None]
+        limited = [r for r in results if r.notice == "limit"]
+        assert len(succeeded) == 2
+        assert len(limited) == 2

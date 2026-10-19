@@ -606,8 +606,10 @@
                             backdrop.remove();
                         });
                         document.body.classList.remove('offcanvas-open');
-                        document.body.style.overflow = '';
-                        document.body.style.paddingRight = '';
+                        if (!document.querySelector('.modal.show')) {
+                            document.body.style.overflow = '';
+                            document.body.style.paddingRight = '';
+                        }
                     }
                 }, 50);
             });

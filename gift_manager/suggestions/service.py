@@ -3,8 +3,10 @@
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import timedelta
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Prefetch
 from django.db.models import Q
@@ -174,9 +176,16 @@ class GiftSuggestionService:
     def _get_today_generations_count(self) -> int:
         now = timezone.now()
         today_start = timezone.localtime(now).replace(hour=0, minute=0, second=0, microsecond=0)
-        return GiftSuggestionGeneration.objects.filter(
-            user=self.user, succeeded=True, created_at__gte=today_start
-        ).count()
+        timeout = float(getattr(settings, "GIFT_SUGGESTIONS_AI_TIMEOUT", 15.0))
+        in_flight_window = now - timedelta(seconds=int(timeout * 2))
+        return (
+            GiftSuggestionGeneration.objects.filter(
+                user=self.user,
+                created_at__gte=today_start,
+            )
+            .filter(Q(succeeded=True) | Q(succeeded=False, created_at__gte=in_flight_window))
+            .count()
+        )
 
     def _get_pending_ai_ideas(self) -> list[GiftSuggestion]:
         rec_filter = self._recipient_filter()
@@ -211,20 +220,23 @@ class GiftSuggestionService:
             return AIBlock(ideas=[], notice=None, can_request_more=False)
 
         count = max(1, min(count, 5))
-        today_count = self._get_today_generations_count()
         daily_limit = getattr(settings, "GIFT_SUGGESTIONS_AI_DAILY_LIMIT", 20)
 
-        if today_count >= daily_limit:
-            ideas = self._get_pending_ai_ideas()
-            return AIBlock(ideas=ideas, notice="limit", can_request_more=False)
-
+        user_model = get_user_model()
         rec_filter = self._recipient_filter()
-        generation = GiftSuggestionGeneration.objects.create(
-            user=self.user,
-            succeeded=False,
-            idea_count=0,
-            **rec_filter,
-        )
+        with transaction.atomic():
+            user_model.objects.select_for_update().get(pk=self.user.pk)
+            today_count = self._get_today_generations_count()
+            if today_count >= daily_limit:
+                ideas = self._get_pending_ai_ideas()
+                return AIBlock(ideas=ideas, notice="limit", can_request_more=False)
+
+            generation = GiftSuggestionGeneration.objects.create(
+                user=self.user,
+                succeeded=False,
+                idea_count=0,
+                **rec_filter,
+            )
 
         try:
             strategy = AIStrategy(self.ai_client)
@@ -261,7 +273,7 @@ class GiftSuggestionService:
             generation.save(update_fields=["succeeded", "idea_count"])
 
         ideas = self._get_pending_ai_ideas()
-        new_today_count = today_count + 1
+        new_today_count = self._get_today_generations_count()
         can_more = new_today_count < daily_limit
         return AIBlock(ideas=ideas, notice=None, can_request_more=can_more)
 
