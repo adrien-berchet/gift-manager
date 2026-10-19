@@ -40,9 +40,10 @@ def status():
 class FakeAIClient:
     """Fake AI client for unit and integration tests."""
 
-    def __init__(self, canned_responses=None, error=None):
+    def __init__(self, canned_responses=None, error=None, on_generate=None):
         self.canned_responses = list(canned_responses or [])
         self.error = error
+        self.on_generate = on_generate
         self.calls = []
         self.payload = None
         self.system = None
@@ -55,6 +56,8 @@ class FakeAIClient:
         self.payload = payload
         self.system = system
         self.schema = schema
+        if self.on_generate:
+            self.on_generate()
         if self.error:
             raise self.error
         if self.canned_responses:

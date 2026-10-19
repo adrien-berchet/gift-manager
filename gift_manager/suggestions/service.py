@@ -252,6 +252,7 @@ class GiftSuggestionService:
             return AIBlock(ideas=ideas, notice="unavailable", can_request_more=False)
 
         with transaction.atomic():
+            user_model.objects.select_for_update().get(pk=self.user.pk)
             # Re-fetch existing normalized names for this user and recipient to catch any suggestion
             # created, accepted, or dismissed while the AI provider call was in flight.
             existing_blocked = set(

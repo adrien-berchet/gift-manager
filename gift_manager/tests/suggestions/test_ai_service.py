@@ -626,18 +626,20 @@ def test_overlapping_generation_requests_deduplicate_ideas(user, share):
             {"name": "Unique Idea", "description": "D2", "reason": "R2", "tags": []},
         ]
     }
-    client = FakeAIClient(canned_responses=[batch])
-    service = GiftSuggestionService(user, person, ai_client=client)
 
-    # Simulate that while the AI was generating, another request created "Parallel Idea"
-    GiftSuggestion.objects.create(
-        user=user,
-        person=person,
-        name="Parallel Idea",
-        normalized_name="parallel idea",
-        source=GiftSuggestion.Source.AI,
-        state=GiftSuggestion.State.PENDING,
-    )
+    def simulate_concurrent_insertion():
+        # This executes while the AI provider call is in flight, so _ai_context() didn't see it!
+        GiftSuggestion.objects.create(
+            user=user,
+            person=person,
+            name="Parallel Idea",
+            normalized_name="parallel idea",
+            source=GiftSuggestion.Source.AI,
+            state=GiftSuggestion.State.PENDING,
+        )
+
+    client = FakeAIClient(canned_responses=[batch], on_generate=simulate_concurrent_insertion)
+    service = GiftSuggestionService(user, person, ai_client=client)
 
     block = service.request_more_ideas(count=2)
     # The existing "Parallel Idea" is kept, the duplicate from the AI is skipped, and "Unique Idea" is added
