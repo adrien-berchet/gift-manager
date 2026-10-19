@@ -1,5 +1,7 @@
 """Browser tests for the form loading state in loading-states.js."""
 
+import re
+
 import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import expect
@@ -137,6 +139,28 @@ class TestFormLoadingState:
         expect(page.locator("#probe-submit")).to_be_enabled()
         expect(page.locator("#probe-submit")).to_have_text("Save")
         probes.release()
+
+    def test_form_with_no_button_loading_does_not_alter_button_label(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        probes = open_probe_form(page, live_server)
+        page.evaluate(
+            "document.getElementById('probe-form').setAttribute('data-no-button-loading', '')"
+        )
+
+        page.locator("#probe-submit").click()
+        probes.wait_for_request()
+
+        # Button is disabled and form has is-submitting, but button does not get .loading and keeps its text
+        expect(page.locator("#probe-submit")).to_be_disabled()
+        expect(page.locator("#probe-submit")).not_to_have_class(r"loading")
+        expect(page.locator("#probe-submit")).to_have_text("Save")
+        expect(page.locator("#probe-form")).to_have_class(re.compile(r"\bis-submitting\b"))
+
+        probes.release()
+        expect(page.locator("#probe-submit")).to_be_enabled()
+        expect(page.locator("#probe-submit")).to_have_text("Save")
+        expect(page.locator("#probe-form")).not_to_have_class(re.compile(r"\bis-submitting\b"))
 
     def test_plan_form_hint_request_does_not_lock_form(
         self, page: Page, live_server, seed_data_e2e

@@ -375,6 +375,8 @@ def test_ideas_get_does_not_generate_and_post_generates(client, user, monkeypatc
     assert "Ask for AI suggestions tailored to this recipient." in content1
     assert "Generate ideas" in content1
     assert "data-suggestion-more-ideas" in content1
+    assert "data-no-button-loading" in content1
+    assert "Generating ideas with AI…" in content1
     assert len(fake.calls) == 0
 
     # POST triggers generation
@@ -630,6 +632,7 @@ def test_ai_block_translated_in_french(client, user, monkeypatch):
         content_get = res_get.content.decode()
         assert "Nouvelles idées" in content_get
         assert "Générer des idées" in content_get
+        assert "Génération des idées avec l'IA…" in content_get
         assert "Demandez des suggestions de l'IA adaptées à ce destinataire." in content_get
 
         res_post = client.post(url, data={"count": "1"})

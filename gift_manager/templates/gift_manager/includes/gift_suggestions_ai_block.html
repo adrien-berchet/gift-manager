@@ -27,15 +27,20 @@
               hx-target="closest [data-gift-suggestions-ai]"
               hx-swap="outerHTML"
               hx-disabled-elt="find button"
-              class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap">
+              data-no-button-loading
+              class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap ai-generate-form">
             {% csrf_token %}
-            <span class="small text-muted">
+            <span class="small text-muted ai-status-idle">
                 <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
                 {% if block.ideas %}
                     {% trans "Add ideas:" %}
                 {% else %}
                     {% trans "Generate ideas:" %}
                 {% endif %}
+            </span>
+            <span class="small text-primary ai-status-loading" role="status">
+                <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>
+                {% trans "Generating ideas with AI…" %}
             </span>
             <div class="btn-group btn-group-sm" role="group" aria-label="{% trans "Number of ideas to generate" %}">
                 <button type="submit"

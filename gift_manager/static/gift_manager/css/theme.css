@@ -3559,3 +3559,41 @@ h4, h5, h6 {
         max-width: 100%;
     }
 }
+
+/* =========================================================================
+   AI Suggestions Ideation State & Button Group
+   ========================================================================= */
+
+.gift-suggestions-ai-root .ai-status-loading {
+    display: none;
+    color: var(--color-primary);
+}
+
+.gift-suggestions-ai-root form.htmx-request .ai-status-idle,
+.gift-suggestions-ai-root form.is-submitting .ai-status-idle {
+    display: none;
+}
+
+.gift-suggestions-ai-root form.htmx-request .ai-status-loading,
+.gift-suggestions-ai-root form.is-submitting .ai-status-loading {
+    display: inline-flex;
+    align-items: center;
+}
+
+.gift-suggestions-ai-root .btn-group-sm .btn {
+    width: 38px;
+    min-width: 38px;
+    padding-left: 0;
+    padding-right: 0;
+    text-align: center;
+}
+
+.gift-suggestions-ai-root form.htmx-request .btn.htmx-request {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .gift-suggestions-ai-root .ai-status-loading {
+    color: var(--color-primary);
+}

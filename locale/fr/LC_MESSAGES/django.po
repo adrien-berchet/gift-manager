@@ -4597,6 +4597,9 @@ msgstr "Générer 2 idées"
 msgid "Generate 3 ideas"
 msgstr "Générer 3 idées"
 
+msgid "Generating ideas with AI…"
+msgstr "Génération des idées avec l'IA…"
+
 
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""
