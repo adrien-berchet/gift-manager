@@ -1,0 +1,77 @@
+{% load i18n %}
+<div data-gift-suggestions-ai class="gift-suggestions-ai-root">
+    <div class="d-flex align-items-center mb-2">
+        <h6 class="small text-uppercase text-muted fw-bold mb-0">
+            <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "New ideas" %}
+        </h6>
+    </div>
+
+    {% if block.notice == "unavailable" %}
+        <p class="text-muted small" data-suggestion-notice>{% trans "New ideas are unavailable right now." %}</p>
+    {% elif block.notice == "limit" %}
+        <p class="text-muted small" data-suggestion-notice>{% trans "Daily limit for new ideas reached." %}</p>
+    {% endif %}
+
+    {% for idea in block.ideas %}
+        {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
+    {% empty %}
+        {% if not block.notice %}
+            <p class="text-muted small mb-2">{% trans "Ask for AI suggestions tailored to this recipient." %}</p>
+        {% endif %}
+    {% endfor %}
+
+    {% if block.can_request_more %}
+        <form method="post"
+              action="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+              hx-post="{{ ideas_url }}{% if surface %}?surface={{ surface }}{% endif %}"
+              hx-target="closest [data-gift-suggestions-ai]"
+              hx-swap="outerHTML"
+              hx-disabled-elt="find button"
+              data-no-button-loading
+              class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap ai-generate-form">
+            {% csrf_token %}
+            <span class="small text-muted ai-status-idle">
+                <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
+                {% if block.ideas %}
+                    {% trans "Add ideas:" %}
+                {% else %}
+                    {% trans "Generate ideas:" %}
+                {% endif %}
+            </span>
+            <span class="small text-primary ai-status-loading" role="status">
+                <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>
+                {% trans "Generating ideas with AI…" %}
+            </span>
+            <div class="btn-group btn-group-sm" role="group" aria-label="{% trans "Number of ideas to generate" %}">
+                <button type="submit"
+                        name="count"
+                        value="1"
+                        class="btn btn-outline-primary"
+                        data-count="1"
+                        title="{% trans "Generate 1 idea" %}"
+                        aria-label="{% trans "Generate 1 idea" %}">
+                    +1
+                </button>
+                <button type="submit"
+                        name="count"
+                        value="2"
+                        class="btn btn-outline-primary"
+                        data-suggestion-more-ideas
+                        data-count="2"
+                        title="{% trans "Generate 2 ideas" %}"
+                        aria-label="{% trans "Generate 2 ideas" %}">
+                    +2
+                </button>
+                <button type="submit"
+                        name="count"
+                        value="3"
+                        class="btn btn-outline-primary"
+                        data-count="3"
+                        title="{% trans "Generate 3 ideas" %}"
+                        aria-label="{% trans "Generate 3 ideas" %}">
+                    +3
+                </button>
+            </div>
+        </form>
+    {% endif %}
+</div>

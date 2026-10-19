@@ -1098,6 +1098,7 @@ html .navbar-nav .nav-link.active {
     transition: all var(--transition-fast);
 }
 
+
 .form-control:focus,
 .form-select:focus {
     border-color: var(--color-primary);
@@ -1320,6 +1321,18 @@ html .navbar-nav .nav-link.active {
 /* Badge colors handled via --bs-*-rgb overrides in :root and [data-theme="dark"] */
 .badge.bg-warning {
     color: var(--text-inverse);
+}
+
+[data-theme="dark"] .badge.bg-primary-subtle {
+    background-color: rgba(99, 102, 241, 0.25) !important;
+    color: #c7d2fe !important;
+    border: 1px solid rgba(165, 180, 252, 0.3);
+}
+
+[data-theme="dark"] .badge.bg-secondary-subtle {
+    background-color: rgba(148, 163, 184, 0.2) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 /* ==========================================================================
@@ -3534,5 +3547,64 @@ h4, h5, h6 {
 
     .filter-section.search-section {
         max-width: 100%;
+    }
+}
+
+/* =========================================================================
+   AI Suggestions Ideation State & Button Group
+   ========================================================================= */
+
+.gift-suggestions-ai-root .ai-status-loading {
+    display: none;
+    color: var(--color-primary);
+}
+
+.gift-suggestions-ai-root form.htmx-request .ai-status-idle,
+.gift-suggestions-ai-root form.is-submitting .ai-status-idle {
+    display: none;
+}
+
+.gift-suggestions-ai-root form.htmx-request .ai-status-loading,
+.gift-suggestions-ai-root form.is-submitting .ai-status-loading {
+    display: inline-flex;
+    align-items: center;
+}
+
+.gift-suggestions-ai-root .btn-group-sm .btn {
+    width: 38px;
+    min-width: 38px;
+    padding-left: 0;
+    padding-right: 0;
+    text-align: center;
+}
+
+.gift-suggestions-ai-root form.htmx-request .btn.htmx-request {
+    background-color: var(--color-primary);
+    color: #ffffff;
+    border-color: var(--color-primary);
+}
+
+[data-theme="dark"] .gift-suggestions-ai-root .ai-status-loading {
+    color: var(--color-primary);
+}
+
+/* Dismissed suggestions offcanvas panel */
+#dismissedSuggestionsPanel {
+    z-index: 1065;
+    max-width: 480px;
+    width: 100%;
+}
+
+.dismissed-suggestions-container [data-dismissed-item] {
+    transition: background-color var(--transition-fast, 0.2s);
+}
+
+.gift-suggestion-actions {
+    min-width: 110px;
+}
+
+@media (max-width: 360px) {
+    .gift-suggestion-actions {
+        min-width: 95px;
     }
 }

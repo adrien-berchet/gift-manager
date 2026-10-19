@@ -4469,6 +4469,163 @@ msgstr "Navigation principale"
 msgid "Top navigation"
 msgstr "Navigation supérieure"
 
+msgid "Suggestions"
+msgstr "Suggestions"
+
+msgid "From your gifts"
+msgstr "Parmi vos cadeaux"
+
+msgid "New idea"
+msgstr "Nouvelle idée"
+
+msgid "Add as idea"
+msgstr "Ajouter comme idée"
+
+msgid "Dismiss"
+msgstr "Ignorer"
+
+msgid "Show more"
+msgstr "Voir plus"
+
+msgid "No suggestions yet."
+msgstr "Aucune suggestion pour l'instant."
+
+msgid "Shares tags with gifts rated %(rating)s/5: %(tags)s"
+msgstr "Partage des tags avec des cadeaux notés %(rating)s/5 : %(tags)s"
+
+msgid "Shares tags with gifts liked by related recipients: %(tags)s"
+msgstr "Partage des tags avec des cadeaux appréciés par des destinataires proches : %(tags)s"
+
+msgid "Matches their interests: %(tags)s"
+msgstr "Correspond à leurs centres d'intérêt : %(tags)s"
+
+msgid "Rated %(rating)s/5 on average"
+msgstr "Noté %(rating)s/5 en moyenne"
+
+msgid "Shares tags with past favourites: %(tags)s"
+msgstr "Partage des tags avec des favoris passés : %(tags)s"
+
+msgid "Gift suggestion"
+msgstr "Suggestion de cadeau"
+
+msgid "Gift suggestions"
+msgstr "Suggestions de cadeaux"
+
+msgid "Gift suggestion generation"
+msgstr "Génération de suggestions de cadeaux"
+
+msgid "Gift suggestion generations"
+msgstr "Générations de suggestions de cadeaux"
+
+#: gift_manager/models.py:1632
+msgid "Catalogue"
+msgstr "Catalogue"
+
+#: gift_manager/models.py:1633
+msgid "AI"
+msgstr "IA"
+
+#: gift_manager/models.py:1636
+msgid "Pending"
+msgstr "En attente"
+
+#: gift_manager/models.py:1637
+msgid "Accepted"
+msgstr "Accepté"
+
+#: gift_manager/models.py:1638
+msgid "Dismissed"
+msgstr "Rejeté"
+
+msgid "More ideas"
+msgstr "Plus d'idées"
+
+msgid "New ideas are unavailable right now."
+msgstr "Les nouvelles idées sont indisponibles pour le moment."
+
+msgid "Daily limit for new ideas reached."
+msgstr "Limite quotidienne de nouvelles idées atteinte."
+
+msgid "Provide either gift or suggestion."
+msgstr "Fournissez soit un cadeau soit une suggestion."
+
+msgid "Suggestion not found."
+msgstr "Suggestion introuvable."
+
+msgid "From your catalogue"
+msgstr "Depuis votre catalogue"
+
+msgid "No matching gifts in your catalogue."
+msgstr "Aucun cadeau correspondant dans votre catalogue."
+
+msgid "New ideas"
+msgstr "Nouvelles idées"
+
+msgid "No new ideas generated yet."
+msgstr "Aucune nouvelle idée générée pour l'instant."
+
+msgid "Ask for AI suggestions tailored to this recipient."
+msgstr "Demandez des suggestions de l'IA adaptées à ce destinataire."
+
+msgid "Generate ideas"
+msgstr "Générer des idées"
+
+msgid "Number of ideas"
+msgstr "Nombre d'idées"
+
+msgid "idea"
+msgstr "idée"
+
+msgid "ideas"
+msgstr "idées"
+
+msgid "Generate ideas:"
+msgstr "Générer des idées :"
+
+msgid "Add ideas:"
+msgstr "Ajouter des idées :"
+
+msgid "Number of ideas to generate"
+msgstr "Nombre d'idées à générer"
+
+msgid "Generate 1 idea"
+msgstr "Générer 1 idée"
+
+msgid "Generate 2 ideas"
+msgstr "Générer 2 idées"
+
+msgid "Generate 3 ideas"
+msgstr "Générer 3 idées"
+
+msgid "Generating ideas with AI…"
+msgstr "Génération des idées avec l'IA…"
+
+msgid "Dismissed suggestions"
+msgstr "Suggestions refusées"
+
+msgid "Review suggestions you previously dismissed for this recipient. You can restore them to your active suggestions, or permanently delete them so the AI can suggest them again."
+msgstr "Passez en revue les suggestions précédemment refusées pour ce destinataire. Vous pouvez les restaurer dans vos suggestions actives, ou les supprimer définitivement pour permettre à l'IA de les proposer à nouveau."
+
+msgid "Restore"
+msgstr "Restaurer"
+
+msgid "Restore to active suggestions"
+msgstr "Restaurer dans les suggestions actives"
+
+msgid "Delete permanently"
+msgstr "Supprimer définitivement"
+
+msgid "Completely remove from history so the AI can suggest it again"
+msgstr "Supprimer définitivement de l'historique afin que l'IA puisse à nouveau le proposer"
+
+msgid "Are you sure you want to permanently delete this suggestion? The AI will be allowed to suggest it again."
+msgstr "Êtes-vous sûr de vouloir supprimer définitivement cette suggestion ? L'IA sera autorisée à la proposer à nouveau."
+
+msgid "No dismissed suggestions for this recipient."
+msgstr "Aucune suggestion refusée pour ce destinataire."
+
+
+
 #~ msgid "Choose a recipient or enter the first name of a new person."
 #~ msgstr ""
 #~ "Choisissez un destinataire ou saisissez le prénom d'une nouvelle personne."

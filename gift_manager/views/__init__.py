@@ -111,6 +111,27 @@ from .reminders import calendar_feed
 # Sharing views
 from .sharing import ShareObjectsView
 
+# Suggestions views
+from .suggestions import dismissed_url_for
+from .suggestions import ideas_url_for
+from .suggestions import person_group_suggestion_accept
+from .suggestions import person_group_suggestion_dismiss
+from .suggestions import person_group_suggestion_ideas
+from .suggestions import person_group_suggestion_purge
+from .suggestions import person_group_suggestion_restore
+from .suggestions import person_group_suggestions
+from .suggestions import person_group_suggestions_dismissed
+from .suggestions import person_suggestion_accept
+from .suggestions import person_suggestion_dismiss
+from .suggestions import person_suggestion_ideas
+from .suggestions import person_suggestion_purge
+from .suggestions import person_suggestion_restore
+from .suggestions import person_suggestions
+from .suggestions import person_suggestions_dismissed
+from .suggestions import purge_url_for
+from .suggestions import restore_url_for
+from .suggestions import suggestions_url_for
+
 __all__ = [
     "AcceptInvitationView",
     "BaseCreateView",
@@ -182,12 +203,29 @@ __all__ = [
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",
+    "dismissed_url_for",
     "event_plan_again",
     "get_user",
     "global_search",
     "home",
+    "ideas_url_for",
     "person_gift_history",
     "person_group_gift_history",
+    "person_group_suggestion_accept",
+    "person_group_suggestion_dismiss",
+    "person_group_suggestion_ideas",
+    "person_group_suggestion_purge",
+    "person_group_suggestion_restore",
+    "person_group_suggestions",
+    "person_group_suggestions_dismissed",
+    "person_suggestion_accept",
+    "person_suggestion_dismiss",
+    "person_suggestion_ideas",
+    "person_suggestion_purge",
+    "person_suggestion_restore",
+    "person_suggestions",
+    "person_suggestions_dismissed",
+    "purge_url_for",
     "relation_claim",
     "relation_comment_add",
     "relation_comment_delete",
@@ -198,6 +236,8 @@ __all__ = [
     "remove_person_from_group",
     "reparent_group",
     "repeat_gift_hint",
+    "restore_url_for",
+    "suggestions_url_for",
     "surprise_default_hint",
     "update_relation_status",
 ]

@@ -1,0 +1,12 @@
+{% load i18n %}
+{% comment %} Lazy-loaded gift suggestions section. Required context: suggestions_url, full_page. {% endcomment %}
+<div class="detail-section mt-4 mb-4" data-gift-suggestions-section>
+    <h6 class="detail-section-title text-muted mb-3">
+        <i class="fas fa-lightbulb me-2" aria-hidden="true"></i>{% trans "Suggestions" %}
+    </h6>
+    <div hx-get="{{ suggestions_url }}{% if full_page %}?surface=page{% endif %}"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p class="text-muted small mb-0">{% trans "Loading…" %}</p>
+    </div>
+</div>

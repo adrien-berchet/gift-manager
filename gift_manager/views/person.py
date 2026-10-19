@@ -34,6 +34,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import QueryStringPrefillMixin
+from gift_manager.views.suggestions import suggestions_url_for
 
 
 def get_person_grid_column_names():
@@ -309,6 +310,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         context["gift_history_url"] = reverse(
             "gift_manager:person_gift_history", kwargs={"pk": self.object.person_id}
         )
+        context["suggestions_url"] = suggestions_url_for(self.object)
         # Interests are gift tags: only the ones the viewer can see are shown
         visible_tag_ids = VisibleMetadata.for_request(self.request).tag_ids
         context["interests"] = sorted(

@@ -139,14 +139,18 @@
                 const element = e.detail.elt;
                 const target = e.detail.target;
 
-                // Show loading state on the target element
-                if (target && target !== element) {
+                // Show loading state on the target element (only if target doesn't contain the triggering element)
+                if (target && target !== element && !target.contains(element)) {
                     this.showContentLoading(target);
                 }
 
                 // Show button loading state if triggered by button
                 if (element.tagName === 'BUTTON' || element.tagName === 'A') {
-                    this.showButtonLoading(element);
+                    const noLoading = element.hasAttribute('data-no-button-loading') ||
+                        (element.closest && element.closest('[data-no-button-loading]'));
+                    if (!noLoading) {
+                        this.showButtonLoading(element);
+                    }
                 }
             });
 
@@ -156,7 +160,7 @@
                 const target = e.detail.target;
 
                 // Hide loading states
-                if (target && target !== element) {
+                if (target && target !== element && !target.contains(element)) {
                     this.hideContentLoading(target);
                 }
 
@@ -201,21 +205,25 @@
         // A form marked data-keep-button-label saves in place: its button shows a spinner,
         // then "Saved", without ever changing size (see beginInPlaceFeedback).
         lockForm(form, submitter) {
+            const noButtonLoading = form.hasAttribute('data-no-button-loading') ||
+                (submitter && submitter.hasAttribute('data-no-button-loading'));
             const inPlace = form.hasAttribute('data-keep-button-label');
-            if (submitter) {
+            if (submitter && !noButtonLoading) {
                 if (inPlace) {
                     this.beginInPlaceFeedback(submitter);
                 } else {
                     this.showButtonLoading(submitter, 'submitting');
                 }
             }
-            const restoreControls = this.disableFormControls(form, submitter);
+            const restoreControls = this.disableFormControls(form, noButtonLoading ? null : submitter);
+            form.classList.add('is-submitting');
 
             const release = (successful = false) => {
                 window.removeEventListener('beforeunload', release);
                 clearTimeout(timeoutId);
                 restoreControls();
-                if (submitter) {
+                form.classList.remove('is-submitting');
+                if (submitter && !noButtonLoading) {
                     if (inPlace) {
                         this.endInPlaceFeedback(submitter, successful === true);
                     } else {
@@ -375,6 +383,7 @@
             if (!button || button.dataset.loadingActive) return;
 
             button.dataset.loadingActive = 'true';
+            button.dataset.loadingType = loadingType;
             button.dataset.originalText = button.innerHTML;
             button.dataset.originalDisabled = button.disabled;
 
@@ -404,6 +413,7 @@
                 button.innerHTML = button.dataset.originalText || button.innerHTML;
 
                 delete button.dataset.loadingActive;
+                delete button.dataset.loadingType;
                 delete button.dataset.originalText;
                 delete button.dataset.originalDisabled;
 

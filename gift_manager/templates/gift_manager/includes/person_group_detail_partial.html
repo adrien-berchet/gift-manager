@@ -184,6 +184,8 @@
     </div>
     {% endif %}
 
+    {% include "gift_manager/includes/gift_suggestions_placeholder.html" with suggestions_url=suggestions_url full_page=full_page_detail only %}
+
     {% include "gift_manager/includes/abandoned_ideas_partial.html" with abandoned_relations=abandoned_relations only %}
 
     {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}

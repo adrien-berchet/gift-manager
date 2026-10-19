@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show the detail modal (reuse existing instance to avoid duplicate backdrops)
         const detailPanel = document.getElementById('detailPanel');
         if (detailPanel) {
+            detailPanel.dataset.currentUrl = detailUrl;
             const modalInstance = bootstrap.Modal.getOrCreateInstance(detailPanel);
             modalInstance.show();
         }
@@ -239,7 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.detail.target && e.detail.target.id === 'detailContent') {
             const detailPanel = document.getElementById('detailPanel');
             if (detailPanel) {
-                detailPanel.dataset.currentUrl = e.detail.requestConfig.url;
+                const url = e.detail.path || (e.detail.requestConfig && e.detail.requestConfig.url);
+                if (url) {
+                    detailPanel.dataset.currentUrl = url;
+                }
             }
         }
     });

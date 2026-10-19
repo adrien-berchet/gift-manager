@@ -70,6 +70,14 @@
   Removed because visible: create and update confirmations, sharing row changes, inline edits,
   bulk status updates (unless items were skipped), invitations sent, gift plans repeated for an
   event, a friendship accepted and a disabled calendar feed.
+- Gift suggestions: `gift_manager/suggestions/` holds catalogue scoring and LLM ideation.
+  Candidates, history, ratings and tags are strictly scoped to the viewing user via `accessible_by`
+  and `metadata_visibility.VisibleMetadata`; hidden surprise plans are never read. AI payloads are
+  minimised, scrubbed of recipient/viewer names, emails, and database keys, and exclude free-text
+  coordination comments in `gift_manager/suggestions/ai/prompt.py`. The provider adapter is chosen
+  via settings (`GIFT_SUGGESTIONS_AI_PROVIDER=anthropic|openai`), with optional
+  `GIFT_SUGGESTIONS_AI_BASE_URL` and `GIFT_SUGGESTIONS_AI_MODEL` in `.env`. Suggestions are private
+  to the generating user; accepted suggestions become user-owned `Idea` plans.
 
 ## Risk Areas
 

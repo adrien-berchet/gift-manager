@@ -1591,6 +1591,134 @@ class RelationComment(models.Model):
         return f"{self.author} on {self.relation_id}: {str(self.text)[:30]}"
 
 
+class GiftSuggestionGeneration(models.Model):
+    """An AI suggestion generation run for a recipient, used for rate limits and audit."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="gift_suggestion_generations"
+    )
+    person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    group = models.ForeignKey(
+        PersonGroup, on_delete=models.CASCADE, null=True, blank=True, related_name="+"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    succeeded = models.BooleanField(default=False)
+    idea_count = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = gettext_lazy("Gift suggestion generation")
+        verbose_name_plural = gettext_lazy("Gift suggestion generations")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(person__isnull=False, group__isnull=True)
+                    | Q(person__isnull=True, group__isnull=False)
+                ),
+                name="gift_suggestion_generation_one_recipient",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        recipient = self.person or self.group
+        return f"{self.user} - {recipient} at {self.created_at}"
+
+
+class GiftSuggestion(models.Model):
+    """A suggested gift for a recipient (from catalogue scoring or an AI provider)."""
+
+    class Source(models.TextChoices):
+        CATALOGUE = "catalogue", gettext_lazy("Catalogue")
+        AI = "ai", gettext_lazy("AI")
+
+    class State(models.TextChoices):
+        PENDING = "pending", gettext_lazy("Pending")
+        ACCEPTED = "accepted", gettext_lazy("Accepted")
+        DISMISSED = "dismissed", gettext_lazy("Dismissed")
+
+    suggestion_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gift_suggestions")
+    person = models.ForeignKey(
+        Person, on_delete=models.CASCADE, null=True, blank=True, related_name="gift_suggestions"
+    )
+    group = models.ForeignKey(
+        PersonGroup,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="gift_suggestions",
+    )
+    source = models.CharField(max_length=10, choices=Source.choices)
+    state = models.CharField(max_length=10, choices=State.choices, default=State.PENDING)
+    gift = models.ForeignKey(
+        Gift, on_delete=models.CASCADE, null=True, blank=True, related_name="suggestions"
+    )
+    generation = models.ForeignKey(
+        GiftSuggestionGeneration,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="ideas",
+    )
+    name = models.TextField(blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    reason = models.TextField(blank=True, default="")
+    tags = models.ManyToManyField(GiftTag, blank=True, related_name="+")
+    normalized_name = models.TextField(db_index=True)
+    score = models.FloatField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("-created_at", "pk")
+        verbose_name = gettext_lazy("Gift suggestion")
+        verbose_name_plural = gettext_lazy("Gift suggestions")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(person__isnull=False, group__isnull=True)
+                    | Q(person__isnull=True, group__isnull=False)
+                ),
+                name="gift_suggestion_one_recipient",
+            ),
+            models.CheckConstraint(
+                condition=Q(source="ai") | Q(gift__isnull=False),
+                name="gift_suggestion_catalogue_has_gift",
+            ),
+            models.CheckConstraint(
+                condition=Q(source="catalogue") | ~Q(name=""),
+                name="gift_suggestion_ai_has_name",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "person", "gift"],
+                condition=Q(source="catalogue", person__isnull=False),
+                name="gift_suggestion_unique_catalogue_person",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "group", "gift"],
+                condition=Q(source="catalogue", group__isnull=False),
+                name="gift_suggestion_unique_catalogue_group",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["user", "person", "state"], name="gift_sugg_user_person_idx"),
+            models.Index(fields=["user", "group", "state"], name="gift_sugg_user_group_idx"),
+        ]
+
+    def __str__(self) -> str:
+        gift_or_name = self.gift.name if self.gift_id is not None else self.name
+        return f"{self.user} - {self.recipient}: {gift_or_name} ({self.source}/{self.state})"
+
+    @property
+    def recipient(self) -> Person | PersonGroup | None:
+        if self.person_id is not None:
+            return self.person
+        if self.group_id is not None:
+            return self.group
+        return None
+
+
 @receiver(post_delete, sender=RelationPermission)
 def release_claim_when_access_is_removed(sender, instance, **kwargs):
     """Release the claim a user holds on a plan once they lose access to it."""

@@ -1,0 +1,20 @@
+{% load i18n %}
+<div class="gift-suggestions-catalogue-items">
+    {% for candidate in candidates %}
+        {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=candidate %}
+    {% empty %}
+        <p class="text-muted small mb-0">{% trans "No matching gifts in your catalogue." %}</p>
+    {% endfor %}
+    {% if next_offset is not None %}
+        <div class="mt-2 text-center">
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary"
+                    data-suggestion-show-more
+                    hx-get="{{ suggestions_url }}?offset={{ next_offset }}{% if surface %}&surface={{ surface }}{% endif %}"
+                    hx-target="closest div"
+                    hx-swap="outerHTML">
+                {% trans "Show more" %}
+            </button>
+        </div>
+    {% endif %}
+</div>

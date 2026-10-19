@@ -4,6 +4,8 @@ from .models import Event
 from .models import EventPermission
 from .models import Gift
 from .models import GiftPermission
+from .models import GiftSuggestion
+from .models import GiftSuggestionGeneration
 from .models import GiftTag
 from .models import GiftTagPermission
 from .models import Invitation
@@ -26,6 +28,8 @@ admin.site.register(GiftTag)
 admin.site.register(GiftTagPermission)
 admin.site.register(Gift)
 admin.site.register(GiftPermission)
+admin.site.register(GiftSuggestion)
+admin.site.register(GiftSuggestionGeneration)
 admin.site.register(Event)
 admin.site.register(EventPermission)
 admin.site.register(RelationStatus)

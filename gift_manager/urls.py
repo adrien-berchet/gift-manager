@@ -89,6 +89,41 @@ urlpatterns = [
         name="person_gift_history",
     ),
     path(
+        "persons/<uuid:pk>/suggestions/",
+        views.person_suggestions,
+        name="person_suggestions",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/ideas/",
+        views.person_suggestion_ideas,
+        name="person_suggestion_ideas",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/accept/",
+        views.person_suggestion_accept,
+        name="person_suggestion_accept",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/dismiss/",
+        views.person_suggestion_dismiss,
+        name="person_suggestion_dismiss",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/dismissed/",
+        views.person_suggestions_dismissed,
+        name="person_suggestions_dismissed",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/restore/",
+        views.person_suggestion_restore,
+        name="person_suggestion_restore",
+    ),
+    path(
+        "persons/<uuid:pk>/suggestions/purge/",
+        views.person_suggestion_purge,
+        name="person_suggestion_purge",
+    ),
+    path(
         "persons/<uuid:pk>/add_relation/",
         views.PersonRelationCreateView.as_view(),
         name="person_relation_create",
@@ -98,6 +133,41 @@ urlpatterns = [
         "person_groups/<uuid:pk>/gift-history/",
         views.person_group_gift_history,
         name="person_group_gift_history",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/",
+        views.person_group_suggestions,
+        name="person_group_suggestions",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/ideas/",
+        views.person_group_suggestion_ideas,
+        name="person_group_suggestion_ideas",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/accept/",
+        views.person_group_suggestion_accept,
+        name="person_group_suggestion_accept",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/dismiss/",
+        views.person_group_suggestion_dismiss,
+        name="person_group_suggestion_dismiss",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/dismissed/",
+        views.person_group_suggestions_dismissed,
+        name="person_group_suggestions_dismissed",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/restore/",
+        views.person_group_suggestion_restore,
+        name="person_group_suggestion_restore",
+    ),
+    path(
+        "person_groups/<uuid:pk>/suggestions/purge/",
+        views.person_group_suggestion_purge,
+        name="person_group_suggestion_purge",
     ),
     path(
         "person_groups/explore/",

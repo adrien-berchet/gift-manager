@@ -120,6 +120,35 @@
     </div>
   </div>
 </div>
+
+<!-- Dismissed Suggestions Panel - Slides in from right -->
+<div class="offcanvas offcanvas-end offcanvas-panel"
+     tabindex="-1"
+     id="dismissedSuggestionsPanel"
+     aria-labelledby="dismissedSuggestionsPanelLabel"
+     data-bs-backdrop="true"
+     data-bs-keyboard="true"
+     role="dialog">
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title" id="dismissedSuggestionsPanelLabel">
+      <i class="fas fa-archive me-2 text-primary" aria-hidden="true"></i>
+      <span class="offcanvas-title-text">{% trans "Dismissed suggestions" %}</span>
+    </h5>
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="offcanvas"
+            aria-label="{% trans 'Close' %}"
+            title="{% trans 'Close' %} (Esc)"
+            data-keyboard-hint="Esc"></button>
+  </div>
+  <div class="offcanvas-body" id="dismissedSuggestionsBody">
+    <div class="content-container" id="dismissedSuggestionsContent">
+      <div class="text-center py-4 text-muted">
+        <i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>{% trans "Loading…" %}
+      </div>
+    </div>
+  </div>
+</div>
 {% load static %}
 
 <!-- Unsaved Changes Protection -->
@@ -132,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Enhanced offcanvas functionality
     const editPanel = document.getElementById('editPanel');
     const detailPanel = document.getElementById('detailPanel');
+    const dismissedPanel = document.getElementById('dismissedSuggestionsPanel');
 
     // Focus management for accessibility
     function setupFocusManagement(panel) {
@@ -157,8 +187,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Focus management only for editPanel — Bootstrap Modal handles focus for detailPanel natively
+    // Focus management for panels
     setupFocusManagement(editPanel);
+
+    if (dismissedPanel) {
+        // Save initial server-translated spinner HTML so reopening displays localized text
+        const dismissedContent = document.getElementById('dismissedSuggestionsContent');
+        const initialSpinnerHtml = dismissedContent ? dismissedContent.innerHTML : '';
+
+        // Reset content to spinner and raise backdrop immediately when opening
+        dismissedPanel.addEventListener('show.bs.offcanvas', function() {
+            if (dismissedContent && initialSpinnerHtml) {
+                dismissedContent.innerHTML = initialSpinnerHtml;
+            }
+            requestAnimationFrame(() => {
+                const backdrop = document.querySelector('.offcanvas-backdrop');
+                if (backdrop) {
+                    backdrop.style.zIndex = '1060';
+                }
+            });
+        });
+
+        // Ensure backdrop z-index is higher than modal (1055) when stacked over a detail modal
+        dismissedPanel.addEventListener('shown.bs.offcanvas', function() {
+            const backdrop = document.querySelector('.offcanvas-backdrop');
+            if (backdrop) {
+                backdrop.style.zIndex = '1060';
+            }
+        });
+    }
+
+    // Ensure Escape closes only dismissedSuggestionsPanel when it is open over a modal,
+    // preventing the Escape keydown event from reaching Bootstrap's document-level modal dismiss listener.
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            const panel = document.getElementById('dismissedSuggestionsPanel');
+            if (panel && (panel.classList.contains('show') || panel.classList.contains('showing'))) {
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                const bsOffcanvas = bootstrap.Offcanvas.getInstance(panel) || bootstrap.Offcanvas.getOrCreateInstance(panel);
+                if (bsOffcanvas) {
+                    if (panel.classList.contains('showing')) {
+                        panel.addEventListener('shown.bs.offcanvas', function() {
+                            bsOffcanvas.hide();
+                        }, { once: true });
+                    } else {
+                        bsOffcanvas.hide();
+                    }
+                }
+            }
+        }
+    }, true);
 
     // ---- Detail Panel: explicit close + backdrop cleanup ----
     if (detailPanel) {

@@ -1,0 +1,96 @@
+{% load i18n %}
+<div class="dismissed-suggestions-container" data-dismissed-suggestions-container>
+    <p class="text-muted small mb-3">
+        {% trans "Review suggestions you previously dismissed for this recipient. You can restore them to your active suggestions, or permanently delete them so the AI can suggest them again." %}
+    </p>
+
+    {% if items %}
+        <div class="list-group list-group-flush border rounded-3 mb-3">
+            {% for item in items %}
+                <div class="list-group-item p-3" id="dismissed-item-{{ item.suggestion_id }}" data-dismissed-item>
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="me-2">
+                            <span class="fw-semibold">{{ item.gift.name|default:item.name }}</span>
+                            {% if item.source == "catalogue" %}
+                                <span class="badge bg-secondary-subtle text-secondary-emphasis ms-1">{% trans "From your gifts" %}</span>
+                            {% else %}
+                                <span class="badge bg-primary-subtle text-primary-emphasis ms-1">
+                                    <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "New idea" %}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <small class="text-muted flex-shrink-0">{{ item.updated_at|date:"SHORT_DATE_FORMAT" }}</small>
+                    </div>
+
+                    {% if item.gift.comment %}
+                        <p class="small text-body-secondary mb-1">{{ item.gift.comment }}</p>
+                    {% elif item.description %}
+                        <p class="small text-body-secondary mb-1">{{ item.description }}</p>
+                    {% endif %}
+
+                    {% if item.reason %}
+                        <p class="small text-muted mb-2 fst-italic">{{ item.reason }}</p>
+                    {% endif %}
+
+                    {% with tags=item.gift.tags.all|default:item.tags.all %}
+                        {% if tags %}
+                            <div class="mb-2">
+                                {% for tag in tags %}
+                                    <span class="badge bg-light text-dark border me-1">{{ tag.name }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <form method="post"
+                              action="{{ restore_url }}"
+                              hx-post="{{ restore_url }}"
+                              hx-target="#dismissedSuggestionsContent"
+                              hx-swap="innerHTML"
+                              class="d-inline">
+                            {% csrf_token %}
+                            {% if item.gift %}
+                                <input type="hidden" name="gift" value="{{ item.gift.gift_id }}">
+                            {% else %}
+                                <input type="hidden" name="suggestion" value="{{ item.suggestion_id }}">
+                            {% endif %}
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-primary"
+                                    data-action="restore"
+                                    title="{% trans "Restore to active suggestions" %}">
+                                <i class="fas fa-undo me-1" aria-hidden="true"></i>{% trans "Restore" %}
+                            </button>
+                        </form>
+
+                        <form method="post"
+                              action="{{ purge_url }}"
+                              hx-post="{{ purge_url }}"
+                              hx-target="#dismissedSuggestionsContent"
+                              hx-swap="innerHTML"
+                              hx-confirm="{% trans "Are you sure you want to permanently delete this suggestion? The AI will be allowed to suggest it again." %}"
+                              class="d-inline">
+                            {% csrf_token %}
+                            {% if item.gift %}
+                                <input type="hidden" name="gift" value="{{ item.gift.gift_id }}">
+                            {% else %}
+                                <input type="hidden" name="suggestion" value="{{ item.suggestion_id }}">
+                            {% endif %}
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-danger"
+                                    data-action="purge"
+                                    title="{% trans "Completely remove from history so the AI can suggest it again" %}">
+                                <i class="fas fa-trash-alt me-1" aria-hidden="true"></i>{% trans "Delete permanently" %}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5" data-dismissed-empty>
+            <i class="fas fa-inbox fa-3x text-muted mb-3 d-block" aria-hidden="true"></i>
+            <h6 class="text-muted fw-normal">{% trans "No dismissed suggestions for this recipient." %}</h6>
+        </div>
+    {% endif %}
+</div>
