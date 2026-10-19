@@ -37,6 +37,8 @@
                     {% endif %}
                     {% if relation.has_visible_reaction %}
                     {% rating_stars relation.reaction_rating %}
+                    {% elif entry.can_rate_inline %}
+                    {% include "gift_manager/includes/rating_inline.html" with relation=relation %}
                     {% else %}
                     <span class="text-muted small fst-italic">{% trans "Awaiting reaction" %}</span>
                     {% endif %}

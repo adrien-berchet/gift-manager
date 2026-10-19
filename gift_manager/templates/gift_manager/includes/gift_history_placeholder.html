@@ -5,7 +5,7 @@
         <i class="fas fa-clock-rotate-left me-2" aria-hidden="true"></i>{% trans "Gift history" %}
     </h6>
     <div hx-get="{{ history_url }}"
-         hx-trigger="load"
+         hx-trigger="load, list:update from:body"
          hx-swap="innerHTML">
         <p class="text-muted small mb-0">{% trans "Loading…" %}</p>
     </div>

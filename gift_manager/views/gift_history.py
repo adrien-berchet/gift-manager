@@ -25,7 +25,9 @@ REPEAT_HINT_TEMPLATE = "gift_manager/includes/repeat_gift_hint.html"
 
 def _render_history(request, relations, *, person=None, group=None) -> HttpResponse:
     visible_group_ids = VisibleMetadata.for_request(request).group_ids
-    history = build_gift_history(relations, visible_group_ids, person=person, group=group)
+    history = build_gift_history(
+        relations, visible_group_ids, person=person, group=group, user=request.user
+    )
     return render(request, HISTORY_TEMPLATE, {"history": history})
 
 

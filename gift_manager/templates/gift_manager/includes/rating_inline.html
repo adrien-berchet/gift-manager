@@ -1,9 +1,10 @@
 {% load i18n %}
 {% comment %}
-  One-click rating shown on unrated given/abandoned gift-plan cards.
-  Required context: card (from build_gift_plan_card).
+  One-click rating shown on unrated given/abandoned gift-plan cards or history entries.
+  Context: card (from build_gift_plan_card) OR relation (Relation instance).
 {% endcomment %}
-<form class="rating-inline-form"
+{% if card %}
+<form class="rating-inline-form d-inline-flex align-items-center m-0"
       data-rating-inline
       hx-post="{{ card.reaction_url }}"
       hx-trigger="change"
@@ -29,3 +30,31 @@
     </div>
   </fieldset>
 </form>
+{% else %}
+<form class="rating-inline-form d-inline-flex align-items-center m-0"
+      data-rating-inline
+      hx-post="{% url 'gift_manager:relation_reaction' relation.relation_id %}"
+      hx-trigger="change"
+      hx-target="this"
+      hx-swap="none">
+  {% csrf_token %}
+  <input type="hidden" name="inline" value="1">
+  <fieldset class="rating-input rating-inline">
+    <legend class="visually-hidden">{% trans "Their reaction" %}</legend>
+    <div class="rating-input-stars"
+         title="{% trans 'Rate their reaction' %}">
+      {% for value in "54321" %}
+      <input type="radio"
+             class="rating-input-radio"
+             name="reaction_rating"
+             id="rating-{{ relation.relation_id }}-{{ value }}"
+             value="{{ value }}">
+      <label class="rating-input-star" for="rating-{{ relation.relation_id }}-{{ value }}">
+        <i class="far fa-star" aria-hidden="true"></i>
+        <span class="visually-hidden">{% blocktrans %}{{ value }} out of 5{% endblocktrans %}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </fieldset>
+</form>
+{% endif %}

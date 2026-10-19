@@ -8,7 +8,9 @@
         <h6 class="small text-uppercase text-muted fw-bold mb-2">
             <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "From your catalogue" %}
         </h6>
-        {% include "gift_manager/includes/gift_suggestions_catalogue_items.html" %}
+        <div class="gift-suggestions-scroll-container">
+            {% include "gift_manager/includes/gift_suggestions_catalogue_items.html" %}
+        </div>
     </div>
     {% if ai_enabled %}
         <div data-gift-suggestions-ai

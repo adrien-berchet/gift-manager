@@ -119,6 +119,28 @@ class TestPersonGiftHistory:
         assert "Loved it" in content
         assert content.count("Awaiting reaction") == 1
 
+    def test_unrated_plan_shows_inline_rating_for_editor(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+        _share(user, relation, level=PermissionLevel.EDITOR)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" in content
+        assert (
+            reverse("gift_manager:relation_reaction", kwargs={"pk": relation.relation_id})
+            in content
+        )
+        assert "Awaiting reaction" not in content
+
+    def test_unrated_plan_shows_awaiting_reaction_for_viewer(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+        _share(user, relation, level=PermissionLevel.VIEWER)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" not in content
+        assert "Awaiting reaction" in content
+
     def test_group_plans_show_group_only_when_visible(self, client, user):
         visible_group = PersonGroupFactory(name="Visible family")
         hidden_group = PersonGroupFactory(name="Hidden club")

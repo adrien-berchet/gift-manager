@@ -10,9 +10,11 @@ from django.db.models import Q
 from django.db.models import QuerySet
 
 from gift_manager.models import Gift
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import RelationPermission
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_given_status
 
@@ -28,6 +30,7 @@ class HistoryEntry:
     relation: Relation
     group_name: str | None
     person_name: str | None
+    can_rate_inline: bool = False
 
 
 @dataclass(frozen=True)
@@ -78,12 +81,31 @@ def build_gift_history(
     *,
     person: Person | None = None,
     group: PersonGroup | None = None,
+    user=None,
 ) -> list[HistoryYear]:
     """Group the plans that were given by year, newest year first; other plans are left out.
 
     ``person`` or ``group`` is the recipient whose history is shown: plans addressed to it
     directly carry no recipient name.
     """
+    relations = list(relations)
+    editable_relation_pks: set = set()
+    if user is not None:
+        if getattr(user, "is_superuser", False):
+            editable_relation_pks = {r.pk for r in relations}
+        else:
+            unrated_pks = [
+                r.pk for r in relations if is_given_status(r.status) and r.reaction_rating is None
+            ]
+            if unrated_pks:
+                editable_relation_pks = set(
+                    RelationPermission.objects.filter(
+                        user=user,
+                        relation_id__in=unrated_pks,
+                        permission_type__gte=PermissionLevel.EDITOR,
+                    ).values_list("relation_id", flat=True)
+                )
+
     by_year: dict[int | None, list[HistoryEntry]] = {}
     for relation in relations:
         if not is_given_status(relation.status):
@@ -101,8 +123,9 @@ def build_gift_history(
             and (person is None or relation.person_id != person.pk)
             else None
         )
+        can_rate_inline = relation.reaction_rating is None and relation.pk in editable_relation_pks
         by_year.setdefault(history_year(relation), []).append(
-            HistoryEntry(relation, group_name, person_name)
+            HistoryEntry(relation, group_name, person_name, can_rate_inline=can_rate_inline)
         )
 
     years = sorted(by_year, key=lambda year: (year is None, -(year or 0)))
