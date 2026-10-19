@@ -54,10 +54,12 @@ class AIStrategy:
                 avoid_dict[name] = None
 
         # 3. Dismissed catalogue gifts
+        accessible_gifts = Gift.objects.accessible_by(user)
         for name in GiftSuggestion.objects.filter(
             user=user,
             source=GiftSuggestion.Source.CATALOGUE,
             state=GiftSuggestion.State.DISMISSED,
+            gift__in=accessible_gifts,
             **rec_filter,
         ).values_list("gift__name", flat=True):
             if name:
@@ -114,14 +116,13 @@ class AIStrategy:
                 tags_by_name[name_cf] = pk
             tags_name_by_pk[pk] = name
 
-        metadata = VisibleMetadata(user)
         relevant_tag_ids = set(context.history.interest_tag_ids)
         for it in context.history.items:
             relevant_tag_ids.update(it.tag_ids)
 
         expanded_tag_ids = set(relevant_tag_ids)
         for tid in relevant_tag_ids:
-            expanded_tag_ids.update(metadata.ancestor_tag_ids(tid))
+            expanded_tag_ids.update(context.history.ancestors.get(tid, ()))
 
         if len(expanded_tag_ids) < 15:
             root_tag_ids = set(

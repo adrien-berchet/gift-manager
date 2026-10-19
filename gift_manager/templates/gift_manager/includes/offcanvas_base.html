@@ -189,15 +189,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Focus management for panels
     setupFocusManagement(editPanel);
-    setupFocusManagement(dismissedPanel);
 
     if (dismissedPanel) {
-        // Reset content to spinner when opening so old recipient's data doesn't linger
+        // Save initial server-translated spinner HTML so reopening displays localized text
+        const dismissedContent = document.getElementById('dismissedSuggestionsContent');
+        const initialSpinnerHtml = dismissedContent ? dismissedContent.innerHTML : '';
+
+        // Reset content to spinner and raise backdrop immediately when opening
         dismissedPanel.addEventListener('show.bs.offcanvas', function() {
-            const content = document.getElementById('dismissedSuggestionsContent');
-            if (content) {
-                content.innerHTML = '<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i>' + (window.gettext ? window.gettext('Loading…') : 'Loading…') + '</div>';
+            if (dismissedContent && initialSpinnerHtml) {
+                dismissedContent.innerHTML = initialSpinnerHtml;
             }
+            requestAnimationFrame(() => {
+                const backdrop = document.querySelector('.offcanvas-backdrop');
+                if (backdrop) {
+                    backdrop.style.zIndex = '1060';
+                }
+            });
         });
 
         // Ensure backdrop z-index is higher than modal (1055) when stacked over a detail modal
@@ -207,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 backdrop.style.zIndex = '1060';
             }
         });
+    }
 
     // Ensure Escape closes only dismissedSuggestionsPanel when it is open over a modal,
     // preventing the Escape keydown event from reaching Bootstrap's document-level modal dismiss listener.
@@ -229,7 +238,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }, true);
-}
 
     // ---- Detail Panel: explicit close + backdrop cleanup ----
     if (detailPanel) {

@@ -26,7 +26,6 @@ from gift_manager.models import RelationStatus
 from gift_manager.plan_coordination import default_surprise_for
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_abandoned_status
-from gift_manager.suggestions.ai.client import AIError
 from gift_manager.suggestions.ai.client import get_ai_client
 from gift_manager.suggestions.ai.strategy import AIStrategy
 from gift_manager.suggestions.catalogue import CatalogueStrategy
@@ -176,7 +175,7 @@ class GiftSuggestionService:
         now = timezone.now()
         today_start = timezone.localtime(now).replace(hour=0, minute=0, second=0, microsecond=0)
         return GiftSuggestionGeneration.objects.filter(
-            user=self.user, created_at__gte=today_start
+            user=self.user, succeeded=True, created_at__gte=today_start
         ).count()
 
     def _get_pending_ai_ideas(self) -> list[GiftSuggestion]:
@@ -231,8 +230,8 @@ class GiftSuggestionService:
             strategy = AIStrategy(self.ai_client)
             ctx = self._ai_context()
             candidates = strategy.suggest(ctx, limit=count)
-        except AIError:
-            logger.warning(
+        except Exception:
+            logger.exception(
                 "AI suggestion generation failed for user %s on recipient %s",
                 self.user.pk,
                 self.recipient.pk,

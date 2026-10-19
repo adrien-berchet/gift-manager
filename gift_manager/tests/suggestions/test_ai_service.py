@@ -461,3 +461,87 @@ def test_accept_and_dismiss_for_group(user, share):
     assert plan.gift.name == "Group Fondue Set"
     fondue_sugg.refresh_from_db()
     assert fondue_sugg.state == GiftSuggestion.State.ACCEPTED
+
+
+def test_ai_generation_with_tagged_history_and_interest_tags(user, share):
+    """Verify strategy.suggest() handles tagged history + interest tags without AttributeError (B1 fix)."""
+    parent_tag = GiftTagFactory(name="Outdoor Sports")
+    child_tag = GiftTagFactory(name="Mountain Biking")
+    child_tag.parent_tags.add(parent_tag)
+
+    other_user = UserFactory()
+    unshared_gift = GiftFactory(name="Unshared Avoid Item")
+    share(other_user, unshared_gift)
+
+    person = PersonFactory()
+    past_gift = GiftFactory(name="Helmets", tags=[child_tag])
+    status_given = RelationFactory(person=person, gift=past_gift, reaction_rating=5)
+
+    for obj in (parent_tag, child_tag, person, past_gift, status_given):
+        share(user, obj)
+    person.interests.add(child_tag)
+
+    # User also dismissed an unshared gift in the past
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=unshared_gift,
+        name=unshared_gift.name,
+        normalized_name="unshared avoid item",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+
+    batch = {
+        "ideas": [
+            {
+                "name": "Bike Gloves",
+                "description": "Trail gloves",
+                "reason": "For mountain biking",
+                "tags": ["Mountain Biking"],
+            }
+        ]
+    }
+    client = FakeAIClient(canned_responses=[batch])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    block = service.request_more_ideas(count=1)
+    assert len(block.ideas) == 1
+    assert block.ideas[0].name == "Bike Gloves"
+
+    # Verify available_tags was scoped to relevant tags + ancestors
+    payload = client.payload
+    assert "Mountain Biking" in payload["available_tags"]
+    assert "Outdoor Sports" in payload["available_tags"]
+
+    # Verify unshared gift is NOT leaked into avoid list (n1 fix)
+    assert "Unshared Avoid Item" not in payload["avoid"]
+
+
+def test_failed_generation_does_not_consume_daily_quota(user, share):
+    """Failed generations (e.g. provider error) do not consume the user's daily limit."""
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    fail_client = FakeAIClient(error=AICompletionError("Provider error"))
+    service = GiftSuggestionService(user, person, ai_client=fail_client)
+
+    with override_settings(GIFT_SUGGESTIONS_AI_DAILY_LIMIT=1):
+        block = service.request_more_ideas()
+        assert block.notice == "unavailable"
+
+        # The failed generation is recorded for telemetry, but does not count against quota
+        assert GiftSuggestionGeneration.objects.filter(user=user, person=person).count() == 1
+        assert service._get_today_generations_count() == 0
+
+        # Now try with a working client - user still has their 1 generation available
+        success_batch = {
+            "ideas": [{"name": "Valid Idea", "description": "D", "reason": "R", "tags": []}]
+        }
+        success_client = FakeAIClient(canned_responses=[success_batch])
+        service_success = GiftSuggestionService(user, person, ai_client=success_client)
+
+        success_block = service_success.request_more_ideas()
+        assert success_block.notice is None
+        assert len(success_block.ideas) == 1
+        assert service_success._get_today_generations_count() == 1

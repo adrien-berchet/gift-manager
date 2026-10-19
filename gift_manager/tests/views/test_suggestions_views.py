@@ -1107,3 +1107,28 @@ def test_dismiss_already_accepted_suggestion_is_404(client, user):
     dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
     res = client.post(dismiss_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
     assert res.status_code == 404
+
+
+def test_reaccept_accepted_suggestion_with_unshared_gift_is_404(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    other_user = UserFactory()
+    person = PersonFactory()
+    _share(user, person)
+
+    unshared_gift = GiftFactory(name="Unshared Revoked Gift")
+    _share(other_user, unshared_gift)
+
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=unshared_gift,
+        name=unshared_gift.name,
+        normalized_name="unshared revoked gift",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.ACCEPTED,
+    )
+
+    accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
+    res = client.post(accept_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
+    assert res.status_code == 404

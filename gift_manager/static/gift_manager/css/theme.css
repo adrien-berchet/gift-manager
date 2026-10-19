@@ -609,12 +609,6 @@
     color: #cbd5e1;
 }
 
-[data-theme="dark"] .gift-suggestions-root .text-muted,
-[data-theme="dark"] .gift-suggestions-root .text-secondary,
-[data-theme="dark"] .gift-suggestion-description {
-    color: #cbd5e1;
-}
-
 /* Dark mode breadcrumbs */
 [data-theme="dark"] .breadcrumb-item + .breadcrumb-item::before {
     color: #64748b;
