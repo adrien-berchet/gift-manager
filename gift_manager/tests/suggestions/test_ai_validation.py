@@ -95,7 +95,7 @@ def test_overlong_name_dropped_and_long_fields_truncated():
     assert len(ideas) == 1
     assert ideas[0].name == valid_name
     assert len(ideas[0].description) == 500
-    assert len(ideas[0].reason) == 200
+    assert len(ideas[0].reason) == 150
 
 
 def test_unknown_tags_are_ignored():

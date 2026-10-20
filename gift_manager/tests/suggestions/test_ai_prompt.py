@@ -2,6 +2,7 @@
 
 import json
 from datetime import datetime
+from datetime import timedelta
 from datetime import timezone
 
 import pytest
@@ -11,6 +12,8 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.suggestions.ai.prompt import IDEAS_SCHEMA
 from gift_manager.suggestions.ai.prompt import build_ai_payload
+from gift_manager.suggestions.ai.prompt import derive_age_bracket
+from gift_manager.suggestions.ai.prompt import format_relative_recency
 from gift_manager.suggestions.ai.prompt import scrub_text
 from gift_manager.suggestions.history import HistoryItem
 from gift_manager.suggestions.history import RecipientHistory
@@ -40,10 +43,10 @@ def test_scrub_is_case_insensitive_and_word_bounded():
 
 
 def test_short_terms_are_ignored():
-    terms = ["A", " ", "", "du"]
-    result = scrub_text("A big apple for du", terms)
-    # 'A' is 1 char so ignored; 'du' is 2 chars so scrubbed
-    assert result == "A big apple for [name]"
+    terms = ["A", " ", "", "du", "Bob"]
+    result = scrub_text("A big apple for du and Bob", terms)
+    # 'A' and 'du' (< 3 chars) are ignored; 'Bob' (>= 3 chars) is scrubbed
+    assert result == "A big apple for du and [name]"
 
 
 @pytest.mark.django_db
@@ -55,7 +58,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
     person.set_email("marguerite@example.com")
     person.save()
     group = PersonGroup.objects.create(name="Famille Dupont")
-    user.username = "adrien"
+    user.first_name = "Adrien"
     user.save()
 
     tag = GiftTag.objects.create(name="Photo")
@@ -279,3 +282,350 @@ def test_caps_are_applied(user):
     assert "comment" not in payload["history"][0]
     assert len(payload["available_tags"]) == 200
     assert len(payload["avoid"]) == 100
+
+
+@pytest.mark.django_db
+def test_french_stopwords_and_tags_are_not_mutilated(user):
+    group = PersonGroup.objects.create(name="Les amis de la fac")
+    person = Person.objects.create(first_name="Camille", family_name="Dupont")
+    user.username = "papa"
+    user.first_name = "Jean"
+    user.last_name = "Martin"
+    user.save()
+
+    tag1 = GiftTag.objects.create(name="Jeux de société")
+    tag2 = GiftTag.objects.create(name="Coffret de thé")
+
+    item = HistoryItem(
+        relation_id=1,
+        gift_id=10,
+        gift_name="Bracelet en or rose",
+        tag_ids=frozenset([tag1.pk]),
+        status_slug="given",
+        rating=5,
+        note="Offert par Jean Martin, Camille a adoré",
+        comment="",
+        is_direct=True,
+        person_id=person.pk,
+        group_id=group.pk,
+        created=datetime.now(timezone.utc),
+    )
+    history = RecipientHistory(
+        recipient=person,
+        items=(item,),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset([tag2.pk]),
+        ancestors={tag1.pk: frozenset([tag1.pk]), tag2.pk: frozenset([tag2.pk])},
+    )
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=["Jeux de société", "Coffret de thé", "Matériel de jardinage"],
+        avoid_names=["Bracelet en or rose", "Collier pour Camille"],
+        count=2,
+        language="fr",
+    )
+
+    # Tag names MUST NOT be corrupted by scrubbing
+    assert "Jeux de société" in payload["available_tags"]
+    assert "Coffret de thé" in payload["available_tags"]
+    assert "Matériel de jardinage" in payload["available_tags"]
+    assert "[name]" not in " ".join(payload["available_tags"])
+    assert payload["interests"] == ["Coffret de thé"]
+    assert payload["history"][0]["tags"] == ["Jeux de société"]
+
+    # Gift name "Bracelet en or rose" must not have French stopwords or common nouns scrubbed
+    assert payload["history"][0]["gift"] == "Bracelet en or rose"
+    assert "Bracelet en or rose" in payload["avoid"]
+
+    # But personal first names in avoid and notes must be scrubbed
+    assert "Collier pour [name]" in payload["avoid"]
+    assert "Jean Martin" not in payload["history"][0]["note"]
+    assert "Camille" not in payload["history"][0]["note"]
+
+
+@pytest.mark.parametrize(
+    ("birth_year", "current_year", "expected"),
+    [
+        (None, 2026, None),
+        (2030, 2026, None),
+        (2025, 2026, "0-2"),
+        (2024, 2026, "0-2"),
+        (2021, 2026, "3-5"),
+        (2018, 2026, "6-9"),
+        (2015, 2026, "10-12"),
+        (2010, 2026, "13-17"),
+        (2005, 2026, "18-25"),
+        (1995, 2026, "26-39"),
+        (1975, 2026, "40-59"),
+        (1960, 2026, "60-74"),
+        (1940, 2026, "75+"),
+    ],
+)
+def test_derive_age_bracket(birth_year, current_year, expected):
+    assert derive_age_bracket(birth_year, current_year=current_year) == expected
+
+
+def test_format_relative_recency():
+    now = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+    assert format_relative_recency(now - timedelta(days=5), now=now) == "recently"
+    assert format_relative_recency(now - timedelta(days=29), now=now) == "recently"
+    assert format_relative_recency(now - timedelta(days=35), now=now) == "1 month ago"
+    assert format_relative_recency(now - timedelta(days=95), now=now) == "3 months ago"
+    assert format_relative_recency(now - timedelta(days=400), now=now) == "1 year ago"
+    assert format_relative_recency(now - timedelta(days=800), now=now) == "2 years ago"
+
+
+@pytest.mark.django_db
+def test_payload_includes_age_bracket_and_notes_opt_in(user):
+    person = Person.objects.create(
+        first_name="Camille",
+        birthday_day=15,
+        birthday_month=6,
+        birthday_year=datetime.now(timezone.utc).year - 10,
+        notes="Allergique aux noix et adore les jeux d'échecs. Offrir à Camille.",
+    )
+    user.profile.ai_share_person_notes = True
+    user.profile.save()
+
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+    )
+
+    assert payload["recipient"]["age_bracket"] == "10-12"
+    assert "notes" in payload["recipient"]
+    # Notes are scrubbed of recipient's first name
+    assert "Camille" not in payload["recipient"]["notes"]
+    assert "échecs" in payload["recipient"]["notes"]
+
+    # When opt-in is false, notes are omitted
+    user.profile.ai_share_person_notes = False
+    user.profile.save()
+
+    payload_opt_out = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+    )
+    assert "notes" not in payload_opt_out["recipient"]
+    assert payload_opt_out["recipient"]["age_bracket"] == "10-12"
+
+
+@pytest.mark.django_db
+def test_payload_includes_event_price_and_budget(user):
+    person = Person.objects.create(first_name="Leo")
+    user.profile.currency = "USD"
+    user.profile.save()
+
+    item1 = HistoryItem(
+        relation_id=1,
+        gift_id=10,
+        gift_name="Lego Star Wars",
+        tag_ids=frozenset(),
+        status_slug="given",
+        rating=5,
+        note="",
+        comment="",
+        is_direct=True,
+        person_id=person.pk,
+        group_id=None,
+        created=datetime.now(timezone.utc),
+        event_name="Anniversaire de Leo",
+        price=49.99,
+    )
+    item2 = HistoryItem(
+        relation_id=2,
+        gift_id=11,
+        gift_name="Livre BD",
+        tag_ids=frozenset(),
+        status_slug="given",
+        rating=4,
+        note="",
+        comment="",
+        is_direct=True,
+        person_id=person.pk,
+        group_id=None,
+        created=datetime.now(timezone.utc),
+        event_name="Noël",
+        price=15.00,
+    )
+
+    history = RecipientHistory(
+        recipient=person,
+        items=(item1, item2),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+    )
+
+    assert payload["history"][0]["event"] == "Anniversaire de [name]"
+    assert payload["history"][0]["price"] == 49.99
+    assert payload["history"][0]["when"] == "recently"
+
+    assert "budget" in payload
+    assert payload["budget"]["currency"] == "USD"
+    # Prices sorted: [15.00, 49.99]. Median (index 1) is 50, max is 50.
+    assert payload["budget"]["typical"] == 50
+    assert payload["budget"]["max"] == 50
+
+
+@pytest.mark.django_db
+def test_payload_includes_rejected_directions(user):
+    person = Person.objects.create(first_name="Alice")
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    rejected = [
+        {"name": "Echarpe en laine", "tags": ["Vêtements"]},
+        {"name": "Mug humoristique", "tags": []},
+    ]
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+        rejected_directions=rejected,
+    )
+
+    assert payload["rejected_directions"] == rejected
+
+
+@pytest.mark.django_db
+def test_payload_includes_occasion_and_budget_steering(user):
+    person = Person.objects.create(first_name="Lucas")
+    user.profile.currency = "EUR"
+    user.profile.save()
+
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    # 1. Under 30 budget
+    payload1 = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="en",
+        occasion="Birthday",
+        budget_selection="under_30",
+    )
+    assert payload1["occasion"] == "Birthday"
+    assert payload1["budget"] == {"currency": "EUR", "max": 30}
+
+    # 2. 30-75 budget
+    payload2 = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="en",
+        budget_selection="30_75",
+    )
+    assert payload2["budget"] == {"currency": "EUR", "min": 30, "max": 75}
+
+    # 3. Over 75 budget
+    payload3 = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="en",
+        budget_selection="over_75",
+    )
+    assert payload3["budget"] == {"currency": "EUR", "min": 75}
+
+    # Test occasion with personal name is scrubbed
+    payload_occ = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="en",
+        occasion="Anniversaire de Lucas",
+    )
+    assert payload_occ["occasion"] == "Anniversaire de [name]"
+
+
+@pytest.mark.django_db
+def test_payload_includes_scrubbed_user_hint(user):
+    person = Person.objects.create(first_name="Chloe", family_name="Martin")
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    hint = "Ideas for Chloe Martin who loves Japanese cooking and ceramic pottery"
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+        hint=hint,
+    )
+
+    assert "user_hint" in payload
+    # Chloe Martin must be scrubbed out of hint
+    assert "Chloe Martin" not in payload["user_hint"]
+    assert "Japanese cooking" in payload["user_hint"]
+    assert "ceramic pottery" in payload["user_hint"]
+
+    # Test hint longer than 120 chars is clamped
+    long_hint = "A" * 200
+    payload_long = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+        hint=long_hint,
+    )
+    assert len(payload_long["user_hint"]) == 120

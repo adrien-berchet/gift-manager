@@ -8,7 +8,7 @@ from gift_manager.suggestions.names import normalize_gift_name
 
 MAX_NAME_LENGTH = 120
 MAX_DESCRIPTION_LENGTH = 500
-MAX_REASON_LENGTH = 200
+MAX_REASON_LENGTH = 150
 
 
 @dataclass(frozen=True)

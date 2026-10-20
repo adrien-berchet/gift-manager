@@ -119,21 +119,21 @@ def test_more_ideas_adds_a_batch_and_keeps_previous(user, share):
     assert [i.name for i in block2.ideas[:2]] == ["Batch 2 Idea 1", "Batch 2 Idea 2"]
 
 
-def test_ai_ideas_matching_existing_gift_planned_or_dismissed_are_dropped(user, share, status):
+def test_ai_ideas_matching_planned_or_dismissed_are_dropped(user, share, status):
     person = PersonFactory()
     share(user, person, level=PermissionLevel.VIEWER)
 
-    # 1. Accessible gift "Atlas"
+    # 1. Accessible gift "Atlas" (not planned or dismissed for person -> allowed)
     atlas = GiftFactory(name="Atlas")
     share(user, atlas, level=PermissionLevel.VIEWER)
 
-    # 2. Planned gift "Novel"
+    # 2. Planned gift "Novel" for this person (must be dropped)
     novel = GiftFactory(name="Novel")
     share(user, novel, level=PermissionLevel.VIEWER)
     plan = RelationFactory(person=person, gift=novel, status=status("Given"))
     share(user, plan, level=PermissionLevel.VIEWER)
 
-    # 3. Dismissed AI idea "Kite"
+    # 3. Dismissed AI idea "Kite" for this person (must be dropped)
     GiftSuggestion.objects.create(
         user=user,
         person=person,
@@ -155,8 +155,9 @@ def test_ai_ideas_matching_existing_gift_planned_or_dismissed_are_dropped(user, 
     service = GiftSuggestionService(user, person, ai_client=client)
 
     block = service.request_more_ideas()
-    assert len(block.ideas) == 1
-    assert block.ideas[0].name == "Telescope"
+    # "novel" (planned) and "Kite" (dismissed) are dropped; "Atlas" and "Telescope" remain
+    names = [idea.name for idea in block.ideas]
+    assert names == ["Atlas", "Telescope"]
 
 
 def test_ai_payload_has_no_identifiers(user, share, status):
@@ -325,6 +326,42 @@ def test_accept_ai_idea_creates_gift_and_idea_plan(user, share):
     # Accepted suggestion is no longer in pending ideas
     block_after = service.ai_block()
     assert len(block_after.ideas) == 0
+
+
+def test_accept_ai_idea_reconciles_existing_accessible_gift(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    # An existing accessible gift with the same name
+    existing_gift = GiftFactory(name="Écharpe en laine", comment="Warm scarf")
+    share(user, existing_gift, level=PermissionLevel.VIEWER)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Echarpe en laine",
+                "description": "A very warm winter scarf",
+                "reason": "Cold weather",
+                "tags": [],
+            }
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    block = service.request_more_ideas()
+    assert len(block.ideas) == 1
+    suggestion = block.ideas[0]
+
+    plan = service.accept_suggestion(suggestion.suggestion_id)
+    assert isinstance(plan, Relation)
+    assert plan.gift == existing_gift
+    # No duplicate Gift row was created
+    assert Gift.objects.filter(name__icontains="charpe").count() == 1
+
+    suggestion.refresh_from_db()
+    assert suggestion.state == GiftSuggestion.State.ACCEPTED
+    assert suggestion.gift == existing_gift
 
 
 def test_accept_twice_creates_one_plan(user, share):
@@ -653,3 +690,106 @@ def test_overlapping_generation_requests_deduplicate_ideas(user, share):
         ).count()
         == 1
     )
+
+
+def test_generation_records_telemetry(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Idea 1",
+                "description": "Desc 1",
+                "reason": "Reason 1",
+                "tags": [],
+            }
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    client.model = "gpt-4o"
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    service.request_more_ideas(count=1)
+
+    gen = GiftSuggestionGeneration.objects.filter(user=user, person=person).latest("id")
+    assert gen.succeeded is True
+    assert gen.prompt_version == 2
+    assert gen.model == "gpt-4o"
+    assert gen.idea_count == 1
+    assert gen.duration_ms is not None
+    assert gen.duration_ms >= 0
+
+
+def test_rejected_directions_passed_to_ai_and_blocks_regeneration(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    tag = GiftTagFactory(name="Cuisine")
+    dismissed = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Tablier de cuisine",
+        normalized_name="tablier de cuisine",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+    dismissed.tags.add(tag)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Tablier de cuisine",
+                "description": "Already dismissed",
+                "reason": "Should be dropped",
+                "tags": [],
+            },
+            {
+                "name": "Couteau de chef",
+                "description": "New suggestion",
+                "reason": "Great tool",
+                "tags": [],
+            },
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    block = service.request_more_ideas(count=2)
+
+    assert client.payload is not None
+    rejected = client.payload.get("rejected_directions")
+    assert rejected == [{"name": "Tablier de cuisine", "tags": ["Cuisine"]}]
+
+    assert len(block.ideas) == 1
+    assert block.ideas[0].name == "Couteau de chef"
+
+
+def test_steering_parameters_passed_to_ai_payload(user, share):
+    person = PersonFactory(first_name="Maxime")
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Mug isotherme",
+                "description": "Pratique pour les voyages",
+                "reason": "Compact et utile",
+                "tags": [],
+            }
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    service.request_more_ideas(
+        count=1,
+        occasion="Secret Santa",
+        budget="under_30",
+        hint="Needs to be compact for office use",
+    )
+
+    assert client.payload is not None
+    assert client.payload.get("occasion") == "Secret Santa"
+    assert client.payload.get("budget") == {"currency": "EUR", "max": 30}
+    assert client.payload.get("user_hint") == "Needs to be compact for office use"

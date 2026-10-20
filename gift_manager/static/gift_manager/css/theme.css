@@ -3588,6 +3588,23 @@ h4, h5, h6 {
     color: var(--color-primary);
 }
 
+.gift-suggestions-ai-root .ai-steering-box {
+    background-color: var(--bs-tertiary-bg, rgba(0, 0, 0, 0.03));
+    border: 1px solid var(--bs-border-color, rgba(0, 0, 0, 0.08));
+}
+
+[data-theme="dark"] .gift-suggestions-ai-root .ai-steering-box {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .gift-suggestions-ai-root .ai-steering-box .input-group-text,
+[data-theme="dark"] .gift-suggestions-ai-root .ai-steering-box input[name="hint"] {
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--bs-body-color, #e0e0e0);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
 /* Dismissed suggestions offcanvas panel */
 #dismissedSuggestionsPanel {
     z-index: 1065;

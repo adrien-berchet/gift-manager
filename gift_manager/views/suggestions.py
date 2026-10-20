@@ -19,6 +19,8 @@ from django.views.decorators.http import require_POST
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.suggestions.catalogue import describe_reason
+from gift_manager.suggestions.occasions import derive_default_occasion
+from gift_manager.suggestions.occasions import get_upcoming_occasions
 from gift_manager.suggestions.service import AI_BATCH_SIZE
 from gift_manager.suggestions.service import GiftSuggestionService
 from gift_manager.views.base import HTMXResponseMixin
@@ -111,14 +113,41 @@ def _render_suggestions(request, recipient: Person | PersonGroup) -> HttpRespons
     return render(request, SUGGESTIONS_SECTION_TEMPLATE, context)
 
 
-def _render_ai_block(request, recipient: Person | PersonGroup, block) -> HttpResponse:
+def _render_ai_block(
+    request,
+    recipient: Person | PersonGroup,
+    block,
+    occasion: str | None = None,
+    budget: str = "",
+    hint: str = "",
+    upcoming_occasions=None,
+) -> HttpResponse:
     surface = request.GET.get("surface") or request.POST.get("surface", "")
+    if upcoming_occasions is None:
+        upcoming_occasions = get_upcoming_occasions(request.user, recipient)
+
+    valid_occasion_names = {occ["name"] for occ in upcoming_occasions}
+    if occasion is None:
+        selected_occasion = derive_default_occasion(upcoming_occasions)
+    elif occasion in valid_occasion_names:
+        selected_occasion = occasion
+    else:
+        selected_occasion = ""
+
+    currency_code = getattr(getattr(request.user, "profile", None), "currency", "EUR") or "EUR"
+    currency_symbol = {"EUR": "€", "USD": "$", "GBP": "£"}.get(currency_code, currency_code)
+
     context = {
         "recipient": recipient,
         "is_person": isinstance(recipient, Person),
         "block": block,
         "ideas_url": ideas_url_for(recipient),
         "surface": surface,
+        "upcoming_occasions": upcoming_occasions,
+        "selected_occasion": selected_occasion,
+        "selected_budget": budget,
+        "current_hint": hint,
+        "currency_symbol": currency_symbol,
     }
     return render(request, AI_BLOCK_TEMPLATE, context)
 
@@ -127,14 +156,31 @@ def _handle_ideas(request, recipient: Person | PersonGroup) -> HttpResponse:
     service = GiftSuggestionService(request.user, recipient)
     if request.method == "POST":
         count_raw = request.POST.get("count")
+        occasion_raw = (request.POST.get("occasion") or "").strip()
+        budget_raw = (request.POST.get("budget") or "").strip()
+        hint = (request.POST.get("hint") or "").strip()[:120]
+
+        upcoming_occasions = get_upcoming_occasions(request.user, recipient)
+        valid_occasion_names = {occ["name"] for occ in upcoming_occasions}
+        occasion = occasion_raw if occasion_raw in valid_occasion_names else ""
+        budget = budget_raw if budget_raw in {"under_30", "30_75", "over_75"} else ""
+
         count = AI_BATCH_SIZE
         if count_raw is not None:
             try:
                 count = max(1, min(int(count_raw), 5))
             except (ValueError, TypeError):
                 count = AI_BATCH_SIZE
-        block = service.request_more_ideas(count=count)
-        return _render_ai_block(request, recipient, block)
+        block = service.request_more_ideas(count=count, occasion=occasion, budget=budget, hint=hint)
+        return _render_ai_block(
+            request,
+            recipient,
+            block,
+            occasion=occasion,
+            budget=budget,
+            hint=hint,
+            upcoming_occasions=upcoming_occasions,
+        )
     if request.method == "GET":
         block = service.ai_block()
         return _render_ai_block(request, recipient, block)

@@ -63,6 +63,47 @@ class TestProfileDetailView:
 
 
 @pytest.mark.django_db
+class TestUpdateReminderPreferencesView:
+    """Tests for UpdateReminderPreferencesView."""
+
+    def test_update_ai_share_person_notes_toggle(self, user):
+        client = Client()
+        client.force_login(user)
+        url = reverse("gift_manager:update_reminder_preferences")
+
+        assert user.profile.ai_share_person_notes is False
+
+        # Post with toggle on
+        response = client.post(
+            url,
+            {
+                "preferred_language": "en",
+                "digest_frequency": "off",
+                "digest_lookahead_days": 30,
+                "currency": "EUR",
+                "ai_share_person_notes": "on",
+            },
+        )
+        assert response.status_code == 302
+        profile = Profile.objects.get(user=user)
+        assert profile.ai_share_person_notes is True
+
+        # Post with toggle off (checkbox not sent in POST body)
+        response = client.post(
+            url,
+            {
+                "preferred_language": "en",
+                "digest_frequency": "off",
+                "digest_lookahead_days": 30,
+                "currency": "EUR",
+            },
+        )
+        assert response.status_code == 302
+        profile.refresh_from_db()
+        assert profile.ai_share_person_notes is False
+
+
+@pytest.mark.django_db
 class TestSendInvitationView:
     """Tests for SendInvitationView."""
 

@@ -1,5 +1,7 @@
 """AI idea suggestion strategy using an external LLM client."""
 
+from typing import Any
+
 from django.utils.translation import get_language
 
 from gift_manager.metadata_visibility import VisibleMetadata
@@ -46,9 +48,12 @@ class AIStrategy:
                 if name:
                     avoid_dict[name] = None
 
-        # 2. Every AI suggestion of this user+recipient in any state
+        # 2. AI suggestions for this recipient in pending or accepted state
         for name in GiftSuggestion.objects.filter(
-            user=user, source=GiftSuggestion.Source.AI, **rec_filter
+            user=user,
+            source=GiftSuggestion.Source.AI,
+            state__in=[GiftSuggestion.State.PENDING, GiftSuggestion.State.ACCEPTED],
+            **rec_filter,
         ).values_list("name", flat=True):
             if name:
                 avoid_dict[name] = None
@@ -73,33 +78,38 @@ class AIStrategy:
 
         return list(avoid_dict.keys())
 
+    def _build_rejected_directions(self, context: SuggestionContext) -> list[dict[str, Any]]:
+        user = context.user
+        recipient = context.recipient
+        rec_filter = self._recipient_filter(recipient)
+
+        dismissed = (
+            GiftSuggestion.objects.filter(
+                user=user,
+                source=GiftSuggestion.Source.AI,
+                state=GiftSuggestion.State.DISMISSED,
+                **rec_filter,
+            )
+            .prefetch_related("tags")
+            .order_by("-updated_at")[:15]
+        )
+        return [
+            {
+                "name": s.name,
+                "tags": [t.name for t in s.tags.all()],
+            }
+            for s in dismissed
+            if s.name
+        ]
+
     def _resolve_blocked_names(self, context: SuggestionContext) -> frozenset[str]:
         if context.blocked_names:
             return context.blocked_names
 
-        user = context.user
-        rec_filter = self._recipient_filter(context.recipient)
-
-        accessible_gift_names = set(Gift.objects.accessible_by(user).values_list("name", flat=True))
-        ai_suggestion_names = set(
-            GiftSuggestion.objects.filter(
-                user=user, source=GiftSuggestion.Source.AI, **rec_filter
-            ).values_list("normalized_name", flat=True)
-        )
-        dismissed_catalogue_names = set(
-            GiftSuggestion.objects.filter(
-                user=user,
-                source=GiftSuggestion.Source.CATALOGUE,
-                state=GiftSuggestion.State.DISMISSED,
-                **rec_filter,
-            ).values_list("normalized_name", flat=True)
-        )
-
-        return frozenset(
-            {normalize_gift_name(name) for name in accessible_gift_names if name}
-            | {s for s in ai_suggestion_names if s}
-            | {s for s in dismissed_catalogue_names if s}
-        )
+        avoid_names = self._build_avoid_names(context)
+        rejected = self._build_rejected_directions(context)
+        all_names = list(avoid_names) + [r["name"] for r in rejected if r.get("name")]
+        return frozenset(normalize_gift_name(name) for name in all_names if name)
 
     def suggest(self, context: SuggestionContext, limit: int) -> list[SuggestionCandidate]:
         """Query AI client for ideas and return ranked SuggestionCandidates."""
@@ -124,19 +134,12 @@ class AIStrategy:
         for tid in relevant_tag_ids:
             expanded_tag_ids.update(context.history.ancestors.get(tid, ()))
 
-        if len(expanded_tag_ids) < 15:
-            root_tag_ids = set(
-                GiftTag.objects.filter(pk__in=visible_tag_ids, parent_tags__isnull=True)
-                .order_by("name")
-                .values_list("pk", flat=True)[:25]
-            )
-            expanded_tag_ids.update(root_tag_ids)
-
         available_tag_names = sorted(
             {tags_name_by_pk[pk] for pk in expanded_tag_ids if pk in tags_name_by_pk},
             key=str.casefold,
         )
         avoid_names = self._build_avoid_names(context)
+        rejected_directions = self._build_rejected_directions(context)
         language = get_language() or "en"
 
         payload = build_ai_payload(
@@ -146,6 +149,10 @@ class AIStrategy:
             avoid_names=avoid_names,
             count=limit,
             language=language,
+            rejected_directions=rejected_directions,
+            occasion=context.occasion,
+            budget_selection=context.budget,
+            hint=context.hint,
         )
 
         raw_json = self.client.generate(system=SYSTEM_PROMPT, payload=payload, schema=IDEAS_SCHEMA)
