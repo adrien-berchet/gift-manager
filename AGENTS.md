@@ -27,6 +27,8 @@ Useful references:
   `skills/add-idea/SKILL.md`.
 - When asked to review a branch, PR, or merge candidate, read and follow
   `skills/deep-code-review/SKILL.md`.
+- When asked to loop, consult, or reach consensus with Claude on a plan or technical topic, read and follow
+  `skills/loop-with-claude/SKILL.md`.
 - Agent-specific discovery entries may link to a canonical skill. Keep the
   canonical skill as the single source of truth rather than copying it.
 
