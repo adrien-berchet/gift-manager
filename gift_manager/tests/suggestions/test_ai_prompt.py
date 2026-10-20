@@ -525,6 +525,55 @@ def test_payload_includes_rejected_directions(user):
 
 
 @pytest.mark.django_db
+def test_payload_rejected_directions_scrubs_and_bounds(user):
+    person = Person.objects.create(first_name="Alice", family_name="Dupont")
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    long_name = "Livre " + ("Alice " * 30)
+    rejected = [
+        # Name contains recipient's name, tags must remain unscrubbed
+        {"name": "Portrait d'Alice", "tags": ["Art", "Alice"]},
+        # Long name should be scrubbed then capped at 120 chars
+        {"name": long_name, "tags": []},
+        # Safe handling of tags=None
+        {"name": "Mug", "tags": None},
+        # Non-dict or empty name should be handled safely
+        "invalid",
+        {"name": "", "tags": ["Decor"]},
+    ]
+    # Add 20 more items to test list capping at 15
+    rejected.extend({"name": f"Item {i}", "tags": ["Other"]} for i in range(20))
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+        rejected_directions=rejected,
+    )
+
+    clean_rejected = payload["rejected_directions"]
+    assert len(clean_rejected) == 15
+    # First item name scrubbed Alice -> [name], but tag 'Alice' remains intact (controlled vocabulary)
+    assert clean_rejected[0]["name"] == "Portrait d'[name]"
+    assert clean_rejected[0]["tags"] == ["Art", "Alice"]
+    # Long item scrubbed and truncated to <= 120 chars
+    assert "[name]" in clean_rejected[1]["name"]
+    assert len(clean_rejected[1]["name"]) <= 120
+    # tags=None parsed as empty list
+    assert clean_rejected[2]["name"] == "Mug"
+    assert clean_rejected[2]["tags"] == []
+
+
+@pytest.mark.django_db
 def test_payload_includes_occasion_and_budget_steering(user):
     person = Person.objects.create(first_name="Lucas")
     user.profile.currency = "EUR"

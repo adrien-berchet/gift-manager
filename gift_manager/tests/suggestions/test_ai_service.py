@@ -726,6 +726,7 @@ def test_rejected_directions_passed_to_ai_and_blocks_regeneration(user, share):
     share(user, person, level=PermissionLevel.VIEWER)
 
     tag = GiftTagFactory(name="Cuisine")
+    share(user, tag, level=PermissionLevel.VIEWER)
     dismissed = GiftSuggestion.objects.create(
         user=user,
         person=person,
@@ -763,6 +764,44 @@ def test_rejected_directions_passed_to_ai_and_blocks_regeneration(user, share):
 
     assert len(block.ideas) == 1
     assert block.ideas[0].name == "Couteau de chef"
+
+
+def test_rejected_directions_tags_respect_visibility(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    tag_visible = GiftTagFactory(name="VisibleTag")
+    tag_unshared = GiftTagFactory(name="UnsharedTag")
+    share(user, tag_visible, level=PermissionLevel.VIEWER)
+
+    dismissed = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Tablier",
+        normalized_name="tablier",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+    )
+    dismissed.tags.add(tag_visible, tag_unshared)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Couteau de chef",
+                "description": "New suggestion",
+                "reason": "Great tool",
+                "tags": [],
+            },
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    service.request_more_ideas(count=1)
+
+    assert client.payload is not None
+    rejected = client.payload.get("rejected_directions")
+    assert rejected == [{"name": "Tablier", "tags": ["VisibleTag"]}]
 
 
 def test_steering_parameters_passed_to_ai_payload(user, share):

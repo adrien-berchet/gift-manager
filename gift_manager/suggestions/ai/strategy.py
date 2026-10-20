@@ -78,7 +78,9 @@ class AIStrategy:
 
         return list(avoid_dict.keys())
 
-    def _build_rejected_directions(self, context: SuggestionContext) -> list[dict[str, Any]]:
+    def _build_rejected_directions(
+        self, context: SuggestionContext, visible_tag_ids: set[int] | None = None
+    ) -> list[dict[str, Any]]:
         user = context.user
         recipient = context.recipient
         rec_filter = self._recipient_filter(recipient)
@@ -96,7 +98,11 @@ class AIStrategy:
         return [
             {
                 "name": s.name,
-                "tags": [t.name for t in s.tags.all()],
+                "tags": [
+                    t.name
+                    for t in s.tags.all()
+                    if visible_tag_ids is None or t.pk in visible_tag_ids
+                ],
             }
             for s in dismissed
             if s.name
@@ -139,7 +145,9 @@ class AIStrategy:
             key=str.casefold,
         )
         avoid_names = self._build_avoid_names(context)
-        rejected_directions = self._build_rejected_directions(context)
+        rejected_directions = self._build_rejected_directions(
+            context, visible_tag_ids=visible_tag_ids
+        )
         language = get_language() or "en"
 
         payload = build_ai_payload(

@@ -275,6 +275,32 @@ def resolve_budget_info(
     return _build_budget_info(history_items, viewer)
 
 
+def _clean_rejected_directions(
+    rejected_directions: Iterable[Any] | None,
+    terms: list[str],
+) -> list[dict[str, Any]]:
+    if not rejected_directions:
+        return []
+    cleaned: list[dict[str, Any]] = []
+    for direction in rejected_directions:
+        if not isinstance(direction, dict):
+            continue
+        # Scrub before truncating: a term straddling the cut would no longer
+        # match \b...\b and would leak a fragment. Scrubbing can also lengthen
+        # the string, so the cap has to come last.
+        name = scrub_text(str(direction.get("name") or "").strip(), terms, min_length=3)[:120]
+        # Tag names are a controlled vocabulary and must NEVER be scrubbed
+        tags = [t for t in (direction.get("tags") or []) if isinstance(t, str)][:10]
+        # A direction with no name or one that scrubbed to pure [name] with no tags
+        # is meaningless noise to the model.
+        if not name or (name == "[name]" and not tags):
+            continue
+        cleaned.append({"name": name, "tags": tags})
+        if len(cleaned) >= 15:
+            break
+    return cleaned
+
+
 def build_ai_payload(
     history: RecipientHistory,
     *,
@@ -327,8 +353,9 @@ def build_ai_payload(
     }
     if budget_info:
         payload["budget"] = budget_info
-    if rejected_directions:
-        payload["rejected_directions"] = rejected_directions
+    cleaned_rejected = _clean_rejected_directions(rejected_directions, terms)
+    if cleaned_rejected:
+        payload["rejected_directions"] = cleaned_rejected
     if occasion and occasion.strip():
         cleaned_occ = occasion.strip()[:60]
         scrubbed_occ = scrub_text(cleaned_occ, terms, min_length=3)
