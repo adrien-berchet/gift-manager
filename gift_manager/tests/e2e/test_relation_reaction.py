@@ -180,3 +180,23 @@ class TestRelationReactionWorkflow:
         expect(card.locator(".rating-input-stars")).to_have_attribute(
             "title", "How much would they have liked it?"
         )
+
+    def test_gift_history_inline_stars_save_rating_and_flip_to_read_only(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        relation = make_plan(seed_data_e2e, gift_name="History Rated Gift", status="given")
+        open_page(page, live_server, f"/persons/{seed_data_e2e.persons['dad'].person_id}/")
+
+        history = page.locator("[data-gift-history-section]")
+        expect(history).to_contain_text("History Rated Gift")
+
+        # Find the row for this plan in gift history and click star 4
+        item = history.locator(".gift-history-item", has_text="History Rated Gift")
+        expect(item.locator("[data-rating-inline]")).to_have_count(1)
+        item.locator("label[for$='-4']").click()
+
+        # The inline rating form disappears and is replaced by filled stars
+        expect(item.locator("[data-rating-inline]")).to_have_count(0)
+        expect(item.locator(".rating-stars")).to_have_attribute("aria-label", "4 out of 5")
+        relation.refresh_from_db()
+        assert relation.reaction_rating == 4

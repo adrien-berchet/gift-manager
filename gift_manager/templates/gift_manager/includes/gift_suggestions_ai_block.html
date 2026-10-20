@@ -12,13 +12,18 @@
         <p class="text-muted small" data-suggestion-notice>{% trans "Daily limit for new ideas reached." %}</p>
     {% endif %}
 
-    {% for idea in block.ideas %}
-        {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
-    {% empty %}
-        {% if not block.notice %}
-            <p class="text-muted small mb-2">{% trans "Ask for AI suggestions tailored to this recipient." %}</p>
-        {% endif %}
-    {% endfor %}
+    <div class="gift-suggestions-scroll-container"
+         tabindex="0"
+         role="region"
+         aria-label="{% trans 'New ideas' %}">
+        {% for idea in block.ideas %}
+            {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
+        {% empty %}
+            {% if not block.notice %}
+                <p class="text-muted small mb-2">{% trans "Ask for AI suggestions tailored to this recipient." %}</p>
+            {% endif %}
+        {% endfor %}
+    </div>
 
     {% if block.can_request_more %}
         <form method="post"

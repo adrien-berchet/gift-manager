@@ -8,12 +8,17 @@
     {% if next_offset is not None %}
         <div class="mt-2 text-center">
             <button type="button"
-                    class="btn btn-sm btn-outline-secondary"
+                    class="btn btn-sm btn-outline-secondary suggestion-show-more-btn"
                     data-suggestion-show-more
+                    data-no-button-loading
                     hx-get="{{ suggestions_url }}?offset={{ next_offset }}{% if surface %}&surface={{ surface }}{% endif %}"
                     hx-target="closest div"
-                    hx-swap="outerHTML">
-                {% trans "Show more" %}
+                    hx-swap="outerHTML"
+                    hx-disabled-elt="this">
+                <span class="show-more-idle">{% trans "Show more" %}</span>
+                <span class="show-more-loading" role="status">
+                    <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>{% trans "Loading…" %}
+                </span>
             </button>
         </div>
     {% endif %}

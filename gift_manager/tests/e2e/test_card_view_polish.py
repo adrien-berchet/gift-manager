@@ -23,17 +23,23 @@ PAGES = [
     ("relations/advanced", "relation-grid"),
 ]
 
+# Gecko (e.g. Firefox 144 in CI) keeps attr() unresolved in computed ::before content;
+# resolve it against the element so all browsers produce consistent string content.
+PSEUDO_CONTENT_JS = """(el, pseudo) => getComputedStyle(el, pseudo).content
+    .replace(/attr\\(\\s*([\\w-]+)\\s*\\)/g,
+             (_, name) => JSON.stringify(el.getAttribute(name) ?? ''))"""
+
 # Fields of each card: icon key, role and the label drawn in ::before
-CARD_FIELDS_JS = """card => [...card.querySelectorAll('.gridjs-td[data-label]')]
+CARD_FIELDS_JS = f"""card => [...card.querySelectorAll('.gridjs-td[data-label]')]
     .filter(td => !td.querySelector('.grid-action-bar'))
     .filter(td => getComputedStyle(td).display !== 'none')
-    .map(td => ({
+    .map(td => ({{
         label: td.dataset.label,
         role: td.dataset.cardRole || '',
         icon: td.dataset.cardIcon || '',
-        before: getComputedStyle(td, '::before').content,
+        before: ({PSEUDO_CONTENT_JS})(td, '::before'),
         top: td.getBoundingClientRect().top,
-    }))"""
+    }}))"""
 
 STYLE_JS = """el => {
     const s = getComputedStyle(el);
@@ -587,15 +593,15 @@ def test_group_cards_show_the_member_count(logged_in_page: Page, live_server, se
     page.wait_for_selector('#person-group-grid[data-view="card"] .gridjs-td[data-label]')
 
     counts = page.locator("#person-group-grid .gridjs-tbody .gridjs-tr").evaluate_all(
-        """cards => Object.fromEntries(cards.map(card => {
+        f"""cards => Object.fromEntries(cards.map(card => {{
             const members = card.querySelector('.gridjs-td[data-card-icon="members"]');
             return [
                 card.querySelector('.gridjs-td[data-card-role="title"]').textContent.trim(),
                 members && getComputedStyle(members).display !== 'none'
-                    ? [members.textContent.trim(), getComputedStyle(members, '::before').content]
+                    ? [members.textContent.trim(), ({PSEUDO_CONTENT_JS})(members, '::before')]
                     : null,
             ];
-        }))"""
+        }}))"""
     )
     expected = {
         group.name: str(group.person_set.count()) for group in seed_data_e2e.groups.values()

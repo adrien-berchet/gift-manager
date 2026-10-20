@@ -119,6 +119,56 @@ class TestPersonGiftHistory:
         assert "Loved it" in content
         assert content.count("Awaiting reaction") == 1
 
+    def test_unrated_plan_shows_inline_rating_for_editor(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+        _share(user, relation, level=PermissionLevel.EDITOR)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" in content
+        assert (
+            reverse("gift_manager:relation_reaction", kwargs={"pk": relation.relation_id})
+            in content
+        )
+        assert "Awaiting reaction" not in content
+
+    def test_unrated_plan_shows_awaiting_reaction_for_viewer(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+        _share(user, relation, level=PermissionLevel.VIEWER)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" not in content
+        assert "Awaiting reaction" in content
+
+    def test_unrated_plan_shows_inline_rating_for_owner(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+        _share(user, relation, level=PermissionLevel.OWNER)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" in content
+        assert "Awaiting reaction" not in content
+
+    def test_unrated_plan_shows_inline_rating_for_superuser(self, client, user):
+        user.is_superuser = True
+        user.save()
+        _plan(user, self.person, gift=GiftFactory(name="Unrated"))
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" in content
+        assert "Awaiting reaction" not in content
+
+    def test_rated_plan_never_shows_inline_rating(self, client, user):
+        relation = _plan(user, self.person, gift=GiftFactory(name="Rated"), reaction_rating=5)
+        _share(user, relation, level=PermissionLevel.OWNER)
+
+        content = client.get(_history_url(self.person)).content.decode()
+
+        assert "data-rating-inline" not in content
+        assert "rating-stars" in content
+
     def test_group_plans_show_group_only_when_visible(self, client, user):
         visible_group = PersonGroupFactory(name="Visible family")
         hidden_group = PersonGroupFactory(name="Hidden club")
@@ -155,12 +205,30 @@ class TestPersonGiftHistory:
         baseline = count_queries()
         for year in range(2015, 2025):
             _plan(user, self.person, event_year=year, gift=GiftFactory(), reaction_rating=3)
+            _plan(user, self.person, event_year=year, gift=GiftFactory())
 
         assert count_queries() == baseline
 
 
 @pytest.mark.django_db
 class TestGroupGiftHistory:
+    def test_group_unrated_plan_shows_inline_rating_for_editor(self, client, user):
+        group = PersonGroupFactory()
+        _share(user, group)
+        relation = GroupRelationFactory(
+            group=group, status=_status("Given"), gift=GiftFactory(name="Group Unrated")
+        )
+        _share(user, relation, level=PermissionLevel.EDITOR)
+
+        response = client.get(
+            reverse("gift_manager:person_group_gift_history", kwargs={"pk": group.group_id})
+        )
+
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "data-rating-inline" in content
+        assert "Awaiting reaction" not in content
+
     def test_lists_plans_targeted_at_the_group(self, client, user):
         group = PersonGroupFactory()
         _share(user, group)

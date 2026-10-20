@@ -137,6 +137,7 @@ dmypy.json
 !.agents/skills/
 .agents/skills/*
 !.agents/skills/add-idea
+!.agents/skills/deep-code-review
 .codex-log/
 .claude/settings.local.json
 .claude/logs/
