@@ -3609,6 +3609,39 @@ h4, h5, h6 {
     }
 }
 
+/* Suggestions scroll container (up to ~5 rows) */
+.gift-suggestions-scroll-container {
+    max-height: 380px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.25rem;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.gift-suggestions-scroll-container:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+}
+
+.gift-suggestions-scroll-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.gift-suggestions-scroll-container::-webkit-scrollbar-track {
+    background: var(--bs-light);
+    border-radius: 3px;
+}
+
+.gift-suggestions-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--bs-secondary);
+    border-radius: 3px;
+}
+
+.gift-suggestions-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--bs-primary);
+}
+
 /* Suggestion "Show more" button loading state & dimensions */
 .suggestion-show-more-btn {
     min-width: 140px;

@@ -12,11 +12,10 @@
         <p class="text-muted small" data-suggestion-notice>{% trans "Daily limit for new ideas reached." %}</p>
     {% endif %}
 
-    <div class="detail-scroll-group"
+    <div class="gift-suggestions-scroll-container"
          tabindex="0"
          role="region"
-         aria-label="{% trans 'New ideas' %}"
-         style="--detail-scroll-group-max-height: 380px;">
+         aria-label="{% trans 'New ideas' %}">
         {% for idea in block.ideas %}
             {% include "gift_manager/includes/gift_suggestion_item.html" with candidate=idea %}
         {% empty %}
