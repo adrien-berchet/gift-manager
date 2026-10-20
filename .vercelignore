@@ -1,0 +1,82 @@
+# ==============================================================================
+# Vercel Deployment Ignore Rules
+# Exclude non-runtime files to minimize upload and Lambda bundle storage size.
+# ==============================================================================
+
+# Git and CI
+.git
+.github
+
+# Assistant and IDE configurations
+.agents
+.claude
+.codex
+.cursor
+.gemini
+.kilocode
+.kiro
+.playwright-mcp
+.vscode
+opencode.json
+GiftManager.code-workspace
+
+# Documentation, ideas, and knowledge graph
+docs
+graft
+skills
+*.md
+!README.md
+
+# Tests and QA artifacts (~46MB saved from lambda bundle)
+gift_manager/tests/
+reports/
+playwright-report/
+test-results/
+.benchmarks/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+pytest_pbt.ini
+bandit-report.json
+pip-audit-report.json
+
+# Tooling, linters, and pre-commit
+.flake8
+.pylintrc
+.codespell*
+.pre-commit-config.yaml
+commitlint.config.js
+
+# Docker, Nginx, local deployment configurations
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+nginx.conf
+deploy/
+
+# Local secrets, certificates, and backups
+.env*
+certs/
+cert.pem
+key.pem
+backups/
+*.sql
+*.dump
+*.sqlite3
+
+# Local media and logs
+media/
+messages.mo
+*.log
+
+# Dependencies and virtual environments (Vercel builds its own with uv)
+.venv/
+node_modules/
+pnpm-lock.yaml
+
+# Local maintenance scripts not required for Vercel Lambda execution
+scripts/
