@@ -438,6 +438,14 @@ class Profile(models.Model):
     calendar_token = models.CharField(
         max_length=64, unique=True, null=True, blank=True, editable=False
     )
+    ai_share_person_notes = models.BooleanField(
+        default=False,
+        verbose_name=gettext_lazy("Share recipient notes with AI"),
+        help_text=gettext_lazy(
+            "Allow recipient notes (sizes, preferences, allergies) to be anonymised and shared "
+            "with the AI suggestion provider to improve gift idea relevance."
+        ),
+    )
 
     def __str__(self):
         label = gettext_lazy("Profile of")
@@ -1606,6 +1614,9 @@ class GiftSuggestionGeneration(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     succeeded = models.BooleanField(default=False)
     idea_count = models.PositiveSmallIntegerField(default=0)
+    prompt_version = models.PositiveSmallIntegerField(default=1)
+    model = models.CharField(max_length=100, blank=True, default="")
+    duration_ms = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
         verbose_name = gettext_lazy("Gift suggestion generation")

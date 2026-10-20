@@ -396,6 +396,98 @@ def test_ideas_get_does_not_generate_and_post_generates(client, user, monkeypatc
     assert len(fake.calls) == 1
 
 
+def test_ideas_steering_controls_rendered_and_submitted(client, user, monkeypatch):
+    import datetime
+
+    today = datetime.date.today()
+    bday_date = today + datetime.timedelta(days=20)
+    person = PersonFactory(
+        birthday_day=bday_date.day,
+        birthday_month=bday_date.month,
+        birthday_year=2000,
+    )
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Santoku Knife",
+                "description": "High quality kitchen knife",
+                "reason": "Great for cooking",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+
+    # GET renders steering controls with Birthday preselected (<= 60 days)
+    res_get = client.get(ideas_url)
+    assert res_get.status_code == 200
+    content_get = res_get.content.decode()
+    assert 'name="occasion"' in content_get
+    assert 'value="Birthday"' in content_get
+    assert "checked" in content_get
+    assert 'name="budget"' in content_get
+    assert 'value="30_75"' in content_get
+    assert 'name="hint"' in content_get
+
+    # POST submits occasion, budget, and hint
+    res_post = client.post(
+        ideas_url,
+        data={
+            "count": "1",
+            "occasion": "Birthday",
+            "budget": "30_75",
+            "hint": "loves Japanese cooking",
+        },
+    )
+    assert res_post.status_code == 200
+    content_post = res_post.content.decode()
+    assert "Santoku Knife" in content_post
+    assert 'value="30_75"' in content_post
+    assert "loves Japanese cooking" in content_post
+    assert len(fake.calls) == 1
+    call_payload = fake.calls[0]["payload"]
+    assert call_payload["occasion"] == "Birthday"
+    assert call_payload["budget"] == {"currency": "EUR", "min": 30, "max": 75}
+    assert call_payload["user_hint"] == "loves Japanese cooking"
+
+
+def test_ideas_steering_invalid_occasion_and_long_hint_handled(client, user, monkeypatch):
+    person = PersonFactory(birthday_day=None, birthday_month=None)
+    _share(user, person)
+
+    canned = {"ideas": [{"name": "Book", "description": "D", "reason": "R", "tags": []}]}
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+
+    # Post with occasion not in upcoming occasions, invalid budget, and hint > 120 chars
+    long_hint = "x" * 150
+    res = client.post(
+        ideas_url,
+        data={
+            "count": "1",
+            "occasion": "Unshared Secret Event",
+            "budget": "invalid_budget",
+            "hint": long_hint,
+        },
+    )
+    assert res.status_code == 200
+    content = res.content.decode()
+    assert f'id="ai_budget_{person.pk}_any"' in content
+    assert len(fake.calls) == 1
+    call_payload = fake.calls[0]["payload"]
+    assert "occasion" not in call_payload
+    assert "budget" not in call_payload
+    assert len(call_payload["user_hint"]) == 120
+    assert f'value="{"x" * 120}"' in content
+
+
 def test_more_ideas_post_adds_batch(client, user, monkeypatch):
     person = PersonFactory()
     _share(user, person)

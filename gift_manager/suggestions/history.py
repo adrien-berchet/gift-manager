@@ -30,6 +30,8 @@ class HistoryItem:
     person_id: int | None
     group_id: int | None
     created: datetime
+    event_name: str = ""
+    price: float | None = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +115,9 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
         rating = rel.reaction_rating if has_visible_reaction else None
         note = (rel.reaction_note or "") if has_visible_reaction else ""
         slug = relation_status_slug(rel.status)
+        event_name = rel.event.name if rel.event else ""
+        raw_price = rel.price if rel.price is not None else (gift.price if gift else None)
+        price = float(raw_price) if raw_price is not None else None
 
         raw_items.append(
             HistoryItem(
@@ -128,6 +133,8 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
                 person_id=rel.person_id,
                 group_id=rel.group_id,
                 created=rel.creation_date,
+                event_name=event_name,
+                price=price,
             )
         )
 

@@ -1,6 +1,7 @@
 """Gift suggestion service for catalogue recommendations and plan creation."""
 
 import logging
+import time
 import uuid
 from dataclasses import dataclass
 from datetime import timedelta
@@ -29,6 +30,7 @@ from gift_manager.plan_coordination import default_surprise_for
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.suggestions.ai.client import get_ai_client
+from gift_manager.suggestions.ai.prompt import PROMPT_VERSION
 from gift_manager.suggestions.ai.strategy import AIStrategy
 from gift_manager.suggestions.catalogue import CatalogueStrategy
 from gift_manager.suggestions.history import build_recipient_history
@@ -127,7 +129,12 @@ class GiftSuggestionService:
 
         return CataloguePage(candidates=page_candidates, next_offset=next_offset)
 
-    def _ai_context(self) -> SuggestionContext:
+    def _ai_context(
+        self,
+        occasion: str = "",
+        budget: str = "",
+        hint: str = "",
+    ) -> SuggestionContext:
         history = build_recipient_history(self.user, self.recipient)
         rec_filter = self._recipient_filter()
 
@@ -141,8 +148,8 @@ class GiftSuggestionService:
         )
         excluded_gift_ids = frozenset(history.planned_gift_ids | user_catalogue_gift_ids)
 
-        accessible_gift_names = set(
-            Gift.objects.accessible_by(self.user).values_list("name", flat=True)
+        planned_gift_names = set(
+            Gift.objects.filter(pk__in=history.planned_gift_ids).values_list("name", flat=True)
         )
         ai_suggestion_names = set(
             GiftSuggestion.objects.filter(
@@ -160,7 +167,7 @@ class GiftSuggestionService:
             ).values_list("normalized_name", flat=True)
         )
         blocked_names = frozenset(
-            {normalize_gift_name(name) for name in accessible_gift_names if name}
+            {normalize_gift_name(name) for name in planned_gift_names if name}
             | {s for s in ai_suggestion_names if s}
             | {s for s in dismissed_catalogue_names if s}
         )
@@ -171,6 +178,9 @@ class GiftSuggestionService:
             history=history,
             excluded_gift_ids=excluded_gift_ids,
             blocked_names=blocked_names,
+            occasion=occasion,
+            budget=budget,
+            hint=hint,
         )
 
     def _get_today_generations_count(self) -> int:
@@ -214,7 +224,13 @@ class GiftSuggestionService:
 
         return AIBlock(ideas=ideas, notice=notice, can_request_more=can_request_more)
 
-    def request_more_ideas(self, count: int = AI_BATCH_SIZE) -> AIBlock:
+    def request_more_ideas(
+        self,
+        count: int = AI_BATCH_SIZE,
+        occasion: str = "",
+        budget: str = "",
+        hint: str = "",
+    ) -> AIBlock:
         """Generate another batch of AI ideas, subject to the daily limit."""
         if not self.ai_enabled:
             return AIBlock(ideas=[], notice=None, can_request_more=False)
@@ -231,18 +247,26 @@ class GiftSuggestionService:
                 ideas = self._get_pending_ai_ideas()
                 return AIBlock(ideas=ideas, notice="limit", can_request_more=False)
 
+            model_name = getattr(self.ai_client, "model", "") if self.ai_client else ""
             generation = GiftSuggestionGeneration.objects.create(
                 user=self.user,
+                prompt_version=PROMPT_VERSION,
+                model=model_name,
                 succeeded=False,
                 idea_count=0,
                 **rec_filter,
             )
 
+        start_time = time.monotonic()
         try:
             strategy = AIStrategy(self.ai_client)
-            ctx = self._ai_context()
+            ctx = self._ai_context(occasion=occasion, budget=budget, hint=hint)
             candidates = strategy.suggest(ctx, limit=count)
+            duration_ms = int((time.monotonic() - start_time) * 1000)
         except Exception:
+            duration_ms = int((time.monotonic() - start_time) * 1000)
+            generation.duration_ms = duration_ms
+            generation.save(update_fields=["duration_ms"])
             logger.exception(
                 "AI suggestion generation failed for user %s on recipient %s",
                 self.user.pk,
@@ -263,7 +287,9 @@ class GiftSuggestionService:
             )
             existing_blocked.update(
                 normalize_gift_name(name)
-                for name in Gift.objects.accessible_by(self.user).values_list("name", flat=True)
+                for name in Gift.objects.filter(pk__in=ctx.history.planned_gift_ids).values_list(
+                    "name", flat=True
+                )
                 if name
             )
 
@@ -292,7 +318,8 @@ class GiftSuggestionService:
 
             generation.succeeded = True
             generation.idea_count = created_count
-            generation.save(update_fields=["succeeded", "idea_count"])
+            generation.duration_ms = duration_ms
+            generation.save(update_fields=["succeeded", "idea_count", "duration_ms"])
 
         ideas = self._get_pending_ai_ideas()
         new_today_count = self._get_today_generations_count()
@@ -410,6 +437,26 @@ class GiftSuggestionService:
 
             suggestion.delete()
 
+    def _reconcile_existing_gift(self, name: str) -> Gift | None:
+        """Find an existing accessible gift matching the normalized suggestion name."""
+        norm_name = normalize_gift_name(name)
+        if not norm_name:
+            return None
+
+        # Fast path: exact or case-insensitive DB match
+        exact = Gift.objects.accessible_by(self.user).filter(name__iexact=name.strip()).first()
+        if exact is not None and normalize_gift_name(exact.name) == norm_name:
+            return exact
+
+        # Fallback: lightweight scan of (pk, name) tuples avoiding full model loading
+        for gift_pk, gift_name in (
+            Gift.objects.accessible_by(self.user).values_list("pk", "name").iterator()
+        ):
+            if normalize_gift_name(gift_name) == norm_name:
+                return Gift.objects.get(pk=gift_pk)
+
+        return None
+
     def accept_suggestion(self, suggestion_uuid: uuid.UUID) -> Relation:
         """Accept an AI gift idea, create the Gift and Relation plan."""
         rec_filter = self._recipient_filter()
@@ -440,19 +487,23 @@ class GiftSuggestionService:
                     return plan
                 return self._create_idea_plan(suggestion.gift, record_catalogue_acceptance=False)
 
-            gift = Gift.objects.create(
-                name=suggestion.name,
-                comment=suggestion.description,
-            )
-            visible_tag_ids = VisibleMetadata(self.user).tag_ids
-            sugg_tag_ids = set(suggestion.tags.values_list("pk", flat=True))
-            valid_tag_ids = sugg_tag_ids & visible_tag_ids
-            if valid_tag_ids:
-                gift.tags.set(valid_tag_ids)
+            existing_gift = self._reconcile_existing_gift(suggestion.name)
+            if existing_gift is not None:
+                gift = existing_gift
+            else:
+                gift = Gift.objects.create(
+                    name=suggestion.name,
+                    comment=suggestion.description,
+                )
+                visible_tag_ids = VisibleMetadata(self.user).tag_ids
+                sugg_tag_ids = set(suggestion.tags.values_list("pk", flat=True))
+                valid_tag_ids = sugg_tag_ids & visible_tag_ids
+                if valid_tag_ids:
+                    gift.tags.set(valid_tag_ids)
 
-            PermissionService.create_or_update_permission(
-                self.user, gift, permission_level=PermissionLevel.OWNER, object_attr="gift"
-            )
+                PermissionService.create_or_update_permission(
+                    self.user, gift, permission_level=PermissionLevel.OWNER, object_attr="gift"
+                )
 
             plan = self._create_idea_plan(gift, record_catalogue_acceptance=False)
 

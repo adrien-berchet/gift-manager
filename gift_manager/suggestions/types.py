@@ -44,6 +44,9 @@ class SuggestionContext:
     history: "RecipientHistory"
     excluded_gift_ids: frozenset[int] = frozenset()
     blocked_names: frozenset[str] = frozenset()
+    occasion: str = ""
+    budget: str = ""
+    hint: str = ""
 
 
 class SuggestionStrategy(Protocol):

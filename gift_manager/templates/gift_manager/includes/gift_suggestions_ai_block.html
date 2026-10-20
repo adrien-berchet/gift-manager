@@ -33,49 +33,153 @@
               hx-swap="outerHTML"
               hx-disabled-elt="find button"
               data-no-button-loading
-              class="mt-2 d-flex align-items-center justify-content-center gap-2 flex-wrap ai-generate-form">
+              class="mt-2 ai-generate-form"
+              data-ai-generate-form>
             {% csrf_token %}
-            <span class="small text-muted ai-status-idle">
-                <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
-                {% if block.ideas %}
-                    {% trans "Add ideas:" %}
-                {% else %}
-                    {% trans "Generate ideas:" %}
+
+            <div class="card p-2 mb-2 ai-steering-box rounded-3">
+                {% if upcoming_occasions %}
+                    <div class="d-flex flex-wrap gap-1 align-items-center mb-2 ai-steering-row"
+                         role="radiogroup"
+                         aria-label="{% trans "Occasion" %}">
+                        <span class="small text-muted me-1">
+                            <i class="fas fa-calendar-day me-1" aria-hidden="true"></i>{% trans "Occasion:" %}
+                        </span>
+                        {% for occ in upcoming_occasions %}
+                            <input type="radio"
+                                    class="btn-check"
+                                    name="occasion"
+                                    id="ai_occ_{{ recipient.pk }}_{{ forloop.counter }}"
+                                    value="{{ occ.name }}"
+                                    autocomplete="off"
+                                    {% if selected_occasion == occ.name %}checked{% endif %}>
+                            <label class="btn btn-outline-primary btn-sm py-0 px-2"
+                                   for="ai_occ_{{ recipient.pk }}_{{ forloop.counter }}"
+                                   title="{{ occ.date|date:'SHORT_DATE_FORMAT' }}">
+                                {{ occ.name }}
+                            </label>
+                        {% endfor %}
+                        <input type="radio"
+                               class="btn-check"
+                               name="occasion"
+                               id="ai_occ_{{ recipient.pk }}_any"
+                               value=""
+                               autocomplete="off"
+                               {% if not selected_occasion %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary btn-sm py-0 px-2" for="ai_occ_{{ recipient.pk }}_any">
+                            {% trans "Any" %}
+                        </label>
+                    </div>
                 {% endif %}
-            </span>
-            <span class="small text-primary ai-status-loading" role="status">
-                <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>
-                {% trans "Generating ideas with AI…" %}
-            </span>
-            <div class="btn-group btn-group-sm" role="group" aria-label="{% trans "Number of ideas to generate" %}">
-                <button type="submit"
-                        name="count"
-                        value="1"
-                        class="btn btn-outline-primary"
-                        data-count="1"
-                        title="{% trans "Generate 1 idea" %}"
-                        aria-label="{% trans "Generate 1 idea" %}">
-                    +1
-                </button>
-                <button type="submit"
-                        name="count"
-                        value="2"
-                        class="btn btn-outline-primary"
-                        data-suggestion-more-ideas
-                        data-count="2"
-                        title="{% trans "Generate 2 ideas" %}"
-                        aria-label="{% trans "Generate 2 ideas" %}">
-                    +2
-                </button>
-                <button type="submit"
-                        name="count"
-                        value="3"
-                        class="btn btn-outline-primary"
-                        data-count="3"
-                        title="{% trans "Generate 3 ideas" %}"
-                        aria-label="{% trans "Generate 3 ideas" %}">
-                    +3
-                </button>
+
+                <div class="d-flex flex-wrap gap-1 align-items-center mb-2 ai-steering-row"
+                     role="radiogroup"
+                     aria-label="{% trans "Budget" %}">
+                    <span class="small text-muted me-1">
+                        <i class="fas fa-coins me-1" aria-hidden="true"></i>{% trans "Budget:" %}
+                    </span>
+                    <input type="radio"
+                           class="btn-check"
+                           name="budget"
+                           id="ai_budget_{{ recipient.pk }}_any"
+                           value=""
+                           autocomplete="off"
+                           {% if not selected_budget %}checked{% endif %}>
+                    <label class="btn btn-outline-secondary btn-sm py-0 px-2" for="ai_budget_{{ recipient.pk }}_any">
+                        {% trans "Any" %}
+                    </label>
+
+                    <input type="radio"
+                           class="btn-check"
+                           name="budget"
+                           id="ai_budget_{{ recipient.pk }}_under_30"
+                           value="under_30"
+                           autocomplete="off"
+                           {% if selected_budget == "under_30" %}checked{% endif %}>
+                    <label class="btn btn-outline-primary btn-sm py-0 px-2" for="ai_budget_{{ recipient.pk }}_under_30">
+                        &lt; 30{{ currency_symbol }}
+                    </label>
+
+                    <input type="radio"
+                           class="btn-check"
+                           name="budget"
+                           id="ai_budget_{{ recipient.pk }}_30_75"
+                           value="30_75"
+                           autocomplete="off"
+                           {% if selected_budget == "30_75" %}checked{% endif %}>
+                    <label class="btn btn-outline-primary btn-sm py-0 px-2" for="ai_budget_{{ recipient.pk }}_30_75">
+                        30-75{{ currency_symbol }}
+                    </label>
+
+                    <input type="radio"
+                           class="btn-check"
+                           name="budget"
+                           id="ai_budget_{{ recipient.pk }}_over_75"
+                           value="over_75"
+                           autocomplete="off"
+                           {% if selected_budget == "over_75" %}checked{% endif %}>
+                    <label class="btn btn-outline-primary btn-sm py-0 px-2" for="ai_budget_{{ recipient.pk }}_over_75">
+                        &gt; 75{{ currency_symbol }}
+                    </label>
+                </div>
+
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text text-muted">
+                        <i class="fas fa-comment-dots" aria-hidden="true"></i>
+                    </span>
+                    <input type="text"
+                           name="hint"
+                           maxlength="120"
+                           value="{{ current_hint }}"
+                           class="form-control form-control-sm"
+                           placeholder="{% trans "Optional hint: e.g. loves Japanese cooking, compact…" %}"
+                           aria-label="{% trans "Optional suggestion hint" %}">
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-center gap-2 flex-wrap">
+                <span class="small text-muted ai-status-idle">
+                    <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>
+                    {% if block.ideas %}
+                        {% trans "Add ideas:" %}
+                    {% else %}
+                        {% trans "Generate ideas:" %}
+                    {% endif %}
+                </span>
+                <span class="small text-primary ai-status-loading" role="status">
+                    <i class="fas fa-spinner fa-spin me-1" aria-hidden="true"></i>
+                    {% trans "Generating ideas with AI…" %}
+                </span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="{% trans "Number of ideas to generate" %}">
+                    <button type="submit"
+                            name="count"
+                            value="1"
+                            class="btn btn-outline-primary"
+                            data-count="1"
+                            title="{% trans "Generate 1 idea" %}"
+                            aria-label="{% trans "Generate 1 idea" %}">
+                        +1
+                    </button>
+                    <button type="submit"
+                            name="count"
+                            value="2"
+                            class="btn btn-outline-primary"
+                            data-suggestion-more-ideas
+                            data-count="2"
+                            title="{% trans "Generate 2 ideas" %}"
+                            aria-label="{% trans "Generate 2 ideas" %}">
+                        +2
+                    </button>
+                    <button type="submit"
+                            name="count"
+                            value="3"
+                            class="btn btn-outline-primary"
+                            data-count="3"
+                            title="{% trans "Generate 3 ideas" %}"
+                            aria-label="{% trans "Generate 3 ideas" %}">
+                        +3
+                    </button>
+                </div>
             </div>
         </form>
     {% endif %}
