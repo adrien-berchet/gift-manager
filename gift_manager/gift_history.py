@@ -89,7 +89,7 @@ def build_gift_history(
     directly carry no recipient name.
     """
     relations = list(relations)
-    editable_relation_pks: set = set()
+    editable_relation_pks: set[int] = set()
     if user is not None:
         if getattr(user, "is_superuser", False):
             editable_relation_pks = {r.pk for r in relations}

@@ -876,7 +876,7 @@ class RelationDetailView(BaseDetailView):
 
 
 def _relation_quick_action_response(
-    message: str, *extra_events, undo: dict | None = None
+    message: str, *extra_events, undo: dict | None = None, list_update="list:update"
 ) -> HttpResponse:
     """Return a no-swap HTMX response that refreshes card lists."""
     notification = {"message": message, "type": "success"}
@@ -886,7 +886,7 @@ def _relation_quick_action_response(
     response["HX-Reswap"] = "none"
     response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
         [
-            "list:update",
+            list_update,
             {"showNotification": notification},
             *extra_events,
         ]
@@ -1077,7 +1077,10 @@ def relation_reaction(request, pk):
     if request.headers.get("HX-Request") != "true":
         return redirect(relation.get_absolute_url())
     extra_events = () if is_inline else ("offcanvas:close",)
-    return _relation_quick_action_response(gettext("Reaction saved."), *extra_events)
+    list_update = {"list:update": {"source": "inline_reaction"}} if is_inline else "list:update"
+    return _relation_quick_action_response(
+        gettext("Reaction saved."), *extra_events, list_update=list_update
+    )
 
 
 @login_required

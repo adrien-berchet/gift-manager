@@ -214,7 +214,10 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Auto-refresh detail views when list updates
      */
-    document.addEventListener('list:update', function() {
+    document.addEventListener('list:update', function(e) {
+        if (e.detail && e.detail.source === 'inline_reaction') {
+            return;
+        }
         const openDetailPanel = document.querySelector('.modal.show#detailPanel');
         if (openDetailPanel) {
             // Find the current detail URL and refresh
