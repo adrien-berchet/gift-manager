@@ -1,0 +1,87 @@
+name: Cleanup Vercel Preview Deployments
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: '0 3 * * 0'  # Weekly on Sunday at 03:00 UTC to prune stale preview deployments
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Git branch name to clean up (optional)'
+        required: false
+        type: string
+      older_than_days:
+        description: 'Prune preview deployments older than N days'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Dry run (inspect deployments without deleting)'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: Cleanup Preview Deployments
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run Vercel preview cleanup
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || vars.VERCEL_PROJECT_ID || 'prj_6aigFVVxxgFpZmB2tkGVAWlBWmAd' }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_ORG_ID || secrets.VERCEL_TEAM_ID || vars.VERCEL_TEAM_ID || 'team_EAAIdCUS0FCvbNVCybOZMLa1' }}
+          PR_BRANCH: ${{ github.head_ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_BRANCH: ${{ inputs.branch }}
+          INPUT_OLDER_THAN_DAYS: ${{ inputs.older_than_days }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning ::VERCEL_TOKEN secret is not configured; skipping Vercel preview deployment cleanup."
+            exit 0
+          fi
+
+          ARGS=()
+
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            if [ -n "$PR_BRANCH" ]; then
+              echo "PR closed: cleaning up preview deployments for branch '$PR_BRANCH'"
+              ARGS+=(--branch "$PR_BRANCH")
+            else
+              echo "No PR branch identified; skipping branch-targeted cleanup."
+              exit 0
+            fi
+          elif [ "$EVENT_NAME" = "schedule" ]; then
+            echo "Scheduled weekly maintenance: pruning preview deployments older than 7 days"
+            ARGS+=(--older-than-days "7")
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -n "$INPUT_BRANCH" ]; then
+              ARGS+=(--branch "$INPUT_BRANCH")
+            fi
+            if [ -n "$INPUT_OLDER_THAN_DAYS" ]; then
+              ARGS+=(--older-than-days "$INPUT_OLDER_THAN_DAYS")
+            fi
+            if [ "$INPUT_DRY_RUN" = "true" ]; then
+              ARGS+=(--dry-run)
+            fi
+          fi
+
+          if [ ${#ARGS[@]} -eq 0 ]; then
+            echo "No cleanup criteria specified; nothing to do."
+            exit 0
+          fi
+
+          python scripts/cleanup_vercel_deployments.py "${ARGS[@]}"
