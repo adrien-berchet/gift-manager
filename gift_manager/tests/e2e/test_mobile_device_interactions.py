@@ -418,10 +418,11 @@ class TestMobileDeviceInteractions(BaseE2ETest):
     def test_mobile_orientation_changes(self, page: Page, live_server, test_user, sample_persons):
         """Test behavior during orientation changes."""
         self.login_as_user(page, live_server, test_user)
-        self.navigate_to_entity_list(page, live_server, "persons")
 
-        # Test portrait orientation
+        # Start in portrait orientation before navigating to avoid a desktop-to-mobile resize race
         page.set_viewport_size({"width": 375, "height": 667})
+        self.navigate_to_entity_list(page, live_server, "persons")
+        page.wait_for_selector('#person-grid:not([aria-busy="true"]) .gridjs-tbody .gridjs-tr')
 
         # Open edit panel in portrait
         self.click_quick_action(page, 0, "edit")
