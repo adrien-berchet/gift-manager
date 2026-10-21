@@ -21,6 +21,7 @@ class AnthropicClient:
         model: str,
         timeout: float = 15.0,
         effort: str = "low",
+        max_tokens: int = 4096,
     ) -> None:
         import anthropic  # noqa: PLC0415
 
@@ -29,6 +30,7 @@ class AnthropicClient:
         self.model = model
         self.timeout = timeout
         self.effort = effort
+        self.max_tokens = max_tokens
         self._client = anthropic.Anthropic(api_key=api_key, timeout=timeout, max_retries=0)
 
     def generate(self, *, system: str, payload: dict[str, Any], schema: dict[str, Any]) -> str:
@@ -42,7 +44,7 @@ class AnthropicClient:
         try:
             response = self._client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=self.max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user_content}],
                 output_config=output_config,
