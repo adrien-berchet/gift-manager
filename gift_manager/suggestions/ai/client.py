@@ -85,9 +85,16 @@ def _build_anthropic_client() -> AIClient | None:
     model = getattr(settings, "GIFT_SUGGESTIONS_AI_MODEL", "").strip() or "claude-haiku-5-5"
     timeout = float(getattr(settings, "GIFT_SUGGESTIONS_AI_TIMEOUT", 15.0))
     effort = getattr(settings, "GIFT_SUGGESTIONS_AI_EFFORT", "low").strip()
+    max_tokens = int(getattr(settings, "GIFT_SUGGESTIONS_AI_MAX_TOKENS", 4096))
     from gift_manager.suggestions.ai.anthropic_client import AnthropicClient  # noqa: PLC0415
 
-    return AnthropicClient(api_key=api_key, model=model, timeout=timeout, effort=effort)
+    return AnthropicClient(
+        api_key=api_key,
+        model=model,
+        timeout=timeout,
+        effort=effort,
+        max_tokens=max_tokens,
+    )
 
 
 def _build_openai_client() -> AIClient | None:

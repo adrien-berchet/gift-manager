@@ -804,6 +804,140 @@ def test_rejected_directions_tags_respect_visibility(user, share):
     assert rejected == [{"name": "Tablier", "tags": ["VisibleTag"]}]
 
 
+def test_rejected_directions_includes_reason_and_comment(user, share):
+    person = PersonFactory(first_name="Mailys")
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    tag = GiftTagFactory(name="Paragliding")
+    share(user, tag, level=PermissionLevel.VIEWER)
+
+    dismissed = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Tandem flight",
+        normalized_name="tandem flight",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        dismiss_comment="Mailys is already an advanced solo pilot",
+    )
+    dismissed.tags.add(tag)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Flight Vario Instrument",
+                "description": "Altimeter and vario for thermalling",
+                "reason": "Complements paragliding practice",
+                "tags": ["Paragliding"],
+            },
+        ]
+    }
+    client = FakeAIClient(canned_responses=[canned])
+    service = GiftSuggestionService(user, person, ai_client=client)
+
+    service.request_more_ideas(count=1)
+
+    assert client.payload is not None
+    rejected = client.payload.get("rejected_directions")
+    assert rejected == [
+        {
+            "name": "Tandem flight",
+            "tags": ["Paragliding"],
+            "reason": "already_owned_or_practiced",
+            "comment": "[name] is already an advanced solo pilot",
+        }
+    ]
+
+
+def test_rejected_directions_excludes_unshared_or_revoked_catalogue_gifts(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    tag = GiftTagFactory(name="Aviation")
+    share(user, tag, level=PermissionLevel.VIEWER)
+
+    other_user = UserFactory()
+    gift_accessible = GiftFactory(name="Accessible Plane Model", tags=[tag])
+    share(user, gift_accessible, level=PermissionLevel.VIEWER)
+
+    gift_unshared = GiftFactory(name="Secret Drone", tags=[tag])
+    share(other_user, gift_unshared, level=PermissionLevel.OWNER)
+
+    # Dismiss both with reasons
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift_accessible,
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        dismiss_comment="Has several models",
+    )
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift_unshared,
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.DISLIKES,
+        dismiss_comment="Dislikes drones",
+    )
+
+    client = FakeAIClient(canned_responses=[{"ideas": []}, {"ideas": []}])
+    service = GiftSuggestionService(user, person, ai_client=client)
+    service.request_more_ideas(count=1)
+
+    assert client.payload is not None
+    rejected = client.payload.get("rejected_directions") or []
+    rejected_names = [r["name"] for r in rejected]
+
+    # Accessible gift is in rejected_directions; unshared gift is strictly excluded
+    assert "Accessible Plane Model" in rejected_names
+    assert "Secret Drone" not in rejected_names
+
+    # If accessible gift's share is revoked, it is also excluded
+    GiftPermission.objects.filter(user=user, gift=gift_accessible).delete()
+    service.request_more_ideas(count=1)
+    rejected_after = client.payload.get("rejected_directions") or []
+    assert "Accessible Plane Model" not in [r["name"] for r in rejected_after]
+
+
+def test_rejected_directions_uses_current_catalogue_gift_name(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    tag = GiftTagFactory(name="Camping")
+    share(user, tag, level=PermissionLevel.VIEWER)
+
+    gift = GiftFactory(name="Old Tent Name", tags=[tag])
+    share(user, gift, level=PermissionLevel.VIEWER)
+
+    GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        gift=gift,
+        name="Old Tent Name",
+        source=GiftSuggestion.Source.CATALOGUE,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.TOO_EXPENSIVE,
+    )
+
+    # Rename the gift in catalogue
+    gift.name = "Ultra-Light 2-Person Tent"
+    gift.save(update_fields=["name"])
+
+    client = FakeAIClient(canned_responses=[{"ideas": []}])
+    service = GiftSuggestionService(user, person, ai_client=client)
+    service.request_more_ideas(count=1)
+
+    assert client.payload is not None
+    rejected = client.payload.get("rejected_directions") or []
+    rejected_names = [r["name"] for r in rejected]
+    assert "Ultra-Light 2-Person Tent" in rejected_names
+    assert "Old Tent Name" not in rejected_names
+
+
 def test_steering_parameters_passed_to_ai_payload(user, share):
     person = PersonFactory(first_name="Maxime")
     share(user, person, level=PermissionLevel.VIEWER)

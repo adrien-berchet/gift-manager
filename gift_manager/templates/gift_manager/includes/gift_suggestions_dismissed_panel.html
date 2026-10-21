@@ -32,6 +32,19 @@
                         <p class="small text-muted mb-2 fst-italic">{{ item.reason }}</p>
                     {% endif %}
 
+                    {% if item.dismiss_reason or item.dismiss_comment %}
+                        <div class="mb-2">
+                            <span class="badge bg-warning-subtle text-warning-emphasis">
+                                <i class="fas fa-comment-slash me-1" aria-hidden="true"></i>{% if item.dismiss_reason %}{{ item.get_dismiss_reason_display }}{% else %}{% trans "Dismissed" %}{% endif %}
+                            </span>
+                            {% if item.dismiss_comment %}
+                                <p class="small text-body-secondary mb-1 mt-1 text-break">
+                                    {{ item.dismiss_comment }}
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
                     {% with tags=item.gift.tags.all|default:item.tags.all %}
                         {% if tags %}
                             <div class="mb-2">

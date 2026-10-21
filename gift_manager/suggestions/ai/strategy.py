@@ -2,6 +2,8 @@
 
 from typing import Any
 
+from django.db.models import Prefetch
+from django.db.models import Q
 from django.utils.translation import get_language
 
 from gift_manager.metadata_visibility import VisibleMetadata
@@ -84,29 +86,54 @@ class AIStrategy:
         user = context.user
         recipient = context.recipient
         rec_filter = self._recipient_filter(recipient)
+        accessible_gifts = Gift.objects.accessible_by(user)
+
+        prefetch_tags = (
+            Prefetch("tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids))
+            if visible_tag_ids is not None
+            else "tags"
+        )
+        prefetch_gift_tags = (
+            Prefetch("gift__tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids))
+            if visible_tag_ids is not None
+            else "gift__tags"
+        )
 
         dismissed = (
             GiftSuggestion.objects.filter(
                 user=user,
-                source=GiftSuggestion.Source.AI,
                 state=GiftSuggestion.State.DISMISSED,
                 **rec_filter,
             )
-            .prefetch_related("tags")
+            .filter(
+                Q(source=GiftSuggestion.Source.AI)
+                | (
+                    Q(source=GiftSuggestion.Source.CATALOGUE, gift__in=accessible_gifts)
+                    & ~Q(dismiss_reason="")
+                )
+            )
+            .select_related("gift")
+            .prefetch_related(prefetch_tags, prefetch_gift_tags)
             .order_by("-updated_at")[:15]
         )
-        return [
-            {
-                "name": s.name,
+        results: list[dict[str, Any]] = []
+        for s in dismissed:
+            name = s.gift.name if s.gift_id and s.gift else s.name
+            if not name:
+                continue
+            tags_qs = s.gift.tags.all() if s.gift_id and s.gift else s.tags.all()
+            item: dict[str, Any] = {
+                "name": name,
                 "tags": [
-                    t.name
-                    for t in s.tags.all()
-                    if visible_tag_ids is None or t.pk in visible_tag_ids
+                    t.name for t in tags_qs if visible_tag_ids is None or t.pk in visible_tag_ids
                 ],
             }
-            for s in dismissed
-            if s.name
-        ]
+            if s.dismiss_reason:
+                item["reason"] = s.dismiss_reason
+            if s.dismiss_comment:
+                item["comment"] = s.dismiss_comment
+            results.append(item)
+        return results
 
     def _resolve_blocked_names(self, context: SuggestionContext) -> frozenset[str]:
         if context.blocked_names:

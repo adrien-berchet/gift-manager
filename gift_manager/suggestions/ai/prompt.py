@@ -8,6 +8,7 @@ from typing import Any
 
 from django.contrib.auth.models import User
 
+from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -27,10 +28,15 @@ SYSTEM_PROMPT = (
     "3. Batch Diversity: When generating ideas, vary the angles across the batch (e.g. "
     "practical/everyday, hobby or passion, experiential or consumable). Do not repeat the same "
     "category or theme across ideas.\n"
-    "4. Negative Feedback & Nuance: Respect the avoid list and rejected_directions. When reviewing "
-    "past history, pay attention to ratings and reaction notes: a low rating (1-2) with a specific "
-    "complaint indicates what to avoid, while an abandoned plan is a weak signal about "
-    "logistics or price rather than taste.\n"
+    "4. Negative Feedback & Nuance: Respect the avoid list and rejected_directions. When a "
+    "rejected direction has a reason: if 'already_owned_or_practiced' (or user comment indicates "
+    "existing ownership or active practice), treat it as an active interest or passion—do NOT "
+    "discard the category, but pivot to upgrades, maintenance, accessories, books, or consumables "
+    "rather than starter sets or beginner introductory experiences. If 'dislikes', steer clear "
+    "of the style or genre. If 'too_expensive', favor budget-friendly alternatives. If 'custom', "
+    "rely on the user comment. When reviewing past history, pay attention to ratings and "
+    "reaction notes: a low rating (1-2) with a specific complaint indicates what to avoid, while "
+    "an abandoned plan is a weak signal about logistics or price rather than taste.\n"
     "5. Target Occasion: If 'occasion' is specified (e.g. 'Birthday', 'Christmas', "
     "'Housewarming'), tailor suggestions to fit that event's context, "
     "social expectations, and mood.\n"
@@ -295,7 +301,18 @@ def _clean_rejected_directions(
         # is meaningless noise to the model.
         if not name or (name == "[name]" and not tags):
             continue
-        cleaned.append({"name": name, "tags": tags})
+        entry: dict[str, Any] = {"name": name, "tags": tags}
+        reason = str(direction.get("reason") or "").strip()
+        if reason and reason in GiftSuggestion.DismissReason.values:
+            entry["reason"] = reason
+        comment = str(direction.get("comment") or "").strip()
+        if comment:
+            scrubbed_comment = scrub_text(comment, terms, min_length=3)[
+                : GiftSuggestion.DISMISS_COMMENT_MAX_LENGTH
+            ]
+            if scrubbed_comment and scrubbed_comment != "[name]":
+                entry["comment"] = scrubbed_comment
+        cleaned.append(entry)
         if len(cleaned) >= 15:
             break
     return cleaned

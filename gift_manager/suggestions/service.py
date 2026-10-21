@@ -45,6 +45,24 @@ CATALOGUE_FIRST_PAGE_WITH_AI = 3
 AI_BATCH_SIZE = 2
 AI_MAX_VISIBLE = 6
 
+
+def normalize_dismiss_input(reason: str = "", comment: str = "") -> tuple[str, str]:
+    """Normalize dismissal reason and comment.
+
+    Infers 'custom' if a note is provided without reason.
+    """
+    reason = (reason or "").strip()
+    comment = (comment or "").strip()[: GiftSuggestion.DISMISS_COMMENT_MAX_LENGTH]
+    valid_reasons = set(GiftSuggestion.DismissReason.values)
+    if reason and reason not in valid_reasons:
+        reason = ""
+    if comment and not reason:
+        reason = GiftSuggestion.DismissReason.CUSTOM
+    elif reason == GiftSuggestion.DismissReason.CUSTOM and not comment:
+        reason = ""
+    return reason, comment
+
+
 _DEFAULT = object()
 
 
@@ -331,11 +349,12 @@ class GiftSuggestionService:
         gift = get_object_or_404(Gift.objects.accessible_by(self.user), gift_id=gift_uuid)
         return self._create_idea_plan(gift, record_catalogue_acceptance=True)
 
-    def dismiss_gift(self, gift_uuid: uuid.UUID) -> None:
+    def dismiss_gift(self, gift_uuid: uuid.UUID, *, reason: str = "", comment: str = "") -> None:
         """Dismiss a catalogue suggestion so it no longer appears."""
         gift = get_object_or_404(Gift.objects.accessible_by(self.user), gift_id=gift_uuid)
+        reason, comment = normalize_dismiss_input(reason, comment)
         rec_filter = self._recipient_filter()
-        GiftSuggestion.objects.update_or_create(
+        suggestion, _ = GiftSuggestion.objects.update_or_create(
             user=self.user,
             gift=gift,
             source=GiftSuggestion.Source.CATALOGUE,
@@ -344,8 +363,11 @@ class GiftSuggestionService:
                 "state": GiftSuggestion.State.DISMISSED,
                 "name": gift.name,
                 "normalized_name": normalize_gift_name(gift.name),
+                "dismiss_reason": reason,
+                "dismiss_comment": comment,
             },
         )
+        suggestion.tags.set(gift.tags.all())
 
     def dismissed_count(self) -> int:
         """Return count of dismissed suggestions for this recipient."""
@@ -414,7 +436,11 @@ class GiftSuggestionService:
                 raise Http404(_("Suggestion not found.")) from None
 
             suggestion.state = GiftSuggestion.State.PENDING
-            suggestion.save(update_fields=["state", "updated_at"])
+            suggestion.dismiss_reason = ""
+            suggestion.dismiss_comment = ""
+            suggestion.save(
+                update_fields=["state", "dismiss_reason", "dismiss_comment", "updated_at"]
+            )
 
     def purge_gift(self, gift_uuid: uuid.UUID) -> None:
         """Completely purge a catalogue suggestion dismissal record."""
@@ -513,8 +539,11 @@ class GiftSuggestionService:
 
             return plan
 
-    def dismiss_suggestion(self, suggestion_uuid: uuid.UUID) -> None:
+    def dismiss_suggestion(
+        self, suggestion_uuid: uuid.UUID, *, reason: str = "", comment: str = ""
+    ) -> None:
         """Dismiss an AI suggestion so it no longer appears."""
+        reason, comment = normalize_dismiss_input(reason, comment)
         rec_filter = self._recipient_filter()
         with transaction.atomic():
             try:
@@ -532,7 +561,11 @@ class GiftSuggestionService:
 
             if suggestion.state != GiftSuggestion.State.DISMISSED:
                 suggestion.state = GiftSuggestion.State.DISMISSED
-                suggestion.save(update_fields=["state"])
+            suggestion.dismiss_reason = reason
+            suggestion.dismiss_comment = comment
+            suggestion.save(
+                update_fields=["state", "dismiss_reason", "dismiss_comment", "updated_at"]
+            )
 
     def _upsert_accepted_suggestion(self, gift: Gift) -> None:
         rec_filter = self._recipient_filter()

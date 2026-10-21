@@ -59,9 +59,54 @@
             {% if surface %}
                 <input type="hidden" name="surface" value="{{ surface }}">
             {% endif %}
-            <button type="submit" class="btn btn-sm btn-outline-secondary w-100 text-nowrap" data-suggestion-dismiss>
-                <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Dismiss" %}
-            </button>
+            <div class="btn-group w-100" role="group" aria-label="{% trans "Dismiss options" %}">
+                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap" data-suggestion-dismiss>
+                    <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Dismiss" %}
+                </button>
+                <button type="button"
+                        class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown"
+                        data-bs-auto-close="outside"
+                        data-bs-popper-config='{"strategy":"fixed"}'
+                        aria-expanded="false"
+                        title="{% trans "Dismiss with reason" %}">
+                    <span class="visually-hidden">{% trans "Dismiss with reason" %}</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2 gift-suggestion-dropdown-menu">
+                    <li><h6 class="dropdown-header px-2 py-1 text-uppercase small text-muted">{% trans "Reason (optional)" %}</h6></li>
+                    <li>
+                        <button type="submit" name="reason" value="already_owned_or_practiced" class="dropdown-item rounded small py-1 px-2">
+                            <i class="fas fa-check-circle me-2 text-success" aria-hidden="true"></i>{% trans "Already owned or practiced" %}
+                        </button>
+                    </li>
+                    <li>
+                        <button type="submit" name="reason" value="dislikes" class="dropdown-item rounded small py-1 px-2">
+                            <i class="fas fa-thumbs-down me-2 text-danger" aria-hidden="true"></i>{% trans "Not their taste" %}
+                        </button>
+                    </li>
+                    <li>
+                        <button type="submit" name="reason" value="too_expensive" class="dropdown-item rounded small py-1 px-2">
+                            <i class="fas fa-tag me-2 text-warning" aria-hidden="true"></i>{% trans "Too expensive" %}
+                        </button>
+                    </li>
+                    <li><hr class="dropdown-divider my-2"></li>
+                    <li class="px-2">
+                        <span class="form-label small text-muted mb-1 d-block">{% trans "Other reason" %}</span>
+                        <div class="input-group input-group-sm">
+                            <input type="text"
+                                   name="comment"
+                                   class="form-control form-control-sm"
+                                   placeholder="{% trans "Short note…" %}"
+                                   aria-label="{% trans "Other reason" %}"
+                                   maxlength="120"
+                                   onclick="event.stopPropagation();">
+                            <button type="submit" name="reason" value="custom" class="btn btn-sm btn-outline-secondary" title="{% trans "Submit with note" %}" aria-label="{% trans "Submit with note" %}">
+                                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </li>
+                </ul>
+            </div>
         </form>
     </div>
 </div>
