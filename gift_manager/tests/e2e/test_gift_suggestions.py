@@ -391,3 +391,80 @@ class TestGiftSuggestions(BaseE2ETest):
         expect(offcanvas_panel).not_to_be_visible(timeout=self.ajax_timeout)
         # Detail modal is still open and visible!
         expect(detail_modal).to_be_visible()
+
+    def test_dismiss_with_dropdown_reason_and_custom_note(self, page: Page, live_server, test_user):
+        """Dismissing via dropdown with a custom note preserves the reason and note in dismissed panel."""
+        tag = GiftTagFactory(name="Paragliding")
+        person = PersonFactory(first_name="Sophie", family_name="Flyer")
+        past_gift = GiftFactory(name="Past Flight Book", tags=[tag])
+        given_plan = RelationFactory(
+            person=person,
+            gift=past_gift,
+            status=_status("Given"),
+            reaction_rating=5,
+        )
+        tandem = GiftFactory(name="Tandem Paragliding Flight", tags=[tag])
+        _share(test_user, tag, person, past_gift, given_plan, tandem)
+
+        self.login_as_user(page, live_server, test_user)
+
+        # Set mobile viewport 360x740 to verify layout and clipping on small screens
+        page.set_viewport_size({"width": 360, "height": 740})
+        page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        item = suggestions.locator("[data-gift-suggestion]").filter(
+            has_text="Tandem Paragliding Flight"
+        )
+        expect(item).to_be_visible()
+
+        # Open the split dropdown caret
+        dropdown_toggle = item.locator(".dropdown-toggle-split")
+        expect(dropdown_toggle).to_be_visible()
+        dropdown_toggle.click()
+
+        # Dropdown menu is visible
+        dropdown_menu = item.locator(".gift-suggestion-dropdown-menu")
+        expect(dropdown_menu).to_be_visible()
+
+        # Input is visible and not clipped
+        note_input = dropdown_menu.locator('input[name="comment"]')
+        expect(note_input).to_be_visible()
+
+        reports_dir = Path("reports")
+        reports_dir.mkdir(exist_ok=True)
+        page.screenshot(path=str(reports_dir / "suggestions_dropdown_360px.png"))
+
+        # Click into input (verifying it is not clipped or obstructed) and type custom note
+        note_input.click()
+        note_input.fill("Already practices solo paragliding")
+        note_input.press("Enter")
+
+        # Item is removed from the active suggestions
+        expect(item).not_to_be_attached(timeout=self.ajax_timeout)
+
+        # Open dismissed suggestions panel
+        review_btn = suggestions.locator("[data-suggestions-review-dismissed]")
+        expect(review_btn).to_be_visible()
+        review_btn.click()
+
+        panel = page.locator("#dismissedSuggestionsPanel")
+        expect(panel).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        content = panel.locator("#dismissedSuggestionsContent")
+        dismissed_item = content.locator("[data-dismissed-item]").filter(
+            has_text="Tandem Paragliding Flight"
+        )
+        expect(dismissed_item).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Reason badge shows "Other reason" and note text is rendered outside badge
+        expect(dismissed_item).to_contain_text("Other reason")
+        expect(dismissed_item).to_contain_text("Already practices solo paragliding")
+
+        # Take full page screenshot of dismissed panel on 360px
+        page.screenshot(path=str(reports_dir / "dismissed_panel_360px.png"))
+
+        # Reset viewport
+        page.set_viewport_size({"width": 1920, "height": 1080})

@@ -574,6 +574,54 @@ def test_payload_rejected_directions_scrubs_and_bounds(user):
 
 
 @pytest.mark.django_db
+def test_payload_rejected_directions_includes_reason_and_scrubs_comment(user):
+    person = Person.objects.create(first_name="Alice", family_name="Dupont")
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    rejected = [
+        {
+            "name": "Baptême de parapente",
+            "tags": ["Parapente"],
+            "reason": "already_owned_or_practiced",
+            "comment": "Alice pratique déjà le parapente en solo",
+        },
+        {
+            "name": "Montre de luxe",
+            "tags": ["Mode"],
+            "reason": "too_expensive",
+        },
+    ]
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=2,
+        language="fr",
+        rejected_directions=rejected,
+    )
+
+    clean_rejected = payload["rejected_directions"]
+    assert len(clean_rejected) == 2
+    assert clean_rejected[0]["name"] == "Baptême de parapente"
+    assert clean_rejected[0]["tags"] == ["Parapente"]
+    assert clean_rejected[0]["reason"] == "already_owned_or_practiced"
+    # Comment is scrubbed of Alice -> [name]
+    assert "Alice" not in clean_rejected[0]["comment"]
+    assert clean_rejected[0]["comment"] == "[name] pratique déjà le parapente en solo"
+
+    assert clean_rejected[1]["reason"] == "too_expensive"
+    assert "comment" not in clean_rejected[1]
+
+
+@pytest.mark.django_db
 def test_payload_includes_occasion_and_budget_steering(user):
     person = Person.objects.create(first_name="Lucas")
     user.profile.currency = "EUR"

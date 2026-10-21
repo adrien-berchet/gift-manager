@@ -635,6 +635,175 @@ def test_dismiss_ai_suggestion(client, user, monkeypatch):
     assert sugg.state == GiftSuggestion.State.DISMISSED
 
 
+def test_dismiss_with_reason_and_comment(client, user, monkeypatch):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Paragliding Tandem",
+                "description": "Flight experience",
+                "reason": "Air sport",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.post(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Paragliding Tandem")
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    res = client.post(
+        dismiss_url,
+        {
+            "suggestion": str(sugg.suggestion_id),
+            "reason": "already_owned_or_practiced",
+            "comment": "Already a licensed solo pilot",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.DISMISSED
+    assert sugg.dismiss_reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED
+    assert sugg.dismiss_comment == "Already a licensed solo pilot"
+
+
+def test_dismiss_with_invalid_reason_defaults_to_empty(client, user, monkeypatch):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Book",
+                "description": "A novel",
+                "reason": "Reading",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.post(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Book")
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    res = client.post(
+        dismiss_url,
+        {
+            "suggestion": str(sugg.suggestion_id),
+            "reason": "completely_invalid_reason",
+            "comment": "",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.DISMISSED
+    assert sugg.dismiss_reason == ""
+    assert sugg.dismiss_comment == ""
+
+
+def test_dismiss_with_comment_only_infers_custom_reason(client, user, monkeypatch):
+    """Pressing Enter in the comment input submits comment with reason='', inferring custom."""
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Board Game",
+                "description": "Fun game",
+                "reason": "Social",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.post(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Board Game")
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    res = client.post(
+        dismiss_url,
+        {
+            "suggestion": str(sugg.suggestion_id),
+            "reason": "",
+            "comment": "Already plays this with friends",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.DISMISSED
+    assert sugg.dismiss_reason == GiftSuggestion.DismissReason.CUSTOM
+    assert sugg.dismiss_comment == "Already plays this with friends"
+
+
+def test_dismiss_with_custom_reason_and_empty_comment_resets_to_empty(client, user, monkeypatch):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory()
+    _share(user, person)
+
+    canned = {
+        "ideas": [
+            {
+                "name": "Tea Set",
+                "description": "Ceramic set",
+                "reason": "Tea lover",
+                "tags": [],
+            }
+        ]
+    }
+    fake = FakeAIClient(canned_responses=[canned])
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", lambda: fake)
+
+    ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
+    client.post(ideas_url)
+
+    sugg = GiftSuggestion.objects.get(user=user, name="Tea Set")
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+
+    res = client.post(
+        dismiss_url,
+        {
+            "suggestion": str(sugg.suggestion_id),
+            "reason": "custom",
+            "comment": "   ",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+
+    sugg.refresh_from_db()
+    assert sugg.state == GiftSuggestion.State.DISMISSED
+    assert sugg.dismiss_reason == ""
+    assert sugg.dismiss_comment == ""
+
+
 def test_post_with_gift_and_suggestion_is_400(client, user):
     person = PersonFactory()
     _share(user, person)
@@ -801,6 +970,8 @@ def test_person_suggestions_dismissed_lists_items(client, user):
         normalized_name="stellaris",
         source=GiftSuggestion.Source.CATALOGUE,
         state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        dismiss_comment="Already has one",
         reason="Matches tag Sci-Fi",
     )
 
@@ -824,6 +995,8 @@ def test_person_suggestions_dismissed_lists_items(client, user):
     assert "data-dismissed-item" in content
     assert "Stellaris" in content
     assert "From your gifts" in content
+    assert "Already owned or practiced" in content
+    assert "Already has one" in content
     assert "Solar Telescope" in content
     assert "New idea" in content
     assert "Great for daytime astronomy" in content

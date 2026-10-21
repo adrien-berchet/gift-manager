@@ -135,3 +135,25 @@ def test_generation_requires_one_recipient(user):
     # One group works
     gen_group = GiftSuggestionGeneration.objects.create(user=user, group=group)
     assert gen_group.pk is not None
+
+
+def test_dismiss_reason_choices_and_defaults(user):
+    person = PersonFactory()
+    sugg = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        source=GiftSuggestion.Source.AI,
+        name="Telescope",
+        normalized_name="telescope",
+    )
+    assert sugg.dismiss_reason == ""
+    assert sugg.dismiss_comment == ""
+
+    sugg.dismiss_reason = GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED
+    sugg.dismiss_comment = "Owns high-end reflector"
+    sugg.save()
+
+    sugg.refresh_from_db()
+    assert sugg.dismiss_reason == "already_owned_or_practiced"
+    assert sugg.dismiss_comment == "Owns high-end reflector"
+    assert sugg.get_dismiss_reason_display() == "Already owned or practiced"

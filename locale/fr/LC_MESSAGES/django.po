@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 14:18+0200\n"
+"POT-Creation-Date: 2026-10-21 15:38+0200\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -744,7 +744,7 @@ msgid "Gifts"
 msgstr "Cadeaux"
 
 #: gift_manager/models.py:1110 gift_manager/models.py:1144
-#: gift_manager/suggestions/occasions.py:34
+#: gift_manager/suggestions/occasions.py:35
 #: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:13
 #: gift_manager/templates/gift_manager/includes/forms/person_fields.html:7
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:47
@@ -875,14 +875,35 @@ msgid "Accepted"
 msgstr "Accepté"
 
 #: gift_manager/models.py:1649
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:38
 msgid "Dismissed"
 msgstr "Rejeté"
 
-#: gift_manager/models.py:1686
+#: gift_manager/models.py:1654
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:78
+msgid "Already owned or practiced"
+msgstr "Déjà possédé ou pratiqué"
+
+#: gift_manager/models.py:1656
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:83
+msgid "Not their taste"
+msgstr "Pas à son goût"
+
+#: gift_manager/models.py:1657
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:88
+msgid "Too expensive"
+msgstr "Trop cher"
+
+#: gift_manager/models.py:1658
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:93
+msgid "Other reason"
+msgstr "Autre motif"
+
+#: gift_manager/models.py:1702
 msgid "Gift suggestion"
 msgstr "Suggestion de cadeau"
 
-#: gift_manager/models.py:1687
+#: gift_manager/models.py:1703
 msgid "Gift suggestions"
 msgstr "Suggestions de cadeaux"
 
@@ -992,41 +1013,41 @@ msgstr ""
 "Ce projet de cadeau est partagé avec des personnes qui ne peuvent pas voir "
 "ce choix, et vous n'êtes pas autorisé à le partager avec elles."
 
-#: gift_manager/suggestions/catalogue.py:45
+#: gift_manager/suggestions/catalogue.py:46
 #, python-format
 msgid "Shares tags with gifts rated %(rating)s/5: %(tags)s"
 msgstr "Partage des tags avec des cadeaux notés %(rating)s/5 : %(tags)s"
 
-#: gift_manager/suggestions/catalogue.py:50
+#: gift_manager/suggestions/catalogue.py:51
 #, python-format
 msgid "Shares tags with past favourites: %(tags)s"
 msgstr "Partage des tags avec des favoris passés : %(tags)s"
 
-#: gift_manager/suggestions/catalogue.py:52
+#: gift_manager/suggestions/catalogue.py:53
 #, python-format
 msgid "Shares tags with gifts liked by related recipients: %(tags)s"
 msgstr ""
 "Partage des tags avec des cadeaux appréciés par des destinataires proches : "
 "%(tags)s"
 
-#: gift_manager/suggestions/catalogue.py:56
+#: gift_manager/suggestions/catalogue.py:57
 #, python-format
 msgid "Matches their interests: %(tags)s"
 msgstr "Correspond à leurs centres d'intérêt : %(tags)s"
 
-#: gift_manager/suggestions/catalogue.py:58
+#: gift_manager/suggestions/catalogue.py:59
 #, python-format
 msgid "Rated %(rating)s/5 on average"
 msgstr "Noté %(rating)s/5 en moyenne"
 
-#: gift_manager/suggestions/service.py:399
-#: gift_manager/suggestions/service.py:414
-#: gift_manager/suggestions/service.py:436
-#: gift_manager/suggestions/service.py:472
-#: gift_manager/suggestions/service.py:475
+#: gift_manager/suggestions/service.py:404
+#: gift_manager/suggestions/service.py:419
+#: gift_manager/suggestions/service.py:445
+#: gift_manager/suggestions/service.py:481
 #: gift_manager/suggestions/service.py:484
-#: gift_manager/suggestions/service.py:528
-#: gift_manager/suggestions/service.py:531
+#: gift_manager/suggestions/service.py:493
+#: gift_manager/suggestions/service.py:539
+#: gift_manager/suggestions/service.py:542
 msgid "Suggestion not found."
 msgstr "Suggestion introuvable."
 
@@ -2766,9 +2787,30 @@ msgstr "Nouvelle idée"
 msgid "Add as idea"
 msgstr "Ajouter comme idée"
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:63
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:62
+msgid "Dismiss options"
+msgstr "Options pour ignorer"
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:64
 msgid "Dismiss"
 msgstr "Ignorer"
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:71
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:72
+msgid "Dismiss with reason"
+msgstr "Rejeter avec un motif"
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:75
+msgid "Reason (optional)"
+msgstr "Motif (facultatif)"
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:98
+msgid "Short note…"
+msgstr "Note courte…"
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html:101
+msgid "Submit with note"
+msgstr "Valider avec la note"
 
 #: gift_manager/templates/gift_manager/includes/gift_suggestions_ai_block.html:5
 #: gift_manager/templates/gift_manager/includes/gift_suggestions_ai_block.html:18
@@ -2862,15 +2904,15 @@ msgstr ""
 "Vous pouvez les restaurer dans vos suggestions actives, ou les supprimer "
 "définitivement pour permettre à l'IA de les proposer à nouveau."
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:61
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:69
 msgid "Restore to active suggestions"
 msgstr "Restaurer dans les suggestions actives"
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:62
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:70
 msgid "Restore"
 msgstr "Restaurer"
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:71
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:79
 msgid ""
 "Are you sure you want to permanently delete this suggestion? The AI will be "
 "allowed to suggest it again."
@@ -2878,17 +2920,17 @@ msgstr ""
 "Êtes-vous sûr de vouloir supprimer définitivement cette suggestion ? L'IA "
 "sera autorisée à la proposer à nouveau."
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:82
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:90
 msgid "Completely remove from history so the AI can suggest it again"
 msgstr ""
 "Supprimer définitivement de l'historique afin que l'IA puisse à nouveau le "
 "proposer"
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:83
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:91
 msgid "Delete permanently"
 msgstr "Supprimer définitivement"
 
-#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:93
+#: gift_manager/templates/gift_manager/includes/gift_suggestions_dismissed_panel.html:101
 msgid "No dismissed suggestions for this recipient."
 msgstr "Aucune suggestion refusée pour ce destinataire."
 
@@ -4617,7 +4659,7 @@ msgid "Invalid object selection."
 msgstr "Sélection d'éléments invalide."
 
 #: gift_manager/views/suggestions.py:195 gift_manager/views/suggestions.py:234
-#: gift_manager/views/suggestions.py:278 gift_manager/views/suggestions.py:311
+#: gift_manager/views/suggestions.py:283 gift_manager/views/suggestions.py:316
 msgid "Provide either gift or suggestion."
 msgstr "Fournissez soit un cadeau soit une suggestion."
 

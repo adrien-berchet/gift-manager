@@ -283,3 +283,126 @@ def test_dismissed_gift_never_returns(user, share, status):
     other_service = GiftSuggestionService(other_user, person)
     other_page = other_service.catalogue_page(offset=0)
     assert gift1.pk in [c.gift.pk for c in other_page.candidates]
+
+
+def test_dismiss_gift_persists_reason_and_comment(user, share):
+    tag = GiftTagFactory(name="Tag")
+    share(user, tag, level=PermissionLevel.VIEWER)
+
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    gift = GiftFactory(name="Paragliding Flight", tags=[tag])
+    share(user, gift, level=PermissionLevel.VIEWER)
+
+    service = GiftSuggestionService(user, person)
+    service.dismiss_gift(
+        gift.gift_id,
+        reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        comment="Already practices solo",
+    )
+
+    row = GiftSuggestion.objects.get(user=user, person=person, gift=gift)
+    assert row.state == GiftSuggestion.State.DISMISSED
+    assert row.dismiss_reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED
+    assert row.dismiss_comment == "Already practices solo"
+    assert set(row.tags.all()) == {tag}
+
+
+def test_dismiss_and_restore_ai_suggestion_with_reason(user, share):
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    suggestion = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Climbing Harness",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.PENDING,
+    )
+
+    service = GiftSuggestionService(user, person)
+    service.dismiss_suggestion(
+        suggestion.suggestion_id,
+        reason=GiftSuggestion.DismissReason.TOO_EXPENSIVE,
+        comment="Prefer budget under 50",
+    )
+
+    suggestion.refresh_from_db()
+    assert suggestion.state == GiftSuggestion.State.DISMISSED
+    assert suggestion.dismiss_reason == GiftSuggestion.DismissReason.TOO_EXPENSIVE
+    assert suggestion.dismiss_comment == "Prefer budget under 50"
+
+    # Restoring clears dismiss_reason and dismiss_comment
+    service.restore_suggestion(suggestion.suggestion_id)
+    suggestion.refresh_from_db()
+    assert suggestion.state == GiftSuggestion.State.PENDING
+    assert suggestion.dismiss_reason == ""
+    assert suggestion.dismiss_comment == ""
+
+
+def test_normalize_dismiss_input():
+    from gift_manager.suggestions.service import normalize_dismiss_input
+
+    # Standard valid reason
+    r, c = normalize_dismiss_input("dislikes", "Not my style")
+    assert r == "dislikes"
+    assert c == "Not my style"
+
+    # Comment only (e.g. Enter key pressed in input) infers CUSTOM
+    r, c = normalize_dismiss_input("", "Already has this exact model")
+    assert r == GiftSuggestion.DismissReason.CUSTOM
+    assert c == "Already has this exact model"
+
+    # CUSTOM reason with empty comment resets to empty
+    r, c = normalize_dismiss_input("custom", "   ")
+    assert r == ""
+    assert c == ""
+
+    # Invalid reason with comment infers CUSTOM
+    r, c = normalize_dismiss_input("unknown_reason", "Some note")
+    assert r == GiftSuggestion.DismissReason.CUSTOM
+    assert c == "Some note"
+
+    # Invalid reason without comment resets to empty
+    r, c = normalize_dismiss_input("unknown_reason", "")
+    assert r == ""
+    assert c == ""
+
+    # Comment truncated to DISMISS_COMMENT_MAX_LENGTH (120)
+    long_note = "A" * 200
+    _, c = normalize_dismiss_input("dislikes", long_note)
+    assert len(c) == GiftSuggestion.DISMISS_COMMENT_MAX_LENGTH
+
+
+def test_dismiss_suggestion_updates_updated_at(user, share):
+    import datetime
+
+    from django.utils import timezone
+
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    suggestion = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        name="Climbing Chalk",
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.PENDING,
+    )
+    # Artificially set updated_at in the past
+    past_time = timezone.now() - datetime.timedelta(days=10)
+    GiftSuggestion.objects.filter(pk=suggestion.pk).update(updated_at=past_time)
+    suggestion.refresh_from_db()
+    assert suggestion.updated_at == past_time
+
+    service = GiftSuggestionService(user, person)
+    service.dismiss_suggestion(
+        suggestion.suggestion_id,
+        reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        comment="Has lots of chalk",
+    )
+
+    suggestion.refresh_from_db()
+    assert suggestion.state == GiftSuggestion.State.DISMISSED
+    assert suggestion.updated_at > past_time

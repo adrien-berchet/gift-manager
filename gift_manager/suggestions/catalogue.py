@@ -3,12 +3,14 @@
 from collections import defaultdict
 
 from django.db.models import Prefetch
+from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.models import Gift
 from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
+from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
@@ -61,6 +63,7 @@ def describe_reason(reason: SuggestionReason | str, recipient=None) -> str:  # n
 
 def _build_profile(
     history,
+    dismissed_tag_signals: dict[int, float] | None = None,
 ) -> tuple[dict[int, float], dict[int, float], dict[int, float], dict[int, float]]:
     profile: dict[int, float] = defaultdict(float)
     direct_contrib: dict[int, float] = defaultdict(float)
@@ -83,7 +86,76 @@ def _build_profile(
         profile[tid] += INTEREST_SIGNAL
         interest_contrib[tid] += INTEREST_SIGNAL
 
+    if dismissed_tag_signals:
+        for tid, sig in dismissed_tag_signals.items():
+            profile[tid] += sig
+            if sig > 0:
+                interest_contrib[tid] += sig
+
     return profile, direct_contrib, related_contrib, interest_contrib
+
+
+def _compute_dismissed_signals(
+    context: SuggestionContext,
+    visible_tag_ids: set[int],
+    ancestors: dict[int, frozenset[int]],
+) -> dict[int, float]:
+    rec_filter = (
+        {"person": context.recipient}
+        if isinstance(context.recipient, Person)
+        else {"group": context.recipient}
+    )
+    accessible_gifts = Gift.objects.accessible_by(context.user)
+    dismissed = (
+        GiftSuggestion.objects.filter(
+            user=context.user,
+            state=GiftSuggestion.State.DISMISSED,
+            **rec_filter,
+        )
+        .filter(Q(gift__isnull=True) | Q(gift__in=accessible_gifts))
+        .exclude(dismiss_reason="")
+        .select_related("gift")
+        .prefetch_related(
+            Prefetch("tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
+            Prefetch("gift__tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
+        )
+    )
+    signals: dict[int, float] = defaultdict(float)
+    for s in dismissed:
+        if s.gift_id and s.gift:
+            tag_ids = {t.pk for t in s.gift.tags.all()}
+        else:
+            tag_ids = {t.pk for t in s.tags.all()}
+
+        if not tag_ids:
+            continue
+
+        if s.dismiss_reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED:
+            sig = INTEREST_SIGNAL
+            # Positive interest naturally expands upward to ancestor categories
+            target_tag_ids = frozenset.union(
+                *(ancestors.get(tid, frozenset({tid})) for tid in tag_ids),
+                frozenset(),
+            )
+        elif s.dismiss_reason == GiftSuggestion.DismissReason.DISLIKES:
+            sig = -INTEREST_SIGNAL
+            # Negative feedback must NOT propagate upward to ancestors (which would poison
+            # sibling tags). Furthermore, if multiple tags are on the item, isolate leaf tags:
+            # exclude any tag that is an ancestor of another tag on this item (e.g. drop 'Books'
+            # if 'Horror' is present).
+            ancestor_ids_on_gift = {
+                a
+                for tid in tag_ids
+                for a in ancestors.get(tid, frozenset({tid}))
+                if a != tid and a in tag_ids
+            }
+            target_tag_ids = frozenset(tag_ids - ancestor_ids_on_gift) or frozenset(tag_ids)
+        else:
+            continue
+
+        for tid in target_tag_ids:
+            signals[tid] += sig
+    return signals
 
 
 def _compute_popularity(user) -> dict[int, float]:
@@ -170,7 +242,10 @@ class CatalogueStrategy:
         visible_tag_ids = VisibleMetadata(user).tag_ids
         ancestors = history.ancestors
 
-        profile, direct_contrib, related_contrib, interest_contrib = _build_profile(history)
+        dismissed_signals = _compute_dismissed_signals(context, visible_tag_ids, ancestors)
+        profile, direct_contrib, related_contrib, interest_contrib = _build_profile(
+            history, dismissed_signals
+        )
         has_positive_tag = any(score > 0 for score in profile.values())
 
         gifts_qs = (

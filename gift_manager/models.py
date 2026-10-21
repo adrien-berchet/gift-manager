@@ -1648,6 +1648,17 @@ class GiftSuggestion(models.Model):
         ACCEPTED = "accepted", gettext_lazy("Accepted")
         DISMISSED = "dismissed", gettext_lazy("Dismissed")
 
+    class DismissReason(models.TextChoices):
+        ALREADY_OWNED_OR_PRACTICED = (
+            "already_owned_or_practiced",
+            gettext_lazy("Already owned or practiced"),
+        )
+        DISLIKES = "dislikes", gettext_lazy("Not their taste")
+        TOO_EXPENSIVE = "too_expensive", gettext_lazy("Too expensive")
+        CUSTOM = "custom", gettext_lazy("Other reason")
+
+    DISMISS_COMMENT_MAX_LENGTH = 120
+
     suggestion_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="gift_suggestions")
     person = models.ForeignKey(
@@ -1662,6 +1673,15 @@ class GiftSuggestion(models.Model):
     )
     source = models.CharField(max_length=10, choices=Source.choices)
     state = models.CharField(max_length=10, choices=State.choices, default=State.PENDING)
+    dismiss_reason = models.CharField(
+        max_length=40,
+        choices=DismissReason.choices,
+        blank=True,
+        default="",
+    )
+    dismiss_comment = models.CharField(
+        max_length=DISMISS_COMMENT_MAX_LENGTH, blank=True, default=""
+    )
     gift = models.ForeignKey(
         Gift, on_delete=models.CASCADE, null=True, blank=True, related_name="suggestions"
     )

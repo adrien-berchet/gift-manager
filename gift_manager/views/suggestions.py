@@ -23,6 +23,7 @@ from gift_manager.suggestions.occasions import derive_default_occasion
 from gift_manager.suggestions.occasions import get_upcoming_occasions
 from gift_manager.suggestions.service import AI_BATCH_SIZE
 from gift_manager.suggestions.service import GiftSuggestionService
+from gift_manager.suggestions.service import normalize_dismiss_input
 from gift_manager.views.base import HTMXResponseMixin
 
 SUGGESTIONS_SECTION_TEMPLATE = "gift_manager/includes/gift_suggestions_section.html"
@@ -234,19 +235,22 @@ def _handle_dismiss(request, recipient: Person | PersonGroup) -> HttpResponse:
         return HttpResponseBadRequest(_("Provide either gift or suggestion."))
 
     service = GiftSuggestionService(request.user, recipient)
+    reason, comment = normalize_dismiss_input(
+        request.POST.get("reason", ""), request.POST.get("comment", "")
+    )
 
     if gift_raw:
         try:
             gift_uuid = uuid.UUID(gift_raw)
         except (ValueError, TypeError):
             raise Http404 from None
-        service.dismiss_gift(gift_uuid)
+        service.dismiss_gift(gift_uuid, reason=reason, comment=comment)
     else:
         try:
             sugg_uuid = uuid.UUID(sugg_raw)
         except (ValueError, TypeError):
             raise Http404 from None
-        service.dismiss_suggestion(sugg_uuid)
+        service.dismiss_suggestion(sugg_uuid, reason=reason, comment=comment)
 
     is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
     if not is_htmx:

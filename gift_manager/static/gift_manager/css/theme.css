@@ -3620,6 +3620,10 @@ h4, h5, h6 {
     min-width: 110px;
 }
 
+.gift-suggestion-dropdown-menu {
+    min-width: 250px;
+}
+
 @media (max-width: 360px) {
     .gift-suggestion-actions {
         min-width: 95px;
