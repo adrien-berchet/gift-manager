@@ -25,6 +25,18 @@
     {% include "gift_manager/includes/forms/errors.html" %}
     {% rating_input form.reaction_rating %}
     {% include "gift_manager/includes/forms/field.html" with field=form.reaction_note %}
+    {% if can_promote_to_profile %}
+      <div class="form-check mb-3">
+        <input class="form-check-input"
+               type="checkbox"
+               name="promote_to_profile"
+               value="1"
+               id="reaction-promote-to-profile">
+        <label class="form-check-label small text-muted user-select-none" for="reaction-promote-to-profile">
+          {% trans "Remember in recipient's profile (notes & interests)" %}
+        </label>
+      </div>
+    {% endif %}
   </div>
 
   <div class="{% if full_page %}page-form-actions{% else %}panel-form-actions{% endif %}">

@@ -11,6 +11,7 @@ from django.db.models import QuerySet
 from django.utils import formats
 from django.utils import timezone
 from django.utils.dates import MONTHS
+from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
 
 from .email_encoding import decode_email
@@ -24,6 +25,9 @@ from .models import Person
 from .models import PersonGroup
 from .models import Profile
 from .models import Relation
+from .person_profile import append_person_provenance_note
+from .person_profile import promote_tags_to_person_interests
+from .person_profile import promotion_target
 from .plan_coordination import can_be_surprise
 from .plan_coordination import can_be_surprise_for_owners
 from .plan_coordination import default_surprise_for
@@ -31,6 +35,7 @@ from .services import PermissionService
 from .sharing_service import RelationExposureDenied
 from .sharing_service import SharingService
 from .statuses import can_rate_status
+from .statuses import is_abandoned_status
 
 
 class BaseFormMixin:
@@ -1186,6 +1191,22 @@ class RelationForm(BaseRelationScopedForm):
         self.fields["status"].widget.attrs["data-rateable-statuses"] = ",".join(
             sorted(self.rateable_status_ids)
         )
+        target = (
+            promotion_target(self.user, self.instance)
+            if (self.instance and self.instance.pk)
+            else None
+        )
+        if target:
+            self.fields["promote_notes_to_profile"] = forms.BooleanField(
+                required=False,
+                label=gettext_lazy("Add reaction note to recipient's profile notes"),
+                widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            )
+            self.fields["promote_tags_to_profile"] = forms.BooleanField(
+                required=False,
+                label=gettext_lazy("Add gift's tags to recipient's interests"),
+                widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            )
 
     @property
     def reaction_section_visible(self) -> bool:
@@ -1209,6 +1230,34 @@ class RelationForm(BaseRelationScopedForm):
         for name in REACTION_FIELD_NAMES:
             if not rating_applies or _reaction_field_omitted(self, name):
                 cleaned_data.pop(name, None)
+
+    def save(self, *, commit=True):
+        instance = super().save(commit=commit)
+        if commit:
+            target = promotion_target(self.user, instance)
+            if target:
+                if self.cleaned_data.get("promote_notes_to_profile"):
+                    reaction_note = (instance.reaction_note or "").strip()
+                    if reaction_note:
+                        source_label = (
+                            gettext("Abandoned gift plan")
+                            if is_abandoned_status(instance.status)
+                            else gettext("Gift plan")
+                        )
+                        item_name = instance.gift.name if instance.gift else ""
+                        append_person_provenance_note(
+                            target,
+                            source_label=source_label,
+                            item_name=item_name,
+                            text=reaction_note,
+                        )
+                if self.cleaned_data.get("promote_tags_to_profile") and instance.gift:
+                    promote_tags_to_person_interests(
+                        target,
+                        instance.gift.tags.all(),
+                        self.user,
+                    )
+        return instance
 
 
 class ReminderPreferencesForm(forms.ModelForm):

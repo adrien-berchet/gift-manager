@@ -10,7 +10,10 @@ from gift_manager.forms import RelationForm
 from gift_manager.models import PermissionLevel
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.tests.factories import GiftFactory
+from gift_manager.tests.factories import GiftTagFactory
 from gift_manager.tests.factories import GroupRelationFactory
+from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
 
@@ -764,3 +767,145 @@ class TestReactionOnCards:
 
         assert "data-rating-inline" not in html
         assert 'aria-label="Edit reaction"' not in html
+
+
+@pytest.mark.django_db
+class TestRelationReactionProfilePromotion:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        self.user = UserFactory()
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def test_reaction_get_includes_promote_checkbox_when_editor_and_not_surprise(self):
+        person = PersonFactory()
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+        gift = GiftFactory()
+        create_or_update_permission(self.user, gift, permission_level=PermissionLevel.EDITOR)
+        relation = RelationFactory(
+            person=person, gift=gift, status=_status("Given"), is_surprise=False
+        )
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        res = self.client.get(_reaction_url(relation), HTTP_HX_REQUEST="true")
+        assert res.status_code == 200
+        assert 'name="promote_to_profile"' in res.content.decode()
+
+    def test_reaction_get_omits_promote_checkbox_when_surprise(self):
+        person = PersonFactory()
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+        gift = GiftFactory()
+        create_or_update_permission(self.user, gift, permission_level=PermissionLevel.EDITOR)
+        relation = RelationFactory(
+            person=person, gift=gift, status=_status("Given"), is_surprise=True
+        )
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        res = self.client.get(_reaction_url(relation), HTTP_HX_REQUEST="true")
+        assert res.status_code == 200
+        assert 'name="promote_to_profile"' not in res.content.decode()
+
+    def test_reaction_get_omits_promote_checkbox_when_group_relation(self):
+        relation = GroupRelationFactory(status=_status("Given"))
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        res = self.client.get(_reaction_url(relation), HTTP_HX_REQUEST="true")
+        assert res.status_code == 200
+        assert 'name="promote_to_profile"' not in res.content.decode()
+
+    def test_reaction_post_with_promote_appends_note_and_promotes_tags_for_rating_4_plus(self):
+        tag = GiftTagFactory(name="Ceramics")
+        create_or_update_permission(self.user, tag, permission_level=PermissionLevel.VIEWER)
+
+        person = PersonFactory(notes="")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+
+        gift = GiftFactory(name="Pottery Wheel")
+        gift.tags.add(tag)
+        create_or_update_permission(self.user, gift, permission_level=PermissionLevel.EDITOR)
+
+        relation = RelationFactory(
+            person=person, gift=gift, status=_status("Given"), is_surprise=False
+        )
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        res = self.client.post(
+            _reaction_url(relation),
+            {
+                "reaction_rating": 5,
+                "reaction_note": "A adoré tourner des bols",
+                "promote_to_profile": "1",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        assert res.status_code == 200
+        person.refresh_from_db()
+        assert "Gift plan: Pottery Wheel]: A adoré tourner des bols" in person.notes
+        assert person.interests.filter(name="Ceramics").exists()
+
+    def test_reaction_post_with_promote_skips_tags_when_abandoned_plan(self):
+        tag = GiftTagFactory(name="Expensive Watch")
+        create_or_update_permission(self.user, tag, permission_level=PermissionLevel.VIEWER)
+
+        person = PersonFactory(notes="")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+
+        gift = GiftFactory(name="Chronograph")
+        gift.tags.add(tag)
+        create_or_update_permission(self.user, gift, permission_level=PermissionLevel.EDITOR)
+
+        relation = RelationFactory(
+            person=person, gift=gift, status=_status("Abandoned"), is_surprise=False
+        )
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        res = self.client.post(
+            _reaction_url(relation),
+            {
+                "reaction_rating": 4,
+                "reaction_note": "Budget trop élevé pour le moment",
+                "promote_to_profile": "1",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        assert res.status_code == 200
+        person.refresh_from_db()
+        assert "Abandoned gift plan: Chronograph]: Budget trop élevé pour le moment" in person.notes
+        # Abandoned plans must NOT promote tags to interests
+        assert not person.interests.filter(name="Expensive Watch").exists()
+
+    def test_relation_form_promotes_notes_and_tags_on_save(self):
+        tag = GiftTagFactory(name="Gardening")
+        create_or_update_permission(self.user, tag, permission_level=PermissionLevel.VIEWER)
+
+        person = PersonFactory(notes="")
+        create_or_update_permission(self.user, person, permission_level=PermissionLevel.EDITOR)
+
+        gift = GiftFactory(name="Pruning Shears")
+        gift.tags.add(tag)
+        create_or_update_permission(self.user, gift, permission_level=PermissionLevel.EDITOR)
+
+        relation = RelationFactory(
+            person=person, gift=gift, status=_status("Given"), is_surprise=False
+        )
+        create_or_update_permission(self.user, relation, permission_level=PermissionLevel.EDITOR)
+
+        form = RelationForm(
+            data={
+                "recipient": relation.recipient_key,
+                "gift": gift.pk,
+                "status": relation.status.pk,
+                "reaction_rating": 5,
+                "reaction_note": "Parfait pour tailler les rosiers",
+                "promote_notes_to_profile": True,
+                "promote_tags_to_profile": True,
+            },
+            instance=relation,
+            user=self.user,
+        )
+        assert form.is_valid(), form.errors
+        form.save()
+
+        person.refresh_from_db()
+        assert "Gift plan: Pruning Shears]: Parfait pour tailler les rosiers" in person.notes
+        assert person.interests.filter(name="Gardening").exists()

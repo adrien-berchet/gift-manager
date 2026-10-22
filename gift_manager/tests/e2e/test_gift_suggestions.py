@@ -468,3 +468,54 @@ class TestGiftSuggestions(BaseE2ETest):
 
         # Reset viewport
         page.set_viewport_size({"width": 1920, "height": 1080})
+
+    def test_dismiss_suggestion_with_promote_to_profile(self, page: Page, live_server, test_user):
+        """Dismissing a suggestion with 'promote_to_profile' checked adds tags and note to person."""
+        tag = GiftTagFactory(name="Robotics")
+        person = PersonFactory(first_name="Ada", family_name="Lovelace", notes="")
+        past_gift = GiftFactory(name="Past Robot", tags=[tag])
+        given_plan = RelationFactory(
+            person=person,
+            gift=past_gift,
+            status=_status("Given"),
+            reaction_rating=5,
+        )
+        kit = GiftFactory(name="Arduino Starter Kit", tags=[tag])
+        _share(test_user, tag, person, past_gift, given_plan, kit)
+
+        self.login_as_user(page, live_server, test_user)
+        page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        kit_item = suggestions.locator("[data-gift-suggestion]").filter(
+            has_text="Arduino Starter Kit"
+        )
+        expect(kit_item).to_be_visible()
+
+        # Open dropdown
+        dropdown_toggle = kit_item.locator(".dropdown-toggle")
+        expect(dropdown_toggle).to_be_visible()
+        dropdown_toggle.click()
+
+        dropdown_menu = kit_item.locator(".dropdown-menu")
+        expect(dropdown_menu).to_be_visible()
+
+        # Check promote_to_profile checkbox
+        promote_checkbox = dropdown_menu.locator('input[name="promote_to_profile"]')
+        expect(promote_checkbox).to_be_visible()
+        promote_checkbox.check()
+
+        # Click "Already owned or practiced"
+        owned_btn = dropdown_menu.locator('button[value="already_owned_or_practiced"]')
+        expect(owned_btn).to_be_visible()
+        owned_btn.click()
+
+        # Item should be removed from DOM
+        expect(kit_item).not_to_be_attached(timeout=self.ajax_timeout)
+
+        # Verify DB changes
+        person.refresh_from_db()
+        assert person.interests.filter(name="Robotics").exists()
+        assert "Suggestion: Arduino Starter Kit" in person.notes

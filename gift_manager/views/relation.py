@@ -70,6 +70,9 @@ from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.person_profile import append_person_provenance_note
+from gift_manager.person_profile import promote_tags_to_person_interests
+from gift_manager.person_profile import promotion_target
 from gift_manager.plan_coordination import can_be_surprise_for_owners
 from gift_manager.plan_coordination import default_surprise_for
 from gift_manager.plan_repeat import DUPLICATE_OF_PARAM
@@ -991,6 +994,7 @@ def _reaction_form_response(request, relation, form, *, status=200) -> HttpRespo
             "cancel_url": relation.get_absolute_url(),
             "full_page": not is_htmx,
             "form_type": "relation-reaction",
+            "can_promote_to_profile": promotion_target(request.user, relation) is not None,
         },
         status=status,
     )
@@ -1074,6 +1078,36 @@ def relation_reaction(request, pk):
         return response
 
     form.save()
+
+    if request.POST.get("promote_to_profile") == "1":
+        target_person = promotion_target(request.user, relation)
+        if target_person:
+            reaction_note = (relation.reaction_note or "").strip()
+            item_name = relation.gift.name if relation.gift else ""
+            if reaction_note:
+                source_label = (
+                    gettext("Abandoned gift plan")
+                    if is_abandoned_status(relation.status)
+                    else gettext("Gift plan")
+                )
+                append_person_provenance_note(
+                    target_person,
+                    source_label=source_label,
+                    item_name=item_name,
+                    text=reaction_note,
+                )
+            if (
+                relation.gift
+                and relation.reaction_rating
+                and relation.reaction_rating >= 4
+                and not is_abandoned_status(relation.status)
+            ):
+                promote_tags_to_person_interests(
+                    target_person,
+                    relation.gift.tags.all(),
+                    request.user,
+                )
+
     if request.headers.get("HX-Request") != "true":
         return redirect(relation.get_absolute_url())
     extra_events = () if is_inline else ("offcanvas:close",)

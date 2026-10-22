@@ -256,3 +256,125 @@ def test_query_count_is_bounded(user, share, status, django_assert_max_num_queri
     # Max 6 queries:
     with django_assert_max_num_queries(6):
         build_recipient_history(user, person)
+
+
+def test_history_item_carries_direct_tag_ids_without_ancestors(user, share, status):
+    parent_tag = GiftTagFactory(name="Toys")
+    child_tag = GiftTagFactory(name="Lego")
+    child_tag.parent_tags.add(parent_tag)
+
+    share(user, parent_tag, level=PermissionLevel.VIEWER)
+    share(user, child_tag, level=PermissionLevel.VIEWER)
+
+    person = PersonFactory()
+    gift = GiftFactory()
+    gift.tags.add(child_tag)
+    plan = RelationFactory(person=person, gift=gift, status=status("Given"))
+
+    for obj in (person, gift, plan):
+        share(user, obj, level=PermissionLevel.VIEWER)
+
+    history = build_recipient_history(user, person)
+    item = history.items[0]
+
+    assert item.tag_ids == frozenset({child_tag.pk, parent_tag.pk})
+    assert item.direct_tag_ids == frozenset({child_tag.pk})
+
+
+def test_build_preference_profile_aggregates_three_buckets_with_direct_counts(user, share, status):
+    from gift_manager.models import GiftSuggestion
+    from gift_manager.suggestions.history import build_preference_profile
+
+    robotics = GiftTagFactory(name="Robotics")
+    scifi = GiftTagFactory(name="Sci-Fi")
+    horror = GiftTagFactory(name="Horror")
+
+    for tag in (robotics, scifi, horror):
+        share(user, tag, level=PermissionLevel.VIEWER)
+
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    # 2 plans rated 5★ with Robotics
+    for i in range(2):
+        g = GiftFactory(name=f"Robo {i}")
+        g.tags.add(robotics)
+        p = RelationFactory(
+            person=person, gift=g, status=status("Given"), reaction_rating=5, reaction_note="Great!"
+        )
+        share(user, g, level=PermissionLevel.VIEWER)
+        share(user, p, level=PermissionLevel.VIEWER)
+
+    # 1 plan rated 1★ with Horror
+    g_horror = GiftFactory(name="Spooky Book")
+    g_horror.tags.add(horror)
+    p_horror = RelationFactory(
+        person=person,
+        gift=g_horror,
+        status=status("Given"),
+        reaction_rating=1,
+        reaction_note="Hated it",
+    )
+    share(user, g_horror, level=PermissionLevel.VIEWER)
+    share(user, p_horror, level=PermissionLevel.VIEWER)
+
+    # Dismissed suggestion with already_owned_or_practiced (Sci-Fi)
+    sugg_owned = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+        name="Sci-Fi Novel",
+    )
+    sugg_owned.tags.add(scifi)
+
+    # Dismissed suggestion with dislikes (Horror)
+    sugg_disliked = GiftSuggestion.objects.create(
+        user=user,
+        person=person,
+        source=GiftSuggestion.Source.AI,
+        state=GiftSuggestion.State.DISMISSED,
+        dismiss_reason=GiftSuggestion.DismissReason.DISLIKES,
+        name="Horror Movie",
+    )
+    sugg_disliked.tags.add(horror)
+
+    history = build_recipient_history(user, person)
+    visible_tag_ids = {robotics.pk, scifi.pk, horror.pk}
+    profile = build_preference_profile(user, history, visible_tag_ids)
+
+    assert profile.liked_tags == (("Robotics", 2),)
+    assert profile.owned_tags == (("Sci-Fi", 1),)
+    assert profile.disliked_tags == (("Horror", 2),)
+
+
+def test_build_preference_profile_respects_50_plus_history_and_visibility(user, share, status):
+    from gift_manager.suggestions.history import build_preference_profile
+
+    visible_tag = GiftTagFactory(name="Chess")
+    hidden_tag = GiftTagFactory(name="Secret Hobby")
+    share(user, visible_tag, level=PermissionLevel.VIEWER)
+    # hidden_tag is intentionally NOT shared with user
+
+    person = PersonFactory()
+    share(user, person, level=PermissionLevel.VIEWER)
+
+    # 55 plans rated 5★
+    for i in range(55):
+        g = GiftFactory(name=f"Chess Set {i}")
+        g.tags.add(visible_tag, hidden_tag)
+        p = RelationFactory(
+            person=person, gift=g, status=status("Given"), reaction_rating=5, reaction_note="Super"
+        )
+        share(user, g, level=PermissionLevel.VIEWER)
+        share(user, p, level=PermissionLevel.VIEWER)
+
+    history = build_recipient_history(user, person)
+    assert len(history.items) == 55
+
+    visible_tag_ids = {visible_tag.pk}
+    profile = build_preference_profile(user, history, visible_tag_ids)
+
+    assert profile.liked_tags == (("Chess", 55),)
+    assert "Secret Hobby" not in [t[0] for t in profile.liked_tags]

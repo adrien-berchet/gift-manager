@@ -105,6 +105,24 @@
                             </button>
                         </div>
                     </li>
+                    {% if can_promote_to_profile %}
+                        <li><hr class="dropdown-divider my-2"></li>
+                        <li class="px-2 pt-1 pb-1">
+                            <div class="form-check form-check-sm mb-0">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       name="promote_to_profile"
+                                       value="1"
+                                       id="promote-profile-{{ candidate.name|slugify }}-{{ forloop.counter }}"
+                                       onclick="event.stopPropagation();">
+                                <label class="form-check-label small text-muted user-select-none"
+                                       for="promote-profile-{{ candidate.name|slugify }}-{{ forloop.counter }}"
+                                       onclick="event.stopPropagation();">
+                                    {% trans "Remember in recipient's profile (notes & interests)" %}
+                                </label>
+                            </div>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </form>

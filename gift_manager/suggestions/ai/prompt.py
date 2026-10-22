@@ -12,9 +12,10 @@ from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.suggestions.history import PreferenceProfile
 from gift_manager.suggestions.history import RecipientHistory
 
-PROMPT_VERSION = 2
+PROMPT_VERSION = 3
 
 SYSTEM_PROMPT = (
     "You are an expert gift planner. Suggest new, concrete, appealing gift ideas for the recipient "
@@ -36,7 +37,12 @@ SYSTEM_PROMPT = (
     "of the style or genre. If 'too_expensive', favor budget-friendly alternatives. If 'custom', "
     "rely on the user comment. When reviewing past history, pay attention to ratings and "
     "reaction notes: a low rating (1-2) with a specific complaint indicates what to avoid, while "
-    "an abandoned plan is a weak signal about logistics or price rather than taste.\n"
+    "an abandoned plan is a weak signal about logistics or price rather than taste. When "
+    "all_time_preferences is present, it summarizes long-term verified affinities "
+    "(liked_tags, owned_or_practiced_tags) and avoidances (disliked_tags) computed from "
+    "recipient history beyond the recent plans sample. Use liked_tags to reinforce high-affinity "
+    "themes, pivot on owned_or_practiced_tags toward complementary accessories/consumables/books, "
+    "and strictly avoid disliked_tags.\n"
     "5. Target Occasion: If 'occasion' is specified (e.g. 'Birthday', 'Christmas', "
     "'Housewarming'), tailor suggestions to fit that event's context, "
     "social expectations, and mood.\n"
@@ -136,6 +142,94 @@ def scrub_text(text: str, terms: Iterable[str], min_length: int = 3) -> str:
     for term in valid_terms:
         pattern = rf"\b{re.escape(term)}\b"
         result = re.sub(pattern, "[name]", result, flags=re.IGNORECASE)
+
+    return result
+
+
+PROVENANCE_LINE_RE = re.compile(r"^\[\d{4}-\d{2}-\d{2} - ")
+
+
+def _select_provenance_lines(
+    prov_lines: list[str],
+    budget: int,
+    *,
+    has_bio: bool,
+) -> list[str]:
+    """Pick most recent provenance lines that fit within the character budget."""
+    selected: list[str] = []
+    current_len = 0
+    for line in reversed(prov_lines):
+        needed = len(line) + (1 if (selected or has_bio) else 0)
+        if current_len + needed <= budget:
+            selected.append(line)
+            current_len += needed
+        else:
+            break
+    selected.reverse()
+    return selected
+
+
+def window_person_notes(
+    notes: str,
+    terms: Iterable[str],
+    max_length: int = 800,
+    bio_max_length: int = 400,
+) -> str:
+    """Window notes to fit within character budget, preserving baseline bio and recent provenance.
+
+    Scrubbing is performed before truncation to ensure terms straddling the cutoff are never leaked.
+    Baseline bio lines (up to bio_max_length chars) are preserved at the top, and recent provenance
+    lines are kept from newest to oldest up to max_length total chars.
+    """
+    if not notes:
+        return ""
+
+    scrubbed = scrub_text(notes, terms, min_length=3).strip()
+    if not scrubbed or len(scrubbed) <= max_length:
+        return scrubbed
+
+    lines = scrubbed.splitlines()
+    bio_lines: list[str] = []
+    prov_lines: list[str] = []
+
+    for line in lines:
+        cleaned_line = line.strip()
+        if not cleaned_line:
+            continue
+        if PROVENANCE_LINE_RE.match(cleaned_line):
+            prov_lines.append(cleaned_line)
+        else:
+            bio_lines.append(cleaned_line)
+
+    bio_text = "\n".join(bio_lines).strip()
+    if len(bio_text) > bio_max_length:
+        bio_text = bio_text[: bio_max_length - 1].rstrip() + "…"
+
+    if not prov_lines:
+        return bio_text[: max_length - 1].rstrip() + "…" if len(bio_text) > max_length else bio_text
+
+    # Calculate remaining budget for provenance lines
+    overhead = len(bio_text) + (1 if bio_text else 0)
+    selected_prov = _select_provenance_lines(
+        prov_lines, max_length - overhead, has_bio=bool(bio_text)
+    )
+
+    parts: list[str] = []
+    if bio_text:
+        parts.append(bio_text)
+    if len(selected_prov) < len(prov_lines):
+        parts.append("…")
+    parts.extend(selected_prov)
+
+    result = "\n".join(parts)
+    while len(result) > max_length and len(selected_prov) > 1:
+        selected_prov.pop(0)
+        parts = [bio_text] if bio_text else []
+        parts.append("…")
+        parts.extend(selected_prov)
+        result = "\n".join(parts)
+    if len(result) > max_length:
+        result = result[: max_length - 1].rstrip() + "…"
 
     return result
 
@@ -247,7 +341,9 @@ def _build_recipient_info(
             recipient_info["age_bracket"] = age_bracket
         can_share_notes = getattr(getattr(viewer, "profile", None), "ai_share_person_notes", False)
         if can_share_notes and recipient.notes:
-            recipient_info["notes"] = scrub_text(recipient.notes[:500], terms, min_length=3)
+            windowed_notes = window_person_notes(recipient.notes, terms, max_length=800)
+            if windowed_notes:
+                recipient_info["notes"] = windowed_notes
     return recipient_info
 
 
@@ -318,7 +414,7 @@ def _clean_rejected_directions(
     return cleaned
 
 
-def build_ai_payload(
+def build_ai_payload(  # noqa: PLR0913
     history: RecipientHistory,
     *,
     viewer: User,
@@ -330,6 +426,7 @@ def build_ai_payload(
     occasion: str | None = None,
     budget_selection: str | None = None,
     hint: str | None = None,
+    preference_profile: PreferenceProfile | None = None,
 ) -> dict[str, Any]:
     """Build an anonymised, capped payload dictionary for the AI provider."""
     terms = _collect_scrub_terms(history, viewer)
@@ -368,6 +465,22 @@ def build_ai_payload(
         "available_tags": available_tags,
         "avoid": avoid,
     }
+    if preference_profile:
+        liked_list = [
+            {"tag": tag_name, "count": cnt} for tag_name, cnt in preference_profile.liked_tags
+        ]
+        owned_list = [
+            {"tag": tag_name, "count": cnt} for tag_name, cnt in preference_profile.owned_tags
+        ]
+        disliked_list = [
+            {"tag": tag_name, "count": cnt} for tag_name, cnt in preference_profile.disliked_tags
+        ]
+        if liked_list or owned_list or disliked_list:
+            payload["all_time_preferences"] = {
+                "liked_tags": liked_list,
+                "owned_or_practiced_tags": owned_list,
+                "disliked_tags": disliked_list,
+            }
     if budget_info:
         payload["budget"] = budget_info
     cleaned_rejected = _clean_rejected_directions(rejected_directions, terms)
