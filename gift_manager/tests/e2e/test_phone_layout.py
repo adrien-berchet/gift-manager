@@ -450,3 +450,31 @@ def test_phone_gift_suggestion_actions_fit_inside_container(
             route,
             menu_box,
         )
+
+
+def test_phone_clicking_ai_steering_pills_does_not_scroll_viewport(
+    phone_page, live_server, seed_data_e2e, monkeypatch
+):
+    from gift_manager.tests.suggestions.conftest import FakeAIClient
+
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", FakeAIClient)
+    page = phone_page
+    page.set_viewport_size({"width": 411, "height": 748})
+    person = seed_data_e2e.persons["mom"]
+    page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+    ai_block = page.locator("[data-gift-suggestions-ai]")
+    expect(ai_block.locator("[data-suggestion-more-ideas]")).to_be_visible(timeout=10000)
+
+    budget_label = ai_block.locator('label[for$="_under_30"]')
+    budget_label.scroll_into_view_if_needed()
+    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY
+    page.evaluate("window.scrollBy(0, -180)")
+    scroll_before = page.evaluate("window.scrollY")
+
+    budget_label.click()
+    # Wait past the 300ms + 100ms soft-keyboard scroll timers in mobile-responsive.js
+    page.evaluate("() => new Promise(resolve => setTimeout(resolve, 550))")
+    scroll_after = page.evaluate("window.scrollY")
+    assert scroll_after == scroll_before
+    assert not page.evaluate("document.body.classList.contains('keyboard-visible')")

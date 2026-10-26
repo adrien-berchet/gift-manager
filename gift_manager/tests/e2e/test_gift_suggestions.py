@@ -182,11 +182,23 @@ class TestGiftSuggestions(BaseE2ETest):
 
     def test_accept_ai_idea_on_group_page(self, page: Page, live_server, test_user, monkeypatch):
         """AI ideas load lazily on group detail page, can be accepted into group plans, and 'More ideas' works."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from gift_manager.models import Event
+        from gift_manager.tests.factories import EventFactory
         from gift_manager.tests.factories import PersonGroupFactory
         from gift_manager.tests.suggestions.conftest import FakeAIClient
 
         group = PersonGroupFactory(name="Stargazers")
-        _share(test_user, group)
+        upcoming_event = EventFactory(
+            name="Solstice Party",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=10),
+            is_birthday=False,
+        )
+        _share(test_user, group, upcoming_event)
 
         batch1 = {
             "ideas": [
@@ -222,7 +234,31 @@ class TestGiftSuggestions(BaseE2ETest):
         generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
         expect(generate_btn).to_be_visible(timeout=self.ajax_timeout * 2)
 
+        # Tabbing into the occasion and budget pill groups shows a visible focus ring on each pill
+        ai_scroll = suggestions.locator(
+            "[data-gift-suggestions-ai] .gift-suggestions-scroll-container"
+        )
+        ai_scroll.focus()
+        page.keyboard.press("Tab")
+        occ_any_radio = suggestions.locator('input.btn-check[name="occasion"][value=""]')
+        occ_any_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_any"]')
+        expect(occ_any_radio).to_be_focused()
+        occ_outline = occ_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert occ_outline["style"] == "solid" and occ_outline["width"] != "0px"
+
+        page.keyboard.press("Tab")
+        budget_any_radio = suggestions.locator('input.btn-check[name="budget"][value=""]')
+        budget_any_label = suggestions.locator('label[for$="_budget_' + str(group.pk) + '_any"]')
+        expect(budget_any_radio).to_be_focused()
+        budget_outline = budget_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert budget_outline["style"] == "solid" and budget_outline["width"] != "0px"
+
         # Clicking a steering pill highlights the button without unclipping its hidden .btn-check radio input
+        # and does not show a focus ring for mouse clicks
         budget_radio = suggestions.locator('input.btn-check[name="budget"][value="under_30"]')
         budget_label = suggestions.locator('label[for$="_under_30"]')
         budget_label.click()
@@ -235,6 +271,54 @@ class TestGiftSuggestions(BaseE2ETest):
         )
         assert radio_style["position"] == "absolute"
         assert radio_style["clip"] == "rect(0px, 0px, 0px, 0px)"
+        assert budget_label.evaluate("el => getComputedStyle(el).outlineStyle") == "none"
+
+        # Emulate high-contrast mode: clicking a pill keeps its checked fill, and tabbing shows a 3px outline
+        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
+        cdp = page.context.new_cdp_session(page)
+        cdp.send(
+            "Emulation.setEmulatedMedia",
+            {"features": [{"name": "prefers-contrast", "value": "more"}]},
+        )
+        budget_label.click()
+        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
+        ai_scroll.focus()
+        page.keyboard.press("Tab")
+        hc_outline = occ_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert hc_outline["style"] == "solid" and hc_outline["width"] == "3px"
+
+        # Emulate touch device (hover: none): hovering an unchecked pill keeps a transparent background
+        cdp.send("Emulation.setEmulatedMedia", {"features": []})
+        cdp.send(
+            "Emulation.setDeviceMetricsOverride",
+            {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True},
+        )
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": True})
+        assert page.evaluate("window.matchMedia('(hover: none)').matches")
+        occ_event_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_1"]')
+        for dark in (False, True):
+            if dark:
+                page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+            occ_event_label.hover()
+            assert (
+                occ_event_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            budget_any_label.hover()
+            assert (
+                budget_any_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            assert (
+                budget_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                != "rgba(0, 0, 0, 0)"
+            )
+        page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+        cdp.send("Emulation.clearDeviceMetricsOverride")
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False})
+        cdp.detach()
 
         generate_btn.click()
 

@@ -15,6 +15,7 @@
     - data_action: value of the data-action attribute, e.g. 'create' to open a form in the panel (custom only, optional)
 {% endcomment %}
 
+{% if buttons %}
 <div class="action-buttons d-flex flex-wrap gap-2 mb-3">
   {% for button in buttons %}
     {% if button.type == 'give' %}
@@ -68,3 +69,4 @@
     {% endif %}
   {% endfor %}
 </div>
+{% endif %}

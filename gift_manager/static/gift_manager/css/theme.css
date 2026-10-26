@@ -379,6 +379,14 @@
 }
 
 [data-theme="dark"] .btn-outline-primary {
+    --bs-btn-color: #a5b4fc;
+    --bs-btn-border-color: #818cf8;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #4f46e5;
+    --bs-btn-hover-border-color: #4f46e5;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: #4f46e5;
+    --bs-btn-active-border-color: #4f46e5;
     border-color: #818cf8;
     color: #a5b4fc;
 }
@@ -387,12 +395,20 @@
 [data-theme="dark"] .btn-check:checked + .btn-outline-primary,
 [data-theme="dark"] .btn-outline-primary.active,
 [data-theme="dark"] .btn-outline-primary:active {
-    background-color: #6366f1;
-    border-color: #6366f1;
+    background-color: #4f46e5;
+    border-color: #4f46e5;
     color: #ffffff;
 }
 
 [data-theme="dark"] .btn-outline-secondary {
+    --bs-btn-color: #c4b5fd;
+    --bs-btn-border-color: #8b5cf6;
+    --bs-btn-hover-color: #ffffff;
+    --bs-btn-hover-bg: #6d28d9;
+    --bs-btn-hover-border-color: #6d28d9;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-active-bg: #6d28d9;
+    --bs-btn-active-border-color: #6d28d9;
     border-color: #8b5cf6;
     color: #c4b5fd;
 }
@@ -401,8 +417,8 @@
 [data-theme="dark"] .btn-check:checked + .btn-outline-secondary,
 [data-theme="dark"] .btn-outline-secondary.active,
 [data-theme="dark"] .btn-outline-secondary:active {
-    background-color: #7c3aed;
-    border-color: #7c3aed;
+    background-color: #6d28d9;
+    border-color: #6d28d9;
     color: #ffffff;
 }
 
@@ -998,6 +1014,14 @@ html .navbar-nav .nav-link.active {
 }
 
 .btn-outline-primary {
+    --bs-btn-color: var(--color-primary);
+    --bs-btn-border-color: var(--color-primary);
+    --bs-btn-hover-color: var(--text-inverse);
+    --bs-btn-hover-bg: var(--color-primary-hover);
+    --bs-btn-hover-border-color: var(--color-primary-hover);
+    --bs-btn-active-color: var(--text-inverse);
+    --bs-btn-active-bg: var(--color-primary-hover);
+    --bs-btn-active-border-color: var(--color-primary-hover);
     background-color: transparent;
     border: 2px solid var(--color-primary);
     color: var(--color-primary);
@@ -1007,12 +1031,20 @@ html .navbar-nav .nav-link.active {
 .btn-check:checked + .btn-outline-primary,
 .btn-outline-primary.active,
 .btn-outline-primary:active {
-    background-color: var(--color-primary);
-    border-color: var(--color-primary);
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
     color: var(--text-inverse);
 }
 
 .btn-outline-secondary {
+    --bs-btn-color: var(--text-secondary);
+    --bs-btn-border-color: var(--border-color);
+    --bs-btn-hover-color: var(--text-primary);
+    --bs-btn-hover-bg: var(--color-gray-100);
+    --bs-btn-hover-border-color: var(--border-color-hover);
+    --bs-btn-active-color: var(--text-inverse);
+    --bs-btn-active-bg: var(--color-gray-600);
+    --bs-btn-active-border-color: var(--color-gray-600);
     background-color: transparent;
     border: 2px solid var(--border-color);
     color: var(--text-secondary);
@@ -1027,8 +1059,8 @@ html .navbar-nav .nav-link.active {
 .btn-check:checked + .btn-outline-secondary,
 .btn-outline-secondary.active,
 .btn-outline-secondary:active {
-    background-color: var(--color-secondary);
-    border-color: var(--color-secondary);
+    background-color: var(--color-gray-600);
+    border-color: var(--color-gray-600);
     color: var(--text-inverse);
 }
 
@@ -1798,14 +1830,14 @@ h4, h5, h6 {
         max-height: calc(100vh - 200px);
     }
 
-    /* Tabs on mobile - wrap into pill-like buttons */
-    .nav-tabs {
+    /* Tabs on mobile - wrap into pill-like buttons when opted in */
+    .nav-tabs.nav-tabs-wrap-mobile {
         flex-wrap: wrap;
         gap: var(--space-1);
         border-bottom: none;
     }
 
-    .nav-tabs .nav-link {
+    .nav-tabs.nav-tabs-wrap-mobile .nav-link {
         white-space: normal;
         text-align: left;
         border: 1px solid var(--border-color);
@@ -1813,10 +1845,11 @@ h4, h5, h6 {
         padding: var(--space-2) var(--space-3);
     }
 
-    .nav-tabs .nav-link.active {
+    .nav-tabs.nav-tabs-wrap-mobile .nav-link.active {
         background-color: var(--color-primary-light);
         border-color: var(--color-primary);
         border-bottom-width: 1px;
+        color: var(--color-primary-dark);
         margin-bottom: 0;
         font-weight: 600;
     }

@@ -78,7 +78,7 @@ def _open_card(page: Page, live_server, relation):
     return card
 
 
-def _swipe(page: Page, card, delta_x, delta_y=0, steps=8):
+def _swipe(page: Page, card, delta_x, delta_y=0, steps=4):
     """Drag one finger across the card the way a phone reports it: fast, in small moves."""
     box = card.bounding_box()
     start_x = box["x"] + box["width"] / 2 - delta_x / 2

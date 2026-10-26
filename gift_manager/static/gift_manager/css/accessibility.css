@@ -122,7 +122,8 @@ a:focus {
 }
 
 /* Keyboard Navigation Indicators */
-.keyboard-navigation-active *:focus:not(.btn-check):not(.rating-input-radio) {
+.keyboard-navigation-active *:focus:not(.btn-check):not(.rating-input-radio),
+.keyboard-navigation-active .btn-check:focus + .btn {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
 }
@@ -241,6 +242,7 @@ a:focus {
     /* Remove focus styles for mouse users */
     button:focus:not(:focus-visible),
     input:not(.btn-check):not(.rating-input-radio):focus:not(:focus-visible),
+    .btn-check:focus:not(:focus-visible) + .btn,
     select:focus:not(:focus-visible),
     textarea:focus:not(:focus-visible),
     a:focus:not(:focus-visible),
@@ -252,6 +254,7 @@ a:focus {
     /* Enhanced focus-visible styles */
     button:focus-visible,
     input:not(.btn-check):not(.rating-input-radio):focus-visible,
+    .btn-check:focus-visible + .btn,
     select:focus-visible,
     textarea:focus-visible,
     a:focus-visible,
@@ -260,12 +263,6 @@ a:focus {
         outline-offset: var(--focus-outline-offset) !important;
         box-shadow: 0 0 0 var(--focus-shadow-size) rgba(var(--focus-color-rgb), 0.25) !important;
     }
-}
-
-.btn-check:focus + .btn,
-.btn-check:focus-visible + .btn {
-    outline: none !important;
-    box-shadow: none !important;
 }
 
 #main-content:focus,

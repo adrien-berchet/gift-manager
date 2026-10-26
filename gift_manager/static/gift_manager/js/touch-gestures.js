@@ -252,6 +252,17 @@
                 this.resetSwipeVisual(this.state.element);
                 return;
             }
+
+            const hasSwipeActions =
+                this.getSwipeActionButtons(this.state.element, "left").length +
+                    this.getSwipeActionButtons(this.state.element, "right").length >
+                0;
+            if (!hasSwipeActions) {
+                this.state.axis = "y";
+                this.resetSwipeVisual(this.state.element);
+                return;
+            }
+
             // Cancel from the first horizontal move, before the browser starts a scroll
             e.preventDefault();
 

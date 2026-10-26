@@ -122,7 +122,7 @@ def _render_ai_block(
     request,
     recipient: Person | PersonGroup,
     block,
-    occasion: str | None = None,
+    occasion: str = "",
     budget: str = "",
     hint: str = "",
     upcoming_occasions=None,

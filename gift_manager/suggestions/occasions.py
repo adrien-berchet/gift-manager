@@ -72,10 +72,3 @@ def get_upcoming_occasions(
                 break
 
     return deduped
-
-
-def derive_default_occasion(occasions: list[dict[str, Any]], max_days: int = 60) -> str:
-    """Return the name of the soonest occasion if within max_days, otherwise empty string."""
-    if occasions and occasions[0]["days_until"] <= max_days:
-        return occasions[0]["name"]
-    return ""
