@@ -1734,23 +1734,27 @@ h4, h5, h6 {
         max-height: calc(100vh - 200px);
     }
 
-    /* Tabs on mobile - horizontal scroll */
+    /* Tabs on mobile - wrap into pill-like buttons */
     .nav-tabs {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-    }
-
-    .nav-tabs::-webkit-scrollbar {
-        display: none;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+        border-bottom: none;
     }
 
     .nav-tabs .nav-link {
-        white-space: nowrap;
-        flex-shrink: 0;
-        padding: var(--space-3) var(--space-4);
+        white-space: normal;
+        text-align: left;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        padding: var(--space-2) var(--space-3);
+    }
+
+    .nav-tabs .nav-link.active {
+        background-color: var(--color-primary-light);
+        border-color: var(--color-primary);
+        border-bottom-width: 1px;
+        margin-bottom: 0;
+        font-weight: 600;
     }
 
     /* Spacing reductions */
@@ -3621,7 +3625,13 @@ h4, h5, h6 {
 }
 
 .gift-suggestion-dropdown-menu {
-    min-width: 250px;
+    width: 260px;
+    min-width: 0;
+    max-width: calc(100vw - 5rem);
+}
+
+.gift-suggestion-dropdown-menu .dropdown-item {
+    white-space: normal;
 }
 
 @media (max-width: 360px) {

@@ -575,8 +575,10 @@
     justify-content: center;
     min-width: 44px;
     min-height: 56px;
-    padding: 0.25rem 0;
+    padding: 0.25rem 0.125rem;
     font-size: 0.7rem;
+    line-height: 1.15;
+    text-align: center;
     color: var(--bs-secondary-color);
     text-decoration: none;
     background: none;
