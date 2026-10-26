@@ -221,6 +221,21 @@ class TestGiftSuggestions(BaseE2ETest):
         # AI block loads lazily inside suggestions with generate button
         generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
         expect(generate_btn).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Clicking a steering pill highlights the button without unclipping its hidden .btn-check radio input
+        budget_radio = suggestions.locator('input.btn-check[name="budget"][value="under_30"]')
+        budget_label = suggestions.locator('label[for$="_under_30"]')
+        budget_label.click()
+        expect(budget_radio).to_be_checked()
+        radio_style = budget_radio.evaluate(
+            """el => {
+                const cs = window.getComputedStyle(el);
+                return { position: cs.position, clip: cs.clip };
+            }"""
+        )
+        assert radio_style["position"] == "absolute"
+        assert radio_style["clip"] == "rect(0px, 0px, 0px, 0px)"
+
         generate_btn.click()
 
         # Batch 1 'Telescope' appears in AI block

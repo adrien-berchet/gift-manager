@@ -423,13 +423,16 @@ def test_ideas_steering_controls_rendered_and_submitted(client, user, monkeypatc
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
 
-    # GET renders steering controls with Birthday preselected (<= 60 days)
+    # GET renders steering controls with Any occasion first and preselected by default
     res_get = client.get(ideas_url)
     assert res_get.status_code == 200
     content_get = res_get.content.decode()
     assert 'name="occasion"' in content_get
     assert 'value="Birthday"' in content_get
-    assert "checked" in content_get
+    any_occ_pos = content_get.index(f'id="ai_occ_{person.pk}_any"')
+    first_occ_pos = content_get.index(f'id="ai_occ_{person.pk}_1"')
+    assert any_occ_pos < first_occ_pos
+    assert "checked>" in content_get[any_occ_pos:first_occ_pos]
     assert 'name="budget"' in content_get
     assert 'value="30_75"' in content_get
     assert 'name="hint"' in content_get

@@ -23,7 +23,6 @@ from gift_manager.person_profile import append_person_provenance_note
 from gift_manager.person_profile import promote_tags_to_person_interests
 from gift_manager.person_profile import promotion_target
 from gift_manager.suggestions.catalogue import describe_reason
-from gift_manager.suggestions.occasions import derive_default_occasion
 from gift_manager.suggestions.occasions import get_upcoming_occasions
 from gift_manager.suggestions.service import AI_BATCH_SIZE
 from gift_manager.suggestions.service import GiftSuggestionService
@@ -133,12 +132,7 @@ def _render_ai_block(
         upcoming_occasions = get_upcoming_occasions(request.user, recipient)
 
     valid_occasion_names = {occ["name"] for occ in upcoming_occasions}
-    if occasion is None:
-        selected_occasion = derive_default_occasion(upcoming_occasions)
-    elif occasion in valid_occasion_names:
-        selected_occasion = occasion
-    else:
-        selected_occasion = ""
+    selected_occasion = occasion if occasion in valid_occasion_names else ""
 
     currency_code = getattr(getattr(request.user, "profile", None), "currency", "EUR") or "EUR"
     currency_symbol = {"EUR": "€", "USD": "$", "GBP": "£"}.get(currency_code, currency_code)
