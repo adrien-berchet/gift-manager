@@ -16,10 +16,13 @@ from django.utils.translation import gettext as _
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
+from gift_manager.models import GiftSuggestion
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.person_profile import append_person_provenance_note
+from gift_manager.person_profile import promote_tags_to_person_interests
+from gift_manager.person_profile import promotion_target
 from gift_manager.suggestions.catalogue import describe_reason
-from gift_manager.suggestions.occasions import derive_default_occasion
 from gift_manager.suggestions.occasions import get_upcoming_occasions
 from gift_manager.suggestions.service import AI_BATCH_SIZE
 from gift_manager.suggestions.service import GiftSuggestionService
@@ -107,6 +110,7 @@ def _render_suggestions(request, recipient: Person | PersonGroup) -> HttpRespons
         "dismissed_count": service.dismissed_count(),
         "surface": surface,
         "ai_enabled": service.ai_enabled,
+        "can_promote_to_profile": promotion_target(request.user, recipient) is not None,
     }
 
     if offset > 0:
@@ -118,7 +122,7 @@ def _render_ai_block(
     request,
     recipient: Person | PersonGroup,
     block,
-    occasion: str | None = None,
+    occasion: str = "",
     budget: str = "",
     hint: str = "",
     upcoming_occasions=None,
@@ -128,12 +132,7 @@ def _render_ai_block(
         upcoming_occasions = get_upcoming_occasions(request.user, recipient)
 
     valid_occasion_names = {occ["name"] for occ in upcoming_occasions}
-    if occasion is None:
-        selected_occasion = derive_default_occasion(upcoming_occasions)
-    elif occasion in valid_occasion_names:
-        selected_occasion = occasion
-    else:
-        selected_occasion = ""
+    selected_occasion = occasion if occasion in valid_occasion_names else ""
 
     currency_code = getattr(getattr(request.user, "profile", None), "currency", "EUR") or "EUR"
     currency_symbol = {"EUR": "€", "USD": "$", "GBP": "£"}.get(currency_code, currency_code)
@@ -149,6 +148,7 @@ def _render_ai_block(
         "selected_budget": budget,
         "current_hint": hint,
         "currency_symbol": currency_symbol,
+        "can_promote_to_profile": promotion_target(request.user, recipient) is not None,
     }
     return render(request, AI_BLOCK_TEMPLATE, context)
 
@@ -227,6 +227,47 @@ def _handle_accept(request, recipient: Person | PersonGroup) -> HttpResponse:
     return response
 
 
+def _promote_dismissal_to_profile(
+    user,
+    recipient: Person | PersonGroup,
+    suggestion: GiftSuggestion,
+    reason: str,
+    comment: str,
+) -> bool:
+    target_person = promotion_target(user, recipient)
+    if not target_person:
+        return False
+
+    item_name = (
+        suggestion.gift.name if (suggestion.gift_id and suggestion.gift) else suggestion.name
+    )
+    tags = (
+        suggestion.gift.tags.all()
+        if (suggestion.gift_id and suggestion.gift)
+        else suggestion.tags.all()
+    )
+
+    note_text = comment
+    if not note_text and reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED:
+        note_text = _("Already owned or practiced")
+
+    promoted = False
+    if note_text and append_person_provenance_note(
+        target_person,
+        source_label=_("Suggestion"),
+        item_name=item_name,
+        text=note_text,
+    ):
+        promoted = True
+
+    if reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED:
+        added_tags = promote_tags_to_person_interests(target_person, tags, user)
+        if added_tags:
+            promoted = True
+
+    return promoted
+
+
 def _handle_dismiss(request, recipient: Person | PersonGroup) -> HttpResponse:
     gift_raw = request.POST.get("gift")
     sugg_raw = request.POST.get("suggestion")
@@ -244,13 +285,19 @@ def _handle_dismiss(request, recipient: Person | PersonGroup) -> HttpResponse:
             gift_uuid = uuid.UUID(gift_raw)
         except (ValueError, TypeError):
             raise Http404 from None
-        service.dismiss_gift(gift_uuid, reason=reason, comment=comment)
+        suggestion = service.dismiss_gift(gift_uuid, reason=reason, comment=comment)
     else:
         try:
             sugg_uuid = uuid.UUID(sugg_raw)
         except (ValueError, TypeError):
             raise Http404 from None
-        service.dismiss_suggestion(sugg_uuid, reason=reason, comment=comment)
+        suggestion = service.dismiss_suggestion(sugg_uuid, reason=reason, comment=comment)
+
+    promoted = False
+    if request.POST.get("promote_to_profile") == "1":
+        promoted = _promote_dismissal_to_profile(
+            request.user, recipient, suggestion, reason, comment
+        )
 
     is_htmx = getattr(request, "htmx", False) or request.headers.get("HX-Request") == "true"
     if not is_htmx:
@@ -258,7 +305,19 @@ def _handle_dismiss(request, recipient: Person | PersonGroup) -> HttpResponse:
             return redirect("gift_manager:person_detail", pk=recipient.person_id)
         return redirect("gift_manager:person_group_detail", pk=recipient.group_id)
 
-    return _render_suggestions(request, recipient)
+    response = _render_suggestions(request, recipient)
+    if promoted:
+        response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
+            [
+                {
+                    "showNotification": {
+                        "message": _("Preference remembered in recipient's profile."),
+                        "type": "info",
+                    }
+                }
+            ]
+        )
+    return response
 
 
 def _render_dismissed_panel(request, recipient: Person | PersonGroup) -> HttpResponse:

@@ -188,6 +188,7 @@ class AIStrategy:
             occasion=context.occasion,
             budget_selection=context.budget,
             hint=context.hint,
+            preference_profile=context.preference_profile,
         )
 
         raw_json = self.client.generate(system=SYSTEM_PROMPT, payload=payload, schema=IDEAS_SCHEMA)

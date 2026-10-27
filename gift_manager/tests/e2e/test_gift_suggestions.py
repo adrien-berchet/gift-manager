@@ -182,11 +182,23 @@ class TestGiftSuggestions(BaseE2ETest):
 
     def test_accept_ai_idea_on_group_page(self, page: Page, live_server, test_user, monkeypatch):
         """AI ideas load lazily on group detail page, can be accepted into group plans, and 'More ideas' works."""
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from gift_manager.models import Event
+        from gift_manager.tests.factories import EventFactory
         from gift_manager.tests.factories import PersonGroupFactory
         from gift_manager.tests.suggestions.conftest import FakeAIClient
 
         group = PersonGroupFactory(name="Stargazers")
-        _share(test_user, group)
+        upcoming_event = EventFactory(
+            name="Solstice Party",
+            schedule_type=Event.ScheduleType.ONE_TIME,
+            date=timezone.localdate() + timedelta(days=10),
+            is_birthday=False,
+        )
+        _share(test_user, group, upcoming_event)
 
         batch1 = {
             "ideas": [
@@ -221,6 +233,93 @@ class TestGiftSuggestions(BaseE2ETest):
         # AI block loads lazily inside suggestions with generate button
         generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
         expect(generate_btn).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        # Tabbing into the occasion and budget pill groups shows a visible focus ring on each pill
+        ai_scroll = suggestions.locator(
+            "[data-gift-suggestions-ai] .gift-suggestions-scroll-container"
+        )
+        ai_scroll.focus()
+        page.keyboard.press("Tab")
+        occ_any_radio = suggestions.locator('input.btn-check[name="occasion"][value=""]')
+        occ_any_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_any"]')
+        expect(occ_any_radio).to_be_focused()
+        occ_outline = occ_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert occ_outline["style"] == "solid" and occ_outline["width"] != "0px"
+
+        page.keyboard.press("Tab")
+        budget_any_radio = suggestions.locator('input.btn-check[name="budget"][value=""]')
+        budget_any_label = suggestions.locator('label[for$="_budget_' + str(group.pk) + '_any"]')
+        expect(budget_any_radio).to_be_focused()
+        budget_outline = budget_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert budget_outline["style"] == "solid" and budget_outline["width"] != "0px"
+
+        # Clicking a steering pill highlights the button without unclipping its hidden .btn-check radio input
+        # and does not show a focus ring for mouse clicks
+        budget_radio = suggestions.locator('input.btn-check[name="budget"][value="under_30"]')
+        budget_label = suggestions.locator('label[for$="_under_30"]')
+        budget_label.click()
+        expect(budget_radio).to_be_checked()
+        radio_style = budget_radio.evaluate(
+            """el => {
+                const cs = window.getComputedStyle(el);
+                return { position: cs.position, clip: cs.clip };
+            }"""
+        )
+        assert radio_style["position"] == "absolute"
+        assert radio_style["clip"] == "rect(0px, 0px, 0px, 0px)"
+        assert budget_label.evaluate("el => getComputedStyle(el).outlineStyle") == "none"
+
+        # Emulate high-contrast mode: clicking a pill keeps its checked fill, and tabbing shows a 3px outline
+        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
+        cdp = page.context.new_cdp_session(page)
+        cdp.send(
+            "Emulation.setEmulatedMedia",
+            {"features": [{"name": "prefers-contrast", "value": "more"}]},
+        )
+        budget_label.click()
+        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
+        ai_scroll.focus()
+        page.keyboard.press("Tab")
+        hc_outline = occ_any_label.evaluate(
+            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
+        )
+        assert hc_outline["style"] == "solid" and hc_outline["width"] == "3px"
+
+        # Emulate touch device (hover: none): hovering an unchecked pill keeps a transparent background
+        cdp.send("Emulation.setEmulatedMedia", {"features": []})
+        cdp.send(
+            "Emulation.setDeviceMetricsOverride",
+            {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True},
+        )
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": True})
+        assert page.evaluate("window.matchMedia('(hover: none)').matches")
+        occ_event_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_1"]')
+        for dark in (False, True):
+            if dark:
+                page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+            occ_event_label.hover()
+            assert (
+                occ_event_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            budget_any_label.hover()
+            assert (
+                budget_any_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            assert (
+                budget_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                != "rgba(0, 0, 0, 0)"
+            )
+        page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
+        cdp.send("Emulation.clearDeviceMetricsOverride")
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False})
+        cdp.detach()
+
         generate_btn.click()
 
         # Batch 1 'Telescope' appears in AI block
@@ -468,3 +567,54 @@ class TestGiftSuggestions(BaseE2ETest):
 
         # Reset viewport
         page.set_viewport_size({"width": 1920, "height": 1080})
+
+    def test_dismiss_suggestion_with_promote_to_profile(self, page: Page, live_server, test_user):
+        """Dismissing a suggestion with 'promote_to_profile' checked adds tags and note to person."""
+        tag = GiftTagFactory(name="Robotics")
+        person = PersonFactory(first_name="Ada", family_name="Lovelace", notes="")
+        past_gift = GiftFactory(name="Past Robot", tags=[tag])
+        given_plan = RelationFactory(
+            person=person,
+            gift=past_gift,
+            status=_status("Given"),
+            reaction_rating=5,
+        )
+        kit = GiftFactory(name="Arduino Starter Kit", tags=[tag])
+        _share(test_user, tag, person, past_gift, given_plan, kit)
+
+        self.login_as_user(page, live_server, test_user)
+        page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=self.ajax_timeout * 2)
+
+        kit_item = suggestions.locator("[data-gift-suggestion]").filter(
+            has_text="Arduino Starter Kit"
+        )
+        expect(kit_item).to_be_visible()
+
+        # Open dropdown
+        dropdown_toggle = kit_item.locator(".dropdown-toggle")
+        expect(dropdown_toggle).to_be_visible()
+        dropdown_toggle.click()
+
+        dropdown_menu = kit_item.locator(".dropdown-menu")
+        expect(dropdown_menu).to_be_visible()
+
+        # Check promote_to_profile checkbox
+        promote_checkbox = dropdown_menu.locator('input[name="promote_to_profile"]')
+        expect(promote_checkbox).to_be_visible()
+        promote_checkbox.check()
+
+        # Click "Already owned or practiced"
+        owned_btn = dropdown_menu.locator('button[value="already_owned_or_practiced"]')
+        expect(owned_btn).to_be_visible()
+        owned_btn.click()
+
+        # Item should be removed from DOM
+        expect(kit_item).not_to_be_attached(timeout=self.ajax_timeout)
+
+        # Verify DB changes
+        person.refresh_from_db()
+        assert person.interests.filter(name="Robotics").exists()
+        assert "Suggestion: Arduino Starter Kit" in person.notes

@@ -4663,6 +4663,35 @@ msgstr "Sélection d'éléments invalide."
 msgid "Provide either gift or suggestion."
 msgstr "Fournissez soit un cadeau soit une suggestion."
 
+#: gift_manager/forms.py
+msgid "Add reaction note to recipient's profile notes"
+msgstr "Ajouter la note de réaction aux notes du profil du destinataire"
+
+#: gift_manager/forms.py
+msgid "Add gift's tags to recipient's interests"
+msgstr "Ajouter les étiquettes du cadeau aux centres d'intérêt du destinataire"
+
+#: gift_manager/forms.py gift_manager/views/relation.py
+msgid "Abandoned gift plan"
+msgstr "Projet de cadeau abandonné"
+
+#: gift_manager/forms.py gift_manager/views/relation.py
+msgid "Gift plan"
+msgstr "Projet de cadeau"
+
+#: gift_manager/views/suggestions.py
+msgid "Suggestion"
+msgstr "Suggestion"
+
+#: gift_manager/views/suggestions.py
+msgid "Preference remembered in recipient's profile."
+msgstr "Préférence enregistrée dans le profil du destinataire."
+
+#: gift_manager/templates/gift_manager/includes/gift_suggestion_item.html
+#: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html
+msgid "Remember in recipient's profile (notes & interests)"
+msgstr "Mémoriser dans le profil du destinataire (notes et centres d'intérêt)"
+
 #~ msgid "No"
 #~ msgstr "Non"
 
@@ -4801,11 +4830,6 @@ msgstr "Fournissez soit un cadeau soit une suggestion."
 
 #~ msgid "Enter a name for the new event."
 #~ msgstr "Saisissez un nom pour le nouvel événement."
-
-#, fuzzy
-#~| msgid "gift plan"
-#~ msgid "Gift plan"
-#~ msgstr "projet de cadeau"
 
 #~ msgid "New event date"
 #~ msgstr "Date du nouvel événement"

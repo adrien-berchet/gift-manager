@@ -33,6 +33,7 @@ from gift_manager.suggestions.ai.client import get_ai_client
 from gift_manager.suggestions.ai.prompt import PROMPT_VERSION
 from gift_manager.suggestions.ai.strategy import AIStrategy
 from gift_manager.suggestions.catalogue import CatalogueStrategy
+from gift_manager.suggestions.history import build_preference_profile
 from gift_manager.suggestions.history import build_recipient_history
 from gift_manager.suggestions.names import normalize_gift_name
 from gift_manager.suggestions.types import SuggestionCandidate
@@ -190,6 +191,9 @@ class GiftSuggestionService:
             | {s for s in dismissed_catalogue_names if s}
         )
 
+        visible_tag_ids = set(GiftTag.objects.accessible_by(self.user).values_list("pk", flat=True))
+        preference_profile = build_preference_profile(self.user, history, visible_tag_ids)
+
         return SuggestionContext(
             user=self.user,
             recipient=self.recipient,
@@ -199,6 +203,7 @@ class GiftSuggestionService:
             occasion=occasion,
             budget=budget,
             hint=hint,
+            preference_profile=preference_profile,
         )
 
     def _get_today_generations_count(self) -> int:
@@ -349,7 +354,9 @@ class GiftSuggestionService:
         gift = get_object_or_404(Gift.objects.accessible_by(self.user), gift_id=gift_uuid)
         return self._create_idea_plan(gift, record_catalogue_acceptance=True)
 
-    def dismiss_gift(self, gift_uuid: uuid.UUID, *, reason: str = "", comment: str = "") -> None:
+    def dismiss_gift(
+        self, gift_uuid: uuid.UUID, *, reason: str = "", comment: str = ""
+    ) -> GiftSuggestion:
         """Dismiss a catalogue suggestion so it no longer appears."""
         gift = get_object_or_404(Gift.objects.accessible_by(self.user), gift_id=gift_uuid)
         reason, comment = normalize_dismiss_input(reason, comment)
@@ -368,6 +375,7 @@ class GiftSuggestionService:
             },
         )
         suggestion.tags.set(gift.tags.all())
+        return suggestion
 
     def dismissed_count(self) -> int:
         """Return count of dismissed suggestions for this recipient."""
@@ -541,7 +549,7 @@ class GiftSuggestionService:
 
     def dismiss_suggestion(
         self, suggestion_uuid: uuid.UUID, *, reason: str = "", comment: str = ""
-    ) -> None:
+    ) -> GiftSuggestion:
         """Dismiss an AI suggestion so it no longer appears."""
         reason, comment = normalize_dismiss_input(reason, comment)
         rec_filter = self._recipient_filter()
@@ -566,6 +574,7 @@ class GiftSuggestionService:
             suggestion.save(
                 update_fields=["state", "dismiss_reason", "dismiss_comment", "updated_at"]
             )
+            return suggestion
 
     def _upsert_accepted_suggestion(self, gift: Gift) -> None:
         rec_filter = self._recipient_filter()

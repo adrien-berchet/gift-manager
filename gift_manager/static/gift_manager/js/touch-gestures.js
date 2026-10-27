@@ -14,6 +14,7 @@
             longPressTimeout: 500, // Time for long press
             doubleTapTimeout: 300, // Time between taps for double tap
             velocityThreshold: 0.3, // Minimum velocity for swipe
+            axisLockDistance: 10, // Movement that decides between swipe and scroll
         },
 
         // State tracking
@@ -25,6 +26,7 @@
             isTracking: false,
             element: null,
             swipeDirection: null,
+            axis: null,
             longPressTimer: null,
         },
 
@@ -34,6 +36,11 @@
             this.setupEventListeners();
             this.setupSwipeableElements();
             this.setupLongPressElements();
+
+            // Re-setup after HTMX updates
+            document.body.addEventListener("htmx:afterSwap", () => {
+                setTimeout(() => this.setupSwipeableElements(), 100);
+            });
         },
 
         isTouchDevice: function () {
@@ -66,11 +73,6 @@
                     this.makeElementSwipeable(item);
                     item.dataset.swipeSetup = "true";
                 }
-            });
-
-            // Re-setup after HTMX updates
-            document.body.addEventListener("htmx:afterSwap", () => {
-                setTimeout(() => this.setupSwipeableElements(), 100);
             });
         },
 
@@ -114,6 +116,10 @@
                 button.title = action.title;
                 button.dataset.action = action.action;
                 button.dataset.url = action.url || "";
+                button.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    this.executeSwipeAction(button, element);
+                });
 
                 if (action.side === "left") {
                     leftActions.appendChild(button);
@@ -187,12 +193,18 @@
 
             if (!element) return;
 
+            // Grid.js renders its rows after init and again on every page or sort
+            if (!element.querySelector(".swipe-actions")) {
+                this.makeElementSwipeable(element);
+            }
+
             this.state.startX = touch.clientX;
             this.state.startY = touch.clientY;
             this.state.startTime = Date.now();
             this.state.isTracking = true;
             this.state.element = element;
             this.state.swipeDirection = null;
+            this.state.axis = null;
 
             // Clear any existing long press timer
             if (this.state.longPressTimer) {
@@ -225,15 +237,45 @@
                 }
             }
 
-            // Determine swipe direction
-            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20) {
+            // Decide once whether the gesture is a swipe or a scroll
+            const lockDistance = this.config.axisLockDistance;
+            const moved = Math.abs(deltaX) > lockDistance || Math.abs(deltaY) > lockDistance;
+            if (!this.state.axis && moved) {
+                this.state.axis = Math.abs(deltaX) > Math.abs(deltaY) ? "x" : "y";
+            }
+            if (this.state.axis !== "x") return;
+
+            // A scroll the browser already started cannot be cancelled: let it win
+            if (!e.cancelable) {
+                this.state.axis = "y";
+                this.state.swipeDirection = null;
+                this.resetSwipeVisual(this.state.element);
+                return;
+            }
+
+            const hasSwipeActions =
+                this.getSwipeActionButtons(this.state.element, "left").length +
+                    this.getSwipeActionButtons(this.state.element, "right").length >
+                0;
+            if (!hasSwipeActions) {
+                this.state.axis = "y";
+                this.resetSwipeVisual(this.state.element);
+                return;
+            }
+
+            // Cancel from the first horizontal move, before the browser starts a scroll
+            e.preventDefault();
+
+            if (Math.abs(deltaX) > 20) {
                 this.state.swipeDirection = deltaX > 0 ? "right" : "left";
 
-                // Prevent vertical scrolling during horizontal swipe
-                e.preventDefault();
-
-                // Apply visual feedback
-                this.updateSwipeVisual(this.state.element, deltaX);
+                // Only slide when there is something to reveal on that side
+                const actions = this.getSwipeActionButtons(this.state.element, this.state.swipeDirection);
+                if (actions.length) {
+                    this.updateSwipeVisual(this.state.element, deltaX);
+                } else {
+                    this.resetSwipeVisual(this.state.element);
+                }
             }
         },
 
@@ -263,6 +305,7 @@
 
             // Process swipe gesture
             if (
+                this.state.axis === "x" &&
                 Math.abs(deltaX) > this.config.swipeThreshold &&
                 deltaTime < this.config.swipeTimeout &&
                 velocity > this.config.velocityThreshold
@@ -344,21 +387,14 @@
             }
         },
 
+        getSwipeActionButtons: function (element, direction) {
+            // Swiping right uncovers the left actions, swiping left the right ones
+            const side = direction === "right" ? "left" : "right";
+            return element.querySelectorAll(`.swipe-actions-${side} .swipe-action-btn`);
+        },
+
         handleSwipe: function (element, direction, distance) {
-            const swipeActions = element.querySelector(".swipe-actions");
-            if (!swipeActions) return;
-
-            const actionsContainer =
-                direction === "right"
-                    ? swipeActions.querySelector(".swipe-actions-left")
-                    : swipeActions.querySelector(".swipe-actions-right");
-
-            if (!actionsContainer) {
-                this.resetSwipeVisual(element);
-                return;
-            }
-
-            const actions = actionsContainer.querySelectorAll(".swipe-action-btn");
+            const actions = this.getSwipeActionButtons(element, direction);
             if (actions.length === 0) {
                 this.resetSwipeVisual(element);
                 return;
@@ -383,17 +419,6 @@
                     this.hideSwipeActions(element);
                 }
             }, 3000);
-
-            // Setup action button handlers
-            const swipeActions = element.querySelector(".swipe-actions");
-            const actionButtons = swipeActions.querySelectorAll(".swipe-action-btn");
-
-            actionButtons.forEach((button) => {
-                button.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    this.executeSwipeAction(button, element);
-                });
-            });
         },
 
         hideSwipeActions: function (element) {
@@ -598,6 +623,7 @@
             this.state.isTracking = false;
             this.state.element = null;
             this.state.swipeDirection = null;
+            this.state.axis = null;
         },
 
         getCsrfToken: function () {

@@ -4,9 +4,14 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 
+from django.db.models import Prefetch
+from django.db.models import Q
+
 from gift_manager.gift_history import group_history_queryset
 from gift_manager.gift_history import person_history_queryset
 from gift_manager.metadata_visibility import VisibleMetadata
+from gift_manager.models import Gift
+from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -32,6 +37,7 @@ class HistoryItem:
     created: datetime
     event_name: str = ""
     price: float | None = None
+    direct_tag_ids: frozenset[int] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -135,6 +141,7 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
                 created=rel.creation_date,
                 event_name=event_name,
                 price=price,
+                direct_tag_ids=frozenset(gift_visible_tags),
             )
         )
 
@@ -154,4 +161,114 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
         planned_gift_ids=planned_gift_ids,
         interest_tag_ids=interest_tag_ids,
         ancestors=ancestors,
+    )
+
+
+def dismissed_suggestions_for(
+    user,
+    recipient: Person | PersonGroup,
+    visible_tag_ids: set[int] | None = None,
+    limit: int = 500,
+) -> list[GiftSuggestion]:
+    """Return dismissed suggestions accessible to user, with tags prefetched."""
+    rec_filter = {"person": recipient} if isinstance(recipient, Person) else {"group": recipient}
+    accessible_gifts = Gift.objects.accessible_by(user)
+    qs = (
+        GiftSuggestion.objects.filter(
+            user=user,
+            state=GiftSuggestion.State.DISMISSED,
+            **rec_filter,
+        )
+        .filter(Q(gift__isnull=True) | Q(gift__in=accessible_gifts))
+        .select_related("gift")
+    )
+    if visible_tag_ids is not None:
+        qs = qs.prefetch_related(
+            Prefetch("tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
+            Prefetch("gift__tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
+        )
+    return list(qs.order_by("-updated_at", "-created_at")[:limit])
+
+
+@dataclass(frozen=True)
+class PreferenceProfile:
+    """All-time positive, owned/practiced, and negative tag profiles."""
+
+    liked_tags: tuple[tuple[str, int], ...] = ()
+    owned_tags: tuple[tuple[str, int], ...] = ()
+    disliked_tags: tuple[tuple[str, int], ...] = ()
+
+
+def _tally_plan_affinities(
+    history: RecipientHistory,
+    visible_tag_ids: set[int],
+    liked_counts: dict[int, int],
+    disliked_counts: dict[int, int],
+) -> None:
+    for it in history.items:
+        if it.rating is None:
+            continue
+        target_tags = it.direct_tag_ids & visible_tag_ids
+        if not target_tags:
+            continue
+        if it.rating >= 4:
+            for tid in target_tags:
+                liked_counts[tid] += 1
+        elif it.rating <= 2:
+            for tid in target_tags:
+                disliked_counts[tid] += 1
+
+
+def _tally_dismissal_affinities(
+    dismissed: list[GiftSuggestion],
+    visible_tag_ids: set[int],
+    owned_counts: dict[int, int],
+    disliked_counts: dict[int, int],
+) -> None:
+    for s in dismissed:
+        if s.gift_id and s.gift:
+            tag_ids = {t.pk for t in s.gift.tags.all() if t.pk in visible_tag_ids}
+        else:
+            tag_ids = {t.pk for t in s.tags.all() if t.pk in visible_tag_ids}
+        if not tag_ids:
+            continue
+        if s.dismiss_reason == GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED:
+            for tid in tag_ids:
+                owned_counts[tid] += 1
+        elif s.dismiss_reason == GiftSuggestion.DismissReason.DISLIKES:
+            for tid in tag_ids:
+                disliked_counts[tid] += 1
+
+
+def build_preference_profile(
+    user,
+    history: RecipientHistory,
+    visible_tag_ids: set[int],
+) -> PreferenceProfile:
+    """Aggregate all-time direct tag affinities from 100% of plans and dismissals."""
+    liked_counts: dict[int, int] = defaultdict(int)
+    disliked_counts: dict[int, int] = defaultdict(int)
+    owned_counts: dict[int, int] = defaultdict(int)
+
+    # 1. Tally from all-time plans (no 50-item cutoff)
+    _tally_plan_affinities(history, visible_tag_ids, liked_counts, disliked_counts)
+
+    # 2. Tally from dismissed suggestions
+    dismissed = dismissed_suggestions_for(
+        user, history.recipient, visible_tag_ids=visible_tag_ids, limit=500
+    )
+    _tally_dismissal_affinities(dismissed, visible_tag_ids, owned_counts, disliked_counts)
+
+    all_tag_ids = set(liked_counts) | set(disliked_counts) | set(owned_counts)
+    tag_names = dict(GiftTag.objects.filter(pk__in=all_tag_ids).values_list("pk", "name"))
+
+    def _format_bucket(counts: dict[int, int]) -> tuple[tuple[str, int], ...]:
+        items = [(tag_names[tid], count) for tid, count in counts.items() if tid in tag_names]
+        items.sort(key=lambda x: (-x[1], x[0].casefold()))
+        return tuple(items[:20])
+
+    return PreferenceProfile(
+        liked_tags=_format_bucket(liked_counts),
+        owned_tags=_format_bucket(owned_counts),
+        disliked_tags=_format_bucket(disliked_counts),
     )

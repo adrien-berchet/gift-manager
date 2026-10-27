@@ -39,5 +39,11 @@
   <h3 class="h6 mt-3">{% trans "Reaction" %}</h3>
   {% rating_input form.reaction_rating %}
   {% include "gift_manager/includes/forms/field.html" with field=form.reaction_note %}
+  {% if form.promote_notes_to_profile %}
+    {% include "gift_manager/includes/forms/field.html" with field=form.promote_notes_to_profile %}
+  {% endif %}
+  {% if form.promote_tags_to_profile %}
+    {% include "gift_manager/includes/forms/field.html" with field=form.promote_tags_to_profile %}
+  {% endif %}
 </div>
 {% endif %}

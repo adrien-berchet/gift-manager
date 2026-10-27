@@ -56,8 +56,9 @@
 
 /* Enhanced Focus Styles for Interactive Elements */
 /* Exclude .offcanvas and .modal so Bootstrap's position/z-index are never overridden */
+/* Exclude .btn-check and .rating-input-radio so visually-hidden inputs stay clipped */
 button:focus,
-input:focus,
+input:not(.btn-check):not(.rating-input-radio):focus,
 select:focus,
 textarea:focus,
 a:focus,
@@ -121,7 +122,8 @@ a:focus {
 }
 
 /* Keyboard Navigation Indicators */
-.keyboard-navigation-active *:focus {
+.keyboard-navigation-active *:focus:not(.btn-check):not(.rating-input-radio),
+.keyboard-navigation-active .btn-check:focus + .btn {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
 }
@@ -200,7 +202,7 @@ a:focus {
 @media (max-width: 767.98px) {
     /* Larger focus indicators for touch devices */
     button:focus,
-    input:focus,
+    input:not(.btn-check):not(.rating-input-radio):focus,
     select:focus,
     textarea:focus,
     a:focus,
@@ -219,7 +221,7 @@ a:focus {
 /* High Contrast Mode Support */
 @media (prefers-contrast: high) {
     button:focus,
-    input:focus,
+    input:not(.btn-check):not(.rating-input-radio):focus,
     select:focus,
     textarea:focus,
     a:focus,
@@ -239,7 +241,8 @@ a:focus {
 @supports selector(:focus-visible) {
     /* Remove focus styles for mouse users */
     button:focus:not(:focus-visible),
-    input:focus:not(:focus-visible),
+    input:not(.btn-check):not(.rating-input-radio):focus:not(:focus-visible),
+    .btn-check:focus:not(:focus-visible) + .btn,
     select:focus:not(:focus-visible),
     textarea:focus:not(:focus-visible),
     a:focus:not(:focus-visible),
@@ -250,7 +253,8 @@ a:focus {
 
     /* Enhanced focus-visible styles */
     button:focus-visible,
-    input:focus-visible,
+    input:not(.btn-check):not(.rating-input-radio):focus-visible,
+    .btn-check:focus-visible + .btn,
     select:focus-visible,
     textarea:focus-visible,
     a:focus-visible,
@@ -396,7 +400,7 @@ body.keyboard-navigation-active {
     /* Enhanced focus indicators when keyboard navigation is detected */
 }
 
-body.keyboard-navigation-active *:focus:not(#main-content) {
+body.keyboard-navigation-active *:focus:not(#main-content):not(.btn-check):not(.rating-input-radio) {
     outline: var(--focus-outline-width) solid var(--focus-color) !important;
     outline-offset: var(--focus-outline-offset) !important;
 }

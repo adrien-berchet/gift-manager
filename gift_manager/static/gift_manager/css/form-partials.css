@@ -375,19 +375,6 @@ select[multiple] option:checked {
     padding: 1rem;
 }
 
-/* Button styling improvements */
-.btn-outline-primary:hover {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.btn-outline-secondary:hover {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    color: white;
-}
-
 /* Focus management for accessibility */
 .offcanvas-form:focus-within .form-control:focus,
 .offcanvas-form:focus-within .form-select:focus {

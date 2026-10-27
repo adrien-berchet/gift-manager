@@ -4,11 +4,9 @@ from datetime import date
 from datetime import timedelta
 
 import pytest
-from django.utils import timezone
 
 from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
-from gift_manager.suggestions.occasions import derive_default_occasion
 from gift_manager.suggestions.occasions import get_upcoming_occasions
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import PersonFactory
@@ -95,22 +93,6 @@ def test_upcoming_occasions_for_group_skips_birthday(user, share):
     assert len(occasions) == 1
     assert occasions[0]["name"] == "Family Gathering"
     assert occasions[0]["days_until"] == 12
-
-
-def test_derive_default_occasion():
-    today = timezone.localdate()
-    # Occasion within 60 days is pre-selected
-    near_occasions = [{"name": "Birthday", "days_until": 14, "date": today + timedelta(days=14)}]
-    assert derive_default_occasion(near_occasions, max_days=60) == "Birthday"
-
-    # Occasion beyond 60 days is not pre-selected
-    far_occasions = [
-        {"name": "Summer Trip", "days_until": 180, "date": today + timedelta(days=180)}
-    ]
-    assert derive_default_occasion(far_occasions, max_days=60) == ""
-
-    # Empty list
-    assert derive_default_occasion([], max_days=60) == ""
 
 
 def test_upcoming_occasions_excludes_inaccessible_events(user, share):

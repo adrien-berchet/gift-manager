@@ -45,6 +45,16 @@
                         <span class="small text-muted me-1">
                             <i class="fas fa-calendar-day me-1" aria-hidden="true"></i>{% trans "Occasion:" %}
                         </span>
+                        <input type="radio"
+                               class="btn-check"
+                               name="occasion"
+                               id="ai_occ_{{ recipient.pk }}_any"
+                               value=""
+                               autocomplete="off"
+                               {% if not selected_occasion %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary btn-sm py-0 px-2" for="ai_occ_{{ recipient.pk }}_any">
+                            {% trans "Any" %}
+                        </label>
                         {% for occ in upcoming_occasions %}
                             <input type="radio"
                                     class="btn-check"
@@ -59,16 +69,6 @@
                                 {{ occ.name }}
                             </label>
                         {% endfor %}
-                        <input type="radio"
-                               class="btn-check"
-                               name="occasion"
-                               id="ai_occ_{{ recipient.pk }}_any"
-                               value=""
-                               autocomplete="off"
-                               {% if not selected_occasion %}checked{% endif %}>
-                        <label class="btn btn-outline-secondary btn-sm py-0 px-2" for="ai_occ_{{ recipient.pk }}_any">
-                            {% trans "Any" %}
-                        </label>
                     </div>
                 {% endif %}
 

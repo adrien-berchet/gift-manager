@@ -17,6 +17,7 @@
 
     .profile-section h2 {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
         gap: var(--space-3);
         margin-bottom: var(--space-4);
@@ -313,7 +314,7 @@
     <div class="profile-section">
         <h2>
             <i class="fas fa-users"></i> {% trans "My Friends" %}
-            <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-primary btn-sm ms-auto">
+            <a href="{% url 'gift_manager:send_invitation' %}" class="btn btn-primary btn-sm ms-auto text-nowrap">
                 <i class="fas fa-user-plus me-1"></i>{% trans "Invite friend" %}
             </a>
         </h2>

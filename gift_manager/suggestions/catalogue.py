@@ -3,18 +3,17 @@
 from collections import defaultdict
 
 from django.db.models import Prefetch
-from django.db.models import Q
 from django.utils.translation import gettext as _
 
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.models import Gift
 from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
-from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_given_status
+from gift_manager.suggestions.history import dismissed_suggestions_for
 from gift_manager.suggestions.names import normalize_gift_name
 from gift_manager.suggestions.types import SuggestionCandidate
 from gift_manager.suggestions.types import SuggestionContext
@@ -100,25 +99,10 @@ def _compute_dismissed_signals(
     visible_tag_ids: set[int],
     ancestors: dict[int, frozenset[int]],
 ) -> dict[int, float]:
-    rec_filter = (
-        {"person": context.recipient}
-        if isinstance(context.recipient, Person)
-        else {"group": context.recipient}
-    )
-    accessible_gifts = Gift.objects.accessible_by(context.user)
-    dismissed = (
-        GiftSuggestion.objects.filter(
-            user=context.user,
-            state=GiftSuggestion.State.DISMISSED,
-            **rec_filter,
-        )
-        .filter(Q(gift__isnull=True) | Q(gift__in=accessible_gifts))
-        .exclude(dismiss_reason="")
-        .select_related("gift")
-        .prefetch_related(
-            Prefetch("tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
-            Prefetch("gift__tags", queryset=GiftTag.objects.filter(pk__in=visible_tag_ids)),
-        )
+    dismissed = dismissed_suggestions_for(
+        context.user,
+        context.recipient,
+        visible_tag_ids,
     )
     signals: dict[int, float] = defaultdict(float)
     for s in dismissed:

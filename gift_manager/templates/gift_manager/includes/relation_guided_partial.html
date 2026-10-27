@@ -24,7 +24,7 @@
   <button type="submit" name="nav" value="next" hidden tabindex="-1" aria-hidden="true"></button>
 
   <nav aria-label="{% trans 'Progress' %}">
-    <ol class="guided-steps list-unstyled d-flex gap-3 mb-3">
+    <ol class="guided-steps list-unstyled d-flex flex-wrap gap-3 mb-3">
       {% for item in steps %}
       <li class="guided-step guided-step--{{ item.state }}{% if item.state == 'current' %} fw-semibold{% elif item.state == 'todo' %} text-muted{% endif %}"
           {% if item.state == "current" %}aria-current="step"{% endif %}>

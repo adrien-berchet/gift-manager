@@ -11,11 +11,14 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.suggestions.ai.prompt import IDEAS_SCHEMA
+from gift_manager.suggestions.ai.prompt import PROMPT_VERSION
 from gift_manager.suggestions.ai.prompt import build_ai_payload
 from gift_manager.suggestions.ai.prompt import derive_age_bracket
 from gift_manager.suggestions.ai.prompt import format_relative_recency
 from gift_manager.suggestions.ai.prompt import scrub_text
+from gift_manager.suggestions.ai.prompt import window_person_notes
 from gift_manager.suggestions.history import HistoryItem
+from gift_manager.suggestions.history import PreferenceProfile
 from gift_manager.suggestions.history import RecipientHistory
 
 
@@ -91,7 +94,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
         viewer=user,
         available_tag_names=["Photo", "Jeux"],
         avoid_names=["Album photo Marguerite"],
-        count=7,
+        count=15,
         language="fr",
     )
 
@@ -119,7 +122,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
     assert "[email]" in dumped
     assert payload["recipient_type"] == "person"
     assert payload["language"] == "fr"
-    assert payload["count"] == 7
+    assert payload["count"] == 15
     assert len(payload["history"]) == 1
     assert payload["history"][0]["recipient"] == "Recipient"
     assert payload["history"][0]["rating"] == 5
@@ -726,3 +729,85 @@ def test_payload_includes_scrubbed_user_hint(user):
         hint=long_hint,
     )
     assert len(payload_long["user_hint"]) == 120
+
+
+def test_prompt_version_is_3():
+    assert PROMPT_VERSION == 3
+
+
+def test_window_person_notes_preserves_baseline_and_recent_provenance():
+    bio = "Marguerite est passionnée par les arts créatifs, la couture et la poterie. " * 7
+    old_provenance = [
+        f"[2024-0{i + 1}-01 - Suggestion: Ancien cadeau {i}]: Note descriptive ancienne"
+        for i in range(8)
+    ]
+    p1 = "[2025-01-10 - Suggestion: Machine à coudre]: Acheté récemment"
+    p2 = "[2025-02-15 - Gift idea: Laine mérinos]: Préfère la laine biologique"
+    p3 = "[2025-03-20 - Suggestion: Patron de robe]: A déjà ce modèle"
+    raw_notes = f"{bio}\n" + "\n".join(old_provenance) + f"\n{p1}\n{p2}\n{p3}"
+
+    windowed = window_person_notes(raw_notes, terms=["Marguerite"], max_length=800)
+    assert len(windowed) <= 800
+    assert "[name]" in windowed
+    assert "Marguerite" not in windowed
+    assert p3 in windowed
+    assert "…" in windowed
+
+
+def test_window_person_notes_scrubs_before_truncation():
+    long_prefix = "A" * 390
+    name = "Bartholomew"
+    notes = f"{long_prefix} {name} has specific tastes in literature."
+    windowed = window_person_notes(notes, terms=[name], max_length=400)
+    assert name not in windowed
+    assert "[name]" in windowed
+
+
+@pytest.mark.django_db
+def test_build_ai_payload_includes_all_time_preferences(user):
+    tag_liked = GiftTag.objects.create(name="Manga")
+    tag_owned = GiftTag.objects.create(name="Coffee")
+    tag_disliked = GiftTag.objects.create(name="Candle")
+
+    person = Person.objects.create(first_name="Leo", family_name="Bernard")
+    history = RecipientHistory(
+        recipient=person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+
+    profile = PreferenceProfile(
+        liked_tags=((tag_liked.name, 3),),
+        owned_tags=((tag_owned.name, 2),),
+        disliked_tags=((tag_disliked.name, 1),),
+    )
+
+    payload = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=["Manga", "Coffee", "Candle"],
+        avoid_names=[],
+        count=3,
+        language="en",
+        preference_profile=profile,
+    )
+
+    assert "all_time_preferences" in payload
+    prefs = payload["all_time_preferences"]
+    assert prefs["liked_tags"] == [{"tag": "Manga", "count": 3}]
+    assert prefs["owned_or_practiced_tags"] == [{"tag": "Coffee", "count": 2}]
+    assert prefs["disliked_tags"] == [{"tag": "Candle", "count": 1}]
+
+    # When profile is empty or None, all_time_preferences is omitted
+    payload_empty = build_ai_payload(
+        history,
+        viewer=user,
+        available_tag_names=[],
+        avoid_names=[],
+        count=3,
+        language="en",
+        preference_profile=PreferenceProfile(),
+    )
+    assert "all_time_preferences" not in payload_empty

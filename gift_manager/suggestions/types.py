@@ -47,6 +47,7 @@ class SuggestionContext:
     occasion: str = ""
     budget: str = ""
     hint: str = ""
+    preference_profile: Any = None
 
 
 class SuggestionStrategy(Protocol):

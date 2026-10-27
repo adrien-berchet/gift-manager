@@ -423,13 +423,16 @@ def test_ideas_steering_controls_rendered_and_submitted(client, user, monkeypatc
 
     ideas_url = reverse("gift_manager:person_suggestion_ideas", kwargs={"pk": person.person_id})
 
-    # GET renders steering controls with Birthday preselected (<= 60 days)
+    # GET renders steering controls with Any occasion first and preselected by default
     res_get = client.get(ideas_url)
     assert res_get.status_code == 200
     content_get = res_get.content.decode()
     assert 'name="occasion"' in content_get
     assert 'value="Birthday"' in content_get
-    assert "checked" in content_get
+    any_occ_pos = content_get.index(f'id="ai_occ_{person.pk}_any"')
+    first_occ_pos = content_get.index(f'id="ai_occ_{person.pk}_1"')
+    assert any_occ_pos < first_occ_pos
+    assert "checked>" in content_get[any_occ_pos:first_occ_pos]
     assert 'name="budget"' in content_get
     assert 'value="30_75"' in content_get
     assert 'name="hint"' in content_get
@@ -1397,3 +1400,98 @@ def test_reaccept_accepted_suggestion_with_unshared_gift_is_404(client, user):
     accept_url = reverse("gift_manager:person_suggestion_accept", kwargs={"pk": person.person_id})
     res = client.post(accept_url, {"suggestion": str(sugg.suggestion_id)}, HTTP_HX_REQUEST="true")
     assert res.status_code == 404
+
+
+def test_dismiss_suggestion_with_promote_to_profile_appends_note_and_tags(client, user):
+    import json
+
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory(notes="Prefers quiet evenings.")
+    _share(user, person, level=PermissionLevel.EDITOR)
+
+    tag = GiftTagFactory(name="Origami")
+    _share(user, tag, level=PermissionLevel.VIEWER)
+
+    gift = GiftFactory(name="Livre Origami Japonais")
+    gift.tags.add(tag)
+    _share(user, gift, level=PermissionLevel.VIEWER)
+
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+    res = client.post(
+        dismiss_url,
+        {
+            "gift": str(gift.gift_id),
+            "reason": GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+            "comment": "Pratique le pliage depuis longtemps",
+            "promote_to_profile": "1",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    person.refresh_from_db()
+    assert (
+        "Suggestion: Livre Origami Japonais]: Pratique le pliage depuis longtemps" in person.notes
+    )
+    assert person.interests.filter(name="Origami").exists()
+
+    hx_trigger = json.loads(res.headers.get("HX-Trigger", "{}"))
+    assert "showNotification" in hx_trigger
+    assert hx_trigger["showNotification"]["type"] == "info"
+
+
+def test_dismiss_suggestion_with_promote_to_profile_when_already_owned_no_comment_appends_default_note(
+    client, user
+):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory(notes="")
+    _share(user, person, level=PermissionLevel.EDITOR)
+
+    tag = GiftTagFactory(name="Astronomy")
+    _share(user, tag, level=PermissionLevel.VIEWER)
+
+    gift = GiftFactory(name="Telescope 70mm")
+    gift.tags.add(tag)
+    _share(user, gift, level=PermissionLevel.VIEWER)
+
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+    res = client.post(
+        dismiss_url,
+        {
+            "gift": str(gift.gift_id),
+            "reason": GiftSuggestion.DismissReason.ALREADY_OWNED_OR_PRACTICED,
+            "promote_to_profile": "1",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    person.refresh_from_db()
+    assert "Suggestion: Telescope 70mm]: Already owned or practiced" in person.notes
+    assert person.interests.filter(name="Astronomy").exists()
+
+
+def test_dismiss_suggestion_with_promote_to_profile_ignored_when_read_only_viewer(client, user):
+    from gift_manager.models import GiftSuggestion
+
+    person = PersonFactory(notes="Initial")
+    _share(user, person, level=PermissionLevel.VIEWER)  # read-only!
+
+    gift = GiftFactory(name="Headphones")
+    _share(user, gift, level=PermissionLevel.VIEWER)
+
+    dismiss_url = reverse("gift_manager:person_suggestion_dismiss", kwargs={"pk": person.person_id})
+    res = client.post(
+        dismiss_url,
+        {
+            "gift": str(gift.gift_id),
+            "reason": GiftSuggestion.DismissReason.DISLIKES,
+            "comment": "Does not like in-ear style",
+            "promote_to_profile": "1",
+        },
+        HTTP_HX_REQUEST="true",
+    )
+    assert res.status_code == 200
+    person.refresh_from_db()
+    # Notes must remain unchanged because viewer does not have EDITOR permissions
+    assert person.notes == "Initial"

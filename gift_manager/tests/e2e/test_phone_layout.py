@@ -316,3 +316,165 @@ def test_bottom_nav_active_tab_is_distinct_in_dark_mode(phone_page, live_server)
         return [color('#bottom-nav a.active'), color('#bottom-nav a:not(.active)')];
     }""")
     assert colors[0] != colors[1], colors
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+@pytest.mark.parametrize("width", [320, 411])
+def test_detail_and_profile_pages_have_no_horizontal_overflow_on_phones(
+    phone_page, live_server, seed_data_e2e, width, language
+):
+    page = phone_page
+    page.set_viewport_size({"width": width, "height": 748})
+
+    person = next(iter(seed_data_e2e.persons.values()))
+    group = next(iter(seed_data_e2e.groups.values()))
+    gift = next(iter(seed_data_e2e.gifts.values()))
+    relation = seed_data_e2e.relations[0]
+    event = next(iter(seed_data_e2e.events.values()))
+
+    routes = [
+        f"/{language}/persons/{person.person_id}/",
+        f"/{language}/person_groups/{group.group_id}/",
+        f"/{language}/gifts/{gift.gift_id}/",
+        f"/{language}/relations/{relation.relation_id}/",
+        f"/{language}/events/{event.event_id}/",
+        f"/{language}/profile/",
+        f"/{language}/relations/guided/",
+    ]
+
+    for route in routes:
+        page.goto(f"{live_server.url}{route}")
+        expect(page.locator("#bottom-nav")).to_be_visible()
+
+        scroll_width = page.evaluate("document.documentElement.scrollWidth")
+        assert scroll_width <= width, (route, scroll_width, page.evaluate(OVERFLOW_OFFENDERS_JS))
+
+        # Top navbar toggler and bottom nav must remain completely inside the viewport
+        for selector in [".navbar-toggler", "#bottom-nav"]:
+            box = page.locator(selector).bounding_box()
+            assert box is not None, (route, selector)
+            assert box["x"] >= -1 and box["x"] + box["width"] <= width + 1, (route, selector, box)
+
+        # Action buttons on detail pages must wrap and stay within the viewport
+        action_buttons = page.locator(".action-buttons .btn:visible")
+        if action_buttons.count() > 0:
+            assert action_buttons.evaluate_all(
+                """(buttons, maxW) => buttons.every(btn => {
+                    const rect = btn.getBoundingClientRect();
+                    return rect.left >= 0 && rect.right <= maxW + 1;
+                })""",
+                width,
+            ), (route, "action-buttons overflow")
+
+        # Person Group Detail tabs must all be visible within the viewport without clipping
+        group_tabs = page.locator("#groupTab .nav-link:visible")
+        if group_tabs.count() > 0:
+            assert group_tabs.evaluate_all(
+                """(tabs, maxW) => tabs.every(tab => {
+                    const rect = tab.getBoundingClientRect();
+                    return rect.left >= 0 && rect.right <= maxW + 1 &&
+                        tab.scrollWidth <= tab.clientWidth + 1;
+                })""",
+                width,
+            ), (route, "groupTab overflow")
+
+        # Guided relation stepper items must wrap cleanly within the viewport
+        guided_steps = page.locator(".guided-steps .guided-step:visible")
+        if guided_steps.count() > 0:
+            assert guided_steps.evaluate_all(
+                """(steps, maxW) => steps.every(step => {
+                    const rect = step.getBoundingClientRect();
+                    return rect.left >= 0 && rect.right <= maxW + 1;
+                })""",
+                width,
+            ), (route, "guided-steps overflow")
+
+
+@pytest.mark.parametrize("language", ["en", "fr"])
+@pytest.mark.parametrize("width", [320, 411])
+def test_phone_gift_suggestion_actions_fit_inside_container(
+    phone_page, live_server, seed_data_e2e, width, language
+):
+    page = phone_page
+    page.set_viewport_size({"width": width, "height": 748})
+
+    person = seed_data_e2e.persons["mom"]
+    group = seed_data_e2e.groups["family"]
+    seed_data_e2e.gifts["scarf"].tags.add(seed_data_e2e.tags["gadgets"])
+    for route in [
+        f"/{language}/persons/{person.person_id}/",
+        f"/{language}/person_groups/{group.group_id}/",
+    ]:
+        page.goto(f"{live_server.url}{route}")
+
+        suggestions = page.locator("[data-gift-suggestions]")
+        expect(suggestions).to_be_visible(timeout=10000)
+        first_item = suggestions.locator("[data-gift-suggestion]").first
+        expect(first_item).to_be_visible()
+
+        metrics = first_item.evaluate(
+            """(item, maxW) => {
+                const container = item.closest('.gift-suggestions-scroll-container') || item;
+                const cRect = container.getBoundingClientRect();
+                const accept = item.querySelector('[data-suggestion-accept]').getBoundingClientRect();
+                const dismiss = item.querySelector('[data-suggestion-dismiss]').getBoundingClientRect();
+                const toggle = item.querySelector('.dropdown-toggle-split').getBoundingClientRect();
+                return {
+                    containerLeft: cRect.left,
+                    containerRight: cRect.right,
+                    acceptLeft: accept.left,
+                    acceptRight: accept.right,
+                    dismissLeft: dismiss.left,
+                    dismissRight: dismiss.right,
+                    toggleRight: toggle.right,
+                    fits: (
+                        accept.left >= cRect.left - 1 &&
+                        accept.right <= cRect.right + 1 &&
+                        dismiss.left >= cRect.left - 1 &&
+                        toggle.right <= cRect.right + 1 &&
+                        toggle.right <= maxW + 1
+                    ),
+                };
+            }""",
+            width,
+        )
+        assert metrics["fits"], (route, metrics)
+
+        # Opening the dismiss-with-reason dropdown must keep the menu within the viewport
+        first_item.locator(".dropdown-toggle-split").click()
+        dropdown_menu = first_item.locator(".gift-suggestion-dropdown-menu")
+        expect(dropdown_menu).to_be_visible()
+        menu_box = dropdown_menu.bounding_box()
+        assert menu_box is not None
+        assert menu_box["x"] >= 0 and menu_box["x"] + menu_box["width"] <= width + 1, (
+            route,
+            menu_box,
+        )
+
+
+def test_phone_clicking_ai_steering_pills_does_not_scroll_viewport(
+    phone_page, live_server, seed_data_e2e, monkeypatch
+):
+    from gift_manager.tests.suggestions.conftest import FakeAIClient
+
+    monkeypatch.setattr("gift_manager.suggestions.service.get_ai_client", FakeAIClient)
+    page = phone_page
+    page.set_viewport_size({"width": 411, "height": 748})
+    person = seed_data_e2e.persons["mom"]
+    page.goto(f"{live_server.url}/en/persons/{person.person_id}/")
+
+    ai_block = page.locator("[data-gift-suggestions-ai]")
+    expect(ai_block.locator("[data-suggestion-more-ideas]")).to_be_visible(timeout=10000)
+
+    budget_label = ai_block.locator('label[for$="_under_30"]')
+    budget_label.scroll_into_view_if_needed()
+    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY
+    page.evaluate("window.scrollBy(0, -180)")
+    scroll_before = page.evaluate("window.scrollY")
+
+    budget_label.click()
+    # Wait past the 300ms + 100ms soft-keyboard scroll timers in mobile-responsive.js
+    page.evaluate("() => new Promise(resolve => setTimeout(resolve, 550))")
+    scroll_after = page.evaluate("window.scrollY")
+    assert scroll_after == scroll_before
+    assert not page.evaluate("document.body.classList.contains('keyboard-visible')")

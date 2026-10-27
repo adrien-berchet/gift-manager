@@ -6,6 +6,19 @@
 (function() {
     'use strict';
 
+    const NON_KEYBOARD_INPUT_TYPES = [
+        'button',
+        'checkbox',
+        'color',
+        'file',
+        'hidden',
+        'image',
+        'radio',
+        'range',
+        'reset',
+        'submit',
+    ];
+
     // Mobile detection and state management
     const MobileResponsive = {
         isMobile: false,
@@ -137,9 +150,7 @@
         isFormElement: function(element) {
             const formElements = ['INPUT', 'TEXTAREA', 'SELECT'];
             return formElements.includes(element.tagName) &&
-                   element.type !== 'button' &&
-                   element.type !== 'submit' &&
-                   element.type !== 'reset';
+                   !NON_KEYBOARD_INPUT_TYPES.includes(element.type);
         },
 
         handleKeyboardToggle: function() {

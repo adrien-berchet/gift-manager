@@ -714,7 +714,7 @@ def test_generation_records_telemetry(user, share):
 
     gen = GiftSuggestionGeneration.objects.filter(user=user, person=person).latest("id")
     assert gen.succeeded is True
-    assert gen.prompt_version == 2
+    assert gen.prompt_version == 3
     assert gen.model == "gpt-4o"
     assert gen.idea_count == 1
     assert gen.duration_ms is not None
