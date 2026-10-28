@@ -117,7 +117,8 @@ resolves permissions through `PermissionService` and raises `PermissionDenied` o
 - `unlink(person, actor) -> None`: actor must have EDITOR or more. No-op when not linked.
 - `revealed_surprise_count(person) -> int`: number of plans shared with `person.account` that are
   hidden from it now and would no longer be hidden without this link, computed with the same
-  `hidden_surprises_for` query with this record left out. A plan that stays hidden through another
+  `hidden_surprises_for` query with this record left out (an optional `excluding_person`
+  argument on `hidden_surprises_for` and `recipient_groups_for`). A plan that stays hidden through another
   record linked to the same account is not counted. Used for the unlink and change warnings.
 - `link_suggestion(person, viewer) -> User | None`: for an editor viewing an unlinked record with
   an email, the suggested account: the viewer's own account when the email is theirs (shown as
@@ -198,7 +199,9 @@ works without JavaScript; HTMX requests get partial templates under
   records, edited emails and friendships created after the record.
 - **"Invite to Gift Manager"** button on the person page for editors, when the record has an
   email, is unlinked, and the email belongs neither to the viewer nor to a friend. It opens the
-  existing `send_invitation` form with the email prefilled and a hidden `person` field.
+  existing `send_invitation` form with `?person=<uuid>`; the view fills the email in from the
+  record (never from the URL, so emails stay out of URLs and logs) and keeps `person` as a hidden
+  field.
   `SendInvitationView` stores `Invitation.person` only if the sender is an OWNER of that record.
 - **Friends list** (`profile_detail.html:313-341`), for each friend:
   - When the viewer owns records linked to them: each record's name (link to the person page) and
@@ -206,11 +209,12 @@ works without JavaScript; HTMX requests get partial templates under
     viewer an owner of another giver's linked record.
   - Otherwise: "Link to a person" (`profile/friends/<int:friend_id>/link/`,
     `friend_link_person`: the viewer's owned, unlinked records, those whose email matches the
-    friend first) and "Create person" (the person create form prefilled with the friend's first
-    and last name, falling back to the username, and email, plus `link_to=<friend profile pk>`).
+    friend first) and "Create person" (the person create form with `?link_to=<friend profile
+    pk>`; the view fills in the friend's first and last name, falling back to the username, and
+    email from the account, never from the URL).
   - A hint "1 person has this email" when owned unlinked records match.
-- **Person create form**: `prefill_fields` (`views/base.py:284`) also accepts `email`. The
-  `link_to` parameter is carried as a hidden field; after save, `link` is called with the creator
+- **Person create form**: the `link_to` parameter fills in the initial values (above) and is
+  carried as a hidden field; after save, `link` is called with the creator
   as actor. A refused link keeps the created record and shows the refusal message.
 - **Profile page**: "Your own person record: <name>" when a record the user owns is linked to
   them, listing each one when sharing produced several.
@@ -219,8 +223,11 @@ works without JavaScript; HTMX requests get partial templates under
 
 ## Seed data and documentation
 
-- `gift_manager/seed_data.py`: link the seeded "Alice" and "Bob" records to the seeded Alice and
-  Bob accounts, and add a self-linked record for the test user inside a family group.
+- `gift_manager/seed_data.py`: the base seed has no person records for the seeded Alice and Bob
+  accounts, and about 18 end-to-end tests depend on its exact contents, so it stays unchanged. A
+  separate helper `create_account_link_seed(data)` adds an "Alice" record owned by the test user
+  and linked to Alice, and a self-linked record for the test user, both in a new "Household"
+  group. The new end-to-end tests and the `seed_data` command (for manual testing) call it.
 - `docs/ai/architecture.md`: a short "Persons and accounts" paragraph: ownership comes from
   permission rows, `account` says who a record represents, and being a recipient only removes
   visibility.
