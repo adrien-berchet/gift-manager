@@ -54,6 +54,26 @@ msgstr "Cet utilisateur n'existe pas."
 msgid "Your account has been successfully reactivated."
 msgstr "Votre compte a été réactivé avec succès."
 
+#: gift_manager/account_links.py:78 gift_manager/account_links.py:133
+msgid "You do not have permission to edit this person."
+msgstr "Vous n'avez pas la permission de modifier cette personne."
+
+#: gift_manager/account_links.py:86
+msgid "Only an owner of this person can mark it as you."
+msgstr "Seul un propriétaire de cette personne peut indiquer qu'il s'agit de vous."
+
+#: gift_manager/account_links.py:92
+msgid "You can only link a person to one of your friends."
+msgstr "Vous ne pouvez associer une personne qu'à l'un de vos amis."
+
+#: gift_manager/account_links.py:102
+msgid "Nobody who owns this person is friends with this account."
+msgstr "Aucun des propriétaires de cette personne n'est ami avec ce compte."
+
+#: gift_manager/account_links.py:109
+msgid "One of this person's owners already has a person linked to this account."
+msgstr "L'un des propriétaires de cette personne a déjà une personne associée à ce compte."
+
 #: gift_manager/calendar_feed.py:128
 #, python-format
 msgid "%(gift)s for %(recipient)s"

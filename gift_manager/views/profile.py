@@ -15,6 +15,7 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic import View
 
+from gift_manager.account_links import remove_links_after_unfriending
 from gift_manager.email_encoding import encode_email
 from gift_manager.forms import InvitationForm
 from gift_manager.forms import ReminderPreferencesForm
@@ -227,6 +228,7 @@ class RemoveFriendView(LoginRequiredMixin, View):
                 friend_profile.friends.remove(user_profile)
 
             self._cleanup_former_friend_permissions(request.user, friend)
+            remove_links_after_unfriending(request.user, friend)
 
         messages.success(
             request,
