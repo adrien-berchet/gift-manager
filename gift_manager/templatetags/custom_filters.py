@@ -4,6 +4,7 @@ from django import template
 from django.utils import formats
 from django.utils.translation import gettext
 
+from gift_manager.account_links import link_label as _link_label
 from gift_manager.email_encoding import decode_email as _decode_email
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.statuses import relation_status_slug
@@ -52,6 +53,14 @@ def replace_empty(value, replacement="-"):
 def decode_email(value):
     """Decode a base64-encoded email address for display."""
     return _decode_email(value)
+
+
+@register.filter
+def person_link_label(person, viewer):
+    """Return human-readable account link label for person viewed by viewer."""
+    if person is None or viewer is None:
+        return ""
+    return _link_label(person, viewer)
 
 
 _STATUS_BADGE_MAP = {

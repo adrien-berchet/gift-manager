@@ -84,6 +84,11 @@ urlpatterns = [
     path("persons/<uuid:pk>/edit/", views.PersonUpdateView.as_view(), name="person_edit"),
     path("persons/<uuid:pk>/delete/", views.PersonDeleteView.as_view(), name="person_delete"),
     path(
+        "persons/<uuid:pk>/link/",
+        views.PersonLinkAccountView.as_view(),
+        name="person_link_account",
+    ),
+    path(
         "persons/<uuid:pk>/gift-history/",
         views.person_gift_history,
         name="person_gift_history",

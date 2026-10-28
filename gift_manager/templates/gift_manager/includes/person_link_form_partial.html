@@ -1,0 +1,65 @@
+{% load i18n custom_filters %}
+<form method="post"
+      action="{% url 'gift_manager:person_link_account' person.person_id %}"
+      hx-post="{% url 'gift_manager:person_link_account' person.person_id %}"
+      hx-target="this"
+      hx-swap="outerHTML"
+      data-form-type="person-link">
+    {% csrf_token %}
+
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        {{ error_message }}
+    </div>
+    {% endif %}
+
+    {% if confirm_required and confirmation_message %}
+    <div class="alert alert-warning" role="alert">
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+        {{ confirmation_message }}
+    </div>
+    <input type="hidden" name="confirm" value="1">
+    <input type="hidden" name="confirm_account" value="{{ confirm_account_id }}">
+    {% endif %}
+
+    <fieldset class="mb-4">
+        <legend class="h6 mb-3">{% trans "Who is this person?" %}</legend>
+        <div class="d-flex flex-column gap-2" role="radiogroup">
+            {% for choice in choices %}
+            <div class="form-check">
+                <input class="form-check-input"
+                       type="radio"
+                       name="account"
+                       id="choice-{{ forloop.counter }}"
+                       value="{{ choice.value }}"
+                       {% if choice.value == selected_account_id %}checked{% endif %}
+                       {% if choice.disabled %}disabled aria-describedby="desc-{{ forloop.counter }}"{% endif %}>
+                <label class="form-check-label {% if choice.disabled %}text-muted{% endif %}" for="choice-{{ forloop.counter }}">
+                    {{ choice.label }}
+                </label>
+                {% if choice.disabled %}
+                <div class="form-text mt-0 ms-1 text-muted" id="desc-{{ forloop.counter }}">
+                    {% if choice.conflicts %}
+                        {% trans "Already linked to:" %}
+                        {% for conflict in choice.conflicts %}
+                            <a href="{% url 'gift_manager:person_detail' conflict.person_id %}">{{ conflict }}</a>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {% trans "One of this person's owners already has a person linked to this account." %}
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </fieldset>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {% if confirm_required %}{% trans "Confirm" %}{% else %}{% trans "Save" %}{% endif %}
+        </button>
+        <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="btn btn-outline-secondary">
+            {% trans "Cancel" %}
+        </a>
+    </div>
+</form>

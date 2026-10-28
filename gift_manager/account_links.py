@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from django.core.exceptions import PermissionDenied
@@ -191,3 +192,129 @@ def remove_links_after_unfriending(user: User, former_friend: User) -> int:
     if not pks:
         return 0
     return Person.objects.filter(pk__in=pks).update(account=None)
+
+
+@dataclass(frozen=True)
+class LinkChoice:
+    """A choice displayed in the person-account link form."""
+
+    value: str
+    label: str
+    account: User | None
+    disabled: bool
+    conflicts: tuple[Person, ...]
+
+
+def link_label(person: Person, viewer: User) -> str:
+    """Return a short human-readable label describing who this person is linked to."""
+    if person.account_id is None:
+        return ""
+    if person.account_id == viewer.pk:
+        return _("This is you")
+    username = person.account.username if person.account else ""
+    return _("Linked to %(username)s") % {"username": username}
+
+
+def _candidate_conflicts(
+    candidate_ids: set[int],
+    owner_ids: set[int],
+    person_pk: int,
+    actor: User,
+) -> tuple[dict[int, list[Person]], dict[int, list[Person]]]:
+    all_conflicts: dict[int, list[Person]] = {}
+    accessible_conflicts: dict[int, list[Person]] = {}
+    if not (owner_ids and candidate_ids):
+        return all_conflicts, accessible_conflicts
+
+    conflicts_qs = (
+        Person.objects.filter(
+            account_id__in=candidate_ids,
+            personpermission__user_id__in=owner_ids,
+            personpermission__permission_type=PermissionLevel.OWNER,
+        )
+        .exclude(pk=person_pk)
+        .distinct()
+    )
+    accessible_pks = set(
+        Person.objects.accessible_by(actor)
+        .filter(pk__in=conflicts_qs.values("pk"))
+        .values_list("pk", flat=True)
+    )
+    for cp in conflicts_qs:
+        all_conflicts.setdefault(cp.account_id, []).append(cp)
+        if cp.pk in accessible_pks:
+            accessible_conflicts.setdefault(cp.account_id, []).append(cp)
+    return all_conflicts, accessible_conflicts
+
+
+def _make_choice(
+    account: User,
+    label: str,
+    person: Person,
+    all_conflicts: dict[int, list[Person]],
+    accessible_conflicts: dict[int, list[Person]],
+) -> LinkChoice:
+    if person.account_id == account.pk:
+        disabled = False
+        conflicts = ()
+    else:
+        disabled = bool(all_conflicts.get(account.pk))
+        conflicts = tuple(accessible_conflicts.get(account.pk, []))
+    return LinkChoice(
+        value=str(account.pk),
+        label=label,
+        account=account,
+        disabled=disabled,
+        conflicts=conflicts,
+    )
+
+
+def link_choices(person: Person, actor: User) -> list[LinkChoice]:
+    """Return the ordered list of account choices for linking this person record."""
+    owner_ids = _owner_ids(person)
+    is_owner = actor.pk in owner_ids
+
+    choices: list[LinkChoice] = [
+        LinkChoice(
+            value="",
+            label=_("No one"),
+            account=None,
+            disabled=False,
+            conflicts=(),
+        )
+    ]
+
+    friends_dict: dict[int, User] = {}
+    if hasattr(actor, "profile"):
+        friends_qs = actor.profile.friends.filter(
+            user__in=Profile.objects.filter(user_id__in=owner_ids).values("friends__user")
+        ).select_related("user")
+        for friend_profile in friends_qs:
+            friends_dict[friend_profile.user_id] = friend_profile.user
+
+    # If currently linked to someone not actor and not in friends_dict:
+    if person.account_id and person.account_id != actor.pk and person.account:
+        friends_dict.setdefault(person.account_id, person.account)
+
+    friends = sorted(friends_dict.values(), key=lambda u: u.username.lower())
+
+    candidate_accounts: list[User] = []
+    if is_owner or person.account_id == actor.pk:
+        candidate_accounts.append(actor)
+    candidate_accounts.extend(friends)
+
+    candidate_ids = {u.id for u in candidate_accounts}
+
+    all_conflicts, accessible_conflicts = _candidate_conflicts(
+        candidate_ids, owner_ids, person.pk, actor
+    )
+
+    if is_owner or person.account_id == actor.pk:
+        choices.append(_make_choice(actor, _("Me"), person, all_conflicts, accessible_conflicts))
+
+    choices.extend(
+        _make_choice(friend, friend.username, person, all_conflicts, accessible_conflicts)
+        for friend in friends
+    )
+
+    return choices

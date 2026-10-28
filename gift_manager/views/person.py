@@ -268,6 +268,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
     context_object_name = "person"
     pk_name = "person_id"
     htmx_template_name = "gift_manager/includes/person_detail_partial.html"
+    select_related_fields = ["account"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -320,7 +321,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         # Build action buttons configuration
         is_editor = context.get("is_editor", False)
 
-        context["action_buttons"] = [
+        action_buttons = [
             {
                 "type": "edit",
                 "url": reverse("gift_manager:person_edit", kwargs={"pk": self.object.person_id}),
@@ -330,6 +331,21 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                 if not is_editor
                 else None,
             },
+        ]
+        if is_editor:
+            action_buttons.append(
+                {
+                    "type": "custom",
+                    "url": reverse(
+                        "gift_manager:person_link_account",
+                        kwargs={"pk": self.object.person_id},
+                    ),
+                    "label": _("Change link") if self.object.account_id else _("Link account"),
+                    "icon": "fas fa-link",
+                    "btn_class": "btn-outline-secondary",
+                }
+            )
+        action_buttons.append(
             {
                 "type": "delete",
                 "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
@@ -341,7 +357,9 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                 )
                 if not is_editor
                 else None,
-            },
-        ]
+            }
+        )
+
+        context["action_buttons"] = action_buttons
 
         return context

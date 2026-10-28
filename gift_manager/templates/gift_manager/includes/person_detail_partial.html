@@ -4,6 +4,16 @@
 {% block edit_url %}{% url 'gift_manager:person_edit' pk=person.person_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:person_delete' pk=person.person_id %}{% endblock %}
 
+{% block title_badges %}
+{% with label=person|person_link_label:request.user %}
+{% if label %}
+    <span class="badge bg-secondary ms-2 align-middle">
+        <i class="fas fa-link me-1" aria-hidden="true"></i>{{ label }}
+    </span>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
 {% block detail_fields %}
 <div class="row g-4">
 

@@ -1,0 +1,21 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Link account" %} - {{ person }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <h1>{% trans "Link account" %} - {{ person }}</h1>
+        <a href="{% url 'gift_manager:person_detail' person.person_id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back" %}
+        </a>
+    </div>
+</div>
+
+<div class="card col-lg-6 col-md-8 mx-auto">
+    <div class="card-body">
+        {% include "gift_manager/includes/person_link_form_partial.html" %}
+    </div>
+</div>
+{% endblock %}

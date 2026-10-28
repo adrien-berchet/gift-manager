@@ -2,6 +2,7 @@
 
 # Common utilities
 # Base classes (not typically imported directly, but available if needed)
+from .account_links import PersonLinkAccountView
 from .base import BaseCreateView
 from .base import BaseDeleteView
 from .base import BaseDetailView
@@ -179,6 +180,7 @@ __all__ = [
     "PersonGroupListView",
     "PersonGroupRelationCreateView",
     "PersonGroupUpdateView",
+    "PersonLinkAccountView",
     "PersonListView",
     "PersonRelationCreateView",
     "PersonUpdateView",

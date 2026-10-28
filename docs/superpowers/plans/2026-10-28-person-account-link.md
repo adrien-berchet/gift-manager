@@ -289,7 +289,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - URL `persons/<uuid:pk>/link/`, name `person_link_account`, view
     `PersonLinkAccountView` (GET form, POST `account=<value>` with optional `confirm=1`).
 
-- [ ] **Step 1: Write failing tests** in `test_person_link_account.py`:
+- [x] **Step 1: Write failing tests** in `test_person_link_account.py`:
   - `test_non_editor_gets_403_and_stranger_gets_404` (also the linked account itself: 404).
   - `test_choices_and_disabled_states`: a friend with a conflicting owned record is disabled and
     its conflict is listed; "Me" appears for owners only and is disabled when a self-record
@@ -309,18 +309,18 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - `test_detail_page_shows_badge_and_button`: the person page shows "Linked to ana" and the
     "Change link" button for editors; "Link account" when unlinked; no button for viewers; the
     badge reads "This is you" on a self-record.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_person_link_account.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_person_link_account.py`.
   Expected: FAIL.
-- [ ] **Step 3: Implement** `link_choices`, `link_label`, the filter, the view and templates.
+- [x] **Step 3: Implement** `link_choices`, `link_label`, the filter, the view and templates.
   The view resolves the person through `Person.objects.accessible_by(request.user)` (404) and
   requires EDITOR (`PermissionDenied`). The full page extends `base.html` and includes the partial;
   HTMX GET gets the partial alone. The confirmation is a second render of the same form carrying
   `confirm=1`. Add the custom action button (`type: "custom"`, icon `fas fa-link`,
   `btn_class: "btn-outline-secondary"`, label "Link account" or "Change link", editors only) to
   `PersonDetailView`'s `action_buttons`.
-- [ ] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/`. Expected:
+- [x] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/`. Expected:
   PASS. Add the French translations.
-- [ ] **Step 5: Commit** `Feat: Link a person to an account from the person page`.
+- [x] **Step 5: Commit** `Feat: Link a person to an account from the person page`.
 
 ---
 
