@@ -42,7 +42,7 @@ class TestMobileResponsivenessProperty:
         """
         # Create test entity with proper user associations
         if entity_type == "person":
-            entity = PersonFactory(user_link=self.user)
+            entity = PersonFactory(account=self.user)
             delete_url = reverse("gift_manager:person_delete", kwargs={"pk": entity.person_id})
         elif entity_type == "gift":
             entity = GiftFactory(shared_with=[self.user])
@@ -92,7 +92,7 @@ class TestMobileResponsivenessProperty:
         """
         # Create test entity with proper user associations
         if entity_type == "person":
-            entity = PersonFactory(user_link=self.user)
+            entity = PersonFactory(account=self.user)
             edit_url = reverse("gift_manager:person_edit", kwargs={"pk": entity.person_id})
         elif entity_type == "gift":
             entity = GiftFactory(shared_with=[self.user])

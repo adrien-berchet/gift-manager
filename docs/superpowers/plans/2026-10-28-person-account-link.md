@@ -103,7 +103,15 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
     ends with exactly one OWNER `PersonPermission` for `u`.
   - `test_does_not_duplicate_existing_owner_permission`: a person with `user_link=u` and an OWNER
     row for `u` still has exactly one row.
+  - `test_upgrades_existing_non_owner_permission`: a person with `user_link=u` and a VIEWER or EDITOR
+    row for `u` is upgraded to OWNER.
+  - `test_preserves_other_users_permissions`: other users' permission rows on the person remain unchanged.
+  - `test_same_user_linked_on_multiple_persons`: a user linked to multiple persons receives an OWNER
+    permission for each person.
+  - `test_unlinked_person_gets_no_permission_created`: a person with no link gets no permissions created.
   - `test_clears_every_account`: after migrating, every `Person.account_id` is NULL.
+  - `test_new_columns_exist_and_are_null`: `Person.link_suggestion_dismissed_account_id` and
+    `Invitation.person_id` exist and are NULL.
   - `test_deleting_linked_account_keeps_the_person` (post-migration model): `account=u`,
     `u.delete()`, the person still exists with `account is None`.
 - [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_migrations.py`. Expected:
@@ -111,10 +119,12 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
 - [ ] **Step 3: Implement the model change**: rename the field to `account`
   (`related_name="linked_persons"`), add `link_suggestion_dismissed_account` and
   `Invitation.person` as specified in the spec's Data model section.
-- [ ] **Step 4: Write `0041_person_account_link.py` by hand** in this order: `RunPython`
-  backfill (historical models; reverse no-op), `RenameField("person", "user_link", "account")`,
-  `AlterField` for the `related_name`, `RunPython` clearing `account` (reverse no-op), the two
-  `AddField`s. Then `python manage.py makemigrations --check --dry-run` reports no changes.
+- [ ] **Step 4: Write `0041_person_account_link.py` by hand** in this order:
+  `RenameField("person", "user_link", "account")`, `AlterField` for the `related_name`,
+  the two `AddField`s (`link_suggestion_dismissed_account` and `invitation.person`),
+  `RunPython` backfill (upgrading/creating OWNER permissions; reverse no-op),
+  `RunPython` clearing `account` (reverse no-op).
+  Then `python manage.py makemigrations --check --dry-run` reports no changes.
 - [ ] **Step 5: Rename every caller mechanically**: `user_link` becomes `account` and
   `user_link_id` becomes `account_id` in code and tests, with no other change (Task 2 changes
   behaviour). Add `PersonFactory.owner` (post-generation, OWNER via

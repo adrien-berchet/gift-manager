@@ -20,7 +20,7 @@ def grant_owner(user, *objects):
 @pytest.fixture
 def form_choice_data(user):
     person = Person.objects.create(
-        user_link=user,
+        account=user,
         first_name="Ada",
         family_name="Lovelace",
     )
@@ -194,7 +194,7 @@ def test_edit_form_sharing_controls_submit_without_javascript(authenticated_clie
     user.profile.friends.add(friend.profile)
 
     person = Person.objects.create(
-        user_link=user,
+        account=user,
         first_name="Grace",
         family_name="Hopper",
         email_address="grace@example.com",

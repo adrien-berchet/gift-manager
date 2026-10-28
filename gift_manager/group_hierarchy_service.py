@@ -60,7 +60,7 @@ class GroupHierarchyService:
 
     @classmethod
     def _editable_object_pks(cls, actor, objs: list) -> set[int]:
-        """Editable objects with a permission model (persons, ...), owner via user_link."""
+        """Editable objects with a permission model (persons, ...), owner via account."""
         model = PermissionService.get_permission_model(objs[0])
         attr = PermissionService._get_permission_object_attr(objs[0], model)  # noqa: SLF001
         editable = set(
@@ -70,7 +70,7 @@ class GroupHierarchyService:
                 **{f"{attr}__in": objs},
             ).values_list(f"{attr}_id", flat=True)
         )
-        editable.update(obj.pk for obj in objs if getattr(obj, "user_link_id", None) == actor.id)
+        editable.update(obj.pk for obj in objs if getattr(obj, "account_id", None) == actor.id)
         return editable
 
     @classmethod

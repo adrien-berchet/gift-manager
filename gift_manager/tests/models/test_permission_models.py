@@ -52,8 +52,8 @@ class TestAccessibleByMethod:
     def test_accessible_by_deduplicates_owned_person_with_multiple_permissions(self, user, person):
         """An owned person is returned once even when shared with another user."""
         friend = UserFactory(username="friend")
-        person.user_link = user
-        person.save(update_fields=["user_link"])
+        person.account = user
+        person.save(update_fields=["account"])
         PersonPermission.objects.create(
             user=user, person=person, permission_type=PermissionLevel.OWNER
         )

@@ -86,11 +86,11 @@ Ownership never needed `user_link`: every create path also writes an explicit OW
 
 Migration operations, in order:
 
-1. `RunPython`: for each `Person` with `user_link` set and no OWNER `PersonPermission` for that
-   user, create one. Reverse: no-op.
-2. `RenameField` `user_link` to `account`, then `AlterField` for the new `related_name`.
-3. `RunPython`: set `account = NULL` on every row. Reverse: no-op (old values are not restored).
-4. `AddField` `Person.link_suggestion_dismissed_account` and `Invitation.person`.
+1. `RenameField` `user_link` to `account`, then `AlterField` for the new `related_name`.
+2. `AddField` `Person.link_suggestion_dismissed_account` and `Invitation.person`.
+3. `RunPython`: for each `Person` with `account` set, ensure an OWNER `PersonPermission` exists for that
+   user (creating it or upgrading any lower permission). Reverse: no-op.
+4. `RunPython`: set `account = NULL` on every row. Reverse: no-op (old values are not restored).
 
 ## Service: `gift_manager/account_links.py`
 

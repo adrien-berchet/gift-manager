@@ -71,7 +71,7 @@ class TestPlanCoordination:
 
         # A surprise plan for Bob is invisible to Bob and still visible to Alice
         surprise = RelationFactory(
-            person=PersonFactory(first_name="Bobby", user_link=bob),
+            person=PersonFactory(first_name="Bobby", account=bob),
             gift=GiftFactory(name="Hidden Surprise Gift", shared_with=[alice, bob]),
             event=None,
             is_surprise=True,
@@ -158,7 +158,7 @@ class TestPlanCoordination:
         alice.profile.friends.add(bob.profile)
         gift = GiftFactory(name="Warned Gift")
         share(gift, alice, PermissionLevel.OWNER)
-        bobby = PersonFactory(first_name="Bobby", user_link=bob)
+        bobby = PersonFactory(first_name="Bobby", account=bob)
         share(bobby, alice, PermissionLevel.OWNER)
         plan = RelationFactory(person=bobby, gift=gift, event=None, is_surprise=True)
         share(plan, alice, PermissionLevel.OWNER)

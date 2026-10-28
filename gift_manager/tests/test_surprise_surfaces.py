@@ -67,7 +67,7 @@ class Scene:
         self.collaborator = UserFactory()
         self.gift = GiftFactory(name="Surprise gift")
         self.event = EventFactory(name="Surprise event")
-        self.person = PersonFactory(user_link=self.recipient)
+        self.person = PersonFactory(account=self.recipient)
         if kind == "group":
             self.group = PersonGroupFactory(name="Surprise group")
             self.person.groups.add(self.group)

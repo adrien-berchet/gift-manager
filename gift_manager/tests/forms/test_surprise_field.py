@@ -52,7 +52,7 @@ def _data(gift, **overrides):
 
 
 def test_default_is_on_for_a_person_linked_to_another_user(creator):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
 
     form = RelationForm(initial={"recipient": f"person:{person.person_id}"}, user=creator)
 
@@ -69,7 +69,7 @@ def test_default_is_off_for_an_unlinked_person(creator):
 
 def test_default_is_on_for_a_group_with_a_linked_member(creator):
     group = PersonGroupFactory(shared_with=[creator])
-    PersonFactory(user_link=UserFactory(), groups=[group])
+    PersonFactory(account=UserFactory(), groups=[group])
 
     form = RelationForm(initial={"recipient": f"group:{group.group_id}"}, user=creator)
 
@@ -78,7 +78,7 @@ def test_default_is_on_for_a_group_with_a_linked_member(creator):
 
 def test_default_is_off_for_a_group_whose_only_linked_member_is_the_creator(creator):
     group = PersonGroupFactory(shared_with=[creator])
-    PersonFactory(user_link=creator, groups=[group])
+    PersonFactory(account=creator, groups=[group])
 
     form = RelationForm(initial={"recipient": f"group:{group.group_id}"}, user=creator)
 
@@ -87,9 +87,9 @@ def test_default_is_off_for_a_group_whose_only_linked_member_is_the_creator(crea
 
 
 def test_person_and_group_create_forms_apply_the_same_default(creator):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
     group = PersonGroupFactory(shared_with=[creator])
-    PersonFactory(user_link=UserFactory(), groups=[group])
+    PersonFactory(account=UserFactory(), groups=[group])
 
     person_form = PersonRelationForm(person_id=person.person_id, user=creator)
     group_form = PersonGroupRelationForm(group_id=group.group_id, user=creator)
@@ -99,7 +99,7 @@ def test_person_and_group_create_forms_apply_the_same_default(creator):
 
 
 def test_gift_create_form_uses_its_initial_recipient(creator, gift):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
 
     form = GiftRelationForm(
         gift_id=gift.gift_id, initial={"recipient": f"person:{person.person_id}"}, user=creator
@@ -122,7 +122,7 @@ def test_duplicating_a_surprise_plan_keeps_the_flag_whatever_the_default(creator
 
 
 def test_field_is_absent_when_the_recipient_is_the_creators_own_person(creator):
-    person = PersonFactory(user_link=creator)
+    person = PersonFactory(account=creator)
 
     form = RelationForm(initial={"recipient": f"person:{person.person_id}"}, user=creator)
 
@@ -130,7 +130,7 @@ def test_field_is_absent_when_the_recipient_is_the_creators_own_person(creator):
 
 
 def test_posting_the_flag_for_the_creators_own_person_saves_false(creator, gift):
-    person = PersonFactory(user_link=creator)
+    person = PersonFactory(account=creator)
 
     form = RelationForm(
         data=_data(gift, recipient=f"person:{person.person_id}", is_surprise="on"), user=creator
@@ -144,7 +144,7 @@ def test_posting_the_flag_for_the_creators_own_person_saves_false(creator, gift)
 
 
 def test_the_checkbox_is_saved_when_ticked_and_when_cleared(creator, gift):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
     recipient = f"person:{person.person_id}"
 
     ticked = RelationForm(data=_data(gift, recipient=recipient, is_surprise="on"), user=creator)
@@ -161,7 +161,7 @@ def test_the_checkbox_is_saved_when_ticked_and_when_cleared(creator, gift):
 
 @pytest.mark.parametrize("level", [PermissionLevel.EDITOR, PermissionLevel.OWNER])
 def test_editors_and_owners_see_the_field_on_edit(creator, level):
-    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()))
+    relation = RelationFactory(person=PersonFactory(account=UserFactory()))
     _share(relation, creator, level, "relation")
 
     form = RelationForm(instance=relation, user=creator)
@@ -170,7 +170,7 @@ def test_editors_and_owners_see_the_field_on_edit(creator, level):
 
 
 def test_viewers_do_not_get_the_field_and_cannot_change_the_flag(creator, gift):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
     relation = RelationFactory(person=person, gift=gift, is_surprise=True)
     _share(relation, creator, PermissionLevel.VIEWER, "relation")
 
@@ -186,7 +186,7 @@ def test_viewers_do_not_get_the_field_and_cannot_change_the_flag(creator, gift):
 
 
 def test_editing_a_plan_keeps_the_flag_when_the_field_is_left_ticked(creator, gift):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
     relation = RelationFactory(person=person, gift=gift, is_surprise=True)
     _share(relation, creator, PermissionLevel.OWNER, "relation")
     data = _data(
@@ -204,7 +204,7 @@ def test_editing_a_plan_keeps_the_flag_when_the_field_is_left_ticked(creator, gi
 
 def test_field_is_absent_and_flag_forced_off_when_the_recipient_owns_the_plan(creator, gift):
     recipient_user = UserFactory()
-    person = PersonFactory(user_link=recipient_user, shared_with=[creator])
+    person = PersonFactory(account=recipient_user, shared_with=[creator])
     relation = RelationFactory(person=person, gift=gift, is_surprise=True)
     _share(relation, recipient_user, PermissionLevel.OWNER, "relation")
     _share(relation, creator, PermissionLevel.EDITOR, "relation")
@@ -224,7 +224,7 @@ def test_field_is_absent_and_flag_forced_off_when_the_recipient_owns_the_plan(cr
 
 def test_group_plan_edit_keeps_the_field_even_if_an_owner_is_a_member(creator, gift):
     group = PersonGroupFactory(shared_with=[creator])
-    PersonFactory(user_link=creator, groups=[group])
+    PersonFactory(account=creator, groups=[group])
     relation = GroupRelationFactory(group=group, gift=gift)
     _share(relation, creator, PermissionLevel.OWNER, "relation")
 

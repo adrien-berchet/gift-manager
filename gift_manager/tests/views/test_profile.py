@@ -909,12 +909,12 @@ class TestRemoveFriendView:
 
     @override_settings(USE_I18N=False)
     def test_post_remove_friend_revokes_requester_access_to_friend_linked_person(self, setup_users):
-        """Test cleanup handles former friend ownership implied by Person.user_link."""
+        """Test cleanup handles former friend ownership implied by Person.account."""
         self.client.force_login(self.user1)
         person = Person.objects.create(
             first_name="Friend",
             family_name="Linked",
-            user_link=self.user2,
+            account=self.user2,
         )
         create_or_update_permission(self.user1, person, permission_level=PermissionLevel.VIEWER)
 
@@ -923,7 +923,7 @@ class TestRemoveFriendView:
 
         assert response.status_code == 302
         person.refresh_from_db()
-        assert person.user_link == self.user2
+        assert person.account == self.user2
         assert (
             PermissionService.get_effective_permission(person, self.user2) == PermissionLevel.OWNER
         )
@@ -931,12 +931,12 @@ class TestRemoveFriendView:
 
     @override_settings(USE_I18N=False)
     def test_post_remove_friend_revokes_friend_access_to_requester_linked_person(self, setup_users):
-        """Test cleanup preserves requester user_link ownership and drops friend access."""
+        """Test cleanup preserves requester account ownership and drops friend access."""
         self.client.force_login(self.user1)
         person = Person.objects.create(
             first_name="Requester",
             family_name="Linked",
-            user_link=self.user1,
+            account=self.user1,
         )
         create_or_update_permission(self.user2, person, permission_level=PermissionLevel.VIEWER)
 
@@ -945,7 +945,7 @@ class TestRemoveFriendView:
 
         assert response.status_code == 302
         person.refresh_from_db()
-        assert person.user_link == self.user1
+        assert person.account == self.user1
         assert (
             PermissionService.get_effective_permission(person, self.user1) == PermissionLevel.OWNER
         )

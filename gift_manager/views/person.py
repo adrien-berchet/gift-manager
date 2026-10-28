@@ -61,7 +61,7 @@ def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
         .order_by("family_name", "first_name")
         .values(
             "person_id",
-            "user_link_id",
+            "account_id",
             *value_fields,
         )
     )

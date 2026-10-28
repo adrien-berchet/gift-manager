@@ -258,8 +258,8 @@ class TestEditPermissionMixin:
         """Test view-only users cannot update objects or gain editor permission."""
         viewer = UserFactory(username="viewer", email="viewer@example.com")
         create_or_update_permission(viewer, self.person, permission_level=PermissionLevel.VIEWER)
-        self.person.user_link = self.user
-        self.person.save(update_fields=["user_link"])
+        self.person.account = self.user
+        self.person.save(update_fields=["account"])
         self.client.force_login(viewer)
 
         url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
@@ -275,7 +275,7 @@ class TestEditPermissionMixin:
         assert response.status_code == 403
         self.person.refresh_from_db()
         assert self.person.first_name != "Hacked"
-        assert self.person.user_link == self.user
+        assert self.person.account == self.user
         assert get_permission(self.person, viewer) == PermissionLevel.VIEWER
 
     @override_settings(USE_I18N=False)
@@ -284,8 +284,8 @@ class TestEditPermissionMixin:
         editor = UserFactory(username="editor", email="editor@example.com")
         editor.profile.friends.add(self.friend.profile)
         create_or_update_permission(editor, self.person, permission_level=PermissionLevel.EDITOR)
-        self.person.user_link = self.user
-        self.person.save(update_fields=["user_link"])
+        self.person.account = self.user
+        self.person.save(update_fields=["account"])
         self.client.force_login(editor)
 
         url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
@@ -302,7 +302,7 @@ class TestEditPermissionMixin:
         assert response.status_code == 302
         self.person.refresh_from_db()
         assert self.person.first_name == "Edited"
-        assert self.person.user_link == self.user
+        assert self.person.account == self.user
         assert get_permission(self.person, self.friend) == PermissionLevel.NONE
         assert get_permission(self.person, editor) == PermissionLevel.EDITOR
         assert get_permission(self.person, self.user) == PermissionLevel.OWNER
@@ -338,8 +338,8 @@ class TestEditPermissionMixin:
     @override_settings(USE_I18N=False)
     def test_owner_can_update_without_permission_change(self):
         """Test owners can update objects without changing ownership metadata."""
-        self.person.user_link = self.user
-        self.person.save(update_fields=["user_link"])
+        self.person.account = self.user
+        self.person.save(update_fields=["account"])
 
         url = reverse("gift_manager:person_edit", kwargs={"pk": self.person.person_id})
         response = self.client.post(
@@ -354,7 +354,7 @@ class TestEditPermissionMixin:
         assert response.status_code == 302
         self.person.refresh_from_db()
         assert self.person.first_name == "Owned"
-        assert self.person.user_link == self.user
+        assert self.person.account == self.user
         assert get_permission(self.person, self.user) == PermissionLevel.OWNER
 
     @override_settings(USE_I18N=False)
@@ -808,12 +808,12 @@ class TestDeleteSharedMixin:
         assert get_permission(self.person, self.other_user) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
-    def test_delete_preserves_person_with_implicit_user_link_owner(self):
-        """Test editors cannot delete a person owned only through user_link."""
+    def test_delete_preserves_person_with_implicit_account_owner(self):
+        """Test editors cannot delete a person owned only through account."""
         linked_owner = UserFactory(username="linkedowner", email="linked@example.com")
         editor = UserFactory(username="editor", email="editor@example.com")
         person = PersonFactory(
-            user_link=linked_owner,
+            account=linked_owner,
             first_name="Implicit",
             family_name="Owner",
         )
@@ -825,7 +825,7 @@ class TestDeleteSharedMixin:
 
         assert response.status_code == 302
         person.refresh_from_db()
-        assert person.user_link == linked_owner
+        assert person.account == linked_owner
         assert get_permission(person, editor) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)

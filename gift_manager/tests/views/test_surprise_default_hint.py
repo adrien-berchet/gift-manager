@@ -31,7 +31,7 @@ def test_requires_login(client):
 
 
 def test_checkbox_is_checked_for_a_person_linked_to_another_user(client, creator):
-    person = PersonFactory(user_link=UserFactory(), shared_with=[creator])
+    person = PersonFactory(account=UserFactory(), shared_with=[creator])
 
     response = _hint(client, f"person:{person.person_id}")
 
@@ -52,7 +52,7 @@ def test_checkbox_is_unchecked_for_an_unlinked_person(client, creator):
 
 def test_checkbox_is_checked_for_a_group_with_a_linked_member(client, creator):
     group = PersonGroupFactory(shared_with=[creator])
-    PersonFactory(user_link=UserFactory(), groups=[group])
+    PersonFactory(account=UserFactory(), groups=[group])
 
     content = _hint(client, f"group:{group.group_id}").content.decode()
 
@@ -60,7 +60,7 @@ def test_checkbox_is_checked_for_a_group_with_a_linked_member(client, creator):
 
 
 def test_no_checkbox_for_the_creators_own_person(client, creator):
-    person = PersonFactory(user_link=creator)
+    person = PersonFactory(account=creator)
 
     response = _hint(client, f"person:{person.person_id}")
 
@@ -98,7 +98,7 @@ def test_create_page_renders_the_checkbox_and_refreshes_it_on_recipient_change(c
 
 
 def test_edit_page_renders_the_checkbox_without_the_refresh(client, creator):
-    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()))
+    relation = RelationFactory(person=PersonFactory(account=UserFactory()))
     PermissionService.create_or_update_permission(
         creator, relation, permission_level=PermissionLevel.OWNER, object_attr="relation"
     )

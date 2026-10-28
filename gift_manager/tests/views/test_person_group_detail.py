@@ -114,7 +114,7 @@ class TestPersonGroupDetail:
     ):
         """A member accessible through multiple permission rows is listed once."""
         friend = user_factory(username="friend")
-        person = person_factory(user_link=self.user, groups=[self.group])
+        person = person_factory(account=self.user, groups=[self.group])
         create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
         create_or_update_permission(friend, person, permission_level=PermissionLevel.VIEWER)
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})

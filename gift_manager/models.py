@@ -121,8 +121,8 @@ class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
 
     def accessible_by(self, user):
-        """Return all persons accessible by a user (user_link or shared_with)."""
-        return self.filter(Q(user_link=user) | Q(shared_with=user)).distinct()
+        """Return all persons accessible by a user (account or shared_with)."""
+        return self.filter(Q(account=user) | Q(shared_with=user)).distinct()
 
     def with_groups_annotated(self, user=None):
         """Return persons with groups information annotated for Grid.js.
@@ -267,12 +267,12 @@ class EventManager(models.Manager.from_queryset(EventQuerySet)):
 def recipient_groups_for(user) -> RawSQL:
     """Return a subquery of the pks of the groups that ``user`` is a recipient of.
 
-    These are the groups of each person linked to ``user`` (``Person.user_link``) plus all of
+    These are the groups of each person linked to ``user`` (``Person.account``) plus all of
     their ancestor groups: a member of a nested group is a member of its parents. It is a
     recursive query embedded in the caller's statement, so reading plans costs no extra query
     whatever the depth of the hierarchy.
     """
-    memberships = Person.groups.through.objects.filter(person__user_link=user)
+    memberships = Person.groups.through.objects.filter(person__account=user)
     return PersonGroup.hierarchy_subquery(
         memberships.values("persongroup_id"), ancestors=True, include_start=True
     )
@@ -292,7 +292,7 @@ class RelationQuerySet(UserPermissionQuerySet):
         )
         return (
             self.filter(is_surprise=True)
-            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_groups_for(user)))
+            .filter(Q(person__account=user) | Q(group_id__in=recipient_groups_for(user)))
             .exclude(Exists(owns_plan))
         )
 
@@ -510,6 +510,13 @@ class Invitation(models.Model):
         related_name="%(app_label)s_%(class)s_invitations_sent",
         on_delete=models.CASCADE,
     )
+    person = models.ForeignKey(
+        "Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invitations",
+    )
     # Email is stored encoded for privacy - use email property for decoded access
     recipient_email = models.TextField()
     accepted = models.BooleanField(default=False)
@@ -581,12 +588,19 @@ class Person(models.Model):
     shared_with = models.ManyToManyField(
         User, through="PersonPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
-    user_link = models.ForeignKey(
+    account = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
-        related_name="%(app_label)s_%(class)s_user",
         null=True,
         blank=True,
+        on_delete=models.SET_NULL,
+        related_name="linked_persons",
+    )
+    link_suggestion_dismissed_account = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
 
     # Custom manager

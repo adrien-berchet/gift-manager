@@ -40,7 +40,7 @@ def owner():
 
 
 def test_ticking_surprise_releases_the_claim_of_the_person_recipient(claimer, owner):
-    relation = RelationFactory(person=PersonFactory(user_link=claimer))
+    relation = RelationFactory(person=PersonFactory(account=claimer))
     _share(relation, owner, PermissionLevel.OWNER)
     _share(relation, claimer)
     _claim(relation, claimer)
@@ -55,7 +55,7 @@ def test_ticking_surprise_releases_the_claim_of_the_person_recipient(claimer, ow
 
 def test_ticking_surprise_releases_the_claim_of_a_group_member(claimer, owner):
     group = PersonGroupFactory()
-    PersonFactory(user_link=claimer, groups=[group])
+    PersonFactory(account=claimer, groups=[group])
     relation = GroupRelationFactory(group=group)
     _share(relation, owner, PermissionLevel.OWNER)
     _share(relation, claimer)
@@ -68,7 +68,7 @@ def test_ticking_surprise_releases_the_claim_of_a_group_member(claimer, owner):
 
 
 def test_a_claim_held_by_someone_who_is_not_a_recipient_is_kept(claimer, owner):
-    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()))
+    relation = RelationFactory(person=PersonFactory(account=UserFactory()))
     _share(relation, owner, PermissionLevel.OWNER)
     _share(relation, claimer)
     _claim(relation, claimer)
@@ -81,7 +81,7 @@ def test_a_claim_held_by_someone_who_is_not_a_recipient_is_kept(claimer, owner):
 
 def test_an_owner_who_is_a_recipient_keeps_their_claim(claimer):
     group = PersonGroupFactory()
-    PersonFactory(user_link=claimer, groups=[group])
+    PersonFactory(account=claimer, groups=[group])
     relation = GroupRelationFactory(group=group)
     _share(relation, claimer, PermissionLevel.OWNER)
     _claim(relation, claimer)
@@ -98,7 +98,7 @@ def test_changing_the_recipient_of_a_surprise_plan_releases_the_claim(claimer, o
     _share(relation, claimer)
     _claim(relation, claimer)
 
-    relation.person = PersonFactory(user_link=claimer)
+    relation.person = PersonFactory(account=claimer)
     relation.save()
 
     relation.refresh_from_db()
@@ -106,7 +106,7 @@ def test_changing_the_recipient_of_a_surprise_plan_releases_the_claim(claimer, o
 
 
 def test_ticking_the_checkbox_in_the_plan_form_releases_the_claim(claimer, owner):
-    person = PersonFactory(user_link=claimer, shared_with=[owner])
+    person = PersonFactory(account=claimer, shared_with=[owner])
     gift = GiftFactory(shared_with=[owner])
     relation = RelationFactory(person=person, gift=gift, event=None)
     _share(relation, owner, PermissionLevel.OWNER)
@@ -131,6 +131,6 @@ def test_ticking_the_checkbox_in_the_plan_form_releases_the_claim(claimer, owner
 
 
 def test_creating_a_plan_does_not_touch_anything(claimer):
-    relation = RelationFactory(person=PersonFactory(user_link=claimer), is_surprise=True)
+    relation = RelationFactory(person=PersonFactory(account=claimer), is_surprise=True)
 
     assert relation.claimed_by is None

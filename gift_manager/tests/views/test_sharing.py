@@ -307,11 +307,11 @@ class TestShareObjectsView:
         assert get_permission(self.gift, recipient) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
-    def test_user_link_owner_can_share_despite_lower_explicit_permission(self):
+    def test_account_owner_can_share_despite_lower_explicit_permission(self):
         """Test effective owner permission wins over stale lower explicit rows."""
         # Arrange
-        self.person.user_link = self.owner
-        self.person.save(update_fields=["user_link"])
+        self.person.account = self.owner
+        self.person.save(update_fields=["account"])
         create_or_update_permission(
             self.owner,
             self.person,

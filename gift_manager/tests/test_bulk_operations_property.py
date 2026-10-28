@@ -145,10 +145,10 @@ class TestBulkOperationsProperty:
         assert PermissionService.get_permission(gift, self.user) == PermissionLevel.NONE
         assert PermissionService.get_permission(gift, owner) == PermissionLevel.OWNER
 
-    def test_bulk_delete_preserves_person_with_implicit_user_link_owner(self):
-        """Bulk delete must preserve persons owned only through user_link."""
+    def test_bulk_delete_preserves_person_with_implicit_account_owner(self):
+        """Bulk delete must preserve persons owned only through account."""
         linked_owner = UserFactory()
-        person = PersonFactory(user_link=linked_owner)
+        person = PersonFactory(account=linked_owner)
         PermissionService.create_or_update_permission(
             self.user, person, permission_level=PermissionLevel.EDITOR
         )
@@ -171,7 +171,7 @@ class TestBulkOperationsProperty:
         assert response_data["success"] is True
         assert str(person.person_id) in response_data["shared_removed"]
         person.refresh_from_db()
-        assert person.user_link == linked_owner
+        assert person.account == linked_owner
         assert PermissionService.get_permission(person, self.user) == PermissionLevel.NONE
 
     def test_bulk_update_status_updates_editor_relations_by_public_id(self):

@@ -180,7 +180,7 @@ def test_accept_sets_default_surprise(user, share):
     share(user, tag, level=PermissionLevel.VIEWER)
 
     other_user = UserFactory()
-    person = PersonFactory(user_link=other_user)
+    person = PersonFactory(account=other_user)
     person.interests.add(tag)
     share(user, person, level=PermissionLevel.VIEWER)
 

@@ -94,7 +94,7 @@ class PermissionService:
 
     @classmethod
     def get_effective_permission(cls, obj, user) -> int:
-        """Get permission including ownership implied by user_link."""
+        """Get permission including ownership implied by account."""
         if user.is_superuser:
             return PermissionLevel.OWNER
 
@@ -102,7 +102,7 @@ class PermissionService:
             return cls.get_effective_permission_for_group(obj, user)
 
         permission = cls.get_permission(obj, user)
-        if getattr(obj, "user_link_id", None) == user.id:
+        if getattr(obj, "account_id", None) == user.id:
             return max(permission, PermissionLevel.OWNER)
         if getattr(obj, "is_global", False):
             # Global objects (e.g. the Birthday event) are read-only for everyone
@@ -219,7 +219,7 @@ class PermissionService:
         if obj.shared_with.exclude(id=user.id).exists():
             return True
 
-        linked_user_id = getattr(obj, "user_link_id", None)
+        linked_user_id = getattr(obj, "account_id", None)
         if linked_user_id is not None and linked_user_id != user.id:
             return True
 
@@ -255,7 +255,7 @@ class PermissionService:
             ).values_list("user_id", flat=True)
         )
 
-        linked_user_id = getattr(obj, "user_link_id", None)
+        linked_user_id = getattr(obj, "account_id", None)
         if linked_user_id is not None:
             owner_ids.add(linked_user_id)
 

@@ -113,7 +113,7 @@ def can_be_surprise_for_owners(
     It cannot when the recipient is a person linked to one of the owners: they would be hiding
     the plan from themselves. A group recipient is always possible; its owners are never hidden.
     """
-    return not (isinstance(recipient, Person) and recipient.user_link_id in set(owner_ids))
+    return not (isinstance(recipient, Person) and recipient.account_id in set(owner_ids))
 
 
 def can_be_surprise(relation: Relation) -> bool:
@@ -140,12 +140,12 @@ def default_surprise_for(recipient: Person | PersonGroup | None, creator: User) 
     (nested groups included) with such a member.
     """
     if isinstance(recipient, Person):
-        return recipient.user_link_id is not None and recipient.user_link_id != creator.pk
+        return recipient.account_id is not None and recipient.account_id != creator.pk
     if isinstance(recipient, PersonGroup):
         return (
             recipient.get_all_members(include_nested=True)
-            .filter(user_link__isnull=False)
-            .exclude(user_link=creator)
+            .filter(account__isnull=False)
+            .exclude(account=creator)
             .exists()
         )
     return False
@@ -182,12 +182,12 @@ def hidden_recipient_ids(relation: Relation) -> set[int]:
         return set()
     candidates: set[int | None] = set()
     if relation.person_id is not None:
-        candidates = {relation.person.user_link_id} - {None}
+        candidates = {relation.person.account_id} - {None}
     elif relation.group_id is not None:
         candidates = set(
             relation.group.get_all_members(include_nested=True)
-            .filter(user_link__isnull=False)
-            .values_list("user_link_id", flat=True)
+            .filter(account__isnull=False)
+            .values_list("account_id", flat=True)
         )
     if not candidates:
         return set()

@@ -166,8 +166,8 @@ class PermissionContextMixin:
             obj_id = getattr(related_obj, id_field)
             permissions[str(obj_id)] = perm.permission_type
 
-        # Also check for ownership via user_link field
-        # Objects where user_link matches the current user should get OWNER permission
+        # Also check for ownership via account field
+        # Objects where account matches the current user should get OWNER permission
         user_id = self.request.user.id
         logger.debug(
             f"[_build_permissions_from_dicts] Checking ownership. user_id={user_id} (type={type(user_id).__name__})"
@@ -175,14 +175,14 @@ class PermissionContextMixin:
 
         for obj in objects:
             obj_id = str(obj.get(id_field))
-            # Check if user_link field exists and matches current user
-            user_link_id = obj.get("user_link_id") or obj.get("user_link")
+            # Check if account field exists and matches current user
+            account_id = obj.get("account_id") or obj.get("account")
             logger.debug(
                 f"[_build_permissions_from_dicts] obj_id={obj_id}, "
-                f"user_link_id={user_link_id} (type={type(user_link_id).__name__ if user_link_id else 'None'}), "
-                f"match={user_link_id == user_id if user_link_id else False}"
+                f"account_id={account_id} (type={type(account_id).__name__ if account_id else 'None'}), "
+                f"match={account_id == user_id if account_id else False}"
             )
-            if user_link_id is not None and user_link_id == user_id:
+            if account_id is not None and account_id == user_id:
                 # User is the owner, grant OWNER permission
                 permissions[obj_id] = PermissionLevel.OWNER
                 logger.debug(f"[_build_permissions_from_dicts] Granted OWNER to {obj_id}")

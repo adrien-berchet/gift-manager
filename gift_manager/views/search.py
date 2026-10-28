@@ -63,7 +63,7 @@ class HTMXListSearchView(LoginRequiredMixin, HTMXSearchMixin, View):
         if hasattr(self.model.objects, "accessible_by"):
             return self.model.objects.accessible_by(self.request.user)
         # Fallback for models without accessible_by method
-        return self.model.objects.filter(user_link=self.request.user)
+        return self.model.objects.filter(account=self.request.user)
 
     def get_search_data(self, queryset):
         """Convert queryset to data format expected by templates."""

@@ -93,6 +93,22 @@ class PersonFactory(DjangoModelFactory):
                 user=user, person=self, permission_type=PermissionLevel.VIEWER
             )
 
+    @factory.post_generation
+    def owner(self, create, extracted, **kwargs):
+        """Create or update owner permission rows for the person."""
+        if not create or not extracted:
+            return
+        from gift_manager.models import PermissionLevel
+        from gift_manager.models import PersonPermission
+
+        users = extracted if isinstance(extracted, (list, tuple, set)) else [extracted]
+        for user in users:
+            PersonPermission.objects.update_or_create(
+                user=user,
+                person=self,
+                defaults={"permission_type": PermissionLevel.OWNER},
+            )
+
 
 class PersonGroupFactory(DjangoModelFactory):
     """Factory for creating PersonGroup instances."""

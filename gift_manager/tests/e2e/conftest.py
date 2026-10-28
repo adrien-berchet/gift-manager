@@ -131,11 +131,11 @@ def test_admin_user(transactional_db):
 def sample_persons(transactional_db, test_user):
     """Create sample persons for testing list operations."""
     return [
-        PersonFactory(first_name="Alice", family_name="Johnson", user_link=test_user),
-        PersonFactory(first_name="Bob", family_name="Smith", user_link=test_user),
-        PersonFactory(first_name="Carol", family_name="Williams", user_link=test_user),
-        PersonFactory(first_name="David", family_name="Brown", user_link=test_user),
-        PersonFactory(first_name="Eve", family_name="Davis", user_link=test_user),
+        PersonFactory(first_name="Alice", family_name="Johnson", account=test_user),
+        PersonFactory(first_name="Bob", family_name="Smith", account=test_user),
+        PersonFactory(first_name="Carol", family_name="Williams", account=test_user),
+        PersonFactory(first_name="David", family_name="Brown", account=test_user),
+        PersonFactory(first_name="Eve", family_name="Davis", account=test_user),
     ]
 
 

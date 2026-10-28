@@ -41,7 +41,7 @@ class TestOffcanvasPersonForm:
     def person(self, user):
         """Create a test person."""
         return Person.objects.create(
-            user_link=user, first_name="John", family_name="Doe", email_address="john@example.com"
+            account=user, first_name="John", family_name="Doe", email_address="john@example.com"
         )
 
     @pytest.fixture

@@ -258,11 +258,11 @@ class TestEditablePksIsBulk:
 
         assert pks == {p.pk for p in persons[:10]}
 
-    def test_inherited_editor_and_user_link_owner_count_as_editable(self, actor):
+    def test_inherited_editor_and_account_owner_count_as_editable(self, actor):
         parent, child, unrelated = (PersonGroupFactory() for _ in range(3))
         child.parent_groups.add(parent)
         _grant(actor, parent, PermissionLevel.EDITOR, inherit=True)
-        own_person, other_person = PersonFactory(user_link=actor), PersonFactory()
+        own_person, other_person = PersonFactory(account=actor), PersonFactory()
 
         assert GroupHierarchyService.editable_pks(actor, [parent, child, unrelated]) == {
             parent.pk,

@@ -105,7 +105,7 @@ def test_plans_not_shared_with_viewer_are_absent(user, share, status):
 
 def test_hidden_surprise_plan_is_not_in_history(user, share, status):
     # Viewer is linked to the person
-    person = PersonFactory(user_link=user)
+    person = PersonFactory(account=user)
     owner = UserFactory()
 
     gift = GiftFactory()

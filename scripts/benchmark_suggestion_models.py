@@ -337,12 +337,12 @@ def list_database_recipients(
             full_name=Concat("first_name", Value(" "), "family_name", output_field=CharField()),
             interests_count=Count("interests", distinct=True),
         )
-        .select_related("user_link")
+        .select_related("account")
         .order_by("first_name", "family_name")
     )
 
     if user:
-        qs = qs.filter(user_link=user)
+        qs = qs.filter(account=user)
 
     if query:
         q = query.strip()
@@ -383,7 +383,7 @@ def list_database_recipients(
         first = (p.first_name or "")[:20]
         family = (p.family_name or "")[:20]
         email = (p.email_address or "-")[:28]
-        owner = (p.user_link.username if p.user_link else "-")[:10]
+        owner = (p.account.username if p.account else "-")[:10]
         cnt = getattr(p, "interests_count", 0)
         logger.info(
             "%-6s %-20s %-20s %-28s %-10s %s",
@@ -499,7 +499,7 @@ def _find_name_candidates(raw_query: str, family_name: str | None) -> list[Perso
     qs = Person.objects.annotate(
         full_name=Concat("first_name", Value(" "), "family_name", output_field=CharField()),
         rev_name=Concat("family_name", Value(" "), "first_name", output_field=CharField()),
-    ).select_related("user_link")
+    ).select_related("account")
 
     if family_name:
         return list(
@@ -551,7 +551,7 @@ def _disambiguation_error(
     """Format a clear error listing ambiguous candidates and recommended flags."""
     lines = [f"Multiple recipients ({len(candidates)}) match '{raw_query}':"]
     for c in candidates[:10]:
-        owner_str = f", owner: {c.user_link.username}" if c.user_link else ""
+        owner_str = f", owner: {c.account.username}" if c.account else ""
         email_str = f", email: {c.email_address}" if c.email_address else ""
         lines.append(f"  • [ID {c.pk}] {c.first_name} {c.family_name}{email_str}{owner_str}")
     if len(candidates) > 10:
@@ -592,7 +592,7 @@ def resolve_recipient(
 
     raw_query = (recipient_identifier or "").strip()
     if not raw_query and not family_name:
-        base_qs = Person.objects.filter(user_link=user) if user else Person.objects.all()
+        base_qs = Person.objects.filter(account=user) if user else Person.objects.all()
         target = (
             base_qs.filter(interests__isnull=False).distinct().first()
             or base_qs.first()
@@ -620,7 +620,7 @@ def resolve_recipient(
         return candidates[0]
 
     if user:
-        user_matches = [c for c in candidates if c.user_link_id == getattr(user, "pk", None)]
+        user_matches = [c for c in candidates if c.account_id == getattr(user, "pk", None)]
         if len(user_matches) == 1:
             return user_matches[0]
 
@@ -657,8 +657,8 @@ def resolve_subject(
     )
 
     if user is None:
-        if isinstance(recipient, Person) and recipient.user_link:
-            user = recipient.user_link
+        if isinstance(recipient, Person) and recipient.account:
+            user = recipient.account
         else:
             user = user_model.objects.filter(is_active=True).first()
             if not user:

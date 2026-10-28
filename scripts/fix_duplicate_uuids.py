@@ -86,9 +86,9 @@ def merge_persons(duplicates):
                     if not keeper.groups.filter(id=group.id).exists():
                         keeper.groups.add(group)
 
-                # Migrate user_link if needed.
-                if duplicate.user_link and not keeper.user_link:
-                    keeper.user_link = duplicate.user_link
+                # Migrate account if needed.
+                if duplicate.account and not keeper.account:
+                    keeper.account = duplicate.account
                     keeper.save()
 
                 # Delete the duplicate.
