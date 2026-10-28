@@ -89,7 +89,7 @@ class PermissionContextMixin:
 
         return permissions
 
-    def _build_permissions_from_dicts(  # noqa: PLR0911, PLR0912
+    def _build_permissions_from_dicts(  # noqa: PLR0911
         self, objects: list, id_fields: list
     ) -> dict[str, int]:
         """Build permissions mapping from dictionary objects.
@@ -165,30 +165,6 @@ class PermissionContextMixin:
             related_obj = getattr(perm, filter_field)
             obj_id = getattr(related_obj, id_field)
             permissions[str(obj_id)] = perm.permission_type
-
-        # Also check for ownership via account field
-        # Objects where account matches the current user should get OWNER permission
-        user_id = self.request.user.id
-        logger.debug(
-            f"[_build_permissions_from_dicts] Checking ownership. user_id={user_id} (type={type(user_id).__name__})"
-        )
-
-        for obj in objects:
-            obj_id = str(obj.get(id_field))
-            # Check if account field exists and matches current user
-            account_id = obj.get("account_id") or obj.get("account")
-            logger.debug(
-                f"[_build_permissions_from_dicts] obj_id={obj_id}, "
-                f"account_id={account_id} (type={type(account_id).__name__ if account_id else 'None'}), "
-                f"match={account_id == user_id if account_id else False}"
-            )
-            if account_id is not None and account_id == user_id:
-                # User is the owner, grant OWNER permission
-                permissions[obj_id] = PermissionLevel.OWNER
-                logger.debug(f"[_build_permissions_from_dicts] Granted OWNER to {obj_id}")
-            elif obj_id not in permissions:
-                # No permission found, will default to NONE
-                logger.debug(f"[_build_permissions_from_dicts] No permission for {obj_id}")
 
         logger.debug(f"[_build_permissions_from_dicts] Final permissions: {permissions}")
         return permissions

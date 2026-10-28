@@ -1,4 +1,6 @@
 # pylint: disable=too-many-lines
+from __future__ import annotations
+
 import calendar
 import secrets
 import uuid
@@ -119,10 +121,6 @@ class UserPermissionQuerySet(models.QuerySet):
 
 class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
-
-    def accessible_by(self, user):
-        """Return all persons accessible by a user (account or shared_with)."""
-        return self.filter(Q(account=user) | Q(shared_with=user)).distinct()
 
     def with_groups_annotated(self, user=None):
         """Return persons with groups information annotated for Grid.js.
@@ -264,7 +262,7 @@ class EventManager(models.Manager.from_queryset(EventQuerySet)):
         return event
 
 
-def recipient_groups_for(user) -> RawSQL:
+def recipient_groups_for(user, excluding_person: Person | None = None) -> RawSQL:
     """Return a subquery of the pks of the groups that ``user`` is a recipient of.
 
     These are the groups of each person linked to ``user`` (``Person.account``) plus all of
@@ -273,6 +271,8 @@ def recipient_groups_for(user) -> RawSQL:
     whatever the depth of the hierarchy.
     """
     memberships = Person.groups.through.objects.filter(person__account=user)
+    if excluding_person is not None:
+        memberships = memberships.exclude(person=excluding_person)
     return PersonGroup.hierarchy_subquery(
         memberships.values("persongroup_id"), ancestors=True, include_start=True
     )
@@ -281,7 +281,7 @@ def recipient_groups_for(user) -> RawSQL:
 class RelationQuerySet(UserPermissionQuerySet):
     """QuerySet for Relation model with additional query methods."""
 
-    def hidden_surprises_for(self, user):
+    def hidden_surprises_for(self, user, excluding_person: Person | None = None):
         """Return the surprise plans ``user`` must never see, shared with them or not.
 
         A surprise plan is hidden from its recipient: the person linked to ``user`` or a member
@@ -290,9 +290,15 @@ class RelationQuerySet(UserPermissionQuerySet):
         owns_plan = RelationPermission.objects.filter(
             relation=OuterRef("pk"), user=user, permission_type=PermissionLevel.OWNER
         )
+        person_filter = Q(person__account=user)
+        if excluding_person is not None:
+            person_filter &= ~Q(person=excluding_person)
         return (
             self.filter(is_surprise=True)
-            .filter(Q(person__account=user) | Q(group_id__in=recipient_groups_for(user)))
+            .filter(
+                person_filter
+                | Q(group_id__in=recipient_groups_for(user, excluding_person=excluding_person))
+            )
             .exclude(Exists(owns_plan))
         )
 

@@ -50,7 +50,7 @@ class KeyboardAccessibilityPropertyTest(TestCase):
 
         # Create entity with proper parameters
         if entity_type.lower() == "person":
-            entity = PersonFactory(account=self.user)
+            entity = PersonFactory(owner=self.user)
             entity_pk = entity.person_id
         elif entity_type.lower() == "gift":
             entity = GiftFactory(shared_with=[self.user])

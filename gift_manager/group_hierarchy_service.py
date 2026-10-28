@@ -60,18 +60,16 @@ class GroupHierarchyService:
 
     @classmethod
     def _editable_object_pks(cls, actor, objs: list) -> set[int]:
-        """Editable objects with a permission model (persons, ...), owner via account."""
+        """Editable objects with a permission model (persons, ...)."""
         model = PermissionService.get_permission_model(objs[0])
         attr = PermissionService._get_permission_object_attr(objs[0], model)  # noqa: SLF001
-        editable = set(
+        return set(
             model.objects.filter(
                 user=actor,
                 permission_type__gte=PermissionLevel.EDITOR,
                 **{f"{attr}__in": objs},
             ).values_list(f"{attr}_id", flat=True)
         )
-        editable.update(obj.pk for obj in objs if getattr(obj, "account_id", None) == actor.id)
-        return editable
 
     @classmethod
     def _assert_can_edit(cls, actor, obj, *, is_new: bool = False) -> None:

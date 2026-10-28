@@ -40,9 +40,14 @@ class TestOffcanvasPersonForm:
     @pytest.fixture
     def person(self, user):
         """Create a test person."""
-        return Person.objects.create(
-            account=user, first_name="John", family_name="Doe", email_address="john@example.com"
+        from gift_manager.models import PermissionLevel
+        from gift_manager.models import PersonPermission
+
+        p = Person.objects.create(
+            first_name="John", family_name="Doe", email_address="john@example.com"
         )
+        PersonPermission.objects.create(person=p, user=user, permission_type=PermissionLevel.OWNER)
+        return p
 
     @pytest.fixture
     def groups(self, user):

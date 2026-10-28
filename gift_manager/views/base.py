@@ -409,32 +409,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
     def form_valid(self, form):
         try:
             with transaction.atomic():
-                # Only set account if the model has that field
-                if hasattr(form.instance, "account"):
-                    logger.debug(
-                        "[BaseCreateView.form_valid] Setting account to %s (id=%s)",
-                        self.request.user,
-                        self.request.user.id,
-                    )
-                    form.instance.account = self.request.user
-                else:
-                    logger.debug(
-                        "[BaseCreateView.form_valid] Model %s has no account field",
-                        form.instance.__class__.__name__,
-                    )
-
                 response = super().form_valid(form)
-
-                # Log the saved instance
-                pk_field = getattr(form.instance, "pk", None) or getattr(
-                    form.instance, f"{form.instance.__class__.__name__.lower()}_id", None
-                )
-                saved_account = getattr(form.instance, "account", None)
-                logger.debug(
-                    "[BaseCreateView.form_valid] After save: pk=%s, account=%s",
-                    pk_field,
-                    saved_account,
-                )
 
                 PermissionService.create_or_update_permission(
                     self.request.user,

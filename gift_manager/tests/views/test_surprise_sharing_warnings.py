@@ -46,7 +46,7 @@ def surprise(owner, recipient):
     gift = GiftFactory(name="Secret Gift")
     _grant(gift, owner, PermissionLevel.OWNER)
     relation = RelationFactory(
-        person=PersonFactory(account=recipient, shared_with=[owner]),
+        person=PersonFactory(owner=owner, account=recipient),
         gift=gift,
         event=None,
         is_surprise=True,
@@ -150,7 +150,7 @@ def test_changing_a_permission_with_the_page_form_warns_in_a_message(client, sur
 def test_sharing_a_normal_plan_with_a_friend_does_not_warn(client, owner):
     friend = UserFactory()
     owner.profile.friends.add(friend.profile)
-    relation = RelationFactory(person=PersonFactory(account=friend), event=None)
+    relation = RelationFactory(person=PersonFactory(owner=owner, account=friend), event=None)
     _grant(relation, owner, PermissionLevel.OWNER, "relation")
     _grant(relation.gift, owner, PermissionLevel.OWNER)
 

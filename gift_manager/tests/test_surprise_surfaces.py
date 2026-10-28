@@ -90,8 +90,9 @@ class Scene:
             _grant(self.event, user, PermissionLevel.VIEWER, "event")
             if self.group is not None:
                 _grant(self.group, user, PermissionLevel.VIEWER, "group")
-        # The collaborator can reach the recipient person the way the owner shared it
+        # The collaborator and recipient can reach the recipient person
         _grant(self.person, self.collaborator, PermissionLevel.VIEWER, "person")
+        _grant(self.person, self.recipient, PermissionLevel.VIEWER, "person")
 
     @property
     def markers(self) -> list[str]:

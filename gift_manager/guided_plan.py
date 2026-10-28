@@ -382,8 +382,6 @@ def _save_owned(form: forms.ModelForm, user, object_attr: str) -> Person | Gift 
             [message for errors in form.errors.values() for message in errors]
         )
     instance = form.save(commit=False)
-    if hasattr(instance, "account"):
-        instance.account = user
     instance.save()
     form.save_m2m()
     PermissionService.create_or_update_permission(

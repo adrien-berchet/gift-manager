@@ -122,7 +122,7 @@ def test_duplicating_a_surprise_plan_keeps_the_flag_whatever_the_default(creator
 
 
 def test_field_is_absent_when_the_recipient_is_the_creators_own_person(creator):
-    person = PersonFactory(account=creator)
+    person = PersonFactory(owner=creator, account=creator)
 
     form = RelationForm(initial={"recipient": f"person:{person.person_id}"}, user=creator)
 
@@ -130,7 +130,7 @@ def test_field_is_absent_when_the_recipient_is_the_creators_own_person(creator):
 
 
 def test_posting_the_flag_for_the_creators_own_person_saves_false(creator, gift):
-    person = PersonFactory(account=creator)
+    person = PersonFactory(owner=creator, account=creator)
 
     form = RelationForm(
         data=_data(gift, recipient=f"person:{person.person_id}", is_surprise="on"), user=creator

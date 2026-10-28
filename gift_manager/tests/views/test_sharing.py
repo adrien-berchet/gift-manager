@@ -307,8 +307,8 @@ class TestShareObjectsView:
         assert get_permission(self.gift, recipient) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
-    def test_account_owner_can_share_despite_lower_explicit_permission(self):
-        """Test effective owner permission wins over stale lower explicit rows."""
+    def test_linked_user_with_viewer_permission_cannot_share(self):
+        """Test a linked account with VIEWER permission cannot share the record."""
         # Arrange
         self.person.account = self.owner
         self.person.save(update_fields=["account"])
@@ -329,8 +329,8 @@ class TestShareObjectsView:
         response = self.client.post(url, data)
 
         # Assert
-        assert response.status_code == 302
-        assert get_permission(self.person, self.friend) == PermissionLevel.EDITOR
+        assert response.status_code == 200
+        assert get_permission(self.person, self.friend) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
     def test_post_share_objects_rejects_relation_with_unshareable_related_object(self):

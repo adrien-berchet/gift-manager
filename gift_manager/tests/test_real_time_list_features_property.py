@@ -52,7 +52,7 @@ class TestRealTimeListFeaturesProperty:
         for i in range(entity_count):
             if entity_type == "person":
                 entity = PersonFactory(
-                    first_name=f"Test{search_term}{i}", family_name=f"User{i}", account=self.user
+                    first_name=f"Test{search_term}{i}", family_name=f"User{i}", owner=self.user
                 )
                 entities.append(entity)
             elif entity_type == "gift":
@@ -66,7 +66,7 @@ class TestRealTimeListFeaturesProperty:
                 )
                 entities.append(entity)
             elif entity_type == "relation":
-                person = PersonFactory(first_name=f"Person{search_term}{i}", account=self.user)
+                person = PersonFactory(first_name=f"Person{search_term}{i}", owner=self.user)
                 gift = GiftFactory(name=f"Gift{i}", shared_with=[self.user])
                 entity = RelationFactory(person=person, gift=gift, shared_with=[self.user])
                 entities.append(entity)
@@ -141,7 +141,7 @@ class TestRealTimeListFeaturesProperty:
         for i in range(entity_count):
             if entity_type == "person":
                 entity = PersonFactory(
-                    first_name=f"TestPerson{i}", family_name=f"User{i}", account=self.user
+                    first_name=f"TestPerson{i}", family_name=f"User{i}", owner=self.user
                 )
                 entities.append(entity)
             elif entity_type == "gift":
@@ -151,7 +151,7 @@ class TestRealTimeListFeaturesProperty:
                 entity = EventFactory(name=f"TestEvent{i}", shared_with=[self.user])
                 entities.append(entity)
             elif entity_type == "relation":
-                person = PersonFactory(account=self.user)
+                person = PersonFactory(owner=self.user)
                 gift = GiftFactory(shared_with=[self.user])
                 entity = RelationFactory(person=person, gift=gift, shared_with=[self.user])
                 entities.append(entity)
@@ -206,7 +206,7 @@ class TestRealTimeListFeaturesProperty:
         entities = []
         for i in range(3):
             if entity_type == "person":
-                entity = PersonFactory(first_name=f"Person{i}", account=self.user)
+                entity = PersonFactory(first_name=f"Person{i}", owner=self.user)
                 entities.append(entity)
             elif entity_type == "gift":
                 entity = GiftFactory(name=f"Gift{i}", shared_with=[self.user])
@@ -215,7 +215,7 @@ class TestRealTimeListFeaturesProperty:
                 entity = EventFactory(name=f"Event{i}", shared_with=[self.user])
                 entities.append(entity)
             elif entity_type == "relation":
-                person = PersonFactory(account=self.user)
+                person = PersonFactory(owner=self.user)
                 gift = GiftFactory(shared_with=[self.user])
                 entity = RelationFactory(person=person, gift=gift, shared_with=[self.user])
                 entities.append(entity)
@@ -269,7 +269,7 @@ class TestRealTimeListFeaturesProperty:
         # Create one test entity to ensure we have data
         expected_fields = []
         if entity_type == "person":
-            PersonFactory(first_name="TestPerson", family_name="TestUser", account=self.user)
+            PersonFactory(first_name="TestPerson", family_name="TestUser", owner=self.user)
             expected_fields = [
                 "person_id",
                 "first_name",
@@ -295,7 +295,7 @@ class TestRealTimeListFeaturesProperty:
                 "recurrence_label",
             ]
         elif entity_type == "relation":
-            person = PersonFactory(account=self.user)
+            person = PersonFactory(owner=self.user)
             gift = GiftFactory(shared_with=[self.user])
             RelationFactory(person=person, gift=gift, shared_with=[self.user])
             expected_fields = ["relation_id", "person_name", "gift_name", "event_name", "status"]
@@ -354,8 +354,8 @@ class TestRealTimeListFeaturesProperty:
 
         # Create entities for current user
         if entity_type == "person":
-            PersonFactory(first_name="MyPerson", account=self.user)
-            PersonFactory(first_name="OtherPerson", account=other_user)
+            PersonFactory(first_name="MyPerson", owner=self.user)
+            PersonFactory(first_name="OtherPerson", owner=other_user)
         elif entity_type == "gift":
             GiftFactory(name="MyGift", shared_with=[self.user])
             GiftFactory(name="OtherGift", shared_with=[other_user])
@@ -363,10 +363,10 @@ class TestRealTimeListFeaturesProperty:
             EventFactory(name="MyEvent", shared_with=[self.user])
             EventFactory(name="OtherEvent", shared_with=[other_user])
         elif entity_type == "relation":
-            my_person = PersonFactory(first_name="MyRelPerson", account=self.user)
+            my_person = PersonFactory(first_name="MyRelPerson", owner=self.user)
             my_gift = GiftFactory(name="MyRelGift", shared_with=[self.user])
             RelationFactory(person=my_person, gift=my_gift, shared_with=[self.user])
-            other_person = PersonFactory(first_name="OtherRelPerson", account=other_user)
+            other_person = PersonFactory(first_name="OtherRelPerson", owner=other_user)
             other_gift = GiftFactory(name="OtherRelGift", shared_with=[other_user])
             RelationFactory(person=other_person, gift=other_gift, shared_with=[other_user])
         elif entity_type == "persongroup":

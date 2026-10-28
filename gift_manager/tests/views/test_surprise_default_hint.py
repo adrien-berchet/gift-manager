@@ -60,7 +60,7 @@ def test_checkbox_is_checked_for_a_group_with_a_linked_member(client, creator):
 
 
 def test_no_checkbox_for_the_creators_own_person(client, creator):
-    person = PersonFactory(account=creator)
+    person = PersonFactory(owner=creator, account=creator)
 
     response = _hint(client, f"person:{person.person_id}")
 

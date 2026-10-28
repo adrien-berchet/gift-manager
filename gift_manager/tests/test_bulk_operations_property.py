@@ -9,6 +9,7 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
@@ -145,10 +146,10 @@ class TestBulkOperationsProperty:
         assert PermissionService.get_permission(gift, self.user) == PermissionLevel.NONE
         assert PermissionService.get_permission(gift, owner) == PermissionLevel.OWNER
 
-    def test_bulk_delete_preserves_person_with_implicit_account_owner(self):
-        """Bulk delete must preserve persons owned only through account."""
-        linked_owner = UserFactory()
-        person = PersonFactory(account=linked_owner)
+    def test_bulk_delete_preserves_person_with_other_owner(self):
+        """Bulk delete must unshare rather than delete when another owner exists."""
+        other_owner = UserFactory()
+        person = PersonFactory(owner=other_owner)
         PermissionService.create_or_update_permission(
             self.user, person, permission_level=PermissionLevel.EDITOR
         )
@@ -171,8 +172,34 @@ class TestBulkOperationsProperty:
         assert response_data["success"] is True
         assert str(person.person_id) in response_data["shared_removed"]
         person.refresh_from_db()
-        assert person.account == linked_owner
         assert PermissionService.get_permission(person, self.user) == PermissionLevel.NONE
+
+    def test_bulk_delete_deletes_person_when_only_linked_account_remains(self):
+        """A link alone does not count as an access holder, so editor deletion deletes the record."""
+        linked_account = UserFactory()
+        person = PersonFactory(account=linked_account)
+        PermissionService.create_or_update_permission(
+            self.user, person, permission_level=PermissionLevel.EDITOR
+        )
+
+        response = self.client.post(
+            reverse("gift_manager:bulk_operations"),
+            data=json.dumps(
+                {
+                    "action": "bulk_delete",
+                    "entity_type": "person",
+                    "entity_ids": [str(person.person_id)],
+                }
+            ),
+            content_type="application/json",
+            HTTP_HX_REQUEST="true",
+        )
+
+        response_data = json.loads(response.content)
+        assert response.status_code == 200
+        assert response_data["success"] is True
+        assert str(person.person_id) in response_data["deleted"]
+        assert not Person.objects.filter(pk=person.pk).exists()
 
     def test_bulk_update_status_updates_editor_relations_by_public_id(self):
         """Bulk status updates should update editable gift plans by relation_id."""

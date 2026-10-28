@@ -808,13 +808,13 @@ class TestDeleteSharedMixin:
         assert get_permission(self.person, self.other_user) == PermissionLevel.NONE
 
     @override_settings(USE_I18N=False)
-    def test_delete_preserves_person_with_implicit_account_owner(self):
-        """Test editors cannot delete a person owned only through account."""
-        linked_owner = UserFactory(username="linkedowner", email="linked@example.com")
+    def test_delete_preserves_person_with_other_owner(self):
+        """Test editors cannot delete a person when another owner exists."""
+        other_owner = UserFactory(username="otherowner", email="owner@example.com")
         editor = UserFactory(username="editor", email="editor@example.com")
         person = PersonFactory(
-            account=linked_owner,
-            first_name="Implicit",
+            owner=other_owner,
+            first_name="Real",
             family_name="Owner",
         )
         create_or_update_permission(editor, person, permission_level=PermissionLevel.EDITOR)
@@ -825,8 +825,26 @@ class TestDeleteSharedMixin:
 
         assert response.status_code == 302
         person.refresh_from_db()
-        assert person.account == linked_owner
         assert get_permission(person, editor) == PermissionLevel.NONE
+
+    @override_settings(USE_I18N=False)
+    def test_delete_deletes_person_when_only_linked_account_remains(self):
+        """Test a link alone does not preserve the person when editor deletes it."""
+        linked_account = UserFactory(username="linkedaccount", email="linked@example.com")
+        editor = UserFactory(username="editor", email="editor@example.com")
+        person = PersonFactory(
+            account=linked_account,
+            first_name="Linked",
+            family_name="Only",
+        )
+        create_or_update_permission(editor, person, permission_level=PermissionLevel.EDITOR)
+        self.client.force_login(editor)
+
+        url = reverse("gift_manager:person_delete", kwargs={"pk": person.person_id})
+        response = self.client.post(url)
+
+        assert response.status_code == 302
+        assert not Person.objects.filter(pk=person.pk).exists()
 
     @override_settings(USE_I18N=False)
     def test_delete_non_shared_object(self):

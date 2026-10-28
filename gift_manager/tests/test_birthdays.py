@@ -299,7 +299,7 @@ class TestBuildUpcomingBirthdays:
         assert [item["person"] for item in build_upcoming_birthdays(user, TODAY)] == [person]
 
     def test_linked_user_sees_their_own_birthday(self, user):
-        person = make_person(day=5, month=10, account=user)
+        person = make_person(user, day=5, month=10, account=user)
 
         assert [item["person"] for item in build_upcoming_birthdays(user, TODAY)] == [person]
 

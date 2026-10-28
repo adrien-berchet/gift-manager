@@ -909,13 +909,14 @@ class TestRemoveFriendView:
 
     @override_settings(USE_I18N=False)
     def test_post_remove_friend_revokes_requester_access_to_friend_linked_person(self, setup_users):
-        """Test cleanup handles former friend ownership implied by Person.account."""
+        """Test cleanup handles former friend ownership and drops requester access."""
         self.client.force_login(self.user1)
         person = Person.objects.create(
             first_name="Friend",
             family_name="Linked",
             account=self.user2,
         )
+        create_or_update_permission(self.user2, person, permission_level=PermissionLevel.OWNER)
         create_or_update_permission(self.user1, person, permission_level=PermissionLevel.VIEWER)
 
         url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
@@ -938,6 +939,7 @@ class TestRemoveFriendView:
             family_name="Linked",
             account=self.user1,
         )
+        create_or_update_permission(self.user1, person, permission_level=PermissionLevel.OWNER)
         create_or_update_permission(self.user2, person, permission_level=PermissionLevel.VIEWER)
 
         url = reverse("gift_manager:remove_friend", kwargs={"friend_id": self.profile2.pk})
