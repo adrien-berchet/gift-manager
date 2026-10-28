@@ -50,8 +50,8 @@ Ownership never needed `user_link`: every create path also writes an explicit OW
 | Meaning | `account` = the account this record represents. It never means "creator" and never grants access or ownership. |
 | Existing data | Only test data exists. The migration backfills missing OWNER permissions, then clears every value. Links are recreated by hand. |
 | Who may link to a friend | A user with at least EDITOR on the record, only to one of their friends. At least one OWNER of the record must also be friends with that account (always true when the actor is an owner). The linked friend is not asked and is not notified. |
-| Self-link ("This is me") | Only an OWNER of the record may link it to their own account. A user has at most one self-linked record. |
-| One record per account | A user may own at most one record linked to a given account (friend or self). Checked for every owner of the record being linked. |
+| Self-link ("This is me") | Only an OWNER of the record may link it to their own account. The duplicate guard below refuses a second self-link; sharing can still give a user another record linked to them. |
+| One record per account | Linking refuses to create a second record linked to an account that any owner of the record already owns a record linked to (friend or self). This is a guard against accidental duplicates at link time only: sharing a record as OWNER (`views/sharing.py:186-189`, and group sharing, which shares members at the same level, `views/sharing.py:449-464`) can still give a user several records linked to the same account. That is harmless, because surprise rules work per account, and the UI lists every such record. Sharing is not blocked. |
 | Visibility of a link | Everyone who can see the record sees that it is linked and to whom ("Linked to Ana", "This is you"). The linked account gains no access to the record. |
 | Unfriending | A link to a friend stays only while at least one OWNER of the record is still friends with the linked account. Self-links are never removed by unfriending. |
 | Effect on plans | The stored `is_surprise` flag is never recomputed. Linking hides existing surprise plans from the newly linked account and releases their claims on them; unlinking can reveal them again, and the UI warns first. |
@@ -100,12 +100,13 @@ resolves permissions through `PermissionService` and raises `PermissionDenied` o
 
 - `link(person, account, actor) -> Person`
   - Inside `transaction.atomic()` with `PermissionService.lock_object(person)`.
-  - `account == actor`: actor must be OWNER of `person` and must not already own another record
-    linked to themselves.
+  - `account == actor`: actor must be OWNER of `person`.
   - Otherwise: actor must have EDITOR or more on `person`, be friends with `account`
     (`PermissionService.users_are_friends`), and at least one OWNER of `person` must be friends
     with `account`.
-  - For every OWNER of `person`: they must not own another record linked to `account`.
+  - Duplicate guard, for both cases: no OWNER of `person` may already own another record linked
+    to `account`. Only `link` checks it; ownership granted later through sharing is not checked
+    (see the Decisions table).
   - Linking to the account already linked is a no-op. Linking a record linked to someone else
     replaces the link (same checks as unlink plus link).
   - After saving: release the claims `account` holds on plans that are now hidden from it:
@@ -133,7 +134,7 @@ resolves permissions through `PermissionService` and raises `PermissionDenied` o
   (`gift_manager/invitations.py:141-162`) after the friendship is created, in the same
   transaction. Links `invitation.person` to `user` through `link(..., actor=invitation.sender)`
   only when the record still exists, the sender is still an OWNER, the record is unlinked, and the
-  one-record rule holds. Any refusal is swallowed: the invitation is still accepted and the
+  duplicate guard passes. Any refusal is swallowed: the invitation is still accepted and the
   email-match banner remains as a fallback.
 
 ## Permission and surprise rules
@@ -180,9 +181,10 @@ works without JavaScript; HTMX requests get partial templates under
   `persons/<uuid:pk>/link/` (`person_link_account`), a form "Who is this person?" with radio
   choices:
   - "No one".
-  - "Me": owners only; disabled with a link to the existing self-record when there is one.
-  - Each friend: disabled with a link to the other record when one of the record's owners already
-    owns a record linked to that friend.
+  - "Me": owners only; disabled with links to the existing self-records when the duplicate guard
+    would refuse it.
+  - Each friend: disabled with links to the other records when the duplicate guard would refuse
+    it.
   When the choice removes or replaces a link and `revealed_surprise_count` is positive, the
   confirmation shows "N surprise plans shared with Ana would become visible to her."
 - **Link badge**: next to the person's name on the person page, in the persons list and card
@@ -199,8 +201,9 @@ works without JavaScript; HTMX requests get partial templates under
   existing `send_invitation` form with the email prefilled and a hidden `person` field.
   `SendInvitationView` stores `Invitation.person` only if the sender is an OWNER of that record.
 - **Friends list** (`profile_detail.html:313-341`), for each friend:
-  - When the viewer owns a record linked to them: the record's name (link to the person page) and
-    "Unlink" (to the person link form).
+  - When the viewer owns records linked to them: each record's name (link to the person page) and
+    "Unlink" (to that record's link form). Usually one record; several only when sharing made the
+    viewer an owner of another giver's linked record.
   - Otherwise: "Link to a person" (`profile/friends/<int:friend_id>/link/`,
     `friend_link_person`: the viewer's owned, unlinked records, those whose email matches the
     friend first) and "Create person" (the person create form prefilled with the friend's first
@@ -209,7 +212,8 @@ works without JavaScript; HTMX requests get partial templates under
 - **Person create form**: `prefill_fields` (`views/base.py:284`) also accepts `email`. The
   `link_to` parameter is carried as a hidden field; after save, `link` is called with the creator
   as actor. A refused link keeps the created record and shows the refusal message.
-- **Profile page**: "Your own person record: <name>" when a self-link exists.
+- **Profile page**: "Your own person record: <name>" when a record the user owns is linked to
+  them, listing each one when sharing produced several.
 - **Admin**: unchanged registrations; `account`, `link_suggestion_dismissed_account` and
   `Invitation.person` appear with the default admin.
 
@@ -237,7 +241,9 @@ New tests (pytest, PostgreSQL):
 - Migration: backfill of missing OWNER permissions, no duplicate permission, rename, cleared
   values.
 - `account_links`: every rule of `link` and `unlink`, including the owner-friendship condition for
-  editors, owner-only self-link, one self-record, one owned record per account for every owner;
+  editors, owner-only self-link, and the duplicate guard for every owner (friend and self);
+  sharing a linked record as OWNER with a user who already owns another record linked to the same
+  account still succeeds, and the friends list and profile page then list both records;
   claim release on link; `revealed_surprise_count`; `remove_links_after_unfriending` (kept when
   another owner is still a friend, removed otherwise, self-links kept); `link_from_invitation`
   success for new and existing users and each skip condition.
@@ -277,3 +283,5 @@ python manage.py compilemessages
 - A record linked by one giver can be linked to a different account by another editor; the last
   link wins, subject to the rules above.
 - Superusers editing `account` in the admin bypass the service rules and the claim release.
+- Sharing can give a user several records linked to the same account (see the duplicate guard);
+  they are listed, not merged.

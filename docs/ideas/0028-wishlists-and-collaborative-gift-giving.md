@@ -88,7 +88,20 @@ Recommended starting context:
 
 ## Open Questions
 
-- Project B: which profile fields beyond interests (sizes, colours, "please no" list)?
+- Project B: which profile fields beyond interests (sizes, colours, brands)? Recommendation from
+  the spec review: include a self-written "please avoid" list (dislikes, allergies, formats such
+  as "no physical books"). Feed it into the existing suggestion signals (dismissal reasons from
+  `0026`, preference profiles from `0027`) instead of adding a parallel list. Sending a
+  self-written profile to the AI needs the profile owner's consent; the existing
+  `Profile.ai_share_person_notes` setting only covers a giver's own notes.
 - Project B: should wishes reuse `Relation` (a plan addressed to the user's own linked record) or
-  get their own model?
-- Project C: how are shares split by default (equal parts or free amounts)?
+  get their own model? Recommendation from the spec review: a dedicated model. `Relation`
+  carries the givers' visibility rules (surprises hidden from recipients), while a wish needs the
+  opposite boundary (visible to the wisher, claims and giver discussion hidden from them);
+  mixing both on one model is where leaks would come from. A plan that fulfils a wish points to
+  it (for example `Relation.wish`), so budgets, history and suggestions keep working unchanged.
+  To be confirmed in project B's design.
+- Project C: how are shares split by default (equal parts or free amounts)? Recommendation from
+  the spec review: equal parts by default, with optional custom amounts per participant (which
+  also covers a couple counting double, so no weights). The cents left over by an uneven split
+  go to one participant.
