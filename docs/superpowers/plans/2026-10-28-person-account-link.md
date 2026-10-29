@@ -97,7 +97,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   `PersonFactory(owner=user)` creates an OWNER `PersonPermission` for `user` (repeatable with a
   list: `owner=[u1, u2]`).
 
-- [ ] **Step 1: Write the failing migration tests** with the `MigrationExecutor` pattern of
+- [x] **Step 1: Write the failing migration tests** with the `MigrationExecutor` pattern of
   `test_migrations.py:69-130`, migrating from `0040_giftsuggestion_dismiss_comment_and_more`:
   - `test_backfills_missing_owner_permission`: a person with `user_link=u` and no permission row
     ends with exactly one OWNER `PersonPermission` for `u`.
@@ -114,25 +114,25 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
     `Invitation.person_id` exist and are NULL.
   - `test_deleting_linked_account_keeps_the_person` (post-migration model): `account=u`,
     `u.delete()`, the person still exists with `account is None`.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_migrations.py`. Expected:
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_migrations.py`. Expected:
   FAIL (migration missing).
-- [ ] **Step 3: Implement the model change**: rename the field to `account`
+- [x] **Step 3: Implement the model change**: rename the field to `account`
   (`related_name="linked_persons"`), add `link_suggestion_dismissed_account` and
   `Invitation.person` as specified in the spec's Data model section.
-- [ ] **Step 4: Write `0041_person_account_link.py` by hand** in this order:
+- [x] **Step 4: Write `0041_person_account_link.py` by hand** in this order:
   `RenameField("person", "user_link", "account")`, `AlterField` for the `related_name`,
   the two `AddField`s (`link_suggestion_dismissed_account` and `invitation.person`),
   `RunPython` backfill (upgrading/creating OWNER permissions; reverse no-op),
   `RunPython` clearing `account` (reverse no-op).
   Then `python manage.py makemigrations --check --dry-run` reports no changes.
-- [ ] **Step 5: Rename every caller mechanically**: `user_link` becomes `account` and
+- [x] **Step 5: Rename every caller mechanically**: `user_link` becomes `account` and
   `user_link_id` becomes `account_id` in code and tests, with no other change (Task 2 changes
   behaviour). Add `PersonFactory.owner` (post-generation, OWNER via
   `PersonPermission.objects.update_or_create`). `rg user_link gift_manager --glob '!migrations'`
   returns nothing.
-- [ ] **Step 6: Run** the migration tests, then the whole suite `tox run -e py311`. Expected:
+- [x] **Step 6: Run** the migration tests, then the whole suite `tox run -e py311`. Expected:
   PASS; the suite is as green as on `main` (the rename alone changes no behaviour).
-- [ ] **Step 7: Commit** `Refactor: Rename Person.user_link to Person.account and clear it`.
+- [x] **Step 7: Commit** `Refactor: Rename Person.user_link to Person.account and clear it`.
 
 ---
 
@@ -154,7 +154,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   (memberships and person recipients of `excluding_person` are ignored); `Person.objects.accessible_by(user)`
   is the base `shared_with=user` query.
 
-- [ ] **Step 1: Write failing tests** in `test_person_account_semantics.py`:
+- [x] **Step 1: Write failing tests** in `test_person_account_semantics.py`:
   - `test_creating_a_person_does_not_link_the_creator`: POST to `person_create` as a logged-in
     user; the new person has `account is None` and the user holds OWNER.
   - `test_linked_account_has_no_access`: Bob owns P, `P.account = alice`:
@@ -177,22 +177,22 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - `test_hidden_surprises_excluding_person`: Alice is linked through records P1 and P2 (both
     recipients of surprise plans S1 and S2); `hidden_surprises_for(alice, excluding_person=P1)`
     still contains the plan for P2 and not the plan for P1.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_person_account_semantics.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_person_account_semantics.py`.
   Expected: FAIL (access still granted, creator still linked).
-- [ ] **Step 3: Implement** the removals listed in the spec's "Permission and surprise rules"
+- [x] **Step 3: Implement** the removals listed in the spec's "Permission and surprise rules"
   section (drop the OWNER boost and linked-user branches in `services.py`, delete
   `PersonQuerySet.accessible_by`, drop the list-row override, the group-hierarchy branch, the
   search fallback and both create-path writes, stop selecting `account_id` in the person grid
   rows, which only fed the removed override; Task 8 selects it again for the badge) and add
   `excluding_person` to the two model helpers.
-- [ ] **Step 4: Update existing tests** that still pass `account=` where they meant ownership:
+- [x] **Step 4: Update existing tests** that still pass `account=` where they meant ownership:
   switch them to `owner=`. A test whose expected result only held because of the double meaning
   is rewritten to the new rule and named in the commit message body.
-- [ ] **Step 5: Add the "Persons and accounts" paragraph** to `docs/ai/architecture.md`
+- [x] **Step 5: Add the "Persons and accounts" paragraph** to `docs/ai/architecture.md`
   (ownership from permission rows; `account` = who the record represents; being a recipient only
   removes visibility).
-- [ ] **Step 6: Run** the new file, then `tox run -e py311` and `tox run -e lint`. Expected: PASS.
-- [ ] **Step 7: Commit** `Fix: Stop granting access through the person account link`.
+- [x] **Step 6: Run** the new file, then `tox run -e py311` and `tox run -e lint`. Expected: PASS.
+- [x] **Step 7: Commit** `Fix: Stop granting access through the person account link`.
 
 ---
 
@@ -217,7 +217,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - `revealed_surprise_count(person: Person) -> int`.
   - `remove_links_after_unfriending(user: User, former_friend: User) -> int` (records unlinked).
 
-- [ ] **Step 1: Write failing tests** in `test_account_links_service.py`:
+- [x] **Step 1: Write failing tests** in `test_account_links_service.py`:
   - `test_owner_links_record_to_friend`, `test_editor_links_when_an_owner_is_a_friend`,
     `test_editor_refused_when_no_owner_is_a_friend`, `test_viewer_refused` (`PermissionDenied`),
     `test_refused_for_a_non_friend` (`LinkRefused`).
@@ -241,9 +241,9 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
     `test_unfriending_keeps_link_when_another_owner_is_friend`,
     `test_unfriending_never_removes_self_links`, and the view-level
     `test_remove_friend_view_unlinks` (POST `remove_friend`).
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_account_links_service.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_account_links_service.py`.
   Expected: FAIL (module missing).
-- [ ] **Step 3: Implement `gift_manager/account_links.py`** with the rules of the spec's
+- [x] **Step 3: Implement `gift_manager/account_links.py`** with the rules of the spec's
   "Service" section. `link` runs in `transaction.atomic()` with
   `PermissionService.lock_object(person)`; after saving it runs
   `Relation.objects.hidden_surprises_for(account).filter(claimed_by=account).update(claimed_by=None, claimed_at=None)`
@@ -253,12 +253,12 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   "You can only link a person to one of your friends.", "Only an owner of this person can mark
   it as you.", "One of this person's owners already has a person linked to this account.",
   "Nobody who owns this person is friends with this account."
-- [ ] **Step 4: Call `remove_links_after_unfriending(request.user, friend)`** in
+- [x] **Step 4: Call `remove_links_after_unfriending(request.user, friend)`** in
   `RemoveFriendView.post` right after `_cleanup_former_friend_permissions`, inside its
   transaction.
-- [ ] **Step 5: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py`.
+- [x] **Step 5: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py`.
   Expected: PASS. Add the French translations of the four messages.
-- [ ] **Step 6: Commit** `Feat: Add the person account linking service`.
+- [x] **Step 6: Commit** `Feat: Add the person account linking service`.
 
 ---
 
