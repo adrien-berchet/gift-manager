@@ -143,13 +143,13 @@ Verify that no side channel leaks claim, plan, or surprise information to the wi
 **Files:**
 - Create: `gift_manager/tests/views/test_wishlist_privacy.py`
 
-- [ ] **Step 1: Write privacy boundary tests in `gift_manager/tests/views/test_wishlist_privacy.py`:**
+- [x] **Step 1: Write privacy boundary tests in `gift_manager/tests/views/test_wishlist_privacy.py`:**
   - `test_wisher_views_render_identically_whether_claimed_or_not`: Alice's wishlist page HTML, form context, and responses are character-for-character identical when wish is unclaimed vs claimed by Bob vs planned by Bob.
   - `test_wisher_cannot_see_claim_status_via_api_or_html`: no claimer username or badge appears in wisher's payload.
   - `test_plan_wish_forces_surprise_flag_on_relation`: assert `relation.is_surprise is True`.
   - `test_created_gift_from_wish_is_not_shared_with_wisher`: assert `Gift` created by `plan_wish` has no `GiftPermission` for wisher.
   - `test_archiving_claimed_wish_preserves_claim_for_giver`: when Alice archives a claimed wish, Bob still sees the wish with an archived notice, without breaking his plan.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_privacy.py`. Expected: PASS (after matching service implementation).
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_privacy.py`. Expected: PASS (after matching service implementation).
 
 ---
 
@@ -179,10 +179,11 @@ Build the user-facing UI for managing personal preferences and wishlist items on
 - [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py`. Expected: FAIL.
 - [ ] **Step 3: Implement forms, views, templates, and routes:**
   - In `forms.py`: `WishForm` with validation for non-negative price and URL. `ProfilePreferencesForm` with `public_interests` choices limited to `is_public=True`.
-  - In `views/wishlist.py`: CRUD views supporting HTMX offcanvas editing.
+  - In `views/wishlist.py`: CRUD views supporting HTMX offcanvas editing. `WishListView` mapped to `gift_manager:wishlist_list` at `profile/wishlist/`.
   - In `profile_detail.html`: embed "My Preferences" section and "My Wishlist" card/link.
   - Add French translations in `locale/fr/LC_MESSAGES/django.po` and compile.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py`. Expected: PASS.
+  - Remove `@pytest.mark.xfail` markers from `gift_manager/tests/views/test_wishlist_privacy.py` so contract tests run against the newly landed view.
+- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py gift_manager/tests/views/test_wishlist_privacy.py`. Expected: PASS.
 
 ---
 
