@@ -1307,6 +1307,7 @@ class InvitationForm(forms.Form):
             attrs={"class": "form-control", "autocomplete": "off", "autofocus": True}
         ),
     )
+    person = forms.UUIDField(required=False, widget=forms.HiddenInput())
 
     def clean_recipient_email(self):
         """Normalize the address so pending invitations can be matched."""

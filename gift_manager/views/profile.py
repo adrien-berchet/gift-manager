@@ -1,5 +1,7 @@
 """Profile-related views."""
 
+import uuid
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -80,7 +82,23 @@ class SendInvitationView(LoginRequiredMixin, View):
         )
 
     def get(self, request, *args, **kwargs):
-        return self._render(request, InvitationForm())
+        initial = {}
+        person_param = request.GET.get("person")
+        if person_param:
+            try:
+                person_uuid = uuid.UUID(person_param)
+            except (ValueError, TypeError):
+                person_uuid = None
+            if person_uuid:
+                person = (
+                    Person.objects.accessible_by(request.user).filter(person_id=person_uuid).first()
+                )
+                if person and person.email:
+                    initial = {
+                        "recipient_email": person.email,
+                        "person": person.person_id,
+                    }
+        return self._render(request, InvitationForm(initial=initial))
 
     def post(self, request, *args, **kwargs):
         form = InvitationForm(request.POST)
@@ -113,9 +131,25 @@ class SendInvitationView(LoginRequiredMixin, View):
             )
             return self._render(request, form, status=429)
 
+        # Resolve attached person if provided and sender is OWNER
+        person_to_attach = None
+        person_uuid = form.cleaned_data.get("person")
+        if person_uuid:
+            person = (
+                Person.objects.accessible_by(request.user).filter(person_id=person_uuid).first()
+            )
+            if (
+                person
+                and PermissionService.get_effective_permission(person, request.user)
+                == PermissionLevel.OWNER
+            ):
+                person_to_attach = person
+
         # Store the email encoded for privacy
         invitation = Invitation.objects.create(
-            sender=request.user, recipient_email=encode_email(recipient_email)
+            sender=request.user,
+            recipient_email=encode_email(recipient_email),
+            person=person_to_attach,
         )
         invitation_link = request.build_absolute_uri(
             reverse("gift_manager:accept_invitation", args=[invitation.token])

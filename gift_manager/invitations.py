@@ -225,6 +225,9 @@ def accept_invitation_for_user(invitation: Invitation, user) -> bool:
         sender_profile, _ = Profile.objects.get_or_create(user=invitation.sender)
         user_profile.friends.add(sender_profile)
         sender_profile.friends.add(user_profile)
+        from gift_manager import account_links  # noqa: PLC0415
+
+        account_links.link_from_invitation(invitation, user)
     return True
 
 

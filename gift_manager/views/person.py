@@ -16,10 +16,13 @@ from django.utils.translation import gettext_lazy as _
 
 from gift_manager import account_links
 from gift_manager.account_links import LinkRefused
+from gift_manager.account_links import clean_person_email
 from gift_manager.account_links import link_suggestion
 from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
 from gift_manager.invitations import best_email_for_account
+from gift_manager.invitations import user_has_email
+from gift_manager.invitations import user_is_friends_with_email
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
@@ -415,6 +418,24 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                     "btn_class": "btn-outline-secondary",
                 }
             )
+            clean_email = (
+                clean_person_email(self.object) if self.object.account_id is None else None
+            )
+            if (
+                clean_email
+                and not user_has_email(self.request.user, clean_email)
+                and not user_is_friends_with_email(self.request.user, clean_email)
+            ):
+                action_buttons.append(
+                    {
+                        "type": "custom",
+                        "url": reverse("gift_manager:send_invitation")
+                        + f"?person={self.object.person_id}",
+                        "label": _("Invite to Gift Manager"),
+                        "icon": "fas fa-envelope",
+                        "btn_class": "btn-outline-secondary",
+                    }
+                )
         action_buttons.append(
             {
                 "type": "delete",

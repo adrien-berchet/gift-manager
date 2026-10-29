@@ -27,6 +27,8 @@ from gift_manager.services import PermissionService
 if TYPE_CHECKING:
     from django.contrib.auth.models import User
 
+    from gift_manager.models import Invitation
+
 
 class LinkRefused(ValidationError):  # noqa: N818
     """Raised when a person-account link operation is rejected by business rules."""
@@ -153,6 +155,36 @@ def unlink(person: Person, actor: User) -> None:
 
         person.account = None
         person.save(update_fields=["account"])
+
+
+def link_from_invitation(invitation: Invitation, user: User) -> bool:
+    """Link an unlinked person record attached to an accepted invitation to the recipient user.
+
+    Fails silently (returning False) if the record was deleted, the sender is no longer an
+    OWNER, the record is already linked, or duplicate/friendship rules refuse the link.
+    """
+    if invitation.person_id is None:
+        return False
+
+    try:
+        with transaction.atomic():
+            person = Person.objects.select_for_update().filter(pk=invitation.person_id).first()
+            if person is None:
+                return False
+
+            if (
+                PermissionService.get_effective_permission(person, invitation.sender)
+                != PermissionLevel.OWNER
+            ):
+                return False
+
+            if person.account_id is not None:
+                return False
+
+            link(person, user, actor=invitation.sender)
+            return True
+    except (LinkRefused, PermissionDenied):
+        return False
 
 
 def revealed_surprise_count(person: Person) -> int:
@@ -345,7 +377,7 @@ def link_choices(person: Person, actor: User) -> list[LinkChoice]:
     return choices
 
 
-def _clean_person_email(person: Person) -> str | None:
+def clean_person_email(person: Person) -> str | None:
     raw_email = person.email
     if not raw_email:
         return None
@@ -393,7 +425,7 @@ def link_suggestion(person: Person, viewer: User) -> User | None:
     if person.account_id is not None:
         return None
 
-    clean_email = _clean_person_email(person)
+    clean_email = clean_person_email(person)
     if not clean_email:
         return None
 
@@ -457,7 +489,7 @@ def friend_link_rows(viewer: User) -> list[FriendLinkRow]:
         if p.account_id in linked_by_account:
             linked_by_account[p.account_id].append(p)
         elif p.account_id is None and p.email_address:
-            clean = _clean_person_email(p)
+            clean = clean_person_email(p)
             if clean:
                 unlinked_emails.append((clean, p.link_suggestion_dismissed_account_id))
 
@@ -521,7 +553,7 @@ def linkable_persons(viewer: User, friend: User) -> list[Person]:
     target_emails = emails_owned_by([friend]).get(friend.pk, set())
 
     for p in unlinked:
-        clean = _clean_person_email(p) if p.email_address else None
+        clean = clean_person_email(p) if p.email_address else None
         p.has_same_email = (
             bool(clean and clean in target_emails)
             and p.link_suggestion_dismissed_account_id != friend.pk

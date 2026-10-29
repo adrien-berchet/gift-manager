@@ -16,6 +16,7 @@
         </h1>
         <form method="post" novalidate>
             {% csrf_token %}
+            {{ form.person }}
             {% include "gift_manager/includes/forms/errors.html" %}
             {% include "gift_manager/includes/forms/field.html" with field=form.recipient_email %}
             <div class="d-flex gap-2 justify-content-end">

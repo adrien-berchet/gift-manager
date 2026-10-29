@@ -432,7 +432,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
 - Produces: `link_from_invitation(invitation: Invitation, user: User) -> bool`;
   `InvitationForm.person` (hidden `UUIDField`, optional).
 
-- [ ] **Step 1: Write failing tests** in `test_invitation_person_link.py`:
+- [x] **Step 1: Write failing tests** in `test_invitation_person_link.py`:
   - `test_invite_button_conditions`: shown to editors for an unlinked record whose email belongs
     to nobody the viewer knows; hidden without email, when linked, or when the email is a friend's
     or the viewer's.
@@ -444,16 +444,16 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - `test_accepting_skips_linking_when` (parametrized): record deleted, sender no longer OWNER,
     record already linked, duplicate guard fails. In each case the invitation is accepted, the
     friendship exists, nothing is linked, no error.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_invitation_person_link.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_invitation_person_link.py`.
   Expected: FAIL.
-- [ ] **Step 3: Implement** `link_from_invitation` (calls `link(..., actor=invitation.sender)`
+- [x] **Step 3: Implement** `link_from_invitation` (calls `link(..., actor=invitation.sender)`
   and returns False on `LinkRefused`, `PermissionDenied` or a missing record), call it in
   `accept_invitation_for_user` after the two `friends.add` calls inside the same atomic block,
   the form field, the view changes and the "Invite to Gift Manager" custom action button (icon
   `fas fa-envelope`).
-- [ ] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py`.
+- [x] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py`.
   Expected: PASS. Add the French translations.
-- [ ] **Step 5: Commit** `Feat: Link a person when the invitation sent from it is accepted`.
+- [x] **Step 5: Commit** `Feat: Link a person when the invitation sent from it is accepted`.
 
 ---
 

@@ -4870,6 +4870,10 @@ msgstr "pour"
 msgid "This person is already linked."
 msgstr "Cette personne est déjà associée."
 
+#: gift_manager/views/person.py:432
+msgid "Invite to Gift Manager"
+msgstr "Inviter sur Gift Manager"
+
 #~ msgid "No"
 #~ msgstr "Non"
 
