@@ -151,13 +151,23 @@
         </div>
         {% endif %}
 
+        {% if person.account_id != request.user.id %}
         {% include "gift_manager/includes/budget_summary.html" %}
+        {% endif %}
 
     </div>
 
     <!-- Right column: Gift plans -->
     <div class="col-lg-7">
 
+        {% if person.account_id == request.user.id %}
+        <div class="detail-section">
+            <div class="alert alert-info" role="status">
+                <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                {% trans "This person record represents you. Gift plans and suggestions are hidden for your own record." %}
+            </div>
+        </div>
+        {% else %}
         <div class="detail-section">
             <h6 class="detail-section-title text-muted mb-3">
                 <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift plans in progress" %}
@@ -194,6 +204,7 @@
         {% include "gift_manager/includes/abandoned_ideas_partial.html" with abandoned_relations=abandoned_relations only %}
 
         {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
+        {% endif %}
 
     </div>
 </div>

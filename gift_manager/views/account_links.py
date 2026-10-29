@@ -206,7 +206,13 @@ class FriendLinkPersonView(LoginRequiredMixin, View):
             "friend": friend_profile,
             "persons": persons,
         }
-        return render(request, "gift_manager/friend_link_person.html", context)
+        is_htmx = request.headers.get("HX-Request") == "true"
+        template_name = (
+            "gift_manager/includes/friend_link_form_partial.html"
+            if is_htmx
+            else "gift_manager/friend_link_person.html"
+        )
+        return render(request, template_name, context)
 
     def post(self, request, friend_id: int):
         friend_profile = self._get_friend_profile(request, friend_id)
@@ -220,22 +226,33 @@ class FriendLinkPersonView(LoginRequiredMixin, View):
             return HttpResponse("Invalid person ID", status=400)
 
         person = get_object_or_404(account_links.owned_persons(request.user), person_id=person_uuid)
+        is_htmx = request.headers.get("HX-Request") == "true"
 
         with transaction.atomic():
             PermissionService.lock_object(person)
             person.refresh_from_db(fields=["account"])
             if person.account_id is not None:
                 messages.error(request, _("This person is already linked."))
-                return redirect("gift_manager:friend_link_person", friend_id=friend_id)
-
-            try:
-                account_links.link(person, friend_profile.user, request.user)
-                messages.success(
-                    request,
-                    _("Linked to %(username)s.") % {"username": friend_profile.user.username},
+                target_url = reverse(
+                    "gift_manager:friend_link_person", kwargs={"friend_id": friend_id}
                 )
-                return redirect("gift_manager:profile_detail")
-            except LinkRefused as exc:
-                msg = exc.message if hasattr(exc, "message") else str(exc)
-                messages.error(request, msg)
-                return redirect("gift_manager:friend_link_person", friend_id=friend_id)
+            else:
+                try:
+                    account_links.link(person, friend_profile.user, request.user)
+                    messages.success(
+                        request,
+                        _("Linked to %(username)s.") % {"username": friend_profile.user.username},
+                    )
+                    target_url = reverse("gift_manager:profile_detail")
+                except LinkRefused as exc:
+                    msg = exc.message if hasattr(exc, "message") else str(exc)
+                    messages.error(request, msg)
+                    target_url = reverse(
+                        "gift_manager:friend_link_person", kwargs={"friend_id": friend_id}
+                    )
+
+        if is_htmx:
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = target_url
+            return response
+        return redirect(target_url)

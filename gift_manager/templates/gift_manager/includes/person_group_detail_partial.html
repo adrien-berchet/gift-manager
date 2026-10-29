@@ -1,5 +1,5 @@
 {% extends "gift_manager/includes/detail_partial.html" %}
-{% load i18n %}
+{% load custom_filters i18n %}
 
 {% block edit_url %}{% url 'gift_manager:person_group_edit' pk=object.group_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:person_group_delete' pk=object.group_id %}{% endblock %}
@@ -99,9 +99,16 @@
         <div class="members-list">
             {% for member in members %}
             <div class="member-item d-flex align-items-center justify-content-between py-2 border-bottom">
-                <div class="d-flex align-items-center">
-                    <i class="fas fa-user me-2 text-muted"></i>
+                <div class="d-flex align-items-center flex-wrap gap-1">
+                    <i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>
                     <span>{{ member }}</span>
+                    {% with link_badge=member|person_link_label:request.user %}
+                    {% if link_badge %}
+                    <span class="badge bg-secondary ms-1">
+                        <i class="fas fa-link me-1" aria-hidden="true"></i>{{ link_badge }}
+                    </span>
+                    {% endif %}
+                    {% endwith %}
                     {% if member.email %}
                     <small class="text-muted ms-2">{{ member.email }}</small>
                     {% endif %}

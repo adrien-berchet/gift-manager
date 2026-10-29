@@ -405,7 +405,7 @@
               let linkBadge = '';
               if (linkLabel) {
                   const escaped = GridUtils.escapeHtml(linkLabel);
-                  linkBadge = ` <i class="fas fa-link ms-1 text-secondary" title="${escaped}" aria-hidden="true"></i><span class="visually-hidden">${escaped}</span>`;
+                  linkBadge = ` <span class="badge bg-secondary ms-1"><i class="fas fa-link me-1" aria-hidden="true"></i>${escaped}</span>`;
               }
               return gridjs.html(GridUtils.linkHtml(personUrl, firstName) + linkBadge);
           }
@@ -489,7 +489,7 @@
               let linkBadge = '';
               if (linkLabel) {
                   const escaped = GridUtils.escapeHtml(linkLabel);
-                  linkBadge = ` <i class="fas fa-link ms-1 text-secondary" title="${escaped}" aria-hidden="true"></i><span class="visually-hidden">${escaped}</span>`;
+                  linkBadge = ` <span class="badge bg-secondary ms-1"><i class="fas fa-link me-1" aria-hidden="true"></i>${escaped}</span>`;
               }
               return gridjs.html(GridUtils.linkHtml(personUrl, firstName) + linkBadge);
           }

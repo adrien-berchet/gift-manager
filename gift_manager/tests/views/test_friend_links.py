@@ -456,5 +456,32 @@ def test_profile_lists_own_records(client):
     assert response.status_code == 200
     content = response.content.decode("utf-8")
     assert "Your own person record:" in content
-    assert reverse("gift_manager:person_detail", kwargs={"pk": p1.person_id}) in content
+    assert reverse("gift_manager:person_edit", kwargs={"pk": p1.person_id}) in content
+    assert 'data-action="edit"' in content
     assert "Me Myself" in content
+
+
+def test_friend_link_htmx_get_returns_partial_and_post_returns_hx_redirect(client):
+    """HTMX GET returns offcanvas partial; HTMX POST links and returns 204 HX-Redirect."""
+    viewer = UserFactory(username="viewer")
+    friend = UserFactory(username="ana")
+    viewer.profile.friends.add(friend.profile)
+    person = PersonFactory(owner=viewer, first_name="AnaFriend")
+
+    client.force_login(viewer)
+    url = reverse("gift_manager:friend_link_person", kwargs={"friend_id": friend.profile.pk})
+
+    # GET with HTMX
+    res = client.get(url, HTTP_HX_REQUEST="true")
+    assert res.status_code == 200
+    content = res.content.decode()
+    assert "Link to a person" in content
+    assert "AnaFriend" in content
+    assert 'data-bs-dismiss="offcanvas"' in content
+
+    # POST with HTMX
+    res = client.post(url, {"person": str(person.person_id)}, HTTP_HX_REQUEST="true")
+    assert res.status_code == 204
+    assert res.headers.get("HX-Redirect") == reverse("gift_manager:profile_detail")
+    person.refresh_from_db()
+    assert person.account == friend

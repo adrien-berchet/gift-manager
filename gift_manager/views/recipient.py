@@ -43,7 +43,10 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
 
         accessible_groups = PersonGroup.objects.accessible_by(user).order_by("name").distinct()
         accessible_persons = (
-            Person.objects.accessible_by(user).order_by("family_name", "first_name").distinct()
+            Person.objects.accessible_by(user)
+            .exclude(account=user)
+            .order_by("family_name", "first_name")
+            .distinct()
         )
 
         context["recipient_view"] = recipient_view
@@ -51,7 +54,12 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
         if recipient_view == "people":
             person_column_names = get_person_grid_column_names()
             person_grid_data = list(
-                get_person_grid_queryset(user, person_column_names, accessible_groups)
+                get_person_grid_queryset(
+                    user,
+                    person_column_names,
+                    accessible_groups,
+                    exclude_account=user,
+                )
             )
             populate_person_grid_group_info(person_grid_data, user, accessible_groups)
             person_permission_context = self.get_permission_context(person_grid_data)

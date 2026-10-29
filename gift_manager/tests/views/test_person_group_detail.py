@@ -189,3 +189,19 @@ class TestPersonGroupDetail:
         with django_assert_max_num_queries(25):
             response = self.client.get(url)
             assert response.status_code == 200
+
+    def test_group_detail_partial_shows_link_badges(self, user_factory, person_factory):
+        """Slide-out group detail partial shows the account link badge for members."""
+        ana = user_factory(username="ana")
+        friend_record = person_factory(first_name="Ana", account=ana, groups=[self.group])
+        create_or_update_permission(
+            self.user, friend_record, permission_level=PermissionLevel.OWNER
+        )
+
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        assert "Linked to ana" in content
+        assert "badge bg-secondary" in content

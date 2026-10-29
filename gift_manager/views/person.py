@@ -59,7 +59,9 @@ def get_person_grid_column_names():
     }
 
 
-def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
+def get_person_grid_queryset(
+    user, column_names=None, accessible_groups=None, *, exclude_account=None
+):
     """Return person rows formatted for the shared Grid.js management view."""
     from django.db import connection
 
@@ -78,6 +80,8 @@ def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
             "account__username",
         )
     )
+    if exclude_account is not None:
+        base_queryset = base_queryset.exclude(account=exclude_account)
 
     if connection.vendor == "postgresql":
         return base_queryset.annotate(
@@ -392,7 +396,10 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         context["gift_history_url"] = reverse(
             "gift_manager:person_gift_history", kwargs={"pk": self.object.person_id}
         )
-        context["suggestions_url"] = suggestions_url_for(self.object)
+        if self.object.account_id == self.request.user.id:
+            context["suggestions_url"] = None
+        else:
+            context["suggestions_url"] = suggestions_url_for(self.object)
         # Interests are gift tags: only the ones the viewer can see are shown
         visible_tag_ids = VisibleMetadata.for_request(self.request).tag_ids
         context["interests"] = sorted(
@@ -426,6 +433,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                     "label": _("Change link") if self.object.account_id else _("Link account"),
                     "icon": "fas fa-link",
                     "btn_class": "btn-outline-secondary",
+                    "data_action": "edit",
                 }
             )
             clean_email = (

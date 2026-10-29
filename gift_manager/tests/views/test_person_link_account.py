@@ -294,6 +294,7 @@ def test_detail_page_shows_badge_and_button(client):
     c = res.content.decode()
     assert "Change link" in c
     assert "Linked to ana" in c
+    assert 'data-action="edit"' in c
 
     # 3. Linked to Ana, viewed by viewer
     client.force_login(viewer)
@@ -310,6 +311,8 @@ def test_detail_page_shows_badge_and_button(client):
     res = client.get(detail_url)
     c = res.content.decode()
     assert "This is you" in c
+    assert res.context["suggestions_url"] is None
+    assert "Gift plans and suggestions are hidden for your own record." in c
 
 
 def test_current_link_shown_and_checked_for_non_friend_editor(client):

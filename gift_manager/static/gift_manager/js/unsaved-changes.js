@@ -106,7 +106,7 @@
         form.addEventListener("change", handleTrackedFieldEvent);
         form.addEventListener("paste", handleTrackedFieldEvent);
         form.addEventListener("keyup", handleTrackedFieldEvent);
-        form.addEventListener("submit", handleFormSubmit);
+        form.addEventListener("submit", handleFormSubmit, true);
         form.addEventListener("htmx:afterRequest", handleHtmxAfterRequest);
         form.addEventListener("form:cleanup", function () {
             removeForm(form);
@@ -181,10 +181,6 @@
     }
 
     function handleFormSubmit(event) {
-        if (event.defaultPrevented) {
-            return;
-        }
-
         submittingForms.add(event.currentTarget);
     }
 
@@ -207,6 +203,13 @@
 
         htmxProtectionReady = true;
 
+        document.body.addEventListener("htmx:beforeRequest", function (event) {
+            const form = getEventForm(event);
+            if (form && trackedForms.has(form)) {
+                submittingForms.add(form);
+            }
+        });
+
         document.body.addEventListener("htmx:beforeSwap", function (event) {
             const xhr = event.detail?.xhr;
             if (!xhr || (xhr.status !== 400 && xhr.status !== 422)) {
@@ -218,6 +221,7 @@
                 return;
             }
 
+            submittingForms.delete(form);
             checkForChanges(form);
 
             if (!isDirty(form)) {

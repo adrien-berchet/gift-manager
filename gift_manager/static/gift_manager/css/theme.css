@@ -1014,7 +1014,7 @@ html .navbar-nav .nav-link.active {
 }
 
 .btn-outline-primary {
-    --bs-btn-color: var(--color-primary);
+    --bs-btn-color: var(--color-primary-dark);
     --bs-btn-border-color: var(--color-primary);
     --bs-btn-hover-color: var(--text-inverse);
     --bs-btn-hover-bg: var(--color-primary-hover);
@@ -1024,7 +1024,7 @@ html .navbar-nav .nav-link.active {
     --bs-btn-active-border-color: var(--color-primary-hover);
     background-color: transparent;
     border: 2px solid var(--color-primary);
-    color: var(--color-primary);
+    color: var(--color-primary-dark);
 }
 
 .btn-outline-primary:hover,

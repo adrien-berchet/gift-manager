@@ -179,7 +179,9 @@
                 <label>{% trans "Your own person record:" %}</label>
                 <div class="value">
                     {% for own_person in own_records %}
-                        <a href="{% url 'gift_manager:person_detail' own_person.person_id %}">{{ own_person }}</a>{% if not forloop.last %}, {% endif %}
+                        <a href="{% url 'gift_manager:person_edit' own_person.person_id %}" data-action="edit">
+                            {{ own_person }} <i class="fas fa-edit ms-1 text-muted" aria-hidden="true"></i>
+                        </a>{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 </div>
             </div>
@@ -343,21 +345,21 @@
                                             <i class="fas fa-link me-1 text-muted" aria-hidden="true"></i>
                                             {% url 'gift_manager:person_detail' p.person_id as person_url %}
                                             {% blocktrans with name=p person_url=person_url %}Linked to <a href="{{ person_url }}">{{ name }}</a>{% endblocktrans %}
-                                            <a class="btn btn-link btn-sm p-0 ms-2" href="{% url 'gift_manager:person_link_account' p.person_id %}">
+                                            <a class="btn btn-link btn-sm p-0 ms-2" href="{% url 'gift_manager:person_link_account' p.person_id %}" data-action="edit">
                                                 {% trans "Unlink" %}
                                                 <span class="visually-hidden"> {{ p }}</span>
                                             </a>
                                         </div>
                                     {% endfor %}
                                 {% elif row.matching_count > 0 %}
-                                    <a class="small text-muted d-block mt-1 text-decoration-none" href="{% url 'gift_manager:friend_link_person' row.profile.pk %}">
+                                    <a class="small text-muted d-block mt-1 text-decoration-none" href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" data-action="edit">
                                         <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% blocktrans count counter=row.matching_count %}{{ counter }} person has this email{% plural %}{{ counter }} persons have this email{% endblocktrans %}
                                     </a>
                                 {% endif %}
                             </div>
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 {% if not row.linked %}
-                                    <a href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" class="btn btn-outline-primary btn-sm">
+                                    <a href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" class="btn btn-outline-primary btn-sm" data-action="edit">
                                         <i class="fas fa-link me-1" aria-hidden="true"></i>{% trans "Link to a person" %}
                                         <span class="visually-hidden"> {% trans "for" %} {{ row.profile.user.username }}</span>
                                     </a>

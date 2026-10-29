@@ -4874,6 +4874,15 @@ msgstr "Cette personne est déjà associée."
 msgid "Invite to Gift Manager"
 msgstr "Inviter sur Gift Manager"
 
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html
+msgid ""
+"This person record represents you. Gift plans and suggestions are hidden for "
+"your own record."
+msgstr ""
+"Cette fiche vous représente. Les projets de cadeaux et suggestions sont "
+"masqués pour votre propre fiche."
+
+
 #~ msgid "No"
 #~ msgstr "Non"
 
