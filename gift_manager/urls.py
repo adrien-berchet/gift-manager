@@ -52,6 +52,11 @@ urlpatterns = [
         name="remove_friend",
     ),
     path(
+        "profile/friends/<int:friend_id>/link/",
+        views.FriendLinkPersonView.as_view(),
+        name="friend_link_person",
+    ),
+    path(
         "profile/update-view-preferences/",
         views.UpdateViewPreferencesView.as_view(),
         name="update_view_preferences",

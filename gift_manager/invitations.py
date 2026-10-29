@@ -37,19 +37,11 @@ def _decoded_user_email(user) -> str:
     return decode_email(user.email or "")
 
 
-def accounts_owning_email(users: Iterable[User], email: str) -> list[User]:
-    """Return users among ``users`` who own ``email`` (verified or legacy)."""
+def emails_owned_by(users: Iterable[User]) -> dict[int, set[str]]:
+    """Return a mapping of user_id to set of verified or legacy casefolded emails."""
     user_list = [u for u in users if u and u.pk]
     if not user_list:
-        return []
-
-    try:
-        clean_email = normalize_email(email)
-    except ValidationError:
-        return []
-
-    if not clean_email:
-        return []
+        return {}
 
     user_ids = [u.pk for u in user_list]
     rows = EmailAddress.objects.filter(user_id__in=user_ids).values_list(
@@ -64,17 +56,50 @@ def accounts_owning_email(users: Iterable[User], email: str) -> list[User]:
         if verified and row_email:
             verified_emails_by_user[uid].add(row_email.casefold())
 
-    matches: list[User] = []
+    result: dict[int, set[str]] = {}
     for user in user_list:
-        if clean_email in verified_emails_by_user.get(user.pk, set()):
-            matches.append(user)
-        elif (
-            user.pk not in user_has_any_rows and _decoded_user_email(user).casefold() == clean_email
-        ):
-            # Legacy programmatic accounts in tests/data may not have allauth EmailAddress rows.
-            matches.append(user)
+        if user.pk in user_has_any_rows:
+            result[user.pk] = verified_emails_by_user.get(user.pk, set())
+        else:
+            legacy = _decoded_user_email(user).casefold()
+            result[user.pk] = {legacy} if legacy else set()
 
-    return matches
+    return result
+
+
+def best_email_for_account(user: User) -> str | None:
+    """Return the primary verified email, or first verified email, or legacy email if no rows."""
+    if not user or not user.pk:
+        return None
+
+    rows = list(EmailAddress.objects.filter(user=user, verified=True).order_by("-primary", "id"))
+    if rows:
+        return rows[0].email
+
+    has_any = EmailAddress.objects.filter(user=user).exists()
+    if not has_any:
+        legacy = _decoded_user_email(user)
+        return legacy or None
+
+    return None
+
+
+def accounts_owning_email(users: Iterable[User], email: str) -> list[User]:
+    """Return users among ``users`` who own ``email`` (verified or legacy)."""
+    user_list = [u for u in users if u and u.pk]
+    if not user_list:
+        return []
+
+    try:
+        clean_email = normalize_email(email)
+    except ValidationError:
+        return []
+
+    if not clean_email:
+        return []
+
+    owned_map = emails_owned_by(user_list)
+    return [u for u in user_list if clean_email in owned_map.get(u.pk, set())]
 
 
 def user_has_email(user, email: str) -> bool:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
@@ -22,6 +24,7 @@ from gift_manager.account_links import link_choices
 from gift_manager.account_links import revealed_surprise_count
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
+from gift_manager.models import Profile
 from gift_manager.services import PermissionService
 
 
@@ -184,3 +187,55 @@ class PersonDismissLinkSuggestionView(LoginRequiredMixin, View):
             response["HX-Redirect"] = success_url
             return response
         return redirect(success_url)
+
+
+class FriendLinkPersonView(LoginRequiredMixin, View):
+    """List viewer's linkable persons to link to a friend, and handle linking."""
+
+    def _get_friend_profile(self, request, friend_id: int) -> Profile:
+        return get_object_or_404(
+            Profile.objects.select_related("user"),
+            pk=friend_id,
+            friends=request.user.profile,
+        )
+
+    def get(self, request, friend_id: int):
+        friend_profile = self._get_friend_profile(request, friend_id)
+        persons = account_links.linkable_persons(request.user, friend_profile.user)
+        context = {
+            "friend": friend_profile,
+            "persons": persons,
+        }
+        return render(request, "gift_manager/friend_link_person.html", context)
+
+    def post(self, request, friend_id: int):
+        friend_profile = self._get_friend_profile(request, friend_id)
+        person_raw = request.POST.get("person")
+        if not person_raw:
+            return HttpResponse("Missing person", status=400)
+
+        try:
+            person_uuid = uuid.UUID(person_raw)
+        except (ValueError, AttributeError):
+            return HttpResponse("Invalid person ID", status=400)
+
+        person = get_object_or_404(account_links.owned_persons(request.user), person_id=person_uuid)
+
+        with transaction.atomic():
+            PermissionService.lock_object(person)
+            person.refresh_from_db(fields=["account"])
+            if person.account_id is not None:
+                messages.error(request, _("This person is already linked."))
+                return redirect("gift_manager:friend_link_person", friend_id=friend_id)
+
+            try:
+                account_links.link(person, friend_profile.user, request.user)
+                messages.success(
+                    request,
+                    _("Linked to %(username)s.") % {"username": friend_profile.user.username},
+                )
+                return redirect("gift_manager:profile_detail")
+            except LinkRefused as exc:
+                msg = exc.message if hasattr(exc, "message") else str(exc)
+                messages.error(request, msg)
+                return redirect("gift_manager:friend_link_person", friend_id=friend_id)

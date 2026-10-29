@@ -2,6 +2,7 @@
 
 # Common utilities
 # Base classes (not typically imported directly, but available if needed)
+from .account_links import FriendLinkPersonView
 from .account_links import PersonDismissLinkSuggestionView
 from .account_links import PersonLinkAccountView
 from .base import BaseCreateView
@@ -156,6 +157,7 @@ __all__ = [
     "EventListView",
     "EventUpdateView",
     "FilterByUserMixin",
+    "FriendLinkPersonView",
     "GetObjectByTokenMixin",
     "GiftCreateView",
     "GiftDeleteView",

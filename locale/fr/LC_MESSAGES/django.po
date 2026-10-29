@@ -4818,6 +4818,58 @@ msgstr "Suggestion"
 msgid "Preference remembered in recipient's profile."
 msgstr "Préférence enregistrée dans le profil du destinataire."
 
+#: gift_manager/templates/gift_manager/friend_link_person.html:5
+#: gift_manager/templates/gift_manager/friend_link_person.html:10
+#: gift_manager/templates/gift_manager/profile_detail.html:362
+msgid "Link to a person"
+msgstr "Associer à une personne"
+
+#: gift_manager/templates/gift_manager/friend_link_person.html:12
+msgid "Back to Profile"
+msgstr "Retour au profil"
+
+#: gift_manager/templates/gift_manager/friend_link_person.html:19
+#, python-format
+msgid "Choose one of your person records to link to %(username)s."
+msgstr "Choisissez l'une de vos fiches personnes à associer à %(username)s."
+
+#: gift_manager/templates/gift_manager/friend_link_person.html:31
+msgid "Same email"
+msgstr "Même adresse e-mail"
+
+#: gift_manager/templates/gift_manager/friend_link_person.html:51
+msgid "You don't have any unlinked persons to link to this friend."
+msgstr "Vous n'avez aucune personne non associée à associer à cet ami."
+
+#: gift_manager/templates/gift_manager/profile_detail.html:180
+msgid "Your own person record:"
+msgstr "Votre propre fiche personne :"
+
+#: gift_manager/templates/gift_manager/profile_detail.html:343
+#, python-format
+msgid "Linked to <a href=\"%(person_url)s\">%(name)s</a>"
+msgstr "Associé à <a href=\"%(person_url)s\">%(name)s</a>"
+
+#: gift_manager/templates/gift_manager/profile_detail.html:345
+msgid "Unlink"
+msgstr "Dissocier"
+
+#: gift_manager/templates/gift_manager/profile_detail.html:352
+#, python-format
+msgid "%(counter)s person has this email"
+msgid_plural "%(counter)s persons have this email"
+msgstr[0] "%(counter)s personne a cette adresse e-mail"
+msgstr[1] "%(counter)s personnes ont cette adresse e-mail"
+
+#: gift_manager/templates/gift_manager/profile_detail.html:363
+#: gift_manager/templates/gift_manager/profile_detail.html:367
+msgid "for"
+msgstr "pour"
+
+#: gift_manager/views/account_links.py:230
+msgid "This person is already linked."
+msgstr "Cette personne est déjà associée."
+
 #~ msgid "No"
 #~ msgstr "Non"
 

@@ -1,5 +1,6 @@
 {% load i18n %}
 
+{% if link_friend %}<input type="hidden" name="link_to" value="{{ link_friend.pk }}">{% endif %}
 {% include "gift_manager/includes/forms/field.html" with field=form.first_name %}
 {% include "gift_manager/includes/forms/field.html" with field=form.family_name %}
 {% include "gift_manager/includes/forms/field.html" with field=form.email_address %}

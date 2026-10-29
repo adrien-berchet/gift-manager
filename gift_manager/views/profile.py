@@ -15,6 +15,7 @@ from django.views.generic import DetailView
 from django.views.generic import TemplateView
 from django.views.generic import View
 
+from gift_manager import account_links
 from gift_manager.account_links import remove_links_after_unfriending
 from gift_manager.email_encoding import encode_email
 from gift_manager.forms import InvitationForm
@@ -55,6 +56,8 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
             context["calendar_feed_url"] = self.request.build_absolute_uri(
                 reverse("gift_manager:calendar_feed", kwargs={"token": profile.calendar_token})
             )
+        context["friend_link_rows"] = account_links.friend_link_rows(self.request.user)
+        context["own_records"] = account_links.own_records(self.request.user)
         return context
 
 

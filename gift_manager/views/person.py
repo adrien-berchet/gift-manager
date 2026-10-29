@@ -1,5 +1,8 @@
 """Person-related views."""
 
+from functools import cached_property
+
+from django.contrib import messages
 from django.contrib.postgres.aggregates import JSONBAgg
 from django.core.exceptions import ValidationError
 from django.db.models import F
@@ -11,9 +14,12 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from gift_manager import account_links
+from gift_manager.account_links import LinkRefused
 from gift_manager.account_links import link_suggestion
 from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
+from gift_manager.invitations import best_email_for_account
 from gift_manager.metadata_visibility import VisibleMetadata
 from gift_manager.mixins.fallback_mode import FallbackModeFormMixin
 from gift_manager.mixins.fallback_mode import FallbackModeListMixin
@@ -23,6 +29,7 @@ from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import BudgetService
@@ -215,8 +222,44 @@ class PersonCreateView(
     close_offcanvas = True
     prefill_fields = {"name": "first_name"}
 
+    @cached_property
+    def link_friend(self) -> Profile | None:
+        """Resolve the friend profile specified in link_to query or POST data."""
+        raw_val = self.request.POST.get("link_to") or self.request.GET.get("link_to")
+        if not raw_val:
+            return None
+        try:
+            profile_pk = int(raw_val)
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+        if not self.request.user.is_authenticated:
+            return None
+
+        try:
+            return (
+                Profile.objects.select_related("user")
+                .filter(pk=profile_pk, friends=self.request.user.profile)
+                .first()
+            )
+        except (AttributeError, Profile.DoesNotExist):
+            return None
+
     def get_initial(self):
         initial = super().get_initial()
+        friend_profile = self.link_friend
+        if friend_profile:
+            friend_user = friend_profile.user
+            first_name = friend_user.first_name or ""
+            family_name = friend_user.last_name or ""
+            if not first_name and not family_name:
+                first_name = friend_user.username
+            initial["first_name"] = first_name
+            initial["family_name"] = family_name
+            best_email = best_email_for_account(friend_user)
+            if best_email:
+                initial["email_address"] = best_email
+
         group_id = self.request.GET.get("group")
         if not group_id:
             return initial
@@ -228,6 +271,31 @@ class PersonCreateView(
 
         initial["groups"] = [group.pk]
         return initial
+
+    def get_context_data(self, **kwargs) -> dict:
+        context = super().get_context_data(**kwargs)
+        context["link_friend"] = self.link_friend
+        return context
+
+    def get_success_url(self) -> str:
+        if self.link_friend:
+            return reverse("gift_manager:profile_detail")
+        return super().get_success_url()
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        friend_profile = self.link_friend
+        if friend_profile:
+            try:
+                account_links.link(self.object, friend_profile.user, self.request.user)
+                messages.success(
+                    self.request,
+                    _("Linked to %(username)s.") % {"username": friend_profile.user.username},
+                )
+            except LinkRefused as exc:
+                msg = exc.message if hasattr(exc, "message") else str(exc)
+                messages.warning(self.request, msg)
+        return response
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)

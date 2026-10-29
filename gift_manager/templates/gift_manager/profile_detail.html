@@ -174,6 +174,16 @@
             <span class="value">{{ profile.user.email|decode_email }}</span>
             <a href="{% url 'account_email' %}" class="btn btn-secondary btn-sm">{% trans 'Update' %}</a>
         </div>
+        {% if own_records %}
+            <div class="profile-field">
+                <label>{% trans "Your own person record:" %}</label>
+                <div class="value">
+                    {% for own_person in own_records %}
+                        <a href="{% url 'gift_manager:person_detail' own_person.person_id %}">{{ own_person }}</a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- Display Preferences Section -->
@@ -318,21 +328,53 @@
                 <i class="fas fa-user-plus me-1"></i>{% trans "Invite friend" %}
             </a>
         </h2>
-        {% if profile.friends.all %}
+        {% if friend_link_rows %}
             <ul class="list-group list-group-flush mt-3 friends-list">
-                {% for friend in profile.friends.all %}
-                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-2">
-                        <div>
-                            <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ friend.user.username }}</div>
-                            <div class="text-muted small">{{ friend.user.email|decode_email }}</div>
+                {% for row in friend_link_rows %}
+                    <li class="list-group-item px-2 py-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <div class="me-auto">
+                                <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ row.profile.user.username }}</div>
+                                <div class="text-muted small">{{ row.profile.user.email|decode_email }}</div>
+
+                                {% if row.linked %}
+                                    {% for p in row.linked %}
+                                        <div class="small mt-1">
+                                            <i class="fas fa-link me-1 text-muted" aria-hidden="true"></i>
+                                            {% url 'gift_manager:person_detail' p.person_id as person_url %}
+                                            {% blocktrans with name=p person_url=person_url %}Linked to <a href="{{ person_url }}">{{ name }}</a>{% endblocktrans %}
+                                            <a class="btn btn-link btn-sm p-0 ms-2" href="{% url 'gift_manager:person_link_account' p.person_id %}">
+                                                {% trans "Unlink" %}
+                                                <span class="visually-hidden"> {{ p }}</span>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                {% elif row.matching_count > 0 %}
+                                    <a class="small text-muted d-block mt-1 text-decoration-none" href="{% url 'gift_manager:friend_link_person' row.profile.pk %}">
+                                        <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% blocktrans count counter=row.matching_count %}{{ counter }} person has this email{% plural %}{{ counter }} persons have this email{% endblocktrans %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                {% if not row.linked %}
+                                    <a href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-link me-1" aria-hidden="true"></i>{% trans "Link to a person" %}
+                                        <span class="visually-hidden"> {% trans "for" %} {{ row.profile.user.username }}</span>
+                                    </a>
+                                    <a href="{% url 'gift_manager:person_create' %}?link_to={{ row.profile.pk }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Create person" %}
+                                        <span class="visually-hidden"> {% trans "for" %} {{ row.profile.user.username }}</span>
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'gift_manager:confirm_remove_friend' row.profile.pk %}"
+                                   class="btn btn-outline-danger btn-sm"
+                                   data-remove-friend
+                                   data-friend-name="{{ row.profile.user.username }}"
+                                   data-remove-url="{% url 'gift_manager:remove_friend' row.profile.pk %}">
+                                    <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
+                                </a>
+                            </div>
                         </div>
-                        <a href="{% url 'gift_manager:confirm_remove_friend' friend.pk %}"
-                           class="btn btn-outline-danger btn-sm"
-                           data-remove-friend
-                           data-friend-name="{{ friend.user.username }}"
-                           data-remove-url="{% url 'gift_manager:remove_friend' friend.pk %}">
-                            <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
-                        </a>
                     </li>
                 {% endfor %}
             </ul>

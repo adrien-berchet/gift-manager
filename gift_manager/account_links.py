@@ -15,6 +15,7 @@ from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
 from gift_manager.invitations import accounts_owning_email
+from gift_manager.invitations import emails_owned_by
 from gift_manager.invitations import normalize_email
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
@@ -29,6 +30,15 @@ if TYPE_CHECKING:
 
 class LinkRefused(ValidationError):  # noqa: N818
     """Raised when a person-account link operation is rejected by business rules."""
+
+
+@dataclass(frozen=True)
+class FriendLinkRow:
+    """Represents a friend row in the friends list with linked records and hints."""
+
+    profile: Profile
+    linked: tuple[Person, ...]
+    matching_count: int
 
 
 def _owner_ids(person: Person) -> set[int]:
@@ -417,3 +427,111 @@ def dismiss_link_suggestion(person: Person, account: User, actor: User) -> None:
 
         person.link_suggestion_dismissed_account = account
         person.save(update_fields=["link_suggestion_dismissed_account"])
+
+
+def friend_link_rows(viewer: User) -> list[FriendLinkRow]:
+    """Return FriendLinkRow items for viewer's confirmed friends.
+
+    Ordered by friend's username. Computes linked records and matching unlinked
+    records in O(1) database queries across all friends.
+    """
+    friends = list(viewer.profile.friends.select_related("user").order_by("user__username"))
+    if not friends:
+        return []
+
+    owned = list(
+        owned_persons(viewer).only(
+            "person_id",
+            "first_name",
+            "family_name",
+            "email_address",
+            "account_id",
+            "link_suggestion_dismissed_account_id",
+        )
+    )
+
+    linked_by_account: dict[int, list[Person]] = {f.user_id: [] for f in friends}
+    unlinked_emails: list[tuple[str, int | None]] = []
+
+    for p in owned:
+        if p.account_id in linked_by_account:
+            linked_by_account[p.account_id].append(p)
+        elif p.account_id is None and p.email_address:
+            clean = _clean_person_email(p)
+            if clean:
+                unlinked_emails.append((clean, p.link_suggestion_dismissed_account_id))
+
+    friend_users = [f.user for f in friends]
+    owned_emails_map = emails_owned_by(friend_users)
+
+    rows: list[FriendLinkRow] = []
+    for f in friends:
+        friend_linked = linked_by_account.get(f.user_id, [])
+        friend_linked.sort(
+            key=lambda p: (
+                (p.family_name or "").casefold(),
+                (p.first_name or "").casefold(),
+            )
+        )
+
+        f_emails = owned_emails_map.get(f.user_id, set())
+        matching_count = sum(
+            1
+            for email, dismissed_id in unlinked_emails
+            if email in f_emails and dismissed_id != f.user_id
+        )
+
+        rows.append(
+            FriendLinkRow(
+                profile=f,
+                linked=tuple(friend_linked),
+                matching_count=matching_count,
+            )
+        )
+
+    return rows
+
+
+def own_records(viewer: User) -> list[Person]:
+    """Return viewer's owned records that are linked to viewer.
+
+    Ordered by family name, then first name.
+    """
+    records = list(owned_persons(viewer).filter(account=viewer))
+    records.sort(
+        key=lambda p: (
+            (p.family_name or "").casefold(),
+            (p.first_name or "").casefold(),
+        )
+    )
+    return records
+
+
+def linkable_persons(viewer: User, friend: User) -> list[Person]:
+    """Return viewer's owned, unlinked records available to link to friend.
+
+    Ordered so that records whose email matches friend come first (excluding
+    records with dismissed suggestions for friend), then ordered by family name
+    and first name. Sets ``has_same_email`` attribute on each person.
+    """
+    unlinked = list(owned_persons(viewer).filter(account__isnull=True))
+    if not unlinked:
+        return []
+
+    target_emails = emails_owned_by([friend]).get(friend.pk, set())
+
+    for p in unlinked:
+        clean = _clean_person_email(p) if p.email_address else None
+        p.has_same_email = (
+            bool(clean and clean in target_emails)
+            and p.link_suggestion_dismissed_account_id != friend.pk
+        )
+
+    unlinked.sort(
+        key=lambda p: (
+            not p.has_same_email,
+            (p.family_name or "").casefold(),
+            (p.first_name or "").casefold(),
+        )
+    )
+    return unlinked
