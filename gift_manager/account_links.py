@@ -252,14 +252,25 @@ class LinkChoice:
     conflicts: tuple[Person, ...]
 
 
+def format_link_label(
+    account_id: int | None,
+    username: str | None,
+    viewer: User | None,
+) -> str:
+    """Format human-readable link label from account id, username, and viewing user."""
+    if not account_id:
+        return ""
+    if viewer and viewer.is_authenticated and account_id == viewer.pk:
+        return _("This is you")
+    if username:
+        return _("Linked to %(username)s") % {"username": username}
+    return ""
+
+
 def link_label(person: Person, viewer: User) -> str:
     """Return a short human-readable label describing who this person is linked to."""
-    if person.account_id is None:
-        return ""
-    if person.account_id == viewer.pk:
-        return _("This is you")
     username = person.account.username if person.account else ""
-    return _("Linked to %(username)s") % {"username": username}
+    return format_link_label(person.account_id, username, viewer)
 
 
 def _candidate_conflicts(

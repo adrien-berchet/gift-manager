@@ -224,7 +224,8 @@
             return;
         }
 
-        const originalValue = cell.textContent.trim();
+        const valueEl = cell.querySelector('.entity-name') || cell;
+        const originalValue = valueEl.textContent.trim();
         const originalHTML = cell.innerHTML;
         let isSaving = false; // Flag to prevent multiple saves
         let isCancelled = false; // Prevent blur from saving after Escape
@@ -345,7 +346,15 @@
 
             if (data.success) {
                 // Show success state
-                cell.textContent = newValue;
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = originalHTML;
+                const valueEl = tempDiv.querySelector('.entity-name');
+                if (valueEl) {
+                    valueEl.textContent = newValue;
+                    cell.innerHTML = tempDiv.innerHTML;
+                } else {
+                    cell.textContent = newValue;
+                }
                 cell.classList.add(INLINE_EDITING_CONFIG.classes.success);
 
                 // No success toast: the cell already shows the new value

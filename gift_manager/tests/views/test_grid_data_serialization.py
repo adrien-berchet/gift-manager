@@ -27,6 +27,7 @@ from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.views.event import EventListView
 from gift_manager.views.gift import GiftListView
 from gift_manager.views.person import PersonListView
+from gift_manager.views.person import get_person_grid_queryset
 from gift_manager.views.person_group import PersonGroupListView
 from gift_manager.views.relation import RelationListView
 from gift_manager.views.relation import RelationStatusListView
@@ -478,6 +479,8 @@ class TestPersonGridDataSerialization:
         assert row[7] == reverse("gift_manager:person_detail", args=[person.person_id])
         assert row[8] == reverse("gift_manager:person_edit", args=[person.person_id])
         assert row[9] == reverse("gift_manager:person_delete", args=[person.person_id])
+        assert row[10] == ""
+        assert len(row) == 11
 
     def test_person_list_page_serves_valid_grid_data_and_permissions(
         self, authenticated_client, user
@@ -490,6 +493,64 @@ class TestPersonGridDataSerialization:
         names = [row[1] for row in grid_data]
         assert "Charlie" in names
         assert str(person.person_id) in perms
+
+    def test_person_rows_end_with_link_label(self, user, user_factory):
+        ana = user_factory(username="ana")
+        friend_record = PersonFactory(
+            first_name="Ana", family_name="Smith", account=ana, shared_with=[user]
+        )
+        self_record = PersonFactory(
+            first_name="Self", family_name="User", account=user, shared_with=[user]
+        )
+        unlinked_record = PersonFactory(
+            first_name="Plain", family_name="Person", shared_with=[user]
+        )
+
+        view = PersonListView()
+        view.request = type("Request", (), {"user": user})()
+
+        items = list(get_person_grid_queryset(user))
+        rows = view.get_grid_data(items)
+        assert len(rows) == 3
+
+        friend_row = next(r for r in rows if r[5] == str(friend_record.person_id))
+        assert len(friend_row) == 11
+        assert friend_row[1] == "Ana"
+        assert friend_row[10] == "Linked to ana"
+
+        self_row = next(r for r in rows if r[5] == str(self_record.person_id))
+        assert len(self_row) == 11
+        assert self_row[1] == "Self"
+        assert self_row[10] == "This is you"
+
+        unlinked_row = next(r for r in rows if r[5] == str(unlinked_record.person_id))
+        assert len(unlinked_row) == 11
+        assert unlinked_row[10] == ""
+
+    def test_deleted_linked_account_leaves_empty_label(self, user, user_factory):
+        ana = user_factory(username="ana")
+        friend_record = PersonFactory(
+            first_name="Ana", family_name="Smith", account=ana, shared_with=[user]
+        )
+        ana.delete()
+
+        view = PersonListView()
+        view.request = type("Request", (), {"user": user})()
+
+        items = list(get_person_grid_queryset(user))
+        rows = view.get_grid_data(items)
+        friend_row = next(r for r in rows if r[5] == str(friend_record.person_id))
+        assert len(friend_row) == 11
+        assert friend_row[10] == ""
+
+    def test_recipient_view_people_includes_link_label(self, authenticated_client, user):
+        PersonFactory(first_name="Self", family_name="User", account=user, shared_with=[user])
+        response = authenticated_client.get(f"{reverse('gift_manager:recipients')}?view=people")
+        assert response.status_code == 200
+        grid_data = _extract_grid_data_json(response.content.decode())
+        self_row = next(r for r in grid_data if r[1] == "Self")
+        assert len(self_row) == 11
+        assert self_row[10] == "This is you"
 
 
 @pytest.mark.django_db

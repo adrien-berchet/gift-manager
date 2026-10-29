@@ -17,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from gift_manager import account_links
 from gift_manager.account_links import LinkRefused
 from gift_manager.account_links import clean_person_email
+from gift_manager.account_links import format_link_label
 from gift_manager.account_links import link_suggestion
 from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
@@ -73,6 +74,8 @@ def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
         .values(
             "person_id",
             *value_fields,
+            "account_id",
+            "account__username",
         )
     )
 
@@ -120,7 +123,7 @@ def populate_person_grid_group_info(data, user, accessible_groups=None) -> None:
             item["groups_info"] = groups_by_person.get(item["person_id"], [])
 
 
-def get_person_grid_data(items) -> list:
+def get_person_grid_data(items, viewer=None) -> list:
     """Format person items into rows for Grid.js."""
     rows = []
     for item in items:
@@ -135,6 +138,11 @@ def get_person_grid_data(items) -> list:
         ]
         raw_email = item.get("email_address")
         email = decode_email(raw_email) if raw_email else ""
+        link_label = format_link_label(
+            item.get("account_id"),
+            item.get("account__username"),
+            viewer,
+        )
         rows.append(
             [
                 "",  # Checkbox placeholder - Index 0
@@ -147,6 +155,7 @@ def get_person_grid_data(items) -> list:
                 reverse("gift_manager:person_detail", args=[person_id]),  # Index 7
                 reverse("gift_manager:person_edit", args=[person_id]),  # Index 8
                 reverse("gift_manager:person_delete", args=[person_id]),  # Index 9
+                link_label,  # Index 10
             ]
         )
     return rows
@@ -170,7 +179,8 @@ class PersonListView(
 
     def get_grid_data(self, items) -> list:
         """Format person items into rows for Grid.js."""
-        return get_person_grid_data(items)
+        viewer = getattr(self.request, "user", None) if hasattr(self, "request") else None
+        return get_person_grid_data(items, viewer=viewer)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

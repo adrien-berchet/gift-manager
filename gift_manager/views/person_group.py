@@ -473,14 +473,17 @@ class PersonGroupDetailView(BaseDetailView):
         # Direct members only
         context["members"] = (
             accessible_people.filter(groups=self.object)
+            .select_related("account")
             .prefetch_related("groups")
             .order_by("family_name", "first_name")
         )
 
         # All members (including from nested groups)
         nested_member_qs = accessible_people.filter(groups__in=accessible_nested_groups).distinct()
-        context["nested_members"] = nested_member_qs.prefetch_related("groups").order_by(
-            "family_name", "first_name"
+        context["nested_members"] = (
+            nested_member_qs.select_related("account")
+            .prefetch_related("groups")
+            .order_by("family_name", "first_name")
         )
 
         # Relations/gifts for this group

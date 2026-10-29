@@ -385,7 +385,8 @@
       "{{ person.family_name|escapejs }}",
       "{% url 'gift_manager:person_detail' person.person_id %}",
       "{% url 'gift_manager:person_edit' person.person_id %}",
-      "{% url 'gift_manager:remove_person_group_person' group.group_id person.person_id %}"
+      "{% url 'gift_manager:remove_person_group_person' group.group_id person.person_id %}",
+      "{{ person|person_link_label:request.user|escapejs }}"
   ],
       {% endfor %}
       ];
@@ -400,7 +401,13 @@
           formatter: (cell, row) => {
               const firstName = row.cells[1].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(GridUtils.linkHtml(personUrl, firstName));
+              const linkLabel = row.cells[6]?.data || '';
+              let linkBadge = '';
+              if (linkLabel) {
+                  const escaped = GridUtils.escapeHtml(linkLabel);
+                  linkBadge = ` <i class="fas fa-link ms-1 text-secondary" title="${escaped}" aria-hidden="true"></i><span class="visually-hidden">${escaped}</span>`;
+              }
+              return gridjs.html(GridUtils.linkHtml(personUrl, firstName) + linkBadge);
           }
       },
       {
@@ -417,6 +424,7 @@
       { name: 'person_detail_url', hidden: true },
       { name: 'person_edit_url', hidden: true },
       { name: 'person_delete_url', hidden: true },
+      { name: 'link_label', hidden: true },
       {
           id: 'actions',
           name: "{% trans 'Actions' %}",
@@ -461,7 +469,8 @@
       "{{ person.first_name|escapejs }}",
       "{{ person.family_name|escapejs }}",
       "{% url 'gift_manager:person_detail' person.person_id %}",
-      "{% url 'gift_manager:person_edit' person.person_id %}"
+      "{% url 'gift_manager:person_edit' person.person_id %}",
+      "{{ person|person_link_label:request.user|escapejs }}"
   ],
       {% endfor %}
       ];
@@ -476,7 +485,13 @@
           formatter: (cell, row) => {
               const firstName = row.cells[1].data;
               const personUrl = row.cells[3].data;
-              return gridjs.html(GridUtils.linkHtml(personUrl, firstName));
+              const linkLabel = row.cells[5]?.data || '';
+              let linkBadge = '';
+              if (linkLabel) {
+                  const escaped = GridUtils.escapeHtml(linkLabel);
+                  linkBadge = ` <i class="fas fa-link ms-1 text-secondary" title="${escaped}" aria-hidden="true"></i><span class="visually-hidden">${escaped}</span>`;
+              }
+              return gridjs.html(GridUtils.linkHtml(personUrl, firstName) + linkBadge);
           }
       },
       {
@@ -492,6 +507,7 @@
       },
       { name: 'person_detail_url', hidden: true },
       { name: 'person_edit_url', hidden: true },
+      { name: 'link_label', hidden: true },
       {
           id: 'actions',
           name: "{% trans 'Actions' %}",
