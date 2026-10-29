@@ -4887,6 +4887,71 @@ msgid "Your email address is managed from your profile settings."
 msgstr "Votre adresse e-mail est gérée depuis les paramètres de votre profil."
 
 
+#: gift_manager/wishlist.py
+msgid "You can only view wishlists of confirmed friends."
+msgstr "Vous ne pouvez consulter que les listes de souhaits de vos amis confirmés."
+
+#: gift_manager/wishlist.py
+msgid "You cannot claim your own wish."
+msgstr "Vous ne pouvez pas réserver votre propre souhait."
+
+#: gift_manager/wishlist.py
+msgid "Only confirmed friends can claim wishes."
+msgstr "Seuls les amis confirmés peuvent réserver des souhaits."
+
+#: gift_manager/wishlist.py
+msgid "Cannot claim an archived or fulfilled wish."
+msgstr "Impossible de réserver un souhait archivé ou déjà réalisé."
+
+#: gift_manager/wishlist.py
+msgid "This wish has already been claimed by another friend."
+msgstr "Ce souhait a déjà été réservé par un autre ami."
+
+#: gift_manager/wishlist.py
+msgid "You cannot release claims on your own wish."
+msgstr "Vous ne pouvez pas annuler les réservations de votre propre souhait."
+
+#: gift_manager/wishlist.py
+msgid "Only confirmed friends can release claims."
+msgstr "Seuls les amis confirmés peuvent annuler des réservations."
+
+#: gift_manager/wishlist.py
+msgid "Only the user who claimed this wish can release the claim."
+msgstr "Seul l'utilisateur qui a réservé ce souhait peut annuler la réservation."
+
+#: gift_manager/wishlist.py
+msgid "Abandon or delete the gift plan for this wish before releasing the claim."
+msgstr "Abandonnez ou supprimez le plan de cadeau de ce souhait avant d'annuler la réservation."
+
+#: gift_manager/wishlist.py
+msgid "You need edit rights on this person to plan a gift for them."
+msgstr "Vous devez pouvoir modifier cette personne pour lui planifier un cadeau."
+
+#: gift_manager/wishlist.py
+msgid "You do not have access to this event."
+msgstr "Vous n'avez pas accès à cet événement."
+
+#: gift_manager/wishlist.py
+msgid "Available"
+msgstr "Disponible"
+
+#: gift_manager/wishlist.py
+msgid "Claimed by you"
+msgstr "Réservé par vous"
+
+#: gift_manager/wishlist.py
+#, python-format
+msgid "Claimed by @%(username)s"
+msgstr "Réservé par @%(username)s"
+
+#: gift_manager/wishlist.py
+msgid "Claimed by a friend"
+msgstr "Réservé par un ami"
+
+#: gift_manager/wishlist.py
+msgid "Only the wisher can delete this wish."
+msgstr "Seul l'auteur du souhait peut le supprimer."
+
 #~ msgid "No"
 #~ msgstr "Non"
 

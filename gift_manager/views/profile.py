@@ -40,6 +40,7 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.services import PermissionService
+from gift_manager.wishlist import release_claims_after_unfriending
 
 
 class ProfileDetailView(LoginRequiredMixin, DetailView):
@@ -266,6 +267,7 @@ class RemoveFriendView(LoginRequiredMixin, View):
 
             self._cleanup_former_friend_permissions(request.user, friend)
             remove_links_after_unfriending(request.user, friend)
+            release_claims_after_unfriending(request.user, friend)
 
         messages.success(
             request,

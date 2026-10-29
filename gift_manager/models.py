@@ -33,6 +33,7 @@ from django.db.models.functions import NullIf
 from django.db.models.query_utils import DeferredAttribute
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import formats
@@ -1944,3 +1945,32 @@ def release_claim_of_hidden_recipient(sender, instance, created, **kwargs):
         Relation.objects.filter(pk=instance.pk).update(claimed_by=None, claimed_at=None)
         instance.claimed_by = None
         instance.claimed_at = None
+
+
+@receiver(pre_delete, sender=Relation)
+def remember_wish_owners_before_plan_deletion(sender, instance, **kwargs):
+    """Snapshot the plan's owners: their permissions may be gone by ``post_delete``."""
+    if instance.wish_id is not None:
+        instance._wish_owner_ids = set(  # noqa: SLF001
+            RelationPermission.objects.filter(
+                relation_id=instance.pk, permission_type=PermissionLevel.OWNER
+            ).values_list("user_id", flat=True)
+        )
+
+
+@receiver(post_save, sender=Relation)
+def sync_wish_after_plan_save(sender, instance, **kwargs):
+    """Keep the wish's claim and fulfilled flag in line with the plan that fulfils it."""
+    if instance.wish_id is not None:
+        from gift_manager import wishlist
+
+        wishlist.sync_wish_on_plan_change(instance)
+
+
+@receiver(post_delete, sender=Relation)
+def sync_wish_after_plan_deletion(sender, instance, **kwargs):
+    """Release the wish's claim when its last active fulfilling plan is deleted."""
+    if instance.wish_id is not None:
+        from gift_manager import wishlist
+
+        wishlist.sync_wish_on_plan_change(instance, is_deleted=True)

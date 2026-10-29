@@ -116,7 +116,7 @@ Implement all business logic for wish management, claiming, and plan synchroniza
 - `release_claims_after_unfriending(user: User, former_friend: User) -> None`
 - `format_claimer_label(wish: Wish, viewer: User) -> str`
 
-- [ ] **Step 1: Write failing service unit tests in `gift_manager/tests/test_wishlist_service.py`:**
+- [x] **Step 1: Write failing service unit tests in `gift_manager/tests/test_wishlist_service.py`:**
   - `test_get_friend_visible_wishes_requires_friendship`: non-friend raises PermissionDenied.
   - `test_get_friend_visible_wishes_excludes_archived`: wisher's archived wishes not shown to friends.
   - `test_claim_wish_success`: friend claims unclaimed wish; sets `claimed_by` and `claimed_at`.
@@ -129,10 +129,10 @@ Implement all business logic for wish management, claiming, and plan synchroniza
   - `test_sync_wish_on_plan_given_marks_fulfilled`: status `GIVEN` sets `wish.is_fulfilled = True`.
   - `test_release_claims_after_unfriending`: removes claims across former friends.
   - `test_format_claimer_label_masks_non_friend_username`: returns "Claimed by @bob" if viewer is friends with Bob; "Claimed by a friend" if not.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_wishlist_service.py`. Expected: FAIL.
-- [ ] **Step 3: Implement `gift_manager/wishlist.py`:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_wishlist_service.py`. Expected: FAIL.
+- [x] **Step 3: Implement `gift_manager/wishlist.py`:**
   - Write atomic claim, release, plan linking, and plan lifecycle synchronization functions.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_wishlist_service.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_wishlist_service.py`. Expected: PASS.
 
 ---
 
