@@ -4882,6 +4882,10 @@ msgstr ""
 "Cette fiche vous représente. Les projets de cadeaux et suggestions sont "
 "masqués pour votre propre fiche."
 
+#: gift_manager/forms.py:308 gift_manager/views/inline_editing.py:93
+msgid "Your email address is managed from your profile settings."
+msgstr "Votre adresse e-mail est gérée depuis les paramètres de votre profil."
+
 
 #~ msgid "No"
 #~ msgstr "Non"

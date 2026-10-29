@@ -430,6 +430,20 @@
     color: #f8fafc;
 }
 
+[data-theme="dark"] .form-control:disabled,
+[data-theme="dark"] .form-control[readonly],
+[data-theme="dark"] .form-select:disabled {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #cbd5e1;
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+[data-theme="dark"] .form-text {
+    color: #94a3b8;
+}
+
 /* Dark mode input group addons (e.g. the currency next to a price) */
 [data-theme="dark"] .input-group-text {
     background-color: #475569;
@@ -1192,6 +1206,16 @@ html .navbar-nav .nav-link.active {
     padding: var(--space-3) var(--space-4);
     color: var(--text-primary);
     transition: all var(--transition-fast);
+}
+
+.form-control:disabled,
+.form-control[readonly],
+.form-select:disabled {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-300);
+    color: var(--color-gray-700);
+    opacity: 1;
+    cursor: not-allowed;
 }
 
 

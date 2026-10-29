@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 from django.http import JsonResponse
+from django.utils.translation import gettext
 from django.views import View
 
 from gift_manager.models import Event
@@ -85,17 +86,28 @@ class InlineFieldUpdateView(LoginRequiredMixin, GetObjectByTokenMixin, View):
                 )
 
             # Special validation for email fields
-            if field_name == "email_address" and field_value:
-                from django.core.exceptions import ValidationError as DjangoValidationError
-                from django.core.validators import validate_email
-
-                try:
-                    validate_email(field_value)
-                except DjangoValidationError:
+            if field_name == "email_address":
+                if isinstance(obj, Person) and obj.account_id == request.user.id:
                     return JsonResponse(
-                        {"success": False, "error": "Please enter a valid email address."},
+                        {
+                            "success": False,
+                            "error": gettext(
+                                "Your email address is managed from your profile settings."
+                            ),
+                        },
                         status=400,
                     )
+                if field_value:
+                    from django.core.exceptions import ValidationError as DjangoValidationError
+                    from django.core.validators import validate_email
+
+                    try:
+                        validate_email(field_value)
+                    except DjangoValidationError:
+                        return JsonResponse(
+                            {"success": False, "error": "Please enter a valid email address."},
+                            status=400,
+                        )
 
             # Update the field
             with transaction.atomic():

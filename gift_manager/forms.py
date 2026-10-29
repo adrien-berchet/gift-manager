@@ -297,6 +297,18 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             PersonGroup.objects.accessible_by(user), user
         ).order_by("name")
         self.fields["interests"].queryset = GiftTag.objects.accessible_by(user).order_by("name")
+        if (
+            self.instance
+            and self.instance.pk
+            and self.instance.account_id is not None
+            and self.instance.account_id == user.id
+        ):
+            self.fields["email_address"].disabled = True
+            self.fields["email_address"].help_text = gettext_lazy(
+                "Your email address is managed from your profile settings."
+            )
+            if not self.initial.get("email_address"):
+                self.initial["email_address"] = user.email or ""
 
     def clean_notes(self):
         notes = self.cleaned_data.get("notes")

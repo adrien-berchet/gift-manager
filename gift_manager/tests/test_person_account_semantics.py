@@ -258,3 +258,36 @@ def test_hidden_surprises_excluding_person():
     assert sg1 not in filtered
     assert sg2 in filtered
     assert sg3 in filtered
+
+
+def test_own_person_form_disables_email_address_field(client):
+    """When editing their own person record, the email address field is disabled."""
+    alice = UserFactory(email="alice@example.com")
+    person = PersonFactory(first_name="Alice", owner=alice, account=alice)
+    client.force_login(alice)
+
+    edit_url = reverse("gift_manager:person_edit", kwargs={"pk": person.person_id})
+    response = client.get(edit_url)
+    assert response.status_code == 200
+
+    form = response.context["form"]
+    assert form.fields["email_address"].disabled is True
+    assert "profile settings" in str(form.fields["email_address"].help_text)
+
+    # Attempting to POST a new email does not change person.email_address
+    post_response = client.post(
+        edit_url,
+        {
+            "first_name": "AliceUpdated",
+            "family_name": "",
+            "email_address": "hacked@example.com",
+            "birthday_day": "",
+            "birthday_month": "",
+            "birthday_year": "",
+            "notes": "",
+        },
+    )
+    assert post_response.status_code in (200, 302)
+    person.refresh_from_db()
+    assert person.first_name == "AliceUpdated"
+    assert person.email != "hacked@example.com"
