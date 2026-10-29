@@ -159,3 +159,28 @@ class PersonLinkAccountView(LoginRequiredMixin, View):
             response["HX-Redirect"] = success_url
             return response
         return redirect(success_url)
+
+
+class PersonDismissLinkSuggestionView(LoginRequiredMixin, View):
+    """Dismiss a link suggestion on an unlinked person record."""
+
+    def post(self, request, pk):
+        person = get_object_or_404(Person.objects.accessible_by(request.user), person_id=pk)
+        if (
+            PermissionService.get_effective_permission(person, request.user)
+            < PermissionLevel.EDITOR
+        ):
+            raise PermissionDenied(_("You do not have permission to edit this person."))
+
+        suggested = account_links.link_suggestion(person, request.user)
+        account_val = request.POST.get("account")
+
+        if suggested is not None and account_val == str(suggested.pk):
+            account_links.dismiss_link_suggestion(person, suggested, request.user)
+
+        success_url = reverse("gift_manager:person_detail", kwargs={"pk": person.person_id})
+        if request.headers.get("HX-Request") == "true":
+            response = HttpResponse(status=204)
+            response["HX-Redirect"] = success_url
+            return response
+        return redirect(success_url)

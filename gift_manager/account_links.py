@@ -14,6 +14,8 @@ from django.db.models import Q
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
+from gift_manager.invitations import accounts_owning_email
+from gift_manager.invitations import normalize_email
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonPermission
@@ -47,9 +49,12 @@ def owned_persons(user: User) -> QuerySet[Person]:
     ).distinct()
 
 
-def duplicate_conflicts(person: Person, account: User) -> list[Person]:
+def duplicate_conflicts(
+    person: Person, account: User, owner_ids: set[int] | None = None
+) -> list[Person]:
     """Return other person records linked to ``account`` owned by any owner of ``person``."""
-    owner_ids = _owner_ids(person)
+    if owner_ids is None:
+        owner_ids = _owner_ids(person)
     if not owner_ids:
         return []
     return list(
@@ -269,6 +274,22 @@ def _make_choice(
     )
 
 
+def _friend_candidates(actor: User, owner_ids: set[int]) -> list[User]:
+    """Return friends of ``actor`` who are also friends with at least one owner of the person."""
+    if not (hasattr(actor, "profile") and owner_ids):
+        return []
+    friends_qs = actor.profile.friends.filter(
+        user__in=Profile.objects.filter(user_id__in=owner_ids).values("friends__user")
+    ).select_related("user")
+    seen_ids: set[int] = set()
+    candidates: list[User] = []
+    for friend_profile in friends_qs:
+        if friend_profile.user_id not in seen_ids:
+            seen_ids.add(friend_profile.user_id)
+            candidates.append(friend_profile.user)
+    return candidates
+
+
 def link_choices(person: Person, actor: User) -> list[LinkChoice]:
     """Return the ordered list of account choices for linking this person record."""
     owner_ids = _owner_ids(person)
@@ -284,13 +305,7 @@ def link_choices(person: Person, actor: User) -> list[LinkChoice]:
         )
     ]
 
-    friends_dict: dict[int, User] = {}
-    if hasattr(actor, "profile"):
-        friends_qs = actor.profile.friends.filter(
-            user__in=Profile.objects.filter(user_id__in=owner_ids).values("friends__user")
-        ).select_related("user")
-        for friend_profile in friends_qs:
-            friends_dict[friend_profile.user_id] = friend_profile.user
+    friends_dict = {u.pk: u for u in _friend_candidates(actor, owner_ids)}
 
     # If currently linked to someone not actor and not in friends_dict:
     if person.account_id and person.account_id != actor.pk and person.account:
@@ -318,3 +333,87 @@ def link_choices(person: Person, actor: User) -> list[LinkChoice]:
     )
 
     return choices
+
+
+def _clean_person_email(person: Person) -> str | None:
+    raw_email = person.email
+    if not raw_email:
+        return None
+    try:
+        clean = normalize_email(raw_email)
+    except ValidationError:
+        return None
+    return clean or None
+
+
+def _suggest_self_or_none(
+    person: Person, viewer: User, viewer_perm: int, clean_email: str, owner_ids: set[int]
+) -> tuple[bool, User | None]:
+    if not accounts_owning_email([viewer], clean_email):
+        return False, None
+    if (
+        viewer_perm == PermissionLevel.OWNER
+        and person.link_suggestion_dismissed_account_id != viewer.pk
+        and not duplicate_conflicts(person, viewer, owner_ids=owner_ids)
+    ):
+        return True, viewer
+    return True, None
+
+
+def _suggest_friend(
+    person: Person, viewer: User, clean_email: str, owner_ids: set[int]
+) -> User | None:
+    candidates = _friend_candidates(viewer, owner_ids)
+    matching_friends = accounts_owning_email(candidates, clean_email)
+    matching_friends.sort(key=lambda u: (u.username.lower(), u.pk))
+    for friend in matching_friends:
+        if person.link_suggestion_dismissed_account_id != friend.pk and not duplicate_conflicts(
+            person, friend, owner_ids=owner_ids
+        ):
+            return friend
+    return None
+
+
+def link_suggestion(person: Person, viewer: User) -> User | None:
+    """Return a suggested account to link to this person, or None.
+
+    Matches an unlinked record's email to the viewer (self-link) or to a friend
+    of the viewer who is also friends with an owner of the record.
+    """
+    if person.account_id is not None:
+        return None
+
+    clean_email = _clean_person_email(person)
+    if not clean_email:
+        return None
+
+    viewer_perm = PermissionService.get_effective_permission(person, viewer)
+    if viewer_perm < PermissionLevel.EDITOR:
+        return None
+
+    owner_ids = _owner_ids(person)
+
+    is_viewer_match, self_user = _suggest_self_or_none(
+        person, viewer, viewer_perm, clean_email, owner_ids
+    )
+    if is_viewer_match:
+        return self_user
+
+    return _suggest_friend(person, viewer, clean_email, owner_ids)
+
+
+def dismiss_link_suggestion(person: Person, account: User, actor: User) -> None:
+    """Dismiss the link suggestion of ``account`` on ``person``."""
+    with transaction.atomic():
+        PermissionService.lock_object(person)
+        person.refresh_from_db(fields=["account", "link_suggestion_dismissed_account"])
+
+        actor_perm = PermissionService.get_effective_permission(person, actor)
+        if actor_perm < PermissionLevel.EDITOR:
+            raise PermissionDenied(_("You do not have permission to edit this person."))
+
+        if person.account_id is not None:
+            return
+
+        person.link_suggestion_dismissed_account = account
+        person.save(update_fields=["link_suggestion_dismissed_account"])

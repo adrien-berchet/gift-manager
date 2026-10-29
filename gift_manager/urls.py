@@ -89,6 +89,11 @@ urlpatterns = [
         name="person_link_account",
     ),
     path(
+        "persons/<uuid:pk>/link-suggestion/dismiss/",
+        views.PersonDismissLinkSuggestionView.as_view(),
+        name="person_dismiss_link_suggestion",
+    ),
+    path(
         "persons/<uuid:pk>/gift-history/",
         views.person_gift_history,
         name="person_gift_history",

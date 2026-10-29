@@ -11,6 +11,7 @@ from django.urls import reverse_lazy
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
+from gift_manager.account_links import link_suggestion
 from gift_manager.email_encoding import decode_email
 from gift_manager.forms import PersonForm
 from gift_manager.metadata_visibility import VisibleMetadata
@@ -317,6 +318,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             (tag for tag in self.object.interests.all() if tag.pk in visible_tag_ids),
             key=lambda tag: tag.name.lower(),
         )
+        context["link_suggestion"] = link_suggestion(self.object, self.request.user)
 
         # Build action buttons configuration
         is_editor = context.get("is_editor", False)

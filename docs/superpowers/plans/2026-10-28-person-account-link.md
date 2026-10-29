@@ -341,7 +341,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   `persons/<uuid:pk>/link-suggestion/dismiss/`, name `person_dismiss_link_suggestion` (POST
   `account=<pk>`, redirect or `HX-Redirect` to `person_detail`).
 
-- [ ] **Step 1: Write failing tests** in `test_person_link_suggestion.py`:
+- [x] **Step 1: Write failing tests** in `test_person_link_suggestion.py`:
   - `test_suggests_friend_by_verified_email` and `test_suggests_friend_by_legacy_user_email`
     (friend without `EmailAddress` rows, matching `user.email`).
   - `test_suggests_self_for_own_email` (banner text "This email is yours. Is this person you?").
@@ -352,16 +352,16 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - `test_dismissal_is_per_account`: dismissing Ana hides her banner; changing the email to Ben's
     shows Ben's banner; the dismiss URL returns 404 for the linked account and 403 for viewers.
   - `test_banner_link_button_links`: POST from the banner links and the badge appears.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_person_link_suggestion.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_person_link_suggestion.py`.
   Expected: FAIL.
-- [ ] **Step 3: Implement** `link_suggestion` (decode `person.email`, normalise with
+- [x] **Step 3: Implement** `link_suggestion` (decode `person.email`, normalise with
   `casefold()`, check the viewer then each friend with `user_has_email`; skip the dismissed account
   and any account for which `duplicate_conflicts` is non-empty or the friendship rules of `link`
   would refuse), `dismiss_link_suggestion` (EDITOR or more), the dismiss view, the banner
   template (friend text "This email belongs to your friend %(username)s. Link this person to
   their account?" with "Link" / "Not them"; self text with "This is me" / "Not me").
-- [ ] **Step 4: Run** the new file. Expected: PASS. Add the French translations.
-- [ ] **Step 5: Commit** `Feat: Suggest linking a person whose email matches an account`.
+- [x] **Step 4: Run** the new file. Expected: PASS. Add the French translations.
+- [x] **Step 5: Commit** `Feat: Suggest linking a person whose email matches an account`.
 
 ---
 

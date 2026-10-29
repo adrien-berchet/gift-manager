@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-28 21:36+0100\n"
+"POT-Creation-Date: 2026-10-29 09:10+0100\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -54,25 +54,26 @@ msgstr "Cet utilisateur n'existe pas."
 msgid "Your account has been successfully reactivated."
 msgstr "Votre compte a été réactivé avec succès."
 
-#: gift_manager/account_links.py:77 gift_manager/account_links.py:132
-#: gift_manager/views/account_links.py:34
+#: gift_manager/account_links.py:84 gift_manager/account_links.py:139
+#: gift_manager/account_links.py:398 gift_manager/views/account_links.py:37
+#: gift_manager/views/account_links.py:173
 msgid "You do not have permission to edit this person."
 msgstr "Vous n'avez pas la permission de modifier cette personne."
 
-#: gift_manager/account_links.py:85
+#: gift_manager/account_links.py:92
 msgid "Only an owner of this person can mark it as you."
 msgstr ""
 "Seul un propriétaire de cette personne peut indiquer qu'il s'agit de vous."
 
-#: gift_manager/account_links.py:91
+#: gift_manager/account_links.py:98
 msgid "You can only link a person to one of your friends."
 msgstr "Vous ne pouvez associer une personne qu'à l'un de vos amis."
 
-#: gift_manager/account_links.py:101
+#: gift_manager/account_links.py:108
 msgid "Nobody who owns this person is friends with this account."
 msgstr "Aucun des propriétaires de cette personne n'est ami avec ce compte."
 
-#: gift_manager/account_links.py:108
+#: gift_manager/account_links.py:115
 #: gift_manager/templates/gift_manager/includes/person_link_form_partial.html:48
 msgid ""
 "One of this person's owners already has a person linked to this account."
@@ -80,20 +81,20 @@ msgstr ""
 "L'un des propriétaires de cette personne a déjà une personne associée à ce "
 "compte."
 
-#: gift_manager/account_links.py:211
+#: gift_manager/account_links.py:218
 msgid "This is you"
 msgstr "C'est vous"
 
-#: gift_manager/account_links.py:213
+#: gift_manager/account_links.py:220
 #, python-format
 msgid "Linked to %(username)s"
 msgstr "Associé à %(username)s"
 
-#: gift_manager/account_links.py:224
+#: gift_manager/account_links.py:301
 msgid "No one"
 msgstr "Personne"
 
-#: gift_manager/account_links.py:288
+#: gift_manager/account_links.py:328
 msgid "Me"
 msgstr "Moi"
 
@@ -120,7 +121,9 @@ msgstr[0] "Gift Manager : %(count)d élément nécessite votre attention"
 msgstr[1] "Gift Manager : %(count)d éléments nécessitent votre attention"
 
 #: gift_manager/forms.py:57 gift_manager/models.py:1073
-#: gift_manager/models.py:1403 gift_manager/views/gift.py:54
+#: gift_manager/models.py:1403
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:22
+#: gift_manager/views/gift.py:54
 msgid "Link"
 msgstr "Lien"
 
@@ -141,9 +144,9 @@ msgstr "Personnes"
 
 #: gift_manager/forms.py:119 gift_manager/forms.py:220
 #: gift_manager/templates/gift_manager/home.html:220
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:103
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:104
 #: gift_manager/templates/gift_manager/recipient_list.html:123
-#: gift_manager/views/person.py:46
+#: gift_manager/views/person.py:47
 msgid "Groups"
 msgstr "Groupes"
 
@@ -172,7 +175,7 @@ msgstr "Mois"
 msgid "Year (optional)"
 msgstr "Année (facultatif)"
 
-#: gift_manager/forms.py:210 gift_manager/views/person.py:45
+#: gift_manager/forms.py:210 gift_manager/views/person.py:46
 msgid "Email address"
 msgstr "Adresse email"
 
@@ -191,14 +194,14 @@ msgstr "Étiquettes de cadeau décrivant ce que la personne aime."
 #: gift_manager/forms.py:243
 #: gift_manager/templates/gift_manager/person_group_detail.html:396
 #: gift_manager/templates/gift_manager/person_group_detail.html:472
-#: gift_manager/views/person.py:43
+#: gift_manager/views/person.py:44
 msgid "First name"
 msgstr "Prénom"
 
 #: gift_manager/forms.py:244
 #: gift_manager/templates/gift_manager/person_group_detail.html:407
 #: gift_manager/templates/gift_manager/person_group_detail.html:483
-#: gift_manager/views/person.py:44
+#: gift_manager/views/person.py:45
 msgid "Family name"
 msgstr "Nom de famille"
 
@@ -491,7 +494,7 @@ msgid "Plan"
 msgstr "Planifier"
 
 #: gift_manager/gift_plan_actions.py:98
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:177
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:178
 msgid "Given"
 msgstr "Offert"
 
@@ -806,7 +809,7 @@ msgstr "Cadeaux"
 #: gift_manager/suggestions/occasions.py:35
 #: gift_manager/templates/gift_manager/includes/forms/guided_new_object.html:13
 #: gift_manager/templates/gift_manager/includes/forms/person_fields.html:7
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:57
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:58
 #: gift_manager/templatetags/custom_filters.py:24
 msgid "Birthday"
 msgstr "Anniversaire"
@@ -2060,7 +2063,7 @@ msgstr "Éditer le tag"
 #: gift_manager/templates/gift_manager/includes/action_buttons.html:47
 #: gift_manager/templates/gift_manager/includes/detail_partial.html:52
 #: gift_manager/views/event.py:162 gift_manager/views/gift.py:306
-#: gift_manager/views/person.py:330 gift_manager/views/person_group.py:542
+#: gift_manager/views/person.py:332 gift_manager/views/person_group.py:542
 #: gift_manager/views/relation.py:851
 msgid "You do not have permission to edit this object"
 msgstr "Vous n'avez pas la permission d'éditer cet objet"
@@ -2077,7 +2080,7 @@ msgstr "Supprimer le tag"
 
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:55
 #: gift_manager/views/event.py:176 gift_manager/views/gift.py:316
-#: gift_manager/views/person.py:355 gift_manager/views/person_group.py:554
+#: gift_manager/views/person.py:357 gift_manager/views/person_group.py:554
 #: gift_manager/views/relation.py:871
 msgid ""
 "You do not have permission to delete this object so it will only be unshared "
@@ -2544,7 +2547,7 @@ msgstr "Éléments liés"
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:12
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:12
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:12
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:26
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:27
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:12
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:12
 msgid "Basic Information"
@@ -2553,10 +2556,10 @@ msgstr "Informations de base"
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:32
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:42
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:40
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:69
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:70
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:24
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:123
-#: gift_manager/views/person.py:191
+#: gift_manager/views/person.py:192
 msgid "Created"
 msgstr "Créé"
 
@@ -2612,7 +2615,7 @@ msgstr "Supprimer le projet de cadeau"
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:175
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:163
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:176
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:136
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:137
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:197
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:224
 msgid "Shared With"
@@ -3160,44 +3163,44 @@ msgstr "Recharger les détails"
 msgid "Not Shared"
 msgstr "Non Partagé"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:31
-#: gift_manager/views/person.py:188
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:32
+#: gift_manager/views/person.py:189
 msgid "First Name"
 msgstr "Prénom"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:37
-#: gift_manager/views/person.py:189
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:38
+#: gift_manager/views/person.py:190
 msgid "Family Name"
 msgstr "Nom de famille"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:43
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:44
 msgid "Email Address"
 msgstr "Adresse email"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:84
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:85
 msgid "Notes and interests"
 msgstr "Notes et centres d'intérêt"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:107
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:108
 msgid "Direct Groups"
 msgstr "Groupes directs"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:119
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:120
 msgid "Inherited Groups"
 msgstr "Groupes hérités"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:162
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:163
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:128
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:136
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:38
 msgid "Gift plans in progress"
 msgstr "Projets de cadeaux en cours"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:171
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:172
 msgid "In progress"
 msgstr "En cours"
 
-#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:183
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:184
 msgid "Abandoned"
 msgstr "Abandonné"
 
@@ -3303,6 +3306,31 @@ msgstr "Qui est cette personne ?"
 #: gift_manager/templates/gift_manager/includes/person_link_form_partial.html:43
 msgid "Already linked to:"
 msgstr "Déjà associé à :"
+
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:8
+msgid "This email is yours. Is this person you?"
+msgstr "Cette adresse e-mail est la vôtre. Cette personne, est-ce vous ?"
+
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:10
+#, python-format
+msgid ""
+"This email belongs to your friend %(username)s. Link this person to their "
+"account?"
+msgstr ""
+"Cette adresse e-mail est celle de %(username)s, qui fait partie de vos "
+"amis. Associer cette personne à son compte ?"
+
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:20
+msgid "This is me"
+msgstr "C'est moi"
+
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:31
+msgid "Not me"
+msgstr "Ce n'est pas moi"
+
+#: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:33
+msgid "Not them"
+msgstr "Pas cette personne"
 
 #: gift_manager/templates/gift_manager/includes/rating_inline.html:16
 #: gift_manager/templates/gift_manager/includes/rating_inline.html:18
@@ -3794,7 +3822,7 @@ msgstr "Retirer du groupe"
 
 #: gift_manager/templates/gift_manager/person_link_account.html:4
 #: gift_manager/templates/gift_manager/person_link_account.html:9
-#: gift_manager/views/person.py:343
+#: gift_manager/views/person.py:345
 msgid "Link account"
 msgstr "Associer un compte"
 
@@ -4175,15 +4203,15 @@ msgstr "Partager les éléments sélectionnés"
 msgid "Enter a valid http or https URL."
 msgstr "Saisissez une adresse http ou https valide."
 
-#: gift_manager/views/account_links.py:73
+#: gift_manager/views/account_links.py:76
 msgid "Please select who this person is."
 msgstr "Veuillez sélectionner qui est cette personne."
 
-#: gift_manager/views/account_links.py:91
+#: gift_manager/views/account_links.py:94
 msgid "Invalid account selection."
 msgstr "Sélection de compte invalide."
 
-#: gift_manager/views/account_links.py:114
+#: gift_manager/views/account_links.py:115
 #, python-format
 msgid ""
 "%(count)d surprise plan shared with %(username)s would become visible to "
@@ -4191,14 +4219,17 @@ msgid ""
 msgid_plural ""
 "%(count)d surprise plans shared with %(username)s would become visible to "
 "them."
-msgstr[0] "%(count)d plan surprise partagé avec %(username)s lui deviendrait visible."
-msgstr[1] "%(count)d plans surprises partagés avec %(username)s lui deviendraient visibles."
+msgstr[0] ""
+"%(count)d plan surprise partagé avec %(username)s lui deviendrait visible."
+msgstr[1] ""
+"%(count)d plans surprises partagés avec %(username)s lui deviendraient "
+"visibles."
 
-#: gift_manager/views/account_links.py:132
+#: gift_manager/views/account_links.py:135
 msgid "Link removed."
 msgstr "Lien supprimé."
 
-#: gift_manager/views/account_links.py:137
+#: gift_manager/views/account_links.py:140
 #, python-format
 msgid "Linked to %(username)s."
 msgstr "Associé à %(username)s."
@@ -4460,19 +4491,19 @@ msgstr "Nom du tag"
 msgid "Parent tag"
 msgstr "Tag parent"
 
-#: gift_manager/views/person.py:190
+#: gift_manager/views/person.py:191
 msgid "Email"
 msgstr "Email"
 
-#: gift_manager/views/person.py:328
+#: gift_manager/views/person.py:330
 msgid "Edit person"
 msgstr "Éditer la personne"
 
-#: gift_manager/views/person.py:343
+#: gift_manager/views/person.py:345
 msgid "Change link"
 msgstr "Modifier le lien"
 
-#: gift_manager/views/person.py:352
+#: gift_manager/views/person.py:354
 msgid "Delete person"
 msgstr "Supprimer la personne"
 

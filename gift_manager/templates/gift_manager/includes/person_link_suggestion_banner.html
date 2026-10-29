@@ -1,0 +1,38 @@
+{% load i18n %}
+{% if link_suggestion %}
+<div class="alert alert-info d-flex flex-wrap align-items-center gap-2 mb-3"
+     role="status" data-link-suggestion>
+  <i class="fas fa-link" aria-hidden="true"></i>
+  <span id="link-suggestion-text" class="me-auto">
+    {% if link_suggestion.pk == request.user.pk %}
+      {% translate "This email is yours. Is this person you?" %}
+    {% else %}
+      {% blocktranslate with username=link_suggestion.username trimmed %}
+        This email belongs to your friend {{ username }}. Link this person to their account?
+      {% endblocktranslate %}
+    {% endif %}
+  </span>
+  <form method="post" action="{% url 'gift_manager:person_link_account' person.person_id %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="account" value="{{ link_suggestion.pk }}">
+    <button type="submit" class="btn btn-sm btn-primary" aria-describedby="link-suggestion-text">
+      {% if link_suggestion.pk == request.user.pk %}
+        {% translate "This is me" %}
+      {% else %}
+        {% translate "Link" %}
+      {% endif %}
+    </button>
+  </form>
+  <form method="post" action="{% url 'gift_manager:person_dismiss_link_suggestion' person.person_id %}" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="account" value="{{ link_suggestion.pk }}">
+    <button type="submit" class="btn btn-sm btn-outline-secondary" aria-describedby="link-suggestion-text">
+      {% if link_suggestion.pk == request.user.pk %}
+        {% translate "Not me" %}
+      {% else %}
+        {% translate "Not them" %}
+      {% endif %}
+    </button>
+  </form>
+</div>
+{% endif %}
