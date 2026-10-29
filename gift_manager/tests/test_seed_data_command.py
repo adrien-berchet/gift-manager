@@ -64,3 +64,10 @@ class TestSeedDataCommand:
         call_command("seed_data", flush=True)
         assert User.objects.filter(username="alice").exists()
         assert PersonGroup.objects.count() >= 3
+
+    def test_seed_command_creates_account_links(self):
+        """The seed command creates the 'Household' group and linked records."""
+        call_command("seed_data")
+        assert PersonGroup.objects.filter(name="Household").exists()
+        assert Person.objects.filter(account__username="alice").exists()
+        assert Person.objects.filter(account__username="testuser").exists()

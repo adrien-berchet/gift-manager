@@ -42,9 +42,11 @@ class Command(BaseCommand):
         else:
             self._check_clean_db()
 
+        from gift_manager.seed_data import create_account_link_seed  # noqa: PLC0415
         from gift_manager.seed_data import create_seed_data  # noqa: PLC0415
 
         data = create_seed_data()
+        create_account_link_seed(data)
         self._print_summary(data)
 
     # ------------------------------------------------------------------

@@ -389,7 +389,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   - URL `profile/friends/<int:friend_id>/link/`, name `friend_link_person` (GET list, POST
     `person=<person_id uuid>`; `friend_id` is the friend's `Profile` pk like `remove_friend`).
 
-- [ ] **Step 1: Write failing tests** in `test_friend_links.py`:
+- [x] **Step 1: Write failing tests** in `test_friend_links.py`:
   - `test_friend_row_unlinked_shows_actions_and_hint` ("Link to a person", "Create person",
     "1 person has this email").
   - `test_friend_row_linked_shows_records_and_unlink` (two rows when sharing produced two owned
@@ -403,17 +403,17 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
     and it is linked; a `link_to` for a non-friend is ignored (record created, not linked).
   - `test_profile_lists_own_records`: "Your own person record: <name>" for each self-linked owned
     record.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_friend_links.py`.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_friend_links.py`.
   Expected: FAIL.
-- [ ] **Step 3: Implement** the helpers, the view and template, the friends list markup (keeps
+- [x] **Step 3: Implement** the helpers, the view and template, the friends list markup (keeps
   the existing remove-friend button and modal), the profile context (`friend_link_rows`,
   `own_records`), and in `PersonCreateView`: `get_initial` fills the friend's values when
   `link_to` resolves to one of the viewer's friends' profiles, the template renders
   `<input type="hidden" name="link_to">`, and `form_valid` calls `link(self.object, friend.user,
   self.request.user)` after `super().form_valid`, turning `LinkRefused` into a warning message.
-- [ ] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py gift_manager/tests/test_offcanvas_person_form.py`.
+- [x] **Step 4: Run** the new file and `tox run -e py311 -- gift_manager/tests/views/test_profile.py gift_manager/tests/test_offcanvas_person_form.py`.
   Expected: PASS. Add the French translations.
-- [ ] **Step 5: Commit** `Feat: Link friends to persons from the friends list`.
+- [x] **Step 5: Commit** `Feat: Link friends to persons from the friends list`.
 
 ---
 
@@ -473,24 +473,24 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
 - Produces: `get_person_grid_data(items, viewer: User | None = None) -> list` appends the link
   label as row index 10; existing indexes 0-9 are unchanged.
 
-- [ ] **Step 1: Write failing tests**:
+- [x] **Step 1: Write failing tests**:
   - `test_person_rows_end_with_link_label`: rows keep indexes 0-9 and add `"Linked to ana"`,
     `"This is you"` or `""` at index 10.
   - `test_deleted_linked_account_leaves_empty_label`: after deleting the linked account the row
     label is `""`.
   - `test_group_members_show_link_label`: the group page's member rows carry the label.
-- [ ] **Step 2: Run** both test files. Expected: FAIL.
-- [ ] **Step 3: Implement**: select `account_id` and `account__username` in
+- [x] **Step 2: Run** both test files. Expected: FAIL.
+- [x] **Step 3: Implement**: select `account_id` and `account__username` in
   `get_person_grid_queryset`, compute the label in `get_person_grid_data`, add a hidden
   `{ name: 'link_label', hidden: true }` column right before `actions` in both grid scripts, and
   make the first-name formatter append
   `<i class="fas fa-link ms-1" title="<label>" aria-hidden="true"></i><span class="visually-hidden"><label></span>`
   when the label is set (escaped with `GridUtils.escapeHtml`). Actions are found by
   `id: 'actions'`, not by index (`dynamic-filters.js:440`, `real-time-search.js:36`).
-- [ ] **Step 4: Run** the two files, `tox run -e py311 -- gift_manager/tests/views/` and
+- [x] **Step 4: Run** the two files, `tox run -e py311 -- gift_manager/tests/views/` and
   `tox run -e e2e -- gift_manager/tests/e2e/test_card_view_polish.py gift_manager/tests/e2e/test_list_templates.py`.
   Expected: PASS (list, card view, inline editing and bulk selection unchanged).
-- [ ] **Step 5: Commit** `Feat: Show account links in person lists and group members`.
+- [x] **Step 5: Commit** `Feat: Show account links in person lists and group members`.
 
 ---
 
@@ -508,7 +508,7 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
   self_record: Person` (both records owned by `testuser`, in the new "Household" group,
   `alice_record` linked to `data.alice`, `self_record` linked to `testuser`).
 
-- [ ] **Step 1: Write failing tests**:
+- [x] **Step 1: Write failing tests**:
   - `test_account_link_seed` in `test_seed_data.py`: the helper creates the group and two records
     with the links above, and `create_seed_data()` alone is unchanged (`len(data.persons) == 5`).
   - `test_seed_command_creates_account_links` in `test_seed_data_command.py`.
@@ -522,13 +522,13 @@ Pure rename plus data migration: behaviour is unchanged except that existing val
       "Link" on the banner, sees the badge.
     - `test_friends_row_buttons_fit_on_phone` (`@pytest.mark.mobile`, 390x844): both buttons are
       visible and the page has no horizontal scroll.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_seed_data.py gift_manager/tests/test_seed_data_command.py`
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_seed_data.py gift_manager/tests/test_seed_data_command.py`
   and `tox run -e e2e -- gift_manager/tests/e2e/test_person_account_link.py`. Expected: FAIL.
-- [ ] **Step 3: Implement** the helper (links through `account_links.link` with `testuser` as
+- [x] **Step 3: Implement** the helper (links through `account_links.link` with `testuser` as
   actor) and call it from the command after `create_seed_data()`.
-- [ ] **Step 4: Run** the step 2 commands, then the final verification:
+- [x] **Step 4: Run** the step 2 commands, then the final verification:
   `python manage.py makemigrations --check --dry-run`, `tox run -e py311`, `tox run -e lint`,
   `tox run -e e2e -- gift_manager/tests/e2e/test_person_account_link.py gift_manager/tests/e2e/test_plan_coordination.py`,
   `python manage.py makemessages -l fr` (no new untranslated or fuzzy entries) and
   `python manage.py compilemessages`. Expected: all PASS.
-- [ ] **Step 5: Commit** `Test: Add account link seed and end-to-end tests`.
+- [x] **Step 5: Commit** `Test: Add account link seed and end-to-end tests`.

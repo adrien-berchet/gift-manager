@@ -28,6 +28,7 @@ from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from gift_manager import account_links
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -39,6 +40,13 @@ from gift_manager.models import PersonGroupPermission
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import create_or_update_permission
+
+
+@dataclass(frozen=True)
+class AccountLinkSeed:
+    household: PersonGroup
+    alice_record: Person
+    self_record: Person
 
 
 @dataclass(frozen=True)
@@ -392,4 +400,41 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gifts=gifts,
         events=events,
         relations=relations,
+    )
+
+
+def create_account_link_seed(data: SeedData) -> AccountLinkSeed:
+    """Create additional seed data for person-account links in development and E2E tests.
+
+    Creates a 'Household' group and two person records owned by ``testuser``:
+    - ``alice_record`` linked to ``data.alice``
+    - ``self_record`` linked to ``testuser``
+    """
+    testuser = User.objects.get(username="testuser")
+
+    household = PersonGroup.objects.create(name="Household")
+    create_or_update_permission(testuser, household, permission_level=PermissionLevel.OWNER)
+
+    alice_record = Person.objects.create(
+        first_name="Alice",
+        family_name="Smith",
+        email_address=encode_email("alice@example.com"),
+    )
+    create_or_update_permission(testuser, alice_record, permission_level=PermissionLevel.OWNER)
+    alice_record.groups.add(household)
+    account_links.link(alice_record, data.alice, actor=testuser)
+
+    self_record = Person.objects.create(
+        first_name="Test",
+        family_name="User",
+        email_address=encode_email("testuser@example.com"),
+    )
+    create_or_update_permission(testuser, self_record, permission_level=PermissionLevel.OWNER)
+    self_record.groups.add(household)
+    account_links.link(self_record, testuser, actor=testuser)
+
+    return AccountLinkSeed(
+        household=household,
+        alice_record=alice_record,
+        self_record=self_record,
     )

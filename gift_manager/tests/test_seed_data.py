@@ -413,3 +413,38 @@ class TestRelations:
         assert r.gift == data.gifts["scarf"]
         assert r.event == data.events["christmas"]
         assert r.status == data.statuses["given"]
+
+
+# =====================================================================
+# Account link seed
+# =====================================================================
+
+
+class TestAccountLinkSeed:
+    """Verify that create_account_link_seed creates the household group and linked records."""
+
+    def test_account_link_seed(self, data):
+        from gift_manager.seed_data import AccountLinkSeed
+        from gift_manager.seed_data import create_account_link_seed
+
+        link_seed = create_account_link_seed(data)
+        assert isinstance(link_seed, AccountLinkSeed)
+        assert link_seed.household.name == "Household"
+        assert link_seed.alice_record.account == data.alice
+        testuser = User.objects.get(username="testuser")
+        assert link_seed.self_record.account == testuser
+        assert link_seed.household in link_seed.alice_record.groups.all()
+        assert link_seed.household in link_seed.self_record.groups.all()
+        assert (
+            PermissionService.get_effective_permission(link_seed.household, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert (
+            PermissionService.get_effective_permission(link_seed.alice_record, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert (
+            PermissionService.get_effective_permission(link_seed.self_record, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert len(data.persons) == 5
