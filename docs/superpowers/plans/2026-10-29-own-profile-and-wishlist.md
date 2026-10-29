@@ -247,15 +247,15 @@ Create Playwright E2E tests validating the full collaborative workflow and verif
 - Create: `gift_manager/tests/e2e/test_wishlist_e2e.py`
 - Modify: `gift_manager/seed_data.py` (seed wishes and preferences for demo)
 
-- [ ] **Step 1: Write E2E test in `gift_manager/tests/e2e/test_wishlist_e2e.py`:**
+- [x] **Step 1: Write E2E test in `gift_manager/tests/e2e/test_wishlist_e2e.py`:**
   - Alice logs in, writes sizes and avoid notes, and adds a wish with title and link.
   - Bob logs in, navigates to his linked record for Alice, views her "Wishlist & Preferences" tab.
   - Bob claims the wish and creates a surprise gift plan from it.
   - Alice logs in, verifies her wish is intact, verifies she cannot see Bob's claim or plan.
   - Test light and dark mode accessibility and contrast.
-- [ ] **Step 2: Run E2E test:** `tox run -e e2e -- gift_manager/tests/e2e/test_wishlist_e2e.py`.
-- [ ] **Step 3: Run full verification:**
+- [x] **Step 2: Run E2E test:** `tox run -e e2e -- gift_manager/tests/e2e/test_wishlist_e2e.py`.
+- [x] **Step 3: Run full verification:**
   - `tox run -e lint`
   - `tox run -e py311 -- gift_manager/tests/test_wishlist_models.py gift_manager/tests/test_wishlist_service.py gift_manager/tests/views/test_wishlist_privacy.py gift_manager/tests/views/test_wishlist_wisher_views.py gift_manager/tests/views/test_wishlist_giver_views.py gift_manager/tests/test_suggestions_wishlist.py gift_manager/tests/test_locale_coverage.py`
-- [ ] **Step 4: Run `graft build`** to refresh the repo context graph.
-- [ ] **Step 5: Commit and push:** `Feat: Implement own profile and wishlist (Project B)`.
+- [x] **Step 4: Run `graft build`** to refresh the repo context graph.
+- [x] **Step 5: Commit and push:** `Feat: Implement own profile and wishlist (Project B)`.

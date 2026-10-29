@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
 from datetime import timedelta
+from decimal import Decimal
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
@@ -39,6 +40,8 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.models import Wish
+from gift_manager.models import WishPriority
 from gift_manager.permissions import create_or_update_permission
 
 
@@ -65,6 +68,7 @@ class SeedData:
     gifts: dict[str, Gift] = field(default_factory=dict)
     events: dict[str, Event] = field(default_factory=dict)
     relations: list[Relation] = field(default_factory=list)
+    wishes: dict[str, Wish] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +90,8 @@ def _grant_owner_all(user: User, objects: list) -> None:
 def create_seed_data() -> SeedData:  # noqa: PLR0915
     """Create a deterministic seed dataset and return a :class:`SeedData` instance.
 
-    The dataset contains **34 objects** exercising every model, relationship,
-    hierarchy, permission level and encrypted-email feature of the application.
+    The dataset contains **36 objects** exercising every model, relationship,
+    hierarchy, permission level, encrypted-email and wishlist/preference feature of the application.
     """
     # ------------------------------------------------------------------
     # 1. Users
@@ -119,6 +123,12 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
 
     # Make testuser friends with alice and bob.
     testuser.profile.friends.add(alice.profile, bob.profile)
+
+    # Set Alice's gift preferences and avoid notes
+    alice.profile.preferences_notes = "Shoe size 39, favorite color blue, loves green tea."
+    alice.profile.avoid_notes = "Peanut allergy, dislikes polyester clothing."
+    alice.profile.ai_share_self_profile = True
+    alice.profile.save()
 
     # Mark all user emails as verified for allauth.
     for user_obj, plain_email in [
@@ -236,6 +246,7 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     gadgets = GiftTag.objects.create(name="Gadgets")
     gadgets.parent_tags.add(electronics)  # Gadgets → child of Electronics
     books = GiftTag.objects.create(name="Books", is_public=True)
+    alice.profile.public_interests.add(books)
 
     tags: dict[str, GiftTag] = {
         "electronics": electronics,
@@ -388,6 +399,31 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     # relation_3: NONE
 
     # ------------------------------------------------------------------
+    # 11. Wishes (Alice's wishlist)
+    # ------------------------------------------------------------------
+    teapot = Wish.objects.create(
+        wisher=alice,
+        title="Ceramic Teapot",
+        url="https://example.com/teapot",
+        price_hint=Decimal("45.00"),
+        priority=WishPriority.MEDIUM,
+        notes="Japanese Kyusu teapot, glazed ceramic.",
+    )
+    fountain_pen = Wish.objects.create(
+        wisher=alice,
+        title="Fountain Pen",
+        url="https://example.com/pen",
+        price_hint=Decimal("85.00"),
+        priority=WishPriority.HIGH,
+        notes="Fine nib, blue or black body.",
+    )
+
+    wishes: dict[str, Wish] = {
+        "teapot": teapot,
+        "fountain_pen": fountain_pen,
+    }
+
+    # ------------------------------------------------------------------
     # Done - return frozen dataclass
     # ------------------------------------------------------------------
     return SeedData(
@@ -400,6 +436,7 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gifts=gifts,
         events=events,
         relations=relations,
+        wishes=wishes,
     )
 
 

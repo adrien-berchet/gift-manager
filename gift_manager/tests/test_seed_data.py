@@ -71,6 +71,14 @@ class TestObjectCounts:
         assert len(data.relations) == 4
         assert Relation.objects.count() >= 4
 
+    def test_wish_count(self, data):
+        from gift_manager.models import Wish
+
+        assert len(data.wishes) == 2
+        assert Wish.objects.count() >= 2
+        assert data.wishes["teapot"].wisher == data.alice
+        assert data.wishes["fountain_pen"].wisher == data.alice
+
 
 # =====================================================================
 # Return type

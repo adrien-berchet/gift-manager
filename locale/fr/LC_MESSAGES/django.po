@@ -772,10 +772,8 @@ msgstr ""
 "la pertinence des idées cadeaux."
 
 #: gift_manager/models.py:458
-#, fuzzy
-#| msgid "Save Preferences"
 msgid "Sizes and preferences"
-msgstr "Enregistrer les préférences"
+msgstr "Tailles et préférences"
 
 #: gift_manager/models.py:460
 msgid "Clothing size, shoe size, favorite colors, preferred brands."
@@ -944,10 +942,8 @@ msgid "One-time events cannot have a recurrence."
 msgstr "Les événements ponctuels ne peuvent pas avoir de récurrence."
 
 #: gift_manager/models.py:1371
-#, fuzzy
-#| msgid "Ready to save"
 msgid "Nice to have"
-msgstr "Prêt à sauvegarder"
+msgstr "Optionnel"
 
 #: gift_manager/models.py:1372
 msgid "Would love"
@@ -962,10 +958,8 @@ msgid "Title"
 msgstr "Titre"
 
 #: gift_manager/models.py:1410
-#, fuzzy
-#| msgid "Price"
 msgid "Price hint"
-msgstr "Prix"
+msgstr "Prix indicatif"
 
 #: gift_manager/models.py:1416
 msgid "Expected or typical price in your profile currency."
@@ -3853,6 +3847,10 @@ msgstr "Réservation du souhait annulée."
 #: gift_manager/views/wishlist.py:293
 msgid "Wish claimed."
 msgstr "Souhait réservé."
+
+#: gift_manager/views/wishlist.py:275
+msgid "You do not have permission to view this person."
+msgstr "Vous n'avez pas la permission de voir cette personne."
 
 #: gift_manager/views/wishlist.py:276
 msgid "You can only view and claim wishes of confirmed friends."
