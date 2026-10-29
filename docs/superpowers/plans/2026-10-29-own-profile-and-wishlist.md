@@ -169,21 +169,21 @@ Build the user-facing UI for managing personal preferences and wishlist items on
 - Modify: `locale/fr/LC_MESSAGES/django.po`
 - Create: `gift_manager/tests/views/test_wishlist_wisher_views.py`
 
-- [ ] **Step 1: Write failing wisher view tests in `gift_manager/tests/views/test_wishlist_wisher_views.py`:**
+- [x] **Step 1: Write failing wisher view tests in `gift_manager/tests/views/test_wishlist_wisher_views.py`:**
   - `test_profile_preferences_form_saves_preferences_and_tags`: updates `preferences_notes`, `avoid_notes`, `public_interests`, and `ai_share_self_profile`.
   - `test_wishlist_list_view_renders_wisher_wishes`: wisher sees active and archived wishes.
   - `test_wish_create_view`: creates wish and redirects / returns partial on HTMX.
   - `test_wish_update_view`: updates title, notes, price hint, priority; sets `wisher_updated_at`.
   - `test_wish_archive_toggle`: toggles `is_archived`.
   - `test_wish_delete_view`: deletes wish or marks deleted.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py`. Expected: FAIL.
-- [ ] **Step 3: Implement forms, views, templates, and routes:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py`. Expected: FAIL.
+- [x] **Step 3: Implement forms, views, templates, and routes:**
   - In `forms.py`: `WishForm` with validation for non-negative price and URL. `ProfilePreferencesForm` with `public_interests` choices limited to `is_public=True`.
   - In `views/wishlist.py`: CRUD views supporting HTMX offcanvas editing. `WishListView` mapped to `gift_manager:wishlist_list` at `profile/wishlist/`.
   - In `profile_detail.html`: embed "My Preferences" section and "My Wishlist" card/link.
   - Add French translations in `locale/fr/LC_MESSAGES/django.po` and compile.
   - Remove `@pytest.mark.xfail` markers from `gift_manager/tests/views/test_wishlist_privacy.py` so contract tests run against the newly landed view.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py gift_manager/tests/views/test_wishlist_privacy.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_wisher_views.py gift_manager/tests/views/test_wishlist_privacy.py`. Expected: PASS.
 
 ---
 

@@ -62,9 +62,39 @@ urlpatterns = [
         name="update_view_preferences",
     ),
     path(
+        "profile/update-preferences/",
+        views.UpdateProfilePreferencesView.as_view(),
+        name="update_profile_preferences",
+    ),
+    path(
         "profile/update-reminder-preferences/",
         views.UpdateReminderPreferencesView.as_view(),
         name="update_reminder_preferences",
+    ),
+    path(
+        "profile/wishlist/",
+        views.WishListView.as_view(),
+        name="wishlist_list",
+    ),
+    path(
+        "profile/wishlist/add/",
+        views.WishCreateView.as_view(),
+        name="wish_create",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/edit/",
+        views.WishUpdateView.as_view(),
+        name="wish_edit",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/archive/",
+        views.WishArchiveView.as_view(),
+        name="wish_archive_toggle",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/delete/",
+        views.WishDeleteView.as_view(),
+        name="wish_delete",
     ),
     path(
         "profile/calendar-feed/regenerate/",

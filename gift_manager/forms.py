@@ -25,6 +25,7 @@ from .models import Person
 from .models import PersonGroup
 from .models import Profile
 from .models import Relation
+from .models import Wish
 from .person_profile import append_person_provenance_note
 from .person_profile import promote_tags_to_person_interests
 from .person_profile import promotion_target
@@ -1324,3 +1325,103 @@ class InvitationForm(forms.Form):
     def clean_recipient_email(self):
         """Normalize the address so pending invitations can be matched."""
         return self.cleaned_data["recipient_email"].casefold()
+
+
+class ProfilePreferencesForm(forms.ModelForm):
+    """Self-declared profile preferences and AI consent."""
+
+    public_interests = forms.ModelMultipleChoiceField(
+        queryset=GiftTag.objects.filter(is_public=True).order_by("name"),
+        required=False,
+        widget=forms.SelectMultiple(attrs={"class": "form-select", "size": "6"}),
+        label=gettext_lazy("Public interests"),
+        help_text=gettext_lazy("Select public tags describing topics and hobbies you enjoy."),
+    )
+
+    class Meta:
+        model = Profile
+        fields = [
+            "preferences_notes",
+            "avoid_notes",
+            "public_interests",
+            "ai_share_self_profile",
+        ]
+        widgets = {
+            "preferences_notes": forms.Textarea(
+                attrs={
+                    "class": "form-textarea",
+                    "rows": 3,
+                    "placeholder": gettext_lazy(
+                        "Clothing sizes, shoe size, favorite colors, preferred brands..."
+                    ),
+                }
+            ),
+            "avoid_notes": forms.Textarea(
+                attrs={
+                    "class": "form-textarea",
+                    "rows": 3,
+                    "placeholder": gettext_lazy(
+                        "Allergies, dislikes, formats to avoid (e.g. no physical books)..."
+                    ),
+                }
+            ),
+            "ai_share_self_profile": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["preferences_notes"].required = False
+        self.fields["avoid_notes"].required = False
+        self.fields["ai_share_self_profile"].required = False
+
+
+class WishForm(forms.ModelForm):
+    """Form to create or update a personal wish."""
+
+    class Meta:
+        model = Wish
+        fields = [
+            "title",
+            "url",
+            "price_hint",
+            "priority",
+            "notes",
+        ]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={
+                    "class": "form-input-text",
+                    "placeholder": gettext_lazy("What would you love to receive?"),
+                }
+            ),
+            "url": forms.URLInput(
+                attrs={
+                    "class": "form-input-text",
+                    "placeholder": "https://...",
+                }
+            ),
+            "price_hint": forms.NumberInput(
+                attrs={
+                    "class": "form-input-text",
+                    "step": "0.01",
+                    "min": "0",
+                    "placeholder": "0.00",
+                    "inputmode": "decimal",
+                }
+            ),
+            "priority": forms.Select(attrs={"class": "form-select"}),
+            "notes": forms.Textarea(
+                attrs={
+                    "class": "form-textarea",
+                    "rows": 3,
+                    "placeholder": gettext_lazy("Sizes, colors, specifications or alternatives..."),
+                }
+            ),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["title"].required = True
+        self.fields["url"].required = False
+        self.fields["price_hint"].required = False
+        self.fields["notes"].required = False

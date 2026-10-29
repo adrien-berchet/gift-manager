@@ -21,6 +21,7 @@ from gift_manager import account_links
 from gift_manager.account_links import remove_links_after_unfriending
 from gift_manager.email_encoding import encode_email
 from gift_manager.forms import InvitationForm
+from gift_manager.forms import ProfilePreferencesForm
 from gift_manager.forms import ReminderPreferencesForm
 from gift_manager.invitations import accept_invitation_for_user
 from gift_manager.invitations import get_pending_invitation
@@ -39,6 +40,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
 from gift_manager.models import Relation
+from gift_manager.models import Wish
 from gift_manager.services import PermissionService
 from gift_manager.wishlist import release_claims_after_unfriending
 
@@ -55,6 +57,10 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         profile = context["profile"]
         context["reminder_form"] = ReminderPreferencesForm(instance=profile)
+        context["preferences_form"] = ProfilePreferencesForm(instance=profile)
+        context["active_wishes_count"] = Wish.objects.filter(
+            wisher=self.request.user, is_archived=False
+        ).count()
         if profile.calendar_token:
             context["calendar_feed_url"] = self.request.build_absolute_uri(
                 reverse("gift_manager:calendar_feed", kwargs={"token": profile.calendar_token})
@@ -226,6 +232,27 @@ class UpdateViewPreferencesView(LoginRequiredMixin, View):
             request,
             gettext("Display preferences saved successfully."),
             redirect_to="gift_manager:profile_detail",
+        )
+
+
+class UpdateProfilePreferencesView(LoginRequiredMixin, View):
+    """View to update personal profile preferences (sizes, avoid, tags, AI consent)."""
+
+    def post(self, request, *args, **kwargs):
+        form = ProfilePreferencesForm(request.POST, instance=request.user.profile)
+        ok = form.is_valid()
+        if ok:
+            form.save()
+            message = gettext("Profile preferences saved successfully.")
+        else:
+            first_error = next(iter(form.errors.values()))[0] if form.errors else ""
+            message = first_error or gettext("Choose valid profile preferences.")
+
+        return settings_form_response(
+            request,
+            message,
+            redirect_to="gift_manager:profile_detail",
+            ok=ok,
         )
 
 

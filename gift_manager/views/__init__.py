@@ -79,6 +79,7 @@ from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import UpdateProfilePreferencesView
 from .profile import UpdateViewPreferencesView
 
 # Recipient views
@@ -134,6 +135,13 @@ from .suggestions import person_suggestions_dismissed
 from .suggestions import purge_url_for
 from .suggestions import restore_url_for
 from .suggestions import suggestions_url_for
+
+# Wishlist views
+from .wishlist import WishArchiveView
+from .wishlist import WishCreateView
+from .wishlist import WishDeleteView
+from .wishlist import WishListView
+from .wishlist import WishUpdateView
 
 __all__ = [
     "AcceptInvitationView",
@@ -204,8 +212,14 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "UpdateProfilePreferencesView",
     "UpdateReminderPreferencesView",
     "UpdateViewPreferencesView",
+    "WishArchiveView",
+    "WishCreateView",
+    "WishDeleteView",
+    "WishListView",
+    "WishUpdateView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",

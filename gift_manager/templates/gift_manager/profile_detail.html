@@ -188,6 +188,86 @@
         {% endif %}
     </div>
 
+    <!-- Wishlist Section -->
+    <div class="profile-section">
+        <h2>
+            <i class="fas fa-gift"></i> {% trans "My Wishlist" %}
+            <a href="{% url 'gift_manager:wishlist_list' %}" class="btn btn-primary btn-sm ms-auto text-nowrap">
+                <i class="fas fa-list me-1" aria-hidden="true"></i>{% trans "View wishlist" %}
+            </a>
+        </h2>
+        <p class="text-muted mb-3">
+            {% trans "Manage wishes that your confirmed friends can see when looking for gift ideas for you." %}
+        </p>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary fs-6">
+                {% blocktrans count counter=active_wishes_count %}{{ counter }} active wish{% plural %}{{ counter }} active wishes{% endblocktrans %}
+            </span>
+            <a href="{% url 'gift_manager:wish_create' %}" class="btn btn-outline-primary btn-sm" data-action="create">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add a wish" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-heart"></i> {% trans "Gift Preferences" %}</h2>
+        <p class="text-muted mb-4">
+            {% trans "Help your friends choose the right gifts by sharing your sizes, tastes, and things you dislike or cannot consume." %}
+        </p>
+
+        <form method="post" action="{% url 'gift_manager:update_profile_preferences' %}" id="profile-preferences-form"
+              hx-post="{% url 'gift_manager:update_profile_preferences' %}" hx-swap="none" data-keep-button-label>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.preferences_notes.id_for_label }}">
+                        {{ preferences_form.preferences_notes.label }}
+                    </label>
+                    {{ preferences_form.preferences_notes }}
+                    {% if preferences_form.preferences_notes.help_text %}
+                        <div class="form-text">{{ preferences_form.preferences_notes.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.avoid_notes.id_for_label }}">
+                        {{ preferences_form.avoid_notes.label }}
+                    </label>
+                    {{ preferences_form.avoid_notes }}
+                    {% if preferences_form.avoid_notes.help_text %}
+                        <div class="form-text">{{ preferences_form.avoid_notes.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.public_interests.id_for_label }}">
+                        {{ preferences_form.public_interests.label }}
+                    </label>
+                    {{ preferences_form.public_interests }}
+                    {% if preferences_form.public_interests.help_text %}
+                        <div class="form-text">{{ preferences_form.public_interests.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch mt-2">
+                        {{ preferences_form.ai_share_self_profile }}
+                        <label class="form-check-label fw-semibold" for="{{ preferences_form.ai_share_self_profile.id_for_label }}">
+                            {{ preferences_form.ai_share_self_profile.label }}
+                        </label>
+                        {% if preferences_form.ai_share_self_profile.help_text %}
+                            <div class="form-text">{{ preferences_form.ai_share_self_profile.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>{% trans "Save Preferences" %}
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Display Preferences Section -->
     <div class="profile-section">
         <h2><i class="fas fa-sliders-h"></i> {% trans "Display Preferences" %}</h2>

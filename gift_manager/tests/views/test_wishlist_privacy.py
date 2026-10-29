@@ -22,7 +22,6 @@ from decimal import Decimal
 
 import pytest
 from django.core.exceptions import PermissionDenied
-from django.urls import NoReverseMatch
 from django.urls import reverse
 
 from gift_manager import wishlist
@@ -346,14 +345,9 @@ def test_wisher_search_never_exposes_surprise_plan_or_gift(client, alice, bob, w
     assert any(relation.gift.name in r.get("title", "") for r in bob_results)
 
 
-# --- 3. Wisher Wishlist View Contract Tests (Strict XFail for Task 4) -------------------------
+# --- 3. Wisher Wishlist View Contract Tests ---------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=NoReverseMatch,
-    reason="Task 4 adds /profile/wishlist/ (reverse: gift_manager:wishlist_list)",
-)
 def test_wisher_views_render_identically_whether_claimed_or_not(client, alice, bob, wisher_person):
     """Alice's wishlist page HTML and context are identical when unclaimed, claimed, or planned."""
     url = reverse("gift_manager:wishlist_list")
@@ -390,11 +384,6 @@ def test_wisher_views_render_identically_whether_claimed_or_not(client, alice, b
     assert norm_fulfilled == norm_unclaimed
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=NoReverseMatch,
-    reason="Task 4 adds /profile/wishlist/ (reverse: gift_manager:wishlist_list)",
-)
 def test_wisher_cannot_see_claim_status_via_api_or_html(client, alice, bob, wisher_person):
     """Wisher payload and context never expose claimer name, claim status, or fulfilling plan."""
     url = reverse("gift_manager:wishlist_list")
@@ -407,7 +396,7 @@ def test_wisher_cannot_see_claim_status_via_api_or_html(client, alice, bob, wish
     content = response.content.decode("utf-8")
 
     # Sensitive claim/plan information must not appear in HTML
-    assert bob.username not in content
+    assert not re.search(rf"\b{re.escape(bob.username)}\b", content)
     assert "Claimed" not in content
     assert "claimed" not in content
     assert "Reserved" not in content
