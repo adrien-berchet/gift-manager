@@ -3806,6 +3806,70 @@ msgstr "Ajouter votre premier souhait"
 msgid "Archived wishes"
 msgstr "Souhaits archivés"
 
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:171
+msgid "View profile"
+msgstr "Voir le profil"
+
+#: gift_manager/templates/gift_manager/includes/person_detail_partial.html:174
+msgid "My wishlist"
+msgstr "Ma liste d'envies"
+
+#: gift_manager/templates/gift_manager/includes/person_wishlist_tab_partial.html:4
+msgid "Wishlist & preferences"
+msgstr "Liste d'envies & préférences"
+
+#: gift_manager/templates/gift_manager/includes/person_wishlist_tab_partial.html:25
+msgid "Interests & hobbies"
+msgstr "Centres d'intérêt"
+
+#: gift_manager/templates/gift_manager/includes/person_wishlist_tab_partial.html:37
+msgid "Wishlist"
+msgstr "Liste d'envies"
+
+#: gift_manager/templates/gift_manager/includes/person_wish_item_partial.html:48
+msgid "The wisher modified this wish after it was claimed."
+msgstr "La personne a modifié ce souhait après sa réservation."
+
+#: gift_manager/templates/gift_manager/includes/person_wish_item_partial.html:49
+msgid "Modified after claim"
+msgstr "Modifié après réservation"
+
+#: gift_manager/templates/gift_manager/includes/person_wish_item_partial.html:69
+msgid "Release claim"
+msgstr "Annuler la réservation"
+
+#: gift_manager/templates/gift_manager/includes/person_wish_item_partial.html:79
+msgid "Claim"
+msgstr "Réserver"
+
+#: gift_manager/templates/gift_manager/includes/person_wish_item_partial.html:90
+msgid "Plan this gift"
+msgstr "Planifier ce cadeau"
+
+#: gift_manager/views/wishlist.py:290
+msgid "Wish claim released."
+msgstr "Réservation du souhait annulée."
+
+#: gift_manager/views/wishlist.py:293
+msgid "Wish claimed."
+msgstr "Souhait réservé."
+
+#: gift_manager/views/wishlist.py:276
+msgid "You can only view and claim wishes of confirmed friends."
+msgstr "Vous ne pouvez voir et réserver les souhaits que de vos amis confirmés."
+
+#: gift_manager/views/wishlist.py:336
+msgid "You can only plan gifts for confirmed friends."
+msgstr "Vous ne pouvez planifier de cadeaux que pour vos amis confirmés."
+
+#: gift_manager/views/wishlist.py:355
+msgid "Gift plan created from wish."
+msgstr "Plan de cadeau créé à partir du souhait."
+
+#: gift_manager/views/wishlist.py:353
+msgid "Gift plan already exists for this wish."
+msgstr "Un plan de cadeau existe déjà pour ce souhait."
+
 #: gift_manager/templates/gift_manager/invitation_expired.html:4
 #: gift_manager/templates/gift_manager/invitation_expired.html:13
 msgid "Invitation Expired"

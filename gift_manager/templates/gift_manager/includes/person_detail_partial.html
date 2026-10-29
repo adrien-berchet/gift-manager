@@ -163,11 +163,25 @@
         {% if person.account_id == request.user.id %}
         <div class="detail-section">
             <div class="alert alert-info" role="status">
-                <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
-                {% trans "This person record represents you. Gift plans and suggestions are hidden for your own record." %}
+                <p class="mb-2">
+                    <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                    {% trans "This person record represents you. Gift plans and suggestions are hidden for your own record." %}
+                </p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-user me-1" aria-hidden="true"></i>{% trans "View profile" %}
+                    </a>
+                    <a href="{% url 'gift_manager:wishlist_list' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "My wishlist" %}
+                    </a>
+                </div>
             </div>
         </div>
         {% else %}
+        {% if has_friend_wishlist_data %}
+        {% include "gift_manager/includes/person_wishlist_tab_partial.html" %}
+        {% endif %}
+
         <div class="detail-section">
             <h6 class="detail-section-title text-muted mb-3">
                 <i class="fas fa-hand-holding-heart me-2"></i>{% trans "Gift plans in progress" %}

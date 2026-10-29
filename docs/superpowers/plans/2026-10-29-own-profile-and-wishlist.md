@@ -201,19 +201,19 @@ Display the friend's wishlist and preferences to givers when viewing a linked `P
 - Modify: `locale/fr/LC_MESSAGES/django.po`
 - Create: `gift_manager/tests/views/test_wishlist_giver_views.py`
 
-- [ ] **Step 1: Write failing giver view tests in `gift_manager/tests/views/test_wishlist_giver_views.py`:**
+- [x] **Step 1: Write failing giver view tests in `gift_manager/tests/views/test_wishlist_giver_views.py`:**
   - `test_person_detail_displays_friend_preferences_and_wishlist`: giver viewing Bob's person record linked to Alice sees Alice's sizes, avoid notes, public tags, and wishes.
   - `test_person_detail_own_record_shows_profile_redirect_notice`: viewing own person record displays link to profile instead of giver wishlist view.
   - `test_wish_claim_toggle_htmx`: friend clicks claim -> returns updated wish item partial with "Claimed by you".
   - `test_wish_plan_redirects_to_guided_plan`: friend clicks "Plan this gift" -> initializes plan and attaches wish.
   - `test_unfriending_cleans_up_claims`: former friend's claims are released.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_giver_views.py`. Expected: FAIL.
-- [ ] **Step 3: Implement giver UI and claim endpoints:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_giver_views.py`. Expected: FAIL.
+- [x] **Step 3: Implement giver UI and claim endpoints:**
   - In `PersonDetailView.get_context_data`: query friend's preferences and visible wishes via `gift_manager/wishlist.py`.
   - In `person_detail_partial.html`: render "Wishlist & Preferences" tab with claim buttons and claimer badges.
   - Hook unfriending cleanup in `RemoveFriendView`.
   - Add French translations and compile messages.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_giver_views.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_wishlist_giver_views.py`. Expected: PASS.
 
 ---
 

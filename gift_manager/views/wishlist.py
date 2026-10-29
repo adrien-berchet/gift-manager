@@ -4,12 +4,16 @@ import json
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -19,7 +23,12 @@ from django.views.generic import View
 
 from gift_manager import wishlist
 from gift_manager.forms import WishForm
+from gift_manager.models import PermissionLevel
+from gift_manager.models import Person
+from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.services import PermissionService
+from gift_manager.statuses import is_abandoned_status
 from gift_manager.views.base import HTMXResponseMixin
 
 
@@ -232,3 +241,139 @@ class WishDeleteView(LoginRequiredMixin, View):
 
         messages.success(request, msg)
         return redirect("gift_manager:wishlist_list")
+
+
+def annotate_wish_for_giver(wish, viewer, person, viewer_friend_ids=None):
+    """Attach giver-specific view properties to a wish instance."""
+    if viewer_friend_ids is None:
+        viewer_friend_ids = set(viewer.profile.friends.values_list("user_id", flat=True))
+    wish.claimer_label = wishlist.format_claimer_label(wish, viewer, viewer_friend_ids)
+    wish.is_claimed_by_viewer = wish.claimed_by_id == viewer.id
+    wish.modified_after_claim = wish.is_updated_after_claim()
+
+    active_plans = Relation.objects.filter(
+        wish=wish,
+        person=person,
+        relationpermission__user=viewer,
+        relationpermission__permission_type=PermissionLevel.OWNER,
+    ).select_related("status")
+    active_plan = next((p for p in active_plans if not is_abandoned_status(p.status)), None)
+    wish.planned_relation = active_plan
+    wish.is_planned_by_viewer = active_plan is not None
+    return wish
+
+
+class WishClaimToggleView(LoginRequiredMixin, View):
+    """Toggle reservation/claim on a friend's wish."""
+
+    def post(self, request, person_id, wish_id, *args, **kwargs):
+        person = get_object_or_404(Person, person_id=person_id)
+        if (
+            PermissionService.get_effective_permission(person, request.user)
+            < PermissionLevel.VIEWER
+        ):
+            raise PermissionDenied(gettext("You do not have permission to view this person."))
+
+        if not person.account_id or not PermissionService.users_are_friends(
+            request.user, person.account
+        ):
+            raise PermissionDenied(
+                gettext("You can only view and claim wishes of confirmed friends.")
+            )
+
+        wish = get_object_or_404(
+            Wish.objects.visible_to_friend(request.user, person.account),
+            wish_id=wish_id,
+        )
+
+        is_htmx = request.headers.get("HX-Request") == "true"
+        is_editor = (
+            PermissionService.get_effective_permission(person, request.user)
+            >= PermissionLevel.EDITOR
+        )
+
+        error_message = None
+        success_message = None
+        try:
+            if wish.claimed_by_id == request.user.id:
+                wish = wishlist.release_wish_claim(wish, request.user)
+                success_message = gettext("Wish claim released.")
+            else:
+                wish = wishlist.claim_wish(wish, request.user)
+                success_message = gettext("Wish claimed.")
+        except ValidationError as exc:
+            error_message = exc.message if hasattr(exc, "message") else str(exc)
+            wish = get_object_or_404(
+                Wish.objects.visible_to_friend(request.user, person.account),
+                wish_id=wish_id,
+            )
+
+        annotate_wish_for_giver(wish, request.user, person)
+
+        if is_htmx:
+            content = render_to_string(
+                "gift_manager/includes/person_wish_item_partial.html",
+                {"wish": wish, "person": person, "is_editor": is_editor},
+                request=request,
+            )
+            response = HttpResponse(content)
+            if error_message:
+                response["HX-Trigger"] = json.dumps(
+                    {"showNotification": {"message": str(error_message), "type": "error"}}
+                )
+            else:
+                response["HX-Trigger"] = json.dumps(
+                    {"showNotification": {"message": str(success_message), "type": "success"}}
+                )
+            return response
+
+        if error_message:
+            messages.error(request, error_message)
+        elif success_message:
+            messages.success(request, success_message)
+        return redirect("gift_manager:person_detail", pk=person.person_id)
+
+
+class WishPlanView(LoginRequiredMixin, View):
+    """Plan a gift fulfilling a friend's wish."""
+
+    def post(self, request, person_id, wish_id, *args, **kwargs):
+        person = get_object_or_404(Person, person_id=person_id)
+        if (
+            PermissionService.get_effective_permission(person, request.user)
+            < PermissionLevel.EDITOR
+        ):
+            raise PermissionDenied(
+                gettext("You need edit rights on this person to plan a gift for them.")
+            )
+
+        if not person.account_id or not PermissionService.users_are_friends(
+            request.user, person.account
+        ):
+            raise PermissionDenied(gettext("You can only plan gifts for confirmed friends."))
+
+        wish = get_object_or_404(
+            Wish.objects.visible_to_friend(request.user, person.account),
+            wish_id=wish_id,
+        )
+
+        already_existed = Relation.objects.filter(
+            wish=wish,
+            person=person,
+            relationpermission__user=request.user,
+            relationpermission__permission_type=PermissionLevel.OWNER,
+        ).exists()
+
+        wishlist.plan_wish(wish, request.user, person)
+
+        if already_existed:
+            messages.info(request, gettext("Gift plan already exists for this wish."))
+        else:
+            messages.success(request, gettext("Gift plan created from wish."))
+
+        detail_url = reverse("gift_manager:person_detail", kwargs={"pk": person.person_id})
+        if request.headers.get("HX-Request") == "true":
+            response = HttpResponse("")
+            response["HX-Redirect"] = detail_url
+            return response
+        return redirect(detail_url)

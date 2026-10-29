@@ -1,0 +1,108 @@
+{% load i18n %}
+<div class="list-group-item list-group-item-action p-3" id="wish-item-{{ wish.wish_id }}">
+    <div class="d-flex w-100 justify-content-between align-items-start gap-2 flex-wrap">
+        <div class="flex-grow-1">
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <h6 class="mb-0 fw-semibold">
+                    {% if wish.url %}
+                    <a href="{{ wish.url }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none">
+                        {{ wish.title }} <i class="fas fa-external-link-alt fa-xs text-muted ms-1" aria-hidden="true"></i>
+                    </a>
+                    {% else %}
+                    {{ wish.title }}
+                    {% endif %}
+                </h6>
+                {% if wish.price_hint is not None %}
+                <span class="badge bg-light text-dark border">
+                    ~{{ wish.price_hint }}
+                </span>
+                {% endif %}
+                {% if wish.priority == 3 %}
+                <span class="badge bg-danger">{% trans "Must have" %}</span>
+                {% elif wish.priority == 2 %}
+                <span class="badge bg-primary">{% trans "Would love" %}</span>
+                {% elif wish.priority == 1 %}
+                <span class="badge bg-secondary">{% trans "Nice to have" %}</span>
+                {% endif %}
+            </div>
+
+            {% if wish.notes %}
+            <p class="text-muted small mb-2" style="white-space: pre-line;">{{ wish.notes }}</p>
+            {% endif %}
+
+            <div class="d-flex align-items-center gap-2 flex-wrap small">
+                <!-- Claim status badge -->
+                {% if wish.is_claimed_by_viewer %}
+                <span class="badge bg-info text-dark">
+                    <i class="fas fa-check-circle me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
+                </span>
+                {% elif wish.claimed_by_id %}
+                <span class="badge bg-secondary">
+                    <i class="fas fa-lock me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
+                </span>
+                {% else %}
+                <span class="badge bg-success">
+                    <i class="fas fa-gift me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
+                </span>
+                {% endif %}
+
+                <!-- Modified after claim badge -->
+                {% if wish.modified_after_claim %}
+                <span class="badge bg-warning text-dark" title="{% trans 'The wisher modified this wish after it was claimed.' %}">
+                    <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Modified after claim" %}
+                </span>
+                {% endif %}
+
+                <!-- Planned badge -->
+                {% if wish.is_planned_by_viewer and wish.planned_relation %}
+                <a href="{% url 'gift_manager:relation_detail' pk=wish.planned_relation.relation_id %}" class="badge bg-primary text-decoration-none">
+                    <i class="fas fa-calendar-check me-1" aria-hidden="true"></i>{% trans "Planned" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex align-items-center gap-2 ms-auto mt-2 mt-sm-0">
+            {% if not wish.is_planned_by_viewer %}
+                {% if wish.is_claimed_by_viewer %}
+                <!-- Release claim form -->
+                <form method="post" action="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
+                      hx-post="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
+                      hx-target="#wish-item-{{ wish.wish_id }}"
+                      hx-swap="outerHTML"
+                      class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-undo me-1" aria-hidden="true"></i>{% trans "Release claim" %}
+                    </button>
+                </form>
+                {% elif not wish.claimed_by_id %}
+                <!-- Claim form -->
+                <form method="post" action="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
+                      hx-post="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
+                      hx-target="#wish-item-{{ wish.wish_id }}"
+                      hx-swap="outerHTML"
+                      class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-hand-holding me-1" aria-hidden="true"></i>{% trans "Claim" %}
+                    </button>
+                </form>
+                {% endif %}
+            {% endif %}
+
+            {% if is_editor and not wish.is_planned_by_viewer and not wish.claimed_by_id or is_editor and wish.is_claimed_by_viewer and not wish.is_planned_by_viewer %}
+            <!-- Plan button -->
+            <form method="post" action="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
+                  hx-post="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
+                  class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-primary">
+                    <i class="fas fa-magic me-1" aria-hidden="true"></i>{% trans "Plan this gift" %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>

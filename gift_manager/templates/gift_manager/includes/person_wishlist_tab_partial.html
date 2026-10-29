@@ -1,0 +1,46 @@
+{% load i18n %}
+<div class="detail-section mb-4" id="person-wishlist-container">
+    <h6 class="detail-section-title text-muted mb-3">
+        <i class="fas fa-gift me-2"></i>{% trans "Wishlist & preferences" %}
+    </h6>
+
+    {% if friend_avoid_notes %}
+    <div class="alert alert-warning mb-3" role="status">
+        <h6 class="alert-heading h6 fw-semibold mb-1">
+            <i class="fas fa-exclamation-triangle me-1"></i>{% trans "Things to avoid" %}
+        </h6>
+        <div class="small" style="white-space: pre-line;">{{ friend_avoid_notes }}</div>
+    </div>
+    {% endif %}
+
+    {% if friend_preferences_notes %}
+    <div class="mb-3">
+        <label class="detail-label">{% trans "Sizes and preferences" %}</label>
+        <div class="detail-value" style="white-space: pre-line;">{{ friend_preferences_notes }}</div>
+    </div>
+    {% endif %}
+
+    {% if friend_public_interests %}
+    <div class="mb-3">
+        <label class="detail-label">{% trans "Interests & hobbies" %}</label>
+        <div class="mt-1">
+            {% for tag in friend_public_interests %}
+            <span class="badge bg-secondary me-1 mb-1">
+                <i class="fas fa-tag me-1"></i>{{ tag.name }}
+            </span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if friend_wishes %}
+    <div class="mb-2">
+        <label class="detail-label mb-2">{% trans "Wishlist" %}</label>
+        <div class="list-group" id="friend-wishes-list">
+            {% for wish in friend_wishes %}
+                {% include "gift_manager/includes/person_wish_item_partial.html" with wish=wish person=person is_editor=is_editor only %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>

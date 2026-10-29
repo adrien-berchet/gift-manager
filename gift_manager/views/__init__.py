@@ -138,9 +138,11 @@ from .suggestions import suggestions_url_for
 
 # Wishlist views
 from .wishlist import WishArchiveView
+from .wishlist import WishClaimToggleView
 from .wishlist import WishCreateView
 from .wishlist import WishDeleteView
 from .wishlist import WishListView
+from .wishlist import WishPlanView
 from .wishlist import WishUpdateView
 
 __all__ = [
@@ -216,9 +218,11 @@ __all__ = [
     "UpdateReminderPreferencesView",
     "UpdateViewPreferencesView",
     "WishArchiveView",
+    "WishClaimToggleView",
     "WishCreateView",
     "WishDeleteView",
     "WishListView",
+    "WishPlanView",
     "WishUpdateView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",

@@ -15,6 +15,7 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 
 from gift_manager import account_links
+from gift_manager import wishlist
 from gift_manager.account_links import LinkRefused
 from gift_manager.account_links import clean_person_email
 from gift_manager.account_links import format_link_label
@@ -31,12 +32,14 @@ from gift_manager.mixins.performance import QueryOptimizationMixin
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
 from gift_manager.mixins.permissions import SingleObjectPermissionMixin
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.services import BudgetService
+from gift_manager.services import PermissionService
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_given_status
 from gift_manager.statuses import is_terminal_status
@@ -407,6 +410,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             key=lambda tag: tag.name.lower(),
         )
         context["link_suggestion"] = link_suggestion(self.object, self.request.user)
+        self._populate_friend_wishlist_context(context)
 
         # Build action buttons configuration
         is_editor = context.get("is_editor", False)
@@ -472,3 +476,52 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         context["action_buttons"] = action_buttons
 
         return context
+
+    def _populate_friend_wishlist_context(self, context) -> None:
+        """Populate friend wishlist and preferences if linked to a confirmed friend."""
+        has_friend_account = (
+            self.object.account_id is not None
+            and self.object.account_id != self.request.user.id
+            and PermissionService.users_are_friends(self.request.user, self.object.account)
+        )
+        if not has_friend_account:
+            context["has_friend_wishlist_data"] = False
+            return
+
+        friend_user = self.object.account
+        friend_profile = friend_user.profile
+        context["friend_preferences_notes"] = friend_profile.preferences_notes
+        context["friend_avoid_notes"] = friend_profile.avoid_notes
+        context["friend_public_interests"] = list(friend_profile.public_interests.all())
+
+        raw_wishes = list(
+            wishlist.get_friend_visible_wishes(friend_user, self.request.user).select_related(
+                "claimed_by"
+            )
+        )
+        viewer_friend_ids = set(self.request.user.profile.friends.values_list("user_id", flat=True))
+
+        active_plans = Relation.objects.filter(
+            wish__in=raw_wishes,
+            person=self.object,
+            relationpermission__user=self.request.user,
+            relationpermission__permission_type=PermissionLevel.OWNER,
+        ).select_related("status")
+        planned_relations_by_wish = {
+            plan.wish_id: plan for plan in active_plans if not is_abandoned_status(plan.status)
+        }
+
+        for w in raw_wishes:
+            w.claimer_label = wishlist.format_claimer_label(w, self.request.user, viewer_friend_ids)
+            w.planned_relation = planned_relations_by_wish.get(w.pk)
+            w.is_planned_by_viewer = w.pk in planned_relations_by_wish
+            w.is_claimed_by_viewer = w.claimed_by_id == self.request.user.id
+            w.modified_after_claim = w.is_updated_after_claim()
+
+        context["friend_wishes"] = raw_wishes
+        context["has_friend_wishlist_data"] = bool(
+            friend_profile.preferences_notes
+            or friend_profile.avoid_notes
+            or context["friend_public_interests"]
+            or raw_wishes
+        )

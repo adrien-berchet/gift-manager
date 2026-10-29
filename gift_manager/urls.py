@@ -173,6 +173,16 @@ urlpatterns = [
         views.PersonRelationCreateView.as_view(),
         name="person_relation_create",
     ),
+    path(
+        "persons/<uuid:person_id>/wishes/<uuid:wish_id>/claim/",
+        views.WishClaimToggleView.as_view(),
+        name="wish_claim_toggle",
+    ),
+    path(
+        "persons/<uuid:person_id>/wishes/<uuid:wish_id>/plan/",
+        views.WishPlanView.as_view(),
+        name="wish_plan",
+    ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
     path(
         "person_groups/<uuid:pk>/gift-history/",
