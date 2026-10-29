@@ -226,16 +226,16 @@ Incorporate recipient self-profile preferences and unclaimed wishes into AI prom
 - Modify: `gift_manager/suggestions/catalogue.py`
 - Create: `gift_manager/tests/test_suggestions_wishlist.py`
 
-- [ ] **Step 1: Write failing suggestion tests in `gift_manager/tests/test_suggestions_wishlist.py`:**
+- [x] **Step 1: Write failing suggestion tests in `gift_manager/tests/test_suggestions_wishlist.py`:**
   - `test_ai_prompt_includes_self_profile_when_enabled`: when `ai_share_self_profile=True`, prompt includes public interests, scrubbed avoid notes, and scrubbed unclaimed wish titles.
   - `test_ai_prompt_excludes_self_profile_when_disabled`: when `ai_share_self_profile=False` (default), prompt does not include self-profile data.
   - `test_ai_prompt_excludes_claimed_and_fulfilled_wishes`: wishes claimed by any friend are not passed to prompt.
   - `test_catalogue_matches_public_interests`: catalogue recommendations match against `public_interests`.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_suggestions_wishlist.py`. Expected: FAIL.
-- [ ] **Step 3: Implement suggestions integration:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_suggestions_wishlist.py`. Expected: FAIL.
+- [x] **Step 3: Implement suggestions integration:**
   - In `prompt.py`: update `_build_recipient_info` and `build_ai_payload` to inspect `recipient.account.profile.ai_share_self_profile`.
   - In `catalogue.py`: incorporate `public_interests` into candidate tags.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_suggestions_wishlist.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_suggestions_wishlist.py`. Expected: PASS.
 
 ---
 

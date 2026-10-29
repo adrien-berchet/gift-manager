@@ -81,7 +81,10 @@ def _build_profile(
                 else:
                     related_contrib[tid] += item_points
 
-    for tid in history.interest_tag_ids:
+    all_interest_tag_ids = history.interest_tag_ids | getattr(
+        history, "public_interest_tag_ids", frozenset()
+    )
+    for tid in all_interest_tag_ids:
         profile[tid] += INTEREST_SIGNAL
         interest_contrib[tid] += INTEREST_SIGNAL
 
