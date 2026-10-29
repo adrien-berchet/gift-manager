@@ -6,6 +6,7 @@ import secrets
 import uuid
 from datetime import date as date_class
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -451,6 +452,27 @@ class Profile(models.Model):
             "Allow recipient notes (sizes, preferences, allergies) to be anonymised and shared "
             "with the AI suggestion provider to improve gift idea relevance."
         ),
+    )
+    preferences_notes = models.TextField(
+        gettext_lazy("Sizes and preferences"),
+        blank=True,
+        help_text=gettext_lazy("Clothing size, shoe size, favorite colors, preferred brands."),
+    )
+    avoid_notes = models.TextField(
+        gettext_lazy("Things to avoid"),
+        blank=True,
+        help_text=gettext_lazy("Allergies, formats to avoid (e.g. no physical books), dislikes."),
+    )
+    public_interests = models.ManyToManyField(
+        "GiftTag",
+        blank=True,
+        limit_choices_to={"is_public": True},
+        related_name="interested_profiles",
+        help_text=gettext_lazy("Global public tags describing topics and hobbies you enjoy."),
+    )
+    ai_share_self_profile = models.BooleanField(
+        default=False,
+        verbose_name=gettext_lazy("Allow friends' AI suggestions to consider your preferences"),
     )
 
     def __str__(self):
@@ -1344,6 +1366,118 @@ class EventPermission(BaseObjectPermission):
         return "event"
 
 
+class WishPriority(models.IntegerChoices):
+    LOW = 1, gettext_lazy("Nice to have")
+    MEDIUM = 2, gettext_lazy("Would love")
+    HIGH = 3, gettext_lazy("Must have")
+
+
+class WishQuerySet(models.QuerySet):
+    """QuerySet for Wish model with explicit visibility filters."""
+
+    def for_wisher(self, user):
+        """Return active and archived wishes belonging to the wisher."""
+        if not user or not user.is_authenticated:
+            return self.none()
+        return self.filter(wisher=user)
+
+    def visible_to_friend(self, friend_user, wisher_user):
+        """Return active wishes of a friend, visible only to confirmed friends."""
+        if not friend_user or not friend_user.is_authenticated:
+            return self.none()
+        if not Profile.objects.filter(user=friend_user, friends__user=wisher_user).exists():
+            return self.none()
+        return self.filter(wisher=wisher_user).filter(
+            Q(is_archived=False) | Q(claimed_by=friend_user)
+        )
+
+
+class Wish(models.Model):
+    """A personal wish authored by a user, visible to confirmed friends."""
+
+    wish_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    wisher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishes")
+    title = models.CharField(gettext_lazy("Title"), max_length=255)
+    url = models.URLField(
+        gettext_lazy("Link"),
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_http_url],
+    )
+    price_hint = models.DecimalField(
+        gettext_lazy("Price hint"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=gettext_lazy("Expected or typical price in your profile currency."),
+    )
+    notes = models.TextField(
+        gettext_lazy("Notes"),
+        blank=True,
+        help_text=gettext_lazy("Sizes, colors, specifications."),
+    )
+    priority = models.IntegerField(
+        gettext_lazy("Priority"),
+        choices=WishPriority.choices,
+        default=WishPriority.MEDIUM,
+    )
+    is_archived = models.BooleanField(
+        gettext_lazy("Archived"),
+        default=False,
+        help_text=gettext_lazy("Archived wishes are hidden from friends unless claimed."),
+    )
+    is_fulfilled = models.BooleanField(
+        gettext_lazy("Fulfilled"),
+        default=False,
+        help_text=gettext_lazy("Marked as fulfilled once given or received."),
+    )
+    claimed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claimed_wishes",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    wisher_updated_at = models.DateTimeField(
+        default=timezone.now,
+        help_text=gettext_lazy("Tracks when wisher last modified the wish."),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WishQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = gettext_lazy("Wish")
+        verbose_name_plural = gettext_lazy("Wishes")
+        ordering = ["-priority", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(claimed_by__isnull=True) | models.Q(claimed_at__isnull=False),
+                name="wish_claimed_by_requires_claimed_at",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price_hint__isnull=True) | models.Q(price_hint__gte=0),
+                name="wish_price_hint_non_negative",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.wisher.username})"
+
+    def is_updated_after_claim(self) -> bool:
+        """Return whether the wisher modified this wish after it was claimed."""
+        return bool(
+            self.claimed_by_id
+            and self.claimed_at
+            and self.wisher_updated_at
+            and self.wisher_updated_at > self.claimed_at
+        )
+
+
 class RelationStatus(models.Model):
     """Model for a relation status."""
 
@@ -1433,6 +1567,14 @@ class Relation(models.Model):
         related_name="claimed_relations",
     )
     claimed_at = models.DateTimeField(null=True, blank=True)
+    wish = models.ForeignKey(
+        "Wish",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="fulfilling_plans",
+        help_text=gettext_lazy("The wish this gift plan fulfills."),
+    )
 
     # Custom manager
     objects = RelationManager()
@@ -1504,10 +1646,20 @@ class Relation(models.Model):
         This is primarily used for form validation. For model-level validation,
         forms should call this explicitly.
         """
+        super().clean()
         if (self.person is None) == (self.group is None):
             raise ValidationError(
                 gettext_lazy("Choose exactly one recipient: a person or a group.")
             )
+        if self.wish_id is not None:
+            if self.group_id is not None:
+                raise ValidationError(
+                    gettext_lazy("A gift plan fulfilling a wish must target a person, not a group.")
+                )
+            if self.person_id is None or self.person.account_id != self.wish.wisher_id:
+                raise ValidationError(
+                    gettext_lazy("The recipient person must represent the wisher of this wish.")
+                )
 
     @classmethod
     def from_db(cls, db, field_names, values):

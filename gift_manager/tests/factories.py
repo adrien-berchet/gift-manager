@@ -21,6 +21,7 @@ Usage:
 
 from datetime import date
 from datetime import timedelta
+from decimal import Decimal
 
 import factory
 from django.contrib.auth.models import User
@@ -35,6 +36,8 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.models import Wish
+from gift_manager.models import WishPriority
 
 
 class UserFactory(DjangoModelFactory):
@@ -246,6 +249,7 @@ class RelationFactory(DjangoModelFactory):
     status = factory.SubFactory(RelationStatusFactory, status="Idea")
     comment = factory.Faker("sentence")
     due_date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
+    wish = None
 
     @factory.post_generation
     def shared_with(self, create, extracted, **kwargs):
@@ -280,3 +284,19 @@ class InvitationFactory(DjangoModelFactory):
         lambda obj: encode_email(f"recipient{obj.sender.username}@example.com")
     )
     accepted = False
+
+
+class WishFactory(DjangoModelFactory):
+    """Factory for creating Wish instances."""
+
+    class Meta:
+        model = Wish
+
+    wisher = factory.SubFactory(UserFactory)
+    title = factory.Sequence(lambda n: f"Wish {n}")
+    url = factory.Faker("url")
+    price_hint = Decimal("25.00")
+    notes = factory.Faker("sentence")
+    priority = WishPriority.MEDIUM
+    is_archived = False
+    is_fulfilled = False

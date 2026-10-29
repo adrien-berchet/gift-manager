@@ -75,7 +75,7 @@ Create the `Wish` model, add profile preference fields, link `Relation.wish`, an
 - `Relation.wish`: FK `Wish` nullable (`SET_NULL`, `related_name="fulfilling_plans"`).
 - `Relation.clean()` validates `person.account == wish.wisher` and `group is None`.
 
-- [ ] **Step 1: Write failing model unit tests in `gift_manager/tests/test_wishlist_models.py`:**
+- [x] **Step 1: Write failing model unit tests in `gift_manager/tests/test_wishlist_models.py`:**
   - `test_wish_creation_and_defaults`: verify fields, default priority MEDIUM, `is_archived=False`, `is_fulfilled=False`.
   - `test_wish_check_constraint_claimed_by_requires_claimed_at`: assert DB IntegrityError when `claimed_by` is set without `claimed_at`.
   - `test_wish_check_constraint_non_negative_price`: assert DB IntegrityError when `price_hint < 0`.
@@ -84,17 +84,17 @@ Create the `Wish` model, add profile preference fields, link `Relation.wish`, an
   - `test_relation_wish_validation_rejects_group_recipient`: verify ValidationError when `relation.group` is set.
   - `test_relation_wish_validation_rejects_unlinked_or_mismatched_person`: verify ValidationError when `relation.person.account != wish.wisher`.
   - `test_relation_wish_validation_accepts_matching_linked_person`: valid when `relation.person.account == wish.wisher`.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_wishlist_models.py`. Expected: FAIL (models not found).
-- [ ] **Step 3: Implement models in `gift_manager/models.py`:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_wishlist_models.py`. Expected: FAIL (models not found).
+- [x] **Step 3: Implement models in `gift_manager/models.py`:**
   - Define `WishPriority`, `WishQuerySet`, and `Wish`.
   - Add fields to `Profile`.
   - Add `wish` foreign key to `Relation` and validation in `Relation.clean()`.
-- [ ] **Step 4: Generate migration `0042_own_profile_and_wishlist.py`:**
+- [x] **Step 4: Generate migration `0042_own_profile_and_wishlist.py`:**
   - Run `python manage.py makemigrations gift_manager`.
   - Verify generated migration operations and constraints.
-- [ ] **Step 5: Update `gift_manager/tests/factories.py`:**
+- [x] **Step 5: Update `gift_manager/tests/factories.py`:**
   - Add `WishFactory`.
-- [ ] **Step 6: Run tests:** `tox run -e py311 -- gift_manager/tests/test_wishlist_models.py`. Expected: PASS.
+- [x] **Step 6: Run tests:** `tox run -e py311 -- gift_manager/tests/test_wishlist_models.py`. Expected: PASS.
 
 ---
 
