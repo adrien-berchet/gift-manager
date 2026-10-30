@@ -754,3 +754,69 @@ class TestGroupGiftOperations:
         # Idempotent re-claim doesn't create duplicate
         plan_coordination.claim(relation, buyer)
         assert relation.contributions.filter(user=buyer).count() == 1
+
+    def test_buyer_custom_share_can_be_edited(self):
+        owner = UserFactory()
+        buyer = UserFactory()
+        relation = RelationFactory(
+            is_group_gift=True,
+            split_mode=SplitMode.CUSTOM,
+            claimed_by=buyer,
+            claimed_at=timezone.now(),
+        )
+        _share(relation, owner, PermissionLevel.OWNER)
+        _share(relation, buyer, PermissionLevel.VIEWER)
+
+        buyer_contrib = add_contributor(relation, owner, user=buyer)
+        summary = get_group_gift_summary(relation, owner)
+        buyer_row = next(r for r in summary.rows if r.is_buyer)
+        assert buyer_row.can_edit_amount is True
+
+        update_contribution_amount(buyer_contrib, owner, Decimal("25.00"))
+        summary_after = get_group_gift_summary(relation, owner)
+        buyer_row_after = next(r for r in summary_after.rows if r.is_buyer)
+        assert buyer_row_after.share_amount == Decimal("25.00")
+
+    def test_has_unsettled_funds_on_abandoned_plan(self):
+        from gift_manager.models import RelationStatus
+
+        abandoned_status, _ = RelationStatus.objects.get_or_create(status="Abandoned")
+        owner = UserFactory()
+        collab = UserFactory()
+        relation = RelationFactory(is_group_gift=True, price=Decimal("100.00"))
+        _share(relation, owner, PermissionLevel.OWNER)
+        _share(relation, collab, PermissionLevel.VIEWER)
+
+        c = add_contributor(relation, owner, user=collab)
+        toggle_contribution_paid(c, owner)
+
+        # Active plan -> has_unsettled_funds is False
+        summary = get_group_gift_summary(relation, owner)
+        assert summary.has_unsettled_funds is False
+
+        # Abandoned plan -> has_unsettled_funds is True
+        relation.status = abandoned_status
+        relation.save()
+        summary_abandoned = get_group_gift_summary(relation, owner)
+        assert summary_abandoned.has_unsettled_funds is True
+
+    def test_recipient_check_query_count_bounded(self):
+        owner = UserFactory()
+        group = PersonGroupFactory()
+        PermissionService.create_or_update_permission(
+            owner, group, permission_level=PermissionLevel.OWNER, object_attr="group"
+        )
+        relation = RelationFactory(person=None, group=group, is_group_gift=True)
+        _share(relation, owner, PermissionLevel.OWNER)
+
+        users = [UserFactory() for _ in range(5)]
+        for u in users:
+            _share(relation, u, PermissionLevel.VIEWER)
+            add_contributor(relation, owner, user=u)
+
+        with CaptureQueriesContext(connection) as queries:
+            get_group_gift_summary(relation, owner)
+
+        # Single recursive query for group members instead of query per contributor
+        member_queries = [q for q in queries.captured_queries if "persongroup" in q["sql"].lower()]
+        assert len(member_queries) <= 3

@@ -11,11 +11,16 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext
 
+from gift_manager import wishlist
 from gift_manager.models import Event
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
+from gift_manager.models import RelationPermission
 from gift_manager.models import RelationStatus
+from gift_manager.models import Wish
 from gift_manager.sharing_service import RelationExposureDenied
 from gift_manager.sharing_service import SharingService
+from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
@@ -310,12 +315,34 @@ def restore_relation_from_undo(relation, payload: dict) -> bool:
         updates = {
             "due_date": date.fromisoformat(previous["due_date"]) if previous["due_date"] else None
         }
-    else:
+        Relation.objects.filter(pk=relation.pk).update(**updates)
+        return True
+
+    with transaction.atomic():
+        if relation.wish_id is not None:
+            wish = Wish.objects.select_for_update().filter(pk=relation.wish_id).first()
+            if (
+                wish is not None
+                and is_abandoned_status(relation.status)
+                and not is_abandoned_status(previous["status"])
+            ):
+                owner_ids = set(
+                    RelationPermission.objects.filter(
+                        relation_id=relation.pk, permission_type=PermissionLevel.OWNER
+                    ).values_list("user_id", flat=True)
+                )
+                if wish.claimed_by_id is not None and wish.claimed_by_id not in owner_ids:
+                    return False
+
         changed_at = previous["status_changed_at"]
         updates = {
             "status_id": previous["status"],
             "status_changed_at": datetime.fromisoformat(changed_at) if changed_at else None,
         }
-    # A queryset update keeps status_changed_at: save() would stamp it with now().
-    Relation.objects.filter(pk=relation.pk).update(**updates)
+        # A queryset update keeps status_changed_at: save() would stamp it with now().
+        Relation.objects.filter(pk=relation.pk).update(**updates)
+
+        if relation.wish_id is not None:
+            wishlist.sync_wish_on_plan_change(relation)
+
     return True

@@ -606,6 +606,68 @@ class TestRelationQuickActionUndo:
     def test_undo_requires_post(self):
         assert self.client.get(self.undo_url).status_code == 405
 
+    def test_undo_resyncs_wish_fulfilled_status(self):
+        from gift_manager.tests.factories import UserFactory
+        from gift_manager.tests.factories import WishFactory
+
+        wisher = UserFactory()
+        self.user.profile.friends.add(wisher.profile)
+        wisher.profile.friends.add(self.user.profile)
+        self.relation.person.account = wisher
+        self.relation.person.save()
+
+        wish = WishFactory(wisher=wisher, claimed_by=self.user, claimed_at=timezone.now())
+        self.relation.wish = wish
+        self.relation.save()
+
+        undo = self.do_action(action="given")
+        wish.refresh_from_db()
+        assert wish.is_fulfilled is True
+
+        response = self.undo(undo)
+        assert response.status_code == 200
+        wish.refresh_from_db()
+        assert wish.is_fulfilled is False
+
+    def test_undo_refused_when_wish_claimed_by_other(self):
+        from gift_manager import wishlist
+        from gift_manager.tests.factories import UserFactory
+        from gift_manager.tests.factories import WishFactory
+
+        wisher = UserFactory()
+        other = UserFactory()
+        self.user.profile.friends.add(wisher.profile)
+        wisher.profile.friends.add(self.user.profile)
+        other.profile.friends.add(wisher.profile)
+        wisher.profile.friends.add(other.profile)
+        self.relation.person.account = wisher
+        self.relation.person.save()
+
+        idea_status, _ = RelationStatus.objects.get_or_create(status="Idea")
+        self.relation.status = idea_status
+        self.relation.due_date = None
+        create_or_update_permission(
+            self.user, self.relation, permission_level=PermissionLevel.OWNER
+        )
+        wish = WishFactory(wisher=wisher, claimed_by=self.user, claimed_at=timezone.now())
+        self.relation.wish = wish
+        self.relation.save()
+
+        undo = self.do_action(action="abandoned")
+        wish.refresh_from_db()
+        assert wish.claimed_by is None
+
+        # Other friend claims the wish in the meantime
+        wishlist.claim_wish(wish, other)
+        wish.refresh_from_db()
+        assert wish.claimed_by == other
+
+        # Undoing abandoned fails because wish is claimed by someone else
+        response = self.undo(undo)
+        assert response.status_code == 409
+        self.relation.refresh_from_db()
+        assert relation_status_slug(self.relation.status) == "abandoned"
+
 
 @pytest.mark.django_db
 class TestRelationUpdateView:

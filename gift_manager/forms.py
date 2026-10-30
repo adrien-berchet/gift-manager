@@ -312,7 +312,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
                 "Your email address is managed from your profile settings."
             )
             if not self.initial.get("email_address"):
-                self.initial["email_address"] = user.email or ""
+                self.initial["email_address"] = decode_email(user.email) if user.email else ""
 
     def clean_notes(self):
         notes = self.cleaned_data.get("notes")
@@ -1446,11 +1446,23 @@ def get_eligible_collaborators(relation: Relation) -> QuerySet[User]:
     )
     perm_user_ids -= existing_contributor_user_ids
 
-    eligible_user_ids = [
-        user.pk
-        for user in User.objects.filter(pk__in=perm_user_ids).order_by("username")
-        if not is_recipient_of_plan(relation, user)
-    ]
+    if relation.person_id:
+        recip_id = relation.person.account_id
+        eligible_user_ids = [uid for uid in perm_user_ids if uid != recip_id]
+    elif relation.group_id:
+        member_account_ids = set(
+            relation.group.get_all_members(include_nested=True)
+            .filter(account__isnull=False)
+            .values_list("account_id", flat=True)
+        )
+        perm_map = PermissionService.get_permission_map(relation)
+        eligible_user_ids = [
+            uid
+            for uid in perm_user_ids
+            if uid not in member_account_ids or perm_map.get(uid, 0) >= PermissionLevel.OWNER
+        ]
+    else:
+        eligible_user_ids = list(perm_user_ids)
     return User.objects.filter(pk__in=eligible_user_ids).order_by("username")
 
 

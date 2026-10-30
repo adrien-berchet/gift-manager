@@ -497,16 +497,30 @@ def test_delete_wish_archives_a_claimed_wish(wish, wisher, bob):
 
     wish.refresh_from_db()
     assert wish.is_archived is True
+    assert wish.is_deleted_by_wisher is True
     assert wish.claimed_by == bob
 
 
-def test_delete_wish_archives_a_wish_with_plans(wish, wisher, bob, wisher_person):
+def test_delete_wish_archives_a_wish_with_active_plans(wish, wisher, bob, wisher_person):
     relation = wishlist.plan_wish(wish, bob, wisher_person)
-    _set_status(relation, "Abandoned")
+    _set_status(relation, "Planned")
 
     wishlist.delete_wish(wish, wisher)
 
-    assert Wish.objects.filter(pk=wish.pk, is_archived=True).exists()
+    assert Wish.objects.filter(pk=wish.pk, is_archived=True, is_deleted_by_wisher=True).exists()
+
+
+def test_delete_wish_hard_deletes_when_only_abandoned_plans(wish, wisher, bob, wisher_person):
+    relation = wishlist.plan_wish(wish, bob, wisher_person)
+    _set_status(relation, "Abandoned")
+    # Release claim so wish is not claimed
+    wish.claimed_by = None
+    wish.claimed_at = None
+    wish.save(update_fields=["claimed_by", "claimed_at"])
+
+    wishlist.delete_wish(wish, wisher)
+
+    assert not Wish.objects.filter(pk=wish.pk).exists()
 
 
 def test_delete_wish_rejects_other_users(wish, bob):
@@ -534,3 +548,84 @@ def test_remove_friend_view_releases_wish_claims_and_unlinks_plans(
     plan.refresh_from_db()
     assert wish.claimed_by is None
     assert plan.wish is None
+
+
+def test_plan_wish_rejects_archived_or_fulfilled_wish(wish, bob, wisher_person):
+    wish.is_archived = True
+    wish.save(update_fields=["is_archived"])
+    with pytest.raises(ValidationError, match="Cannot claim an archived or fulfilled wish"):
+        wishlist.plan_wish(wish, bob, wisher_person)
+
+    wish.is_archived = False
+    wish.is_fulfilled = True
+    wish.save(update_fields=["is_archived", "is_fulfilled"])
+    with pytest.raises(ValidationError, match="Cannot claim an archived or fulfilled wish"):
+        wishlist.plan_wish(wish, bob, wisher_person)
+
+
+def test_format_claimer_label_fulfilled_unclaimed(wish, wisher, bob, user_factory):
+    charlie = user_factory(username="charlie")
+    wisher.profile.friends.add(charlie.profile)
+    charlie.profile.friends.add(wisher.profile)
+
+    wish.is_fulfilled = True
+    wish.claimed_by = None
+    wish.save(update_fields=["is_fulfilled", "claimed_by"])
+
+    # Wisher sees empty string
+    assert wishlist.format_claimer_label(wish, wisher) == ""
+    # Friend sees "Already given"
+    assert wishlist.format_claimer_label(wish, bob) == "Already given"
+
+    # If claimed, claimer sees "Claimed by you"
+    wish.claimed_by = bob
+    wish.claimed_at = timezone.now()
+    wish.save(update_fields=["claimed_by", "claimed_at"])
+    assert wishlist.format_claimer_label(wish, bob) == "Claimed by you"
+    # Other friend sees claimed label
+    assert wishlist.format_claimer_label(wish, charlie) == "Claimed by a friend"
+
+
+def test_detach_plans_preserves_fulfilled_and_purges_orphaned():
+    wisher = UserFactory(username="wisher_detach")
+    bob = UserFactory(username="bob_detach")
+    wisher.profile.friends.add(bob.profile)
+    bob.profile.friends.add(wisher.profile)
+
+    wisher_person = PersonFactory(account=wisher)
+    PermissionService.create_or_update_permission(
+        bob, wisher_person, permission_level=PermissionLevel.EDITOR
+    )
+
+    wish = WishFactory(wisher=wisher)
+    plan = wishlist.plan_wish(wish, bob, wisher_person)
+    _set_status(plan, "Given")
+    wish.refresh_from_db()
+    assert wish.is_fulfilled is True
+
+    # Detach plans: wish stays fulfilled, relation.wish becomes None
+    wishlist.detach_plans([plan])
+    plan.refresh_from_db()
+    wish.refresh_from_db()
+    assert plan.wish is None
+    assert wish.is_fulfilled is True
+
+    # If wish was soft-deleted, when orphaned it gets purged
+    wish.is_deleted_by_wisher = True
+    wish.save(update_fields=["is_deleted_by_wisher"])
+    wishlist.purge_if_orphaned(wish)
+    assert not Wish.objects.filter(pk=wish.pk).exists()
+
+
+def test_sync_wish_purge_clears_in_memory_relation_wish_id(wish, bob, wisher_person, wisher):
+    plan = wishlist.plan_wish(wish, bob, wisher_person)
+    wishlist.delete_wish(wish, wisher)
+    wish.refresh_from_db()
+    assert wish.is_deleted_by_wisher is True
+
+    # Abandon plan: sync will release claim and purge the wish
+    _set_status(plan, "Abandoned")
+    assert plan.wish_id is None
+    # Subsequent save on plan does not trigger FK error
+    plan.notes = "Updated after purge"
+    plan.save()

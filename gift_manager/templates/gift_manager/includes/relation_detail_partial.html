@@ -6,6 +6,13 @@
 
 {% block detail_fields %}
 <div class="detail-fields">
+    {% if object.wish and object.wish.claimed_by_id == request.user.pk %}
+        {% if object.wish.is_archived or object.wish.is_deleted_by_wisher %}
+        <div class="alert alert-warning py-2 mb-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>{% trans "The wisher removed or archived this wish" %}
+        </div>
+        {% endif %}
+    {% endif %}
     <!-- Basic Information -->
     <div class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">
@@ -220,7 +227,7 @@
 
     <!-- Shared With -->
     {% if shared_users %}
-    <div class="detail-section mb-4">
+    <div id="relation-sharing" class="detail-section mb-4">
         <h6 class="detail-section-title text-muted mb-3">
             <i class="fas fa-share-alt me-2"></i>{% trans "Shared With" %}
             <span class="badge bg-secondary ms-2">{{ shared_users|length }}</span>

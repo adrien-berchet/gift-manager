@@ -14,6 +14,7 @@ from django.db.models import Q
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
+from gift_manager import wishlist
 from gift_manager.invitations import accounts_owning_email
 from gift_manager.invitations import emails_owned_by
 from gift_manager.invitations import normalize_email
@@ -129,6 +130,11 @@ def link(person: Person, account: User, actor: User) -> Person:
                 code="duplicate",
             )
 
+        if person.account_id is not None and person.account_id != account.id:
+            plans = list(Relation.objects.filter(person=person, wish__isnull=False))
+            if plans:
+                wishlist.detach_plans(plans)
+
         person.account = account
         person.link_suggestion_dismissed_account = None
         person.save(update_fields=["account", "link_suggestion_dismissed_account"])
@@ -160,6 +166,10 @@ def unlink(person: Person, actor: User) -> None:
 
         if person.account_id is None:
             return
+
+        plans = list(Relation.objects.filter(person=person, wish__isnull=False))
+        if plans:
+            wishlist.detach_plans(plans)
 
         person.account = None
         person.save(update_fields=["account"])
@@ -246,6 +256,9 @@ def remove_links_after_unfriending(user: User, former_friend: User) -> int:
     pks = list(affected.values_list("pk", flat=True).distinct())
     if not pks:
         return 0
+    plans = list(Relation.objects.filter(person_id__in=pks, wish__isnull=False))
+    if plans:
+        wishlist.detach_plans(plans)
     return Person.objects.filter(pk__in=pks).update(account=None)
 
 

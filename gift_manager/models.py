@@ -1380,7 +1380,7 @@ class WishQuerySet(models.QuerySet):
         """Return active and archived wishes belonging to the wisher."""
         if not user or not user.is_authenticated:
             return self.none()
-        return self.filter(wisher=user)
+        return self.filter(wisher=user, is_deleted_by_wisher=False)
 
     def visible_to_friend(self, friend_user, wisher_user):
         """Return active wishes of a friend, visible only to confirmed friends."""
@@ -1429,6 +1429,13 @@ class Wish(models.Model):
         gettext_lazy("Archived"),
         default=False,
         help_text=gettext_lazy("Archived wishes are hidden from friends unless claimed."),
+    )
+    is_deleted_by_wisher = models.BooleanField(
+        gettext_lazy("Deleted by wisher"),
+        default=False,
+        help_text=gettext_lazy(
+            "Soft-deleted by the wisher while fulfilling plans or claims still depend on it."
+        ),
     )
     is_fulfilled = models.BooleanField(
         gettext_lazy("Fulfilled"),

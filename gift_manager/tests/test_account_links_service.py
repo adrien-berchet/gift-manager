@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from gift_manager import account_links
+from gift_manager import wishlist
 from gift_manager.account_links import LinkRefused
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
@@ -16,6 +17,7 @@ from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationFactory
 from gift_manager.tests.factories import UserFactory
+from gift_manager.tests.factories import WishFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -448,6 +450,26 @@ def test_unlink_needs_editor():
     account_links.unlink(person, carol)
     person.refresh_from_db()
     assert person.account is None
+
+
+def test_unlink_detaches_plans_allowing_clean_and_save():
+    """Unlinking a person detaches fulfilling plans so subsequent clean/save does not fail."""
+    bob = UserFactory()
+    alice = UserFactory()
+    bob.profile.friends.add(alice.profile)
+
+    person = PersonFactory(owner=bob, account=alice)
+    wish = WishFactory(wisher=alice)
+    plan = wishlist.plan_wish(wish, bob, person)
+
+    # Unlink person
+    account_links.unlink(person, bob)
+    plan.refresh_from_db()
+    assert plan.wish is None
+
+    # Subsequent clean() and save() succeed without ValidationError
+    plan.clean()
+    plan.save()
 
 
 def test_refresh_from_db_on_stale_instance():

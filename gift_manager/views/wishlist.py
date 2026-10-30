@@ -266,6 +266,38 @@ def annotate_wish_for_giver(wish, viewer, person, viewer_friend_ids=None):
 class WishClaimToggleView(LoginRequiredMixin, View):
     """Toggle reservation/claim on a friend's wish."""
 
+    @staticmethod
+    def _execute_toggle(wish, user) -> tuple[Wish | None, str | None, str | None]:
+        try:
+            if wish.claimed_by_id == user.id:
+                return (
+                    wishlist.release_wish_claim(wish, user),
+                    gettext("Wish claim released."),
+                    None,
+                )
+            return wishlist.claim_wish(wish, user), gettext("Wish claimed."), None
+        except ValidationError as exc:
+            msg = exc.message if hasattr(exc, "message") else str(exc)
+            return None, None, msg
+
+    @staticmethod
+    def _render_deleted_response(
+        request, person, is_htmx, error_message, success_message
+    ) -> HttpResponse:
+        if is_htmx:
+            response = HttpResponse("")
+            msg = error_message or success_message
+            msg_type = "error" if error_message else "success"
+            response["HX-Trigger"] = json.dumps(
+                {"showNotification": {"message": str(msg), "type": msg_type}}
+            )
+            return response
+        if error_message:
+            messages.error(request, error_message)
+        elif success_message:
+            messages.success(request, success_message)
+        return redirect("gift_manager:person_detail", pk=person.person_id)
+
     def post(self, request, person_id, wish_id, *args, **kwargs):
         person = get_object_or_404(Person, person_id=person_id)
         if (
@@ -292,20 +324,18 @@ class WishClaimToggleView(LoginRequiredMixin, View):
             >= PermissionLevel.EDITOR
         )
 
-        error_message = None
-        success_message = None
-        try:
-            if wish.claimed_by_id == request.user.id:
-                wish = wishlist.release_wish_claim(wish, request.user)
-                success_message = gettext("Wish claim released.")
-            else:
-                wish = wishlist.claim_wish(wish, request.user)
-                success_message = gettext("Wish claimed.")
-        except ValidationError as exc:
-            error_message = exc.message if hasattr(exc, "message") else str(exc)
+        toggled_wish, success_message, error_message = self._execute_toggle(wish, request.user)
+        if toggled_wish is not None:
+            wish = toggled_wish
+        else:
             wish = get_object_or_404(
                 Wish.objects.visible_to_friend(request.user, person.account),
                 wish_id=wish_id,
+            )
+
+        if wish.is_deleted_by_wisher and wish.claimed_by_id is None:
+            return self._render_deleted_response(
+                request, person, is_htmx, error_message, success_message
             )
 
         annotate_wish_for_giver(wish, request.user, person)
@@ -317,14 +347,11 @@ class WishClaimToggleView(LoginRequiredMixin, View):
                 request=request,
             )
             response = HttpResponse(content)
-            if error_message:
-                response["HX-Trigger"] = json.dumps(
-                    {"showNotification": {"message": str(error_message), "type": "error"}}
-                )
-            else:
-                response["HX-Trigger"] = json.dumps(
-                    {"showNotification": {"message": str(success_message), "type": "success"}}
-                )
+            trigger_msg = error_message or success_message
+            trigger_type = "error" if error_message else "success"
+            response["HX-Trigger"] = json.dumps(
+                {"showNotification": {"message": str(trigger_msg), "type": trigger_type}}
+            )
             return response
 
         if error_message:
@@ -357,12 +384,7 @@ class WishPlanView(LoginRequiredMixin, View):
             wish_id=wish_id,
         )
 
-        already_existed = Relation.objects.filter(
-            wish=wish,
-            person=person,
-            relationpermission__user=request.user,
-            relationpermission__permission_type=PermissionLevel.OWNER,
-        ).exists()
+        already_existed = wishlist.get_active_plan_for_wish(wish, request.user, person) is not None
 
         try:
             wishlist.plan_wish(wish, request.user, person)

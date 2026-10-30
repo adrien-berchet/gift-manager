@@ -1,5 +1,6 @@
 """Group gifts and collaborative contribution tally service layer."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_HALF_UP
@@ -20,6 +21,7 @@ from gift_manager.models import SplitMode
 from gift_manager.plan_coordination import is_recipient_of_plan
 from gift_manager.plan_coordination import require_level
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_abandoned_status
 
 MAX_CONTRIBUTION_AMOUNT = Decimal("100000000.00")  # max 8 integer digits (10^8)
 
@@ -105,6 +107,7 @@ class ContributorRow:
     paid_at: datetime | None
     can_toggle_paid: bool
     can_remove: bool
+    can_edit_amount: bool = False
 
 
 @dataclass(frozen=True)
@@ -124,6 +127,7 @@ class GroupGiftSummary:
     is_fully_paid: bool
     is_overfunded: bool
     can_manage: bool
+    has_unsettled_funds: bool = False
 
     @property
     def percent_collected(self) -> int:
@@ -132,6 +136,26 @@ class GroupGiftSummary:
             return 0
         ratio = (self.total_collected / self.total_price) * 100
         return min(100, max(0, int(ratio)))
+
+
+def _make_recipient_checker(relation: Relation) -> Callable[[User], bool]:
+    """Build a callable to check whether a user is the recipient of the plan."""
+    if relation.person_id:
+        recip_account_id = relation.person.account_id
+        return lambda user: recip_account_id is not None and user.pk == recip_account_id
+
+    if relation.group_id:
+        member_account_ids = set(
+            relation.group.get_all_members(include_nested=True)
+            .filter(account__isnull=False)
+            .values_list("account_id", flat=True)
+        )
+        return lambda user: (
+            user.pk in member_account_ids
+            and PermissionService.get_effective_permission(relation, user) < PermissionLevel.OWNER
+        )
+
+    return lambda _user: False
 
 
 def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary:
@@ -162,10 +186,12 @@ def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary
         for c in contributions:
             share_map[c.pk] = c.amount
 
+    check_recipient = _make_recipient_checker(relation)
+
     rows: list[ContributorRow] = []
     for c in contributions:
         # Dynamic recipient protection: sanitize contributor row if linked person matches
-        is_recip = c.user_id is not None and is_recipient_of_plan(relation, c.user)
+        is_recip = c.user_id is not None and check_recipient(c.user)
         if is_recip:
             display_name = c.name
             is_buyer_row = False
@@ -178,6 +204,11 @@ def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary
             can_manage or (buyer is not None and viewer.pk == buyer.pk)
         )
         can_remove = can_manage and (not is_buyer_row) and (not c.is_paid)
+        can_edit_amount = (
+            relation.split_mode == SplitMode.CUSTOM
+            and can_manage
+            and (is_buyer_row or not c.is_paid)
+        )
         share_amount = share_map.get(c.pk, Decimal("0.00"))
 
         rows.append(
@@ -190,6 +221,7 @@ def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary
                 paid_at=c.paid_at,
                 can_toggle_paid=can_toggle_paid,
                 can_remove=can_remove,
+                can_edit_amount=can_edit_amount,
             )
         )
 
@@ -204,6 +236,9 @@ def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary
     )
     is_fully_paid = total_collected >= total_price > Decimal("0.00")
     is_overfunded = total_collected > total_price
+    has_unsettled_funds = is_abandoned_status(relation.status) and any(
+        c.is_paid for c in contributions if not _is_buyer(relation, c)
+    )
 
     return GroupGiftSummary(
         is_group_gift=relation.is_group_gift,
@@ -221,6 +256,7 @@ def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary
         is_fully_paid=is_fully_paid,
         is_overfunded=is_overfunded,
         can_manage=can_manage,
+        has_unsettled_funds=has_unsettled_funds,
     )
 
 
@@ -436,7 +472,7 @@ def update_contribution_amount(
             raise ValidationError(
                 gettext("Share amounts can only be updated in custom split mode.")
             )
-        if contrib.is_paid:
+        if contrib.is_paid and not _is_buyer(rel, contrib):
             raise ValidationError(
                 gettext("Cannot update amount for a contribution that is already marked as paid.")
             )

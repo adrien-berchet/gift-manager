@@ -543,14 +543,17 @@ class TestPersonGridDataSerialization:
         assert len(friend_row) == 11
         assert friend_row[10] == ""
 
-    def test_recipient_view_people_includes_link_label(self, authenticated_client, user):
-        PersonFactory(first_name="Self", family_name="User", account=user, shared_with=[user])
+    def test_recipient_view_people_includes_link_label(
+        self, authenticated_client, user, user_factory
+    ):
+        ana = user_factory(username="ana")
+        PersonFactory(first_name="Ana", family_name="Smith", account=ana, shared_with=[user])
         response = authenticated_client.get(f"{reverse('gift_manager:recipients')}?view=people")
         assert response.status_code == 200
         grid_data = _extract_grid_data_json(response.content.decode())
-        self_row = next(r for r in grid_data if r[1] == "Self")
-        assert len(self_row) == 11
-        assert self_row[10] == "This is you"
+        friend_row = next(r for r in grid_data if r[1] == "Ana")
+        assert len(friend_row) == 11
+        assert friend_row[10] == "Linked to ana"
 
 
 @pytest.mark.django_db

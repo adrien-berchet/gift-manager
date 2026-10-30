@@ -8,6 +8,7 @@ from typing import Any
 
 from django.contrib.auth.models import User
 
+from gift_manager.email_encoding import decode_email
 from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
@@ -17,7 +18,7 @@ from gift_manager.suggestions.history import PreferenceProfile
 from gift_manager.suggestions.history import RecipientHistory
 from gift_manager.wishlist import get_friend_visible_wishes
 
-PROMPT_VERSION = 3
+PROMPT_VERSION = 4
 
 SYSTEM_PROMPT = (
     "You are an expert gift planner. Suggest new, concrete, appealing gift ideas for the recipient "
@@ -261,7 +262,7 @@ def _collect_scrub_terms(history: RecipientHistory, viewer: User) -> list[str]:
                     getattr(acc, "username", ""),
                     getattr(acc, "first_name", ""),
                     getattr(acc, "last_name", ""),
-                    getattr(acc, "email", ""),
+                    decode_email(getattr(acc, "email", "") or ""),
                 ]
             )
             if full_name:

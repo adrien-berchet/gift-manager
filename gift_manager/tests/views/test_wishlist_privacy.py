@@ -238,19 +238,19 @@ def test_archiving_claimed_wish_preserves_claim_for_giver(wish, bob, carol, alic
 
 
 def test_delete_claimed_wish_preserves_claim_and_plan(wish, bob, wisher_person, alice):
-    """Deleting a claimed/planned wish archives it in DB so the giver's plan is not broken.
+    """Deleting a claimed/planned wish soft-deletes it in DB so the giver's plan is not broken.
 
-    Note on wisher visibility: The wish is removed from Alice's active wishes
-    (get_wisher_wishes(include_archived=False)). If Alice checks her archived list,
-    the wish will appear there because it was preserved rather than hard deleted.
+    Note on wisher visibility: The wish is removed from Alice's active and archived wishes,
+    so she cannot infer whether the wish was claimed or not.
     """
     plan = wishlist.plan_wish(wish, bob, wisher_person)
 
     # Alice deletes her claimed wish
     wishlist.delete_wish(wish, alice)
 
-    # In DB, wish row is preserved with is_archived = True
+    # In DB, wish row is preserved with is_deleted_by_wisher and is_archived = True
     wish.refresh_from_db()
+    assert wish.is_deleted_by_wisher is True
     assert wish.is_archived is True
     assert wish.claimed_by == bob
 
@@ -259,9 +259,13 @@ def test_delete_claimed_wish_preserves_claim_and_plan(wish, bob, wisher_person, 
     assert plan.wish == wish
     assert Relation.objects.filter(pk=plan.pk).exists()
 
-    # Active wisher list excludes it
-    active_wishes = list(wishlist.get_wisher_wishes(alice, include_archived=False))
-    assert wish not in active_wishes
+    # Both active and archived wisher lists exclude it completely (strict privacy)
+    assert wish not in list(wishlist.get_wisher_wishes(alice, include_archived=False))
+    assert wish not in list(wishlist.get_wisher_wishes(alice, include_archived=True))
+
+    # Once the plan is removed, the orphaned soft-deleted wish is purged permanently
+    plan.delete()
+    assert not Wish.objects.filter(pk=wish.pk).exists()
 
     # Contrast with deleting an unclaimed wish, which is completely deleted
     unclaimed_wish = WishFactory(wisher=alice)

@@ -5625,26 +5625,45 @@ msgstr "Non payé"
 msgid "or"
 msgstr "ou"
 
-msgid "The recorded payments ({{ extra }} {{ currency }}) exceed the gift price ({{ price }} {{ currency }})."
-msgstr "Les paiements enregistrés ({{ extra }} {{ currency }}) dépassent le prix du cadeau ({{ price }} {{ currency }})."
+msgid "The recorded payments (%(extra)s %(currency)s) exceed the gift price (%(price)s %(currency)s)."
+msgstr "Les paiements enregistrés (%(extra)s %(currency)s) dépassent le prix du cadeau (%(price)s %(currency)s)."
 
-msgid "Owed to {{ buyer }}: <strong>{{ owed }} {{ curr }}</strong>"
-msgstr "Dû à {{ buyer }} : <strong>{{ owed }} {{ curr }}</strong>"
+msgid "Owed to %(buyer)s: <strong>%(owed)s %(curr)s</strong>"
+msgstr "Dû à %(buyer)s : <strong>%(owed)s %(curr)s</strong>"
 
-msgid "{{ collected }} {{ curr }} of {{ total }} {{ curr }}"
-msgstr "{{ collected }} {{ curr }} sur {{ total }} {{ curr }}"
+msgid "%(collected)s %(curr)s of %(total)s %(curr)s"
+msgstr "%(collected)s %(curr)s sur %(total)s %(curr)s"
 
-msgid "Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned."
-msgstr "Solde non alloué : {{ unallocated }} {{ curr }} restant à attribuer."
+msgid "Unallocated balance: %(unallocated)s %(curr)s remaining to be assigned."
+msgstr "Solde non alloué : %(unallocated)s %(curr)s restant à attribuer."
 
-msgid "Share for {{ name }}"
-msgstr "Part de {{ name }}"
+msgid "Share for %(name)s"
+msgstr "Part de %(name)s"
 
-msgid "Mark {{ name }} as unpaid"
-msgstr "Marquer {{ name }} comme non payé"
+msgid "Mark %(name)s as unpaid"
+msgstr "Marquer %(name)s comme non payé"
 
-msgid "Mark {{ name }} as paid"
-msgstr "Marquer {{ name }} comme payé"
+msgid "Mark %(name)s as paid"
+msgstr "Marquer %(name)s comme payé"
 
-msgid "Remove {{ name }}"
-msgstr "Supprimer {{ name }}"
+msgid "Remove %(name)s"
+msgstr "Supprimer %(name)s"
+
+msgctxt "group gift share"
+msgid "Share"
+msgstr "Part"
+
+msgid "Already given"
+msgstr "Déjà offert"
+
+msgid "The wisher removed or archived this wish"
+msgstr "Le destinataire a retiré ou archivé ce souhait"
+
+msgid "This gift plan has been abandoned. Paid contributions must be settled or returned."
+msgstr "Ce projet de cadeau a été abandonné. Les contributions versées doivent être réglées ou remboursées."
+
+msgid "Deleted by wisher"
+msgstr "Supprimé par le destinataire"
+
+msgid "Soft-deleted by the wisher while fulfilling plans or claims still depend on it."
+msgstr "Supprimé par le destinataire alors que des projets ou réservations en dépendent encore."

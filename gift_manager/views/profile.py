@@ -58,9 +58,9 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         profile = context["profile"]
         context["reminder_form"] = ReminderPreferencesForm(instance=profile)
         context["preferences_form"] = ProfilePreferencesForm(instance=profile)
-        context["active_wishes_count"] = Wish.objects.filter(
-            wisher=self.request.user, is_archived=False
-        ).count()
+        context["active_wishes_count"] = (
+            Wish.objects.for_wisher(self.request.user).filter(is_archived=False).count()
+        )
         if profile.calendar_token:
             context["calendar_feed_url"] = self.request.build_absolute_uri(
                 reverse("gift_manager:calendar_feed", kwargs={"token": profile.calendar_token})

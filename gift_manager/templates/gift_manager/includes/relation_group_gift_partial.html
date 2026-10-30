@@ -1,7 +1,7 @@
 {% load i18n l10n %}
 {% if group_gift %}
 <div id="relation-group-gift" class="detail-section mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <h6 class="detail-section-title text-muted mb-0">
             <i class="fas fa-hand-holding-dollar me-2" aria-hidden="true"></i>{% trans "Group Gift & Contributions" %}
         </h6>
@@ -10,6 +10,7 @@
             <form method="post"
                   action="{% url 'gift_manager:relation_group_gift_mode' pk=relation.relation_id %}"
                   hx-post="{% url 'gift_manager:relation_group_gift_mode' pk=relation.relation_id %}"
+                  {% if relation.split_mode != 'equal' %}hx-confirm="{% trans 'Switching to equal split will reset unpaid custom amounts. Continue?' %}"{% endif %}
                   hx-target="#relation-group-gift"
                   hx-swap="outerHTML">
                 {% csrf_token %}
@@ -21,7 +22,6 @@
                 {% else %}
                 <input type="hidden" name="split_mode" value="equal">
                 <button type="submit" class="btn btn-sm btn-outline-primary"
-                        hx-confirm="{% trans 'Switching to equal split will reset unpaid custom amounts. Continue?' %}"
                         title="{% trans 'Switch to equal split' %}">
                     <i class="fas fa-equals me-1" aria-hidden="true"></i>{% trans "Custom amounts" %}
                 </button>
@@ -30,12 +30,12 @@
             <form method="post"
                   action="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
                   hx-post="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
+                  hx-confirm="{% trans 'Are you sure you want to disable the group gift for this plan?' %}"
                   hx-target="#relation-group-gift"
                   hx-swap="outerHTML">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="disable">
-                <button type="submit" class="btn btn-sm btn-outline-danger"
-                        hx-confirm="{% trans 'Are you sure you want to disable the group gift for this plan?' %}">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
                     <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Disable" %}
                 </button>
             </form>
@@ -46,6 +46,12 @@
         </span>
         {% endif %}
     </div>
+
+    {% if group_gift.has_unsettled_funds %}
+    <div class="alert alert-warning py-2 mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>{% trans "This gift plan has been abandoned. Paid contributions must be settled or returned." %}
+    </div>
+    {% endif %}
 
     {% if error %}
     <div class="alert alert-warning py-2 mb-3" role="alert">
@@ -86,7 +92,7 @@
     {% if group_gift.is_overfunded %}
     <div class="alert alert-warning py-2 mb-3" role="alert">
         <i class="fas fa-exclamation-circle me-2" aria-hidden="true"></i>
-        {% blocktrans with extra=group_gift.total_collected|floatformat:2 price=group_gift.total_price|floatformat:2 currency=group_gift.currency %}
+        {% blocktrans trimmed with extra=group_gift.total_collected|floatformat:2 price=group_gift.total_price|floatformat:2 currency=group_gift.currency %}
         The recorded payments ({{ extra }} {{ currency }}) exceed the gift price ({{ price }} {{ currency }}).
         {% endblocktrans %}
     </div>
@@ -105,7 +111,7 @@
                 <span class="badge bg-success"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>{% trans "Fully funded" %}</span>
                 {% elif group_gift.buyer %}
                 <small class="text-muted">
-                    {% blocktrans with owed=group_gift.owed_to_buyer|floatformat:2 curr=group_gift.currency buyer=group_gift.buyer.username %}
+                    {% blocktrans trimmed with owed=group_gift.owed_to_buyer|floatformat:2 curr=group_gift.currency buyer=group_gift.buyer.username %}
                     Owed to {{ buyer }}: <strong>{{ owed }} {{ curr }}</strong>
                     {% endblocktrans %}
                 </small>
@@ -141,7 +147,7 @@
         {% if relation.split_mode == 'custom' and group_gift.total_unallocated > 0 %}
         <small class="text-warning-emphasis">
             <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
-            {% blocktrans with unallocated=group_gift.total_unallocated|floatformat:2 curr=group_gift.currency %}
+            {% blocktrans trimmed with unallocated=group_gift.total_unallocated|floatformat:2 curr=group_gift.currency %}
             Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned.
             {% endblocktrans %}
         </small>
@@ -155,7 +161,7 @@
             <thead>
                 <tr>
                     <th scope="col">{% trans "Contributor" %}</th>
-                    <th scope="col">{% trans "Share" %}</th>
+                    <th scope="col">{% trans "Share" context "group gift share" %}</th>
                     <th scope="col">{% trans "Status" %}</th>
                     <th scope="col" class="text-end">{% trans "Actions" %}</th>
                 </tr>
@@ -172,7 +178,7 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if relation.split_mode == 'custom' and group_gift.can_manage and not row.is_paid %}
+                        {% if row.can_edit_amount %}
                         <form method="post"
                               class="d-inline-flex align-items-center gap-1"
                               action="{% url 'gift_manager:relation_group_gift_contributor_amount' pk=relation.relation_id contribution_id=row.contribution.pk %}"

@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n custom_filters %}
 <div class="list-group-item list-group-item-action p-3" id="wish-item-{{ wish.wish_id }}">
     <div class="d-flex w-100 justify-content-between align-items-start gap-2 flex-wrap">
         <div class="flex-grow-1">
@@ -14,7 +14,7 @@
                 </h6>
                 {% if wish.price_hint is not None %}
                 <span class="badge bg-light text-dark border">
-                    ~{{ wish.price_hint }}
+                    ~{{ wish.price_hint|format_price:person.account.profile.currency }}
                 </span>
                 {% endif %}
                 {% if wish.priority == 3 %}
@@ -41,8 +41,8 @@
                     <i class="fas fa-lock me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
                 </span>
                 {% else %}
-                <span class="badge bg-success">
-                    <i class="fas fa-gift me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
+                <span class="badge {% if wish.is_fulfilled %}bg-secondary{% else %}bg-success{% endif %}">
+                    <i class="fas {% if wish.is_fulfilled %}fa-check{% else %}fa-gift{% endif %} me-1" aria-hidden="true"></i>{{ wish.claimer_label }}
                 </span>
                 {% endif %}
 
@@ -50,6 +50,13 @@
                 {% if wish.modified_after_claim %}
                 <span class="badge bg-warning text-dark" title="{% trans 'The wisher modified this wish after it was claimed.' %}">
                     <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Modified after claim" %}
+                </span>
+                {% endif %}
+
+                <!-- Wish removed or archived notice -->
+                {% if wish.is_claimed_by_viewer and wish.is_deleted_by_wisher or wish.is_claimed_by_viewer and wish.is_archived %}
+                <span class="badge bg-warning text-dark" title="{% trans 'The wisher removed or archived this wish' %}">
+                    <i class="fas fa-exclamation-triangle me-1" aria-hidden="true"></i>{% trans "The wisher removed or archived this wish" %}
                 </span>
                 {% endif %}
 
@@ -77,7 +84,7 @@
                         <i class="fas fa-undo me-1" aria-hidden="true"></i>{% trans "Release claim" %}
                     </button>
                 </form>
-                {% elif not wish.claimed_by_id %}
+                {% elif not wish.claimed_by_id and not wish.is_fulfilled and not wish.is_archived %}
                 <!-- Claim form -->
                 <form method="post" action="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
                       hx-post="{% url 'gift_manager:wish_claim_toggle' person_id=person.person_id wish_id=wish.wish_id %}"
@@ -91,7 +98,7 @@
                 </form>
                 {% endif %}
 
-                {% if is_editor %}
+                {% if is_editor and not wish.is_fulfilled and not wish.is_archived %}
                     {% if not wish.claimed_by_id or wish.is_claimed_by_viewer %}
                     <!-- Plan button -->
                     <form method="post" action="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"

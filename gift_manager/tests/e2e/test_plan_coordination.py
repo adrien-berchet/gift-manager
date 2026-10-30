@@ -169,7 +169,7 @@ class TestPlanCoordination:
             page,
             f"{live_server.url}{reverse('gift_manager:relation_detail', kwargs={'pk': plan.relation_id})}",
         )
-        shared_with = page.locator("#relation-coordination ~ .detail-section")
+        shared_with = page.locator("#relation-sharing")
         expect(shared_with).to_contain_text("Can't see it")
 
         # Change Bob's level from the edit panel, opened from the person's page like a user does

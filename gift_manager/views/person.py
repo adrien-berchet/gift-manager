@@ -492,7 +492,9 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
         friend_profile = friend_user.profile
         context["friend_preferences_notes"] = friend_profile.preferences_notes
         context["friend_avoid_notes"] = friend_profile.avoid_notes
-        context["friend_public_interests"] = list(friend_profile.public_interests.all())
+        context["friend_public_interests"] = list(
+            friend_profile.public_interests.filter(is_public=True)
+        )
 
         raw_wishes = list(
             wishlist.get_friend_visible_wishes(friend_user, self.request.user).select_related(
