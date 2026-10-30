@@ -79,7 +79,7 @@ status and notes to reflect the move.
 | 0025 | Measure And Reduce Static Asset Load Cost | Proposed | Frontend | Move-only cleanup of the static asset folders, then measured fixes (vendor assets, `defer`, per-page assets) instead of bundling. |
 | 0026 | Dismiss Reasons For Gift Suggestions | Implemented | Gift Plans | Optional structured dismissal reasons (e.g. already owns/practices, dislikes, too expensive) to steer future AI and catalogue suggestions. Moved to `implemented/`. |
 | 0027 | Recipient Preference Profiles And Feedback Persistence | Implemented | Gift Plans | Aggregate all-time recipient preference profiles to avoid history truncation in suggestions, with opt-in feedback promotion to profile notes and interests. Moved to `implemented/`. |
-| 0028 | Wishlists And Collaborative Gift Giving | Considering | Sharing | Person-account link (project A, specified), own profile and wishlist (B), group gifts with a contribution tally (C). |
+| 0028 | Wishlists And Collaborative Gift Giving | Implemented | Sharing | Person-account link (project A), own profile and wishlist (B), group gifts with a contribution tally (C). Moved to `implemented/`. |
 
 
 ## Working With Ideas

@@ -413,6 +413,30 @@ class TestRelations:
         assert r.gift == data.gifts["watch"]
         assert r.event == data.events["graduation"]
         assert r.status == data.statuses["purchased"]
+        assert r.is_group_gift is True
+        assert r.claimed_by == data.alice
+        assert r.contributions.count() == 3
+
+    def test_relation_2_group_gift_tally(self, data):
+        from decimal import Decimal
+
+        from gift_manager import group_gifts
+
+        r = data.relations[2]
+        summary = group_gifts.get_group_gift_summary(r, data.alice)
+        assert summary.total_price == Decimal("150.00")
+        assert summary.total_collected == Decimal("100.00")
+        assert summary.owed_to_buyer == Decimal("50.00")
+        assert len(summary.rows) == 3
+        buyer_row = next(row for row in summary.rows if row.is_buyer)
+        assert buyer_row.is_paid is True
+        assert buyer_row.share_amount == Decimal("50.00")
+        bob_row = next(row for row in summary.rows if row.contribution.user == data.bob)
+        assert bob_row.is_paid is True
+        assert bob_row.share_amount == Decimal("50.00")
+        charlie_row = next(row for row in summary.rows if row.contribution.user is None)
+        assert charlie_row.is_paid is False
+        assert charlie_row.share_amount == Decimal("50.00")
 
     def test_relation_3_group_scarf_christmas_given(self, data):
         r = data.relations[3]

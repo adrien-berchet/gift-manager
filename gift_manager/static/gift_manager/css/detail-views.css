@@ -464,3 +464,28 @@
         margin-bottom: 0;
     }
 }
+
+/* Group Gift Box Styling & Dark Mode Contrast */
+.group-gift-box {
+    background-color: var(--color-gray-50);
+}
+
+[data-theme="dark"] .group-gift-box {
+    background-color: var(--bs-gray-800);
+    border-color: var(--bs-gray-700) !important;
+    color: var(--bs-body-color);
+}
+
+[data-theme="dark"] .group-gift-box .text-muted,
+[data-theme="dark"] .group-gift-box .text-body-secondary {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .group-gift-box h6 {
+    color: var(--bs-body-color) !important;
+}
+
+[data-theme="dark"] #relation-group-gift .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--bs-body-color);
+}

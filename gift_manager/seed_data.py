@@ -30,6 +30,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 
 from gift_manager import account_links
+from gift_manager import group_gifts
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -330,6 +331,9 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gift=watch,
         event=graduation,
         status=statuses["purchased"],
+        price=Decimal("150.00"),
+        claimed_by=alice,
+        claimed_at=timezone.now(),
     )
     # Group relation - person is None, group is set.
     relation_3 = Relation.objects.create(
@@ -397,6 +401,15 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     # relation_1: NONE
     create_or_update_permission(bob, relation_2, permission_level=PermissionLevel.EDITOR)
     # relation_3: NONE
+
+    # ------------------------------------------------------------------
+    # 10b. Group gift on relation_2 (Graduation gift for best friend)
+    # ------------------------------------------------------------------
+    group_gifts.enable_group_gift(relation_2, actor=alice)
+    bob_contrib = group_gifts.add_contributor(relation_2, actor=alice, user=bob)
+    group_gifts.add_contributor(relation_2, actor=alice, name="Charlie")
+    group_gifts.toggle_contribution_paid(bob_contrib, actor=alice)
+    relation_2.refresh_from_db()
 
     # ------------------------------------------------------------------
     # 11. Wishes (Alice's wishlist)

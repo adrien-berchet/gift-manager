@@ -184,7 +184,7 @@ Write Playwright E2E tests, seed demo data, update idea 0028 status to Implement
 - Modify: `docs/ideas/0028-wishlists-and-collaborative-gift-giving.md`
 - Modify: `docs/ideas/README.md`
 
-- [ ] **Step 1: Write Playwright E2E tests in `gift_manager/tests/e2e/test_group_gift_e2e.py`:**
+- [x] **Step 1: Write Playwright E2E tests in `gift_manager/tests/e2e/test_group_gift_e2e.py`:**
   - `test_group_gift_surprise_plan_collaborative_workflow`:
     - Alice creates surprise plan for Bob, sets price $90, claims plan (buyer).
     - Alice organizes as group gift, adds Carol (collaborator) and Dave (external name).
@@ -196,17 +196,17 @@ Write Playwright E2E tests, seed demo data, update idea 0028 status to Implement
     - Alice creates non-surprise plan shared with Bob and Carol.
     - Alice organizes group gift with Carol.
     - Bob views plan: sees gift details, but group gift section is strictly absent.
-- [ ] **Step 2: Seed demo group gift data in `gift_manager/seed_data.py`:**
-  - Add a group gift on one of the seed plans (e.g. Alice and Bob chipping in for Mom's birthday gift).
-- [ ] **Step 3: Run full verification suite:**
+- [x] **Step 2: Seed demo group gift data in `gift_manager/seed_data.py`:**
+  - Add a group gift on one of the seed plans (graduation gift for best friend on relation_2 with Alice buyer, Bob paid, Charlie unpaid).
+- [x] **Step 3: Run full verification suite:**
   - `tox run -e py311 -- gift_manager/tests/test_group_gift_models.py gift_manager/tests/test_group_gift_service.py gift_manager/tests/views/test_group_gift_privacy.py gift_manager/tests/views/test_group_gift_views.py gift_manager/tests/test_locale_coverage.py`
   - `tox run -e lint`
   - `tox run -e e2e -- gift_manager/tests/e2e/test_group_gift_e2e.py`
-- [ ] **Step 4: Refresh repo context graph:**
+- [x] **Step 4: Refresh repo context graph:**
   - Run `graft build`.
-- [ ] **Step 5: Move Idea 0028 to Implemented:**
+- [x] **Step 5: Move Idea 0028 to Implemented:**
   - Update `docs/ideas/0028-wishlists-and-collaborative-gift-giving.md` status to `Implemented`.
   - Move to `docs/ideas/implemented/0028-wishlists-and-collaborative-gift-giving.md`.
   - Update row in `docs/ideas/README.md`.
-- [ ] **Step 6: Commit and push:**
+- [x] **Step 6: Commit and push:**
   - `Feat: Implement collaborative group gifts and contribution tally (Project C)`

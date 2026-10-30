@@ -54,14 +54,14 @@
     {% endif %}
 
     {% if not relation.is_group_gift %}
-    <div class="border rounded p-3 bg-light">
+    <div class="border rounded p-3 group-gift-box">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <p class="mb-1 text-muted">
                     {% trans "Divide the cost among multiple collaborators and track who has paid." %}
                 </p>
                 {% if not relation.effective_price or relation.effective_price <= 0 %}
-                <small class="text-warning">
+                <small class="text-warning-emphasis">
                     <i class="fas fa-info-circle me-1" aria-hidden="true"></i>{% trans "Tip: set an estimated price on the gift or plan first to calculate equal shares." %}
                 </small>
                 {% endif %}
@@ -93,7 +93,7 @@
     {% endif %}
 
     <!-- Progress & Financial Tally -->
-    <div class="border rounded p-3 mb-3 bg-light">
+    <div class="border rounded p-3 mb-3 group-gift-box">
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span>
                 <strong>{% trans "Total Collected:" %}</strong>
@@ -139,7 +139,7 @@
         {% endlocalize %}
 
         {% if relation.split_mode == 'custom' and group_gift.total_unallocated > 0 %}
-        <small class="text-warning">
+        <small class="text-warning-emphasis">
             <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
             {% blocktrans with unallocated=group_gift.total_unallocated|floatformat:2 curr=group_gift.currency %}
             Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned.
@@ -152,7 +152,7 @@
     <div class="table-responsive mb-3">
         <table class="table table-sm align-middle mb-0">
             <caption class="visually-hidden">{% trans "List of contributors and payment statuses" %}</caption>
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th scope="col">{% trans "Contributor" %}</th>
                     <th scope="col">{% trans "Share" %}</th>
@@ -166,7 +166,7 @@
                     <td>
                         <span class="fw-semibold">{{ row.display_name }}</span>
                         {% if row.is_buyer %}
-                        <span class="badge bg-info text-dark ms-1" title="{% trans 'Designated buyer for this gift' %}">
+                        <span class="badge bg-secondary text-white ms-1" title="{% trans 'Designated buyer for this gift' %}">
                             <i class="fas fa-shopping-bag me-1" aria-hidden="true"></i>{% trans "Buyer" %}
                         </span>
                         {% endif %}
@@ -225,14 +225,14 @@
                                 {% if row.is_paid %}
                                 <button type="submit"
                                         id="gg-paid-{{ row.contribution.pk }}"
-                                        class="btn btn-sm btn-outline-warning py-0 px-2"
+                                        class="btn btn-sm btn-outline-secondary py-0 px-2"
                                         aria-label="{% blocktrans with name=row.display_name %}Mark {{ name }} as unpaid{% endblocktrans %}">
                                     {% trans "Mark unpaid" %}
                                 </button>
                                 {% else %}
                                 <button type="submit"
                                         id="gg-paid-{{ row.contribution.pk }}"
-                                        class="btn btn-sm btn-outline-success py-0 px-2"
+                                        class="btn btn-sm btn-outline-primary py-0 px-2"
                                         aria-label="{% blocktrans with name=row.display_name %}Mark {{ name }} as paid{% endblocktrans %}">
                                     {% trans "Mark paid" %}
                                 </button>
@@ -271,7 +271,7 @@
 
     <!-- Add contributor form -->
     {% if group_gift.can_manage and contributor_form %}
-    <div class="border rounded p-3 bg-light">
+    <div class="border rounded p-3 group-gift-box">
         <h6 class="small text-muted mb-2">
             <i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Add Contributor" %}
         </h6>
