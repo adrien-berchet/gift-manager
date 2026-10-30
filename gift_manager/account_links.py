@@ -22,6 +22,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonPermission
 from gift_manager.models import Profile
 from gift_manager.models import Relation
+from gift_manager.models import RelationContribution
 from gift_manager.services import PermissionService
 
 if TYPE_CHECKING:
@@ -136,6 +137,13 @@ def link(person: Person, account: User, actor: User) -> Person:
         Relation.objects.hidden_surprises_for(account).filter(claimed_by=account).update(
             claimed_by=None, claimed_at=None
         )
+
+        # Convert existing contributions held by account on plans for this person
+        # to external snapshots
+        RelationContribution.objects.filter(
+            relation__person=person,
+            user=account,
+        ).update(user=None)
 
         return person
 

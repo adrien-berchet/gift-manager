@@ -129,14 +129,14 @@ Verify that no side channel leaks group gift tallies, contributor names, or amou
 **Files:**
 - Create: `gift_manager/tests/views/test_group_gift_privacy.py`
 
-- [ ] **Step 1: Write privacy boundary tests in `gift_manager/tests/views/test_group_gift_privacy.py`:**
+- [x] **Step 1: Write privacy boundary tests in `gift_manager/tests/views/test_group_gift_privacy.py`:**
   - `test_recipient_gets_403_on_all_group_gift_endpoints`: recipient user calling any group gift endpoint gets generic HTTP 403 `PermissionDenied`.
   - `test_recipient_never_sees_group_gift_markup_on_surprise_or_non_surprise_plan`: wisher / recipient rendering `relation_detail` receives zero group gift markup, table, or balance bar.
   - `test_calendar_feed_excludes_group_gift_data`: `.ics` feed for recipient and collaborators contains no group gift text or contributor names.
   - `test_email_digest_excludes_group_gift_data`: reminder digest contains no group gift text or contributor names.
   - `test_ai_prompt_excludes_group_gift_data`: AI suggestion payload contains no group gift text or contributor names.
   - `test_dynamic_recipient_protection_converts_recipient_contributor_rows`: linking a person to an account or adding to a group converts any existing contributor row for that user to an external snapshot (`user=None`), preventing exposure.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_privacy.py`. Expected: PASS.
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_privacy.py`. Expected: PASS.
 
 ---
 
