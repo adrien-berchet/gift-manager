@@ -66,6 +66,54 @@ def test_navbar_language_switch_from_fr_to_en_with_next():
 
 
 @pytest.mark.django_db
+def test_navbar_language_switch_with_opposing_accept_language_header():
+    """Switching language translates correctly even if browser Accept-Language differs from page."""
+    client = Client()
+    set_lang_url = reverse("set_language")
+
+    # 1. French browser user on English page switching to French:
+    response_fr = client.post(
+        set_lang_url,
+        {"language": "fr", "next": "/en/gifts/"},
+        HTTP_ACCEPT_LANGUAGE="fr-FR,fr;q=0.9",
+        HTTP_REFERER="http://testserver/en/gifts/",
+    )
+    assert response_fr.status_code == 302
+    assert response_fr.headers["Location"] == "/fr/gifts/"
+
+    # 2. English browser user on French page switching to English:
+    response_en = client.post(
+        set_lang_url,
+        {"language": "en", "next": "/fr/gifts/"},
+        HTTP_ACCEPT_LANGUAGE="en-US,en;q=0.9",
+        HTTP_REFERER="http://testserver/fr/gifts/",
+    )
+    assert response_en.status_code == 302
+    assert response_en.headers["Location"] == "/en/gifts/"
+
+
+@pytest.mark.django_db
+def test_navbar_language_switch_from_root_url():
+    """Switching language from root '/' correctly translates to target language root."""
+    client = Client()
+    set_lang_url = reverse("set_language")
+
+    response_fr = client.post(
+        set_lang_url,
+        {"language": "fr", "next": "/"},
+    )
+    assert response_fr.status_code == 302
+    assert response_fr.headers["Location"] == "/fr/"
+
+    response_en = client.post(
+        set_lang_url,
+        {"language": "en", "next": "/"},
+    )
+    assert response_en.status_code == 302
+    assert response_en.headers["Location"] == "/en/"
+
+
+@pytest.mark.django_db
 def test_navbar_language_switch_preserves_query_string():
     """Switching language preserves query parameters in next URL."""
     client = Client()

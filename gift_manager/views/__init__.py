@@ -53,6 +53,8 @@ from .group_gifts import relation_group_gift_contributor_remove
 from .group_gifts import relation_group_gift_contributor_toggle_paid
 from .group_gifts import relation_group_gift_mode
 from .group_gifts import relation_group_gift_toggle
+from .i18n import set_language
+from .i18n import translate_url_safe
 
 # Person views
 from .person import PersonCreateView
@@ -273,7 +275,9 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "set_language",
     "suggestions_url_for",
     "surprise_default_hint",
+    "translate_url_safe",
     "update_relation_status",
 ]

@@ -23,6 +23,7 @@ from django.shortcuts import redirect
 from django.urls import include
 from django.urls import path
 
+from gift_manager.views.i18n import set_language
 from gift_manager.views.reminders import cron_send_gift_digest
 
 from . import views
@@ -42,6 +43,7 @@ urlpatterns = [
     path("cron/send-gift-digest/", cron_send_gift_digest, name="cron_send_gift_digest"),
     path("admin/", admin.site.urls),
     path("admin_redirect/", admin_redirect, name="admin_redirect"),
+    path("i18n/setlang/", set_language, name="set_language"),
     path("i18n/", include("django.conf.urls.i18n")),
     path("accounts/login/", views.CustomLoginView.as_view(), name="account_login"),
     path("accounts/signup/", views.InvitationBoundSignupView.as_view(), name="account_signup"),
