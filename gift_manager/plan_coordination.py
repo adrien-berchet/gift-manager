@@ -21,6 +21,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
 from gift_manager.models import RelationComment
+from gift_manager.models import RelationContribution
 from gift_manager.services import PermissionService
 
 MAX_COMMENT_LENGTH = 2000
@@ -37,7 +38,27 @@ class AlreadyClaimed(Exception):  # noqa: N818
         self.claimed_by = claimed_by
 
 
-def _require_level(relation: Relation, user: User, minimum: int) -> int:
+def is_recipient_of_plan(relation: Relation, user: User | None) -> bool:
+    """Return whether user is the recipient of the plan.
+
+    For a person recipient, true if person.account == user.
+    For a group recipient, true if user is a member UNLESS user is an OWNER of the plan.
+    """
+    if not user or not user.is_authenticated:
+        return False
+    if relation.person_id and relation.person.account_id == user.pk:
+        return True
+    if relation.group_id:
+        is_member = (
+            relation.group.get_all_members(include_nested=True).filter(account=user).exists()
+        )
+        if is_member:
+            level = PermissionService.get_effective_permission(relation, user)
+            return level < PermissionLevel.OWNER
+    return False
+
+
+def require_level(relation: Relation, user: User, minimum: int) -> int:
     """Return the user's permission level on the plan, or raise ``PermissionDenied``.
 
     A surprise plan addressed to the user counts as inaccessible whatever their level.
@@ -50,21 +71,34 @@ def _require_level(relation: Relation, user: User, minimum: int) -> int:
     return level
 
 
+_require_level = require_level
+
+
 def claim(relation: Relation, user: User) -> Relation:
     """Claim the plan for ``user``: they are the one buying the gift.
 
     Claiming a plan you already hold changes nothing; a plan held by someone else raises
     ``AlreadyClaimed``. The row lock makes the second of two concurrent claims see the first.
     """
-    _require_level(relation, user, PermissionLevel.VIEWER)
+    require_level(relation, user, PermissionLevel.VIEWER)
     with transaction.atomic():
         PermissionService.lock_object(relation)
-        current = Relation.objects.select_related("claimed_by").get(pk=relation.pk)
+        current = Relation.objects.select_related("claimed_by", "person", "group").get(
+            pk=relation.pk
+        )
         if current.claimed_by_id is not None and current.claimed_by_id != user.pk:
             raise AlreadyClaimed(current.claimed_by)
         if current.claimed_by_id is None:
             Relation.objects.filter(pk=relation.pk).update(
                 claimed_by=user, claimed_at=timezone.now()
+            )
+            current.claimed_by = user
+
+        if current.is_group_gift and not is_recipient_of_plan(current, user):
+            RelationContribution.objects.get_or_create(
+                relation=current,
+                user=user,
+                defaults={"name": user.username},
             )
     relation.refresh_from_db(fields=["claimed_by", "claimed_at"])
     return relation
@@ -72,7 +106,7 @@ def claim(relation: Relation, user: User) -> Relation:
 
 def release(relation: Relation, user: User) -> None:
     """Release the claim: allowed to the claimer and to the owners of the plan."""
-    level = _require_level(relation, user, PermissionLevel.VIEWER)
+    level = require_level(relation, user, PermissionLevel.VIEWER)
     with transaction.atomic():
         PermissionService.lock_object(relation)
         claimed_by_id = (
@@ -88,7 +122,7 @@ def release(relation: Relation, user: User) -> None:
 
 def add_comment(relation: Relation, user: User, text: str) -> RelationComment:
     """Add a comment from ``user``; the text is stripped, non-blank and length-limited."""
-    _require_level(relation, user, PermissionLevel.VIEWER)
+    require_level(relation, user, PermissionLevel.VIEWER)
     text = (text or "").strip()
     if not text:
         raise ValidationError(COMMENT_BLANK_ERROR)
@@ -99,7 +133,7 @@ def add_comment(relation: Relation, user: User, text: str) -> RelationComment:
 
 def delete_comment(comment: RelationComment, user: User) -> None:
     """Delete a comment: allowed to its author and to the owners of the plan."""
-    level = _require_level(comment.relation, user, PermissionLevel.VIEWER)
+    level = require_level(comment.relation, user, PermissionLevel.VIEWER)
     if comment.author_id != user.pk and level < PermissionLevel.OWNER:
         raise PermissionDenied(gettext("You cannot delete this comment."))
     comment.delete()
@@ -128,7 +162,7 @@ def can_be_surprise(relation: Relation) -> bool:
 
 def set_surprise(relation: Relation, user: User, *, value: bool) -> None:
     """Set or clear the surprise flag; it stays off where ``can_be_surprise`` is false."""
-    _require_level(relation, user, PermissionLevel.EDITOR)
+    require_level(relation, user, PermissionLevel.EDITOR)
     relation.is_surprise = bool(value) and can_be_surprise(relation)
     relation.save(update_fields=["is_surprise"])
 

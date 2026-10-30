@@ -98,7 +98,7 @@ Implement mathematics, permissions, access guards, financial summary builder, an
 - Modify: `gift_manager/plan_coordination.py` (expose `require_level`)
 - Create: `gift_manager/tests/test_group_gift_service.py`
 
-- [ ] **Step 1: Write failing service tests in `gift_manager/tests/test_group_gift_service.py`:**
+- [x] **Step 1: Write failing service tests in `gift_manager/tests/test_group_gift_service.py`:**
   - `test_calculate_equal_shares_divmod_penny_distribution`: tests exact cents distribution (e.g. 100/3 -> [33.34, 33.33, 33.33]; 0.07/4 -> [0.02, 0.02, 0.02, 0.01]).
   - `test_calculate_equal_shares_hypothesis_property`: Hypothesis property test asserting `sum(calculate_equal_shares(p, n)) == p` across arbitrary 2-decimal positive Decimals and counts.
   - `test_calculate_equal_shares_edge_cases`: zero count returns empty list; zero or None price returns list of 0.00.
@@ -112,13 +112,13 @@ Implement mathematics, permissions, access guards, financial summary builder, an
   - `test_overfunded_state_when_price_drops`: flags `is_overfunded=True` when frozen payments exceed reduced price.
   - `test_recipient_guard_owner_exemption_matrix`: owner member on group recipient allowed; non-owner member blocked; person recipient blocked even if plan owner.
   - `test_concurrency_locking_prevents_duplicate_user`: transactional test with PostgreSQL row locks.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_group_gift_service.py`. Expected: FAIL.
-- [ ] **Step 3: Implement `gift_manager/group_gifts.py`:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_group_gift_service.py`. Expected: FAIL.
+- [x] **Step 3: Implement `gift_manager/group_gifts.py`:**
   - `calculate_equal_shares`.
   - `is_recipient_of_plan` and `_require_group_gift_access` (reusing `require_level` from `plan_coordination`).
   - `ContributorRow` and `GroupGiftSummary` dataclasses.
   - Service functions with `PermissionService.lock_object(relation)` inside `transaction.atomic()`.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_group_gift_service.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_group_gift_service.py`. Expected: PASS.
 
 ---
 
