@@ -25,6 +25,7 @@ from decimal import Decimal
 
 import factory
 from django.contrib.auth.models import User
+from django.utils import timezone
 from factory.django import DjangoModelFactory
 
 from gift_manager.email_encoding import encode_email
@@ -35,6 +36,7 @@ from gift_manager.models import Invitation
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import RelationContribution
 from gift_manager.models import RelationStatus
 from gift_manager.models import Wish
 from gift_manager.models import WishPriority
@@ -270,6 +272,27 @@ class GroupRelationFactory(RelationFactory):
 
     person = None
     group = factory.SubFactory(PersonGroupFactory)
+
+
+class RelationContributionFactory(DjangoModelFactory):
+    """Factory for creating RelationContribution instances.
+
+    Traits: ``external`` (no linked user) and ``paid`` (marked as paid).
+    """
+
+    class Meta:
+        model = RelationContribution
+
+    class Params:
+        external = factory.Trait(user=None, name="External Contributor")
+        paid = factory.Trait(is_paid=True)
+
+    relation = factory.SubFactory(RelationFactory)
+    user = factory.SubFactory(UserFactory)
+    name = factory.LazyAttribute(lambda o: o.user.username if o.user else "External Contributor")
+    amount = Decimal("0.00")
+    is_paid = False
+    paid_at = factory.Maybe("is_paid", factory.LazyFunction(timezone.now), None)
 
 
 class InvitationFactory(DjangoModelFactory):

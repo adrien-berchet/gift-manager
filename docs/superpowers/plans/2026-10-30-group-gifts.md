@@ -69,7 +69,7 @@ Implement the `RelationContribution` model, fields on `Relation`, constraints, a
 - Modify: `gift_manager/tests/factories.py`
 - Create: `gift_manager/tests/test_group_gift_models.py`
 
-- [ ] **Step 1: Write failing model tests in `gift_manager/tests/test_group_gift_models.py`:**
+- [x] **Step 1: Write failing model tests in `gift_manager/tests/test_group_gift_models.py`:**
   - `test_contribution_requires_name`: name cannot be empty.
   - `test_contribution_amount_non_negative`: amount < 0 violates check constraint.
   - `test_contribution_is_paid_requires_paid_at`: `is_paid=True` requires `paid_at IS NOT NULL`; `is_paid=False` requires `paid_at IS NULL`.
@@ -78,14 +78,14 @@ Implement the `RelationContribution` model, fields on `Relation`, constraints, a
   - `test_save_snapshots_user_username_into_name`: when `user` is set and `name=""`, `save()` automatically snapshots `user.username` into `name`.
   - `test_user_account_deletion_preserves_contribution_row`: deleting contributor's `User` sets `user=None` via `SET_NULL`, preserving row and snapshot `name` without `IntegrityError`.
   - `test_relation_split_mode_and_is_group_gift_defaults`: default `is_group_gift=False` and `split_mode="equal"`.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_group_gift_models.py`. Expected: FAIL.
-- [ ] **Step 3: Implement models and create migration:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/test_group_gift_models.py`. Expected: FAIL.
+- [x] **Step 3: Implement models and create migration:**
   - Add `SplitMode` choices to `Relation`.
   - Add `is_group_gift` and `split_mode` to `Relation`.
   - Add `RelationContribution` model with constraints and snapshot `save()`.
   - Run `python manage.py makemigrations gift_manager` (creating `0043_group_gifts.py`).
   - Add `RelationContributionFactory` in `gift_manager/tests/factories.py`.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_group_gift_models.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/test_group_gift_models.py`. Expected: PASS.
 
 ---
 

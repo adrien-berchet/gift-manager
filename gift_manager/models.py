@@ -1479,6 +1479,13 @@ class Wish(models.Model):
         )
 
 
+class SplitMode(models.TextChoices):
+    """How the cost of a group gift is divided among its contributors."""
+
+    EQUAL = "equal", gettext_lazy("Equal split")
+    CUSTOM = "custom", gettext_lazy("Custom amounts")
+
+
 class RelationStatus(models.Model):
     """Model for a relation status."""
 
@@ -1575,6 +1582,19 @@ class Relation(models.Model):
         on_delete=models.SET_NULL,
         related_name="fulfilling_plans",
         help_text=gettext_lazy("The wish this gift plan fulfills."),
+    )
+    is_group_gift = models.BooleanField(
+        gettext_lazy("Group gift"),
+        default=False,
+        help_text=gettext_lazy(
+            "Whether this gift plan is funded collaboratively by multiple contributors."
+        ),
+    )
+    split_mode = models.CharField(
+        max_length=20,
+        choices=SplitMode.choices,
+        default=SplitMode.EQUAL,
+        help_text=gettext_lazy("How the total gift cost is divided among contributors."),
     )
 
     # Custom manager
@@ -1740,6 +1760,124 @@ class Relation(models.Model):
     def is_group_targeted(self) -> bool:
         """Return whether this gift plan targets a group directly."""
         return self.group_id is not None
+
+
+class RelationContribution(models.Model):
+    """One contributor's share of a group gift plan.
+
+    ``amount`` is the share in custom mode, or the frozen paid amount in equal mode.
+    ``user`` is cleared when the account is deleted; ``name`` keeps the label so the
+    buyer's tally survives.
+    """
+
+    relation = models.ForeignKey(
+        "Relation",
+        on_delete=models.CASCADE,
+        related_name="contributions",
+    )
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="gift_contributions",
+        help_text=gettext_lazy("Registered user participating in this group gift."),
+    )
+    name = models.CharField(
+        max_length=150,
+        help_text=gettext_lazy("Snapshot name of the contributor or external contributor label."),
+    )
+    amount = models.DecimalField(
+        gettext_lazy("Share amount"),
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=gettext_lazy(
+            "Stored share amount in custom mode, or frozen paid amount in equal mode."
+        ),
+    )
+    is_paid = models.BooleanField(
+        gettext_lazy("Paid"),
+        default=False,
+        help_text=gettext_lazy("Whether this contributor has paid their share to the buyer."),
+    )
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=gettext_lazy("When this share was marked as paid."),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(amount__gte=0),
+                name="contribution_amount_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=Q(is_paid=False, paid_at__isnull=True)
+                | Q(is_paid=True, paid_at__isnull=False),
+                name="contribution_is_paid_requires_paid_at",
+            ),
+            models.CheckConstraint(
+                condition=~Q(name=""),
+                name="contribution_requires_name",
+            ),
+            models.UniqueConstraint(
+                fields=["relation", "user"],
+                condition=Q(user__isnull=False),
+                name="unique_user_contribution_per_plan",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.display_name} ({self.amount})"
+
+    def save(self, *args, **kwargs):
+        """Keep ``name`` in sync with the linked user and reject blank external names."""
+        if self.user_id is not None:
+            self.name = self.user.username
+        else:
+            self.name = (self.name or "").strip()
+            if not self.name:
+                raise ValidationError({"name": gettext_lazy("A contributor name is required.")})
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = {*update_fields, "name"}
+        super().save(*args, **kwargs)
+
+    @property
+    def display_name(self) -> str:
+        """Return the live username while the account exists, else the stored name."""
+        if self.user_id is not None:
+            return self.user.username
+        return self.name
+
+    def clean(self):
+        """Require a non-blank name for contributors without an account."""
+        super().clean()
+        self.name = (self.name or "").strip()
+        if self.user_id is None and not self.name:
+            raise ValidationError({"name": gettext_lazy("A contributor name is required.")})
+
+    def mark_paid(self, amount: Decimal | None = None) -> None:
+        """Mark the share as paid, optionally freezing the paid ``amount``."""
+        fields = {"is_paid", "paid_at"}
+        if not self.is_paid or self.paid_at is None:
+            self.paid_at = timezone.now()
+        self.is_paid = True
+        if amount is not None:
+            self.amount = amount
+            fields.add("amount")
+        self.save(update_fields=fields)
+
+    def mark_unpaid(self) -> None:
+        """Clear the paid state and its timestamp."""
+        self.is_paid = False
+        self.paid_at = None
+        self.save(update_fields=["is_paid", "paid_at"])
 
 
 class RelationPermission(BaseObjectPermission):
