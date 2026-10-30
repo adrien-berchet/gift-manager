@@ -125,6 +125,14 @@ class GroupGiftSummary:
     is_overfunded: bool
     can_manage: bool
 
+    @property
+    def percent_collected(self) -> int:
+        """Percentage of total price collected, capped between 0 and 100."""
+        if not self.total_price or self.total_price <= Decimal("0.00"):
+            return 0
+        ratio = (self.total_collected / self.total_price) * 100
+        return min(100, max(0, int(ratio)))
+
 
 def get_group_gift_summary(relation: Relation, viewer: User) -> GroupGiftSummary:
     """Build the read model financial summary and breakdown for a group gift."""

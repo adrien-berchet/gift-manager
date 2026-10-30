@@ -5444,3 +5444,207 @@ msgstr "Seul l'auteur du souhait peut le supprimer."
 
 #~ msgid "Register here"
 #~ msgstr "Inscrivez-vous ici"
+
+msgid "— Choose collaborator —"
+msgstr "— Choisir un collaborateur —"
+
+msgid "e.g. Uncle Bob"
+msgstr "ex. Tonton Bob"
+
+msgid "Choose a collaborator or enter an external name, not both."
+msgstr "Choisissez un collaborateur ou saisissez un nom externe, pas les deux."
+
+msgid "Choose a collaborator or enter an external name."
+msgstr "Choisissez un collaborateur ou saisissez un nom externe."
+
+msgid "The recipient cannot be a contributor to their own gift."
+msgstr "Le destinataire ne peut pas contribuer à son propre cadeau."
+
+msgid "This user is already a contributor."
+msgstr "Cet utilisateur est déjà contributeur."
+
+msgid "Invalid split mode."
+msgstr "Mode de répartition invalide."
+
+msgid "Cannot disable a group gift with recorded payments."
+msgstr "Impossible de désactiver un cadeau commun avec des paiements enregistrés."
+
+msgid "Group gift is not enabled on this plan."
+msgstr "Le cadeau commun n'est pas activé sur ce projet."
+
+msgid "User must have access to the gift plan."
+msgstr "L'utilisateur doit avoir accès au projet de cadeau."
+
+msgid "User cannot access this surprise gift plan."
+msgstr "L'utilisateur ne peut pas accéder à ce projet de cadeau surprise."
+
+msgid "Contributor name must be between 1 and 150 characters."
+msgstr "Le nom du contributeur doit comporter entre 1 et 150 caractères."
+
+msgid "Cannot remove the designated buyer from contributors."
+msgstr "Impossible de retirer l'acheteur désigné des contributeurs."
+
+msgid "Cannot remove a contributor with a recorded payment; unmark payment first."
+msgstr "Impossible de retirer un contributeur avec un paiement enregistré ; annulez d'abord le paiement."
+
+msgid "Only editors, owners, or the buyer can update payment status."
+msgstr "Seuls les éditeurs, propriétaires ou l'acheteur peuvent mettre à jour le statut du paiement."
+
+msgid "The buyer's share is settled by definition."
+msgstr "La part de l'acheteur est réglée par définition."
+
+msgid "Cannot mark a zero-amount share as paid."
+msgstr "Impossible de marquer une part de montant nul comme payée."
+
+msgid "Share amounts can only be updated in custom split mode."
+msgstr "Les montants des parts ne peuvent être modifiés qu'en mode de répartition personnalisée."
+
+msgid "Cannot update amount for a contribution that is already marked as paid."
+msgstr "Impossible de modifier le montant d'une contribution déjà marquée comme payée."
+
+msgid "Enter a valid amount."
+msgstr "Saisissez un montant valide."
+
+msgid "Amount must be a non-negative finite value under 100,000,000."
+msgstr "Le montant doit être une valeur finie positive ou nulle inférieure à 100 000 000."
+
+msgid "Group gift"
+msgstr "Cadeau commun"
+
+msgid "Whether this gift plan is funded collaboratively by multiple contributors."
+msgstr "Indique si ce projet de cadeau est financé collectivement par plusieurs contributeurs."
+
+msgid "How the total gift cost is divided among contributors."
+msgstr "Façon dont le coût total du cadeau est réparti entre les contributeurs."
+
+msgid "Registered user participating in this group gift."
+msgstr "Utilisateur inscrit participant à ce cadeau commun."
+
+msgid "Snapshot name of the contributor or external contributor label."
+msgstr "Instantané du nom du contributeur ou libellé de contributeur externe."
+
+msgid "Share amount"
+msgstr "Montant de la part"
+
+msgid "Stored share amount in custom mode, or frozen paid amount in equal mode."
+msgstr "Montant de la part stocké en mode personnalisé, ou montant payé figé en mode égal."
+
+msgid "Whether this contributor has paid their share to the buyer."
+msgstr "Indique si ce contributeur a réglé sa part à l'acheteur."
+
+msgid "When this share was marked as paid."
+msgstr "Date et heure auxquelles cette part a été marquée comme payée."
+
+msgid "A contributor name is required."
+msgstr "Un nom de contributeur est obligatoire."
+
+msgid "Add Contributor"
+msgstr "Ajouter un contributeur"
+
+msgid "Amount"
+msgstr "Montant"
+
+msgid "Are you sure you want to disable the group gift for this plan?"
+msgstr "Êtes-vous sûr de vouloir désactiver le cadeau commun pour ce projet ?"
+
+msgid "Buyer"
+msgstr "Acheteur"
+
+msgid "Collaborator"
+msgstr "Collaborateur"
+
+msgid "Contribution progress"
+msgstr "Progression des contributions"
+
+msgid "Contributor"
+msgstr "Contributeur"
+
+msgid "Custom amounts"
+msgstr "Montants personnalisés"
+
+msgid "Designated buyer for this gift"
+msgstr "Acheteur désigné pour ce cadeau"
+
+msgid "Divide the cost among multiple collaborators and track who has paid."
+msgstr "Divisez le coût entre plusieurs collaborateurs et suivez qui a payé."
+
+msgid "Equal split"
+msgstr "Parts égales"
+
+msgid "External Person"
+msgstr "Personne externe"
+
+msgid "Fully funded"
+msgstr "Entièrement financé"
+
+msgid "Group Gift & Contributions"
+msgstr "Cadeau commun et contributions"
+
+msgid "List of contributors and payment statuses"
+msgstr "Liste des contributeurs et statuts de paiement"
+
+msgid "Mark paid"
+msgstr "Marquer payé"
+
+msgid "Mark unpaid"
+msgstr "Marquer non payé"
+
+msgid "No contributors yet. Add collaborators or external friends below."
+msgstr "Aucun contributeur pour le moment. Ajoutez des collaborateurs ou des amis externes ci-dessous."
+
+msgid "Organize as a group gift"
+msgstr "Organiser en cadeau commun"
+
+msgid "Paid"
+msgstr "Payé"
+
+msgid "Remove contributor"
+msgstr "Supprimer le contributeur"
+
+msgid "Save amount"
+msgstr "Enregistrer le montant"
+
+msgid "Switch to custom amounts"
+msgstr "Passer aux montants personnalisés"
+
+msgid "Switch to equal split"
+msgstr "Passer aux parts égales"
+
+msgid "Switching to equal split will reset unpaid custom amounts. Continue?"
+msgstr "Passer aux parts égales réinitialisera les montants personnalisés non payés. Continuer ?"
+
+msgid "Tip: set an estimated price on the gift or plan first to calculate equal shares."
+msgstr "Conseil : définissez d'abord un prix estimé sur le cadeau ou le projet pour calculer les parts égales."
+
+msgid "Total Collected:"
+msgstr "Total collecté :"
+
+msgid "Unpaid"
+msgstr "Non payé"
+
+msgid "or"
+msgstr "ou"
+
+msgid "The recorded payments ({{ extra }} {{ currency }}) exceed the gift price ({{ price }} {{ currency }})."
+msgstr "Les paiements enregistrés ({{ extra }} {{ currency }}) dépassent le prix du cadeau ({{ price }} {{ currency }})."
+
+msgid "Owed to {{ buyer }}: <strong>{{ owed }} {{ curr }}</strong>"
+msgstr "Dû à {{ buyer }} : <strong>{{ owed }} {{ curr }}</strong>"
+
+msgid "{{ collected }} {{ curr }} of {{ total }} {{ curr }}"
+msgstr "{{ collected }} {{ curr }} sur {{ total }} {{ curr }}"
+
+msgid "Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned."
+msgstr "Solde non alloué : {{ unallocated }} {{ curr }} restant à attribuer."
+
+msgid "Share for {{ name }}"
+msgstr "Part de {{ name }}"
+
+msgid "Mark {{ name }} as unpaid"
+msgstr "Marquer {{ name }} comme non payé"
+
+msgid "Mark {{ name }} as paid"
+msgstr "Marquer {{ name }} comme payé"
+
+msgid "Remove {{ name }}"
+msgstr "Supprimer {{ name }}"

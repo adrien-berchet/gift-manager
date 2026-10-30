@@ -1,0 +1,315 @@
+{% load i18n l10n %}
+{% if group_gift %}
+<div id="relation-group-gift" class="detail-section mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="detail-section-title text-muted mb-0">
+            <i class="fas fa-hand-holding-dollar me-2" aria-hidden="true"></i>{% trans "Group Gift & Contributions" %}
+        </h6>
+        {% if relation.is_group_gift and group_gift.can_manage %}
+        <div class="d-flex align-items-center gap-2">
+            <form method="post"
+                  action="{% url 'gift_manager:relation_group_gift_mode' pk=relation.relation_id %}"
+                  hx-post="{% url 'gift_manager:relation_group_gift_mode' pk=relation.relation_id %}"
+                  hx-target="#relation-group-gift"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                {% if relation.split_mode == 'equal' %}
+                <input type="hidden" name="split_mode" value="custom">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" title="{% trans 'Switch to custom amounts' %}">
+                    <i class="fas fa-sliders-h me-1" aria-hidden="true"></i>{% trans "Equal split" %}
+                </button>
+                {% else %}
+                <input type="hidden" name="split_mode" value="equal">
+                <button type="submit" class="btn btn-sm btn-outline-primary"
+                        hx-confirm="{% trans 'Switching to equal split will reset unpaid custom amounts. Continue?' %}"
+                        title="{% trans 'Switch to equal split' %}">
+                    <i class="fas fa-equals me-1" aria-hidden="true"></i>{% trans "Custom amounts" %}
+                </button>
+                {% endif %}
+            </form>
+            <form method="post"
+                  action="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
+                  hx-post="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
+                  hx-target="#relation-group-gift"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="disable">
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                        hx-confirm="{% trans 'Are you sure you want to disable the group gift for this plan?' %}">
+                    <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Disable" %}
+                </button>
+            </form>
+        </div>
+        {% elif relation.is_group_gift %}
+        <span class="badge bg-secondary">
+            {% if relation.split_mode == 'equal' %}{% trans "Equal split" %}{% else %}{% trans "Custom amounts" %}{% endif %}
+        </span>
+        {% endif %}
+    </div>
+
+    {% if error %}
+    <div class="alert alert-warning py-2 mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>{{ error }}
+    </div>
+    {% endif %}
+
+    {% if not relation.is_group_gift %}
+    <div class="border rounded p-3 bg-light">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <p class="mb-1 text-muted">
+                    {% trans "Divide the cost among multiple collaborators and track who has paid." %}
+                </p>
+                {% if not relation.effective_price or relation.effective_price <= 0 %}
+                <small class="text-warning">
+                    <i class="fas fa-info-circle me-1" aria-hidden="true"></i>{% trans "Tip: set an estimated price on the gift or plan first to calculate equal shares." %}
+                </small>
+                {% endif %}
+            </div>
+            {% if group_gift.can_manage %}
+            <form method="post"
+                  action="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
+                  hx-post="{% url 'gift_manager:relation_group_gift_toggle' pk=relation.relation_id %}"
+                  hx-target="#relation-group-gift"
+                  hx-swap="outerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="enable">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-users me-1" aria-hidden="true"></i>{% trans "Organize as a group gift" %}
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- Group gift is active -->
+    {% if group_gift.is_overfunded %}
+    <div class="alert alert-warning py-2 mb-3" role="alert">
+        <i class="fas fa-exclamation-circle me-2" aria-hidden="true"></i>
+        {% blocktrans with extra=group_gift.total_collected|floatformat:2 price=group_gift.total_price|floatformat:2 currency=group_gift.currency %}
+        The recorded payments ({{ extra }} {{ currency }}) exceed the gift price ({{ price }} {{ currency }}).
+        {% endblocktrans %}
+    </div>
+    {% endif %}
+
+    <!-- Progress & Financial Tally -->
+    <div class="border rounded p-3 mb-3 bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span>
+                <strong>{% trans "Total Collected:" %}</strong>
+                {{ group_gift.total_collected|floatformat:2 }} {{ group_gift.currency }} /
+                {{ group_gift.total_price|floatformat:2 }} {{ group_gift.currency }}
+            </span>
+            <span>
+                {% if group_gift.is_fully_paid %}
+                <span class="badge bg-success"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>{% trans "Fully funded" %}</span>
+                {% elif group_gift.buyer %}
+                <small class="text-muted">
+                    {% blocktrans with owed=group_gift.owed_to_buyer|floatformat:2 curr=group_gift.currency buyer=group_gift.buyer.username %}
+                    Owed to {{ buyer }}: <strong>{{ owed }} {{ curr }}</strong>
+                    {% endblocktrans %}
+                </small>
+                {% endif %}
+            </span>
+        </div>
+
+        {% localize off %}
+        <div class="progress mb-2" style="height: 10px;">
+            {% if group_gift.total_price > 0 %}
+            <div class="progress-bar {% if group_gift.is_fully_paid %}bg-success{% else %}bg-primary{% endif %}"
+                 role="progressbar"
+                 style="width: {{ group_gift.percent_collected }}%;"
+                 aria-valuenow="{{ group_gift.total_collected }}"
+                 aria-valuemin="0"
+                 aria-valuemax="{{ group_gift.total_price }}"
+                 aria-valuetext="{% blocktrans with collected=group_gift.total_collected total=group_gift.total_price curr=group_gift.currency %}{{ collected }} {{ curr }} of {{ total }} {{ curr }}{% endblocktrans %}"
+                 aria-label="{% trans 'Contribution progress' %}">
+            </div>
+            {% else %}
+            <div class="progress-bar bg-secondary"
+                 role="progressbar"
+                 style="width: 0%;"
+                 aria-valuenow="0"
+                 aria-valuemin="0"
+                 aria-valuemax="100"
+                 aria-label="{% trans 'Contribution progress' %}">
+            </div>
+            {% endif %}
+        </div>
+        {% endlocalize %}
+
+        {% if relation.split_mode == 'custom' and group_gift.total_unallocated > 0 %}
+        <small class="text-warning">
+            <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
+            {% blocktrans with unallocated=group_gift.total_unallocated|floatformat:2 curr=group_gift.currency %}
+            Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned.
+            {% endblocktrans %}
+        </small>
+        {% endif %}
+    </div>
+
+    <!-- Contributors list -->
+    <div class="table-responsive mb-3">
+        <table class="table table-sm align-middle mb-0">
+            <caption class="visually-hidden">{% trans "List of contributors and payment statuses" %}</caption>
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">{% trans "Contributor" %}</th>
+                    <th scope="col">{% trans "Share" %}</th>
+                    <th scope="col">{% trans "Status" %}</th>
+                    <th scope="col" class="text-end">{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in group_gift.rows %}
+                <tr>
+                    <td>
+                        <span class="fw-semibold">{{ row.display_name }}</span>
+                        {% if row.is_buyer %}
+                        <span class="badge bg-info text-dark ms-1" title="{% trans 'Designated buyer for this gift' %}">
+                            <i class="fas fa-shopping-bag me-1" aria-hidden="true"></i>{% trans "Buyer" %}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if relation.split_mode == 'custom' and group_gift.can_manage and not row.is_paid %}
+                        <form method="post"
+                              class="d-inline-flex align-items-center gap-1"
+                              action="{% url 'gift_manager:relation_group_gift_contributor_amount' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                              hx-post="{% url 'gift_manager:relation_group_gift_contributor_amount' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                              hx-target="#relation-group-gift"
+                              hx-swap="outerHTML">
+                            {% csrf_token %}
+                            {% localize off %}
+                            <input type="number"
+                                   name="amount"
+                                   id="gg-amount-{{ row.contribution.pk }}"
+                                   class="form-control form-control-sm"
+                                   style="width: 90px;"
+                                   step="0.01"
+                                   min="0"
+                                   value="{{ row.share_amount }}"
+                                   aria-label="{% blocktrans with name=row.display_name %}Share for {{ name }}{% endblocktrans %}">
+                            {% endlocalize %}
+                            <button type="submit" class="btn btn-outline-secondary btn-sm py-0 px-2" title="{% trans 'Save amount' %}">
+                                <i class="fas fa-check" aria-hidden="true"></i>
+                            </button>
+                        </form>
+                        {% else %}
+                        <span>{{ row.share_amount|floatformat:2 }} {{ group_gift.currency }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.is_paid %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check me-1" aria-hidden="true"></i>{% trans "Paid" %}
+                        </span>
+                        {% if row.paid_at and not row.is_buyer %}
+                        <small class="text-muted ms-1">{{ row.paid_at|date:"DATE_FORMAT" }}</small>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1" aria-hidden="true"></i>{% trans "Unpaid" %}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex align-items-center gap-1">
+                            {% if row.can_toggle_paid %}
+                            <form method="post"
+                                  action="{% url 'gift_manager:relation_group_gift_contributor_toggle_paid' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                                  hx-post="{% url 'gift_manager:relation_group_gift_contributor_toggle_paid' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                                  hx-target="#relation-group-gift"
+                                  hx-swap="outerHTML">
+                                {% csrf_token %}
+                                {% if row.is_paid %}
+                                <button type="submit"
+                                        id="gg-paid-{{ row.contribution.pk }}"
+                                        class="btn btn-sm btn-outline-warning py-0 px-2"
+                                        aria-label="{% blocktrans with name=row.display_name %}Mark {{ name }} as unpaid{% endblocktrans %}">
+                                    {% trans "Mark unpaid" %}
+                                </button>
+                                {% else %}
+                                <button type="submit"
+                                        id="gg-paid-{{ row.contribution.pk }}"
+                                        class="btn btn-sm btn-outline-success py-0 px-2"
+                                        aria-label="{% blocktrans with name=row.display_name %}Mark {{ name }} as paid{% endblocktrans %}">
+                                    {% trans "Mark paid" %}
+                                </button>
+                                {% endif %}
+                            </form>
+                            {% endif %}
+                            {% if row.can_remove %}
+                            <form method="post"
+                                  action="{% url 'gift_manager:relation_group_gift_contributor_remove' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                                  hx-post="{% url 'gift_manager:relation_group_gift_contributor_remove' pk=relation.relation_id contribution_id=row.contribution.pk %}"
+                                  hx-target="#relation-group-gift"
+                                  hx-swap="outerHTML">
+                                {% csrf_token %}
+                                <button type="submit"
+                                        id="gg-remove-{{ row.contribution.pk }}"
+                                        class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                        aria-label="{% blocktrans with name=row.display_name %}Remove {{ name }}{% endblocktrans %}"
+                                        title="{% trans 'Remove contributor' %}">
+                                    <i class="fas fa-times" aria-hidden="true"></i>
+                                </button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-muted text-center py-2">
+                        {% trans "No contributors yet. Add collaborators or external friends below." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add contributor form -->
+    {% if group_gift.can_manage and contributor_form %}
+    <div class="border rounded p-3 bg-light">
+        <h6 class="small text-muted mb-2">
+            <i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Add Contributor" %}
+        </h6>
+        <form method="post"
+              action="{% url 'gift_manager:relation_group_gift_contributor_add' pk=relation.relation_id %}"
+              hx-post="{% url 'gift_manager:relation_group_gift_contributor_add' pk=relation.relation_id %}"
+              hx-target="#relation-group-gift"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <div class="row g-2 align-items-end">
+                {% if contributor_form.fields.user.queryset.exists %}
+                <div class="col-md-4">
+                    <label for="gg-contributor-user" class="form-label small mb-1">{% trans "Collaborator" %}</label>
+                    {{ contributor_form.user }}
+                </div>
+                <div class="col-auto text-muted small align-self-center pt-3">
+                    {% trans "or" %}
+                </div>
+                {% endif %}
+                <div class="col-md-4">
+                    <label for="gg-contributor-name" class="form-label small mb-1">{% trans "External Person" %}</label>
+                    {{ contributor_form.name }}
+                </div>
+                {% if relation.split_mode == 'custom' %}
+                <div class="col-md-2">
+                    <label for="gg-contributor-amount" class="form-label small mb-1">{% trans "Amount" %}</label>
+                    {{ contributor_form.amount }}
+                </div>
+                {% endif %}
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add" %}
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endif %}

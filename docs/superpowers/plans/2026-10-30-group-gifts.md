@@ -154,7 +154,7 @@ Build the HTMX endpoints, dedicated partial template, and French translations.
 - Modify: `locale/fr/LC_MESSAGES/django.po`
 - Create: `gift_manager/tests/views/test_group_gift_views.py`
 
-- [ ] **Step 1: Write failing view tests in `gift_manager/tests/views/test_group_gift_views.py`:**
+- [x] **Step 1: Write failing view tests in `gift_manager/tests/views/test_group_gift_views.py`:**
   - `test_enable_disable_group_gift_htmx_and_redirect`: enables and disables group gift via HTMX and standard POST.
   - `test_switch_split_mode_htmx`: switches between equal and custom split modes.
   - `test_add_contributor_user_and_external`: adds collaborator and external name.
@@ -162,15 +162,15 @@ Build the HTMX endpoints, dedicated partial template, and French translations.
   - `test_toggle_paid_htmx`: toggles paid status with visual badge update.
   - `test_update_custom_amount_htmx`: updates custom share amount.
   - `test_plan_detail_renders_group_gift_card_for_collaborators`: editors see group gift card, progress bar, and contributor rows.
-- [ ] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_views.py`. Expected: FAIL.
-- [ ] **Step 3: Implement forms, views, templates, routes, and translations:**
+- [x] **Step 2: Run** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_views.py`. Expected: FAIL.
+- [x] **Step 3: Implement forms, views, templates, routes, and translations:**
   - In `forms.py`: `GroupGiftContributorForm` and `GroupGiftCustomAmountForm`.
   - In `views/group_gifts.py`: 6 endpoints with HTMX partial swap and standard POST redirect.
   - In `views/relation.py`: pass `group_gift` summary in `RelationDetailView.get_context_data`.
   - In `urls.py`: register routes under `relations/<uuid:pk>/group-gift/...`.
   - In templates: create `relation_group_gift_partial.html` (with accessible `role="progressbar"`, mobile card layout, and buyer badges) and include in `relation_detail_partial.html`.
   - Add French translations in `locale/fr/LC_MESSAGES/django.po` and run `django-admin compilemessages`.
-- [ ] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_views.py`. Expected: PASS.
+- [x] **Step 4: Run tests:** `tox run -e py311 -- gift_manager/tests/views/test_group_gift_views.py`. Expected: PASS.
 
 ---
 

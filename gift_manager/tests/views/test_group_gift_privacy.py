@@ -14,7 +14,6 @@ from pathlib import Path
 
 import pytest
 from django.core.exceptions import PermissionDenied
-from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.utils import timezone
 
@@ -207,7 +206,6 @@ def test_group_member_owner_positive_control():
         ),
     ],
 )
-@pytest.mark.xfail(strict=True, raises=NoReverseMatch, reason="Task 4 adds group gift URLs")
 def test_future_group_gift_endpoints_return_403_for_recipient(client, url_name, kwargs_builder):
     """All 6 group gift endpoints return HTTP 403 when called by the recipient."""
     owner = UserFactory()
@@ -238,6 +236,15 @@ def test_future_group_gift_endpoints_return_403_for_recipient(client, url_name, 
     client.force_login(recipient)
     response = client.post(url, data={})
     assert response.status_code == 403
+
+    # Nonexistent contribution ID still returns 403 (no 404 leakage for recipient)
+    kw = kwargs_builder(relation, contrib)
+    if "contribution_id" in kw:
+        bad_kw = dict(kw)
+        bad_kw["contribution_id"] = 999999
+        url_bad = reverse(url_name, kwargs=bad_kw)
+        res_bad = client.post(url_bad, data={})
+        assert res_bad.status_code == 403
 
 
 # --- 3. Existing View Surfaces & Markup Privacy -----------------------------------------------

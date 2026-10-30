@@ -360,6 +360,36 @@ urlpatterns = [
         name="relation_comment_delete",
     ),
     path(
+        "relations/<uuid:pk>/group-gift/toggle/",
+        views.relation_group_gift_toggle,
+        name="relation_group_gift_toggle",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/mode/",
+        views.relation_group_gift_mode,
+        name="relation_group_gift_mode",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/add/",
+        views.relation_group_gift_contributor_add,
+        name="relation_group_gift_contributor_add",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/remove/",
+        views.relation_group_gift_contributor_remove,
+        name="relation_group_gift_contributor_remove",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/toggle-paid/",
+        views.relation_group_gift_contributor_toggle_paid,
+        name="relation_group_gift_contributor_toggle_paid",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/amount/",
+        views.relation_group_gift_contributor_amount,
+        name="relation_group_gift_contributor_amount",
+    ),
+    path(
         "relations/<uuid:pk>/reaction/",
         views.relation_reaction,
         name="relation_reaction",

@@ -1,7 +1,9 @@
 import contextlib
 from collections.abc import Iterator
+from decimal import Decimal
 
 from django import forms
+from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
@@ -32,6 +34,7 @@ from .person_profile import promotion_target
 from .plan_coordination import can_be_surprise
 from .plan_coordination import can_be_surprise_for_owners
 from .plan_coordination import default_surprise_for
+from .plan_coordination import is_recipient_of_plan
 from .services import PermissionService
 from .sharing_service import RelationExposureDenied
 from .sharing_service import SharingService
@@ -1425,3 +1428,117 @@ class WishForm(forms.ModelForm):
         self.fields["url"].required = False
         self.fields["price_hint"].required = False
         self.fields["notes"].required = False
+
+
+def get_eligible_collaborators(relation: Relation) -> QuerySet[User]:
+    """Return users with >= VIEWER access on relation, excluding recipient and contributors."""
+    if not relation or not relation.pk:
+        return User.objects.none()
+
+    perm_user_ids = {
+        uid
+        for uid, lvl in PermissionService.get_permission_map(relation).items()
+        if lvl >= PermissionLevel.VIEWER
+    }
+
+    existing_contributor_user_ids = set(
+        relation.contributions.filter(user__isnull=False).values_list("user_id", flat=True)
+    )
+    perm_user_ids -= existing_contributor_user_ids
+
+    eligible_user_ids = [
+        user.pk
+        for user in User.objects.filter(pk__in=perm_user_ids).order_by("username")
+        if not is_recipient_of_plan(relation, user)
+    ]
+    return User.objects.filter(pk__in=eligible_user_ids).order_by("username")
+
+
+class GroupGiftContributorForm(forms.Form):
+    """Form to add a contributor to a group gift (collaborator or external name)."""
+
+    user = forms.ModelChoiceField(
+        queryset=User.objects.none(),
+        required=False,
+        empty_label=gettext_lazy("— Choose collaborator —"),
+        widget=forms.Select(attrs={"class": "form-select", "id": "gg-contributor-user"}),
+    )
+    name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "class": "form-input-text",
+                "placeholder": gettext_lazy("e.g. Uncle Bob"),
+                "id": "gg-contributor-name",
+            }
+        ),
+    )
+    amount = forms.DecimalField(
+        required=False,
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=10,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input-text",
+                "step": "0.01",
+                "min": "0",
+                "placeholder": "0.00",
+                "inputmode": "decimal",
+                "id": "gg-contributor-amount",
+            }
+        ),
+    )
+
+    def __init__(self, *args, relation=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.relation = relation
+        if relation:
+            self.fields["user"].queryset = get_eligible_collaborators(relation)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        user = cleaned_data.get("user")
+        name = (cleaned_data.get("name") or "").strip()
+        amount = cleaned_data.get("amount")
+
+        if user and name:
+            raise DjangoValidationError(
+                gettext("Choose a collaborator or enter an external name, not both.")
+            )
+        if not user and not name:
+            raise DjangoValidationError(gettext("Choose a collaborator or enter an external name."))
+
+        if user and self.relation:
+            if is_recipient_of_plan(self.relation, user):
+                raise DjangoValidationError(
+                    gettext("The recipient cannot be a contributor to their own gift.")
+                )
+            if self.relation.contributions.filter(user=user).exists():
+                raise DjangoValidationError(gettext("This user is already a contributor."))
+
+        if not amount:
+            cleaned_data["amount"] = Decimal("0.00")
+
+        cleaned_data["name"] = name
+        return cleaned_data
+
+
+class GroupGiftCustomAmountForm(forms.Form):
+    """Form to update custom contribution share amount."""
+
+    amount = forms.DecimalField(
+        required=True,
+        min_value=Decimal("0.00"),
+        decimal_places=2,
+        max_digits=10,
+        widget=forms.NumberInput(
+            attrs={
+                "class": "form-input-text",
+                "step": "0.01",
+                "min": "0",
+                "inputmode": "decimal",
+            }
+        ),
+    )

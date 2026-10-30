@@ -47,6 +47,12 @@ from .gift_tag import GiftTagDetailView
 from .gift_tag import GiftTagExplorerView
 from .gift_tag import GiftTagListView
 from .gift_tag import GiftTagUpdateView
+from .group_gifts import relation_group_gift_contributor_add
+from .group_gifts import relation_group_gift_contributor_amount
+from .group_gifts import relation_group_gift_contributor_remove
+from .group_gifts import relation_group_gift_contributor_toggle_paid
+from .group_gifts import relation_group_gift_mode
+from .group_gifts import relation_group_gift_toggle
 
 # Person views
 from .person import PersonCreateView
@@ -253,6 +259,12 @@ __all__ = [
     "relation_claim",
     "relation_comment_add",
     "relation_comment_delete",
+    "relation_group_gift_contributor_add",
+    "relation_group_gift_contributor_amount",
+    "relation_group_gift_contributor_remove",
+    "relation_group_gift_contributor_toggle_paid",
+    "relation_group_gift_mode",
+    "relation_group_gift_toggle",
     "relation_quick_action",
     "relation_quick_action_undo",
     "relation_reaction",
