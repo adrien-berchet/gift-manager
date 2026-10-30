@@ -489,3 +489,17 @@
     --bs-table-bg: transparent;
     --bs-table-color: var(--bs-body-color);
 }
+
+#relation-group-gift .table .btn {
+    min-height: 24px;
+}
+
+@media (max-width: 991.98px), (pointer: coarse) {
+    #relation-group-gift .table .btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}

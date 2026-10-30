@@ -38,7 +38,7 @@
         <label class="detail-label mb-2">{% trans "Wishlist" %}</label>
         <div class="list-group" id="friend-wishes-list">
             {% for wish in friend_wishes %}
-                {% include "gift_manager/includes/person_wish_item_partial.html" with wish=wish person=person is_editor=is_editor only %}
+                {% include "gift_manager/includes/person_wish_item_partial.html" with wish=wish person=person is_editor=is_editor csrf_token=csrf_token only %}
             {% endfor %}
         </div>
     </div>

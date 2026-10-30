@@ -248,7 +248,7 @@
                                 {% csrf_token %}
                                 <button type="submit"
                                         id="gg-remove-{{ row.contribution.pk }}"
-                                        class="btn btn-sm btn-link text-danger p-0 ms-1"
+                                        class="btn btn-sm btn-link text-danger py-0 px-2 ms-1"
                                         aria-label="{% blocktrans with name=row.display_name %}Remove {{ name }}{% endblocktrans %}"
                                         title="{% trans 'Remove contributor' %}">
                                     <i class="fas fa-times" aria-hidden="true"></i>

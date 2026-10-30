@@ -40,6 +40,10 @@ from gift_manager.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
 
+postgres_only = pytest.mark.skipif(
+    connection.vendor != "postgresql", reason="Row locks need PostgreSQL"
+)
+
 
 def _share(relation, user, level):
     PermissionService.create_or_update_permission(
@@ -717,6 +721,7 @@ class TestGroupGiftOperations:
         assert summary_after.total_collected == Decimal("0.00")
         assert summary_after.total_remaining == Decimal("60.00")
 
+    @postgres_only
     def test_concurrency_locking_takes_row_lock(self):
         owner = UserFactory()
         relation = RelationFactory(is_group_gift=True)

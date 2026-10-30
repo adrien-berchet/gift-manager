@@ -364,7 +364,16 @@ class WishPlanView(LoginRequiredMixin, View):
             relationpermission__permission_type=PermissionLevel.OWNER,
         ).exists()
 
-        wishlist.plan_wish(wish, request.user, person)
+        try:
+            wishlist.plan_wish(wish, request.user, person)
+        except ValidationError as exc:
+            messages.error(request, " ".join(exc.messages))
+            detail_url = reverse("gift_manager:person_detail", kwargs={"pk": person.person_id})
+            if request.headers.get("HX-Request") == "true":
+                response = HttpResponse("")
+                response["HX-Redirect"] = detail_url
+                return response
+            return redirect(detail_url)
 
         if already_existed:
             messages.info(request, gettext("Gift plan already exists for this wish."))

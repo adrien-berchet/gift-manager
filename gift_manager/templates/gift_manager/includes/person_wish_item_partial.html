@@ -90,18 +90,20 @@
                     </button>
                 </form>
                 {% endif %}
-            {% endif %}
 
-            {% if is_editor and not wish.is_planned_by_viewer and not wish.claimed_by_id or is_editor and wish.is_claimed_by_viewer and not wish.is_planned_by_viewer %}
-            <!-- Plan button -->
-            <form method="post" action="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
-                  hx-post="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
-                  class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-primary">
-                    <i class="fas fa-magic me-1" aria-hidden="true"></i>{% trans "Plan this gift" %}
-                </button>
-            </form>
+                {% if is_editor %}
+                    {% if not wish.claimed_by_id or wish.is_claimed_by_viewer %}
+                    <!-- Plan button -->
+                    <form method="post" action="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
+                          hx-post="{% url 'gift_manager:wish_plan' person_id=person.person_id wish_id=wish.wish_id %}"
+                          class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="fas fa-magic me-1" aria-hidden="true"></i>{% trans "Plan this gift" %}
+                        </button>
+                    </form>
+                    {% endif %}
+                {% endif %}
             {% endif %}
         </div>
     </div>

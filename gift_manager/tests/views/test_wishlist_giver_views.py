@@ -1,11 +1,14 @@
 """Tests for giver wishlist and preferences UI on linked Person page."""
 
+import re
 from decimal import Decimal
 
 import pytest
+from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import WishPriority
@@ -318,3 +321,76 @@ def test_unfriending_cleans_up_claims(client, giver, wisher, linked_person):
     detail_resp = client.get(detail_url)
     assert detail_resp.status_code == 200
     assert "Wishlist & preferences" not in detail_resp.content.decode()
+
+
+def test_wish_plan_handles_conflict_validation_error(
+    client, giver, wisher, other_friend, linked_person
+):
+    """Planning a wish concurrently claimed by another friend redirects with error without 500."""
+    wish = WishFactory(
+        wisher=wisher,
+        title="Espresso Machine",
+        claimed_by=other_friend,
+        claimed_at=timezone.now(),
+    )
+    initial_relation_count = Relation.objects.count()
+    initial_gift_count = Gift.objects.count()
+
+    client.force_login(giver)
+    plan_url = reverse(
+        "gift_manager:wish_plan",
+        kwargs={"person_id": linked_person.person_id, "wish_id": wish.wish_id},
+    )
+
+    # Plain POST: redirects to person detail with error message
+    response = client.post(plan_url, follow=True)
+    assert response.status_code == 200
+    messages_list = [m.message for m in response.context["messages"]]
+    assert any("already been claimed" in m for m in messages_list)
+    assert Relation.objects.count() == initial_relation_count
+    assert Gift.objects.count() == initial_gift_count
+    wish.refresh_from_db()
+    assert wish.claimed_by == other_friend
+
+    # HTMX POST: returns 200 with HX-Redirect header
+    response_htmx = client.post(plan_url, HTTP_HX_REQUEST="true")
+    assert response_htmx.status_code == 200
+    assert response_htmx.headers.get("HX-Redirect") == reverse(
+        "gift_manager:person_detail", kwargs={"pk": linked_person.person_id}
+    )
+    assert Relation.objects.count() == initial_relation_count
+    assert Gift.objects.count() == initial_gift_count
+
+
+def test_person_wishlist_tab_csrf_token_present_and_valid(giver, wisher, linked_person):
+    """Non-JS form inside person wishlist tab contains non-empty csrf token and succeeds."""
+    wish = WishFactory(wisher=wisher, title="Noise Cancelling Headphones")
+    secure_client = Client(enforce_csrf_checks=True)
+    secure_client.force_login(giver)
+
+    detail_url = reverse("gift_manager:person_detail", kwargs={"pk": linked_person.person_id})
+    response = secure_client.get(detail_url)
+    assert response.status_code == 200
+    content = response.content.decode()
+
+    # Scope strictly to the wish item card
+    item_start = content.find(f'id="wish-item-{wish.wish_id}"')
+    assert item_start != -1
+    item_form_end = content.find("</form>", item_start)
+    assert item_form_end != -1
+    item_form_html = content[item_start:item_form_end]
+
+    token_match = re.search(r'name="csrfmiddlewaretoken" value="([^"]+)"', item_form_html)
+    assert token_match is not None, "csrfmiddlewaretoken input must be present"
+    csrf_token = token_match.group(1)
+    assert len(csrf_token) > 0, "csrf token in wishlist form must not be blank"
+
+    # Non-JS POST with extracted CSRF token succeeds without HTTP 403
+    claim_url = reverse(
+        "gift_manager:wish_claim_toggle",
+        kwargs={"person_id": linked_person.person_id, "wish_id": wish.wish_id},
+    )
+    claim_response = secure_client.post(claim_url, {"csrfmiddlewaretoken": csrf_token})
+    assert claim_response.status_code == 302
+    wish.refresh_from_db()
+    assert wish.claimed_by == giver

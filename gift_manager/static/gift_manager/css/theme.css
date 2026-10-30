@@ -267,16 +267,6 @@
 }
 
 /* Dark mode buttons - ensure readable text */
-[data-theme="dark"] .btn-primary {
-    background-color: #6366f1;
-    color: #ffffff;
-}
-
-[data-theme="dark"] .btn-primary:hover {
-    background-color: #818cf8;
-    color: #ffffff;
-}
-
 [data-theme="dark"] .btn-secondary {
     background-color: #7c3aed;
     color: #ffffff;
@@ -329,12 +319,12 @@
 
 /* Dark mode quick action buttons in grids - override variable-based styles from modern-ux.css */
 [data-theme="dark"] .quick-action-btn.btn-primary {
-    background-color: #6366f1;
+    background-color: #4f46e5;
     color: #ffffff;
 }
 
 [data-theme="dark"] .quick-action-btn.btn-primary:hover {
-    background-color: #818cf8;
+    background-color: #4338ca;
     color: #ffffff;
 }
 
@@ -956,13 +946,21 @@ html .navbar-nav .nav-link.active {
 }
 
 .btn-primary {
-    background-color: var(--color-primary);
-    color: var(--text-inverse);
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #4f46e5;
+    --bs-btn-border-color: #4f46e5;
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: #4338ca;
+    --bs-btn-hover-border-color: #4338ca;
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: #3730a3;
+    --bs-btn-active-border-color: #3730a3;
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #4f46e5;
+    --bs-btn-disabled-border-color: #4f46e5;
 }
 
 .btn-primary:hover {
-    background-color: var(--color-primary-hover);
-    color: var(--text-inverse);
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
@@ -1439,41 +1437,13 @@ html .navbar-nav .nav-link.active {
 }
 
 /* Badge colors handled via --bs-*-rgb overrides in :root and [data-theme="dark"] */
-.badge.bg-danger {
-    background-color: #b02a37 !important;
-    color: #ffffff !important;
-}
-
-.badge.bg-primary {
-    background-color: #0a58ca !important;
-    color: #ffffff !important;
-}
-
-.badge.bg-success {
-    background-color: #0f766e !important;
-    color: #ffffff !important;
-}
-
-.badge.bg-secondary {
-    background-color: #4b5563 !important;
-    color: #ffffff !important;
-}
+.badge.bg-danger { --bs-danger-rgb: 176, 42, 55; color: #ffffff; }
+.badge.bg-primary { --bs-primary-rgb: 79, 70, 229; color: #ffffff; }
+.badge.bg-success { --bs-success-rgb: 15, 118, 110; color: #ffffff; }
+.badge.bg-secondary { --bs-secondary-rgb: 75, 85, 99; color: #ffffff; }
 
 .badge.bg-warning {
     color: var(--text-inverse);
-}
-
-.btn-primary {
-    background-color: #0b5ed7 !important;
-    border-color: #0a58ca !important;
-    color: #ffffff !important;
-}
-
-.btn-primary:hover,
-.btn-primary:focus-visible {
-    background-color: #0a58ca !important;
-    border-color: #094eb8 !important;
-    color: #ffffff !important;
 }
 
 [data-theme="dark"] .detail-label {
