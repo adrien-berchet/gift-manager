@@ -634,6 +634,10 @@
         font-size: 0.75rem;
         letter-spacing: 0;
         text-transform: none;
+        max-width: 100%;
+        white-space: normal;
+        line-height: 1.25;
+        text-align: center;
     }
 
     .dashboard-empty-action {

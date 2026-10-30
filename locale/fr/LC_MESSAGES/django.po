@@ -1835,7 +1835,7 @@ msgstr "Anniversaires à venir"
 #: gift_manager/templates/gift_manager/email/digest.txt:12
 #: gift_manager/templates/gift_manager/home.html:179
 msgid "No gift plan yet"
-msgstr "Aucun projet de cadeau pour le moment"
+msgstr "Aucun projet de cadeau"
 
 #: gift_manager/templates/gift_manager/email/digest.html:26
 #: gift_manager/templates/gift_manager/email/digest.txt:14
