@@ -1,0 +1,69 @@
+{% load i18n %}
+{% load custom_filters %}
+
+<div class="card wish-card mb-3 shadow-sm" id="wish-{{ wish.wish_id }}">
+  <div class="card-body">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+      <div>
+        <h3 class="h5 card-title mb-1 fw-bold">{{ wish.title }}</h3>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          {% if wish.priority == 3 %}
+            <span class="badge bg-danger">{{ wish.get_priority_display }}</span>
+          {% elif wish.priority == 2 %}
+            <span class="badge bg-primary">{{ wish.get_priority_display }}</span>
+          {% else %}
+            <span class="badge bg-secondary">{{ wish.get_priority_display }}</span>
+          {% endif %}
+
+          {% if wish.price_hint is not None %}
+            <span class="text-muted small">
+              <i class="fas fa-tag me-1" aria-hidden="true"></i>{{ wish.price_hint|format_price:user.profile.currency }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center gap-1">
+        {% if wish.url %}
+          <a href="{{ wish.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-secondary btn-sm" title="{% trans 'Open link' %}">
+            <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+            <span class="visually-hidden">{% trans "Open link" %}</span>
+          </a>
+        {% endif %}
+        <a href="{% url 'gift_manager:wish_edit' wish.wish_id %}"
+           class="btn btn-outline-primary btn-sm"
+           data-action="edit"
+           title="{% trans 'Edit wish' %}">
+          <i class="fas fa-edit me-1" aria-hidden="true"></i>{% trans "Edit" %}
+        </a>
+        <form method="post"
+              action="{% url 'gift_manager:wish_archive_toggle' wish.wish_id %}"
+              class="d-inline"
+              hx-post="{% url 'gift_manager:wish_archive_toggle' wish.wish_id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-secondary btn-sm" title="{% if wish.is_archived %}{% trans 'Unarchive' %}{% else %}{% trans 'Archive' %}{% endif %}">
+            {% if wish.is_archived %}
+              <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "Unarchive" %}
+            {% else %}
+              <i class="fas fa-archive me-1" aria-hidden="true"></i>{% trans "Archive" %}
+            {% endif %}
+          </button>
+        </form>
+        <form method="post"
+              action="{% url 'gift_manager:wish_delete' wish.wish_id %}"
+              class="d-inline"
+              hx-post="{% url 'gift_manager:wish_delete' wish.wish_id %}"
+              hx-confirm="{% trans 'Are you sure you want to delete this wish?' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger btn-sm" title="{% trans 'Delete wish' %}">
+            <i class="fas fa-trash me-1" aria-hidden="true"></i>{% trans "Delete" %}
+          </button>
+        </form>
+      </div>
+    </div>
+
+    {% if wish.notes %}
+      <p class="card-text text-muted small mb-0">{{ wish.notes|linebreaksbr }}</p>
+    {% endif %}
+  </div>
+</div>

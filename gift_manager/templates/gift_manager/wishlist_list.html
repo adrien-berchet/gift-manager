@@ -1,0 +1,38 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "My Wishlist" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+      <nav aria-label="{% trans 'Breadcrumb' %}">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a href="{% url 'gift_manager:profile_detail' %}">{% trans "My Profile" %}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">{% trans "My Wishlist" %}</li>
+        </ol>
+      </nav>
+      <h1 class="h2 mb-0 d-flex align-items-center">
+        <i class="fas fa-gift text-primary me-2" aria-hidden="true"></i>
+        {% trans "My Wishlist" %}
+      </h1>
+    </div>
+
+    <div>
+      <a href="{% url 'gift_manager:wish_create' %}"
+         class="btn btn-primary"
+         data-action="create">
+        <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add a wish" %}
+      </a>
+    </div>
+  </div>
+
+  <p class="text-muted mb-4">
+    {% trans "List the gifts and ideas you would love to receive. Your confirmed friends can see them when planning gifts for you." %}
+  </p>
+
+  {% include "gift_manager/includes/wishlist_body_partial.html" %}
+</div>
+{% endblock %}

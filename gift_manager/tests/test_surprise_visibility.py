@@ -37,7 +37,7 @@ def collaborator():
 
 
 def _surprise_for_person(recipient, collaborator, **kwargs):
-    person = PersonFactory(user_link=recipient)
+    person = PersonFactory(account=recipient)
     relation = RelationFactory(person=person, is_surprise=True, **kwargs)
     _share(relation, recipient)
     _share(relation, collaborator)
@@ -52,7 +52,7 @@ def test_person_recipient_is_hidden_but_collaborator_still_sees_it(recipient, co
 
 
 def test_plan_that_is_not_a_surprise_stays_visible_to_the_recipient(recipient, collaborator):
-    person = PersonFactory(user_link=recipient)
+    person = PersonFactory(account=recipient)
     relation = RelationFactory(person=person, is_surprise=False)
     _share(relation, recipient)
 
@@ -61,7 +61,7 @@ def test_plan_that_is_not_a_surprise_stays_visible_to_the_recipient(recipient, c
 
 def test_direct_group_member_is_hidden(recipient, collaborator):
     group = PersonGroupFactory()
-    PersonFactory(user_link=recipient, groups=[group])
+    PersonFactory(account=recipient, groups=[group])
     relation = GroupRelationFactory(group=group, is_surprise=True)
     _share(relation, recipient)
     _share(relation, collaborator)
@@ -74,7 +74,7 @@ def test_member_of_a_nested_child_group_is_hidden(recipient):
     target = PersonGroupFactory()
     child = PersonGroupFactory()
     child.parent_groups.add(target)
-    PersonFactory(user_link=recipient, groups=[child])
+    PersonFactory(account=recipient, groups=[child])
     relation = GroupRelationFactory(group=target, is_surprise=True)
     _share(relation, recipient)
 
@@ -85,7 +85,7 @@ def test_member_of_the_parent_of_the_target_group_still_sees_the_plan(recipient)
     parent = PersonGroupFactory()
     target = PersonGroupFactory()
     target.parent_groups.add(parent)
-    PersonFactory(user_link=recipient, groups=[parent])
+    PersonFactory(account=recipient, groups=[parent])
     relation = GroupRelationFactory(group=target, is_surprise=True)
     _share(relation, recipient)
 
@@ -93,7 +93,7 @@ def test_member_of_the_parent_of_the_target_group_still_sees_the_plan(recipient)
 
 
 def test_recipient_who_owns_the_plan_is_never_hidden(recipient):
-    person = PersonFactory(user_link=recipient)
+    person = PersonFactory(account=recipient)
     relation = RelationFactory(person=person, is_surprise=True)
     _share(relation, recipient, PermissionLevel.OWNER)
 
@@ -103,7 +103,7 @@ def test_recipient_who_owns_the_plan_is_never_hidden(recipient):
 def test_group_whose_only_linked_member_is_the_owner_stays_visible_to_them():
     owner = UserFactory()
     group = PersonGroupFactory()
-    PersonFactory(user_link=owner, groups=[group])
+    PersonFactory(account=owner, groups=[group])
     relation = GroupRelationFactory(group=group, is_surprise=True)
     _share(relation, owner, PermissionLevel.OWNER)
 
@@ -112,8 +112,8 @@ def test_group_whose_only_linked_member_is_the_owner_stays_visible_to_them():
 
 def test_hidden_surprises_for_lists_hidden_rows_even_when_not_shared(recipient, collaborator):
     hidden = _surprise_for_person(recipient, collaborator)
-    unshared = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
-    RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=False)
+    unshared = RelationFactory(person=PersonFactory(account=recipient), is_surprise=True)
+    RelationFactory(person=PersonFactory(account=recipient), is_surprise=False)
     RelationFactory(is_surprise=True)
 
     assert set(Relation.objects.hidden_surprises_for(recipient)) == {hidden, unshared}
@@ -140,7 +140,7 @@ def test_member_deep_below_the_target_group_is_hidden(recipient, collaborator):
         child = PersonGroupFactory()
         child.parent_groups.add(group)
         group = child
-    PersonFactory(user_link=recipient, groups=[group])
+    PersonFactory(account=recipient, groups=[group])
     relation = GroupRelationFactory(group=target, is_surprise=True)
     _share(relation, recipient)
     _share(relation, collaborator)
@@ -157,7 +157,7 @@ def test_member_reaching_the_target_through_a_diamond_is_hidden(recipient):
     left.parent_groups.add(target)
     right.parent_groups.add(target)
     bottom.parent_groups.add(left, right)
-    PersonFactory(user_link=recipient, groups=[bottom])
+    PersonFactory(account=recipient, groups=[bottom])
     relation = GroupRelationFactory(group=target, is_surprise=True)
     _share(relation, recipient)
 
@@ -168,7 +168,7 @@ def test_recipient_in_two_groups_is_hidden_from_plans_for_either(recipient):
     first = PersonGroupFactory()
     second = PersonGroupFactory()
     unrelated = PersonGroupFactory()
-    PersonFactory(user_link=recipient, groups=[first, second])
+    PersonFactory(account=recipient, groups=[first, second])
     hidden = [GroupRelationFactory(group=group, is_surprise=True) for group in (first, second)]
     visible = GroupRelationFactory(group=unrelated, is_surprise=True)
     for relation in [*hidden, visible]:
@@ -184,7 +184,7 @@ def test_stored_group_cycle_does_not_break_surprise_hiding(recipient, collaborat
     # Bypass the model validation to simulate legacy data
     second.parent_groups.add(first)
     first.parent_groups.add(second)
-    PersonFactory(user_link=recipient, groups=[second])
+    PersonFactory(account=recipient, groups=[second])
     relation = GroupRelationFactory(group=first, is_surprise=True)
     _share(relation, recipient)
     _share(relation, collaborator)
@@ -200,7 +200,7 @@ def test_surprise_hiding_costs_one_query_whatever_the_depth(recipient):
         child = PersonGroupFactory()
         child.parent_groups.add(group)
         group = child
-    PersonFactory(user_link=recipient, groups=[group])
+    PersonFactory(account=recipient, groups=[group])
     relation = GroupRelationFactory(group=target, is_surprise=True)
     _share(relation, recipient)
 

@@ -114,3 +114,14 @@ def test_selected_empty_file_is_an_edit(tracked_page: Page):
     assert navigation_is_blocked(tracked_page)
     attachment.set_input_files([])
     assert not navigation_is_blocked(tracked_page)
+
+
+def test_submitting_form_suppresses_navigation_warning(tracked_page: Page):
+    """Submitting a dirty form suppresses the navigation warning during page unload."""
+    tracked_page.locator("input[name=name]:not([type=hidden])").fill("Edited")
+    assert navigation_is_blocked(tracked_page)
+    tracked_page.evaluate("""() => {
+        const form = document.querySelector('form');
+        form.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));
+    }""")
+    assert not navigation_is_blocked(tracked_page)

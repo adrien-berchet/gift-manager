@@ -33,11 +33,11 @@ class TestPerson:
         person2 = Person.objects.create(first_name="Jane")
         assert str(person2) == "Jane"
 
-    def test_person_user_link(self, person, user):
+    def test_person_account(self, person, user):
         """Test linking a person to a user."""
-        person.user_link = user
+        person.account = user
         person.save()
-        assert person.user_link == user
+        assert person.account == user
 
     def test_person_permission(self, user, username, person, person_first_name, person_family_name):
         """Test adding a permission to a person."""
@@ -107,3 +107,30 @@ class TestPersonManager:
         assert "first_name" in result
         assert "family_name" in result
         assert "groups_info" in result
+
+    def test_person_factory_owner_single_user(self, user):
+        """Test PersonFactory owner hook with a single user."""
+        person = PersonFactory(owner=user)
+        perm = PersonPermission.objects.get(person=person, user=user)
+        assert perm.permission_type == PermissionLevel.OWNER
+
+    def test_person_factory_owner_multiple_users(self, user_factory):
+        """Test PersonFactory owner hook with multiple users."""
+        u1 = user_factory()
+        u2 = user_factory()
+        person = PersonFactory(owner=[u1, u2])
+        assert (
+            PersonPermission.objects.get(person=person, user=u1).permission_type
+            == PermissionLevel.OWNER
+        )
+        assert (
+            PersonPermission.objects.get(person=person, user=u2).permission_type
+            == PermissionLevel.OWNER
+        )
+
+    def test_person_factory_owner_upgrades_shared_with(self, user):
+        """Test PersonFactory owner hook upgrades viewer permission created by shared_with."""
+        person = PersonFactory(shared_with=[user], owner=user)
+        perms = PersonPermission.objects.filter(person=person, user=user)
+        assert perms.count() == 1
+        assert perms.first().permission_type == PermissionLevel.OWNER

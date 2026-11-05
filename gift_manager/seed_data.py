@@ -23,11 +23,14 @@ from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
 from datetime import timedelta
+from decimal import Decimal
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+from gift_manager import account_links
+from gift_manager import group_gifts
 from gift_manager.email_encoding import encode_email
 from gift_manager.models import Event
 from gift_manager.models import Gift
@@ -38,7 +41,16 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import PersonGroupPermission
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
+from gift_manager.models import Wish
+from gift_manager.models import WishPriority
 from gift_manager.permissions import create_or_update_permission
+
+
+@dataclass(frozen=True)
+class AccountLinkSeed:
+    household: PersonGroup
+    alice_record: Person
+    self_record: Person
 
 
 @dataclass(frozen=True)
@@ -57,6 +69,7 @@ class SeedData:
     gifts: dict[str, Gift] = field(default_factory=dict)
     events: dict[str, Event] = field(default_factory=dict)
     relations: list[Relation] = field(default_factory=list)
+    wishes: dict[str, Wish] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -78,8 +91,8 @@ def _grant_owner_all(user: User, objects: list) -> None:
 def create_seed_data() -> SeedData:  # noqa: PLR0915
     """Create a deterministic seed dataset and return a :class:`SeedData` instance.
 
-    The dataset contains **34 objects** exercising every model, relationship,
-    hierarchy, permission level and encrypted-email feature of the application.
+    The dataset contains **36 objects** exercising every model, relationship,
+    hierarchy, permission level, encrypted-email and wishlist/preference feature of the application.
     """
     # ------------------------------------------------------------------
     # 1. Users
@@ -111,6 +124,12 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
 
     # Make testuser friends with alice and bob.
     testuser.profile.friends.add(alice.profile, bob.profile)
+
+    # Set Alice's gift preferences and avoid notes
+    alice.profile.preferences_notes = "Shoe size 39, favorite color blue, loves green tea."
+    alice.profile.avoid_notes = "Peanut allergy, dislikes polyester clothing."
+    alice.profile.ai_share_self_profile = True
+    alice.profile.save()
 
     # Mark all user emails as verified for allauth.
     for user_obj, plain_email in [
@@ -228,6 +247,7 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     gadgets = GiftTag.objects.create(name="Gadgets")
     gadgets.parent_tags.add(electronics)  # Gadgets → child of Electronics
     books = GiftTag.objects.create(name="Books", is_public=True)
+    alice.profile.public_interests.add(books)
 
     tags: dict[str, GiftTag] = {
         "electronics": electronics,
@@ -311,6 +331,9 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gift=watch,
         event=graduation,
         status=statuses["purchased"],
+        price=Decimal("150.00"),
+        claimed_by=alice,
+        claimed_at=timezone.now(),
     )
     # Group relation - person is None, group is set.
     relation_3 = Relation.objects.create(
@@ -380,6 +403,40 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
     # relation_3: NONE
 
     # ------------------------------------------------------------------
+    # 10b. Group gift on relation_2 (Graduation gift for best friend)
+    # ------------------------------------------------------------------
+    group_gifts.enable_group_gift(relation_2, actor=alice)
+    bob_contrib = group_gifts.add_contributor(relation_2, actor=alice, user=bob)
+    group_gifts.add_contributor(relation_2, actor=alice, name="Charlie")
+    group_gifts.toggle_contribution_paid(bob_contrib, actor=alice)
+    relation_2.refresh_from_db()
+
+    # ------------------------------------------------------------------
+    # 11. Wishes (Alice's wishlist)
+    # ------------------------------------------------------------------
+    teapot = Wish.objects.create(
+        wisher=alice,
+        title="Ceramic Teapot",
+        url="https://example.com/teapot",
+        price_hint=Decimal("45.00"),
+        priority=WishPriority.MEDIUM,
+        notes="Japanese Kyusu teapot, glazed ceramic.",
+    )
+    fountain_pen = Wish.objects.create(
+        wisher=alice,
+        title="Fountain Pen",
+        url="https://example.com/pen",
+        price_hint=Decimal("85.00"),
+        priority=WishPriority.HIGH,
+        notes="Fine nib, blue or black body.",
+    )
+
+    wishes: dict[str, Wish] = {
+        "teapot": teapot,
+        "fountain_pen": fountain_pen,
+    }
+
+    # ------------------------------------------------------------------
     # Done - return frozen dataclass
     # ------------------------------------------------------------------
     return SeedData(
@@ -392,4 +449,42 @@ def create_seed_data() -> SeedData:  # noqa: PLR0915
         gifts=gifts,
         events=events,
         relations=relations,
+        wishes=wishes,
+    )
+
+
+def create_account_link_seed(data: SeedData) -> AccountLinkSeed:
+    """Create additional seed data for person-account links in development and E2E tests.
+
+    Creates a 'Household' group and two person records owned by ``testuser``:
+    - ``alice_record`` linked to ``data.alice``
+    - ``self_record`` linked to ``testuser``
+    """
+    testuser = User.objects.get(username="testuser")
+
+    household = PersonGroup.objects.create(name="Household")
+    create_or_update_permission(testuser, household, permission_level=PermissionLevel.OWNER)
+
+    alice_record = Person.objects.create(
+        first_name="Alice",
+        family_name="Smith",
+        email_address=encode_email("alice@example.com"),
+    )
+    create_or_update_permission(testuser, alice_record, permission_level=PermissionLevel.OWNER)
+    alice_record.groups.add(household)
+    account_links.link(alice_record, data.alice, actor=testuser)
+
+    self_record = Person.objects.create(
+        first_name="Test",
+        family_name="User",
+        email_address=encode_email("testuser@example.com"),
+    )
+    create_or_update_permission(testuser, self_record, permission_level=PermissionLevel.OWNER)
+    self_record.groups.add(household)
+    account_links.link(self_record, testuser, actor=testuser)
+
+    return AccountLinkSeed(
+        household=household,
+        alice_record=alice_record,
+        self_record=self_record,
     )

@@ -114,7 +114,7 @@ class TestPersonGroupDetail:
     ):
         """A member accessible through multiple permission rows is listed once."""
         friend = user_factory(username="friend")
-        person = person_factory(user_link=self.user, groups=[self.group])
+        person = person_factory(account=self.user, groups=[self.group])
         create_or_update_permission(self.user, person, permission_level=PermissionLevel.OWNER)
         create_or_update_permission(friend, person, permission_level=PermissionLevel.VIEWER)
         url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
@@ -152,3 +152,56 @@ class TestPersonGroupDetail:
         relation_link_start = content.index(f'href="{relation_create_url}"')
         relation_link_end = content.index("</a>", relation_link_start)
         assert 'data-action="create"' in content[relation_link_start:relation_link_end]
+
+    def test_group_members_show_link_label(self, user_factory, person_factory):
+        """Member rows on the group detail page carry the account link label."""
+        ana = user_factory(username="ana")
+        friend_record = person_factory(first_name="Ana", account=ana, groups=[self.group])
+        self_record = person_factory(first_name="Self", account=self.user, groups=[self.group])
+        unlinked_record = person_factory(first_name="Plain", groups=[self.group])
+
+        create_or_update_permission(
+            self.user, friend_record, permission_level=PermissionLevel.OWNER
+        )
+        create_or_update_permission(self.user, self_record, permission_level=PermissionLevel.OWNER)
+        create_or_update_permission(
+            self.user, unlinked_record, permission_level=PermissionLevel.OWNER
+        )
+
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        response = self.client.get(url)
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        assert "Linked to ana" in content
+        assert "This is you" in content
+
+    def test_group_detail_queries_account_without_n_plus_one(
+        self, user_factory, person_factory, django_assert_max_num_queries
+    ):
+        """Account information is prefetched to avoid N+1 queries when rendering labels."""
+        for i in range(5):
+            u = user_factory(username=f"friend_{i}")
+            p = person_factory(first_name=f"Friend{i}", account=u, groups=[self.group])
+            create_or_update_permission(self.user, p, permission_level=PermissionLevel.OWNER)
+
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        with django_assert_max_num_queries(25):
+            response = self.client.get(url)
+            assert response.status_code == 200
+
+    def test_group_detail_partial_shows_link_badges(self, user_factory, person_factory):
+        """Slide-out group detail partial shows the account link badge for members."""
+        ana = user_factory(username="ana")
+        friend_record = person_factory(first_name="Ana", account=ana, groups=[self.group])
+        create_or_update_permission(
+            self.user, friend_record, permission_level=PermissionLevel.OWNER
+        )
+
+        url = reverse("gift_manager:person_group_detail", kwargs={"pk": self.group.group_id})
+        response = self.client.get(url, HTTP_HX_REQUEST="true")
+        assert response.status_code == 200
+        content = response.content.decode()
+
+        assert "Linked to ana" in content
+        assert "badge bg-secondary" in content

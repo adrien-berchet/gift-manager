@@ -187,7 +187,9 @@
                     <li class="nav-item">
                         <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
                             {% csrf_token %}
-                            <select name="language" onchange="this.form.submit()" class="form-select form-select-sm language-select">
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <label for="language-select" class="visually-hidden">{% trans "Select Language" %}</label>
+                            <select id="language-select" name="language" onchange="if (this.form.requestSubmit) { this.form.requestSubmit(); } else { this.form.submit(); }" class="form-select form-select-sm language-select" aria-label="{% trans 'Select Language' %}">
                                 {% get_current_language as LANGUAGE_CODE %}
                                 {% get_available_languages as LANGUAGES %}
                                 {% for lang in LANGUAGES %}

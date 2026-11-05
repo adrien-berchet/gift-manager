@@ -10,6 +10,7 @@
             {% elif group %}{{ group }}
             {% elif gift_tag %}{{ gift_tag }}
             {% else %}{{ object }}{% endif %}
+            {% block title_badges %}{% endblock %}
         </h4>
         {% if object_type %}
         <small class="text-muted">{{ object_type|title }}</small>

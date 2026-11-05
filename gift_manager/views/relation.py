@@ -39,9 +39,11 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.generic import DetailView
 
+from gift_manager import group_gifts
 from gift_manager import plan_coordination
 from gift_manager.birthdays import BIRTHDAY_FOR_PARAM
 from gift_manager.forms import GiftRelationForm
+from gift_manager.forms import GroupGiftContributorForm
 from gift_manager.forms import PersonGroupRelationForm
 from gift_manager.forms import PersonRelationForm
 from gift_manager.forms import RelationForm
@@ -837,6 +839,13 @@ class RelationDetailView(BaseDetailView):
         context["coordination"] = plan_coordination.coordination_context(
             self.object, self.request.user
         )
+        if not group_gifts.is_recipient_of_plan(self.object, self.request.user):
+            summary = group_gifts.get_group_gift_summary(self.object, self.request.user)
+            context["group_gift"] = summary
+            if summary.can_manage:
+                context["contributor_form"] = GroupGiftContributorForm(relation=self.object)
+        else:
+            context["group_gift"] = None
 
         # Add action buttons
         is_editor = context["is_editor"]

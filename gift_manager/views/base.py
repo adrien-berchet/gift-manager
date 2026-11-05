@@ -409,32 +409,7 @@ class BaseCreateView(LoginRequiredMixin, CreatePermissionMixin, HTMXResponseMixi
     def form_valid(self, form):
         try:
             with transaction.atomic():
-                # Only set user_link if the model has that field
-                if hasattr(form.instance, "user_link"):
-                    logger.debug(
-                        "[BaseCreateView.form_valid] Setting user_link to %s (id=%s)",
-                        self.request.user,
-                        self.request.user.id,
-                    )
-                    form.instance.user_link = self.request.user
-                else:
-                    logger.debug(
-                        "[BaseCreateView.form_valid] Model %s has no user_link field",
-                        form.instance.__class__.__name__,
-                    )
-
                 response = super().form_valid(form)
-
-                # Log the saved instance
-                pk_field = getattr(form.instance, "pk", None) or getattr(
-                    form.instance, f"{form.instance.__class__.__name__.lower()}_id", None
-                )
-                saved_user_link = getattr(form.instance, "user_link", None)
-                logger.debug(
-                    "[BaseCreateView.form_valid] After save: pk=%s, user_link=%s",
-                    pk_field,
-                    saved_user_link,
-                )
 
                 PermissionService.create_or_update_permission(
                     self.request.user,

@@ -353,7 +353,7 @@ class TestOccasionForm:
         assert form.fields["is_surprise"].initial is False
 
     def test_occasion_form_surprise_default_for_linked_recipient(self, user):
-        person = PersonFactory(shared_with=[user], user_link=UserFactory())
+        person = PersonFactory(shared_with=[user], account=UserFactory())
 
         form = GuidedOccasionForm(user=user, recipient_value=f"person:{person.person_id}")
 
@@ -397,7 +397,7 @@ class TestOccasionForm:
 class TestOccasionPlanDetails:
     def test_occasion_form_ignores_carried_surprise_for_another_recipient(self, user):
         other = PersonFactory(shared_with=[user])
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
 
         form = GuidedOccasionForm(
             user=user,
@@ -410,7 +410,7 @@ class TestOccasionPlanDetails:
         assert form.initial["surprise_for"] == f"person:{linked.person_id}"
 
     def test_occasion_form_keeps_carried_surprise_for_the_same_recipient(self, user):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         value = f"person:{linked.person_id}"
 
         form = GuidedOccasionForm(
@@ -422,7 +422,7 @@ class TestOccasionPlanDetails:
         assert form.initial["is_surprise"] is False
 
     def test_occasion_form_ignores_carried_surprise_without_recipient_marker(self, user):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
 
         form = GuidedOccasionForm(
             user=user,
@@ -474,7 +474,7 @@ class TestOccasionPlanDetails:
         assert not form.plan_details_open
 
     def test_an_unchecked_surprise_is_remembered_for_the_same_recipient(self, user):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         value = f"person:{linked.person_id}"
 
         form = GuidedOccasionForm(
@@ -616,7 +616,7 @@ class TestInlineObjects:
         assert decode_email(person.email_address) == decode_email(expected_person.email_address)
         for field in ("first_name", "family_name", "birthday_day", "notes"):
             assert getattr(person, field) == getattr(expected_person, field), field
-        assert person.user_link == expected_person.user_link
+        assert person.account == expected_person.account
         assert set(person.groups.all()) == {group}
         assert set(person.interests.all()) == {tag}
         for field in ("name", "comment", "url", "price"):

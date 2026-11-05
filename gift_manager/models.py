@@ -1,9 +1,12 @@
 # pylint: disable=too-many-lines
+from __future__ import annotations
+
 import calendar
 import secrets
 import uuid
 from datetime import date as date_class
 from datetime import timedelta
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -30,6 +33,7 @@ from django.db.models.functions import NullIf
 from django.db.models.query_utils import DeferredAttribute
 from django.db.models.signals import post_delete
 from django.db.models.signals import post_save
+from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.urls import reverse
 from django.utils import formats
@@ -119,10 +123,6 @@ class UserPermissionQuerySet(models.QuerySet):
 
 class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
-
-    def accessible_by(self, user):
-        """Return all persons accessible by a user (user_link or shared_with)."""
-        return self.filter(Q(user_link=user) | Q(shared_with=user)).distinct()
 
     def with_groups_annotated(self, user=None):
         """Return persons with groups information annotated for Grid.js.
@@ -264,15 +264,17 @@ class EventManager(models.Manager.from_queryset(EventQuerySet)):
         return event
 
 
-def recipient_groups_for(user) -> RawSQL:
+def recipient_groups_for(user, excluding_person: Person | None = None) -> RawSQL:
     """Return a subquery of the pks of the groups that ``user`` is a recipient of.
 
-    These are the groups of each person linked to ``user`` (``Person.user_link``) plus all of
+    These are the groups of each person linked to ``user`` (``Person.account``) plus all of
     their ancestor groups: a member of a nested group is a member of its parents. It is a
     recursive query embedded in the caller's statement, so reading plans costs no extra query
     whatever the depth of the hierarchy.
     """
-    memberships = Person.groups.through.objects.filter(person__user_link=user)
+    memberships = Person.groups.through.objects.filter(person__account=user)
+    if excluding_person is not None:
+        memberships = memberships.exclude(person=excluding_person)
     return PersonGroup.hierarchy_subquery(
         memberships.values("persongroup_id"), ancestors=True, include_start=True
     )
@@ -281,7 +283,7 @@ def recipient_groups_for(user) -> RawSQL:
 class RelationQuerySet(UserPermissionQuerySet):
     """QuerySet for Relation model with additional query methods."""
 
-    def hidden_surprises_for(self, user):
+    def hidden_surprises_for(self, user, excluding_person: Person | None = None):
         """Return the surprise plans ``user`` must never see, shared with them or not.
 
         A surprise plan is hidden from its recipient: the person linked to ``user`` or a member
@@ -290,9 +292,15 @@ class RelationQuerySet(UserPermissionQuerySet):
         owns_plan = RelationPermission.objects.filter(
             relation=OuterRef("pk"), user=user, permission_type=PermissionLevel.OWNER
         )
+        person_filter = Q(person__account=user)
+        if excluding_person is not None:
+            person_filter &= ~Q(person=excluding_person)
         return (
             self.filter(is_surprise=True)
-            .filter(Q(person__user_link=user) | Q(group_id__in=recipient_groups_for(user)))
+            .filter(
+                person_filter
+                | Q(group_id__in=recipient_groups_for(user, excluding_person=excluding_person))
+            )
             .exclude(Exists(owns_plan))
         )
 
@@ -446,6 +454,27 @@ class Profile(models.Model):
             "with the AI suggestion provider to improve gift idea relevance."
         ),
     )
+    preferences_notes = models.TextField(
+        gettext_lazy("Sizes and preferences"),
+        blank=True,
+        help_text=gettext_lazy("Clothing size, shoe size, favorite colors, preferred brands."),
+    )
+    avoid_notes = models.TextField(
+        gettext_lazy("Things to avoid"),
+        blank=True,
+        help_text=gettext_lazy("Allergies, formats to avoid (e.g. no physical books), dislikes."),
+    )
+    public_interests = models.ManyToManyField(
+        "GiftTag",
+        blank=True,
+        limit_choices_to={"is_public": True},
+        related_name="interested_profiles",
+        help_text=gettext_lazy("Global public tags describing topics and hobbies you enjoy."),
+    )
+    ai_share_self_profile = models.BooleanField(
+        default=False,
+        verbose_name=gettext_lazy("Allow friends' AI suggestions to consider your preferences"),
+    )
 
     def __str__(self):
         label = gettext_lazy("Profile of")
@@ -509,6 +538,13 @@ class Invitation(models.Model):
         settings.AUTH_USER_MODEL,
         related_name="%(app_label)s_%(class)s_invitations_sent",
         on_delete=models.CASCADE,
+    )
+    person = models.ForeignKey(
+        "Person",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="invitations",
     )
     # Email is stored encoded for privacy - use email property for decoded access
     recipient_email = models.TextField()
@@ -581,12 +617,19 @@ class Person(models.Model):
     shared_with = models.ManyToManyField(
         User, through="PersonPermission", related_name="%(app_label)s_%(class)s_shared_with"
     )
-    user_link = models.ForeignKey(
+    account = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
-        related_name="%(app_label)s_%(class)s_user",
         null=True,
         blank=True,
+        on_delete=models.SET_NULL,
+        related_name="linked_persons",
+    )
+    link_suggestion_dismissed_account = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
     )
 
     # Custom manager
@@ -1324,6 +1367,132 @@ class EventPermission(BaseObjectPermission):
         return "event"
 
 
+class WishPriority(models.IntegerChoices):
+    LOW = 1, gettext_lazy("Nice to have")
+    MEDIUM = 2, gettext_lazy("Would love")
+    HIGH = 3, gettext_lazy("Must have")
+
+
+class WishQuerySet(models.QuerySet):
+    """QuerySet for Wish model with explicit visibility filters."""
+
+    def for_wisher(self, user):
+        """Return active and archived wishes belonging to the wisher."""
+        if not user or not user.is_authenticated:
+            return self.none()
+        return self.filter(wisher=user, is_deleted_by_wisher=False)
+
+    def visible_to_friend(self, friend_user, wisher_user):
+        """Return active wishes of a friend, visible only to confirmed friends."""
+        if not friend_user or not friend_user.is_authenticated:
+            return self.none()
+        if not Profile.objects.filter(user=friend_user, friends__user=wisher_user).exists():
+            return self.none()
+        return self.filter(wisher=wisher_user).filter(
+            Q(is_archived=False) | Q(claimed_by=friend_user)
+        )
+
+
+class Wish(models.Model):
+    """A personal wish authored by a user, visible to confirmed friends."""
+
+    wish_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    wisher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="wishes")
+    title = models.CharField(gettext_lazy("Title"), max_length=255)
+    url = models.URLField(
+        gettext_lazy("Link"),
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_http_url],
+    )
+    price_hint = models.DecimalField(
+        gettext_lazy("Price hint"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=gettext_lazy("Expected or typical price in your profile currency."),
+    )
+    notes = models.TextField(
+        gettext_lazy("Notes"),
+        blank=True,
+        help_text=gettext_lazy("Sizes, colors, specifications."),
+    )
+    priority = models.IntegerField(
+        gettext_lazy("Priority"),
+        choices=WishPriority.choices,
+        default=WishPriority.MEDIUM,
+    )
+    is_archived = models.BooleanField(
+        gettext_lazy("Archived"),
+        default=False,
+        help_text=gettext_lazy("Archived wishes are hidden from friends unless claimed."),
+    )
+    is_deleted_by_wisher = models.BooleanField(
+        gettext_lazy("Deleted by wisher"),
+        default=False,
+        help_text=gettext_lazy(
+            "Soft-deleted by the wisher while fulfilling plans or claims still depend on it."
+        ),
+    )
+    is_fulfilled = models.BooleanField(
+        gettext_lazy("Fulfilled"),
+        default=False,
+        help_text=gettext_lazy("Marked as fulfilled once given or received."),
+    )
+    claimed_by = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claimed_wishes",
+    )
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    wisher_updated_at = models.DateTimeField(
+        default=timezone.now,
+        help_text=gettext_lazy("Tracks when wisher last modified the wish."),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = WishQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = gettext_lazy("Wish")
+        verbose_name_plural = gettext_lazy("Wishes")
+        ordering = ["-priority", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(claimed_by__isnull=True) | models.Q(claimed_at__isnull=False),
+                name="wish_claimed_by_requires_claimed_at",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price_hint__isnull=True) | models.Q(price_hint__gte=0),
+                name="wish_price_hint_non_negative",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.wisher.username})"
+
+    def is_updated_after_claim(self) -> bool:
+        """Return whether the wisher modified this wish after it was claimed."""
+        return bool(
+            self.claimed_by_id
+            and self.claimed_at
+            and self.wisher_updated_at
+            and self.wisher_updated_at > self.claimed_at
+        )
+
+
+class SplitMode(models.TextChoices):
+    """How the cost of a group gift is divided among its contributors."""
+
+    EQUAL = "equal", gettext_lazy("Equal split")
+    CUSTOM = "custom", gettext_lazy("Custom amounts")
+
+
 class RelationStatus(models.Model):
     """Model for a relation status."""
 
@@ -1413,6 +1582,27 @@ class Relation(models.Model):
         related_name="claimed_relations",
     )
     claimed_at = models.DateTimeField(null=True, blank=True)
+    wish = models.ForeignKey(
+        "Wish",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="fulfilling_plans",
+        help_text=gettext_lazy("The wish this gift plan fulfills."),
+    )
+    is_group_gift = models.BooleanField(
+        gettext_lazy("Group gift"),
+        default=False,
+        help_text=gettext_lazy(
+            "Whether this gift plan is funded collaboratively by multiple contributors."
+        ),
+    )
+    split_mode = models.CharField(
+        max_length=20,
+        choices=SplitMode.choices,
+        default=SplitMode.EQUAL,
+        help_text=gettext_lazy("How the total gift cost is divided among contributors."),
+    )
 
     # Custom manager
     objects = RelationManager()
@@ -1484,10 +1674,20 @@ class Relation(models.Model):
         This is primarily used for form validation. For model-level validation,
         forms should call this explicitly.
         """
+        super().clean()
         if (self.person is None) == (self.group is None):
             raise ValidationError(
                 gettext_lazy("Choose exactly one recipient: a person or a group.")
             )
+        if self.wish_id is not None:
+            if self.group_id is not None:
+                raise ValidationError(
+                    gettext_lazy("A gift plan fulfilling a wish must target a person, not a group.")
+                )
+            if self.person_id is None or self.person.account_id != self.wish.wisher_id:
+                raise ValidationError(
+                    gettext_lazy("The recipient person must represent the wisher of this wish.")
+                )
 
     @classmethod
     def from_db(cls, db, field_names, values):
@@ -1567,6 +1767,124 @@ class Relation(models.Model):
     def is_group_targeted(self) -> bool:
         """Return whether this gift plan targets a group directly."""
         return self.group_id is not None
+
+
+class RelationContribution(models.Model):
+    """One contributor's share of a group gift plan.
+
+    ``amount`` is the share in custom mode, or the frozen paid amount in equal mode.
+    ``user`` is cleared when the account is deleted; ``name`` keeps the label so the
+    buyer's tally survives.
+    """
+
+    relation = models.ForeignKey(
+        "Relation",
+        on_delete=models.CASCADE,
+        related_name="contributions",
+    )
+    user = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="gift_contributions",
+        help_text=gettext_lazy("Registered user participating in this group gift."),
+    )
+    name = models.CharField(
+        max_length=150,
+        help_text=gettext_lazy("Snapshot name of the contributor or external contributor label."),
+    )
+    amount = models.DecimalField(
+        gettext_lazy("Share amount"),
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal("0.00"),
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=gettext_lazy(
+            "Stored share amount in custom mode, or frozen paid amount in equal mode."
+        ),
+    )
+    is_paid = models.BooleanField(
+        gettext_lazy("Paid"),
+        default=False,
+        help_text=gettext_lazy("Whether this contributor has paid their share to the buyer."),
+    )
+    paid_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=gettext_lazy("When this share was marked as paid."),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(amount__gte=0),
+                name="contribution_amount_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=Q(is_paid=False, paid_at__isnull=True)
+                | Q(is_paid=True, paid_at__isnull=False),
+                name="contribution_is_paid_requires_paid_at",
+            ),
+            models.CheckConstraint(
+                condition=~Q(name=""),
+                name="contribution_requires_name",
+            ),
+            models.UniqueConstraint(
+                fields=["relation", "user"],
+                condition=Q(user__isnull=False),
+                name="unique_user_contribution_per_plan",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.display_name} ({self.amount})"
+
+    def save(self, *args, **kwargs):
+        """Keep ``name`` in sync with the linked user and reject blank external names."""
+        if self.user_id is not None:
+            self.name = self.user.username
+        else:
+            self.name = (self.name or "").strip()
+            if not self.name:
+                raise ValidationError({"name": gettext_lazy("A contributor name is required.")})
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = {*update_fields, "name"}
+        super().save(*args, **kwargs)
+
+    @property
+    def display_name(self) -> str:
+        """Return the live username while the account exists, else the stored name."""
+        if self.user_id is not None:
+            return self.user.username
+        return self.name
+
+    def clean(self):
+        """Require a non-blank name for contributors without an account."""
+        super().clean()
+        self.name = (self.name or "").strip()
+        if self.user_id is None and not self.name:
+            raise ValidationError({"name": gettext_lazy("A contributor name is required.")})
+
+    def mark_paid(self, amount: Decimal | None = None) -> None:
+        """Mark the share as paid, optionally freezing the paid ``amount``."""
+        fields = {"is_paid", "paid_at"}
+        if not self.is_paid or self.paid_at is None:
+            self.paid_at = timezone.now()
+        self.is_paid = True
+        if amount is not None:
+            self.amount = amount
+            fields.add("amount")
+        self.save(update_fields=fields)
+
+    def mark_unpaid(self) -> None:
+        """Clear the paid state and its timestamp."""
+        self.is_paid = False
+        self.paid_at = None
+        self.save(update_fields=["is_paid", "paid_at"])
 
 
 class RelationPermission(BaseObjectPermission):
@@ -1772,3 +2090,32 @@ def release_claim_of_hidden_recipient(sender, instance, created, **kwargs):
         Relation.objects.filter(pk=instance.pk).update(claimed_by=None, claimed_at=None)
         instance.claimed_by = None
         instance.claimed_at = None
+
+
+@receiver(pre_delete, sender=Relation)
+def remember_wish_owners_before_plan_deletion(sender, instance, **kwargs):
+    """Snapshot the plan's owners: their permissions may be gone by ``post_delete``."""
+    if instance.wish_id is not None:
+        instance._wish_owner_ids = set(  # noqa: SLF001
+            RelationPermission.objects.filter(
+                relation_id=instance.pk, permission_type=PermissionLevel.OWNER
+            ).values_list("user_id", flat=True)
+        )
+
+
+@receiver(post_save, sender=Relation)
+def sync_wish_after_plan_save(sender, instance, **kwargs):
+    """Keep the wish's claim and fulfilled flag in line with the plan that fulfils it."""
+    if instance.wish_id is not None:
+        from gift_manager import wishlist
+
+        wishlist.sync_wish_on_plan_change(instance)
+
+
+@receiver(post_delete, sender=Relation)
+def sync_wish_after_plan_deletion(sender, instance, **kwargs):
+    """Release the wish's claim when its last active fulfilling plan is deleted."""
+    if instance.wish_id is not None:
+        from gift_manager import wishlist
+
+        wishlist.sync_wish_on_plan_change(instance, is_deleted=True)

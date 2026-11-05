@@ -2,6 +2,9 @@
 
 # Common utilities
 # Base classes (not typically imported directly, but available if needed)
+from .account_links import FriendLinkPersonView
+from .account_links import PersonDismissLinkSuggestionView
+from .account_links import PersonLinkAccountView
 from .base import BaseCreateView
 from .base import BaseDeleteView
 from .base import BaseDetailView
@@ -44,6 +47,14 @@ from .gift_tag import GiftTagDetailView
 from .gift_tag import GiftTagExplorerView
 from .gift_tag import GiftTagListView
 from .gift_tag import GiftTagUpdateView
+from .group_gifts import relation_group_gift_contributor_add
+from .group_gifts import relation_group_gift_contributor_amount
+from .group_gifts import relation_group_gift_contributor_remove
+from .group_gifts import relation_group_gift_contributor_toggle_paid
+from .group_gifts import relation_group_gift_mode
+from .group_gifts import relation_group_gift_toggle
+from .i18n import set_language
+from .i18n import translate_url_safe
 
 # Person views
 from .person import PersonCreateView
@@ -76,6 +87,7 @@ from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import UpdateProfilePreferencesView
 from .profile import UpdateViewPreferencesView
 
 # Recipient views
@@ -132,6 +144,15 @@ from .suggestions import purge_url_for
 from .suggestions import restore_url_for
 from .suggestions import suggestions_url_for
 
+# Wishlist views
+from .wishlist import WishArchiveView
+from .wishlist import WishClaimToggleView
+from .wishlist import WishCreateView
+from .wishlist import WishDeleteView
+from .wishlist import WishListView
+from .wishlist import WishPlanView
+from .wishlist import WishUpdateView
+
 __all__ = [
     "AcceptInvitationView",
     "BaseCreateView",
@@ -154,6 +175,7 @@ __all__ = [
     "EventListView",
     "EventUpdateView",
     "FilterByUserMixin",
+    "FriendLinkPersonView",
     "GetObjectByTokenMixin",
     "GiftCreateView",
     "GiftDeleteView",
@@ -172,6 +194,7 @@ __all__ = [
     "PersonCreateView",
     "PersonDeleteView",
     "PersonDetailView",
+    "PersonDismissLinkSuggestionView",
     "PersonGroupCreateView",
     "PersonGroupDeleteView",
     "PersonGroupDetailView",
@@ -179,6 +202,7 @@ __all__ = [
     "PersonGroupListView",
     "PersonGroupRelationCreateView",
     "PersonGroupUpdateView",
+    "PersonLinkAccountView",
     "PersonListView",
     "PersonRelationCreateView",
     "PersonUpdateView",
@@ -198,8 +222,16 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "UpdateProfilePreferencesView",
     "UpdateReminderPreferencesView",
     "UpdateViewPreferencesView",
+    "WishArchiveView",
+    "WishClaimToggleView",
+    "WishCreateView",
+    "WishDeleteView",
+    "WishListView",
+    "WishPlanView",
+    "WishUpdateView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",
@@ -229,6 +261,12 @@ __all__ = [
     "relation_claim",
     "relation_comment_add",
     "relation_comment_delete",
+    "relation_group_gift_contributor_add",
+    "relation_group_gift_contributor_amount",
+    "relation_group_gift_contributor_remove",
+    "relation_group_gift_contributor_toggle_paid",
+    "relation_group_gift_mode",
+    "relation_group_gift_toggle",
     "relation_quick_action",
     "relation_quick_action_undo",
     "relation_reaction",
@@ -237,7 +275,9 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "set_language",
     "suggestions_url_for",
     "surprise_default_hint",
+    "translate_url_safe",
     "update_relation_status",
 ]

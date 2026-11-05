@@ -4,7 +4,18 @@
 {% block edit_url %}{% url 'gift_manager:person_edit' pk=person.person_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:person_delete' pk=person.person_id %}{% endblock %}
 
+{% block title_badges %}
+{% with label=person|person_link_label:request.user %}
+{% if label %}
+    <span class="badge bg-secondary ms-2 align-middle">
+        <i class="fas fa-link me-1" aria-hidden="true"></i>{{ label }}
+    </span>
+{% endif %}
+{% endwith %}
+{% endblock %}
+
 {% block detail_fields %}
+{% include "gift_manager/includes/person_link_suggestion_banner.html" %}
 <div class="row g-4">
 
     <!-- Left column: Basic info, groups, sharing -->
@@ -140,12 +151,36 @@
         </div>
         {% endif %}
 
+        {% if person.account_id != request.user.id %}
         {% include "gift_manager/includes/budget_summary.html" %}
+        {% endif %}
 
     </div>
 
     <!-- Right column: Gift plans -->
     <div class="col-lg-7">
+
+        {% if person.account_id == request.user.id %}
+        <div class="detail-section">
+            <div class="alert alert-info" role="status">
+                <p class="mb-2">
+                    <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                    {% trans "This person record represents you. Gift plans and suggestions are hidden for your own record." %}
+                </p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-user me-1" aria-hidden="true"></i>{% trans "View profile" %}
+                    </a>
+                    <a href="{% url 'gift_manager:wishlist_list' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "My wishlist" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        {% if has_friend_wishlist_data %}
+        {% include "gift_manager/includes/person_wishlist_tab_partial.html" %}
+        {% endif %}
 
         <div class="detail-section">
             <h6 class="detail-section-title text-muted mb-3">
@@ -183,6 +218,7 @@
         {% include "gift_manager/includes/abandoned_ideas_partial.html" with abandoned_relations=abandoned_relations only %}
 
         {% include "gift_manager/includes/gift_history_placeholder.html" with history_url=gift_history_url only %}
+        {% endif %}
 
     </div>
 </div>

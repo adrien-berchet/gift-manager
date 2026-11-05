@@ -1,5 +1,9 @@
 """Invitation handling: token resolution, verification, rate limiting, and acceptance."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from allauth.account.models import EmailAddress
 from django.conf import settings
 from django.core.cache import cache
@@ -12,17 +16,90 @@ from gift_manager.email_encoding import decode_email
 from gift_manager.models import Invitation
 from gift_manager.models import Profile
 
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from django.contrib.auth.models import User
+
 INVITATION_TOKEN_SESSION_KEY = "pending_invitation_token"  # noqa: S105
 
 
-def _normalize_invitation_email(email: str | None) -> str:
+def normalize_email(email: str | None) -> str:
     """Validate and normalize an invitation email for comparison."""
     return EmailField().clean(email or "").casefold()
+
+
+_normalize_invitation_email = normalize_email
 
 
 def _decoded_user_email(user) -> str:
     """Return the app-level user email in plain text."""
     return decode_email(user.email or "")
+
+
+def emails_owned_by(users: Iterable[User]) -> dict[int, set[str]]:
+    """Return a mapping of user_id to set of verified or legacy casefolded emails."""
+    user_list = [u for u in users if u and u.pk]
+    if not user_list:
+        return {}
+
+    user_ids = [u.pk for u in user_list]
+    rows = EmailAddress.objects.filter(user_id__in=user_ids).values_list(
+        "user_id", "email", "verified"
+    )
+
+    verified_emails_by_user: dict[int, set[str]] = {uid: set() for uid in user_ids}
+    user_has_any_rows: set[int] = set()
+
+    for uid, row_email, verified in rows:
+        user_has_any_rows.add(uid)
+        if verified and row_email:
+            verified_emails_by_user[uid].add(row_email.casefold())
+
+    result: dict[int, set[str]] = {}
+    for user in user_list:
+        if user.pk in user_has_any_rows:
+            result[user.pk] = verified_emails_by_user.get(user.pk, set())
+        else:
+            legacy = _decoded_user_email(user).casefold()
+            result[user.pk] = {legacy} if legacy else set()
+
+    return result
+
+
+def best_email_for_account(user: User) -> str | None:
+    """Return the primary verified email, or first verified email, or legacy email if no rows."""
+    if not user or not user.pk:
+        return None
+
+    rows = list(EmailAddress.objects.filter(user=user, verified=True).order_by("-primary", "id"))
+    if rows:
+        return rows[0].email
+
+    has_any = EmailAddress.objects.filter(user=user).exists()
+    if not has_any:
+        legacy = _decoded_user_email(user)
+        return legacy or None
+
+    return None
+
+
+def accounts_owning_email(users: Iterable[User], email: str) -> list[User]:
+    """Return users among ``users`` who own ``email`` (verified or legacy)."""
+    user_list = [u for u in users if u and u.pk]
+    if not user_list:
+        return []
+
+    try:
+        clean_email = normalize_email(email)
+    except ValidationError:
+        return []
+
+    if not clean_email:
+        return []
+
+    owned_map = emails_owned_by(user_list)
+    return [u for u in user_list if clean_email in owned_map.get(u.pk, set())]
 
 
 def user_has_email(user, email: str) -> bool:
@@ -36,18 +113,7 @@ def user_has_email(user, email: str) -> bool:
 
 def _user_can_accept_invitation(user, email: str) -> bool:
     """Return whether the user has proven control of the invited email."""
-    normalized_email = email.casefold()
-    verified_account_emails = EmailAddress.objects.filter(user=user, verified=True).values_list(
-        "email", flat=True
-    )
-    if any(stored_email.casefold() == normalized_email for stored_email in verified_account_emails):
-        return True
-
-    # Legacy programmatic accounts in tests/data may not have allauth EmailAddress rows.
-    has_account_email_records = EmailAddress.objects.filter(user=user).exists()
-    return (
-        not has_account_email_records and _decoded_user_email(user).casefold() == normalized_email
-    )
+    return bool(accounts_owning_email([user], email))
 
 
 def user_is_friends_with_email(user, email: str) -> bool:
@@ -159,6 +225,9 @@ def accept_invitation_for_user(invitation: Invitation, user) -> bool:
         sender_profile, _ = Profile.objects.get_or_create(user=invitation.sender)
         user_profile.friends.add(sender_profile)
         sender_profile.friends.add(user_profile)
+        from gift_manager import account_links  # noqa: PLC0415
+
+        account_links.link_from_invitation(invitation, user)
     return True
 
 

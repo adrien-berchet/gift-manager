@@ -55,12 +55,13 @@ def test_short_terms_are_ignored():
 @pytest.mark.django_db
 def test_payload_contains_no_names_emails_or_ids(user):
     person = Person.objects.create(
+        pk=9876,
         first_name="Marguerite",
         family_name="Dupont",
     )
     person.set_email("marguerite@example.com")
     person.save()
-    group = PersonGroup.objects.create(name="Famille Dupont")
+    group = PersonGroup.objects.create(pk=8765, name="Famille Dupont")
     user.first_name = "Adrien"
     user.save()
 
@@ -731,8 +732,8 @@ def test_payload_includes_scrubbed_user_hint(user):
     assert len(payload_long["user_hint"]) == 120
 
 
-def test_prompt_version_is_3():
-    assert PROMPT_VERSION == 3
+def test_prompt_version_is_4():
+    assert PROMPT_VERSION == 4
 
 
 def test_window_person_notes_preserves_baseline_and_recent_provenance():

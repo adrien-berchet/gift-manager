@@ -221,3 +221,26 @@ def test_groups_are_nested_under_recipients_in_primary_navigation(client, url_na
     assert response.status_code == 200
     content = response.content.decode("utf-8")
     assert_recipients_nav_is_active_without_groups_nav(content)
+
+
+@pytest.mark.django_db
+def test_recipient_list_excludes_own_person_record(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    friend_person = PersonFactory(first_name="Ada", family_name="Lovelace", owner=user)
+    own_person = PersonFactory(first_name="My", family_name="Self", owner=user, account=user)
+
+    # 1. "all" view excludes own person record
+    response_all = client.get(reverse("gift_manager:recipients"))
+    assert response_all.status_code == 200
+    recipient_keys = [r["key"] for r in response_all.context["recipients"]]
+    assert f"person:{friend_person.person_id}" in recipient_keys
+    assert f"person:{own_person.person_id}" not in recipient_keys
+
+    # 2. "people" view excludes own person record
+    response_people = client.get(f"{reverse('gift_manager:recipients')}?view=people")
+    assert response_people.status_code == 200
+    grid_person_ids = [str(row["person_id"]) for row in response_people.context["person_grid_data"]]
+    assert str(friend_person.person_id) in grid_person_ids
+    assert str(own_person.person_id) not in grid_person_ids

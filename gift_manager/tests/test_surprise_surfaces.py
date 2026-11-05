@@ -67,7 +67,7 @@ class Scene:
         self.collaborator = UserFactory()
         self.gift = GiftFactory(name="Surprise gift")
         self.event = EventFactory(name="Surprise event")
-        self.person = PersonFactory(user_link=self.recipient)
+        self.person = PersonFactory(account=self.recipient)
         if kind == "group":
             self.group = PersonGroupFactory(name="Surprise group")
             self.person.groups.add(self.group)
@@ -90,8 +90,9 @@ class Scene:
             _grant(self.event, user, PermissionLevel.VIEWER, "event")
             if self.group is not None:
                 _grant(self.group, user, PermissionLevel.VIEWER, "group")
-        # The collaborator can reach the recipient person the way the owner shared it
+        # The collaborator and recipient can reach the recipient person
         _grant(self.person, self.collaborator, PermissionLevel.VIEWER, "person")
+        _grant(self.person, self.recipient, PermissionLevel.VIEWER, "person")
 
     @property
     def markers(self) -> list[str]:

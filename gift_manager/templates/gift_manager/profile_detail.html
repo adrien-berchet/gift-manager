@@ -174,6 +174,98 @@
             <span class="value">{{ profile.user.email|decode_email }}</span>
             <a href="{% url 'account_email' %}" class="btn btn-secondary btn-sm">{% trans 'Update' %}</a>
         </div>
+        {% if own_records %}
+            <div class="profile-field">
+                <label>{% trans "Your own person record:" %}</label>
+                <div class="value">
+                    {% for own_person in own_records %}
+                        <a href="{% url 'gift_manager:person_edit' own_person.person_id %}" data-action="edit">
+                            {{ own_person }} <i class="fas fa-edit ms-1 text-muted" aria-hidden="true"></i>
+                        </a>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Wishlist Section -->
+    <div class="profile-section">
+        <h2>
+            <i class="fas fa-gift"></i> {% trans "My Wishlist" %}
+            <a href="{% url 'gift_manager:wishlist_list' %}" class="btn btn-primary btn-sm ms-auto text-nowrap">
+                <i class="fas fa-list me-1" aria-hidden="true"></i>{% trans "View wishlist" %}
+            </a>
+        </h2>
+        <p class="text-muted mb-3">
+            {% trans "Manage wishes that your confirmed friends can see when looking for gift ideas for you." %}
+        </p>
+        <div class="d-flex align-items-center gap-3">
+            <span class="badge bg-primary fs-6">
+                {% blocktrans count counter=active_wishes_count %}{{ counter }} active wish{% plural %}{{ counter }} active wishes{% endblocktrans %}
+            </span>
+            <a href="{% url 'gift_manager:wish_create' %}" class="btn btn-outline-primary btn-sm" data-action="create">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add a wish" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-heart"></i> {% trans "Gift Preferences" %}</h2>
+        <p class="text-muted mb-4">
+            {% trans "Help your friends choose the right gifts by sharing your sizes, tastes, and things you dislike or cannot consume." %}
+        </p>
+
+        <form method="post" action="{% url 'gift_manager:update_profile_preferences' %}" id="profile-preferences-form"
+              hx-post="{% url 'gift_manager:update_profile_preferences' %}" hx-swap="none" data-keep-button-label>
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.preferences_notes.id_for_label }}">
+                        {{ preferences_form.preferences_notes.label }}
+                    </label>
+                    {{ preferences_form.preferences_notes }}
+                    {% if preferences_form.preferences_notes.help_text %}
+                        <div class="form-text">{{ preferences_form.preferences_notes.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.avoid_notes.id_for_label }}">
+                        {{ preferences_form.avoid_notes.label }}
+                    </label>
+                    {{ preferences_form.avoid_notes }}
+                    {% if preferences_form.avoid_notes.help_text %}
+                        <div class="form-text">{{ preferences_form.avoid_notes.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold" for="{{ preferences_form.public_interests.id_for_label }}">
+                        {{ preferences_form.public_interests.label }}
+                    </label>
+                    {{ preferences_form.public_interests }}
+                    {% if preferences_form.public_interests.help_text %}
+                        <div class="form-text">{{ preferences_form.public_interests.help_text }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch mt-2">
+                        {{ preferences_form.ai_share_self_profile }}
+                        <label class="form-check-label fw-semibold" for="{{ preferences_form.ai_share_self_profile.id_for_label }}">
+                            {{ preferences_form.ai_share_self_profile.label }}
+                        </label>
+                        {% if preferences_form.ai_share_self_profile.help_text %}
+                            <div class="form-text">{{ preferences_form.ai_share_self_profile.help_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>{% trans "Save Preferences" %}
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Display Preferences Section -->
@@ -318,21 +410,53 @@
                 <i class="fas fa-user-plus me-1"></i>{% trans "Invite friend" %}
             </a>
         </h2>
-        {% if profile.friends.all %}
+        {% if friend_link_rows %}
             <ul class="list-group list-group-flush mt-3 friends-list">
-                {% for friend in profile.friends.all %}
-                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-2">
-                        <div>
-                            <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ friend.user.username }}</div>
-                            <div class="text-muted small">{{ friend.user.email|decode_email }}</div>
+                {% for row in friend_link_rows %}
+                    <li class="list-group-item px-2 py-3">
+                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <div class="me-auto">
+                                <div class="fw-semibold"><i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ row.profile.user.username }}</div>
+                                <div class="text-muted small">{{ row.profile.user.email|decode_email }}</div>
+
+                                {% if row.linked %}
+                                    {% for p in row.linked %}
+                                        <div class="small mt-1">
+                                            <i class="fas fa-link me-1 text-muted" aria-hidden="true"></i>
+                                            {% url 'gift_manager:person_detail' p.person_id as person_url %}
+                                            {% blocktrans with name=p person_url=person_url %}Linked to <a href="{{ person_url }}">{{ name }}</a>{% endblocktrans %}
+                                            <a class="btn btn-link btn-sm p-0 ms-2" href="{% url 'gift_manager:person_link_account' p.person_id %}" data-action="edit">
+                                                {% trans "Unlink" %}
+                                                <span class="visually-hidden"> {{ p }}</span>
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                {% elif row.matching_count > 0 %}
+                                    <a class="small text-muted d-block mt-1 text-decoration-none" href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" data-action="edit">
+                                        <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% blocktrans count counter=row.matching_count %}{{ counter }} person has this email{% plural %}{{ counter }} persons have this email{% endblocktrans %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                {% if not row.linked %}
+                                    <a href="{% url 'gift_manager:friend_link_person' row.profile.pk %}" class="btn btn-outline-primary btn-sm" data-action="edit">
+                                        <i class="fas fa-link me-1" aria-hidden="true"></i>{% trans "Link to a person" %}
+                                        <span class="visually-hidden"> {% trans "for" %} {{ row.profile.user.username }}</span>
+                                    </a>
+                                    <a href="{% url 'gift_manager:person_create' %}?link_to={{ row.profile.pk }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Create person" %}
+                                        <span class="visually-hidden"> {% trans "for" %} {{ row.profile.user.username }}</span>
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'gift_manager:confirm_remove_friend' row.profile.pk %}"
+                                   class="btn btn-outline-danger btn-sm"
+                                   data-remove-friend
+                                   data-friend-name="{{ row.profile.user.username }}"
+                                   data-remove-url="{% url 'gift_manager:remove_friend' row.profile.pk %}">
+                                    <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
+                                </a>
+                            </div>
                         </div>
-                        <a href="{% url 'gift_manager:confirm_remove_friend' friend.pk %}"
-                           class="btn btn-outline-danger btn-sm"
-                           data-remove-friend
-                           data-friend-name="{{ friend.user.username }}"
-                           data-remove-url="{% url 'gift_manager:remove_friend' friend.pk %}">
-                            <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove friend" %}
-                        </a>
                     </li>
                 {% endfor %}
             </ul>

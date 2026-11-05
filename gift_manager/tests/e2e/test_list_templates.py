@@ -572,6 +572,42 @@ class TestPersonListInlineEditing:
                     page.keyboard.press("Enter")
                     page.wait_for_timeout(800)
 
+    def test_inline_editing_linked_person_preserves_badge_and_value(
+        self, page: Page, live_server, seed_data_e2e
+    ):
+        """Editing a linked person inputs only their name and preserves the link badge."""
+        dad = seed_data_e2e.persons["dad"]
+        dad.account = seed_data_e2e.bob
+        dad.save(update_fields=["account"])
+
+        _login(page, live_server.url)
+        page.goto(f"{live_server.url}/persons/")
+        _wait_for_grid(page, "person-grid")
+        _open_advanced_tools(page, "person-grid")
+
+        row = page.locator("#person-grid .gridjs-tbody tr", has_text="Dad").first
+        cell = row.locator("td:nth-child(2)")
+        expect(cell).to_be_visible()
+        expect(cell.locator(".person-link-badge")).to_be_visible()
+
+        cell.dblclick()
+        page.wait_for_timeout(500)
+
+        inline_input = page.locator(
+            "#person-grid .inline-edit-input, #person-grid .inline-editing-active input"
+        )
+        expect(inline_input.first).to_have_value(dad.first_name)
+
+        new_name = f"{dad.first_name}Updated"
+        inline_input.first.fill(new_name)
+        with page.expect_response(lambda r: "inline-update" in r.url, timeout=5000) as response:
+            page.keyboard.press("Enter")
+        assert response.value.status == 200
+
+        page.wait_for_timeout(800)
+        expect(cell.locator(".entity-name")).to_have_text(new_name)
+        expect(cell.locator(".person-link-badge")).to_be_visible()
+
     def test_editable_fields_have_cursor_hint(self, page: Page, live_server, seed_data_e2e):
         """Editable cells are available without opening advanced controls."""
         _login(page, live_server.url)

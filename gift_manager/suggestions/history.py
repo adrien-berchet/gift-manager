@@ -15,6 +15,7 @@ from gift_manager.models import GiftSuggestion
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.services import PermissionService
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import relation_status_slug
 
@@ -49,6 +50,7 @@ class RecipientHistory:
     planned_gift_ids: frozenset[int]
     interest_tag_ids: frozenset[int]
     ancestors: dict[int, frozenset[int]]
+    public_interest_tag_ids: frozenset[int] = frozenset()
 
 
 def tag_ancestor_map(tag_ids: set[int]) -> dict[int, frozenset[int]]:
@@ -86,6 +88,7 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
     visible_tag_ids = VisibleMetadata(user).tag_ids
     ancestors = tag_ancestor_map(visible_tag_ids)
 
+    public_interest_tag_ids: frozenset[int] = frozenset()
     if isinstance(recipient, Person):
         relations = list(person_history_queryset(user, recipient).prefetch_related("gift__tags"))
         raw_interest_ids = set(
@@ -95,6 +98,18 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
             *(ancestors.get(tid, frozenset({tid})) for tid in raw_interest_ids),
             frozenset(),
         )
+        if recipient.account_id and PermissionService.users_are_friends(user, recipient.account):
+            account_profile = getattr(recipient.account, "profile", None)
+            if account_profile:
+                raw_pub_ids = set(
+                    account_profile.public_interests.filter(
+                        is_public=True, pk__in=visible_tag_ids
+                    ).values_list("pk", flat=True)
+                )
+                public_interest_tag_ids = frozenset.union(
+                    *(ancestors.get(tid, frozenset({tid})) for tid in raw_pub_ids),
+                    frozenset(),
+                )
     else:
         relations = list(group_history_queryset(user, recipient).prefetch_related("gift__tags"))
         interest_tag_ids = frozenset()
@@ -161,6 +176,7 @@ def build_recipient_history(user, recipient: Person | PersonGroup) -> RecipientH
         planned_gift_ids=planned_gift_ids,
         interest_tag_ids=interest_tag_ids,
         ancestors=ancestors,
+        public_interest_tag_ids=public_interest_tag_ids,
     )
 
 

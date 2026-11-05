@@ -1,0 +1,59 @@
+{% extends "gift_manager/base.html" %}
+{% load custom_filters %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Link to a person" %} - {{ friend.user.username }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <h1>{% trans "Link to a person" %} - {{ friend.user.username }}</h1>
+        <a href="{% url 'gift_manager:profile_detail' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back to Profile" %}
+        </a>
+    </div>
+</div>
+
+<div class="card col-lg-8 col-md-10 mx-auto">
+    <div class="card-body">
+        <p class="text-muted mb-4">
+            {% blocktrans with username=friend.user.username %}Choose one of your person records to link to {{ username }}.{% endblocktrans %}
+        </p>
+
+        {% if persons %}
+            <ul class="list-group list-group-flush">
+                {% for person in persons %}
+                    <li class="list-group-item d-flex flex-wrap justify-content-between align-items-center gap-2 px-2 py-3">
+                        <div>
+                            <div class="fw-semibold">
+                                <i class="fas fa-user me-2 text-muted" aria-hidden="true"></i>{{ person }}
+                                {% if person.has_same_email %}
+                                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle ms-2">
+                                        <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% trans "Same email" %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% if person.email_address %}
+                                <div class="text-muted small ms-4">{{ person.email_address|decode_email }}</div>
+                            {% endif %}
+                        </div>
+                        <form method="post" action="{% url 'gift_manager:friend_link_person' friend.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="person" value="{{ person.person_id }}">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-link me-1" aria-hidden="true"></i>{% trans "Link" %}
+                                <span class="visually-hidden"> {{ person }} {% trans "to" %} {{ friend.user.username }}</span>
+                            </button>
+                        </form>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted mb-3">{% trans "You don't have any unlinked persons to link to this friend." %}</p>
+            <a href="{% url 'gift_manager:person_create' %}?link_to={{ friend.pk }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Create person" %}
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

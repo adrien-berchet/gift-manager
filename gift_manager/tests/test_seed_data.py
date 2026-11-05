@@ -71,6 +71,14 @@ class TestObjectCounts:
         assert len(data.relations) == 4
         assert Relation.objects.count() >= 4
 
+    def test_wish_count(self, data):
+        from gift_manager.models import Wish
+
+        assert len(data.wishes) == 2
+        assert Wish.objects.count() >= 2
+        assert data.wishes["teapot"].wisher == data.alice
+        assert data.wishes["fountain_pen"].wisher == data.alice
+
 
 # =====================================================================
 # Return type
@@ -405,6 +413,30 @@ class TestRelations:
         assert r.gift == data.gifts["watch"]
         assert r.event == data.events["graduation"]
         assert r.status == data.statuses["purchased"]
+        assert r.is_group_gift is True
+        assert r.claimed_by == data.alice
+        assert r.contributions.count() == 3
+
+    def test_relation_2_group_gift_tally(self, data):
+        from decimal import Decimal
+
+        from gift_manager import group_gifts
+
+        r = data.relations[2]
+        summary = group_gifts.get_group_gift_summary(r, data.alice)
+        assert summary.total_price == Decimal("150.00")
+        assert summary.total_collected == Decimal("100.00")
+        assert summary.owed_to_buyer == Decimal("50.00")
+        assert len(summary.rows) == 3
+        buyer_row = next(row for row in summary.rows if row.is_buyer)
+        assert buyer_row.is_paid is True
+        assert buyer_row.share_amount == Decimal("50.00")
+        bob_row = next(row for row in summary.rows if row.contribution.user == data.bob)
+        assert bob_row.is_paid is True
+        assert bob_row.share_amount == Decimal("50.00")
+        charlie_row = next(row for row in summary.rows if row.contribution.user is None)
+        assert charlie_row.is_paid is False
+        assert charlie_row.share_amount == Decimal("50.00")
 
     def test_relation_3_group_scarf_christmas_given(self, data):
         r = data.relations[3]
@@ -413,3 +445,38 @@ class TestRelations:
         assert r.gift == data.gifts["scarf"]
         assert r.event == data.events["christmas"]
         assert r.status == data.statuses["given"]
+
+
+# =====================================================================
+# Account link seed
+# =====================================================================
+
+
+class TestAccountLinkSeed:
+    """Verify that create_account_link_seed creates the household group and linked records."""
+
+    def test_account_link_seed(self, data):
+        from gift_manager.seed_data import AccountLinkSeed
+        from gift_manager.seed_data import create_account_link_seed
+
+        link_seed = create_account_link_seed(data)
+        assert isinstance(link_seed, AccountLinkSeed)
+        assert link_seed.household.name == "Household"
+        assert link_seed.alice_record.account == data.alice
+        testuser = User.objects.get(username="testuser")
+        assert link_seed.self_record.account == testuser
+        assert link_seed.household in link_seed.alice_record.groups.all()
+        assert link_seed.household in link_seed.self_record.groups.all()
+        assert (
+            PermissionService.get_effective_permission(link_seed.household, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert (
+            PermissionService.get_effective_permission(link_seed.alice_record, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert (
+            PermissionService.get_effective_permission(link_seed.self_record, testuser)
+            == PermissionLevel.OWNER
+        )
+        assert len(data.persons) == 5

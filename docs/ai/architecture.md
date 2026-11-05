@@ -34,6 +34,12 @@
 - Duplicating a plan and "Plan again" (recreating a repeating event's last occurrence as `Idea`
   plans, Birthday event included) live in `gift_manager/plan_repeat.py`; copies are owned by the
   creating user only and never carry reactions or sharing.
+- Persons and accounts: `Person.account` states which user account the record represents. The link
+  never grants access or ownership; ownership is determined solely by `PersonPermission` rows
+  through `PermissionService`, and `Person.objects.accessible_by(user)` follows `shared_with=user`
+  like every other permission-governed model. Being a recipient (a person linked to a user, or a
+  group containing such a person) only removes visibility of surprise gift plans via
+  `RelationQuerySet.hidden_surprises_for` and `accessible_by`.
 - Plan coordination: `gift_manager/plan_coordination.py` holds the claim, release, comment and
   surprise-flag rules on top of `PermissionService`; views in `views/plan_coordination.py` look plans
   up through `accessible_by` (404, never 403, for users who cannot see a plan). A surprise plan

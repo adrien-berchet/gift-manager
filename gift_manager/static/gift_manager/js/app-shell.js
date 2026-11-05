@@ -374,10 +374,10 @@
                 e.detail.isError = false;
             }
 
-            // A refused claim (409) or comment (422) answers with the coordination fragment,
+            // A refused claim (409) or comment/group-gift action (422) answers with the fragment,
             // alert included: show it instead of dropping the response
             const target = e.detail.target;
-            if (target && target.id === 'relation-coordination' &&
+            if (target && (target.id === 'relation-coordination' || target.id === 'relation-group-gift') &&
                 (xhr.status === 409 || xhr.status === 422)) {
                 e.detail.shouldSwap = true;
                 e.detail.isError = false;

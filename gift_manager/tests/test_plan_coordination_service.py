@@ -229,7 +229,7 @@ def test_editor_and_owner_can_set_and_clear_the_surprise_flag(request, relation,
 
 def test_surprise_is_stored_as_false_when_the_recipient_owns_the_plan(editor):
     recipient = UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient))
+    relation = RelationFactory(person=PersonFactory(account=recipient))
     _share(relation, recipient, PermissionLevel.OWNER)
     _share(relation, editor, PermissionLevel.EDITOR)
 
@@ -241,7 +241,7 @@ def test_surprise_is_stored_as_false_when_the_recipient_owns_the_plan(editor):
 
 def test_the_hidden_recipient_cannot_claim_or_comment(editor):
     recipient = UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+    relation = RelationFactory(person=PersonFactory(account=recipient), is_surprise=True)
     _share(relation, recipient, PermissionLevel.EDITOR)
 
     with pytest.raises(PermissionDenied):
@@ -252,14 +252,14 @@ def test_the_hidden_recipient_cannot_claim_or_comment(editor):
 
 def test_can_be_surprise_is_false_when_the_recipient_owns_the_plan():
     recipient = UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient))
+    relation = RelationFactory(person=PersonFactory(account=recipient))
     _share(relation, recipient, PermissionLevel.OWNER)
 
     assert plan_coordination.can_be_surprise(relation) is False
 
 
 def test_can_be_surprise_is_true_for_a_linked_recipient_who_is_not_an_owner(owner):
-    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()))
+    relation = RelationFactory(person=PersonFactory(account=UserFactory()))
     _share(relation, owner, PermissionLevel.OWNER)
 
     assert plan_coordination.can_be_surprise(relation) is True
@@ -267,7 +267,7 @@ def test_can_be_surprise_is_true_for_a_linked_recipient_who_is_not_an_owner(owne
 
 def test_can_be_surprise_is_true_for_any_group(owner):
     group = PersonGroupFactory()
-    PersonFactory(user_link=owner, groups=[group])
+    PersonFactory(account=owner, groups=[group])
     relation = GroupRelationFactory(group=group)
     _share(relation, owner, PermissionLevel.OWNER)
 
@@ -278,7 +278,7 @@ def test_can_be_surprise_is_true_for_any_group(owner):
 
 
 def test_default_is_on_for_a_person_linked_to_another_user():
-    person = PersonFactory(user_link=UserFactory())
+    person = PersonFactory(account=UserFactory())
 
     assert plan_coordination.default_surprise_for(person, UserFactory()) is True
 
@@ -286,9 +286,7 @@ def test_default_is_on_for_a_person_linked_to_another_user():
 def test_default_is_off_for_the_creators_own_person():
     creator = UserFactory()
 
-    assert (
-        plan_coordination.default_surprise_for(PersonFactory(user_link=creator), creator) is False
-    )
+    assert plan_coordination.default_surprise_for(PersonFactory(account=creator), creator) is False
 
 
 def test_default_is_off_for_an_unlinked_person_and_for_no_recipient():
@@ -298,7 +296,7 @@ def test_default_is_off_for_an_unlinked_person_and_for_no_recipient():
 
 def test_default_is_on_for_a_group_with_a_linked_member():
     group = PersonGroupFactory()
-    PersonFactory(user_link=UserFactory(), groups=[group])
+    PersonFactory(account=UserFactory(), groups=[group])
 
     assert plan_coordination.default_surprise_for(group, UserFactory()) is True
 
@@ -306,7 +304,7 @@ def test_default_is_on_for_a_group_with_a_linked_member():
 def test_default_is_on_when_the_linked_member_is_in_a_nested_group():
     group, child = PersonGroupFactory(), PersonGroupFactory()
     child.parent_groups.add(group)
-    PersonFactory(user_link=UserFactory(), groups=[child])
+    PersonFactory(account=UserFactory(), groups=[child])
 
     assert plan_coordination.default_surprise_for(group, UserFactory()) is True
 
@@ -314,7 +312,7 @@ def test_default_is_on_when_the_linked_member_is_in_a_nested_group():
 def test_default_is_off_for_a_group_whose_only_linked_member_is_the_creator():
     creator = UserFactory()
     group = PersonGroupFactory()
-    PersonFactory(user_link=creator, groups=[group])
+    PersonFactory(account=creator, groups=[group])
     PersonFactory(groups=[group])
 
     assert plan_coordination.default_surprise_for(group, creator) is False
@@ -325,7 +323,7 @@ def test_default_is_off_for_a_group_whose_only_linked_member_is_the_creator():
 
 def test_hidden_recipient_ids_for_a_person_recipient_and_the_owner_exemption():
     recipient, owner = UserFactory(), UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+    relation = RelationFactory(person=PersonFactory(account=recipient), is_surprise=True)
     _share(relation, owner, PermissionLevel.OWNER)
 
     assert plan_coordination.hidden_recipient_ids(relation) == {recipient.pk}
@@ -339,9 +337,9 @@ def test_hidden_recipient_ids_for_a_group_include_nested_members():
     group, child, parent = PersonGroupFactory(), PersonGroupFactory(), PersonGroupFactory()
     child.parent_groups.add(group)
     group.parent_groups.add(parent)
-    PersonFactory(user_link=direct, groups=[group])
-    PersonFactory(user_link=nested, groups=[child])
-    PersonFactory(user_link=parent_member, groups=[parent])
+    PersonFactory(account=direct, groups=[group])
+    PersonFactory(account=nested, groups=[child])
+    PersonFactory(account=parent_member, groups=[parent])
     PersonFactory(groups=[group])
     relation = GroupRelationFactory(group=group, is_surprise=True)
 
@@ -349,7 +347,7 @@ def test_hidden_recipient_ids_for_a_group_include_nested_members():
 
 
 def test_hidden_recipient_ids_is_empty_when_the_plan_is_not_a_surprise():
-    relation = RelationFactory(person=PersonFactory(user_link=UserFactory()), is_surprise=False)
+    relation = RelationFactory(person=PersonFactory(account=UserFactory()), is_surprise=False)
 
     assert plan_coordination.hidden_recipient_ids(relation) == set()
 
@@ -357,7 +355,7 @@ def test_hidden_recipient_ids_is_empty_when_the_plan_is_not_a_surprise():
 def test_hidden_recipient_ids_agrees_with_hidden_surprises_for():
     users = [UserFactory() for _ in range(3)]
     group = PersonGroupFactory()
-    PersonFactory(user_link=users[0], groups=[group])
+    PersonFactory(account=users[0], groups=[group])
     relation = GroupRelationFactory(group=group, is_surprise=True)
 
     hidden = plan_coordination.hidden_recipient_ids(relation)
@@ -369,7 +367,7 @@ def test_hidden_recipient_ids_agrees_with_hidden_surprises_for():
 
 def test_sharing_warning_names_only_the_people_who_cannot_see_the_plan():
     recipient, other = UserFactory(), UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+    relation = RelationFactory(person=PersonFactory(account=recipient), is_surprise=True)
 
     warning = plan_coordination.surprise_sharing_warning(relation, [recipient, other])
 
@@ -382,8 +380,8 @@ def test_sharing_warning_names_only_the_people_who_cannot_see_the_plan():
 def test_sharing_warning_is_translated_and_agrees_in_number():
     first, second = UserFactory(username="anna"), UserFactory(username="ben")
     group = PersonGroupFactory()
-    PersonFactory(user_link=first, groups=[group])
-    PersonFactory(user_link=second, groups=[group])
+    PersonFactory(account=first, groups=[group])
+    PersonFactory(account=second, groups=[group])
     relation = GroupRelationFactory(group=group, is_surprise=True)
 
     with translation.override("fr"):

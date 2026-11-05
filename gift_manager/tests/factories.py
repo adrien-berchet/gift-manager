@@ -21,9 +21,11 @@ Usage:
 
 from datetime import date
 from datetime import timedelta
+from decimal import Decimal
 
 import factory
 from django.contrib.auth.models import User
+from django.utils import timezone
 from factory.django import DjangoModelFactory
 
 from gift_manager.email_encoding import encode_email
@@ -34,7 +36,10 @@ from gift_manager.models import Invitation
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
+from gift_manager.models import RelationContribution
 from gift_manager.models import RelationStatus
+from gift_manager.models import Wish
+from gift_manager.models import WishPriority
 
 
 class UserFactory(DjangoModelFactory):
@@ -91,6 +96,22 @@ class PersonFactory(DjangoModelFactory):
 
             PersonPermission.objects.create(
                 user=user, person=self, permission_type=PermissionLevel.VIEWER
+            )
+
+    @factory.post_generation
+    def owner(self, create, extracted, **kwargs):
+        """Create or update owner permission rows for the person."""
+        if not create or not extracted:
+            return
+        from gift_manager.models import PermissionLevel
+        from gift_manager.models import PersonPermission
+
+        users = extracted if isinstance(extracted, (list, tuple, set)) else [extracted]
+        for user in users:
+            PersonPermission.objects.update_or_create(
+                user=user,
+                person=self,
+                defaults={"permission_type": PermissionLevel.OWNER},
             )
 
 
@@ -230,6 +251,7 @@ class RelationFactory(DjangoModelFactory):
     status = factory.SubFactory(RelationStatusFactory, status="Idea")
     comment = factory.Faker("sentence")
     due_date = factory.LazyFunction(lambda: date.today() + timedelta(days=30))
+    wish = None
 
     @factory.post_generation
     def shared_with(self, create, extracted, **kwargs):
@@ -252,6 +274,27 @@ class GroupRelationFactory(RelationFactory):
     group = factory.SubFactory(PersonGroupFactory)
 
 
+class RelationContributionFactory(DjangoModelFactory):
+    """Factory for creating RelationContribution instances.
+
+    Traits: ``external`` (no linked user) and ``paid`` (marked as paid).
+    """
+
+    class Meta:
+        model = RelationContribution
+
+    class Params:
+        external = factory.Trait(user=None, name="External Contributor")
+        paid = factory.Trait(is_paid=True)
+
+    relation = factory.SubFactory(RelationFactory)
+    user = factory.SubFactory(UserFactory)
+    name = factory.LazyAttribute(lambda o: o.user.username if o.user else "External Contributor")
+    amount = Decimal("0.00")
+    is_paid = False
+    paid_at = factory.Maybe("is_paid", factory.LazyFunction(timezone.now), None)
+
+
 class InvitationFactory(DjangoModelFactory):
     """Factory for creating Invitation instances."""
 
@@ -264,3 +307,19 @@ class InvitationFactory(DjangoModelFactory):
         lambda obj: encode_email(f"recipient{obj.sender.username}@example.com")
     )
     accepted = False
+
+
+class WishFactory(DjangoModelFactory):
+    """Factory for creating Wish instances."""
+
+    class Meta:
+        model = Wish
+
+    wisher = factory.SubFactory(UserFactory)
+    title = factory.Sequence(lambda n: f"Wish {n}")
+    url = factory.Faker("url")
+    price_hint = Decimal("25.00")
+    notes = factory.Faker("sentence")
+    priority = WishPriority.MEDIUM
+    is_archived = False
+    is_fulfilled = False

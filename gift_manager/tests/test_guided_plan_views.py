@@ -178,7 +178,7 @@ class TestSteps:
     def test_unchecked_surprise_survives_back_and_next(
         self, authenticated_client, url, user, idea_status
     ):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         gift = GiftFactory(shared_with=[user])
 
         first = _post(authenticated_client, url, 2, recipient=_recipient(linked), gift=gift.pk)
@@ -207,7 +207,7 @@ class TestSteps:
         self, authenticated_client, url, user, idea_status
     ):
         plain = PersonFactory(shared_with=[user])
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         gift = GiftFactory(shared_with=[user])
 
         # Step 3 was filled for a recipient without a surprise default ("No" chosen)...
@@ -779,7 +779,7 @@ class TestModeMarkup:
     def test_stale_chooser_value_does_not_set_the_surprise_default_in_new_mode(
         self, authenticated_client, url, user
     ):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         gift = GiftFactory(shared_with=[user])
 
         response = _post(
@@ -978,7 +978,7 @@ class TestStatusAndSurpriseMarkup:
     def test_surprise_checkbox_is_checked_for_a_linked_recipient(
         self, authenticated_client, url, user
     ):
-        linked = PersonFactory(shared_with=[user], user_link=UserFactory())
+        linked = PersonFactory(shared_with=[user], account=UserFactory())
         gift = GiftFactory(shared_with=[user])
 
         response = _post(

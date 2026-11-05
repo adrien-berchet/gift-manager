@@ -1,0 +1,26 @@
+{% load i18n %}
+
+<form method="post"
+      id="wish-form"
+      {% if object and object.wish_id %}
+      action="{% url 'gift_manager:wish_edit' object.wish_id %}"
+      hx-post="{% url 'gift_manager:wish_edit' object.wish_id %}"
+      {% else %}
+      action="{% url 'gift_manager:wish_create' %}"
+      hx-post="{% url 'gift_manager:wish_create' %}"
+      {% endif %}
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form wish-form"
+      data-form-type="wish">
+  {% csrf_token %}
+
+  <div class="form-fields" tabindex="-1">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/wish_fields.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" action=action translated_type=translated_type %}
+</form>

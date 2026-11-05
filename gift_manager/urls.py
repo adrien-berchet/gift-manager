@@ -52,14 +52,49 @@ urlpatterns = [
         name="remove_friend",
     ),
     path(
+        "profile/friends/<int:friend_id>/link/",
+        views.FriendLinkPersonView.as_view(),
+        name="friend_link_person",
+    ),
+    path(
         "profile/update-view-preferences/",
         views.UpdateViewPreferencesView.as_view(),
         name="update_view_preferences",
     ),
     path(
+        "profile/update-preferences/",
+        views.UpdateProfilePreferencesView.as_view(),
+        name="update_profile_preferences",
+    ),
+    path(
         "profile/update-reminder-preferences/",
         views.UpdateReminderPreferencesView.as_view(),
         name="update_reminder_preferences",
+    ),
+    path(
+        "profile/wishlist/",
+        views.WishListView.as_view(),
+        name="wishlist_list",
+    ),
+    path(
+        "profile/wishlist/add/",
+        views.WishCreateView.as_view(),
+        name="wish_create",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/edit/",
+        views.WishUpdateView.as_view(),
+        name="wish_edit",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/archive/",
+        views.WishArchiveView.as_view(),
+        name="wish_archive_toggle",
+    ),
+    path(
+        "profile/wishlist/<uuid:wish_id>/delete/",
+        views.WishDeleteView.as_view(),
+        name="wish_delete",
     ),
     path(
         "profile/calendar-feed/regenerate/",
@@ -83,6 +118,16 @@ urlpatterns = [
     path("persons/<uuid:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
     path("persons/<uuid:pk>/edit/", views.PersonUpdateView.as_view(), name="person_edit"),
     path("persons/<uuid:pk>/delete/", views.PersonDeleteView.as_view(), name="person_delete"),
+    path(
+        "persons/<uuid:pk>/link/",
+        views.PersonLinkAccountView.as_view(),
+        name="person_link_account",
+    ),
+    path(
+        "persons/<uuid:pk>/link-suggestion/dismiss/",
+        views.PersonDismissLinkSuggestionView.as_view(),
+        name="person_dismiss_link_suggestion",
+    ),
     path(
         "persons/<uuid:pk>/gift-history/",
         views.person_gift_history,
@@ -127,6 +172,16 @@ urlpatterns = [
         "persons/<uuid:pk>/add_relation/",
         views.PersonRelationCreateView.as_view(),
         name="person_relation_create",
+    ),
+    path(
+        "persons/<uuid:person_id>/wishes/<uuid:wish_id>/claim/",
+        views.WishClaimToggleView.as_view(),
+        name="wish_claim_toggle",
+    ),
+    path(
+        "persons/<uuid:person_id>/wishes/<uuid:wish_id>/plan/",
+        views.WishPlanView.as_view(),
+        name="wish_plan",
     ),
     path("person_groups/", views.PersonGroupListView.as_view(), name="person_groups"),
     path(
@@ -303,6 +358,36 @@ urlpatterns = [
         "relations/<uuid:pk>/comments/<int:comment_id>/delete/",
         views.relation_comment_delete,
         name="relation_comment_delete",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/toggle/",
+        views.relation_group_gift_toggle,
+        name="relation_group_gift_toggle",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/mode/",
+        views.relation_group_gift_mode,
+        name="relation_group_gift_mode",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/add/",
+        views.relation_group_gift_contributor_add,
+        name="relation_group_gift_contributor_add",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/remove/",
+        views.relation_group_gift_contributor_remove,
+        name="relation_group_gift_contributor_remove",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/toggle-paid/",
+        views.relation_group_gift_contributor_toggle_paid,
+        name="relation_group_gift_contributor_toggle_paid",
+    ),
+    path(
+        "relations/<uuid:pk>/group-gift/contributors/<int:contribution_id>/amount/",
+        views.relation_group_gift_contributor_amount,
+        name="relation_group_gift_contributor_amount",
     ),
     path(
         "relations/<uuid:pk>/reaction/",

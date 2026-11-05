@@ -246,7 +246,7 @@ def test_stranger_gets_404_on_comment_delete(client, relation, viewer, stranger)
 
 def test_recipient_gets_404_everywhere_once_the_plan_is_a_surprise(client, owner):
     recipient = UserFactory()
-    relation = RelationFactory(person=PersonFactory(user_link=recipient), is_surprise=True)
+    relation = RelationFactory(person=PersonFactory(account=recipient), is_surprise=True)
     _share(relation, recipient, PermissionLevel.EDITOR)
     _share(relation, owner, PermissionLevel.OWNER)
     comment = plan_coordination.add_comment(relation, owner, "shh")
