@@ -21,15 +21,22 @@ class TestProfilePreferences:
         page.evaluate("window.__sameDocument = true")
         page.evaluate("window.scrollTo({top: 300, behavior: 'instant'})")
         page.wait_for_function("window.scrollY === 300")
+        return self._snapshot(page)
+
+    def _snapshot(self, page: Page):
         return page.evaluate(
             "[window.scrollY, document.querySelector('h1, h2').getBoundingClientRect().top]"
         )
 
+    def _prepare_submit(self, page: Page, submit):
+        # Clicking scrolls an off-screen control into view by itself. Do that first so the
+        # snapshot only measures what saving does to the page.
+        submit.scroll_into_view_if_needed()
+        return self._snapshot(page)
+
     def _assert_not_reloaded(self, page: Page, before):
         assert page.evaluate("window.__sameDocument === true"), "the page was reloaded"
-        after = page.evaluate(
-            "[window.scrollY, document.querySelector('h1, h2').getBoundingClientRect().top]"
-        )
+        after = self._snapshot(page)
         assert after == before, f"the page moved: {before} -> {after}"
 
     @pytest.mark.parametrize("form_id", ["view-preferences-form", "reminder-preferences-form"])
@@ -116,10 +123,12 @@ class TestProfilePreferences:
         assert button.is_enabled()
 
     def test_display_preferences_save_without_reload(self, page: Page, live_server, seed_data_e2e):
-        before = self._open_profile(page, live_server)
+        self._open_profile(page, live_server)
 
         page.locator("#view-preferences-form .view-option", has_text="Cards").first.click()
-        page.locator("#view-preferences-form button[type='submit']").click()
+        submit = page.locator("#view-preferences-form button[type='submit']")
+        before = self._prepare_submit(page, submit)
+        submit.click()
 
         expect(page.locator(".toast").filter(has_text="Display preferences saved")).to_be_visible()
         self._assert_not_reloaded(page, before)
@@ -127,12 +136,14 @@ class TestProfilePreferences:
         assert profile.default_view_desktop == Profile.VIEW_CARD
 
     def test_reminder_preferences_save_without_reload(self, page: Page, live_server, seed_data_e2e):
-        before = self._open_profile(page, live_server)
+        self._open_profile(page, live_server)
 
         page.locator("#reminder-preferences-form select[name='digest_frequency']").select_option(
             "weekly"
         )
-        page.locator("#reminder-preferences-form button[type='submit']").click()
+        submit = page.locator("#reminder-preferences-form button[type='submit']")
+        before = self._prepare_submit(page, submit)
+        submit.click()
 
         expect(page.locator(".toast").filter(has_text="Reminder preferences saved")).to_be_visible()
         self._assert_not_reloaded(page, before)
