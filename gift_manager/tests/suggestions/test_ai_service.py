@@ -13,6 +13,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.statuses import is_idea_status
 from gift_manager.suggestions.ai.client import AICompletionError
+from gift_manager.suggestions.ai.prompt import PROMPT_VERSION
 from gift_manager.suggestions.service import AIBlock
 from gift_manager.suggestions.service import GiftSuggestionService
 from gift_manager.tests.factories import GiftFactory
@@ -714,7 +715,7 @@ def test_generation_records_telemetry(user, share):
 
     gen = GiftSuggestionGeneration.objects.filter(user=user, person=person).latest("id")
     assert gen.succeeded is True
-    assert gen.prompt_version == 3
+    assert gen.prompt_version == PROMPT_VERSION
     assert gen.model == "gpt-4o"
     assert gen.idea_count == 1
     assert gen.duration_ms is not None
