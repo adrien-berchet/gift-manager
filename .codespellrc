@@ -1,3 +1,4 @@
 [codespell]
 skip = .git/*,*.svg,*.mo,*.po,staticfiles/*
-ignore-words-list = ue,dateA,abandonne,Abandonned,bord,discreet,technic,limite,pre-selected
+ignore-words-list = ue,dateA,abandonne,Abandonned,bord,discreet,technic,limite,pre-selected,stdio
+builtin = clear,rare
