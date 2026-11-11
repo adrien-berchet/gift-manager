@@ -1,0 +1,39 @@
+{% load i18n %}
+{% comment %}
+  Wish panel: the received gifts the wisher linked to this wish (their own records only, never
+  friends' plans). Rendered inside the wish form, so each toggle button submits its own small
+  form from wish_received_forms.html (rendered after the wish form) through the form attribute.
+  Required context: wish, received_gifts.
+{% endcomment %}
+<section class="wish-received card mb-3" id="wish-received-{{ wish.wish_id }}" aria-labelledby="wish-received-heading-{{ wish.wish_id }}">
+  <div class="card-header bg-light py-2">
+    <h3 class="h6 mb-0 text-muted" id="wish-received-heading-{{ wish.wish_id }}">
+      <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "Received" %}
+    </h3>
+  </div>
+  <div class="card-body py-2">
+    {% if received_gifts %}
+    <ul class="list-unstyled mb-2 wish-received-list">
+      {% for gift in received_gifts %}
+      {% url 'gift_manager:received_gift_detail' gift.received_gift_id as gift_url %}
+      <li class="wish-received-item{% if not gift.fulfills_wish %} wish-received-item--not-counted{% endif %}">
+        <a href="{{ gift_url }}" class="wish-received-date">{{ gift.received_on|date:"DATE_FORMAT" }}</a>
+        {% include "gift_manager/includes/received_gift_givers.html" with gift=gift inline=True %}
+        <button type="submit"
+                form="wish-receipt-toggle-{{ gift.received_gift_id }}"
+                class="btn btn-sm btn-link wish-received-toggle">
+          {% if gift.fulfills_wish %}{% trans "Don't count as received" %}{% else %}{% trans "Count as received" %}{% endif %}
+        </button>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted small mb-2">{% trans "Not received yet." %}</p>
+    {% endif %}
+    <a href="{% url 'gift_manager:received_gift_create' %}?wish={{ wish.wish_id }}"
+       class="btn btn-sm btn-outline-primary mb-2"
+       data-action="create">
+      <i class="fas fa-box-open me-1" aria-hidden="true"></i>{% trans "Mark as received" %}
+    </a>
+  </div>
+</section>

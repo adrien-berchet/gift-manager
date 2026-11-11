@@ -1,0 +1,21 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Reveal to Recipient" %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header mb-3">
+    <h1>{% trans "Reveal to Recipient" %}</h1>
+    <a href="{% url 'gift_manager:relation_detail' pk=relation.relation_id %}" class="btn btn-sm btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back to gift plan" %}
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      {% include "gift_manager/includes/relation_reveal_partial.html" %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -8,7 +8,7 @@
     {% if field.field.widget.input_type == "radio" %}
       <div class="form-label">
         {{ field.label }}
-        {% if field.field.required %}
+        {% if field.field.required or required %}
         <span class="text-danger" aria-hidden="true">*</span>
         <span class="visually-hidden">{% trans "required" %}</span>
         {% endif %}
@@ -24,9 +24,9 @@
         {% endfor %}
       </div>
     {% else %}
-      <label for="{{ field.id_for_label }}" class="form-label">
+      <label for="{{ field.id_for_label }}" class="form-label{% if label_class %} {{ label_class }}{% endif %}">
         {{ field.label }}
-        {% if field.field.required %}
+        {% if field.field.required or required %}
         <span class="text-danger" aria-hidden="true">*</span>
         <span class="visually-hidden">{% trans "required" %}</span>
         {% endif %}

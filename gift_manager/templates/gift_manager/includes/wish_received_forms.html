@@ -1,0 +1,13 @@
+{# Targets of the toggle buttons in wish_received_section.html (forms cannot be nested). #}
+{% for gift in received_gifts %}
+{% url 'gift_manager:received_gift_toggle_fulfills_wish' gift.received_gift_id as toggle_url %}
+<form id="wish-receipt-toggle-{{ gift.received_gift_id }}"
+      method="post"
+      action="{{ toggle_url }}"
+      hx-post="{{ toggle_url }}"
+      hx-target="#wish-received-{{ wish.wish_id }}"
+      hx-swap="outerHTML"
+      class="no-validate"
+      data-no-button-loading
+      hidden>{% csrf_token %}</form>
+{% endfor %}

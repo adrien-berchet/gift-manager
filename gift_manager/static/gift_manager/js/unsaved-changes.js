@@ -44,6 +44,9 @@
                 '[type="hidden"], [type="submit"], [type="button"], [type="reset"], .no-track, .permission-select',
             formActions: ".panel-form-actions, .page-form-actions",
             fieldGroup: ".form-group, .mb-3, .form-floating, .form-check, .field-wrapper",
+            // Controls whose own state already shows the change (a tick, a pressed toggle):
+            // still tracked, but not highlighted (the highlight would also shift the layout).
+            quietFields: "[data-unsaved-quiet]",
         },
         messages,
         debounceDelay: 150,
@@ -559,9 +562,10 @@
                 Boolean(fieldName) &&
                 !arraysEqual(state.original.get(fieldName) || [], current.get(fieldName) || []);
 
-            field.classList.toggle(CONFIG.classes.unsavedField, changed);
+            const highlighted = changed && !field.closest(CONFIG.selectors.quietFields);
+            field.classList.toggle(CONFIG.classes.unsavedField, highlighted);
 
-            if (changed) {
+            if (highlighted) {
                 const group = field.closest(CONFIG.selectors.fieldGroup);
                 if (group) {
                     changedGroups.add(group);

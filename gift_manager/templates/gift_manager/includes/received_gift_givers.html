@@ -1,0 +1,37 @@
+{% comment %}
+  Giver badges for a received gift.
+  Required context:
+    gift                – ReceivedGift instance (giver_persons and giver_groups prefetched)
+    linkable_person_ids – pks of giver persons the viewer can open
+    linkable_group_ids  – pks of giver groups the viewer can open
+  Optional: inline=True renders a comma-separated list for card meta rows.
+{% endcomment %}
+{% if inline %}
+<span class="received-gift-givers">
+  {% for person in gift.giver_persons.all %}<span class="received-gift-giver">{% if person.pk in linkable_person_ids %}<a href="{% url 'gift_manager:person_detail' pk=person.person_id %}">{{ person }}</a>{% else %}{{ person }}{% endif %}</span>{% endfor %}
+  {% for group in gift.giver_groups.all %}<span class="received-gift-giver">{% if group.pk in linkable_group_ids %}<a href="{% url 'gift_manager:person_group_detail' pk=group.group_id %}">{{ group.name }}</a>{% else %}{{ group.name }}{% endif %}</span>{% endfor %}
+  {% if gift.giver_label %}<span class="received-gift-giver">{{ gift.giver_label }}</span>{% endif %}
+  {% if not gift.giver_persons.all and not gift.giver_groups.all and not gift.giver_label and gift.source_givers_text %}<span class="received-gift-giver">{{ gift.source_givers_text }}</span>{% endif %}
+</span>
+{% else %}
+{% for person in gift.giver_persons.all %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis received-gift-giver">
+  <i class="fas fa-user me-1" aria-hidden="true"></i>{% if person.pk in linkable_person_ids %}<a href="{% url 'gift_manager:person_detail' pk=person.person_id %}" class="text-reset">{{ person }}</a>{% else %}{{ person }}{% endif %}
+</span>
+{% endfor %}
+{% for group in gift.giver_groups.all %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis received-gift-giver">
+  <i class="fas fa-users me-1" aria-hidden="true"></i>{% if group.pk in linkable_group_ids %}<a href="{% url 'gift_manager:person_group_detail' pk=group.group_id %}" class="text-reset">{{ group.name }}</a>{% else %}{{ group.name }}{% endif %}
+</span>
+{% endfor %}
+{% if gift.giver_label %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis received-gift-giver">
+  <i class="fas fa-tag me-1" aria-hidden="true"></i>{{ gift.giver_label }}
+</span>
+{% endif %}
+{% if not gift.giver_persons.all and not gift.giver_groups.all and not gift.giver_label and gift.source_givers_text %}
+<span class="badge bg-secondary-subtle text-secondary-emphasis received-gift-giver">
+  <i class="fas fa-user-friends me-1" aria-hidden="true"></i>{{ gift.source_givers_text }}
+</span>
+{% endif %}
+{% endif %}

@@ -480,6 +480,15 @@ def test_label_uses_precomputed_friend_ids_without_queries(
 
     assert label == f"Claimed by @{bob.username}"
 
+    # Neither wisher nor claimed_by needs to be select_related when using viewer_friend_ids
+    # for a non-friend claimer.
+    plain_wish = Wish.objects.get(pk=wish.pk)
+    with django_assert_num_queries(0):
+        masked_label = wishlist.format_claimer_label(
+            plain_wish, carol, viewer_friend_ids={plain_wish.wisher_id}
+        )
+    assert masked_label == "Claimed by a friend"
+
 
 # --- delete ------------------------------------------------------------------------------------
 

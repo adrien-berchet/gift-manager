@@ -26,6 +26,7 @@ from .models import PermissionLevel
 from .models import Person
 from .models import PersonGroup
 from .models import Profile
+from .models import ReceivedGift
 from .models import Relation
 from .models import Wish
 from .person_profile import append_person_provenance_note
@@ -106,23 +107,29 @@ def build_recipient_choices(
     if not user or not user.is_authenticated:
         return choices
 
-    if include_persons:
-        person_choices = [
-            (f"person:{person.person_id}", str(person))
-            for person in Person.objects.accessible_by(user).order_by("family_name", "first_name")
-        ]
-        if person_choices:
-            choices.append((gettext_lazy("People"), person_choices))
+    persons = (
+        Person.objects.accessible_by(user).order_by("family_name", "first_name")
+        if include_persons
+        else []
+    )
+    groups = PersonGroup.objects.accessible_by(user).order_by("name") if include_groups else []
+    return [*choices, *person_group_choices(persons, groups)]
 
-    if include_groups:
-        group_choices = [
-            (f"group:{group.group_id}", group.name)
-            for group in PersonGroup.objects.accessible_by(user).order_by("name")
-        ]
-        if group_choices:
-            choices.append((gettext_lazy("Groups"), group_choices))
 
-    return choices
+def person_group_choices(persons, groups) -> list:
+    """Typed ``person:<id>`` / ``group:<id>`` choices in a "People" and a "Groups" section.
+
+    Shared by the gift plan recipient selector and the received gift giver selector.
+    Empty sections are left out.
+    """
+    sections = [
+        (
+            gettext_lazy("People"),
+            [(f"person:{person.person_id}", str(person)) for person in persons],
+        ),
+        (gettext_lazy("Groups"), [(f"group:{group.group_id}", group.name) for group in groups]),
+    ]
+    return [(label, options) for label, options in sections if options]
 
 
 def resolve_recipient_choice(
@@ -1554,3 +1561,279 @@ class GroupGiftCustomAmountForm(forms.Form):
             }
         ),
     )
+
+
+GIFT_MODE_NEW = "new"
+GIFT_MODE_WISH = "wish"
+GIVER_MODE_CONTACTS = "contacts"
+GIVER_MODE_OTHER = "other"
+OCCASION_MODE_EVENT = "event"
+OCCASION_MODE_OTHER = "other"
+
+
+class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
+    """Form to create and update a received gift.
+
+    The gift is either new (``title`` and ``url`` typed) or a fulfilled ``wish`` (its title and
+    link are copied), the giver either known people/groups (``givers``) or a free-text name
+    (``giver_label``), and the occasion either a known ``event`` or a free-text
+    ``occasion_text``. A radio per pair (``gift_mode``, ``giver_mode``, ``occasion_mode``)
+    picks the side that is kept; the other side is cleared.
+    """
+
+    reaction_rating = build_reaction_rating_field()
+    reaction_note = build_reaction_note_field()
+
+    gift_mode = forms.ChoiceField(
+        label=gettext_lazy("What did you receive?"),
+        choices=[
+            (GIFT_MODE_NEW, gettext_lazy("New gift")),
+            (GIFT_MODE_WISH, gettext_lazy("Fulfilled wish")),
+        ],
+        required=False,
+        widget=forms.RadioSelect,
+    )
+    giver_mode = forms.ChoiceField(
+        label=gettext_lazy("Who gave this gift?"),
+        choices=[
+            (GIVER_MODE_CONTACTS, gettext_lazy("People or groups")),
+            (GIVER_MODE_OTHER, gettext_lazy("Someone else")),
+        ],
+        required=False,
+        widget=forms.RadioSelect,
+    )
+    givers = forms.MultipleChoiceField(
+        label=gettext_lazy("Givers"),
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+    )
+    occasion_mode = forms.ChoiceField(
+        label=gettext_lazy("Occasion"),
+        choices=[
+            (OCCASION_MODE_EVENT, gettext_lazy("Event")),
+            (OCCASION_MODE_OTHER, gettext_lazy("Other occasion")),
+        ],
+        required=False,
+        widget=forms.RadioSelect,
+    )
+
+    class Meta:
+        model = ReceivedGift
+        fields = [
+            "title",
+            "description",
+            "url",
+            "received_on",
+            "occasion_text",
+            "event",
+            "giver_label",
+            "reaction_rating",
+            "reaction_note",
+            "thank_you_sent",
+            "wish",
+            "fulfills_wish",
+        ]
+        widgets = {
+            "title": forms.TextInput(
+                attrs={"placeholder": gettext_lazy("e.g. Wireless Headphones")}
+            ),
+            "description": forms.Textarea(attrs={"rows": 3}),
+            "url": forms.URLInput(attrs={"class": "form-input-text", "placeholder": "https://"}),
+            "received_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "event": forms.Select(attrs={"class": "form-select"}),
+            "wish": forms.Select(attrs={"class": "form-select"}),
+            "occasion_text": forms.TextInput(
+                attrs={"placeholder": gettext_lazy("e.g. Birthday, Christmas, Housewarming")}
+            ),
+            "giver_label": forms.TextInput(
+                attrs={"placeholder": gettext_lazy("e.g. Aunt Marie and Uncle Paul")}
+            ),
+            "thank_you_sent": forms.CheckboxInput(),
+            "fulfills_wish": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+        labels = {
+            "giver_label": gettext_lazy("Giver name"),
+        }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+        authenticated = bool(user and user.is_authenticated)
+        if authenticated:
+            events = Event.objects.accessible_by(user)
+            if self.instance.pk and self.instance.event_id:
+                # The event stays selectable after its sharing was revoked: saving keeps it
+                events = Event.objects.filter(
+                    Q(pk__in=events.values("pk")) | Q(pk=self.instance.event_id)
+                )
+            self.fields["event"].queryset = events.order_by("name")
+            wish_qs = Wish.objects.for_wisher(user)
+            if self.instance.pk and self.instance.wish_id:
+                wish_qs = wish_qs.filter(Q(is_archived=False) | Q(pk=self.instance.wish_id))
+            else:
+                wish_qs = wish_qs.filter(is_archived=False)
+            self.fields["wish"].queryset = wish_qs.order_by("title")
+        else:
+            self.fields["event"].queryset = Event.objects.none()
+            self.fields["wish"].queryset = Wish.objects.none()
+
+        self.fields["event"].required = False
+        # Required in "new gift" mode only (checked in clean). The asterisk is kept, but not the
+        # HTML attribute: it would block submitting in wish mode, where the input is hidden.
+        self.fields["title"].required = False
+        self.title_required = True
+        self.fields["giver_label"].required = False
+        self.fields["wish"].required = False
+        # The wishes are all the user's own: show their title without the owner's username
+        self.fields["wish"].label_from_instance = lambda wish: wish.title
+
+        self._init_gift()
+        self._init_givers(authenticated=authenticated)
+        self._init_occasion()
+
+    def _init_gift(self) -> None:
+        self.wish_choices_available = self.fields["wish"].queryset.exists()
+        has_wish = bool(self.instance.wish_id if self.instance.pk else self.initial.get("wish"))
+        mode = GIFT_MODE_WISH if self.wish_choices_available and has_wish else GIFT_MODE_NEW
+        self.initial.setdefault("gift_mode", mode)
+
+    def _init_givers(self, *, authenticated: bool) -> None:
+        """Offer accessible people and groups, plus the gift's current givers."""
+        persons = (
+            list(Person.objects.accessible_by(self.user).order_by("family_name", "first_name"))
+            if authenticated
+            else []
+        )
+        groups = (
+            list(PersonGroup.objects.accessible_by(self.user).order_by("name"))
+            if authenticated
+            else []
+        )
+        current = []
+        if self.instance.pk:
+            # A giver stays selectable after its sharing was revoked: saving keeps it
+            current_persons = list(self.instance.giver_persons.all())
+            current_groups = list(self.instance.giver_groups.all())
+            persons += [p for p in current_persons if p not in persons]
+            groups += [g for g in current_groups if g not in groups]
+            current = [f"person:{p.person_id}" for p in current_persons] + [
+                f"group:{g.group_id}" for g in current_groups
+            ]
+            self.initial.setdefault("givers", current)
+
+        self.giver_objects = {f"person:{p.person_id}": p for p in persons} | {
+            f"group:{g.group_id}": g for g in groups
+        }
+        self._giver_person_count = len(persons)
+        self.fields["givers"].choices = person_group_choices(persons, groups)
+        self.giver_contacts_available = bool(self.giver_objects)
+
+        if not self.giver_contacts_available or (
+            self.instance.pk and not current and self.instance.giver_label
+        ):
+            mode = GIVER_MODE_OTHER
+        else:
+            mode = self.initial.get("giver_mode", GIVER_MODE_CONTACTS)
+        self.initial["giver_mode"] = mode
+
+    def _init_occasion(self) -> None:
+        self.event_choices_available = self.fields["event"].queryset.exists()
+        free_text_only = not self.event_choices_available
+        saved_as_text = bool(
+            self.instance.pk and not self.instance.event_id and self.instance.occasion_text
+        )
+        mode = OCCASION_MODE_OTHER if free_text_only or saved_as_text else OCCASION_MODE_EVENT
+        self.initial.setdefault("occasion_mode", mode)
+
+    @property
+    def giver_sections(self) -> list:
+        """The giver checkboxes split into their "People" and "Groups" sections."""
+        options = list(self["givers"])
+        count = self._giver_person_count
+        sections = [(gettext("People"), options[:count]), (gettext("Groups"), options[count:])]
+        return [(label, section) for label, section in sections if section]
+
+    def clean(self):
+        cleaned_data = super().clean()
+        self._clean_gift(cleaned_data)
+        self._clean_givers(cleaned_data)
+        self._clean_occasion(cleaned_data)
+
+        user = self.user
+        if user:
+            event = cleaned_data.get("event")
+            if (
+                event
+                and event.pk != self.instance.event_id
+                and not Event.objects.accessible_by(user).filter(pk=event.pk).exists()
+            ):
+                self.add_error("event", gettext("You do not have access to this event."))
+
+            wish = cleaned_data.get("wish")
+            if wish and (wish.wisher_id != user.pk or wish.is_deleted_by_wisher):
+                self.add_error("wish", gettext("Invalid wish selection."))
+
+        return cleaned_data
+
+    def _clean_gift(self, cleaned_data) -> None:
+        """Keep only the side of the gift choice selected by ``gift_mode``."""
+        mode = cleaned_data.get("gift_mode")
+        wish = cleaned_data.get("wish")
+        if mode == GIFT_MODE_WISH:
+            if wish:
+                # Also set on the instance: construct_instance skips an omitted url (it has a
+                # model default), which would keep a stale link
+                cleaned_data["title"] = self.instance.title = wish.title
+                cleaned_data["url"] = self.instance.url = wish.url or ""
+            elif "wish" in cleaned_data:
+                self.add_error("wish", gettext("Select a wish."))
+            return
+        # The checkbox only counts on the wish side; older clients do not post it at all
+        cleaned_data["fulfills_wish"] = True
+        if mode == GIFT_MODE_NEW:
+            cleaned_data["wish"] = None
+        if not (cleaned_data.get("title") or "").strip() and "title" in cleaned_data:
+            self.add_error("title", forms.Field.default_error_messages["required"])
+
+    def _clean_givers(self, cleaned_data) -> None:
+        """Keep only the side of the giver choice selected by ``giver_mode``."""
+        givers = cleaned_data.get("givers") or []
+        label = (cleaned_data.get("giver_label") or "").strip()
+        mode = cleaned_data.get("giver_mode")
+        if mode not in {GIVER_MODE_CONTACTS, GIVER_MODE_OTHER}:
+            # Not posted: infer it from what is filled
+            mode = GIVER_MODE_CONTACTS if givers else GIVER_MODE_OTHER if label else None
+        if mode is None:
+            if "givers" in cleaned_data:  # an invalid choice already reported its own error
+                raise DjangoValidationError(
+                    gettext(
+                        "Please specify who gave this gift (a person, a group, or an external "
+                        "name)."
+                    )
+                )
+            return
+
+        cleaned_data["giver_mode"] = mode
+        if mode == GIVER_MODE_CONTACTS:
+            cleaned_data["giver_label"] = ""
+            if not givers and "givers" in cleaned_data:
+                self.add_error("givers", gettext("Select at least one person or group."))
+        else:
+            cleaned_data["givers"] = []
+            cleaned_data["giver_label"] = label
+            if not label and "giver_label" in cleaned_data:
+                self.add_error("giver_label", gettext("Enter who gave this gift."))
+
+    def _clean_occasion(self, cleaned_data) -> None:
+        """Keep only the side of the occasion choice selected by ``occasion_mode``."""
+        mode = cleaned_data.get("occasion_mode")
+        if mode == OCCASION_MODE_EVENT:
+            cleaned_data["occasion_text"] = ""
+        elif mode == OCCASION_MODE_OTHER:
+            cleaned_data["event"] = None
+
+    def _save_m2m(self) -> None:
+        super()._save_m2m()
+        selected = [self.giver_objects[value] for value in self.cleaned_data.get("givers", [])]
+        self.instance.giver_persons.set([obj for obj in selected if isinstance(obj, Person)])
+        self.instance.giver_groups.set([obj for obj in selected if isinstance(obj, PersonGroup)])

@@ -81,6 +81,7 @@ from gift_manager.plan_repeat import DUPLICATE_OF_PARAM
 from gift_manager.plan_repeat import duplicate_initial
 from gift_manager.plan_repeat import duplicate_plan_url
 from gift_manager.plan_repeat import parse_duplicate_source
+from gift_manager.received_gifts import can_reveal_plan
 from gift_manager.services import PermissionService
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
@@ -846,6 +847,13 @@ class RelationDetailView(BaseDetailView):
                 context["contributor_form"] = GroupGiftContributorForm(relation=self.object)
         else:
             context["group_gift"] = None
+
+        can_reveal = can_reveal_plan(self.object, self.request.user)
+        context["can_reveal"] = can_reveal
+        if can_reveal:
+            context["reveal_url"] = reverse(
+                "gift_manager:relation_reveal", kwargs={"pk": self.object.relation_id}
+            )
 
         # Add action buttons
         is_editor = context["is_editor"]

@@ -4,8 +4,43 @@
 {% block edit_url %}{% url 'gift_manager:relation_edit' pk=object.relation_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:relation_delete' pk=object.relation_id %}{% endblock %}
 
+{% block title_badges %}
+    {% if object.revealed_at %}
+    <span class="badge bg-success ms-2" title="{% trans 'This gift plan has been revealed to the recipient' %}">
+        <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
+    </span>
+    {% endif %}
+{% endblock %}
+
 {% block detail_fields %}
 <div class="detail-fields">
+    {% if object.revealed_at %}
+    <div class="alert alert-success d-flex align-items-center mb-3 py-2" role="alert">
+        <i class="fas fa-check-circle me-2" aria-hidden="true"></i>
+        <div>
+            <strong>{% trans "Revealed to recipient" %}</strong>
+            <small class="d-block text-muted">{% trans "Revealed on" %} {{ object.revealed_at|date:"DATE_FORMAT" }}</small>
+        </div>
+    </div>
+    {% elif can_reveal %}
+    <div class="card border-info bg-light mb-3">
+        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+            <div class="small">
+                <i class="fas fa-bullhorn text-info me-1" aria-hidden="true"></i>
+                <strong>{% trans "Reveal plan" %}</strong>: {% trans "Share this gift with the recipient so they can log it." %}
+            </div>
+            <button type="button"
+                    class="btn btn-sm btn-info text-white"
+                    hx-get="{{ reveal_url }}"
+                    hx-target="#confirmModal .modal-content"
+                    hx-swap="innerHTML"
+                    data-bs-toggle="modal"
+                    data-bs-target="#confirmModal">
+                <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal to recipient" %}
+            </button>
+        </div>
+    </div>
+    {% endif %}
     {% if object.wish and object.wish.claimed_by_id == request.user.pk %}
         {% if object.wish.is_archived or object.wish.is_deleted_by_wisher %}
         <div class="alert alert-warning py-2 mb-3" role="alert">

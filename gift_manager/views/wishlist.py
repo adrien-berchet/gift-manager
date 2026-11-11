@@ -41,15 +41,19 @@ class WishListView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Strict privacy invariant: defer columns related to claim/plan state
         # so template evaluation cannot access or trigger queries on them.
-        wishes = Wish.objects.for_wisher(request.user).defer(
-            "claimed_by", "claimed_at", "is_fulfilled"
+        wishes = list(
+            Wish.objects.for_wisher(request.user).defer("claimed_by", "claimed_at", "is_fulfilled")
         )
-        active_wishes = list(wishes.filter(is_archived=False))
-        archived_wishes = list(wishes.filter(is_archived=True))
+        # "Received" comes from the wisher's own received gifts only (see own_receipts)
+        receipts = wishlist.own_receipts(request.user, wishes)
+        for wish in wishes:
+            wish.receipt = receipts.get(wish.pk)
+            wish.is_received = bool(wish.receipt and wish.receipt.received_gift)
 
         context = {
-            "active_wishes": active_wishes,
-            "archived_wishes": archived_wishes,
+            "active_wishes": [w for w in wishes if not w.is_archived and not w.is_received],
+            "received_wishes": [w for w in wishes if not w.is_archived and w.is_received],
+            "archived_wishes": [w for w in wishes if w.is_archived],
         }
 
         if request.headers.get("HX-Request") == "true":
@@ -139,6 +143,7 @@ class WishUpdateView(LoginRequiredMixin, HTMXResponseMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["action"] = gettext("Edit")
         context["translated_type"] = gettext("Wish")
+        context["received_gifts"] = wishlist.own_received_gifts(self.request.user, self.object)
         context["form_surface"] = "offcanvas" if self.is_htmx else "page"
         context["cancel_url"] = self.success_url
         return context

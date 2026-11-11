@@ -1,0 +1,95 @@
+{% load i18n custom_filters %}
+{% comment %}
+  Received gift card, sized and styled like the gift plan workspace cards.
+  Required context: gift, linkable_person_ids, linkable_group_ids.
+{% endcomment %}
+{% url 'gift_manager:received_gift_detail' gift.received_gift_id as detail_url %}
+{% url 'gift_manager:received_gift_edit' gift.received_gift_id as edit_url %}
+<article class="gift-plan-card received-gift-item gift-plan-card--{% if gift.thank_you_sent %}completed{% else %}due_soon{% endif %}"
+         data-gift-id="{{ gift.received_gift_id }}">
+    <div class="gift-plan-card-topline">
+        {% if gift.occasion_text or gift.event %}
+        <span class="gift-plan-tag-badge">
+            <i class="fas fa-glass-cheers field-icon--event" aria-hidden="true"></i>{% if gift.occasion_text %}{{ gift.occasion_text }}{% else %}{{ gift.event.name }}{% endif %}
+        </span>
+        {% endif %}
+        <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
+            <i class="fas fa-calendar-day" aria-hidden="true"></i>
+            {{ gift.received_on|date:"DATE_FORMAT" }}
+        </span>
+    </div>
+
+    <h4 class="gift-plan-card-title">
+        <a href="{{ detail_url }}"
+           data-action="detail"
+           data-detail-url="{{ detail_url }}">{{ gift.title }}</a>
+    </h4>
+
+    <div class="gift-plan-card-meta">
+        <div class="gift-plan-card-meta-row">
+            <span class="recipient-type-marker recipient-type-marker--person"
+                  role="img"
+                  title="{% trans 'Givers' %}"
+                  aria-label="{% trans 'Givers' %}">
+                <i class="fas fa-user" aria-hidden="true"></i>
+            </span>
+            {% include "gift_manager/includes/received_gift_givers.html" with inline=True %}
+        </div>
+
+        {% if gift.reaction_rating %}
+        <div class="gift-plan-card-meta-row">
+            {% rating_stars gift.reaction_rating %}
+        </div>
+        {% endif %}
+
+        {% if gift.wish %}
+        <div class="gift-plan-card-meta-row">
+            <i class="fas fa-check-circle text-success" aria-hidden="true"></i>
+            <span>{% blocktrans with wish_title=gift.wish.title %}Fulfilled wish: <span class="fw-semibold">{{ wish_title }}</span>{% endblocktrans %}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if gift.description %}
+    <p class="gift-plan-note"><i class="fas fa-comment field-icon--comment me-1" aria-hidden="true"></i>{{ gift.description|truncatechars:160 }}</p>
+    {% elif gift.giver_note %}
+    <p class="gift-plan-note"><i class="fas fa-quote-left field-icon--comment me-1" aria-hidden="true"></i>{{ gift.giver_note|truncatechars:160 }}</p>
+    {% endif %}
+
+    <div class="gift-plan-card-actions">
+        <form method="post"
+              class="gift-plan-quick-action-form"
+              action="{% url 'gift_manager:received_gift_toggle_thank_you' gift.received_gift_id %}"
+              hx-post="{% url 'gift_manager:received_gift_toggle_thank_you' gift.received_gift_id %}"
+              hx-target="#received-gifts-container"
+              hx-swap="outerHTML"
+              data-no-button-loading>
+            {% csrf_token %}
+            {% if gift.thank_you_sent %}
+            <button type="submit" class="btn btn-sm btn-outline-secondary" title="{% trans 'Click to mark thank-you as pending' %}">
+                <i class="fas fa-check-circle me-1" aria-hidden="true"></i>{% trans "Thanked" %}
+            </button>
+            {% else %}
+            <button type="submit" class="btn btn-sm btn-warning" title="{% trans 'Click to mark thank-you as sent' %}">
+                <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% trans "Thank-you pending" %}
+            </button>
+            {% endif %}
+        </form>
+        <a href="{{ detail_url }}"
+           class="btn btn-sm btn-outline-secondary gift-plan-card-utility-action"
+           data-action="detail"
+           data-detail-url="{{ detail_url }}"
+           aria-label="{% trans 'Details' %}"
+           title="{% trans 'Details' %}">
+            <i class="fas fa-eye" aria-hidden="true"></i>
+        </a>
+        <a href="{{ edit_url }}"
+           class="btn btn-sm btn-primary gift-plan-card-utility-action"
+           data-action="edit"
+           data-edit-url="{{ edit_url }}"
+           aria-label="{% trans 'Edit' %}"
+           title="{% trans 'Edit' %}">
+            <i class="fas fa-pen" aria-hidden="true"></i>
+        </a>
+    </div>
+</article>

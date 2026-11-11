@@ -35,6 +35,7 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Invitation
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import RelationContribution
 from gift_manager.models import RelationStatus
@@ -323,3 +324,32 @@ class WishFactory(DjangoModelFactory):
     priority = WishPriority.MEDIUM
     is_archived = False
     is_fulfilled = False
+
+
+class ReceivedGiftFactory(DjangoModelFactory):
+    """Factory for creating ReceivedGift instances."""
+
+    class Meta:
+        model = ReceivedGift
+        skip_postgeneration_save = True
+
+    recipient_user = factory.SubFactory(UserFactory)
+    title = factory.Sequence(lambda n: f"Received Gift {n}")
+    description = factory.Faker("sentence")
+    url = factory.Faker("url")
+    received_on = factory.LazyFunction(timezone.localdate)
+    occasion_text = "Birthday"
+    giver_label = "Aunt Marie"
+    thank_you_sent = False
+
+    @factory.post_generation
+    def giver_persons(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+        self.giver_persons.add(*extracted)
+
+    @factory.post_generation
+    def giver_accounts(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+        self.giver_accounts.add(*extracted)

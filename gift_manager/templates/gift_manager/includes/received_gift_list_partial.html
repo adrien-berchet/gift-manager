@@ -1,0 +1,115 @@
+{% load i18n custom_filters %}
+
+<div id="received-gifts-container"
+     data-received-gifts
+     hx-get="{% url 'gift_manager:received_gift_list' %}"
+     hx-trigger="list:update from:body"
+     hx-target="this"
+     hx-swap="outerHTML">
+  <!-- Filter bar -->
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body p-3">
+      <form method="get"
+            action="{% url 'gift_manager:received_gift_list' %}"
+            hx-get="{% url 'gift_manager:received_gift_list' %}"
+            hx-target="#received-gifts-container"
+            hx-swap="outerHTML"
+            hx-push-url="true"
+            hx-indicator="#received-gifts-results"
+            data-no-button-loading
+            class="row g-2 align-items-center no-validate">
+        <!-- Year filter -->
+        <div class="col-auto">
+          <select name="year" class="form-select form-select-sm received-gift-filter-select" aria-label="{% trans 'Filter by year' %}" onchange="this.form.requestSubmit()">
+            <option value="">{% trans "All years" %}</option>
+            {% for y in available_years %}
+            <option value="{{ y }}" {% if filter_year == y|stringformat:"i" %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Giver filter -->
+        <div class="col-auto">
+          <select name="giver" class="form-select form-select-sm received-gift-filter-select" aria-label="{% trans 'Filter by giver' %}" onchange="this.form.requestSubmit()">
+            <option value="">{% trans "All givers" %}</option>
+            {% for g in available_givers %}
+            <option value="{{ g.person_id }}" {% if filter_giver == g.person_id|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Thank-you status buttons -->
+        <div class="col-auto">
+          <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Thank-you status filter' %}">
+            <button type="submit" name="thank_you" value="" class="btn {% if not filter_thank_you %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              {% trans "All" %}
+            </button>
+            <button type="submit" name="thank_you" value="pending" class="btn {% if filter_thank_you == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              <i class="fas fa-clock me-1" aria-hidden="true"></i>{% trans "Awaiting thank-you" %}
+              {% if pending_thank_you_count > 0 %}
+              <span class="badge bg-danger rounded-pill ms-1">{{ pending_thank_you_count }}</span>
+              {% endif %}
+            </button>
+            <button type="submit" name="thank_you" value="sent" class="btn {% if filter_thank_you == 'sent' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+              <i class="fas fa-check me-1" aria-hidden="true"></i>{% trans "Sent" %}
+            </button>
+          </div>
+        </div>
+
+        {% if filter_year or filter_giver or filter_occasion or filter_thank_you %}
+        <div class="col-auto ms-auto">
+          <a href="{% url 'gift_manager:received_gift_list' %}"
+             hx-get="{% url 'gift_manager:received_gift_list' %}"
+             hx-target="#received-gifts-container"
+             hx-swap="outerHTML"
+             hx-push-url="true"
+             class="btn btn-sm btn-link text-decoration-none">
+            <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Reset filters" %}
+          </a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+
+  <!-- Results: dimmed while a filter request runs (hx-indicator of the filter form) -->
+  <div id="received-gifts-results" class="received-gifts-results">
+  {% if grouped_gifts %}
+  <div class="timeline received-gifts-timeline">
+    {% for year, gifts in grouped_gifts %}
+    <div class="timeline-year-group mb-4" data-year="{{ year|default:'' }}">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <h2 class="h5 mb-0 fw-bold text-primary">
+          <i class="fas fa-calendar-check me-2" aria-hidden="true"></i>{% if year %}{{ year }}{% else %}{% trans "Unknown date" %}{% endif %}
+        </h2>
+        <span class="badge bg-secondary-subtle text-secondary-emphasis rounded-pill">{{ gifts|length }}</span>
+      </div>
+
+      <div class="gift-plan-card-grid gift-plan-card-grid--paginated">
+        {% for gift in gifts %}
+        {% include "gift_manager/includes/received_gift_card.html" %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="gift-plan-empty-state">
+    <i class="fas fa-box-open" aria-hidden="true"></i>
+    <h3>{% trans "No received gifts found." %}</h3>
+    <p class="text-muted small mb-0">
+      {% if filter_year or filter_giver or filter_occasion or filter_thank_you %}
+      {% trans "Try clearing your filters to see more results." %}
+      {% else %}
+      {% trans "Record gifts you receive from family and friends to keep track of thank-you notes, reactions, and memories." %}
+      {% endif %}
+    </p>
+    {% if not filter_year and not filter_giver and not filter_occasion and not filter_thank_you %}
+    <a href="{% url 'gift_manager:received_gift_create' %}" class="btn btn-primary" data-action="create">
+      <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "Record your first received gift" %}
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+  </div>
+</div>

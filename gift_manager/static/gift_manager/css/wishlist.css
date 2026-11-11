@@ -1,0 +1,11 @@
+/* Wishlist cards reuse the gift plan workspace card styles. */
+
+/* The shared "overdue" badge red (#dc2626 on #fee2e2) is below WCAG AA for small text;
+   darken it for the high-priority wish badge in light mode. */
+.gift-plan-status-badge.wish-priority-badge--high {
+    color: #b91c1c;
+}
+
+[data-theme="dark"] .gift-plan-status-badge.wish-priority-badge--high {
+    color: var(--color-danger-hover);
+}
