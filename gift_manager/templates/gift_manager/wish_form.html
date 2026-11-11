@@ -8,13 +8,6 @@
 {% block content %}
 <div class="container form-page-container">
   <div class="form-page-header mb-4">
-    <nav aria-label="{% trans 'Breadcrumb' %}">
-      <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{% url 'gift_manager:profile_detail' %}">{% trans "My Profile" %}</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'gift_manager:wishlist_list' %}">{% trans "My Wishlist" %}</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ action }} {{ translated_type }}</li>
-      </ol>
-    </nav>
     <h1>{{ action }} {{ translated_type }}</h1>
   </div>
 
@@ -37,6 +30,9 @@
 
     {% include "gift_manager/includes/forms/actions.html" with form_surface="page" cancel_url=cancel_url %}
   </form>
+  {% if wish.pk %}
+  {% include "gift_manager/includes/wish_received_forms.html" %}
+  {% endif %}
 </div>
 {% endblock %}
 

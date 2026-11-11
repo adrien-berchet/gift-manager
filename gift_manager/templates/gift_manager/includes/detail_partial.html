@@ -3,6 +3,7 @@
 <div class="detail-content">
     <div class="detail-header mb-4">
         <h4 class="mb-1">
+            {% block detail_title %}
             {% if person %}{{ person }}
             {% elif gift %}{{ gift }}
             {% elif event %}{{ event }}
@@ -10,6 +11,7 @@
             {% elif group %}{{ group }}
             {% elif gift_tag %}{{ gift_tag }}
             {% else %}{{ object }}{% endif %}
+            {% endblock %}
             {% block title_badges %}{% endblock %}
         </h4>
         {% if object_type %}

@@ -13,6 +13,7 @@ from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.statuses import is_abandoned_status
@@ -154,3 +155,33 @@ def find_repeat_gift_plans(
         queryset = queryset.exclude(pk=exclude.pk)
     queryset = queryset.select_related("status", "event").order_by("-creation_date")
     return [relation for relation in queryset if not is_abandoned_status(relation.status)]
+
+
+def find_regift_warnings(user, person: Person | None, gift_name: str):
+    """Return received gifts the viewer recorded receiving from *person* matching *gift_name*."""
+    if not person or not gift_name or not user or not user.is_authenticated:
+        return []
+
+    memberships = Person.groups.through.objects.filter(person=person).values("persongroup_id")
+    groups = PersonGroup.hierarchy_subquery(memberships, ancestors=True, include_start=True)
+
+    giver_filter = Q(giver_persons=person) | Q(giver_groups__in=groups)
+    if person.account_id is not None:
+        giver_filter |= Q(giver_accounts=person.account)
+
+    candidates = (
+        ReceivedGift.objects.for_user(user)
+        .filter(giver_filter)
+        .distinct()
+        .prefetch_related("giver_persons", "giver_groups")
+        .select_related("event")
+        .order_by("-received_on")
+    )
+
+    norm_target = " ".join(gift_name.split()).casefold()
+    matches = []
+    for candidate in candidates:
+        norm_title = " ".join(candidate.title.split()).casefold()
+        if norm_title == norm_target:
+            matches.append(candidate)
+    return matches

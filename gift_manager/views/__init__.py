@@ -90,6 +90,17 @@ from .profile import SendInvitationView
 from .profile import UpdateProfilePreferencesView
 from .profile import UpdateViewPreferencesView
 
+# Received gift views
+from .received_gift import ReceivedGiftCreateView
+from .received_gift import ReceivedGiftDeleteView
+from .received_gift import ReceivedGiftDetailView
+from .received_gift import ReceivedGiftListView
+from .received_gift import ReceivedGiftShareReactionView
+from .received_gift import ReceivedGiftToggleFulfillsWishView
+from .received_gift import ReceivedGiftToggleThankYouView
+from .received_gift import ReceivedGiftUpdateView
+from .received_gift import RelationRevealView
+
 # Recipient views
 from .recipient import RecipientListView
 
@@ -207,6 +218,14 @@ __all__ = [
     "PersonRelationCreateView",
     "PersonUpdateView",
     "ProfileDetailView",
+    "ReceivedGiftCreateView",
+    "ReceivedGiftDeleteView",
+    "ReceivedGiftDetailView",
+    "ReceivedGiftListView",
+    "ReceivedGiftShareReactionView",
+    "ReceivedGiftToggleFulfillsWishView",
+    "ReceivedGiftToggleThankYouView",
+    "ReceivedGiftUpdateView",
     "RecipientListView",
     "RegenerateCalendarFeedView",
     "RelationAdvancedListView",
@@ -215,6 +234,7 @@ __all__ = [
     "RelationDetailView",
     "RelationGuidedCreateView",
     "RelationListView",
+    "RelationRevealView",
     "RelationStatusDetailView",
     "RelationStatusListView",
     "RelationUpdateView",

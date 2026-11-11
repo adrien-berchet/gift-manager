@@ -460,6 +460,17 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                 )
         action_buttons.append(
             {
+                "type": "custom",
+                "url": reverse("gift_manager:received_gift_create")
+                + f"?giver={self.object.person_id}",
+                "label": _("Record a gift from this person"),
+                "icon": "fas fa-box-open",
+                "btn_class": "btn-outline-secondary",
+                "data_action": "create",
+            }
+        )
+        action_buttons.append(
+            {
                 "type": "delete",
                 "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
                 "label": _("Delete person"),

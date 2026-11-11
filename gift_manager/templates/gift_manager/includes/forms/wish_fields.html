@@ -5,3 +5,6 @@
 {% include "gift_manager/includes/forms/field.html" with field=form.price_hint %}
 {% include "gift_manager/includes/forms/field.html" with field=form.priority %}
 {% include "gift_manager/includes/forms/field.html" with field=form.notes %}
+{% if wish.pk %}
+{% include "gift_manager/includes/wish_received_section.html" %}
+{% endif %}

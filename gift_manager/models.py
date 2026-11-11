@@ -1561,6 +1561,7 @@ class Relation(models.Model):
     )
     creation_date = models.DateTimeField(auto_now_add=True)
     status_changed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    revealed_at = models.DateTimeField(null=True, blank=True, editable=False)
     reaction_rating = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
@@ -2068,6 +2069,155 @@ class GiftSuggestion(models.Model):
         return None
 
 
+_WISH_NOT_LOADED = object()
+
+
+class ReceivedGiftQuerySet(models.QuerySet):
+    """Custom queryset for ReceivedGift."""
+
+    def for_user(self, user):
+        """Return received gifts belonging to ``user``."""
+        if not user or not user.is_authenticated:
+            return self.none()
+        return self.filter(recipient_user=user)
+
+
+class ReceivedGift(models.Model):
+    """A gift received by a user, kept in their private log."""
+
+    received_gift_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    recipient_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="received_gifts",
+        verbose_name=gettext_lazy("Recipient"),
+    )
+    title = models.CharField(max_length=255, verbose_name=gettext_lazy("Title"))
+    description = models.TextField(blank=True, default="", verbose_name=gettext_lazy("Description"))
+    url = models.URLField(
+        max_length=2000,
+        blank=True,
+        default="",
+        validators=[validate_http_url],
+        verbose_name=gettext_lazy("Link"),
+    )
+    received_on = models.DateField(
+        default=timezone.localdate, verbose_name=gettext_lazy("Date received")
+    )
+    event = models.ForeignKey(
+        Event,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name=gettext_lazy("Event"),
+    )
+    occasion_text = models.CharField(
+        max_length=100, blank=True, default="", verbose_name=gettext_lazy("Occasion")
+    )
+    giver_persons = models.ManyToManyField(
+        Person,
+        blank=True,
+        related_name="+",
+        verbose_name=gettext_lazy("Givers"),
+    )
+    giver_groups = models.ManyToManyField(
+        PersonGroup,
+        blank=True,
+        related_name="+",
+        verbose_name=gettext_lazy("Giver groups"),
+    )
+    giver_label = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=gettext_lazy("Other givers"),
+        help_text=gettext_lazy(
+            "Free-text for givers not in your address book (e.g. Aunt Marie and Uncle Paul)."
+        ),
+    )
+    reaction_rating = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name=gettext_lazy("Reaction rating"),
+    )
+    reaction_note = models.TextField(
+        blank=True, default="", verbose_name=gettext_lazy("Reaction note")
+    )
+    reaction_shared_at = models.DateTimeField(null=True, blank=True, editable=False)
+    thank_you_sent = models.BooleanField(default=False, verbose_name=gettext_lazy("Thank-you sent"))
+    wish = models.ForeignKey(
+        Wish,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name=gettext_lazy("Fulfilled wish"),
+    )
+    # Off for wishes that can be received again and again (e.g. food): the gift stays linked
+    # to the wish, but the wish is not marked as received
+    fulfills_wish = models.BooleanField(
+        default=True, verbose_name=gettext_lazy("Mark the wish as received")
+    )
+    source_relation = models.ForeignKey(
+        Relation,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        verbose_name=gettext_lazy("Source plan"),
+    )
+    source_givers_text = models.CharField(max_length=255, blank=True, default="")
+    giver_accounts = models.ManyToManyField(User, blank=True, related_name="+")
+    giver_note = models.TextField(
+        blank=True, default="", verbose_name=gettext_lazy("Note from giver")
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    objects = ReceivedGiftQuerySet.as_manager()
+
+    class Meta:
+        verbose_name = gettext_lazy("Received Gift")
+        verbose_name_plural = gettext_lazy("Received Gifts")
+        ordering = ["-received_on", "-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(reaction_rating__isnull=True)
+                | Q(reaction_rating__gte=1, reaction_rating__lte=5),
+                name="received_gift_reaction_rating_range",
+            ),
+            models.UniqueConstraint(
+                fields=["recipient_user", "source_relation"],
+                condition=Q(source_relation__isnull=False),
+                name="unique_recipient_source_relation",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["recipient_user", "-received_on"], name="rec_gift_user_date_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.title} ({self.recipient_user.username})"
+
+    def save(self, *args, **kwargs):
+        if not self.occasion_text and self.event_id is not None and self.event:
+            self.occasion_text = self.event.name[:100]
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_wish_id = instance.__dict__.get("wish_id", _WISH_NOT_LOADED)  # noqa: SLF001
+        return instance
+
+    def refresh_from_db(self, using=None, fields=None, from_queryset=None):
+        super().refresh_from_db(using=using, fields=fields, from_queryset=from_queryset)
+        if fields is None or {"wish", "wish_id"} & set(fields):
+            self._loaded_wish_id = self.__dict__.get("wish_id", _WISH_NOT_LOADED)
+
+
 @receiver(post_delete, sender=RelationPermission)
 def release_claim_when_access_is_removed(sender, instance, **kwargs):
     """Release the claim a user holds on a plan once they lose access to it."""
@@ -2119,3 +2269,30 @@ def sync_wish_after_plan_deletion(sender, instance, **kwargs):
         from gift_manager import wishlist
 
         wishlist.sync_wish_on_plan_change(instance, is_deleted=True)
+
+
+@receiver(post_save, sender=ReceivedGift)
+def sync_wish_after_received_gift_save(sender, instance, **kwargs):
+    """Keep the wish's fulfilled flag in line with the received gifts that fulfil it."""
+    from gift_manager import wishlist
+
+    old_wish_id = getattr(instance, "_loaded_wish_id", _WISH_NOT_LOADED)
+    if (
+        old_wish_id is not _WISH_NOT_LOADED
+        and old_wish_id is not None
+        and old_wish_id != instance.wish_id
+    ):
+        wishlist.recompute_wish_fulfilled_by_id(old_wish_id)
+
+    if instance.wish_id is not None:
+        wishlist.recompute_wish_fulfilled_by_id(instance.wish_id)
+    instance._loaded_wish_id = instance.wish_id  # noqa: SLF001
+
+
+@receiver(post_delete, sender=ReceivedGift)
+def sync_wish_after_received_gift_deletion(sender, instance, **kwargs):
+    """Recompute the wish's fulfilled flag when a received gift is deleted."""
+    if instance.wish_id is not None:
+        from gift_manager import wishlist
+
+        wishlist.recompute_wish_fulfilled_by_id(instance.wish_id)

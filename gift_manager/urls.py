@@ -97,6 +97,46 @@ urlpatterns = [
         name="wish_delete",
     ),
     path(
+        "profile/received-gifts/",
+        views.ReceivedGiftListView.as_view(),
+        name="received_gift_list",
+    ),
+    path(
+        "profile/received-gifts/add/",
+        views.ReceivedGiftCreateView.as_view(),
+        name="received_gift_create",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/",
+        views.ReceivedGiftDetailView.as_view(),
+        name="received_gift_detail",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/edit/",
+        views.ReceivedGiftUpdateView.as_view(),
+        name="received_gift_edit",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/delete/",
+        views.ReceivedGiftDeleteView.as_view(),
+        name="received_gift_delete",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/toggle-fulfills-wish/",
+        views.ReceivedGiftToggleFulfillsWishView.as_view(),
+        name="received_gift_toggle_fulfills_wish",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/toggle-thank-you/",
+        views.ReceivedGiftToggleThankYouView.as_view(),
+        name="received_gift_toggle_thank_you",
+    ),
+    path(
+        "profile/received-gifts/<uuid:pk>/share-reaction/",
+        views.ReceivedGiftShareReactionView.as_view(),
+        name="received_gift_share_reaction",
+    ),
+    path(
         "profile/calendar-feed/regenerate/",
         views.RegenerateCalendarFeedView.as_view(),
         name="calendar_feed_regenerate",
@@ -331,6 +371,11 @@ urlpatterns = [
         "relations/<uuid:pk>/",
         views.RelationDetailView.as_view(),
         name="relation_detail",
+    ),
+    path(
+        "relations/<uuid:pk>/reveal/",
+        views.RelationRevealView.as_view(),
+        name="relation_reveal",
     ),
     path(
         "relations/<uuid:pk>/edit/",

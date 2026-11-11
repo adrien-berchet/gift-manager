@@ -39,6 +39,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.services import PermissionService
@@ -61,6 +62,9 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         context["active_wishes_count"] = (
             Wish.objects.for_wisher(self.request.user).filter(is_archived=False).count()
         )
+        received_gifts = ReceivedGift.objects.for_user(self.request.user)
+        context["received_gifts_count"] = received_gifts.count()
+        context["pending_thank_you_count"] = received_gifts.filter(thank_you_sent=False).count()
         if profile.calendar_token:
             context["calendar_feed_url"] = self.request.build_absolute_uri(
                 reverse("gift_manager:calendar_feed", kwargs={"token": profile.calendar_token})

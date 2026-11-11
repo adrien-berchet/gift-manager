@@ -1,0 +1,148 @@
+{% extends "gift_manager/includes/detail_partial.html" %}
+{% load i18n custom_filters %}
+
+{% block edit_url %}{% url 'gift_manager:received_gift_edit' pk=gift.received_gift_id %}{% endblock %}
+{% block delete_url %}{% url 'gift_manager:received_gift_delete' pk=gift.received_gift_id %}{% endblock %}
+
+{% block detail_title %}{{ gift.title }}{% endblock %}
+
+{% block detail_fields %}
+<div class="detail-fields">
+    <div class="detail-section mb-4">
+        <h6 class="detail-section-title text-muted mb-3">
+            <i class="fas fa-box-open me-2"></i>{% trans "Received Gift Information" %}
+        </h6>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Title" %}</label>
+                    <div class="detail-value">
+                        <strong>{{ gift.title }}</strong>
+                        {% if gift.url %}
+                        <a href="{{ gift.url }}" target="_blank" rel="noopener noreferrer" class="ms-2 small text-muted">
+                            <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if gift.description %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Description" %}</label>
+                    <div class="detail-value text-muted" style="white-space: pre-line;">{{ gift.description }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Date received" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-calendar-day me-1 text-primary"></i>
+                        {{ gift.received_on|date:"DATE_FORMAT" }}
+                    </div>
+                </div>
+            </div>
+
+            {% if gift.occasion_text or gift.event %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Occasion" %}</label>
+                    <div class="detail-value">
+                        <i class="fas fa-glass-cheers me-1 text-primary"></i>
+                        {% if gift.occasion_text %}{{ gift.occasion_text }}{% elif gift.event %}{{ gift.event.name }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Givers" %}</label>
+                    <div class="detail-value d-flex flex-wrap gap-1">
+                        {% include "gift_manager/includes/received_gift_givers.html" %}
+                    </div>
+                </div>
+            </div>
+
+            {% if gift.giver_note %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Note from giver" %}</label>
+                    <div class="detail-value alert alert-light border py-2">
+                        <i class="fas fa-quote-left me-1 text-muted"></i>{{ gift.giver_note }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if gift.wish %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Wishlist item fulfilled" %}</label>
+                    <div class="detail-value text-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        <a href="{% url 'gift_manager:wishlist_list' %}">{{ gift.wish.title }}</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Thank-you status" %}</label>
+                    <div class="detail-value">
+                        {% if gift.thank_you_sent %}
+                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>{% trans "Thank-you sent" %}</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>{% trans "Thank-you pending" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Reaction rating" %}</label>
+                    <div class="detail-value">
+                        {% if gift.reaction_rating %}
+                        {% rating_stars gift.reaction_rating %}
+                        {% else %}
+                        <span class="text-muted fst-italic">{% trans "Not rated yet" %}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if gift.reaction_note %}
+            <div class="col-12">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Reaction note" %}</label>
+                    <div class="detail-value text-muted">
+                        {{ gift.reaction_note }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_share_reaction and gift.reaction_rating or can_share_reaction and gift.reaction_note %}
+            <div class="col-12 mt-2">
+                <form method="post"
+                      action="{% url 'gift_manager:received_gift_share_reaction' pk=gift.received_gift_id %}"
+                      hx-post="{% url 'gift_manager:received_gift_share_reaction' pk=gift.received_gift_id %}"
+                      hx-swap="none">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-paper-plane me-1" aria-hidden="true"></i>{% trans "Share reaction with giver" %}
+                    </button>
+                    <div class="form-text small">{% trans "Sends your rating and note back to the giver's plan." %}</div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

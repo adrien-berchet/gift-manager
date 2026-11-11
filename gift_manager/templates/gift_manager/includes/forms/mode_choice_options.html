@@ -1,0 +1,7 @@
+{# Segmented radios picking which .guided-panel of the enclosing .guided-choice is used (CSS shows it). #}
+<div class="guided-choice-options" role="radiogroup" aria-label="{{ field.label }}" data-unsaved-quiet>
+  {% for choice in field %}
+  <input type="radio" class="btn-check" name="{{ field.html_name }}" value="{{ choice.data.value }}" id="{{ choice.id_for_label }}" autocomplete="off"{% if choice.data.selected %} checked{% endif %}>
+  <label class="btn btn-sm btn-outline-primary px-2" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+  {% endfor %}
+</div>

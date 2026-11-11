@@ -204,16 +204,8 @@ def coordination_context(relation: Relation, user: User) -> dict:
     }
 
 
-def hidden_recipient_ids(relation: Relation) -> set[int]:
-    """Return the users a surprise plan is hidden from, in a constant number of queries.
-
-    These are the linked user of the recipient person, or the linked users of the members of the
-    recipient group (nested groups included), except the owners of the plan. It is the same rule
-    as ``Relation.objects.hidden_surprises_for``, computed from the plan's side so a list of
-    people can be checked at once.
-    """
-    if not relation.is_surprise:
-        return set()
+def plan_recipient_account_ids(relation: Relation) -> set[int]:
+    """Return non-owner user IDs representing this plan's recipient (person or group members)."""
     candidates: set[int | None] = set()
     if relation.person_id is not None:
         candidates = {relation.person.account_id} - {None}
@@ -231,6 +223,19 @@ def hidden_recipient_ids(relation: Relation) -> set[int]:
         if level == PermissionLevel.OWNER
     }
     return candidates - owner_ids
+
+
+def hidden_recipient_ids(relation: Relation) -> set[int]:
+    """Return the users a surprise plan is hidden from, in a constant number of queries.
+
+    These are the linked user of the recipient person, or the linked users of the members of the
+    recipient group (nested groups included), except the owners of the plan. It is the same rule
+    as ``Relation.objects.hidden_surprises_for``, computed from the plan's side so a list of
+    people can be checked at once.
+    """
+    if not relation.is_surprise:
+        return set()
+    return plan_recipient_account_ids(relation)
 
 
 def surprise_sharing_warning(obj: object, users: Iterable[User]) -> str:

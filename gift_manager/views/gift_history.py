@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET
 
 from gift_manager.forms import resolve_recipient_choice
 from gift_manager.gift_history import build_gift_history
+from gift_manager.gift_history import find_regift_warnings
 from gift_manager.gift_history import find_repeat_gift_plans
 from gift_manager.gift_history import group_history_queryset
 from gift_manager.gift_history import person_history_queryset
@@ -79,4 +80,5 @@ def repeat_gift_hint(request):
     context["repeats"] = find_repeat_gift_plans(
         user, person=person, group=group, gift=gift, exclude=edited
     )
+    context["regifts"] = find_regift_warnings(user, person, gift.name)
     return render(request, REPEAT_HINT_TEMPLATE, context)

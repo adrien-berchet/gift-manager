@@ -1,0 +1,26 @@
+{% load i18n %}
+
+<form method="post"
+      id="received-gift-form"
+      {% if object and object.received_gift_id %}
+      action="{% url 'gift_manager:received_gift_edit' object.received_gift_id %}"
+      hx-post="{% url 'gift_manager:received_gift_edit' object.received_gift_id %}"
+      {% else %}
+      action="{% url 'gift_manager:received_gift_create' %}"
+      hx-post="{% url 'gift_manager:received_gift_create' %}"
+      {% endif %}
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form received-gift-form"
+      data-form-type="received_gift">
+  {% csrf_token %}
+
+  <div class="form-fields" tabindex="-1">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/received_gift_fields.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" action=action translated_type=translated_type %}
+</form>

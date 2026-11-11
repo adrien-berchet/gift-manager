@@ -8,8 +8,10 @@ from datetime import timezone
 import pytest
 
 from gift_manager.models import GiftTag
+from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.services import PermissionService
 from gift_manager.suggestions.ai.prompt import IDEAS_SCHEMA
 from gift_manager.suggestions.ai.prompt import PROMPT_VERSION
 from gift_manager.suggestions.ai.prompt import build_ai_payload
@@ -20,6 +22,8 @@ from gift_manager.suggestions.ai.prompt import window_person_notes
 from gift_manager.suggestions.history import HistoryItem
 from gift_manager.suggestions.history import PreferenceProfile
 from gift_manager.suggestions.history import RecipientHistory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import UserFactory
 
 
 def test_schema_is_strict_compatible():
@@ -732,8 +736,8 @@ def test_payload_includes_scrubbed_user_hint(user):
     assert len(payload_long["user_hint"]) == 120
 
 
-def test_prompt_version_is_4():
-    assert PROMPT_VERSION == 4
+def test_prompt_version_is_5():
+    assert PROMPT_VERSION == 5
 
 
 def test_window_person_notes_preserves_baseline_and_recent_provenance():
@@ -812,3 +816,133 @@ def test_build_ai_payload_includes_all_time_preferences(user):
         preference_profile=PreferenceProfile(),
     )
     assert "all_time_preferences" not in payload_empty
+
+
+@pytest.mark.django_db
+def test_gifts_from_recipient_included_and_scrubbed_in_ai_payload():
+    from datetime import date
+
+    from gift_manager.models import ReceivedGift
+
+    viewer = UserFactory(username="viewer_user")
+    friend = UserFactory(username="alice_friend", first_name="Alice", last_name="Smith")
+    other_user = UserFactory(username="other_user")
+
+    recipient_person = PersonFactory(first_name="Alice", family_name="Smith", account=friend)
+    PermissionService.create_or_update_permission(
+        viewer, recipient_person, permission_level=PermissionLevel.OWNER
+    )
+
+    # 1. Gift given by Alice person directly to viewer
+    g1 = ReceivedGift.objects.create(
+        recipient_user=viewer,
+        title="Handmade Alice Pottery Mug",
+        received_on=date(2025, 6, 15),
+        occasion_text="Alice's summer visit",
+        reaction_rating=5,
+        description="Private note about how Alice made it",
+        giver_note="Hope you enjoy this mug!",
+    )
+    g1.giver_persons.add(recipient_person)
+
+    # 2. Gift revealed from Alice's account to viewer
+    g2 = ReceivedGift.objects.create(
+        recipient_user=viewer,
+        title="Artisan French Roast Coffee Beans",
+        received_on=date(2026, 1, 1),
+        occasion_text="New Year",
+        reaction_rating=4,
+    )
+    g2.giver_accounts.add(friend)
+
+    # 3. Gift received by another user from Alice (must NOT be visible to viewer)
+    g3 = ReceivedGift.objects.create(
+        recipient_user=other_user,
+        title="Secret Gift from Alice to Someone Else",
+        received_on=date(2026, 2, 1),
+    )
+    g3.giver_persons.add(recipient_person)
+
+    # 4. Gift received by viewer from someone else (not Alice)
+    stranger = PersonFactory(first_name="Bob")
+    g4 = ReceivedGift.objects.create(
+        recipient_user=viewer,
+        title="Board Game from Bob",
+        received_on=date(2026, 3, 1),
+    )
+    g4.giver_persons.add(stranger)
+
+    history = RecipientHistory(
+        recipient=recipient_person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+    payload = build_ai_payload(
+        history,
+        viewer=viewer,
+        available_tag_names=[],
+        avoid_names=[],
+        count=3,
+        language="en",
+    )
+
+    assert "gifts_from_recipient" in payload
+    gifts = payload["gifts_from_recipient"]
+    assert len(gifts) == 2
+
+    # Verify order: newest first
+    assert gifts[0]["title"] == "Artisan French Roast Coffee Beans"
+    assert gifts[0]["occasion"] == "New Year"
+    assert gifts[0]["rating"] == 4
+    assert "recency" in gifts[0]
+
+    # Verify scrubbing: "Alice" scrubbed to [name] in title and occasion
+    assert "Alice" not in gifts[1]["title"]
+    assert "[name]" in gifts[1]["title"]
+    assert "Alice" not in gifts[1]["occasion"]
+    assert "[name]" in gifts[1]["occasion"]
+    assert gifts[1]["rating"] == 5
+
+    # Verify privacy: no description, giver notes, or internal details
+    assert "description" not in gifts[0]
+    assert "description" not in gifts[1]
+    assert "giver_note" not in gifts[0]
+    assert "giver_note" not in gifts[1]
+
+
+@pytest.mark.django_db
+def test_received_gifts_do_not_feed_preference_profiles():
+    from datetime import date
+
+    from gift_manager.models import ReceivedGift
+    from gift_manager.suggestions.history import build_preference_profile
+
+    viewer = UserFactory()
+    friend = UserFactory()
+    recipient_person = PersonFactory(account=friend)
+    PermissionService.create_or_update_permission(
+        viewer, recipient_person, permission_level=PermissionLevel.OWNER
+    )
+
+    # Viewer has received gifts with tags/ratings
+    g = ReceivedGift.objects.create(
+        recipient_user=viewer,
+        title="Espresso Maker",
+        received_on=date(2026, 1, 1),
+        reaction_rating=5,
+    )
+    g.giver_persons.add(recipient_person)
+
+    history = RecipientHistory(
+        recipient=recipient_person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+    profile = build_preference_profile(viewer, history, visible_tag_ids=set())
+    assert profile.liked_tags == ()
+    assert profile.owned_tags == ()
+    assert profile.disliked_tags == ()
