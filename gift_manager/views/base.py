@@ -212,15 +212,48 @@ class GetObjectByTokenMixin:
         return get_object_or_404(queryset, **kwargs)
 
 
+LEAVE_ACCESS_QUERY = "intent=leave_access"
+
+
+def delete_action_button(context: dict, *, url: str, label: str) -> dict:
+    """Return a detail page's delete button, following ``context["delete_mode"]``.
+
+    "delete" keeps the Delete button, "leave" turns it into "Remove my access" (the object stays
+    shared with the others), and anything else disables it with the reason. ``context`` comes
+    from ``ContextPermissionMixin``.
+    """
+    mode = context["delete_mode"]
+    if mode == PermissionService.DELETE_MODE_DELETE:
+        return {"type": "delete", "url": url, "label": label}
+    if mode == PermissionService.DELETE_MODE_LEAVE:
+        return {
+            "type": "leave",
+            "url": f"{url}?{LEAVE_ACCESS_QUERY}",
+            "label": gettext("Remove my access"),
+            "tooltip": gettext("It stays shared with the other people who have access."),
+        }
+    return {
+        "type": "delete",
+        "url": url,
+        "label": label,
+        "enabled": False,
+        "tooltip": context["delete_disabled_reason"],
+    }
+
+
 class ContextPermissionMixin:
     """Mixin to add permission context to the view."""
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
+        user = self.request.user
         context["is_editor"] = (
-            PermissionService.get_effective_permission(self.object, self.request.user)
-            >= PermissionLevel.EDITOR
+            PermissionService.get_effective_permission(self.object, user) >= PermissionLevel.EDITOR
         )
+        mode, reason = PermissionService.delete_mode_for(user, self.object)
+        context["delete_mode"] = mode
+        context["delete_disabled_reason"] = reason
+        context["can_leave_access"] = mode == PermissionService.DELETE_MODE_LEAVE
         return context
 
 
@@ -968,7 +1001,10 @@ class BaseDeleteView(
         if permission < PermissionLevel.VIEWER:
             raise PermissionDenied(gettext("You do not have access to this object."))
 
-        if self.is_leave_access_request():
+        if self.is_leave_access_request() or PermissionService.has_other_access_holder(
+            obj, self.request.user
+        ):
+            # Deleting a shared object only removes the user's own access (delete_or_leave)
             PermissionService.assert_can_leave_object(self.request.user, obj)
             return
 
@@ -994,8 +1030,17 @@ class BaseDeleteView(
                 "related_objects": self.get_related_objects(),
                 "cascade_warning": self.get_cascade_warning(),
                 "additional_fields": self.get_additional_fields(),
+                "is_leave_access": self.is_leave_access_request()
+                or PermissionService.has_other_access_holder(self.object, self.request.user),
             }
         )
+        if context["is_leave_access"]:
+            # Leaving only removes the user's own access: the templates then hide the related
+            # objects and cascade warnings, which only apply to an actual deletion
+            context["additional_fields"] = {
+                **context["additional_fields"],
+                "intent": "leave_access",
+            }
         return context
 
     def get_success_message(self):

@@ -688,3 +688,13 @@ select[multiple] option:checked {
     background-color: var(--surface-background);
     color: var(--text-primary);
 }
+
+/* Non-blocking future-date warning (form-initializer.js). Bootstrap's text-warning-emphasis
+   follows data-bs-theme, which the app does not set, so use readable amber shades per theme. */
+.future-date-warning {
+    color: #92400e;
+}
+
+[data-theme="dark"] .future-date-warning {
+    color: var(--color-warning);
+}

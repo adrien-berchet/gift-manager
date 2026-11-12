@@ -26,7 +26,6 @@ from gift_manager.models import RelationStatus
 from gift_manager.plan_repeat import find_repeat_candidates
 from gift_manager.plan_repeat import repeat_plans
 from gift_manager.plan_repeat import supports_plan_again
-from gift_manager.services import GLOBAL_OBJECT_REMOVAL_ERROR
 from gift_manager.services import BudgetService
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
@@ -34,6 +33,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import QueryStringPrefillMixin
+from gift_manager.views.base import delete_action_button
 
 
 class EventListView(
@@ -146,6 +146,7 @@ class EventDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
+            .with_edit_flag(self.request.user)
             .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
         )
         context["relation_statuses"] = RelationStatus.objects.all()
@@ -163,22 +164,11 @@ class EventDetailView(BaseDetailView):
                 if not is_editor
                 else None,
             },
-            {
-                "type": "delete",
-                "url": reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
-                "label": _("Delete event"),
-                # A global event (Birthday) is visible to everyone: regular users cannot
-                # delete it, and there is no access of theirs to remove
-                "enabled": is_editor or not self.object.is_global,
-                "tooltip": GLOBAL_OBJECT_REMOVAL_ERROR
-                if self.object.is_global and not is_editor
-                else _(
-                    "You do not have permission to delete this object so it will only be "
-                    "unshared with you"
-                )
-                if not is_editor
-                else None,
-            },
+            delete_action_button(
+                context,
+                url=reverse("gift_manager:event_delete", kwargs={"pk": self.object.event_id}),
+                label=_("Delete event"),
+            ),
         ]
         if supports_plan_again(self.object):
             context["action_buttons"].insert(

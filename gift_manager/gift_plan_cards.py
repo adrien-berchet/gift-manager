@@ -251,10 +251,9 @@ def build_gift_plan_action_groups(
 def build_dashboard_summary(action_groups: list[dict], unassigned_gift_count: int) -> dict:
     """Return compact action counts for the dashboard summary strip."""
     action_counts = {group["key"]: len(group["items"]) for group in action_groups}
-    attention_count = (
-        sum(count for key, count in action_counts.items() if key != "reaction")
-        + unassigned_gift_count
-    )
+    # Unassigned gifts are ideas kept for later, not something to act on: they have their own
+    # tile (and gift list filter) but do not count as needing attention
+    attention_count = sum(count for key, count in action_counts.items() if key != "reaction")
     return {
         "attention": attention_count,
         "overdue": action_counts.get("overdue", 0),

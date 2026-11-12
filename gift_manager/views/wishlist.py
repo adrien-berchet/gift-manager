@@ -29,6 +29,7 @@ from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_given_status
 from gift_manager.views.base import HTMXResponseMixin
 
 
@@ -271,6 +272,7 @@ def annotate_wish_for_giver(wish, viewer, person, viewer_friend_ids=None):
     active_plan = next((p for p in active_plans if wishlist.reserves_wish(p)), None)
     wish.planned_relation = active_plan
     wish.is_planned_by_viewer = active_plan is not None
+    wish.planned_is_given = bool(active_plan and is_given_status(active_plan.status))
     return wish
 
 

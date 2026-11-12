@@ -134,6 +134,7 @@
                            title="{% trans 'View gift plan details' %}">
                             <i class="fas fa-eye" aria-hidden="true"></i>
                         </a>
+                        {% if relation.can_edit %}
                         <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
                            class="btn btn-outline-primary btn-sm"
                            data-action="edit"
@@ -148,6 +149,7 @@
                            title="{% trans 'Delete gift plan' %}">
                             <i class="fas fa-trash" aria-hidden="true"></i>
                         </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

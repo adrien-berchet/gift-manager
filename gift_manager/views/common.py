@@ -128,13 +128,8 @@ def home(request):
             now=now,
         )
 
-        # Only plans the user can see count: a hidden surprise plan must not make a gift look
-        # planned to its recipient
         unassigned_gift_count = (
-            Gift.objects.accessible_by(user)
-            .exclude(pk__in=Relation.objects.accessible_by(user).values("gift_id"))
-            .distinct()
-            .count()
+            Gift.objects.accessible_by(user).not_in_visible_plans(user).distinct().count()
         )
         context["dashboard_action_groups"] = action_groups
         # "Awaiting reaction" follows up on given plans: it gets its own section and stays out

@@ -57,8 +57,9 @@ class TestEventDetail:
         )
 
         assert detail_url in content
-        assert edit_url in content
-        assert delete_url in content
+        # The user only views this plan: no edit or delete links (2026-11-12 QA, N3)
+        assert edit_url not in content
+        assert f'href="{delete_url}"' not in content
 
         # The modern detail page uses card actions instead of a Grid.js Actions column.
         assert "detail-page-shell" in content

@@ -1,14 +1,23 @@
 {% extends "gift_manager/base.html" %}
 
 {% load i18n %}
-{% block title %}Gift Manager - {% trans "Confirm Deletion" %}{% endblock %}
+{% block title %}Gift Manager - {% if is_leave_access %}{% trans "Remove my access" %}{% else %}{% trans "Confirm Deletion" %}{% endif %}{% endblock %}
 
 {% block content %}
+{% if is_leave_access %}
+<h1 class="my-4">{% trans "Remove my access" %}</h1>
+<p>{% blocktrans with entity_type=entity_type|lower %}You will no longer see this {{ entity_type }}: {{ entity_name }}.{% endblocktrans %}</p>
+<p class="text-muted">{% trans "It stays shared with the other people who have access, and they can share it with you again." %}</p>
+{% else %}
 <h1 class="my-4">{% trans "Confirm Deletion" %}</h1>
 <p>{% trans "Are you sure you want to delete this item?" %}</p>
+{% endif %}
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="btn btn-danger">{% trans "Delete" %}</button>
+    {% for field_name, field_value in additional_fields.items %}
+    <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
+    {% endfor %}
+    <button type="submit" class="btn btn-danger">{% if is_leave_access %}{% trans "Remove my access" %}{% else %}{% trans "Delete" %}{% endif %}</button>
     <a href="{{ cancel_url }}" class="btn btn-secondary">{% trans "Cancel" %}</a>
 </form>
 {% endblock %}

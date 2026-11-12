@@ -9,12 +9,9 @@ from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import BooleanField
 from django.db.models import Case
 from django.db.models import CharField
-from django.db.models import Exists
 from django.db.models import F
-from django.db.models import OuterRef
 from django.db.models import Prefetch
 from django.db.models import TextField
 from django.db.models import Value
@@ -96,6 +93,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import HTMXResponseMixin
+from gift_manager.views.base import delete_action_button
 from gift_manager.views.received_gift import ALREADY_REVEALED_PARAM
 from gift_manager.views.received_gift import render_relation_reveal_form
 
@@ -117,10 +115,10 @@ class RevealOfferMixin:
             and is_given_status(self.object.status)
             and can_reveal_plan(self.object, self.request.user)
         ):
-            self._attach_reveal_notification_link(response)
+            self._attach_reveal_notification_link(response, created=previous is None)
         return response
 
-    def _attach_reveal_notification_link(self, response: HttpResponse) -> None:
+    def _attach_reveal_notification_link(self, response: HttpResponse, *, created: bool) -> None:
         raw_trigger = response.get("HX-Trigger")
         try:
             events = json.loads(raw_trigger) if raw_trigger else {}
@@ -130,8 +128,11 @@ class RevealOfferMixin:
             events = {}
         notification = events.get("showNotification")
         if not isinstance(notification, dict):
+            fallback = (
+                gettext("Gift plan created.") if created else gettext("Gift plan marked as given.")
+            )
             notification = {
-                "message": self.get_success_message() or gettext("Gift plan marked as given."),
+                "message": self.get_success_message() or fallback,
                 "type": "success",
             }
         notification["link"] = {
@@ -326,23 +327,10 @@ class RelationStatusDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .with_related_objects()
             .filter(status=self.object)
-            .annotate(can_edit=self.get_can_edit_expression())
+            .with_edit_flag(self.request.user)
             .order_by(F("due_date").asc(nulls_last=True), "gift__name")
         )
         return context
-
-    def get_can_edit_expression(self):
-        """Return whether the user may edit each relation, matching the edit view's check."""
-        user = self.request.user
-        if user.is_superuser:
-            return Value(value=True, output_field=BooleanField())
-        return Exists(
-            RelationPermission.objects.filter(
-                relation=OuterRef("pk"),
-                user=user,
-                permission_type__gte=PermissionLevel.EDITOR,
-            )
-        )
 
 
 class RelationListView(PermissionContextMixin, BaseListView):
@@ -939,20 +927,11 @@ class RelationDetailView(BaseDetailView):
                 "btn_class": "btn-secondary",
                 "data_action": "create",
             },
-            {
-                "type": "delete",
-                "url": reverse(
-                    "gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}
-                ),
-                "label": _("Delete gift plan"),
-                "enabled": True,
-                "tooltip": _(
-                    "You do not have permission to delete this object so it will only be "
-                    "unshared with you"
-                )
-                if not is_editor
-                else None,
-            },
+            delete_action_button(
+                context,
+                url=reverse("gift_manager:relation_delete", kwargs={"pk": self.object.relation_id}),
+                label=_("Delete gift plan"),
+            ),
         ]
         return context
 
