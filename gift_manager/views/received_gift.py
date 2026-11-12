@@ -1,21 +1,23 @@
 """Views for received gifts management (personal log)."""
 
-import contextlib
 import json
+import uuid
 from collections import defaultdict
-from datetime import date
+from typing import Any
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.http import HttpResponse
-from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils import formats
 from django.utils import timezone
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
@@ -24,41 +26,52 @@ from django.views.generic import UpdateView
 from django.views.generic import View
 
 from gift_manager.forms import ReceivedGiftForm
+from gift_manager.forms import RelationRevealForm
+from gift_manager.forms import person_group_choices
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.received_gifts import ShareReactionResult
 from gift_manager.received_gifts import can_reveal_plan
+from gift_manager.received_gifts import can_share_reaction
 from gift_manager.received_gifts import get_reveal_targets
+from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.received_gifts import reveal_plan
 from gift_manager.received_gifts import share_reaction_feedback
 from gift_manager.services import PermissionService
-from gift_manager.statuses import is_given_status
+from gift_manager.validators import validate_http_url
 from gift_manager.views.base import HTMXResponseMixin
 from gift_manager.wishlist import own_received_gifts
 
 User = get_user_model()
 
 
-def _linkable_giver_ids(user: User, gifts: list[ReceivedGift]) -> tuple[set[int], set[int]]:
-    """Return the giver person and group pks the user can still open.
+def _parse_giver_filter(raw_giver: str) -> tuple[str, Q | None]:
+    """Parse ``person:<uuid>``, ``group:<uuid>``, or a bare UUID into a queryset filter."""
+    if not raw_giver:
+        return "", None
+    kind = None
+    uuid_part = raw_giver
+    if raw_giver.startswith("person:"):
+        kind = "person"
+        uuid_part = raw_giver.removeprefix("person:")
+    elif raw_giver.startswith("group:"):
+        kind = "group"
+        uuid_part = raw_giver.removeprefix("group:")
 
-    Givers are always displayed by name, but only linked to their detail page
-    while the user has access to them (sharing may have been revoked since).
-    """
-    person_pks = {person.pk for gift in gifts for person in gift.giver_persons.all()}
-    group_pks = {group.pk for gift in gifts for group in gift.giver_groups.all()}
-    linkable_person_ids = set(
-        Person.objects.accessible_by(user).filter(pk__in=person_pks).values_list("pk", flat=True)
-    )
-    linkable_group_ids = set(
-        PersonGroup.objects.accessible_by(user)
-        .filter(pk__in=group_pks)
-        .values_list("pk", flat=True)
-    )
-    return linkable_person_ids, linkable_group_ids
+    try:
+        parsed = uuid.UUID(uuid_part)
+    except ValueError:
+        return "", None
+
+    if kind == "person":
+        return f"person:{parsed}", Q(giver_persons__person_id=parsed)
+    if kind == "group":
+        return f"group:{parsed}", Q(giver_groups__group_id=parsed)
+    return str(parsed), Q(giver_persons__person_id=parsed) | Q(giver_groups__group_id=parsed)
 
 
 class ReceivedGiftListView(LoginRequiredMixin, View):
@@ -76,7 +89,7 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
         )
 
         filter_year = request.GET.get("year", "").strip()
-        filter_giver = request.GET.get("giver", "").strip()
+        filter_giver_raw = request.GET.get("giver", "").strip()
         filter_occasion = request.GET.get("occasion", "").strip()
         filter_thank_you = request.GET.get("thank_you", "").strip()
 
@@ -86,26 +99,26 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             except ValueError:
                 filter_year = ""
 
-        if filter_giver:
-            # Match person id or group id
-            queryset = queryset.filter(giver_persons__person_id=filter_giver) | queryset.filter(
-                giver_groups__group_id=filter_giver
-            )
-            queryset = queryset.distinct()
+        filter_giver, giver_query = _parse_giver_filter(filter_giver_raw)
+        if giver_query is not None:
+            queryset = queryset.filter(giver_query).distinct()
 
         if filter_occasion:
-            queryset = queryset.filter(event__event_id=filter_occasion) | queryset.filter(
-                occasion_text__icontains=filter_occasion
-            )
-            queryset = queryset.distinct()
+            queryset = queryset.filter(
+                Q(occasion_text__icontains=filter_occasion)
+                | Q(event__name__icontains=filter_occasion)
+            ).distinct()
 
         if filter_thank_you in {"pending", "0", "false"}:
+            filter_thank_you = "pending"
             queryset = queryset.filter(thank_you_sent=False)
         elif filter_thank_you in {"sent", "1", "true"}:
+            filter_thank_you = "sent"
             queryset = queryset.filter(thank_you_sent=True)
+        else:
+            filter_thank_you = ""
 
         all_user_gifts = ReceivedGift.objects.for_user(user)
-        total_count = all_user_gifts.count()
         pending_thank_you_count = all_user_gifts.filter(thank_you_sent=False).count()
 
         # Available years for filter dropdown
@@ -114,13 +127,18 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             reverse=True,
         )
 
-        # Available givers
+        # Available givers (accessible people and groups linked on the user's received gifts)
         giver_person_pks = all_user_gifts.values_list("giver_persons", flat=True).distinct()
-        available_givers = (
+        giver_group_pks = all_user_gifts.values_list("giver_groups", flat=True).distinct()
+        available_persons = (
             Person.objects.accessible_by(user)
             .filter(pk__in=giver_person_pks)
             .order_by("family_name", "first_name")
         )
+        available_groups = (
+            PersonGroup.objects.accessible_by(user).filter(pk__in=giver_group_pks).order_by("name")
+        )
+        available_giver_choices = person_group_choices(available_persons, available_groups)
 
         # Group gifts by year (newest first)
         by_year = defaultdict(list)
@@ -132,17 +150,15 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             (year, by_year[year])
             for year in sorted(by_year.keys(), key=lambda y: (y is None, -(y or 0)))
         ]
-        linkable_person_ids, linkable_group_ids = _linkable_giver_ids(
+        linkable_person_ids, linkable_group_ids = linkable_giver_ids(
             user, [gift for gifts in by_year.values() for gift in gifts]
         )
 
         context = {
             "grouped_gifts": grouped_gifts,
-            "total_count": total_count,
-            "filtered_count": queryset.count(),
             "pending_thank_you_count": pending_thank_you_count,
             "available_years": available_years,
-            "available_givers": available_givers,
+            "available_giver_choices": available_giver_choices,
             "filter_year": filter_year,
             "filter_giver": filter_giver,
             "filter_occasion": filter_occasion,
@@ -170,24 +186,13 @@ class ReceivedGiftDetailView(LoginRequiredMixin, View):
             received_gift_id=pk,
         )
 
-        can_share_reaction = False
-        if gift.source_relation is not None and is_given_status(gift.source_relation.status):
-            owner_ids = set(
-                gift.source_relation.relationpermission_set.filter(
-                    permission_type=PermissionLevel.OWNER
-                ).values_list("user_id", flat=True)
-            )
-            # Must be friends with at least one owner
-            user_friend_ids = set(request.user.profile.friends.values_list("user_id", flat=True))
-            if owner_ids & user_friend_ids:
-                can_share_reaction = True
-
-        linkable_person_ids, linkable_group_ids = _linkable_giver_ids(request.user, [gift])
+        linkable_person_ids, linkable_group_ids = linkable_giver_ids(request.user, [gift])
         context = {
             "gift": gift,
-            "can_share_reaction": can_share_reaction,
+            "can_share_reaction": can_share_reaction(gift, request.user),
             "linkable_person_ids": linkable_person_ids,
             "linkable_group_ids": linkable_group_ids,
+            "full_page_detail": request.GET.get("surface") == "page",
             # Received gifts are private to their recipient, who can always edit them
             "is_editor": True,
             "action_buttons": [
@@ -213,8 +218,8 @@ class ReceivedGiftDetailView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
-class ReceivedGiftCreateView(LoginRequiredMixin, HTMXResponseMixin, CreateView):
-    """Record a new received gift."""
+class _ReceivedGiftHTMXFormMixin(LoginRequiredMixin, HTMXResponseMixin):
+    """Shared HTMX/page setup for creating and editing received gifts."""
 
     model = ReceivedGift
     form_class = ReceivedGiftForm
@@ -222,18 +227,61 @@ class ReceivedGiftCreateView(LoginRequiredMixin, HTMXResponseMixin, CreateView):
     htmx_template_name = "gift_manager/includes/received_gift_form_partial.html"
     success_url = reverse_lazy("gift_manager:received_gift_list")
     close_offcanvas = True
+    action_label = ""
+    success_message = ""
 
-    def get_form_kwargs(self):
+    def get_form_kwargs(self) -> dict[str, Any]:
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
         return kwargs
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["action"] = str(self.action_label)
+        context["translated_type"] = gettext("Received Gift")
+        context["form_surface"] = "offcanvas" if self.is_htmx else "page"
+        context["cancel_url"] = self.success_url
+        return context
+
+    def get_success_message(self) -> str:
+        return str(self.success_message)
+
+    def form_valid(self, form: ReceivedGiftForm) -> HttpResponse:
+        response = super().form_valid(form)
+        if not self.is_htmx:
+            messages.success(self.request, self.get_success_message())
+        return response
+
+    def form_invalid(self, form: ReceivedGiftForm) -> HttpResponse:
+        response = super().form_invalid(form)
+        if self.is_htmx:
+            response["HX-Trigger"] = json.dumps(
+                {
+                    "showNotification": {
+                        "message": gettext("Please correct the errors below."),
+                        "type": "error",
+                    }
+                }
+            )
+        return response
+
+
+class ReceivedGiftCreateView(_ReceivedGiftHTMXFormMixin, CreateView):
+    """Record a new received gift."""
+
+    action_label = _("Record")
+    success_message = _("Received gift recorded successfully.")
 
     def get_initial(self):
         initial = super().get_initial()
         wish_id = self.request.GET.get("wish")
         if wish_id:
             try:
-                wish = Wish.objects.for_wisher(self.request.user).get(wish_id=wish_id)
+                wish = (
+                    Wish.objects.for_wisher(self.request.user)
+                    .filter(is_archived=False)
+                    .get(wish_id=wish_id)
+                )
                 initial["wish"] = wish
                 initial["title"] = wish.title
                 initial["url"] = wish.url
@@ -249,57 +297,16 @@ class ReceivedGiftCreateView(LoginRequiredMixin, HTMXResponseMixin, CreateView):
                 pass
         return initial
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["action"] = gettext("Record")
-        context["translated_type"] = gettext("Received Gift")
-        context["form_surface"] = "offcanvas" if self.is_htmx else "page"
-        context["cancel_url"] = self.success_url
-        return context
-
     def form_valid(self, form):
         form.instance.recipient_user = self.request.user
-        self.object = form.save()
-
-        success_message = gettext("Received gift recorded successfully.")
-        messages.success(self.request, success_message)
-
-        if self.is_htmx:
-            triggers = ["list:update"]
-            if getattr(self, "close_offcanvas", False):
-                triggers.append("offcanvas:close")
-            triggers.append({"showNotification": {"message": success_message, "type": "success"}})
-            response = HttpResponse("")
-            response["HX-Reswap"] = "none"
-            response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
-            return response
-
-        return HttpResponseRedirect(self.get_success_url())
-
-    def form_invalid(self, form):
-        response = super().form_invalid(form)
-        if self.is_htmx:
-            response.status_code = 422
-            response["HX-Trigger"] = json.dumps(
-                {
-                    "showNotification": {
-                        "message": gettext("Please correct the errors below."),
-                        "type": "error",
-                    }
-                }
-            )
-        return response
+        return super().form_valid(form)
 
 
-class ReceivedGiftUpdateView(LoginRequiredMixin, HTMXResponseMixin, UpdateView):
+class ReceivedGiftUpdateView(_ReceivedGiftHTMXFormMixin, UpdateView):
     """Edit an existing received gift."""
 
-    model = ReceivedGift
-    form_class = ReceivedGiftForm
-    template_name = "gift_manager/received_gift_form.html"
-    htmx_template_name = "gift_manager/includes/received_gift_form_partial.html"
-    success_url = reverse_lazy("gift_manager:received_gift_list")
-    close_offcanvas = True
+    action_label = _("Edit")
+    success_message = _("Received gift updated successfully.")
 
     def get_queryset(self):
         return ReceivedGift.objects.for_user(self.request.user)
@@ -309,64 +316,47 @@ class ReceivedGiftUpdateView(LoginRequiredMixin, HTMXResponseMixin, UpdateView):
             queryset = self.get_queryset()
         return get_object_or_404(queryset, received_gift_id=self.kwargs.get("pk"))
 
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["user"] = self.request.user
-        return kwargs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["action"] = gettext("Edit")
-        context["translated_type"] = gettext("Received Gift")
-        context["form_surface"] = "offcanvas" if self.is_htmx else "page"
-        context["cancel_url"] = self.success_url
-        return context
-
-    def form_valid(self, form):
-        self.object = form.save()
-        success_message = gettext("Received gift updated successfully.")
-        messages.success(self.request, success_message)
-
-        if self.is_htmx:
-            triggers = ["list:update"]
-            if getattr(self, "close_offcanvas", False):
-                triggers.append("offcanvas:close")
-            triggers.append({"showNotification": {"message": success_message, "type": "success"}})
-            response = HttpResponse("")
-            response["HX-Reswap"] = "none"
-            response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
-            return response
-
-        return HttpResponseRedirect(self.get_success_url())
-
-    def form_invalid(self, form):
-        response = super().form_invalid(form)
-        if self.is_htmx:
-            response.status_code = 422
-            response["HX-Trigger"] = json.dumps(
-                {
-                    "showNotification": {
-                        "message": gettext("Please correct the errors below."),
-                        "type": "error",
-                    }
-                }
-            )
-        return response
-
 
 class ReceivedGiftDeleteView(LoginRequiredMixin, HTMXResponseMixin, View):
     """Delete a received gift."""
 
     template_name = "gift_manager/received_gift_confirm_delete.html"
+    htmx_template_name = "gift_manager/includes/delete_confirmation_modal.html"
 
     def get_object(self):
         return get_object_or_404(
-            ReceivedGift.objects.for_user(self.request.user),
+            ReceivedGift.objects.for_user(self.request.user).select_related("wish"),
             received_gift_id=self.kwargs.get("pk"),
         )
 
     def get(self, request, *args, **kwargs):
         gift = self.get_object()
+        if self.is_htmx:
+            entity_details = [
+                gettext("Date received: {date}").format(
+                    date=formats.date_format(gift.received_on, "DATE_FORMAT")
+                )
+            ]
+            if gift.wish_id:
+                entity_details.append(
+                    gettext(
+                        "Deleting this received gift will update the fulfilled status on your "
+                        "wishlist if no other plans or gifts fulfill it."
+                    )
+                )
+            return render(
+                request,
+                self.htmx_template_name,
+                {
+                    "entity_type": gettext("Received Gift"),
+                    "entity_name": gift.title,
+                    "entity_description": gift.description or None,
+                    "entity_icon": "box-open",
+                    "entity_details": entity_details,
+                    "delete_url": request.path,
+                    "related_objects": [],
+                },
+            )
         return render(request, self.template_name, {"gift": gift})
 
     def post(self, request, *args, **kwargs):
@@ -374,9 +364,8 @@ class ReceivedGiftDeleteView(LoginRequiredMixin, HTMXResponseMixin, View):
         gift.delete()
 
         success_message = gettext("Received gift deleted successfully.")
-        messages.success(request, success_message)
 
-        if request.headers.get("HX-Request") == "true":
+        if self.is_htmx:
             triggers = ["list:update", "modal:close"]
             triggers.append({"showNotification": {"message": success_message, "type": "success"}})
             response = HttpResponse("")
@@ -384,6 +373,7 @@ class ReceivedGiftDeleteView(LoginRequiredMixin, HTMXResponseMixin, View):
             response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
             return response
 
+        messages.success(request, success_message)
         return redirect("gift_manager:received_gift_list")
 
 
@@ -404,9 +394,15 @@ class ReceivedGiftToggleFulfillsWishView(LoginRequiredMixin, View):
 
         wish = gift.wish
         if request.headers.get("HX-Request") == "true":
+            received_gifts = own_received_gifts(request.user, wish)
+            linkable_person_ids, linkable_group_ids = linkable_giver_ids(
+                request.user, received_gifts
+            )
             context = {
                 "wish": wish,
-                "received_gifts": own_received_gifts(request.user, wish),
+                "received_gifts": received_gifts,
+                "linkable_person_ids": linkable_person_ids,
+                "linkable_group_ids": linkable_group_ids,
             }
             response = render(request, self.section_template_name, context)
             response["HX-Trigger"] = json.dumps({"list:update": None})
@@ -435,6 +431,90 @@ class ReceivedGiftToggleThankYouView(LoginRequiredMixin, View):
         return redirect("gift_manager:received_gift_list")
 
 
+def reveal_initial_data(relation: Relation) -> dict:
+    """Compute prefill values for ``RelationRevealForm`` from ``relation``."""
+    raw_url = (relation.url or (relation.gift.url if relation.gift else ""))[:2000]
+    if raw_url:
+        try:
+            validate_http_url(raw_url)
+        except ValidationError:
+            raw_url = ""
+
+    if relation.status_changed_at:
+        initial_date = timezone.localdate(relation.status_changed_at)
+    elif relation.due_date:
+        initial_date = relation.due_date
+    else:
+        initial_date = timezone.localdate()
+
+    return {
+        "title": (relation.gift.name if relation.gift else "")[:255],
+        "url": raw_url,
+        "received_on": initial_date,
+        "occasion_text": relation.event.name[:100] if relation.event else "",
+    }
+
+
+def build_relation_reveal_context(
+    relation: Relation,
+    user,
+    form: RelationRevealForm,
+    *,
+    form_surface: str,
+) -> dict[str, Any]:
+    """Build template context shared by Reveal GET/POST and reaction chaining."""
+    targets = get_reveal_targets(relation, user)
+    owner_ids = [
+        u_id
+        for u_id, lvl in PermissionService.get_permission_map(relation).items()
+        if lvl == PermissionLevel.OWNER
+    ]
+    co_owners = list(User.objects.filter(pk__in=owner_ids, is_active=True))
+    defaults = reveal_initial_data(relation)
+    expand_details = bool(
+        form["title"].errors
+        or form["received_on"].errors
+        or form["occasion_text"].errors
+        or form["url"].errors
+        or not (str(form["title"].value() or "")).strip()
+    )
+    return {
+        "relation": relation,
+        "form": form,
+        "preview": defaults,
+        "expand_details": expand_details,
+        "targets": targets,
+        "co_owners": co_owners,
+        "action": gettext("Reveal"),
+        "translated_type": gettext("Gift Plan"),
+        "submit_label": gettext("Reveal now"),
+        "form_surface": form_surface,
+        "cancel_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
+    }
+
+
+def render_relation_reveal_form(
+    request,
+    relation: Relation,
+    form: RelationRevealForm | None = None,
+    *,
+    form_surface: str = "offcanvas",
+) -> HttpResponse:
+    """Render the reveal form template for offcanvas or full page."""
+    if form is None:
+        form = RelationRevealForm(initial=reveal_initial_data(relation))
+    template = (
+        "gift_manager/includes/relation_reveal_partial.html"
+        if form_surface == "offcanvas"
+        else "gift_manager/relation_reveal.html"
+    )
+    return render(
+        request,
+        template,
+        build_relation_reveal_context(relation, request.user, form, form_surface=form_surface),
+    )
+
+
 class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
     """Preview and reveal a Given gift plan to its recipient(s)."""
 
@@ -452,73 +532,47 @@ class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
     def get(self, request, pk, *args, **kwargs):
         relation = self.get_relation(pk)
         if not can_reveal_plan(relation, request.user):
-            return HttpResponse(
-                gettext("This gift plan cannot be revealed."),
-                status=403,
-            )
+            raise PermissionDenied(gettext("This gift plan cannot be revealed."))
 
-        targets = get_reveal_targets(relation, request.user)
-        owner_ids = [
-            u_id
-            for u_id, lvl in PermissionService.get_permission_map(relation).items()
-            if lvl == PermissionLevel.OWNER
-        ]
-        co_owners = list(User.objects.filter(pk__in=owner_ids, is_active=True))
-
-        initial_title = relation.gift.name if relation.gift else ""
-        initial_url = relation.url or (relation.gift.url if relation.gift else "")
-        if relation.status_changed_at:
-            initial_date = timezone.localdate(relation.status_changed_at)
-        elif relation.due_date:
-            initial_date = relation.due_date
-        else:
-            initial_date = timezone.localdate()
-
-        initial_occasion = relation.event.name[:100] if relation.event else ""
-
-        context = {
-            "relation": relation,
-            "targets": targets,
-            "co_owners": co_owners,
-            "initial_title": initial_title,
-            "initial_url": initial_url,
-            "initial_date": initial_date.isoformat(),
-            "initial_occasion": initial_occasion,
-        }
-        template = (
-            self.partial_template_name
-            if request.headers.get("HX-Request") == "true"
-            else self.template_name
+        return render_relation_reveal_form(
+            request,
+            relation,
+            form_surface="offcanvas" if self.is_htmx else "page",
         )
-        return render(request, template, context)
 
     def post(self, request, pk, *args, **kwargs):
         relation = self.get_relation(pk)
         if not can_reveal_plan(relation, request.user):
-            return HttpResponse(
-                gettext("This gift plan cannot be revealed."),
-                status=403,
+            raise PermissionDenied(gettext("This gift plan cannot be revealed."))
+
+        form = RelationRevealForm(request.POST)
+        if not form.is_valid():
+            response = render_relation_reveal_form(
+                request,
+                relation,
+                form,
+                form_surface="offcanvas" if self.is_htmx else "page",
             )
-
-        title = request.POST.get("title", "").strip()
-        url = request.POST.get("url", "").strip()
-        date_str = request.POST.get("received_on", "").strip()
-        occasion_text = request.POST.get("occasion_text", "").strip()
-        giver_note = request.POST.get("giver_note", "").strip()
-
-        received_on = None
-        if date_str:
-            with contextlib.suppress(ValueError):
-                received_on = date.fromisoformat(date_str)
+            if self.is_htmx:
+                response.status_code = 422
+                response["HX-Trigger"] = json.dumps(
+                    {
+                        "showNotification": {
+                            "message": gettext("Please correct the errors below."),
+                            "type": "error",
+                        }
+                    }
+                )
+            return response
 
         created_gifts = reveal_plan(
             relation,
             request.user,
-            title=title,
-            url=url,
-            received_on=received_on,
-            occasion_text=occasion_text,
-            giver_note=giver_note,
+            title=form.cleaned_data["title"],
+            url=form.cleaned_data["url"],
+            received_on=form.cleaned_data["received_on"],
+            occasion_text=form.cleaned_data["occasion_text"],
+            giver_note=form.cleaned_data["giver_note"],
         )
 
         if not created_gifts:
@@ -528,18 +582,17 @@ class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
             message = gettext("Gift plan successfully revealed to recipient!")
             msg_type = "success"
 
-        messages.add_message(
-            request, messages.SUCCESS if msg_type == "success" else messages.WARNING, message
-        )
-
-        if request.headers.get("HX-Request") == "true":
-            triggers = ["list:update", "modal:close", "card:update"]
+        if self.is_htmx:
+            triggers = ["list:update", "offcanvas:close"]
             triggers.append({"showNotification": {"message": message, "type": msg_type}})
             response = HttpResponse("")
             response["HX-Reswap"] = "none"
             response["HX-Trigger"] = self.build_hx_trigger_header(triggers)
             return response
 
+        messages.add_message(
+            request, messages.SUCCESS if msg_type == "success" else messages.WARNING, message
+        )
         return redirect("gift_manager:relation_detail", pk=relation.relation_id)
 
 
@@ -552,24 +605,30 @@ class ReceivedGiftShareReactionView(LoginRequiredMixin, HTMXResponseMixin, View)
             received_gift_id=pk,
         )
 
-        success = share_reaction_feedback(gift, request.user)
-        if success:
+        result = share_reaction_feedback(gift, request.user)
+        if result is ShareReactionResult.SHARED:
             message = gettext("Reaction feedback shared with the givers.")
             msg_type = "success"
+            django_level = messages.SUCCESS
+        elif result is ShareReactionResult.NOTHING_NEW:
+            message = gettext("The givers already have feedback for this gift.")
+            msg_type = "info"
+            django_level = messages.INFO
         else:
             message = gettext("Unable to share reaction feedback.")
             msg_type = "warning"
+            django_level = messages.WARNING
 
-        if request.headers.get("HX-Request") == "true":
+        if self.is_htmx:
             response = HttpResponse("")
             response["HX-Reswap"] = "none"
             response["HX-Trigger"] = json.dumps(
                 {
                     "list:update": None,
-                    "modal:close": None,
                     "showNotification": {"message": message, "type": msg_type},
                 }
             )
             return response
 
+        messages.add_message(request, django_level, message)
         return redirect("gift_manager:received_gift_detail", pk=gift.received_gift_id)

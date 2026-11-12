@@ -2,7 +2,7 @@
 
 <div id="received-gifts-container"
      data-received-gifts
-     hx-get="{% url 'gift_manager:received_gift_list' %}"
+     hx-get="{{ request.get_full_path }}"
      hx-trigger="list:update from:body"
      hx-target="this"
      hx-swap="outerHTML">
@@ -32,29 +32,74 @@
         <div class="col-auto">
           <select name="giver" class="form-select form-select-sm received-gift-filter-select" aria-label="{% trans 'Filter by giver' %}" onchange="this.form.requestSubmit()">
             <option value="">{% trans "All givers" %}</option>
-            {% for g in available_givers %}
-            <option value="{{ g.person_id }}" {% if filter_giver == g.person_id|stringformat:"s" %}selected{% endif %}>{{ g }}</option>
+            {% for group_label, options in available_giver_choices %}
+            <optgroup label="{{ group_label }}">
+              {% for value, label in options %}
+              <option value="{{ value }}" {% if filter_giver == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </optgroup>
             {% endfor %}
           </select>
         </div>
 
-        <!-- Thank-you status buttons -->
+        <!-- Occasion filter -->
         <div class="col-auto">
-          <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Thank-you status filter' %}">
-            <button type="submit" name="thank_you" value="" class="btn {% if not filter_thank_you %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          <input type="search"
+                 name="occasion"
+                 value="{{ filter_occasion }}"
+                 class="form-control form-control-sm received-gift-filter-occasion"
+                 placeholder="{% trans 'Occasion...' %}"
+                 aria-label="{% trans 'Filter by occasion' %}"
+                 onchange="this.form.requestSubmit()">
+        </div>
+
+        <!-- Thank-you status radios -->
+        <div class="col-auto">
+          <div class="btn-group btn-group-sm received-gift-thank-you-group" role="group" aria-label="{% trans 'Thank-you status filter' %}">
+            <input type="radio"
+                   class="btn-check"
+                   name="thank_you"
+                   id="filter-thank-you-all"
+                   value=""
+                   autocomplete="off"
+                   {% if not filter_thank_you %}checked{% endif %}
+                   onchange="this.form.requestSubmit()">
+            <label class="btn {% if not filter_thank_you %}btn-primary{% else %}btn-outline-secondary{% endif %}" for="filter-thank-you-all">
               {% trans "All" %}
-            </button>
-            <button type="submit" name="thank_you" value="pending" class="btn {% if filter_thank_you == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            </label>
+
+            <input type="radio"
+                   class="btn-check"
+                   name="thank_you"
+                   id="filter-thank-you-pending"
+                   value="pending"
+                   autocomplete="off"
+                   {% if filter_thank_you == 'pending' %}checked{% endif %}
+                   onchange="this.form.requestSubmit()">
+            <label class="btn {% if filter_thank_you == 'pending' %}btn-primary{% else %}btn-outline-secondary{% endif %}" for="filter-thank-you-pending">
               <i class="fas fa-clock me-1" aria-hidden="true"></i>{% trans "Awaiting thank-you" %}
               {% if pending_thank_you_count > 0 %}
               <span class="badge bg-danger rounded-pill ms-1">{{ pending_thank_you_count }}</span>
               {% endif %}
-            </button>
-            <button type="submit" name="thank_you" value="sent" class="btn {% if filter_thank_you == 'sent' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+            </label>
+
+            <input type="radio"
+                   class="btn-check"
+                   name="thank_you"
+                   id="filter-thank-you-sent"
+                   value="sent"
+                   autocomplete="off"
+                   {% if filter_thank_you == 'sent' %}checked{% endif %}
+                   onchange="this.form.requestSubmit()">
+            <label class="btn {% if filter_thank_you == 'sent' %}btn-primary{% else %}btn-outline-secondary{% endif %}" for="filter-thank-you-sent">
               <i class="fas fa-check me-1" aria-hidden="true"></i>{% trans "Sent" %}
-            </button>
+            </label>
           </div>
         </div>
+
+        <noscript class="col-auto">
+          <button type="submit" class="btn btn-sm btn-primary">{% trans "Filter" %}</button>
+        </noscript>
 
         {% if filter_year or filter_giver or filter_occasion or filter_thank_you %}
         <div class="col-auto ms-auto">

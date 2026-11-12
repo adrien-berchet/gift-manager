@@ -27,6 +27,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.views.base import HTMXResponseMixin
@@ -143,7 +144,13 @@ class WishUpdateView(LoginRequiredMixin, HTMXResponseMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["action"] = gettext("Edit")
         context["translated_type"] = gettext("Wish")
-        context["received_gifts"] = wishlist.own_received_gifts(self.request.user, self.object)
+        received_gifts = wishlist.own_received_gifts(self.request.user, self.object)
+        linkable_person_ids, linkable_group_ids = linkable_giver_ids(
+            self.request.user, received_gifts
+        )
+        context["received_gifts"] = received_gifts
+        context["linkable_person_ids"] = linkable_person_ids
+        context["linkable_group_ids"] = linkable_group_ids
         context["form_surface"] = "offcanvas" if self.is_htmx else "page"
         context["cancel_url"] = self.success_url
         return context

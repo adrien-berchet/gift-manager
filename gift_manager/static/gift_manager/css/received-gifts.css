@@ -27,6 +27,28 @@
     background-image: none;
 }
 
+.received-gift-filter-occasion {
+    width: 11rem;
+    max-width: 100%;
+}
+
+@media (max-width: 575.98px) {
+    .received-gift-thank-you-group {
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .received-gift-thank-you-group > .btn {
+        flex: 0 1 auto;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .received-gift-filter-occasion {
+        width: 100%;
+    }
+}
+
 /* Filtering gives feedback on the results, not on the filter buttons (the form
    opts out of button spinners, which widened a button and shifted its siblings).
    Only the filter form targets this element; background list refreshes (after a

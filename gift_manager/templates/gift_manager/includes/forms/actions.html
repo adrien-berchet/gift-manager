@@ -41,10 +41,10 @@
           class="btn btn-primary"
           data-loading-text="{% trans 'Saving...' %}"
           data-keyboard-hint="Ctrl+S"
-          title="{% trans 'Save changes' %} (Ctrl+S)"
-          aria-label="{% trans 'Save changes' %}">
+          title="{% if submit_label %}{{ submit_label }}{% else %}{% trans 'Save changes' %}{% endif %} (Ctrl+S)"
+          aria-label="{% if submit_label %}{{ submit_label }}{% else %}{% trans 'Save changes' %}{% endif %}">
     <i class="fas fa-save me-1" aria-hidden="true"></i>
-    {% trans "Save" %}
+    {% if submit_label %}{{ submit_label }}{% else %}{% trans "Save" %}{% endif %}
   </button>
   <span class="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
     {% trans "Ready to save" %}

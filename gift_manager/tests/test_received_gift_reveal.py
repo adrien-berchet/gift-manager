@@ -1,9 +1,14 @@
 """Tests for gift plan reveal and reaction feedback mechanism."""
 
+import json
 from datetime import date
+from datetime import timedelta
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -13,15 +18,20 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.plan_coordination import hidden_recipient_ids
 from gift_manager.plan_coordination import plan_recipient_account_ids
+from gift_manager.received_gifts import ShareReactionResult
 from gift_manager.received_gifts import can_reveal_plan
+from gift_manager.received_gifts import can_share_reaction
 from gift_manager.received_gifts import get_reveal_targets
 from gift_manager.received_gifts import reveal_plan
+from gift_manager.received_gifts import reveal_target_ids_by_relation
+from gift_manager.received_gifts import revealable_relation_pks
 from gift_manager.received_gifts import share_reaction_feedback
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import UserFactory
+from gift_manager.tests.factories import WishFactory
 
 User = get_user_model()
 
@@ -334,6 +344,51 @@ class TestRevealPlanExecution:
         assert owner in rg.giver_accounts.all()
         assert "Dave" in rg.source_givers_text
 
+    def test_reveal_plan_drops_invalid_fallback_url_and_skips_deleted_wish(self, db, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(account=recipient)
+        deleted_wish = WishFactory(
+            wisher=recipient, title="Removed Wish", is_deleted_by_wisher=True
+        )
+        gift = GiftFactory(name="Gadget", url="javascript:alert(1)")
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=given_status,
+            wish=deleted_wish,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        created = reveal_plan(relation, owner, title="Gadget")
+        assert len(created) == 1
+        assert created[0].url == ""
+        assert created[0].wish is None
+
+    def test_reveal_plan_rejects_explicit_unsafe_url(self, db, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(account=recipient)
+        gift = GiftFactory(name="Gadget")
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        with pytest.raises(ValidationError):
+            reveal_plan(relation, owner, title="Gadget", url="javascript:alert(1)")
+        assert not ReceivedGift.objects.filter(recipient_user=recipient).exists()
+
 
 @pytest.mark.django_db
 class TestShareReactionFeedback:
@@ -363,8 +418,12 @@ class TestShareReactionFeedback:
         rg.reaction_note = "Incredible sound quality!"
         rg.save()
 
-        success = share_reaction_feedback(rg, recipient)
-        assert success is True
+        result = share_reaction_feedback(rg, recipient)
+        assert result is ShareReactionResult.SHARED
+
+        rg.refresh_from_db()
+        assert rg.reaction_shared_at is not None
+        assert can_share_reaction(rg, recipient) is False
 
         relation.refresh_from_db()
         assert relation.reaction_rating == 5
@@ -394,13 +453,50 @@ class TestShareReactionFeedback:
         rg.reaction_note = "Recipient loves it even more"
         rg.save()
 
-        success = share_reaction_feedback(rg, recipient)
-        assert success is True
+        assert can_share_reaction(rg, recipient) is False
+        result = share_reaction_feedback(rg, recipient)
+        assert result is ShareReactionResult.NOTHING_NEW
+
+        rg.refresh_from_db()
+        assert rg.reaction_shared_at is None
 
         relation.refresh_from_db()
         # Existing values are preserved
         assert relation.reaction_rating == 4
         assert relation.reaction_note == "Giver already noted they seemed pleased"
+
+    def test_can_share_reaction_reappears_when_note_added_later(self, db, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(account=recipient)
+        gift = GiftFactory()
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        rg = reveal_plan(relation, owner, title="Camera")[0]
+        rg.reaction_rating = 5
+        rg.save()
+
+        assert can_share_reaction(rg, recipient) is True
+        assert share_reaction_feedback(rg, recipient) is ShareReactionResult.SHARED
+        assert can_share_reaction(rg, recipient) is False
+
+        rg.reaction_note = "Took amazing photos on vacation!"
+        rg.save()
+        assert can_share_reaction(rg, recipient) is True
+        assert share_reaction_feedback(rg, recipient) is ShareReactionResult.SHARED
+
+        relation.refresh_from_db()
+        assert relation.reaction_rating == 5
+        assert relation.reaction_note == "Took amazing photos on vacation!"
 
     def test_share_reaction_rejected_if_unfriended(self, db, given_status):
         owner = UserFactory()
@@ -426,8 +522,9 @@ class TestShareReactionFeedback:
         # Unfriend
         owner.profile.friends.remove(recipient.profile)
 
-        success = share_reaction_feedback(rg, recipient)
-        assert success is False
+        assert can_share_reaction(rg, recipient) is False
+        result = share_reaction_feedback(rg, recipient)
+        assert result is ShareReactionResult.NOT_ALLOWED
 
 
 @pytest.mark.django_db
@@ -453,10 +550,12 @@ class TestRelationRevealViews:
         client.force_login(owner)
         url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
 
-        # GET request renders modal partial with targets
+        # GET request renders offcanvas partial with targets and form
         resp = client.get(url, HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
-        assert "Coffee Maker" in resp.content.decode()
+        body = resp.content.decode()
+        assert "Coffee Maker" in body
+        assert "relation-reveal-form" in body
 
         # POST reveals the plan
         post_resp = client.post(
@@ -471,12 +570,95 @@ class TestRelationRevealViews:
             HTTP_HX_REQUEST="true",
         )
         assert post_resp.status_code == 200
-        assert "modal:close" in post_resp.headers.get("HX-Trigger", "")
+        hx_trigger = post_resp.headers.get("HX-Trigger", "")
+        assert "offcanvas:close" in hx_trigger
+        assert "list:update" in hx_trigger
 
         # Verify ReceivedGift was created for recipient
         rg = ReceivedGift.objects.get(recipient_user=recipient)
         assert rg.title == "Espresso Machine"
         assert rg.giver_note == "Enjoy fresh coffee!"
+
+    def test_relation_reveal_invalid_url_returns_422(self, client, given_status):
+        owner = UserFactory()
+        recipient = UserFactory(username="recip2")
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(first_name="Recip", account=recipient)
+        gift = GiftFactory(name="Laptop")
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+        post_resp = client.post(
+            url,
+            {"title": "Laptop", "url": "javascript:alert(1)"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert post_resp.status_code == 422
+        assert "relation-reveal-form" in post_resp.content.decode()
+        assert not ReceivedGift.objects.filter(recipient_user=recipient).exists()
+        relation.refresh_from_db()
+        assert relation.revealed_at is None
+
+    def test_relation_reveal_full_page_get_and_post_redirects(self, client, given_status):
+        owner = UserFactory()
+        recipient = UserFactory(username="recip3")
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(first_name="Recip", account=recipient)
+        gift = GiftFactory(name="Bicycle")
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+
+        get_resp = client.get(url)
+        assert get_resp.status_code == 200
+        assert 'data-form-type="relation_reveal"' in get_resp.content.decode()
+
+        post_resp = client.post(url, {"title": "Mountain Bike"})
+        assert post_resp.status_code == 302
+        assert (
+            reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id})
+            in post_resp["Location"]
+        )
+        assert ReceivedGift.objects.filter(recipient_user=recipient, title="Mountain Bike").exists()
+
+    def test_relation_reveal_forbidden_when_cannot_reveal(self, client, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+
+        person = PersonFactory(account=recipient)
+        gift = GiftFactory()
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=_status("Planned"),
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+        assert client.get(url).status_code == 403
+        assert client.post(url, {"title": "Test"}).status_code == 403
 
     def test_relation_reveal_forbidden_for_non_owner(self, client, given_status):
         owner = UserFactory()
@@ -499,7 +681,6 @@ class TestRelationRevealViews:
         url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
 
         resp = client.get(url)
-        # Not accessible or 403/404
         assert resp.status_code in {403, 404}
 
     def test_received_gift_share_reaction_post(self, client, given_status):
@@ -531,7 +712,471 @@ class TestRelationRevealViews:
         )
         resp = client.post(share_url, HTTP_HX_REQUEST="true")
         assert resp.status_code == 200
+        assert "list:update" in resp.headers.get("HX-Trigger", "")
 
         relation.refresh_from_db()
         assert relation.reaction_rating == 5
         assert relation.reaction_note == "A masterpiece!"
+
+        rg.refresh_from_db()
+        assert rg.reaction_shared_at is not None
+
+        # Detail partial hides share button once all feedback has been shared
+        detail_url = reverse(
+            "gift_manager:received_gift_detail", kwargs={"pk": rg.received_gift_id}
+        )
+        detail_resp = client.get(detail_url, HTTP_HX_REQUEST="true")
+        assert detail_resp.status_code == 200
+        detail_html = detail_resp.content.decode()
+        assert share_url not in detail_html
+        assert "Shared with givers on" in detail_html
+
+        # Repeating the POST reports nothing new rather than falsely claiming newly shared
+        second_resp = client.post(share_url, HTTP_HX_REQUEST="true")
+        assert second_resp.status_code == 200
+        second_trigger = second_resp.headers.get("HX-Trigger", "")
+        assert "already have feedback" in second_trigger
+        assert '"type": "info"' in second_trigger
+
+        # Unfriending yields warning outcome
+        owner.profile.friends.remove(recipient.profile)
+        third_resp = client.post(share_url, HTTP_HX_REQUEST="true")
+        assert third_resp.status_code == 200
+        third_trigger = third_resp.headers.get("HX-Trigger", "")
+        assert "Unable to share reaction feedback." in third_trigger
+        assert '"type": "warning"' in third_trigger
+
+
+@pytest.mark.django_db
+class TestRevealShortcutsAndFlows:
+    """Verify bulk reveal eligibility, undo safety, card/history/edit/reaction flows."""
+
+    def test_bulk_reveal_eligibility_matches_can_reveal_plan_across_edge_cases(
+        self, db, given_status, planned_status, django_assert_num_queries
+    ):
+        owner = UserFactory()
+        co_owner = UserFactory()
+        friend = UserFactory()
+        stranger = UserFactory()
+        owner.profile.friends.add(co_owner.profile, friend.profile)
+
+        p_friend = PersonFactory(account=friend)
+        p_co_owner = PersonFactory(account=co_owner)
+        p_stranger = PersonFactory(account=stranger)
+        p_unlinked = PersonFactory(account=None)
+
+        parent_group = PersonGroupFactory(name="Parent Group")
+        child_group = PersonGroupFactory(name="Child Group")
+        child_group.parent_groups.add(parent_group)
+        p_friend.groups.add(child_group)
+
+        co_owner_only_group = PersonGroupFactory(name="Co-Owner Group")
+        p_co_owner.groups.add(co_owner_only_group)
+
+        # 1. Eligible direct friend plan
+        r_ok = Relation.objects.create(gift=GiftFactory(), person=p_friend, status=given_status)
+        PermissionService.create_or_update_permission(
+            owner, r_ok, permission_level=PermissionLevel.OWNER
+        )
+
+        # 2. Group plan containing friend member and co-owner (only friend stays target)
+        r_group = Relation.objects.create(
+            gift=GiftFactory(), group=parent_group, status=given_status
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_group, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            co_owner, r_group, permission_level=PermissionLevel.OWNER
+        )
+
+        # 3. Group plan whose only friend member is also a co-owner -> excluded!
+        r_group_co_owner_only = Relation.objects.create(
+            gift=GiftFactory(), group=co_owner_only_group, status=given_status
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_group_co_owner_only, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            co_owner, r_group_co_owner_only, permission_level=PermissionLevel.OWNER
+        )
+
+        # 4. Non-friend recipient
+        r_stranger = Relation.objects.create(
+            gift=GiftFactory(), person=p_stranger, status=given_status
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_stranger, permission_level=PermissionLevel.OWNER
+        )
+
+        # 5. Unlinked person
+        r_unlinked = Relation.objects.create(
+            gift=GiftFactory(), person=p_unlinked, status=given_status
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_unlinked, permission_level=PermissionLevel.OWNER
+        )
+
+        # 6. Editor only (not owner)
+        r_editor = Relation.objects.create(gift=GiftFactory(), person=p_friend, status=given_status)
+        PermissionService.create_or_update_permission(
+            co_owner, r_editor, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_editor, permission_level=PermissionLevel.EDITOR
+        )
+
+        # 7. Already revealed
+        r_revealed = Relation.objects.create(
+            gift=GiftFactory(),
+            person=p_friend,
+            status=given_status,
+            revealed_at=timezone.now(),
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_revealed, permission_level=PermissionLevel.OWNER
+        )
+
+        # 8. Non-Given plan
+        r_planned = Relation.objects.create(
+            gift=GiftFactory(), person=p_friend, status=planned_status
+        )
+        PermissionService.create_or_update_permission(
+            owner, r_planned, permission_level=PermissionLevel.OWNER
+        )
+
+        all_relations = list(
+            Relation.objects.filter(
+                pk__in=[
+                    r_ok.pk,
+                    r_group.pk,
+                    r_group_co_owner_only.pk,
+                    r_stranger.pk,
+                    r_unlinked.pk,
+                    r_editor.pk,
+                    r_revealed.pk,
+                    r_planned.pk,
+                ]
+            ).select_related("status", "person", "group")
+        )
+
+        with django_assert_num_queries(4):
+            targets_map = reveal_target_ids_by_relation(all_relations, owner)
+        pks = set(targets_map.keys())
+
+        assert pks == {r_ok.pk, r_group.pk}
+        assert targets_map[r_ok.pk] == {friend.pk}
+        assert targets_map[r_group.pk] == {friend.pk}
+        assert r_group_co_owner_only.pk not in pks
+
+        for rel in all_relations:
+            assert (rel.pk in pks) is can_reveal_plan(rel, owner)
+
+    def test_undo_quick_action_blocked_after_reveal(self, client, given_status, planned_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(account=recipient)
+        relation = Relation.objects.create(
+            gift=GiftFactory(),
+            person=person,
+            status=planned_status,
+            due_date=date.today() - timedelta(days=1),
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        quick_url = reverse(
+            "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
+        )
+        resp = client.post(quick_url, {"action": "given"}, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        trigger = json.loads(resp.headers["HX-Trigger"])
+        undo = trigger["showNotification"]["undo"]
+
+        relation.refresh_from_db()
+        assert reveal_plan(relation, owner, title="Gift")
+
+        undo_resp = client.post(undo["url"], {"token": undo["token"]}, HTTP_HX_REQUEST="true")
+        assert undo_resp.status_code == 409
+        relation.refresh_from_db()
+        assert relation.status_id == given_status.pk
+        assert relation.revealed_at is not None
+
+    def test_undo_quick_action_still_allowed_after_empty_reaction_before_reveal(
+        self, client, given_status, planned_status
+    ):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(account=recipient)
+        relation = Relation.objects.create(
+            gift=GiftFactory(),
+            person=person,
+            status=planned_status,
+            due_date=date.today() - timedelta(days=1),
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        quick_url = reverse(
+            "gift_manager:relation_quick_action", kwargs={"pk": relation.relation_id}
+        )
+        resp = client.post(quick_url, {"action": "given"}, HTTP_HX_REQUEST="true")
+        assert resp.status_code == 200
+        undo = json.loads(resp.headers["HX-Trigger"])["showNotification"]["undo"]
+
+        reaction_url = reverse(
+            "gift_manager:relation_reaction", kwargs={"pk": relation.relation_id}
+        )
+        chain_resp = client.post(
+            reaction_url,
+            {"reaction_rating": "", "reaction_note": "", "after_save": "reveal"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert chain_resp.status_code == 200
+        assert 'id="relation-reveal-form"' in chain_resp.content.decode()
+
+        # Before reveal is confirmed, Undo still reverts status despite the empty note save.
+        undo_resp = client.post(undo["url"], {"token": undo["token"]}, HTTP_HX_REQUEST="true")
+        assert undo_resp.status_code == 200
+        relation.refresh_from_db()
+        assert relation.status_id == planned_status.pk
+        assert relation.revealed_at is None
+
+    def test_relation_reaction_chains_into_reveal_and_skips_for_inline(self, client, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(account=recipient)
+        relation = Relation.objects.create(
+            gift=GiftFactory(name="Leather Journal"),
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        reaction_url = reverse(
+            "gift_manager:relation_reaction", kwargs={"pk": relation.relation_id}
+        )
+        get_resp = client.get(reaction_url, HTTP_HX_REQUEST="true")
+        assert get_resp.status_code == 200
+        get_html = get_resp.content.decode()
+        assert 'name="after_save"' in get_html
+        assert 'value="reveal"' in get_html
+        assert "Save & reveal to recipient" in get_html
+
+        # Inline card rating must NEVER chain into the reveal panel
+        inline_resp = client.post(
+            reaction_url,
+            {"inline": "1", "reaction_rating": "5", "after_save": "reveal"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert inline_resp.status_code == 200
+        assert "relation-reveal-form" not in inline_resp.content.decode()
+
+        # Offcanvas Save & reveal chains directly into #relation-reveal-form
+        relation.reaction_rating = None
+        relation.save(update_fields=["reaction_rating"])
+        chain_resp = client.post(
+            reaction_url,
+            {"reaction_rating": "5", "reaction_note": "Adored it!", "after_save": "reveal"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert chain_resp.status_code == 200
+        chain_html = chain_resp.content.decode()
+        assert 'id="relation-reveal-form"' in chain_html
+        assert "<details" in chain_html
+        assert "Adjust snapshot details" in chain_html
+        assert 'id="id_giver_note"' in chain_html
+        hx_trigger = json.loads(chain_resp.headers["HX-Trigger"])
+        assert "list:update" in hx_trigger
+        assert "offcanvas:close" not in hx_trigger
+        assert hx_trigger["showNotification"]["message"] == "Reaction saved."
+
+        # Reaction was persisted while plan awaits confirmation in the reveal form
+        relation.refresh_from_db()
+        assert relation.reaction_rating == 5
+        assert relation.reaction_note == "Adored it!"
+        assert relation.revealed_at is None
+
+        # Non-HTMX Save & reveal redirects to full reveal page
+        page_resp = client.post(
+            reaction_url,
+            {"reaction_rating": "4", "after_save": "reveal"},
+        )
+        assert page_resp.status_code == 302
+        assert (
+            reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+            in page_resp["Location"]
+        )
+
+    def test_relation_update_to_given_attaches_toast_reveal_link(
+        self, client, given_status, planned_status
+    ):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(first_name="Sam", account=recipient)
+        gift = GiftFactory(name="Watch")
+        relation = Relation.objects.create(
+            gift=gift,
+            person=person,
+            status=planned_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            owner, gift, permission_level=PermissionLevel.OWNER
+        )
+        PermissionService.create_or_update_permission(
+            owner, person, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        edit_url = reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id})
+        reveal_url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+
+        resp = client.post(
+            edit_url,
+            {
+                "gift": gift.pk,
+                "recipient": f"person:{person.person_id}",
+                "status": given_status.pk,
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        assert resp.status_code == 200
+        triggers = json.loads(resp.headers["HX-Trigger"])
+        assert triggers["showNotification"]["link"]["url"] == reveal_url
+
+        # Editing an already-Given plan without changing status attaches no reveal toast link
+        resp2 = client.post(
+            edit_url,
+            {
+                "gift": gift.pk,
+                "recipient": f"person:{person.person_id}",
+                "status": given_status.pk,
+                "comment": "Updated note only",
+            },
+            HTTP_HX_REQUEST="true",
+        )
+        assert resp2.status_code == 200
+        triggers2 = json.loads(resp2.headers["HX-Trigger"])
+        assert "showNotification" not in triggers2 or "link" not in triggers2.get(
+            "showNotification", {}
+        )
+
+    def test_reveal_panel_details_collapse_and_open_on_error(self, client, given_status):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(account=recipient)
+        relation = Relation.objects.create(
+            gift=GiftFactory(name="Desk Lamp"),
+            person=person,
+            status=given_status,
+        )
+        PermissionService.create_or_update_permission(
+            owner, relation, permission_level=PermissionLevel.OWNER
+        )
+
+        client.force_login(owner)
+        reveal_url = reverse("gift_manager:relation_reveal", kwargs={"pk": relation.relation_id})
+        get_html = client.get(reveal_url, HTTP_HX_REQUEST="true").content.decode()
+        assert '<details class="mb-3">' in get_html
+        assert '<details class="mb-3" open>' not in get_html
+        assert "Desk Lamp" in get_html
+
+        err_resp = client.post(
+            reveal_url,
+            {"title": "Desk Lamp", "url": "javascript:alert(1)"},
+            HTTP_HX_REQUEST="true",
+        )
+        assert err_resp.status_code == 422
+        assert '<details class="mb-3" open>' in err_resp.content.decode()
+
+    def test_workspace_dashboard_history_and_query_invariance(
+        self, client, given_status, django_assert_num_queries
+    ):
+        owner = UserFactory()
+        recipient = UserFactory()
+        owner.profile.friends.add(recipient.profile)
+        person = PersonFactory(first_name="Pat", account=recipient)
+        PermissionService.create_or_update_permission(
+            owner, person, permission_level=PermissionLevel.OWNER
+        )
+
+        for idx in range(2):
+            gift = GiftFactory(name=f"Batch Gift {idx}")
+            PermissionService.create_or_update_permission(
+                owner, gift, permission_level=PermissionLevel.OWNER
+            )
+            rel = Relation.objects.create(
+                gift=gift,
+                person=person,
+                status=given_status,
+                due_date=date.today(),
+            )
+            PermissionService.create_or_update_permission(
+                owner, rel, permission_level=PermissionLevel.OWNER
+            )
+
+        client.force_login(owner)
+        relations_url = reverse("gift_manager:relations")
+        history_url = reverse("gift_manager:person_gift_history", kwargs={"pk": person.person_id})
+        home_url = reverse("gift_manager:home")
+
+        # Workspace, dashboard, and history render Reveal button before revealing
+        ws_html = client.get(relations_url).content.decode()
+        home_html = client.get(home_url).content.decode()
+        hist_html = client.get(history_url).content.decode()
+        for rel in Relation.objects.filter(person=person):
+            r_url = reverse("gift_manager:relation_reveal", kwargs={"pk": rel.relation_id})
+            assert r_url in ws_html
+            assert r_url in home_html
+            assert r_url in hist_html
+
+        # Verify query count on RelationListView stays invariant as more Given plans are added
+        with CaptureQueriesContext(connection) as ctx_2:
+            client.get(relations_url)
+
+        for idx in range(2, 5):
+            gift = GiftFactory(name=f"Batch Gift {idx}")
+            PermissionService.create_or_update_permission(
+                owner, gift, permission_level=PermissionLevel.OWNER
+            )
+            rel = Relation.objects.create(
+                gift=gift,
+                person=person,
+                status=given_status,
+                due_date=date.today(),
+            )
+            PermissionService.create_or_update_permission(
+                owner, rel, permission_level=PermissionLevel.OWNER
+            )
+
+        with django_assert_num_queries(len(ctx_2)):
+            client.get(relations_url)
+
+        # Revealing turns cards and history entries from Reveal button -> Revealed badge
+        first_rel = Relation.objects.filter(person=person).order_by("pk").first()
+        reveal_plan(first_rel, owner, title="Batch Gift 0")
+        first_reveal_url = reverse(
+            "gift_manager:relation_reveal", kwargs={"pk": first_rel.relation_id}
+        )
+        ws_after = client.get(relations_url).content.decode()
+        hist_after = client.get(history_url).content.decode()
+        assert first_reveal_url not in ws_after
+        assert first_reveal_url not in hist_after
+        assert "Revealed" in ws_after
+        assert "Revealed" in hist_after
+        assert not revealable_relation_pks([first_rel], owner)

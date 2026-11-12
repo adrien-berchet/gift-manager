@@ -107,6 +107,13 @@
                         submitUndo(data.undo);
                     }
                 };
+            } else if (data.link && data.link.url) {
+                options.action = {
+                    label: data.link.label,
+                    onClick: function() {
+                        loadFormInPanel(data.link.url, data.link.target || 'editPanel');
+                    }
+                };
             }
             showNotification(data.message, data.type || 'info', options);
         });
@@ -154,7 +161,7 @@
                 return;
             }
             const panel = document.getElementById('editPanel');
-            if (panel && panel.querySelector('#relation-reaction-form')) {
+            if (panel && (panel.querySelector('#relation-reaction-form') || panel.querySelector('#relation-reveal-form'))) {
                 closeEditPanel();
             }
         });

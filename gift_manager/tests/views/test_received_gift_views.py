@@ -11,6 +11,7 @@ from gift_manager.forms import ReceivedGiftForm
 from gift_manager.models import PermissionLevel
 from gift_manager.models import ReceivedGift
 from gift_manager.services import PermissionService
+from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import ReceivedGiftFactory
@@ -496,3 +497,152 @@ def test_received_gift_form_chooses_between_a_new_gift_and_a_fulfilled_wish(clie
     assert 'name="gift_mode" value="wish" id="id_gift_mode_1" autocomplete="off" checked' in (
         content
     )
+
+
+@pytest.mark.django_db
+def test_received_gift_list_filters_by_occasion_and_prefixed_giver_safely(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    alice = PersonFactory(first_name="Alice")
+    family = PersonGroupFactory(name="Family")
+    PermissionService.create_or_update_permission(
+        user, alice, permission_level=PermissionLevel.OWNER
+    )
+    PermissionService.create_or_update_permission(
+        user, family, permission_level=PermissionLevel.OWNER
+    )
+    event = EventFactory(name="Alice Birthday Bash")
+    PermissionService.create_or_update_permission(
+        user, event, permission_level=PermissionLevel.OWNER
+    )
+
+    g1 = ReceivedGiftFactory(recipient_user=user, title="Birthday Book", occasion_text="Birthday")
+    g1.giver_persons.add(alice)
+    g2 = ReceivedGiftFactory(recipient_user=user, title="Event Cake", event=event)
+    g2.giver_groups.add(family)
+    ReceivedGiftFactory(recipient_user=user, title="Winter Scarf", occasion_text="Christmas")
+
+    url = reverse("gift_manager:received_gift_list")
+
+    # Occasion search matches both free-text occasion_text and linked Event name
+    occ_resp = client.get(f"{url}?occasion=birthday")
+    assert occ_resp.status_code == 200
+    occ_html = occ_resp.content.decode()
+    assert "Birthday Book" in occ_html
+    assert "Event Cake" in occ_html
+    assert "Winter Scarf" not in occ_html
+
+    # Prefixed person:<uuid> and group:<uuid> filters work independently
+    person_resp = client.get(f"{url}?giver=person:{alice.person_id}")
+    assert person_resp.status_code == 200
+    assert "Birthday Book" in person_resp.content.decode()
+    assert "Event Cake" not in person_resp.content.decode()
+
+    group_resp = client.get(f"{url}?giver=group:{family.group_id}")
+    assert group_resp.status_code == 200
+    assert "Event Cake" in group_resp.content.decode()
+    assert "Birthday Book" not in group_resp.content.decode()
+
+    # Invalid/malformed giver or year params are safely ignored instead of 500 ValidationError
+    bad_resp = client.get(f"{url}?giver=person:not-a-uuid&year=bogus")
+    assert bad_resp.status_code == 200
+    assert "Birthday Book" in bad_resp.content.decode()
+    assert "Winter Scarf" in bad_resp.content.decode()
+
+
+@pytest.mark.django_db
+def test_received_gift_list_preserves_query_string_and_radio_thank_you(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    ReceivedGiftFactory(
+        recipient_user=user,
+        title="Holiday Mug",
+        received_on=date(2025, 12, 25),
+        occasion_text="Xmas",
+        thank_you_sent=True,
+    )
+    url = reverse("gift_manager:received_gift_list")
+
+    resp = client.get(f"{url}?year=2025&thank_you=sent&occasion=Xmas")
+    assert resp.status_code == 200
+    html = resp.content.decode()
+
+    # hx-get on #received-gifts-container preserves active filters for list:update reloads
+    assert 'hx-get="' in html
+    assert "year=2025" in html
+    assert "thank_you=sent" in html
+    assert "occasion=Xmas" in html
+    assert 'type="radio"' in html
+    assert 'name="thank_you"' in html
+
+
+@pytest.mark.django_db
+def test_received_gift_delete_view_htmx_modal_flow(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    gift = ReceivedGiftFactory(recipient_user=user, title="Modal Delete Gift")
+    url = reverse("gift_manager:received_gift_delete", kwargs={"pk": gift.received_gift_id})
+
+    resp_get = client.get(url, HTTP_HX_REQUEST="true")
+    assert resp_get.status_code == 200
+    body = resp_get.content.decode()
+    assert 'id="deleteForm"' in body
+    assert "<html" not in body
+    assert "Modal Delete Gift" in body
+
+    resp_post = client.post(url, HTTP_HX_REQUEST="true")
+    assert resp_post.status_code == 200
+    hx_trigger = resp_post.headers.get("HX-Trigger", "")
+    assert "modal:close" in hx_trigger
+    assert "list:update" in hx_trigger
+    assert not ReceivedGift.objects.filter(pk=gift.pk).exists()
+
+
+@pytest.mark.django_db
+def test_received_gift_nav_marks_more_dropdown_active(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    resp = client.get(reverse("gift_manager:received_gift_list"))
+    assert resp.status_code == 200
+    html = resp.content.decode()
+    idx = html.index('id="navbarMoreDropdown"')
+    snippet = html[max(0, idx - 120) : idx + 200]
+    assert "nav-link dropdown-toggle active" in snippet
+
+
+@pytest.mark.django_db
+def test_received_gift_detail_page_htmx_surface_and_linkable_givers(client):
+    user = UserFactory()
+    client.force_login(user)
+
+    alice = PersonFactory(first_name="Alice")
+    group = PersonGroupFactory(name="Book Club")
+    PermissionService.create_or_update_permission(
+        user, alice, permission_level=PermissionLevel.OWNER
+    )
+    gift = ReceivedGiftFactory(recipient_user=user, title="Shared Novel", giver_label="")
+    gift.giver_persons.add(alice)
+    gift.giver_groups.add(group)
+
+    detail_url = reverse("gift_manager:received_gift_detail", kwargs={"pk": gift.received_gift_id})
+    alice_url = reverse("gift_manager:person_detail", kwargs={"pk": alice.person_id})
+    group_url = reverse("gift_manager:person_group_detail", kwargs={"pk": group.group_id})
+
+    # HTMX offcanvas GET includes Edit/Delete action bar
+    offcanvas_resp = client.get(detail_url, HTTP_HX_REQUEST="true")
+    assert offcanvas_resp.status_code == 200
+    assert 'data-action="edit"' in offcanvas_resp.content.decode()
+
+    # HTMX refresh with ?surface=page suppresses duplicate panel-actions bar
+    resp = client.get(f"{detail_url}?surface=page", HTTP_HX_REQUEST="true")
+    assert resp.status_code == 200
+    html = resp.content.decode()
+    assert "Shared Novel" in html
+    assert 'data-action="edit"' not in html
+    assert alice_url in html
+    assert "Book Club" in html
+    assert group_url not in html

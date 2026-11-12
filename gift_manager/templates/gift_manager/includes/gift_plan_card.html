@@ -6,6 +6,12 @@
         <span class="gift-plan-status-badge {{ card.status_class }}">
             {{ card.relation.status }}
         </span>
+        {% if card.relation.revealed_at %}
+        <span class="badge bg-success-subtle text-success-emphasis border gift-plan-revealed-badge"
+              title="{% trans 'This gift plan has been revealed to the recipient' %}">
+            <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
+        </span>
+        {% endif %}
         {% if card.relation.due_date %}
         <span class="gift-plan-due-badge gift-plan-due-badge--{{ card.urgency_key }}">
             <i class="fas fa-calendar-day" aria-hidden="true"></i>
@@ -182,6 +188,15 @@
             </form>
             {% endif %}
         {% endfor %}
+        {% if card.can_reveal %}
+        <a href="{{ card.reveal_url }}"
+           class="btn btn-sm btn-outline-primary"
+           data-action="edit"
+           data-edit-url="{{ card.reveal_url }}"
+           title="{% trans 'Reveal to recipient' %}">
+            <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal" %}
+        </a>
+        {% endif %}
         <a href="{{ card.detail_url }}"
            class="btn btn-sm btn-outline-secondary gift-plan-card-utility-action"
            data-action="detail"

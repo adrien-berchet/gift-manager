@@ -6239,6 +6239,44 @@ msgstr "Réservé par un ami"
 msgid "Only the wisher can delete this wish."
 msgstr "Seul l'auteur du souhait peut le supprimer."
 
+#: gift_manager/templates/gift_manager/includes/received_gift_list_partial.html:51
+msgid "Occasion..."
+msgstr "Occasion..."
+
+#: gift_manager/templates/gift_manager/includes/received_gift_list_partial.html:52
+msgid "Filter by occasion"
+msgstr "Filtrer par occasion"
+
+#: gift_manager/templates/gift_manager/includes/received_gift_list_partial.html:101
+msgid "Filter"
+msgstr "Filtrer"
+
+#: gift_manager/templates/gift_manager/includes/received_gift_detail_partial.html:134
+#, python-format
+msgid "Shared with givers on %(date)s"
+msgstr "Partagé avec les donateurs le %(date)s"
+
+#: gift_manager/views/received_gift.py:336
+#, python-brace-format
+msgid "Date received: {date}"
+msgstr "Date de réception : {date}"
+
+#: gift_manager/views/received_gift.py:485
+msgid "Reveal"
+msgstr "Révéler"
+
+#: gift_manager/views/received_gift.py:570
+msgid "The givers already have feedback for this gift."
+msgstr "Les donateurs ont déjà reçu un retour pour ce cadeau."
+
+#: gift_manager/templates/gift_manager/includes/forms/relation_reveal_fields.html:56
+msgid "Adjust snapshot details"
+msgstr "Modifier les détails de l'instantané"
+
+#: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:56
+msgid "Save & reveal to recipient…"
+msgstr "Enregistrer et révéler au destinataire…"
+
 #~ msgid "No"
 #~ msgstr "Non"
 

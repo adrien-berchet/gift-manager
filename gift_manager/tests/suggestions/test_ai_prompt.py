@@ -946,3 +946,51 @@ def test_received_gifts_do_not_feed_preference_profiles():
     assert profile.liked_tags == ()
     assert profile.owned_tags == ()
     assert profile.disliked_tags == ()
+
+
+@pytest.mark.django_db
+def test_received_gifts_scrub_giver_group_names_in_ai_payload():
+    from datetime import date
+
+    from gift_manager.models import ReceivedGift
+    from gift_manager.tests.factories import PersonGroupFactory
+
+    viewer = UserFactory()
+    friend = UserFactory()
+    recipient_person = PersonFactory(account=friend)
+    PermissionService.create_or_update_permission(
+        viewer, recipient_person, permission_level=PermissionLevel.OWNER
+    )
+    giver_group = PersonGroupFactory(name="Dupont Crew")
+    PermissionService.create_or_update_permission(
+        viewer, giver_group, permission_level=PermissionLevel.OWNER
+    )
+
+    rg = ReceivedGift.objects.create(
+        recipient_user=viewer,
+        title="Dupont Crew Weekend Voucher",
+        received_on=date(2026, 4, 15),
+    )
+    rg.giver_persons.add(recipient_person)
+    rg.giver_groups.add(giver_group)
+
+    history = RecipientHistory(
+        recipient=recipient_person,
+        items=(),
+        planned_gift_ids=frozenset(),
+        interest_tag_ids=frozenset(),
+        ancestors={},
+    )
+    payload = build_ai_payload(
+        history,
+        viewer=viewer,
+        available_tag_names=[],
+        avoid_names=[],
+        count=3,
+        language="en",
+    )
+
+    gifts = payload["gifts_from_recipient"]
+    assert len(gifts) == 1
+    assert "Dupont Crew" not in gifts[0]["title"]
+    assert "Weekend Voucher" in gifts[0]["title"]

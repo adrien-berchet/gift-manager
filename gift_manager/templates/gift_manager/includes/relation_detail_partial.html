@@ -23,21 +23,18 @@
         </div>
     </div>
     {% elif can_reveal %}
-    <div class="card border-info bg-light mb-3">
-        <div class="card-body p-2 d-flex align-items-center justify-content-between">
+    <div class="card border-info mb-3">
+        <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="small">
                 <i class="fas fa-bullhorn text-info me-1" aria-hidden="true"></i>
                 <strong>{% trans "Reveal plan" %}</strong>: {% trans "Share this gift with the recipient so they can log it." %}
             </div>
-            <button type="button"
-                    class="btn btn-sm btn-info text-white"
-                    hx-get="{{ reveal_url }}"
-                    hx-target="#confirmModal .modal-content"
-                    hx-swap="innerHTML"
-                    data-bs-toggle="modal"
-                    data-bs-target="#confirmModal">
+            <a href="{{ reveal_url }}"
+               class="btn btn-sm btn-primary text-nowrap"
+               data-action="edit"
+               data-edit-url="{{ reveal_url }}">
                 <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal to recipient" %}
-            </button>
+            </a>
         </div>
     </div>
     {% endif %}

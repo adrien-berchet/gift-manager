@@ -423,5 +423,8 @@ def delete_wish(wish: Wish, actor: User) -> None:
             wish.is_deleted_by_wisher = True
             wish.is_archived = True
             wish.save(update_fields=["is_deleted_by_wisher", "is_archived"])
+            # Mirror hard-delete behavior on the wisher's side: unlink received gifts and recompute
+            ReceivedGift.objects.filter(wish=wish).update(wish=None)
+            recompute_wish_fulfilled(wish)
         else:
             wish.delete()
