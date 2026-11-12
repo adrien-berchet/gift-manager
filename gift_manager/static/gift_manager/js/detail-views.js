@@ -327,9 +327,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize on page load
     initializeDetailViews();
 
-    // Dispose tooltips before HTMX replaces #detailContent (old elements leave orphan nodes)
+    // Dispose tooltips before HTMX replaces #detailContent or a self-refreshing detail page
+    // shell (old elements leave orphan nodes)
     document.addEventListener('htmx:beforeSwap', function(e) {
-        if (e.detail.target && e.detail.target.id === 'detailContent') {
+        const target = e.detail.target;
+        if (target && (target.id === 'detailContent' || target.classList.contains('detail-page-shell'))) {
             disposeAllTooltips();
         }
     });

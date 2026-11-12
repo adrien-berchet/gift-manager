@@ -408,13 +408,13 @@ class TestGlobalBirthdayEventAccess:
         assert client_user.get(url, {"intent": "leave_access"}).status_code == 403
         assert client_user.post(url, {"intent": "leave_access"}).status_code == 403
 
-    def test_superuser_can_still_manage_it(self, client, birthday_event):
+    def test_superuser_cannot_edit_it_either(self, client, birthday_event):
         admin = UserFactory(is_superuser=True)
         client.force_login(admin)
 
         response = client.get(self._url("event_edit", birthday_event))
 
-        assert response.status_code == 200
+        assert response.status_code == 403
 
     def test_share_page_does_not_offer_it(self, client_user, birthday_event):
         response = client_user.get(reverse("gift_manager:share_objects"))

@@ -803,7 +803,7 @@ class DeleteSharedMixin:
 
             # Handle HTMX vs regular requests
             is_htmx = getattr(self, "is_htmx", False)
-            logger.debug("Delete request - is_htmx: %s, headers: %s", is_htmx, request.headers)
+            logger.debug("Delete request - is_htmx: %s", is_htmx)
 
             if is_htmx:
                 # For HTMX requests, return appropriate response with triggers
@@ -1021,4 +1021,7 @@ class BaseDetailView(
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["back_url"] = self.request.GET.get("back")
+        if self.request.GET.get("surface") == "page":
+            # The full-page shell reloads itself on list:update with ?surface=page
+            context["full_page_detail"] = True
         return context

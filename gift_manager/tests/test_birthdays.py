@@ -160,17 +160,18 @@ class TestGlobalBirthdayEvent:
 
         assert PermissionService.get_effective_permission(event, user) == PermissionLevel.VIEWER
 
-    def test_global_floor_never_lowers_an_explicit_permission(self, user):
+    def test_global_event_stays_read_only_despite_an_explicit_permission(self, user):
         event = Event.objects.get_birthday_event()
         create_or_update_permission(user, event, permission_level=PermissionLevel.OWNER)
 
-        assert PermissionService.get_effective_permission(event, user) == PermissionLevel.OWNER
+        assert PermissionService.get_effective_permission(event, user) == PermissionLevel.VIEWER
 
-    def test_superuser_can_manage_the_global_event(self):
+    def test_superuser_cannot_manage_the_global_event(self):
+        # Changing it would affect every account (2026-11-12 QA decision)
         admin = UserFactory(is_superuser=True)
         event = Event.objects.get_birthday_event()
 
-        assert PermissionService.get_effective_permission(event, admin) == PermissionLevel.OWNER
+        assert PermissionService.get_effective_permission(event, admin) == PermissionLevel.VIEWER
 
     def test_regular_event_gets_no_implicit_access(self, user):
         event = EventFactory()

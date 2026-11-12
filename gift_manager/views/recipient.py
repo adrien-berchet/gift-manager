@@ -48,6 +48,9 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             .order_by("family_name", "first_name")
             .distinct()
         )
+        # The user's own person is not listed as a recipient but still counts as a group member,
+        # so member counts match the group pages
+        member_persons = Person.objects.accessible_by(user).distinct()
 
         context["recipient_view"] = recipient_view
 
@@ -76,7 +79,7 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
         if recipient_view == "groups":
             group_context = get_person_group_management_context(
                 user,
-                member_queryset=accessible_persons,
+                member_queryset=member_persons,
             )
             context["person_group_grid_data"] = group_context["data"]
             context["person_group_column_names"] = group_context["column_names"]
@@ -108,7 +111,7 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                 ),
                 Prefetch(
                     "person_set",
-                    queryset=accessible_persons,
+                    queryset=member_persons,
                     to_attr="accessible_members",
                 ),
             )

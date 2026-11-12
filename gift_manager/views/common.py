@@ -137,6 +137,13 @@ def home(request):
             .count()
         )
         context["dashboard_action_groups"] = action_groups
+        # "Awaiting reaction" follows up on given plans: it gets its own section and stays out
+        # of "Needs attention" and its counter
+        attention_groups = [group for group in action_groups if group["key"] != "reaction"]
+        context["dashboard_attention_groups"] = attention_groups
+        context["dashboard_reaction_group"] = next(
+            (group for group in action_groups if group["key"] == "reaction"), None
+        )
         context["dashboard_summary"] = build_dashboard_summary(
             action_groups,
             unassigned_gift_count,
@@ -144,7 +151,7 @@ def home(request):
 
         context["upcoming_birthdays"] = build_upcoming_birthdays(user, today)
 
-        if not action_groups:
+        if not attention_groups:
             context["next_upcoming_item"] = _find_next_upcoming_item(gift_plans, user, today)
 
     return render(request, "gift_manager/home.html", context)

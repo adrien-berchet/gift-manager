@@ -9,7 +9,9 @@ from django.contrib.auth.models import User
 from django.db.models import Count
 from django.shortcuts import redirect
 from django.shortcuts import render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.translation import gettext
 from django.views.generic import View
 
@@ -117,13 +119,23 @@ class InvitationBoundSignupView(SignupView):
         return response
 
 
+def account_page_cancel_url(request) -> str:
+    """Return the previous page on this site, or the profile, for an account page's Cancel."""
+    referer = request.META.get("HTTP_REFERER", "")
+    if referer and url_has_allowed_host_and_scheme(
+        referer, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return referer
+    return reverse("gift_manager:profile_detail")
+
+
 class UserAccountDeactivateView(LoginRequiredMixin, View):
     """View to deactivate the user account."""
 
     template_name = "account/confirm_deactivate_user_account.html"
 
     def get(self, request, *args, **kwargs):
-        return render(request, self.template_name)
+        return render(request, self.template_name, {"cancel_url": account_page_cancel_url(request)})
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -146,12 +158,7 @@ class UserAccountDeleteView(LoginRequiredMixin, View):
     template_name = "account/confirm_delete_user_account.html"
 
     def get(self, request, *args, **kwargs):
-        # Retrieve the referer URL (previous page) or use a default URL
-        referer = request.META.get("HTTP_REFERER")
-        cancel_url = referer or "gift_manager:user_account"
-
-        context = {"cancel_url": cancel_url}
-        return render(request, self.template_name, context)
+        return render(request, self.template_name, {"cancel_url": account_page_cancel_url(request)})
 
     def post(self, request, *args, **kwargs):
         user = request.user

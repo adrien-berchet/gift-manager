@@ -31,7 +31,6 @@ admin.site.register(Gift)
 admin.site.register(GiftPermission)
 admin.site.register(GiftSuggestion)
 admin.site.register(GiftSuggestionGeneration)
-admin.site.register(Event)
 admin.site.register(EventPermission)
 admin.site.register(RelationStatus)
 admin.site.register(Relation)
@@ -70,3 +69,18 @@ class ReceivedGiftAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, _request, _obj=None):
         return False
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    """Events; the global Birthday event is shared by every account and stays read-only."""
+
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.is_global:
+            return False
+        return super().has_change_permission(request, obj)
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.is_global:
+            return False
+        return super().has_delete_permission(request, obj)

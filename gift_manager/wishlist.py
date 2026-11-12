@@ -227,6 +227,20 @@ def own_receipts(user: User, wishes: Iterable[Wish]) -> dict[int, WishReceipt]:
     }
 
 
+def count_active_wishes(user: User) -> int:
+    """Count the wishes shown as active on the user's wishlist (not archived, not received).
+
+    Like ``own_receipts``, "received" comes from the user's own received gifts, never from
+    ``Wish.is_fulfilled``, which a friend's "Given" plan also sets.
+    """
+    received_wish_ids = (
+        ReceivedGift.objects.for_user(user)
+        .filter(fulfills_wish=True, wish__isnull=False)
+        .values("wish_id")
+    )
+    return get_wisher_wishes(user).exclude(pk__in=received_wish_ids).count()
+
+
 def own_received_gifts(user: User, wish: Wish) -> list[ReceivedGift]:
     """The wisher's received gifts linked to *wish*, newest first, givers prefetched."""
     from gift_manager.received_gifts import annotate_snapshot_givers  # noqa: PLC0415
