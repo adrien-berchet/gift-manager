@@ -62,3 +62,11 @@ This repository keeps shared AI assistant guidance in `AGENTS.md`.
 - Claude Code project rules, skills, and subagents live under `.claude/`.
 
 See `docs/ai/assistant-maintenance.md` for maintenance conventions.
+
+## License
+
+Gift Manager is licensed under the **Business Source License 1.1 (BSL 1.1)** — see [LICENSE](LICENSE) for the full terms.
+
+- **Free use:** Non-production use (development, testing, evaluation) and production use for **personal, family, or other non-commercial purposes** are free.
+- **Commercial use:** Any commercial or organizational production use requires a separate commercial license. Contact [adrien.berchet@gmail.com](mailto:adrien.berchet@gmail.com) for commercial licensing.
+- **Open-source conversion:** Each released version transitions to **Apache License 2.0** on its Change Date (4 years after release; `2030-11-12` for the current version).
