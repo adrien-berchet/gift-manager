@@ -558,6 +558,7 @@ def _collect_received_gift_scrub_terms(
         for p in rg.giver_persons.all():
             if p.pk != recipient.pk:
                 extra_terms.extend([p.first_name, p.family_name or "", str(p)])
+        extra_terms.extend(group.name for group in rg.giver_groups.all())
         for acc in rg.giver_accounts.all():
             if not recipient.account_id or acc.pk != recipient.account_id:
                 extra_terms.extend([acc.username, acc.first_name, acc.last_name])
@@ -610,7 +611,7 @@ def _build_gifts_from_recipient(
         .filter(filters)
         .distinct()
         .select_related("event")
-        .prefetch_related("giver_persons", "giver_accounts")
+        .prefetch_related("giver_persons", "giver_groups", "giver_accounts")
         .order_by("-received_on", "-created_at")[:20]
     )
     if not gifts:

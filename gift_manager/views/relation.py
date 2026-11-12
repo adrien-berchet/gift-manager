@@ -1,8 +1,10 @@
 """Relation-related views."""
 
+import json
 import uuid
 from urllib.parse import urlencode
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core import signing
 from django.core.exceptions import ValidationError
@@ -82,9 +84,11 @@ from gift_manager.plan_repeat import duplicate_initial
 from gift_manager.plan_repeat import duplicate_plan_url
 from gift_manager.plan_repeat import parse_duplicate_source
 from gift_manager.received_gifts import can_reveal_plan
+from gift_manager.received_gifts import revealable_relation_pks
 from gift_manager.services import PermissionService
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_given_status
 from gift_manager.templatetags.custom_filters import event_display_name
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
@@ -92,6 +96,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import HTMXResponseMixin
+from gift_manager.views.received_gift import render_relation_reveal_form
 
 
 class PersonRelationCreateView(BaseCreateView):
@@ -391,6 +396,8 @@ class RelationListView(PermissionContextMixin, BaseListView):
     def get_workspace_groups(self, relations):
         """Group gift plans by urgency for the primary workspace."""
         today = timezone.localdate()
+        relations = list(relations)
+        revealable_pks = revealable_relation_pks(relations, self.request.user)
         event_options = list(
             Event.objects.accessible_by(self.request.user)
             .only("id", "event_id", "name", "is_birthday")
@@ -442,7 +449,12 @@ class RelationListView(PermissionContextMixin, BaseListView):
         }
 
         for relation in relations:
-            card = self.get_workspace_card(relation, today, event_options)
+            card = self.get_workspace_card(
+                relation,
+                today,
+                event_options,
+                can_reveal=relation.pk in revealable_pks,
+            )
             groups[card["urgency_key"]]["cards"].append(card)
 
         for group in groups.values():
@@ -466,7 +478,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
             )
         ]
 
-    def get_workspace_card(self, relation, today, event_options=None):
+    def get_workspace_card(self, relation, today, event_options=None, *, can_reveal: bool = False):
         """Return presentation data for a single gift-plan card."""
         urgency_key = gift_plan_urgency_key(
             relation,
@@ -479,6 +491,7 @@ class RelationListView(PermissionContextMixin, BaseListView):
             urgency_key=urgency_key,
             permission=permission,
             event_options=event_options,
+            can_reveal=can_reveal,
         )
 
     def get_workspace_card_permission(self, relation) -> int:
@@ -807,6 +820,42 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
         )
         return form
 
+    def form_valid(self, form):
+        previous_relation = (
+            Relation.objects.select_related("status").filter(pk=form.instance.pk).first()
+        )
+        was_given = previous_relation is not None and is_given_status(previous_relation.status)
+        response = super().form_valid(form)
+        transitioned_to_given = not was_given and is_given_status(self.object.status)
+        if (
+            self.is_htmx
+            and transitioned_to_given
+            and can_reveal_plan(self.object, self.request.user)
+        ):
+            self._attach_reveal_notification_link(response)
+        return response
+
+    def _attach_reveal_notification_link(self, response: HttpResponse) -> None:
+        raw_trigger = response.get("HX-Trigger")
+        try:
+            events = json.loads(raw_trigger) if raw_trigger else {}
+        except ValueError:
+            events = {}
+        if not isinstance(events, dict):
+            events = {}
+        notification = events.get("showNotification")
+        if not isinstance(notification, dict):
+            notification = {
+                "message": self.get_success_message() or gettext("Gift plan marked as given."),
+                "type": "success",
+            }
+        notification["link"] = {
+            "label": gettext("Reveal to recipient"),
+            "url": reverse("gift_manager:relation_reveal", kwargs={"pk": self.object.relation_id}),
+        }
+        events["showNotification"] = notification
+        response["HX-Trigger"] = json.dumps(events)
+
     def get_success_url(self):
         if self.object.person_id is not None:
             pk = self.object.person.person_id
@@ -854,6 +903,8 @@ class RelationDetailView(BaseDetailView):
             context["reveal_url"] = reverse(
                 "gift_manager:relation_reveal", kwargs={"pk": self.object.relation_id}
             )
+        if self.request.GET.get("surface") == "page":
+            context["full_page_detail"] = True
 
         # Add action buttons
         is_editor = context["is_editor"]
@@ -1012,6 +1063,7 @@ def _reaction_form_response(request, relation, form, *, status=200) -> HttpRespo
             "full_page": not is_htmx,
             "form_type": "relation-reaction",
             "can_promote_to_profile": promotion_target(request.user, relation) is not None,
+            "can_reveal": can_reveal_plan(relation, request.user),
         },
         status=status,
     )
@@ -1057,6 +1109,32 @@ def surprise_default_hint(request):
             "show": can_be_surprise_for_owners(recipient, [request.user.id]),
             "checked": default_surprise_for(recipient, request.user),
         },
+    )
+
+
+def _reaction_after_save_response(request, relation: Relation, *, is_inline: bool) -> HttpResponse:
+    """Return the response after saving a gift-plan reaction."""
+    is_htmx = request.headers.get("HX-Request") == "true"
+    wants_reveal = request.POST.get("after_save") == "reveal"
+    if wants_reveal and not is_inline and can_reveal_plan(relation, request.user):
+        if not is_htmx:
+            messages.success(request, gettext("Reaction saved."))
+            return redirect("gift_manager:relation_reveal", pk=relation.relation_id)
+        response = render_relation_reveal_form(request, relation, form_surface="offcanvas")
+        response["HX-Trigger"] = HTMXResponseMixin.build_hx_trigger_header(
+            [
+                "list:update",
+                {"showNotification": {"message": gettext("Reaction saved."), "type": "success"}},
+            ]
+        )
+        return response
+
+    if not is_htmx:
+        return redirect(relation.get_absolute_url())
+    extra_events = () if is_inline else ("offcanvas:close",)
+    list_update = {"list:update": {"source": "inline_reaction"}} if is_inline else "list:update"
+    return _relation_quick_action_response(
+        gettext("Reaction saved."), *extra_events, list_update=list_update
     )
 
 
@@ -1125,13 +1203,7 @@ def relation_reaction(request, pk):
                     request.user,
                 )
 
-    if request.headers.get("HX-Request") != "true":
-        return redirect(relation.get_absolute_url())
-    extra_events = () if is_inline else ("offcanvas:close",)
-    list_update = {"list:update": {"source": "inline_reaction"}} if is_inline else "list:update"
-    return _relation_quick_action_response(
-        gettext("Reaction saved."), *extra_events, list_update=list_update
-    )
+    return _reaction_after_save_response(request, relation, is_inline=is_inline)
 
 
 @login_required

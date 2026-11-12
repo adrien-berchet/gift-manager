@@ -52,6 +52,15 @@
       <i class="fas fa-forward me-1" aria-hidden="true"></i>{% trans "Skip" %}
     </button>
     {% endif %}
+    {% if can_reveal %}
+    <button type="submit"
+            name="after_save"
+            value="reveal"
+            class="btn btn-outline-primary"
+            data-loading-text="{% trans 'Saving...' %}">
+      <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Save & reveal to recipient…" %}
+    </button>
+    {% endif %}
     <button type="submit"
             class="btn btn-primary"
             data-loading-text="{% trans 'Saving...' %}">

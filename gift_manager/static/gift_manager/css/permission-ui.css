@@ -60,8 +60,8 @@
 }
 
 .permission-indicator.owner {
-    background-color: #ffc107;
-    color: #212529;
+    background-color: rgb(var(--bs-warning-rgb, 245, 158, 11));
+    color: #111827;
 }
 
 /* Permission-based form elements */

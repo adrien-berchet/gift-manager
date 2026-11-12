@@ -190,12 +190,15 @@ def relation_undo_state(relation, *, field: str) -> dict:
     if field == "due_date":
         return {"due_date": relation.due_date.isoformat() if relation.due_date else None}
     changed_at = relation.status_changed_at
+    revealed_at = relation.revealed_at
     return {
         "status": relation.status_id,
         "status_changed_at": changed_at.isoformat() if changed_at else None,
         # A reaction saved meanwhile must block the undo: it would stay on the reverted plan
         "reaction_rating": relation.reaction_rating,
-        "reaction_note": relation.reaction_note,
+        "reaction_note": relation.reaction_note or "",
+        # Revealing creates a permanent snapshot, so reverting the status afterward is invalid
+        "revealed_at": revealed_at.isoformat() if revealed_at else None,
     }
 
 

@@ -208,6 +208,10 @@ class AccessibilityManager {
         // Open the side panels without scrolling their content or summoning a keyboard.
         // A detail panel is read-only: its first input (the comment box) must not take focus.
         if (container.id === 'editPanel' || container.id === 'detailPanel') {
+            const active = document.activeElement;
+            if (active && active !== container && container.contains(active) && active.closest('form')) {
+                return;
+            }
             const focusTarget = container.querySelector('.btn-close') || container;
             focusTarget.focus({ preventScroll: true });
             return;

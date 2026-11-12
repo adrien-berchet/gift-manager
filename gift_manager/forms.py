@@ -41,6 +41,7 @@ from .sharing_service import RelationExposureDenied
 from .sharing_service import SharingService
 from .statuses import can_rate_status
 from .statuses import is_abandoned_status
+from .validators import validate_http_url
 
 
 class BaseFormMixin:
@@ -1667,11 +1668,11 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
                     Q(pk__in=events.values("pk")) | Q(pk=self.instance.event_id)
                 )
             self.fields["event"].queryset = events.order_by("name")
-            wish_qs = Wish.objects.for_wisher(user)
+            wish_qs = Wish.objects.for_wisher(user).filter(is_archived=False)
             if self.instance.pk and self.instance.wish_id:
-                wish_qs = wish_qs.filter(Q(is_archived=False) | Q(pk=self.instance.wish_id))
-            else:
-                wish_qs = wish_qs.filter(is_archived=False)
+                wish_qs = Wish.objects.filter(
+                    Q(pk__in=wish_qs.values("pk")) | Q(pk=self.instance.wish_id)
+                )
             self.fields["wish"].queryset = wish_qs.order_by("title")
         else:
             self.fields["event"].queryset = Event.objects.none()
@@ -1770,7 +1771,11 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
                 self.add_error("event", gettext("You do not have access to this event."))
 
             wish = cleaned_data.get("wish")
-            if wish and (wish.wisher_id != user.pk or wish.is_deleted_by_wisher):
+            if (
+                wish
+                and wish.pk != self.instance.wish_id
+                and (wish.wisher_id != user.pk or wish.is_deleted_by_wisher)
+            ):
                 self.add_error("wish", gettext("Invalid wish selection."))
 
         return cleaned_data
@@ -1780,6 +1785,8 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         mode = cleaned_data.get("gift_mode")
         wish = cleaned_data.get("wish")
         if mode == GIFT_MODE_WISH:
+            self._errors.pop("title", None)
+            self._errors.pop("url", None)
             if wish:
                 # Also set on the instance: construct_instance skips an omitted url (it has a
                 # model default), which would keep a stale link
@@ -1791,6 +1798,7 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         # The checkbox only counts on the wish side; older clients do not post it at all
         cleaned_data["fulfills_wish"] = True
         if mode == GIFT_MODE_NEW:
+            self._errors.pop("wish", None)
             cleaned_data["wish"] = None
         if not (cleaned_data.get("title") or "").strip() and "title" in cleaned_data:
             self.add_error("title", forms.Field.default_error_messages["required"])
@@ -1815,10 +1823,12 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
 
         cleaned_data["giver_mode"] = mode
         if mode == GIVER_MODE_CONTACTS:
+            self._errors.pop("giver_label", None)
             cleaned_data["giver_label"] = ""
             if not givers and "givers" in cleaned_data:
                 self.add_error("givers", gettext("Select at least one person or group."))
         else:
+            self._errors.pop("givers", None)
             cleaned_data["givers"] = []
             cleaned_data["giver_label"] = label
             if not label and "giver_label" in cleaned_data:
@@ -1828,8 +1838,10 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         """Keep only the side of the occasion choice selected by ``occasion_mode``."""
         mode = cleaned_data.get("occasion_mode")
         if mode == OCCASION_MODE_EVENT:
+            self._errors.pop("occasion_text", None)
             cleaned_data["occasion_text"] = ""
         elif mode == OCCASION_MODE_OTHER:
+            self._errors.pop("event", None)
             cleaned_data["event"] = None
 
     def _save_m2m(self) -> None:
@@ -1837,3 +1849,50 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         selected = [self.giver_objects[value] for value in self.cleaned_data.get("givers", [])]
         self.instance.giver_persons.set([obj for obj in selected if isinstance(obj, Person)])
         self.instance.giver_groups.set([obj for obj in selected if isinstance(obj, PersonGroup)])
+
+
+class RelationRevealForm(BaseFormMixin, forms.Form):
+    """Form for previewing and editing a revealed gift snapshot before sending."""
+
+    title = forms.CharField(
+        label=gettext_lazy("Gift title"),
+        max_length=255,
+        help_text=gettext_lazy("The name of the gift as your recipient will see it."),
+    )
+    received_on = forms.DateField(
+        label=gettext_lazy("Date given"),
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+    )
+    occasion_text = forms.CharField(
+        label=gettext_lazy("Occasion"),
+        max_length=100,
+        required=False,
+    )
+    url = forms.URLField(
+        label=gettext_lazy("Link (optional)"),
+        max_length=2000,
+        required=False,
+        assume_scheme="https",
+        validators=[validate_http_url],
+        widget=forms.URLInput(attrs={"class": "form-input-text", "placeholder": "https://"}),
+        help_text=gettext_lazy("Product or gift link for the recipient's reference."),
+    )
+    giver_note = forms.CharField(
+        label=gettext_lazy("Personal note to recipient (optional)"),
+        max_length=2000,
+        required=False,
+        widget=forms.Textarea(
+            attrs={
+                "rows": 3,
+                "placeholder": gettext_lazy("e.g. Hope you loved celebrating with us!"),
+            }
+        ),
+    )
+
+    def clean_title(self) -> str:
+        """Reject whitespace-only reveal titles."""
+        title = (self.cleaned_data.get("title") or "").strip()
+        if not title:
+            raise DjangoValidationError(forms.Field.default_error_messages["required"])
+        return title

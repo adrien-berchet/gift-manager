@@ -72,9 +72,7 @@
             <div class="col-12">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Note from giver" %}</label>
-                    <div class="detail-value alert alert-light border py-2">
-                        <i class="fas fa-quote-left me-1 text-muted"></i>{{ gift.giver_note }}
-                    </div>
+                    <div class="detail-value alert alert-light border py-2" style="white-space: pre-line;"><i class="fas fa-quote-left me-1 text-muted" aria-hidden="true"></i>{{ gift.giver_note }}</div>
                 </div>
             </div>
             {% endif %}
@@ -128,8 +126,15 @@
             </div>
             {% endif %}
 
-            {% if can_share_reaction and gift.reaction_rating or can_share_reaction and gift.reaction_note %}
+            {% if gift.reaction_shared_at or can_share_reaction %}
             <div class="col-12 mt-2">
+                {% if gift.reaction_shared_at %}
+                <p class="small text-muted mb-2">
+                    <i class="fas fa-check-circle text-success me-1" aria-hidden="true"></i>
+                    {% blocktrans with date=gift.reaction_shared_at|date:"DATE_FORMAT" %}Shared with givers on {{ date }}{% endblocktrans %}
+                </p>
+                {% endif %}
+                {% if can_share_reaction %}
                 <form method="post"
                       action="{% url 'gift_manager:received_gift_share_reaction' pk=gift.received_gift_id %}"
                       hx-post="{% url 'gift_manager:received_gift_share_reaction' pk=gift.received_gift_id %}"
@@ -140,6 +145,7 @@
                     </button>
                     <div class="form-text small">{% trans "Sends your rating and note back to the giver's plan." %}</div>
                 </form>
+                {% endif %}
             </div>
             {% endif %}
         </div>

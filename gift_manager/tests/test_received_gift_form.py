@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 
 from gift_manager.forms import ReceivedGiftForm
+from gift_manager.forms import RelationRevealForm
 from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.services import PermissionService
@@ -463,3 +464,66 @@ class TestMarkWishReceived:
         assert legacy.fulfills_wish is True
         wish.refresh_from_db()
         assert wish.is_fulfilled is True
+
+    def test_unused_side_errors_do_not_block_selected_mode(self, user, marie, wish):
+        other_user = UserFactory()
+        foreign_event = _own(other_user, EventFactory(name="Foreign"))
+        form = ReceivedGiftForm(
+            data={
+                "gift_mode": "wish",
+                "received_on": "2026-11-09",
+                "title": "",
+                "url": "not-a-valid-url",
+                "wish": str(wish.pk),
+                "fulfills_wish": "on",
+                "giver_mode": "other",
+                "givers": [f"person:{marie.person_id}"],
+                "giver_label": "Uncle Paul",
+                "occasion_mode": "other",
+                "event": str(foreign_event.pk),
+                "occasion_text": "Christmas",
+            },
+            user=user,
+        )
+        form.instance.recipient_user = user
+        assert form.is_valid(), form.errors
+        saved = form.save()
+        assert saved.wish == wish
+        assert saved.title == wish.title
+        assert saved.url == wish.url
+        assert saved.giver_label == "Uncle Paul"
+        assert saved.event is None
+
+    def test_soft_deleted_existing_wish_stays_selectable_on_edit(self, user, marie, wish):
+        gift = self._save(user, marie, gift_mode="wish", wish=wish.pk, fulfills_wish="on")
+        wish.is_deleted_by_wisher = True
+        wish.save(update_fields=["is_deleted_by_wisher"])
+
+        form = ReceivedGiftForm(instance=gift, user=user)
+        assert wish in form.fields["wish"].queryset
+
+
+class TestRelationRevealForm:
+    def test_valid_and_invalid_inputs(self):
+        invalid_form = RelationRevealForm(
+            data={
+                "title": "   ",
+                "url": "javascript:alert(1)",
+            }
+        )
+        assert not invalid_form.is_valid()
+        assert "title" in invalid_form.errors
+        assert "url" in invalid_form.errors
+
+        valid_form = RelationRevealForm(
+            data={
+                "title": "Camera",
+                "url": "https://example.com/camera",
+                "received_on": "2026-11-10",
+                "occasion_text": "Birthday",
+                "giver_note": "Line 1\nLine 2",
+            }
+        )
+        assert valid_form.is_valid(), valid_form.errors
+        assert valid_form.cleaned_data["title"] == "Camera"
+        assert valid_form.cleaned_data["giver_note"] == "Line 1\nLine 2"

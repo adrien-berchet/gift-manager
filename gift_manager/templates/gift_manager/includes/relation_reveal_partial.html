@@ -1,115 +1,22 @@
 {% load i18n %}
 
-<div class="modal-header">
-  <h5 class="modal-title">
-    <i class="fas fa-bullhorn text-primary me-2" aria-hidden="true"></i>
-    {% trans "Reveal to Recipient" %}
-  </h5>
-  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
-</div>
-
 <form method="post"
+      id="relation-reveal-form"
       action="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
       hx-post="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
-      hx-swap="none"
-      class="reveal-form">
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form reveal-form"
+      data-form-type="relation_reveal"
+      novalidate>
   {% csrf_token %}
-  <div class="modal-body">
-    <div class="alert alert-info py-2 small mb-3">
-      <i class="fas fa-shield-alt me-1" aria-hidden="true"></i>
-      {% trans "Revealing creates a permanent snapshot in your recipient's private Received Gifts log." %}
-      <div class="mt-1 text-muted">
-        {% trans "Comments, prices, contributions, and claims are strictly private and will never be revealed." %}
-      </div>
-    </div>
 
-    <!-- Target recipients -->
-    <div class="mb-3">
-      <label class="form-label small fw-semibold text-muted">{% trans "Will be revealed to:" %}</label>
-      <div class="d-flex flex-wrap gap-1">
-        {% for target in targets %}
-        <span class="badge bg-primary-subtle text-primary-emphasis border">
-          <i class="fas fa-user me-1" aria-hidden="true"></i>{{ target.get_full_name|default:target.username }}
-        </span>
-        {% empty %}
-        <span class="text-danger small">{% trans "No eligible friends found to receive this snapshot." %}</span>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Co-owners displayed -->
-    <div class="mb-3">
-      <label class="form-label small fw-semibold text-muted">{% trans "Givers shown on snapshot:" %}</label>
-      <div class="d-flex flex-wrap gap-1">
-        {% for owner in co_owners %}
-        <span class="badge bg-secondary-subtle text-secondary-emphasis">
-          <i class="fas fa-user-check me-1 text-success" aria-hidden="true"></i>{{ owner.get_full_name|default:owner.username }}
-        </span>
-        {% endfor %}
-      </div>
-    </div>
-
-    <hr class="my-3">
-
-    <!-- Editable Snapshot Fields -->
-    <div class="mb-3">
-      <label for="reveal-title" class="form-label fw-semibold">{% trans "Gift title" %} <span class="text-danger">*</span></label>
-      <input type="text"
-             name="title"
-             id="reveal-title"
-             class="form-control"
-             value="{{ initial_title }}"
-             maxlength="255"
-             required>
-      <div class="form-text">{% trans "The name of the gift as your recipient will see it." %}</div>
-    </div>
-
-    <div class="row g-2 mb-3">
-      <div class="col-md-6">
-        <label for="reveal-date" class="form-label fw-semibold">{% trans "Date given" %}</label>
-        <input type="date"
-               name="received_on"
-               id="reveal-date"
-               class="form-control"
-               value="{{ initial_date }}">
-      </div>
-      <div class="col-md-6">
-        <label for="reveal-occasion" class="form-label fw-semibold">{% trans "Occasion" %}</label>
-        <input type="text"
-               name="occasion_text"
-               id="reveal-occasion"
-               class="form-control"
-               value="{{ initial_occasion }}"
-               maxlength="100">
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label for="reveal-url" class="form-label fw-semibold">{% trans "Link (optional)" %}</label>
-      <input type="url"
-             name="url"
-             id="reveal-url"
-             class="form-control"
-             value="{{ initial_url }}"
-             maxlength="2000"
-             placeholder="https://">
-      <div class="form-text">{% trans "Product or gift link for the recipient's reference." %}</div>
-    </div>
-
-    <div class="mb-3">
-      <label for="reveal-note" class="form-label fw-semibold">{% trans "Personal note to recipient (optional)" %}</label>
-      <textarea name="giver_note"
-                id="reveal-note"
-                class="form-control"
-                rows="3"
-                placeholder="{% trans 'e.g. Hope you loved celebrating with us!' %}"></textarea>
-    </div>
+  <div class="form-fields" tabindex="-1">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/relation_reveal_fields.html" %}
   </div>
 
-  <div class="modal-footer">
-    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-    <button type="submit" class="btn btn-primary" {% if not targets %}disabled{% endif %}>
-      <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal now" %}
-    </button>
-  </div>
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" action=action translated_type=translated_type submit_label=submit_label %}
 </form>

@@ -34,7 +34,7 @@ _SECTION_URL_NAMES = (
 # URL name fragments per section, checked after the exact names.
 _SECTION_URL_FRAGMENTS = (
     ("recipients", ("person_group",)),
-    ("more", ("gift_tag", "event", "relation_status")),
+    ("more", ("gift_tag", "event", "relation_status", "received_gift")),
 )
 
 

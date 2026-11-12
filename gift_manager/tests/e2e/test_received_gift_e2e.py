@@ -2,14 +2,19 @@
 
 import re
 from datetime import date
+from datetime import timedelta
 
 import pytest
 from django.urls import reverse
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import Gift
+from gift_manager.models import PermissionLevel
 from gift_manager.models import ReceivedGift
+from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.services import PermissionService
 
 
 def login_as(page: Page, base_url: str, username: str) -> None:
@@ -495,3 +500,443 @@ def test_wishlist_shows_and_undoes_received_wishes(page: Page, live_server, seed
     expect(active_card.locator(".wish-last-received")).to_contain_text("Last received on")
     wish.refresh_from_db()
     assert wish.is_fulfilled is False
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_received_gift_delete_from_detail_modal(page: Page, live_server, seed_data_e2e):
+    """Deleting from #detailPanel opens #confirmModal and removes the item cleanly."""
+    alice = seed_data_e2e.alice
+    gift = ReceivedGift.objects.create(
+        recipient_user=alice,
+        title="Ceramic Bowl",
+        giver_label="Aunt Marie",
+        received_on=date(2026, 3, 12),
+    )
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:received_gift_list')}")
+
+    item = page.locator(".received-gift-item", has_text="Ceramic Bowl")
+    expect(item).to_be_visible()
+    item.get_by_role("link", name="Details").click()
+
+    detail_panel = page.locator("#detailPanel")
+    expect(detail_panel).to_be_visible()
+    expect(detail_panel).to_contain_text("Ceramic Bowl")
+
+    detail_panel.locator('[data-action="delete"]').click()
+
+    confirm_modal = page.locator("#confirmModal")
+    expect(confirm_modal).to_be_visible()
+    expect(confirm_modal).to_contain_text("Ceramic Bowl")
+    expect(confirm_modal.locator("#deleteForm")).to_be_attached()
+
+    with page.expect_response(
+        lambda r: (
+            f"/profile/received-gifts/{gift.received_gift_id}/delete/" in r.url and r.status == 200
+        )
+    ):
+        confirm_modal.get_by_role("button", name="Confirm and proceed with action").click()
+
+    expect(confirm_modal).not_to_be_visible()
+    expect(page.locator(".received-gift-item", has_text="Ceramic Bowl")).to_have_count(0)
+    assert not ReceivedGift.objects.filter(pk=gift.pk).exists()
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_relation_reveal_via_offcanvas_and_subsequent_delete_modal(
+    page: Page, live_server, seed_data_e2e
+):
+    """Revealing runs in #editPanel and leaves #confirmModal delete intact afterward."""
+    alice = seed_data_e2e.alice
+    bob = seed_data_e2e.bob
+    alice.profile.friends.add(bob.profile)
+    best_friend = seed_data_e2e.persons["best_friend"]
+    best_friend.account = bob
+    best_friend.save(update_fields=["account"])
+
+    relation = Relation.objects.create(
+        gift=seed_data_e2e.gifts["novel"],
+        person=best_friend,
+        status=seed_data_e2e.statuses["given"],
+    )
+    PermissionService.create_or_update_permission(
+        alice, relation, permission_level=PermissionLevel.OWNER
+    )
+
+    login_as(page, live_server.url, "alice")
+    open_page(
+        page,
+        f"{live_server.url}{reverse('gift_manager:relation_detail', args=[relation.relation_id])}",
+    )
+
+    page.locator('a[data-action="edit"]', has_text="Reveal to recipient").click()
+    edit_panel = page.locator("#editPanel")
+    expect(edit_panel).to_be_visible()
+    expect(edit_panel.locator("#relation-reveal-form")).to_be_visible()
+    expect(page.locator("#confirmModal")).not_to_be_visible()
+
+    edit_panel.locator("details summary").click()
+    edit_panel.locator('input[name="title"]').fill("French Press Reveal")
+    with page.expect_response(
+        lambda r: f"/relations/{relation.relation_id}/reveal/" in r.url and r.status == 200
+    ):
+        edit_panel.locator('#relation-reveal-form button[type="submit"]').click()
+
+    expect(edit_panel).not_to_be_visible()
+    expect(page.locator(".detail-page-shell")).to_contain_text("Revealed to recipient")
+
+    revealed = ReceivedGift.objects.get(recipient_user=bob, title="French Press Reveal")
+    assert revealed.source_relation_id == relation.pk
+
+    # Standard delete modal still works on the list page after a reveal offcanvas interaction
+    open_page(page, f"{live_server.url}{reverse('gift_manager:relation_advanced_list')}")
+    page.locator(f'a[data-detail-url*="{relation.relation_id}"]').first.click()
+    detail_panel = page.locator("#detailPanel")
+    expect(detail_panel).to_be_visible()
+    detail_panel.locator('[data-action="delete"]').click()
+    confirm_modal = page.locator("#confirmModal")
+    expect(confirm_modal).to_be_visible()
+    expect(confirm_modal.locator("#deleteForm")).to_be_attached()
+
+    with page.expect_response(
+        lambda r: f"/relations/{relation.relation_id}/delete/" in r.url and r.status == 200
+    ):
+        confirm_modal.get_by_role("button", name="Confirm and proceed with action").click()
+
+    expect(confirm_modal).not_to_be_visible()
+    assert not Relation.objects.filter(pk=relation.pk).exists()
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_received_gift_filters_preserve_thank_you_and_fit_320px(
+    page: Page, live_server, seed_data_e2e
+):
+    """Changing year keeps thank_you radio checked, occasion filters work, and 320px fits."""
+    alice = seed_data_e2e.alice
+    ReceivedGift.objects.create(
+        recipient_user=alice,
+        title="Jazz Vinyl",
+        giver_label="Aunt Marie",
+        received_on=date(2025, 11, 10),
+        occasion_text="Birthday",
+        thank_you_sent=True,
+    )
+    ReceivedGift.objects.create(
+        recipient_user=alice,
+        title="Tea Set",
+        giver_label="Aunt Marie",
+        received_on=date(2024, 12, 25),
+        occasion_text="Christmas",
+        thank_you_sent=True,
+    )
+    ReceivedGift.objects.create(
+        recipient_user=alice,
+        title="Bookmark",
+        giver_label="Aunt Marie",
+        received_on=date(2025, 5, 1),
+        occasion_text="Birthday",
+        thank_you_sent=False,
+    )
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:received_gift_list')}")
+
+    # Select "Sent" radio thank-you filter
+    with page.expect_response(lambda r: "thank_you=sent" in r.url and r.status == 200):
+        page.locator(FILTER_BUTTONS).nth(2).click()
+    expect(page.locator("#filter-thank-you-sent")).to_be_checked()
+    expect(page.locator(".received-gift-item", has_text="Jazz Vinyl")).to_be_visible()
+    expect(page.locator(".received-gift-item", has_text="Tea Set")).to_be_visible()
+    expect(page.locator(".received-gift-item", has_text="Bookmark")).to_have_count(0)
+
+    # Select year 2025: thank_you=sent must remain active
+    with page.expect_response(
+        lambda r: "year=2025" in r.url and "thank_you=sent" in r.url and r.status == 200
+    ):
+        page.locator(f'{FILTER_FORM} select[name="year"]').select_option("2025")
+    expect(page.locator("#filter-thank-you-sent")).to_be_checked()
+    expect(page.locator(".received-gift-item", has_text="Jazz Vinyl")).to_be_visible()
+    expect(page.locator(".received-gift-item", has_text="Tea Set")).to_have_count(0)
+    expect(page.locator(".received-gift-item", has_text="Bookmark")).to_have_count(0)
+
+    # Check 320px mobile layout has no horizontal overflow and occasion input works
+    page.set_viewport_size({"width": 320, "height": 568})
+    has_overflow = page.evaluate("() => document.documentElement.scrollWidth > window.innerWidth")
+    assert has_overflow is False
+
+    occasion_input = page.locator(f'{FILTER_FORM} input[name="occasion"]')
+    occasion_input.fill("NoMatchOccasion")
+    with page.expect_response(lambda r: "occasion=NoMatchOccasion" in r.url and r.status == 200):
+        occasion_input.press("Enter")
+    expect(page.get_by_text("No received gifts found.")).to_be_visible()
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_received_gift_hidden_invalid_url_does_not_block_wish_mode(
+    page: Page, live_server, seed_data_e2e
+):
+    """Invalid input on hidden New-gift URL field does not block submitting Fulfilled wish."""
+    alice = seed_data_e2e.alice
+    wish = Wish.objects.create(wisher=alice, title="Stand Mixer")
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:received_gift_list')}")
+
+    page.locator('[data-action="create"]:visible').first.click()
+    panel = page.locator("#editPanel")
+    expect(panel).to_be_visible()
+
+    # Enter an invalid URL on the New gift side, then switch to Fulfilled wish
+    panel.locator('input[name="url"]').fill("not-a-valid-url")
+    panel.locator('label[for="id_gift_mode_1"]').click()
+    panel.locator('select[name="wish"]').select_option(str(wish.pk))
+    panel.locator(".giver-picker").get_by_label("Mom Seed").check()
+
+    with page.expect_response(
+        lambda r: "/profile/received-gifts/add/" in r.url and r.status in (200, 204)
+    ):
+        panel.locator('button[type="submit"].btn-primary').click()
+
+    expect(panel).not_to_be_visible()
+    expect(page.locator(".received-gift-item", has_text="Stand Mixer")).to_be_visible()
+    assert ReceivedGift.objects.filter(recipient_user=alice, wish=wish).exists()
+
+
+def _setup_friend_recipient(seed_data_e2e):
+    alice = seed_data_e2e.alice
+    bob = seed_data_e2e.bob
+    alice.profile.friends.add(bob.profile)
+    best_friend = seed_data_e2e.persons["best_friend"]
+    best_friend.account = bob
+    best_friend.save(update_fields=["account"])
+    return alice, bob, best_friend
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_quick_action_given_chains_into_reveal(page: Page, live_server, seed_data_e2e):
+    """Marking Given on a card lets the reaction prompt chain directly into Reveal."""
+    alice, bob, best_friend = _setup_friend_recipient(seed_data_e2e)
+    gift = Gift.objects.create(name="Pour-Over Kettle")
+    relation = Relation.objects.create(
+        gift=gift,
+        person=best_friend,
+        status=seed_data_e2e.statuses["planned"],
+        due_date=date.today() - timedelta(days=1),
+    )
+    PermissionService.create_or_update_permission(
+        alice, gift, permission_level=PermissionLevel.OWNER
+    )
+    PermissionService.create_or_update_permission(
+        alice, relation, permission_level=PermissionLevel.OWNER
+    )
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:relations')}")
+
+    card = page.locator(".gift-plan-card", has_text="Pour-Over Kettle")
+    card.locator('[data-action="quick-given"]').click()
+
+    panel = page.locator("#editPanel")
+    expect(panel.locator("#relation-reaction-form")).to_be_visible()
+    panel.locator("label[for$='reaction_rating_5']").click()
+    panel.locator('button[name="after_save"][value="reveal"]').click()
+
+    # Swaps cleanly in place into the lightweight Reveal form with details collapsed
+    reveal_form = panel.locator("#relation-reveal-form")
+    expect(reveal_form).to_be_visible()
+    expect(panel.locator(".offcanvas-title-text")).to_contain_text("Reveal Gift Plan")
+    expect(reveal_form.locator("details")).not_to_have_attribute("open", "")
+    expect(reveal_form.locator("#id_giver_note")).to_be_focused()
+
+    reveal_form.locator("#id_giver_note").fill("Enjoy your morning coffee!")
+    with page.expect_response(
+        lambda r: f"/relations/{relation.relation_id}/reveal/" in r.url and r.status == 200
+    ):
+        reveal_form.locator('button[type="submit"].btn-primary').click()
+
+    expect(panel).not_to_be_visible()
+    completed_card = page.locator(".gift-plan-card", has_text="Pour-Over Kettle")
+    expect(completed_card.locator(".gift-plan-revealed-badge")).to_contain_text("Revealed")
+    expect(completed_card.locator("a", has_text="Reveal")).to_have_count(0)
+
+    revealed = ReceivedGift.objects.get(recipient_user=bob, title="Pour-Over Kettle")
+    assert revealed.giver_note == "Enjoy your morning coffee!"
+    relation.refresh_from_db()
+    assert relation.reaction_rating == 5
+    assert relation.revealed_at is not None
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_undo_quick_action_closes_chained_reveal_panel(page: Page, live_server, seed_data_e2e):
+    """Undoing a Given quick action closes the panel even after chaining into Reveal."""
+    alice, _bob, best_friend = _setup_friend_recipient(seed_data_e2e)
+    gift = Gift.objects.create(name="Undo Chain Gift")
+    relation = Relation.objects.create(
+        gift=gift,
+        person=best_friend,
+        status=seed_data_e2e.statuses["planned"],
+        due_date=date.today() - timedelta(days=1),
+    )
+    PermissionService.create_or_update_permission(
+        alice, gift, permission_level=PermissionLevel.OWNER
+    )
+    PermissionService.create_or_update_permission(
+        alice, relation, permission_level=PermissionLevel.OWNER
+    )
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:relations')}")
+
+    card = page.locator(".gift-plan-card", has_text="Undo Chain Gift")
+    card.locator('[data-action="quick-given"]').click()
+
+    panel = page.locator("#editPanel")
+    expect(panel.locator("#relation-reaction-form")).to_be_visible()
+    panel.locator('button[name="after_save"][value="reveal"]').click()
+    expect(panel.locator("#relation-reveal-form")).to_be_visible()
+
+    with page.expect_response(
+        lambda r: (
+            f"/relations/{relation.relation_id}/quick-action/undo/" in r.url and r.status == 200
+        )
+    ):
+        page.locator("#toastContainer [data-toast-action]", has_text="Undo").click()
+
+    expect(panel).not_to_be_visible()
+    relation.refresh_from_db()
+    assert relation.status_id == seed_data_e2e.statuses["planned"].pk
+    assert relation.revealed_at is None
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_card_history_and_edit_toast_reveal_shortcuts(page: Page, live_server, seed_data_e2e):
+    """Reveal works from card button, person gift history, and Edit->Given toast action."""
+    alice, bob, best_friend = _setup_friend_recipient(seed_data_e2e)
+    card_gift = Gift.objects.create(name="Card Shortcut Scarf")
+    card_rel = Relation.objects.create(
+        gift=card_gift,
+        person=best_friend,
+        status=seed_data_e2e.statuses["given"],
+    )
+    hist_gift = Gift.objects.create(name="History Shortcut Vinyl")
+    hist_rel = Relation.objects.create(
+        gift=hist_gift,
+        person=best_friend,
+        status=seed_data_e2e.statuses["given"],
+    )
+    edit_gift = Gift.objects.create(name="Edit Toast Watch")
+    edit_rel = Relation.objects.create(
+        gift=edit_gift,
+        person=best_friend,
+        event=seed_data_e2e.events["christmas"],
+        status=seed_data_e2e.statuses["planned"],
+        due_date=date.today() - timedelta(days=1),
+    )
+    for obj in (card_gift, card_rel, hist_gift, hist_rel, edit_gift, edit_rel):
+        PermissionService.create_or_update_permission(
+            alice, obj, permission_level=PermissionLevel.OWNER
+        )
+
+    login_as(page, live_server.url, "alice")
+
+    # 1. Reveal directly from the Completed card on /relations/ and expand details to rename
+    open_page(page, f"{live_server.url}{reverse('gift_manager:relations')}")
+    card = page.locator(".gift-plan-card", has_text="Card Shortcut Scarf")
+    card.get_by_role("link", name="Reveal").click()
+    panel = page.locator("#editPanel")
+    reveal_form = panel.locator("#relation-reveal-form")
+    expect(reveal_form).to_be_visible()
+    reveal_form.locator("details summary").click()
+    expect(reveal_form.locator("details")).to_have_attribute("open", "")
+    reveal_form.locator('input[name="title"]').fill("Cashmere Scarf")
+    with page.expect_response(
+        lambda r: f"/relations/{card_rel.relation_id}/reveal/" in r.url and r.status == 200
+    ):
+        reveal_form.locator('button[type="submit"].btn-primary').click()
+    expect(panel).not_to_be_visible()
+    expect(card.locator(".gift-plan-revealed-badge")).to_contain_text("Revealed")
+    assert ReceivedGift.objects.filter(recipient_user=bob, title="Cashmere Scarf").exists()
+
+    # 2. Edit a Planned card to Given -> click Reveal link inside the toast notification
+    edit_card = page.locator(".gift-plan-card", has_text="Edit Toast Watch")
+    edit_card.locator('a[data-action="edit"][aria-label="Edit"]').click()
+    expect(panel.locator("form.relation-form")).to_be_visible()
+    panel.locator('select[name="status"]').select_option(str(seed_data_e2e.statuses["given"].pk))
+    with page.expect_response(
+        lambda r: f"/relations/{edit_rel.relation_id}/edit/" in r.url and r.status == 200
+    ):
+        panel.locator('button[type="submit"].btn-primary').click()
+    expect(panel).not_to_be_visible()
+    toast_link = page.locator("#toastContainer [data-toast-action]", has_text="Reveal to recipient")
+    expect(toast_link).to_be_visible()
+    toast_link.click()
+    expect(panel.locator("#relation-reveal-form")).to_be_visible()
+    panel.locator('button[data-bs-dismiss="offcanvas"]').first.click()
+    expect(panel).not_to_be_visible()
+
+    # 3. Reveal directly from the recipient's Gift History on person_detail
+    open_page(
+        page,
+        f"{live_server.url}{reverse('gift_manager:person_detail', args=[best_friend.person_id])}",
+    )
+    history_item = page.locator(".gift-history-item", has_text="History Shortcut Vinyl")
+    expect(history_item).to_be_visible()
+    history_item.get_by_role("link", name="Reveal").click()
+    expect(panel.locator("#relation-reveal-form")).to_be_visible()
+    with page.expect_response(
+        lambda r: f"/relations/{hist_rel.relation_id}/reveal/" in r.url and r.status == 200
+    ):
+        panel.locator('#relation-reveal-form button[type="submit"].btn-primary').click()
+    expect(panel).not_to_be_visible()
+    expect(history_item).to_contain_text("Revealed")
+    assert ReceivedGift.objects.filter(recipient_user=bob, title="History Shortcut Vinyl").exists()
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_warning_colors_match_dashboard_badge_in_light_and_dark_mode(
+    page: Page, live_server, seed_data_e2e
+):
+    """Thank-you pending button matches the dashboard 'No gift plan yet' badge in both themes."""
+    upcoming = date.today() + timedelta(days=5)
+    birthday_person = seed_data_e2e.persons["sister"]
+    birthday_person.birthday_day = upcoming.day
+    birthday_person.birthday_month = upcoming.month
+    birthday_person.save(update_fields=["birthday_day", "birthday_month"])
+
+    ReceivedGift.objects.create(
+        recipient_user=seed_data_e2e.alice,
+        title="Unthanked Mug",
+        received_on=date.today(),
+        thank_you_sent=False,
+    )
+
+    login_as(page, live_server.url, "alice")
+
+    expected_bg = {"light": "rgb(245, 158, 11)", "dark": "rgb(217, 119, 6)"}
+    for theme, expected_color in expected_bg.items():
+        open_page(page, f"{live_server.url}{reverse('gift_manager:home')}")
+        page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        page.wait_for_timeout(250)
+        badge = page.locator(
+            ".birthday-card .badge.text-bg-warning", has_text="No gift plan yet"
+        ).first
+        expect(badge).to_be_visible()
+        expect(badge).to_have_css("background-color", expected_color)
+
+        open_page(page, f"{live_server.url}{reverse('gift_manager:received_gift_list')}")
+        page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        page.wait_for_timeout(250)
+        pending_btn = page.locator(".received-gift-item", has_text="Unthanked Mug").locator(
+            ".received-gift-pending-btn"
+        )
+        expect(pending_btn).to_be_visible()
+        expect(pending_btn).to_have_css("background-color", expected_color)

@@ -15,7 +15,11 @@
 
 {% include "gift_manager/includes/action_buttons.html" with buttons=action_buttons %}
 
-<div class="detail-page-shell">
+<div class="detail-page-shell"
+     hx-get="{% url 'gift_manager:received_gift_detail' pk=gift.received_gift_id %}?surface=page"
+     hx-trigger="list:update from:body"
+     hx-target="this"
+     hx-swap="innerHTML">
     {% include "gift_manager/includes/received_gift_detail_partial.html" with full_page_detail=True %}
 </div>
 {% endblock %}

@@ -222,6 +222,9 @@
 
         // Handle form submission validation
         const handleSubmit = function (e) {
+            if (form.noValidate || e.submitter?.formNoValidate) {
+                return;
+            }
             // Only prevent submission if form is invalid
             if (!form.checkValidity()) {
                 e.preventDefault();
@@ -409,22 +412,48 @@
     // Export to global scope
     window.FormInitializer = FormInitializer;
 
+    function focusRevealForm(form) {
+        if (form.id !== "relation-reveal-form") return;
+        const panel = form.closest("#editPanel");
+        if (!panel || form.contains(document.activeElement)) return;
+        // Run after the frame settles so focus traps on the offcanvas do not override it.
+        window.requestAnimationFrame(() => {
+            if (form.isConnected && panel.contains(form) && !form.contains(document.activeElement)) {
+                const focusTarget = form.querySelector("#id_giver_note") || form.querySelector(".form-fields");
+                focusTarget?.focus();
+            }
+        });
+    }
+
+    function initFormsInContainer(container) {
+        if (!container || typeof container.querySelectorAll !== "function") return;
+        const forms = container.querySelectorAll("form[data-form-type]");
+        forms.forEach((form) => {
+            FormInitializer.initForm(form);
+            focusRevealForm(form);
+        });
+        if (container.tagName === "FORM" && container.dataset.formType) {
+            FormInitializer.initForm(container);
+            focusRevealForm(container);
+        }
+    }
+
     // Auto-initialize forms after HTMX swaps
     document.body.addEventListener("htmx:afterSwap", function (e) {
         // An outerHTML swap reports the replaced (detached) element as the target: the new
-        // content is what the event itself is dispatched on.
-        const target = e.detail.target?.isConnected ? e.detail.target : e.target;
+        // content is e.detail.elt or e.target.
+        const target = e.detail?.elt?.isConnected
+            ? e.detail.elt
+            : e.detail.target?.isConnected
+              ? e.detail.target
+              : e.target;
+        initFormsInContainer(target);
+    });
 
-        // Find forms in the swapped content
-        const forms = target.querySelectorAll("form[data-form-type]");
-        forms.forEach((form) => {
-            FormInitializer.initForm(form);
-        });
-
-        // Check if target itself is a form
-        if (target.tagName === "FORM" && target.dataset.formType) {
-            FormInitializer.initForm(target);
-        }
+    // outerHTML swaps can dispatch htmx:afterSwap on the detached node before bubbling, whereas
+    // htmx:load fires on every newly connected node.
+    document.body.addEventListener("htmx:load", function (e) {
+        initFormsInContainer(e.detail?.elt || e.target);
     });
 
     // Initialize forms on page load

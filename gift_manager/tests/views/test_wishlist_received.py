@@ -10,6 +10,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import ReceivedGift
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
 from gift_manager.tests.factories import RelationStatusFactory
 from gift_manager.tests.factories import UserFactory
 from gift_manager.tests.factories import WishFactory
@@ -229,3 +230,54 @@ class TestToggleFulfillsWish:
         client.force_login(user)
 
         assert client.post(self._url(gift)).status_code == 404
+
+
+@pytest.mark.django_db
+class TestSoftDeletedWishAndLinkableGivers:
+    def test_soft_delete_wish_unlinks_received_gifts_and_recomputes_fulfilled(self, user):
+        friend = UserFactory()
+        user.profile.friends.add(friend.profile)
+        wish = WishFactory(wisher=user, title="Stand Mixer")
+        wish.claimed_by = friend
+        wish.claimed_at = wish.created_at
+        wish.save(update_fields=["claimed_by", "claimed_at"])
+
+        gift = _receive(user, wish, date(2026, 4, 1))
+        wish.refresh_from_db()
+        assert wish.is_fulfilled is True
+
+        wishlist.delete_wish(wish, user)
+        wish.refresh_from_db()
+        gift.refresh_from_db()
+        assert wish.is_deleted_by_wisher is True
+        assert wish.is_fulfilled is False
+        assert gift.wish is None
+        assert gift.title == "Stand Mixer"
+
+    def test_wish_edit_renders_accessible_person_link_and_plain_inaccessible_group(
+        self, client, user
+    ):
+        wish = WishFactory(wisher=user, title="Board Game")
+        accessible_person = PersonFactory(first_name="Clara")
+        inaccessible_group = PersonGroupFactory(name="Hidden Club")
+        PermissionService.create_or_update_permission(
+            user, accessible_person, permission_level=PermissionLevel.OWNER
+        )
+        gift = ReceivedGift.objects.create(
+            recipient_user=user,
+            title="Board Game",
+            wish=wish,
+            received_on=date(2026, 5, 1),
+            fulfills_wish=True,
+        )
+        gift.giver_persons.add(accessible_person)
+        gift.giver_groups.add(inaccessible_group)
+
+        client.force_login(user)
+        response = client.get(reverse("gift_manager:wish_edit", args=[wish.wish_id]))
+        assert response.status_code == 200
+        html = response.content.decode()
+        assert reverse("gift_manager:person_detail", args=[accessible_person.person_id]) in html
+        assert "Hidden Club" in html
+        group_url = reverse("gift_manager:person_group_detail", args=[inaccessible_group.group_id])
+        assert group_url not in html
