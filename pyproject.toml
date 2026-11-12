@@ -5,7 +5,10 @@ description = "A Django application to manage gifts."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Business Source License 1.1 (BUSL-1.1)" }
-classifiers = ["Programming Language :: Python"]
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Programming Language :: Python",
+]
 dynamic = ["version"]
 dependencies = [
     "anthropic>=1.15.0",

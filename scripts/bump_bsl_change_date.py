@@ -1,11 +1,14 @@
 #!/usr/bin/env python
-"""Bump the Business Source License 1.1 Change Date by four years.
+"""Check or bump the Business Source License 1.1 Change Date.
 
-Updates the ``Change Date`` line in ``LICENSE`` (and the matching date note in
-``README.md``, if present) to four years from today's UTC date when non-license
-changes have been committed since the last ``LICENSE`` update.
+Supports two modes:
+- Default (bump): updates ``Change Date`` in ``LICENSE`` to four years from
+  today's UTC date when non-license changes have occurred since the last
+  ``Change Date`` update.
+- ``--check``: verifies that ``Change Date`` in ``LICENSE`` is at least 42
+  months (~3.5 years) in the future, exiting non-zero otherwise.
 
-Standard library only; designed for scheduled GitHub Actions maintenance.
+Standard library only.
 """
 
 from __future__ import annotations
@@ -13,7 +16,6 @@ from __future__ import annotations
 import argparse
 import calendar
 import logging
-import os
 import re
 import shutil
 import subprocess
@@ -23,21 +25,26 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 LICENSE_CHANGE_DATE_RE = re.compile(r"^(Change Date:\s*)(\d{4}-\d{2}-\d{2})$", re.MULTILINE)
-README_CHANGE_DATE_RE = re.compile(
-    r"(4 years after release;\s*`)(\d{4}-\d{2}-\d{2})(`\s*for the current version)"
-)
+DEFAULT_BUMP_MONTHS = 48
+DEFAULT_MIN_MONTHS = 42
+
+
+def shift_months(base: date, months: int) -> date:
+    """Return ``base`` shifted forward by ``months`` calendar months (month-end safe)."""
+    zero_based_month = (base.month - 1) + months
+    target_year = base.year + zero_based_month // 12
+    target_month = (zero_based_month % 12) + 1
+    max_day = calendar.monthrange(target_year, target_month)[1]
+    return date(target_year, target_month, min(base.day, max_day))
 
 
 def compute_target_date(today: date | None = None, years: int = 4) -> date:
     """Return ``today`` shifted forward by ``years`` calendar years (leap-day safe)."""
     base = today or datetime.now(tz=timezone.utc).date()
-    target_year = base.year + years
-    max_day = calendar.monthrange(target_year, base.month)[1]
-    return date(target_year, base.month, min(base.day, max_day))
+    return shift_months(base, years * 12)
 
 
 def _run_git(repo_root: Path, *args: str) -> str:
@@ -56,15 +63,25 @@ def _run_git(repo_root: Path, *args: str) -> str:
 
 
 def has_changes_since_last_license_update(repo_root: Path) -> bool:
-    """Return True if files other than LICENSE and README.md changed since LICENSE was updated."""
-    last_license_commit = _run_git(repo_root, "log", "-n", "1", "--format=%H", "--", "LICENSE")
-    if not last_license_commit:
+    """Return True if files other than LICENSE/README.md changed since Change Date was updated."""
+    last_date_commit = _run_git(
+        repo_root,
+        "log",
+        "-n",
+        "1",
+        "-G",
+        "^Change Date:",
+        "--format=%H",
+        "--",
+        "LICENSE",
+    )
+    if not last_date_commit:
         return True
 
     commits_since = _run_git(
         repo_root,
         "log",
-        f"{last_license_commit}..HEAD",
+        f"{last_date_commit}..HEAD",
         "--format=%H",
         "--",
         ".",
@@ -74,26 +91,59 @@ def has_changes_since_last_license_update(repo_root: Path) -> bool:
     return bool(commits_since)
 
 
+def read_change_date(repo_root: Path) -> tuple[Path, str, date]:
+    """Read ``LICENSE`` and return ``(license_path, license_text, change_date)``."""
+    license_path = repo_root / "LICENSE"
+    license_text = license_path.read_text(encoding="utf-8")
+    match = LICENSE_CHANGE_DATE_RE.search(license_text)
+    if match is None:
+        msg = f"Could not find 'Change Date: YYYY-MM-DD' in {license_path}"
+        raise ValueError(msg)
+    return license_path, license_text, date.fromisoformat(match.group(2))
+
+
+def check_change_date(
+    repo_root: Path,
+    *,
+    min_months: int = DEFAULT_MIN_MONTHS,
+    today: date | None = None,
+) -> bool:
+    """Return True if ``Change Date`` in ``LICENSE`` is at least ``min_months`` away."""
+    _, _, current_date = read_change_date(repo_root)
+    base = today or datetime.now(tz=timezone.utc).date()
+    min_required = shift_months(base, min_months)
+    if current_date < min_required:
+        suggested = compute_target_date(base)
+        logger.error(
+            "BSL Change Date (%s) is less than %d months away (minimum %s). "
+            "Run 'python scripts/bump_bsl_change_date.py --force' to bump it to %s.",
+            current_date.isoformat(),
+            min_months,
+            min_required.isoformat(),
+            suggested.isoformat(),
+        )
+        return False
+
+    logger.info(
+        "BSL Change Date (%s) meets minimum threshold (%s).",
+        current_date.isoformat(),
+        min_required.isoformat(),
+    )
+    return True
+
+
 def update_files(
     repo_root: Path,
     target_date: date,
     *,
     dry_run: bool = False,
 ) -> tuple[bool, date]:
-    """Update Change Date in LICENSE and README.md if ``target_date`` is newer.
+    """Update Change Date in ``LICENSE`` if ``target_date`` is newer.
 
     Returns:
         A tuple of ``(changed, target_date)``.
     """
-    license_path = repo_root / "LICENSE"
-    license_text = license_path.read_text(encoding="utf-8")
-
-    match = LICENSE_CHANGE_DATE_RE.search(license_text)
-    if match is None:
-        msg = f"Could not find 'Change Date: YYYY-MM-DD' in {license_path}"
-        raise ValueError(msg)
-
-    current_date = date.fromisoformat(match.group(2))
+    license_path, license_text, current_date = read_change_date(repo_root)
     if current_date >= target_date:
         logger.info(
             "Current Change Date (%s) is already on or after target (%s); no update needed.",
@@ -105,46 +155,18 @@ def update_files(
     new_date_str = target_date.isoformat()
     updated_license = LICENSE_CHANGE_DATE_RE.sub(rf"\g<1>{new_date_str}", license_text, count=1)
 
-    readme_path = repo_root / "README.md"
-    updated_readme: str | None = None
-    if readme_path.is_file():
-        readme_text = readme_path.read_text(encoding="utf-8")
-        if README_CHANGE_DATE_RE.search(readme_text):
-            candidate = README_CHANGE_DATE_RE.sub(
-                rf"\g<1>{new_date_str}\g<3>",
-                readme_text,
-                count=1,
-            )
-            if candidate != readme_text:
-                updated_readme = candidate
-
     if dry_run:
         logger.info("[DRY RUN] Would bump Change Date: %s -> %s", current_date, new_date_str)
-        if updated_readme is not None:
-            logger.info("[DRY RUN] Would also update Change Date in %s", readme_path)
         return True, target_date
 
     license_path.write_text(updated_license, encoding="utf-8")
-    if updated_readme is not None:
-        readme_path.write_text(updated_readme, encoding="utf-8")
-
     logger.info("Updated Change Date: %s -> %s", current_date.isoformat(), new_date_str)
     return True, target_date
 
 
-def _write_github_output(target_date: date, *, changed: bool) -> None:
-    """Append outputs for GitHub Actions when GITHUB_OUTPUT is set."""
-    output_path = os.environ.get("GITHUB_OUTPUT")
-    if not output_path:
-        return
-    with Path(output_path).open("a", encoding="utf-8") as handle:
-        handle.write(f"changed={'true' if changed else 'false'}\n")
-        handle.write(f"target_date={target_date.isoformat()}\n")
-
-
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments."""
-    parser = argparse.ArgumentParser(description="Bump BSL 1.1 Change Date by 4 years.")
+    parser = argparse.ArgumentParser(description="Check or bump BSL 1.1 Change Date.")
     parser.add_argument(
         "--repo-root",
         type=Path,
@@ -152,9 +174,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Path to repository root (defaults to parent of scripts/).",
     )
     parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail with exit code 1 if Change Date is less than --min-months away.",
+    )
+    parser.add_argument(
+        "--min-months",
+        type=int,
+        default=DEFAULT_MIN_MONTHS,
+        help="Minimum remaining horizon in months required by --check (default: 42).",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
-        help="Bump even if no non-license files changed since the last LICENSE commit.",
+        help="Bump even if no non-license files changed since the last Change Date commit.",
     )
     parser.add_argument(
         "--dry-run",
@@ -165,18 +198,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for bumping the BSL 1.1 Change Date."""
+    """Entry point for checking or bumping the BSL 1.1 Change Date."""
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     args = parse_args(argv)
     repo_root = args.repo_root.resolve()
-    target_date = compute_target_date()
 
+    if args.check:
+        return 0 if check_change_date(repo_root, min_months=args.min_months) else 1
+
+    target_date = compute_target_date()
     if not args.force and not has_changes_since_last_license_update(repo_root):
-        logger.info("No non-license changes since last LICENSE update; skipping bump.")
-        _write_github_output(target_date, changed=False)
+        logger.info("No non-license changes since last Change Date update; skipping bump.")
         return 0
 
-    changed, target_date = update_files(repo_root, target_date, dry_run=args.dry_run)
-    _write_github_output(target_date, changed=changed and not args.dry_run)
+    update_files(repo_root, target_date, dry_run=args.dry_run)
     return 0
 
 
