@@ -95,17 +95,17 @@ class PermissionService:
     @classmethod
     def get_effective_permission(cls, obj, user) -> int:
         """Get permission level for an object and user."""
+        if getattr(obj, "is_global", False):
+            # Global objects (e.g. the Birthday event) are shared by every user and read-only
+            # for everyone, superusers included: changing them would affect every account
+            return PermissionLevel.VIEWER
         if user.is_superuser:
             return PermissionLevel.OWNER
 
         if isinstance(obj, PersonGroup):
             return cls.get_effective_permission_for_group(obj, user)
 
-        permission = cls.get_permission(obj, user)
-        if getattr(obj, "is_global", False):
-            # Global objects (e.g. the Birthday event) are read-only for everyone
-            return max(permission, PermissionLevel.VIEWER)
-        return permission
+        return cls.get_permission(obj, user)
 
     @classmethod
     def validate_permission_level(cls, permission_level: int) -> int:

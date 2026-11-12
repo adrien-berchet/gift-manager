@@ -18,6 +18,7 @@ from django.views.generic import TemplateView
 from django.views.generic import View
 
 from gift_manager import account_links
+from gift_manager import wishlist
 from gift_manager.account_links import remove_links_after_unfriending
 from gift_manager.email_encoding import encode_email
 from gift_manager.forms import InvitationForm
@@ -41,7 +42,6 @@ from gift_manager.models import PersonGroup
 from gift_manager.models import Profile
 from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
-from gift_manager.models import Wish
 from gift_manager.services import PermissionService
 from gift_manager.wishlist import release_claims_after_unfriending
 
@@ -59,9 +59,7 @@ class ProfileDetailView(LoginRequiredMixin, DetailView):
         profile = context["profile"]
         context["reminder_form"] = ReminderPreferencesForm(instance=profile)
         context["preferences_form"] = ProfilePreferencesForm(instance=profile)
-        context["active_wishes_count"] = (
-            Wish.objects.for_wisher(self.request.user).filter(is_archived=False).count()
-        )
+        context["active_wishes_count"] = wishlist.count_active_wishes(self.request.user)
         received_gifts = ReceivedGift.objects.for_user(self.request.user)
         context["received_gifts_count"] = received_gifts.count()
         context["pending_thank_you_count"] = received_gifts.filter(thank_you_sent=False).count()

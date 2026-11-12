@@ -869,6 +869,9 @@ class BaseRelationScopedForm(
         model = Relation
         fields = ["gift", "comment", "url", "price", "event", "status", "due_date", "is_surprise"]
         widgets = {
+            "gift": forms.Select(attrs={"class": "form-select"}),
+            "event": forms.Select(attrs={"class": "form-select"}),
+            "status": forms.Select(attrs={"class": "form-select"}),
             "comment": forms.Textarea(attrs={"rows": 3}),
             **link_price_widgets(),
             # ISO format: an <input type="date"> ignores values in the locale's format
