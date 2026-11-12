@@ -108,6 +108,8 @@
                     }
                 };
             } else if (data.link && data.link.url) {
+                // A follow-up step (e.g. "Reveal to recipient") stays until the user closes it
+                options.persistent = true;
                 options.action = {
                     label: data.link.label,
                     onClick: function() {
@@ -208,7 +210,7 @@
 
             toastContainer.insertAdjacentHTML('beforeend', toastHtml);
             const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            const toast = new bootstrap.Toast(toastElement, { autohide: !options.persistent, delay: 5000 });
             toast.show();
 
             const actionButton = toastElement.querySelector('[data-toast-action]');

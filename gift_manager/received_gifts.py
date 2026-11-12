@@ -11,6 +11,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
+from django.utils.translation import ngettext
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
@@ -232,11 +233,12 @@ def _create_revealed_gift_for_target(
     if ReceivedGift.objects.filter(recipient_user=target, source_relation=locked).exists():
         return None
 
-    # Link the target user's Person entries for the givers when available
+    # Link the target user's Person entries for the givers when available. The other owners stay
+    # in giver_accounts: annotate_snapshot_givers names the target's friends and only counts the
+    # rest, so co-owners the target does not know are never named to them.
     giver_persons = list(
         Person.objects.accessible_by(target).filter(account__in=snapshot.owner_ids)
     )
-    giver_label = "" if giver_persons else snapshot.source_givers_text
     linked_wish = (
         locked.wish
         if locked.wish_id
@@ -253,7 +255,6 @@ def _create_revealed_gift_for_target(
         occasion_text=snapshot.occasion_text,
         source_relation=locked,
         source_givers_text=snapshot.source_givers_text,
-        giver_label=giver_label,
         giver_note=snapshot.giver_note,
         wish=linked_wish,
     )
@@ -342,6 +343,90 @@ def linkable_giver_ids(user: User, gifts: Iterable[ReceivedGift]) -> tuple[set[i
         else set()
     )
     return linkable_person_ids, linkable_group_ids
+
+
+def _account_display_name(account: User) -> str:
+    return account.get_full_name() or account.username
+
+
+def _other_givers_label(count: int, *, after_named_givers: bool) -> str:
+    if not count:
+        return ""
+    if after_named_givers:
+        return ngettext("and %(count)d other", "and %(count)d others", count) % {"count": count}
+    return ngettext("%(count)d other giver", "%(count)d other givers", count) % {"count": count}
+
+
+def annotate_snapshot_givers(
+    user: User, gifts: Iterable[ReceivedGift], *, ignore_label: bool = False
+) -> list[ReceivedGift]:
+    """Set how the givers kept from a revealed plan are shown to ``user`` on each gift.
+
+    A revealed gift keeps every plan owner in ``giver_accounts``. Owners already shown as one of
+    the gift's giver contacts are skipped; the others are shown as ``user``'s contact for them
+    when there is one (``snapshot_giver_persons``, e.g. added after the reveal), named when they
+    are confirmed friends of ``user`` (``snapshot_giver_names``), and only counted otherwise
+    (``other_givers_count`` and ``other_givers_label``, e.g. "and 1 other"). A free-text giver
+    typed by the recipient replaces them unless ``ignore_label`` is set.
+    Prefetch ``giver_persons``, ``giver_groups`` and ``giver_accounts``.
+    """
+    gifts_list = list(gifts)
+    pending: list[tuple[ReceivedGift, list[User]]] = []
+    for gift in gifts_list:
+        gift.snapshot_giver_persons = []
+        gift.snapshot_giver_names = []
+        gift.other_givers_count = 0
+        gift.other_givers_label = ""
+        if gift.giver_label and not ignore_label:
+            continue
+        contact_account_ids = {p.account_id for p in gift.giver_persons.all() if p.account_id}
+        accounts = [
+            account
+            for account in gift.giver_accounts.all()
+            if account.pk not in contact_account_ids and account.pk != user.pk
+        ]
+        if accounts:
+            pending.append((gift, accounts))
+    if not pending:
+        return gifts_list
+
+    contacts_by_account: dict[int, Person] = {}
+    for person in Person.objects.accessible_by(user).filter(
+        account_id__in={account.pk for _gift, accounts in pending for account in accounts}
+    ):
+        contacts_by_account.setdefault(person.account_id, person)
+    friend_ids = _active_friend_ids(user)
+    for gift, accounts in pending:
+        gift.snapshot_giver_persons = [
+            contacts_by_account[account.pk]
+            for account in accounts
+            if account.pk in contacts_by_account
+        ]
+        unmatched = [account for account in accounts if account.pk not in contacts_by_account]
+        known = [account for account in unmatched if account.pk in friend_ids]
+        gift.snapshot_giver_names = sorted(_account_display_name(account) for account in known)
+        gift.other_givers_count = len(unmatched) - len(known)
+        after_named_givers = bool(
+            gift.snapshot_giver_persons
+            or gift.snapshot_giver_names
+            or gift.giver_persons.all()
+            or gift.giver_groups.all()
+        )
+        gift.other_givers_label = _other_givers_label(
+            gift.other_givers_count, after_named_givers=after_named_givers
+        )
+    return gifts_list
+
+
+def snapshot_givers_summary(gift: ReceivedGift) -> str:
+    """One line listing the givers of an annotated gift, e.g. "Alice Smith, and 1 other"."""
+    parts = [str(person) for person in gift.giver_persons.all()]
+    parts += [group.name for group in gift.giver_groups.all()]
+    parts += [str(person) for person in gift.snapshot_giver_persons]
+    parts += gift.snapshot_giver_names
+    if gift.other_givers_label:
+        parts.append(gift.other_givers_label)
+    return ", ".join(parts)
 
 
 def shareable_reaction_fields(received_gift: ReceivedGift, plan: Relation) -> list[str]:

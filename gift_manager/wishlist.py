@@ -48,14 +48,23 @@ def _owner_ids(relation: Relation) -> set[int]:
     )
 
 
+def reserves_wish(plan: Relation) -> bool:
+    """Whether *plan* still holds its wish: not abandoned and not revealed yet.
+
+    Once revealed, the wisher's received gift decides whether the wish stays received, so the
+    plan no longer keeps the wish claimed (see ``_wish_is_fulfilled``).
+    """
+    return plan.revealed_at is None and not is_abandoned_status(plan.status)
+
+
 def _active_plans_owned_by(wish: Wish, user: User) -> list[Relation]:
-    """Return the non-abandoned plans fulfilling *wish* that *user* owns."""
+    """Return the plans fulfilling *wish* that *user* owns and that still reserve it."""
     permissions = RelationPermission.objects.filter(
         user=user,
         permission_type=PermissionLevel.OWNER,
         relation__wish=wish,
     ).select_related("relation__status")
-    return [p.relation for p in permissions if not is_abandoned_status(p.relation.status)]
+    return [p.relation for p in permissions if reserves_wish(p.relation)]
 
 
 def _release(wish: Wish) -> None:
@@ -220,21 +229,35 @@ def own_receipts(user: User, wishes: Iterable[Wish]) -> dict[int, WishReceipt]:
 
 def own_received_gifts(user: User, wish: Wish) -> list[ReceivedGift]:
     """The wisher's received gifts linked to *wish*, newest first, givers prefetched."""
-    return list(
+    from gift_manager.received_gifts import annotate_snapshot_givers  # noqa: PLC0415
+
+    return annotate_snapshot_givers(
+        user,
         ReceivedGift.objects.for_user(user)
         .filter(wish=wish)
-        .prefetch_related("giver_persons", "giver_groups")
-        .order_by("-received_on", "-created_at")
+        .prefetch_related("giver_persons", "giver_groups", "giver_accounts")
+        .order_by("-received_on", "-created_at"),
     )
+
+
+def _wish_is_fulfilled(wish: Wish, active_plans: Iterable[Relation]) -> bool:
+    """Whether a given plan or one of the wisher's received gifts fulfils *wish*.
+
+    Once a given plan is revealed, the wisher holds a received gift for it and decides: turning
+    off "Mark the wish as received" on that gift, or deleting it, reopens the wish (e.g. food
+    that can be received again), so a revealed plan no longer counts on its own.
+    """
+    has_given = any(
+        is_given_status(plan.status) and plan.revealed_at is None for plan in active_plans
+    )
+    return has_given or ReceivedGift.objects.filter(wish=wish, fulfills_wish=True).exists()
 
 
 def recompute_wish_fulfilled(wish: Wish) -> bool:
     """Recompute and save ``wish.is_fulfilled`` from fulfilling plans and received gifts."""
     plans = Relation.objects.filter(wish=wish).select_related("status")
     active = [plan for plan in plans if not is_abandoned_status(plan.status)]
-    has_given = any(is_given_status(plan.status) for plan in active)
-    has_received = ReceivedGift.objects.filter(wish=wish, fulfills_wish=True).exists()
-    fulfilled = has_given or has_received
+    fulfilled = _wish_is_fulfilled(wish, active)
 
     if wish.is_fulfilled != fulfilled:
         wish.is_fulfilled = fulfilled
@@ -262,10 +285,11 @@ def sync_wish_on_plan_change(relation: Relation, *, is_deleted: bool = False) ->
         plans = Relation.objects.filter(wish=wish).select_related("status")
         if is_deleted:
             plans = plans.exclude(pk=relation.pk)
-        active = [plan for plan in plans if not is_abandoned_status(plan.status)]
-        has_given = any(is_given_status(plan.status) for plan in active)
-        has_received = ReceivedGift.objects.filter(wish=wish, fulfills_wish=True).exists()
-        fulfilled = has_given or has_received
+        plans = list(plans)
+        fulfilled = _wish_is_fulfilled(
+            wish, [plan for plan in plans if not is_abandoned_status(plan.status)]
+        )
+        active = [plan for plan in plans if reserves_wish(plan)]
 
         update_fields = []
         if wish.is_fulfilled != fulfilled:

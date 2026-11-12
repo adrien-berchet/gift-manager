@@ -18,7 +18,7 @@
     <div class="alert alert-success d-flex align-items-center mb-3 py-2" role="alert">
         <i class="fas fa-check-circle me-2" aria-hidden="true"></i>
         <div>
-            <strong>{% trans "Revealed to recipient" %}</strong>
+            <strong>{% if already_revealed_notice %}{% trans "This gift plan was already revealed." %}{% else %}{% trans "Revealed to recipient" %}{% endif %}</strong>
             <small class="d-block text-muted">{% trans "Revealed on" %} {{ object.revealed_at|date:"DATE_FORMAT" }}</small>
         </div>
     </div>

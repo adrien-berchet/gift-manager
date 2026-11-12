@@ -3,6 +3,8 @@
 import json
 import uuid
 from collections import defaultdict
+from datetime import MAXYEAR
+from datetime import MINYEAR
 from typing import Any
 
 from django.contrib import messages
@@ -35,12 +37,14 @@ from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.received_gifts import ShareReactionResult
+from gift_manager.received_gifts import annotate_snapshot_givers
 from gift_manager.received_gifts import can_reveal_plan
 from gift_manager.received_gifts import can_share_reaction
 from gift_manager.received_gifts import get_reveal_targets
 from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.received_gifts import reveal_plan
 from gift_manager.received_gifts import share_reaction_feedback
+from gift_manager.received_gifts import user_is_plan_owner
 from gift_manager.services import PermissionService
 from gift_manager.validators import validate_http_url
 from gift_manager.views.base import HTMXResponseMixin
@@ -84,7 +88,7 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
         user = request.user
         queryset = (
             ReceivedGift.objects.for_user(user)
-            .prefetch_related("giver_persons", "giver_groups")
+            .prefetch_related("giver_persons", "giver_groups", "giver_accounts")
             .select_related("event", "wish")
         )
 
@@ -95,8 +99,12 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
 
         if filter_year:
             try:
-                queryset = queryset.filter(received_on__year=int(filter_year))
+                year = int(filter_year)
             except ValueError:
+                year = None
+            if year is not None and MINYEAR <= year <= MAXYEAR:
+                queryset = queryset.filter(received_on__year=year)
+            else:
                 filter_year = ""
 
         filter_giver, giver_query = _parse_giver_filter(filter_giver_raw)
@@ -150,9 +158,9 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             (year, by_year[year])
             for year in sorted(by_year.keys(), key=lambda y: (y is None, -(y or 0)))
         ]
-        linkable_person_ids, linkable_group_ids = linkable_giver_ids(
-            user, [gift for gifts in by_year.values() for gift in gifts]
-        )
+        listed_gifts = [gift for gifts in by_year.values() for gift in gifts]
+        annotate_snapshot_givers(user, listed_gifts)
+        linkable_person_ids, linkable_group_ids = linkable_giver_ids(user, listed_gifts)
 
         context = {
             "grouped_gifts": grouped_gifts,
@@ -181,11 +189,12 @@ class ReceivedGiftDetailView(LoginRequiredMixin, View):
     def get(self, request, pk, *args, **kwargs):
         gift = get_object_or_404(
             ReceivedGift.objects.for_user(request.user)
-            .prefetch_related("giver_persons", "giver_groups")
+            .prefetch_related("giver_persons", "giver_groups", "giver_accounts")
             .select_related("event", "wish", "source_relation"),
             received_gift_id=pk,
         )
 
+        annotate_snapshot_givers(request.user, [gift])
         linkable_person_ids, linkable_group_ids = linkable_giver_ids(request.user, [gift])
         context = {
             "gift": gift,
@@ -515,6 +524,10 @@ def render_relation_reveal_form(
     )
 
 
+# Query parameter telling the plan detail that a reveal link pointed to an already revealed plan
+ALREADY_REVEALED_PARAM = "already_revealed"
+
+
 class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
     """Preview and reveal a Given gift plan to its recipient(s)."""
 
@@ -529,10 +542,35 @@ class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
             relation_id=pk,
         )
 
+    def already_revealed_response(self, request, relation: Relation) -> HttpResponse:
+        """Send a stale reveal link or form back to the plan, which shows it is revealed."""
+        message = gettext("This gift plan was already revealed.")
+        if self.is_htmx and request.method == "POST":
+            response = HttpResponse("")
+            response["HX-Reswap"] = "none"
+            response["HX-Trigger"] = self.build_hx_trigger_header(
+                ["list:update", "offcanvas:close", {"showNotification": {"message": message}}]
+            )
+            return response
+        detail_url = reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id})
+        if self.is_htmx:
+            # The side panel follows the redirect and shows the plan with this notice
+            return redirect(f"{detail_url}?{ALREADY_REVEALED_PARAM}=1")
+        messages.info(request, message)
+        return redirect(detail_url)
+
+    def check_can_reveal(self, request, relation: Relation) -> HttpResponse | None:
+        """Return the response for a plan that cannot be revealed, or None when it can."""
+        if can_reveal_plan(relation, request.user):
+            return None
+        if relation.revealed_at is not None and user_is_plan_owner(relation, request.user):
+            return self.already_revealed_response(request, relation)
+        raise PermissionDenied(gettext("This gift plan cannot be revealed."))
+
     def get(self, request, pk, *args, **kwargs):
         relation = self.get_relation(pk)
-        if not can_reveal_plan(relation, request.user):
-            raise PermissionDenied(gettext("This gift plan cannot be revealed."))
+        if (response := self.check_can_reveal(request, relation)) is not None:
+            return response
 
         return render_relation_reveal_form(
             request,
@@ -542,8 +580,8 @@ class RelationRevealView(LoginRequiredMixin, HTMXResponseMixin, View):
 
     def post(self, request, pk, *args, **kwargs):
         relation = self.get_relation(pk)
-        if not can_reveal_plan(relation, request.user):
-            raise PermissionDenied(gettext("This gift plan cannot be revealed."))
+        if (response := self.check_can_reveal(request, relation)) is not None:
+            return response
 
         form = RelationRevealForm(request.POST)
         if not form.is_valid():
