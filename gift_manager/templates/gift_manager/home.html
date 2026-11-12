@@ -61,7 +61,7 @@
                 <span>{% trans "Due soon" %}</span>
             </div>
         </a>
-        <a href="{% url 'gift_manager:gifts' %}" class="dashboard-summary-tile">
+        <a href="{% url 'gift_manager:gifts' %}?unassigned=1" class="dashboard-summary-tile">
             <i class="fas fa-gift" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.unassigned_gifts|default:0 }}</strong>

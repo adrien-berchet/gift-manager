@@ -176,6 +176,14 @@ class PersonManager(models.Manager.from_queryset(PersonQuerySet)):
 class GiftQuerySet(UserPermissionQuerySet):
     """QuerySet for Gift model with additional query methods."""
 
+    def not_in_visible_plans(self, user):
+        """Return the gifts no gift plan visible to ``user`` uses yet ("unassigned" gifts).
+
+        Only plans the user can see count: a hidden surprise plan must not make a gift look
+        planned to its recipient.
+        """
+        return self.exclude(pk__in=Relation.objects.accessible_by(user).values("gift_id"))
+
     def with_tags_annotated(self, user=None):
         """Return gifts with tags information annotated for Grid.js.
 
@@ -312,6 +320,20 @@ class RelationQuerySet(UserPermissionQuerySet):
     def with_related_objects(self):
         """Return relations with all related objects selected."""
         return self.select_related("person", "group", "gift", "event", "status")
+
+    def with_edit_flag(self, user):
+        """Annotate ``can_edit``: whether ``user`` may edit each plan (the edit view's check)."""
+        if user.is_superuser:
+            return self.annotate(can_edit=Value(value=True, output_field=models.BooleanField()))
+        return self.annotate(
+            can_edit=Exists(
+                RelationPermission.objects.filter(
+                    relation=OuterRef("pk"),
+                    user=user,
+                    permission_type__gte=PermissionLevel.EDITOR,
+                )
+            )
+        )
 
     def with_related_object_name(self):
         """Return relations with related_object annotation (person or group name)."""

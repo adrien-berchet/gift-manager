@@ -175,6 +175,7 @@
                         {% endif %}
                     </div>
 
+                    {% if relation.can_edit %}
                     <div class="relation-actions">
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
@@ -184,6 +185,7 @@
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

@@ -193,7 +193,7 @@
             input.dataset.futureDateWarningInit = "true";
 
             const warning = document.createElement("div");
-            warning.className = "form-text text-warning-emphasis future-date-warning";
+            warning.className = "form-text future-date-warning";
             warning.id = `${input.id || input.name}-future-warning`;
             warning.setAttribute("role", "status");
             warning.hidden = true;

@@ -133,7 +133,7 @@
                        data-bs-toggle="tooltip">
                         <i class="fas fa-link" aria-hidden="true"></i>
                     </a>
-                    {% if is_editor %}
+                    {% if relation.can_edit %}
                     <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
                        class="btn btn-outline-primary btn-sm"
                        data-action="edit"
@@ -152,7 +152,7 @@
 
 {% else %}
 <p class="text-muted small">
-    {% trans "No gift plans found for this person." %}
+    {% trans "No gift plans in progress for this person." %}
     {% if is_editor %}
     <a href="{% url 'gift_manager:person_relation_create' pk=person.person_id %}"
        data-action="edit"

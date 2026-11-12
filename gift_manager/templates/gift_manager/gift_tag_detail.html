@@ -46,14 +46,15 @@
 <button class="btn btn-warning mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip"
     title="{% trans 'You do not have permission to edit this object' %}">{% trans "Edit tag" %}</button>
 {% endif %}
-{% if gift_tag.is_public %}
-<button class="btn btn-danger mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip"
-    title="{% trans 'You do not have permission to delete this object' %}">{% trans "Delete tag" %}</button>
+{% if delete_mode == "delete" %}
+<a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}" class="btn btn-danger mb-3">{% trans 'Delete tag' %}</a>
+{% elif delete_mode == "leave" %}
+<a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}?intent=leave_access" class="btn btn-outline-danger mb-3"
+    data-toggle="tooltip" title="{% trans 'It stays shared with the other people who have access.' %}">
+    <i class="fas fa-user-minus me-1" aria-hidden="true"></i>{% trans "Remove my access" %}</a>
 {% else %}
-<a href="{% url 'gift_manager:gift_tag_delete' gift_tag.tag_id %}" class="btn btn-danger mb-3" {% if not is_editor
-    %}data-toggle="tooltip"
-    title="{% trans 'You do not have permission to delete this object so it will only be unshared with you' %}" {% endif
-    %}>{% trans 'Delete tag' %}</a>
+<button class="btn btn-danger mb-3" disabled style="opacity: 0.5;" data-toggle="tooltip"
+    title="{{ delete_disabled_reason }}">{% trans "Delete tag" %}</button>
 {% endif %}
 
 <h2 class="my-4">{% trans "Gifts with this tag" %}</h2>

@@ -68,6 +68,15 @@
         </button>
       {% endif %}
 
+    {% elif button.type == 'leave' %}
+      {# A user who can only view the object removes their own access: it stays shared #}
+      <a href="{{ button.url }}"
+         class="btn btn-outline-danger {% if button.css_class %}{{ button.css_class }}{% endif %}"
+         {% if button.tooltip %}data-toggle="tooltip" title="{{ button.tooltip }}"{% endif %}>
+        <i class="fas fa-user-minus"></i>
+        {{ button.label }}
+      </a>
+
     {% elif button.type == 'custom' %}
       <a href="{{ button.url }}"
          class="btn {{ button.btn_class|default:'btn-secondary' }} {% if button.css_class %}{{ button.css_class }}{% endif %}"

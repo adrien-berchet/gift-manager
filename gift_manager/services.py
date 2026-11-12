@@ -56,6 +56,11 @@ class PermissionService:
     DELETE_RESULT_DELETED = "deleted"
     DELETE_RESULT_UNSHARED = "shared_removed"
 
+    # What "delete" means for a user on an object (see delete_mode_for)
+    DELETE_MODE_DELETE = "delete"
+    DELETE_MODE_LEAVE = "leave"
+    DELETE_MODE_NONE = "none"
+
     @staticmethod
     def get_permission_model(obj) -> type[Model] | None:
         """Get the permission model for the given object."""
@@ -169,6 +174,28 @@ class PermissionService:
 
         if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
             raise PermissionDenied(gettext("At least one owner is required."))
+
+    @classmethod
+    def delete_mode_for(cls, user, obj) -> tuple[str, str | None]:
+        """Return what deleting ``obj`` does for ``user`` and, when nothing, why.
+
+        Mirrors ``delete_or_leave``: while someone else holds access, deleting only removes the
+        user's own access ("leave"); otherwise editors delete the object. Public tags and global
+        objects are visible to everyone, so there is nothing to delete or leave.
+        """
+        if getattr(obj, "is_public", False):
+            return cls.DELETE_MODE_NONE, gettext("A public tag cannot be deleted or left.")
+        if getattr(obj, "is_global", False):
+            return cls.DELETE_MODE_NONE, str(GLOBAL_OBJECT_REMOVAL_ERROR)
+        if cls.has_other_access_holder(obj, user):
+            try:
+                cls.assert_can_leave_object(user, obj)
+            except PermissionDenied as exc:
+                return cls.DELETE_MODE_NONE, str(exc)
+            return cls.DELETE_MODE_LEAVE, None
+        if cls.get_effective_permission(obj, user) >= PermissionLevel.EDITOR:
+            return cls.DELETE_MODE_DELETE, None
+        return cls.DELETE_MODE_NONE, gettext("You do not have permission to delete this object.")
 
     @classmethod
     def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False) -> str:

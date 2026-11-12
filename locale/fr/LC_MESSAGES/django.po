@@ -622,6 +622,63 @@ msgstr "Échéance mise à jour."
 msgid "Gift plan marked as given."
 msgstr "Projet de cadeau marqué comme offert."
 
+#: gift_manager/views/relation.py
+msgid "Gift plan created."
+msgstr "Projet de cadeau créé."
+
+#: gift_manager/views/base.py
+#: gift_manager/templates/gift_manager/confirm_delete.html
+#: gift_manager/templates/gift_manager/includes/delete_confirmation_modal.html
+#: gift_manager/templates/gift_manager/includes/detail_partial.html
+#: gift_manager/templates/gift_manager/gift_tag_detail.html
+msgid "Remove my access"
+msgstr "Retirer mon accès"
+
+#: gift_manager/services.py
+msgid "A public tag cannot be deleted or left."
+msgstr "Une étiquette publique ne peut être ni supprimée ni quittée."
+
+#: gift_manager/views/base.py
+#: gift_manager/templates/gift_manager/includes/detail_partial.html
+#: gift_manager/templates/gift_manager/gift_tag_detail.html
+msgid "It stays shared with the other people who have access."
+msgstr "Il reste partagé avec les autres personnes qui y ont accès."
+
+#: gift_manager/templates/gift_manager/confirm_delete.html
+#: gift_manager/templates/gift_manager/includes/delete_confirmation_modal.html
+msgid ""
+"It stays shared with the other people who have access, and they can share it "
+"with you again."
+msgstr ""
+"Il reste partagé avec les autres personnes qui y ont accès, et elles peuvent "
+"vous le partager à nouveau."
+
+#: gift_manager/templates/gift_manager/confirm_delete.html
+#, python-format
+msgid "You will no longer see this %(entity_type)s: %(entity_name)s."
+msgstr "Vous ne verrez plus cet élément (%(entity_type)s) : %(entity_name)s."
+
+#: gift_manager/templates/gift_manager/includes/delete_confirmation_modal.html
+#, python-format
+msgid "You will no longer see this %(entity_type)s."
+msgstr "Vous ne verrez plus cet élément (%(entity_type)s)."
+
+#: gift_manager/templates/gift_manager/gift_list.html
+msgid "Gifts to show"
+msgstr "Cadeaux à afficher"
+
+#: gift_manager/templates/gift_manager/gift_list.html
+msgid "All gifts"
+msgstr "Tous les cadeaux"
+
+#: gift_manager/templates/gift_manager/gift_list.html
+msgid "Not in a plan yet"
+msgstr "Pas encore dans un projet"
+
+#: gift_manager/templates/gift_manager/includes/relation_cards_partial.html
+msgid "No gift plans in progress for this person."
+msgstr "Aucun projet de cadeau en cours pour cette personne."
+
 #: gift_manager/gift_plan_actions.py:300
 msgid "Gift plan marked as purchased."
 msgstr "Projet de cadeau marqué comme acheté."

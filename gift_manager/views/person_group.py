@@ -45,6 +45,7 @@ from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
+from gift_manager.views.base import delete_action_button
 from gift_manager.views.suggestions import suggestions_url_for
 
 
@@ -491,6 +492,7 @@ class PersonGroupDetailView(BaseDetailView):
             Relation.objects.accessible_by(self.request.user)
             .filter(group=self.object, gift__isnull=False)
             .select_related("gift", "event", "status")
+            .with_edit_flag(self.request.user)
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
         )
@@ -546,20 +548,13 @@ class PersonGroupDetailView(BaseDetailView):
                 if not is_editor
                 else None,
             },
-            {
-                "type": "delete",
-                "url": reverse(
+            delete_action_button(
+                context,
+                url=reverse(
                     "gift_manager:person_group_delete", kwargs={"pk": self.object.group_id}
                 ),
-                "label": _("Delete group"),
-                "enabled": True,
-                "tooltip": _(
-                    "You do not have permission to delete this object so it will only be "
-                    "unshared with you"
-                )
-                if not is_editor
-                else None,
-            },
+                label=_("Delete group"),
+            ),
         ]
         return context
 
