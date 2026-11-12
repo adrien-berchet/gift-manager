@@ -181,6 +181,57 @@
     });
 
     /**
+     * Future date warning
+     * Date inputs with data-future-date-warning accept any day but warn below the field when the
+     * chosen day is after today (e.g. a received gift dated in the future).
+     */
+    FormInitializer.register("futureDateWarning", function (form) {
+        form.querySelectorAll("input[data-future-date-warning]").forEach((input) => {
+            if (input.dataset.futureDateWarningInit) {
+                return;
+            }
+            input.dataset.futureDateWarningInit = "true";
+
+            const warning = document.createElement("div");
+            warning.className = "form-text text-warning-emphasis future-date-warning";
+            warning.id = `${input.id || input.name}-future-warning`;
+            warning.setAttribute("role", "status");
+            warning.hidden = true;
+            const icon = document.createElement("i");
+            icon.className = "fas fa-exclamation-triangle me-1";
+            icon.setAttribute("aria-hidden", "true");
+            warning.append(icon, document.createTextNode(input.dataset.futureDateWarning));
+            (input.closest(".form-field") || input.parentElement).appendChild(warning);
+
+            const today = () => {
+                const now = new Date();
+                const month = String(now.getMonth() + 1).padStart(2, "0");
+                const day = String(now.getDate()).padStart(2, "0");
+                return `${now.getFullYear()}-${month}-${day}`;
+            };
+            const update = () => {
+                // Values are ISO dates (Y-m-d), so string order is date order
+                const isFuture = /^\d{4}-\d{2}-\d{2}$/.test(input.value) && input.value > today();
+                warning.hidden = !isFuture;
+                const describedBy = (input.getAttribute("aria-describedby") || "")
+                    .split(/\s+/)
+                    .filter((token) => token && token !== warning.id);
+                if (isFuture) {
+                    describedBy.push(warning.id);
+                }
+                if (describedBy.length) {
+                    input.setAttribute("aria-describedby", describedBy.join(" "));
+                } else {
+                    input.removeAttribute("aria-describedby");
+                }
+            };
+            input.addEventListener("change", update);
+            input.addEventListener("input", update);
+            update();
+        });
+    });
+
+    /**
      * Event schedule initializer
      * Shows date and recurrence controls based on the selected schedule type.
      */

@@ -4204,6 +4204,34 @@ msgstr "Révélé"
 msgid "Revealed to recipient"
 msgstr "Révélé au destinataire"
 
+#: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:21
+#: gift_manager/views/received_gift.py
+msgid "This gift plan was already revealed."
+msgstr "Ce projet de cadeau a déjà été révélé."
+
+#: gift_manager/received_gifts.py
+#, python-format
+msgid "and %(count)d other"
+msgid_plural "and %(count)d others"
+msgstr[0] "et %(count)d autre"
+msgstr[1] "et %(count)d autres"
+
+#: gift_manager/received_gifts.py
+#, python-format
+msgid "%(count)d other giver"
+msgid_plural "%(count)d other givers"
+msgstr[0] "%(count)d autre donateur"
+msgstr[1] "%(count)d autres donateurs"
+
+#: gift_manager/templates/gift_manager/includes/forms/received_gift_fields.html
+#, python-format
+msgid "From the revealed gift plan: %(givers)s"
+msgstr "D'après le projet de cadeau révélé : %(givers)s"
+
+#: gift_manager/forms.py
+msgid "This date is in the future."
+msgstr "Cette date est dans le futur."
+
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:22
 msgid "Revealed on"
 msgstr "Révélé le"

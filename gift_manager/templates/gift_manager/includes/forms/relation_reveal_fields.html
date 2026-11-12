@@ -38,7 +38,7 @@
 
 <!-- Compact snapshot summary -->
 {% if preview.title or preview.received_on or preview.occasion_text %}
-<div class="border rounded-3 p-2 px-3 mb-3 bg-body-tertiary small">
+<div class="reveal-snapshot-summary border rounded-3 p-2 px-3 mb-3 small">
   {% if preview.title %}
   <div class="fw-semibold">{{ preview.title }}</div>
   {% endif %}
@@ -59,13 +59,8 @@
     {% trans "Adjust snapshot details" %}
   </summary>
   {% include "gift_manager/includes/forms/field.html" with field=form.title %}
-  <div class="row g-2">
-    <div class="col-md-6">
-      {% include "gift_manager/includes/forms/field.html" with field=form.received_on %}
-    </div>
-    <div class="col-md-6">
-      {% include "gift_manager/includes/forms/field.html" with field=form.occasion_text %}
-    </div>
-  </div>
+  {# Stacked like the other fields: the side panel is too narrow for two columns #}
+  {% include "gift_manager/includes/forms/field.html" with field=form.received_on %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.occasion_text %}
   {% include "gift_manager/includes/forms/field.html" with field=form.url %}
 </details>

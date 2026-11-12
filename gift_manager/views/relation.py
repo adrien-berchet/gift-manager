@@ -96,10 +96,53 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import HTMXResponseMixin
+from gift_manager.views.received_gift import ALREADY_REVEALED_PARAM
 from gift_manager.views.received_gift import render_relation_reveal_form
 
 
-class PersonRelationCreateView(BaseCreateView):
+class RevealOfferMixin:
+    """Offer to reveal a gift plan from the save notification when it has just been given."""
+
+    def form_valid(self, form):
+        previous = (
+            Relation.objects.select_related("status").filter(pk=form.instance.pk).first()
+            if form.instance.pk
+            else None
+        )
+        was_given = previous is not None and is_given_status(previous.status)
+        response = super().form_valid(form)
+        if (
+            self.is_htmx
+            and not was_given
+            and is_given_status(self.object.status)
+            and can_reveal_plan(self.object, self.request.user)
+        ):
+            self._attach_reveal_notification_link(response)
+        return response
+
+    def _attach_reveal_notification_link(self, response: HttpResponse) -> None:
+        raw_trigger = response.get("HX-Trigger")
+        try:
+            events = json.loads(raw_trigger) if raw_trigger else {}
+        except ValueError:
+            events = {}
+        if not isinstance(events, dict):
+            events = {}
+        notification = events.get("showNotification")
+        if not isinstance(notification, dict):
+            notification = {
+                "message": self.get_success_message() or gettext("Gift plan marked as given."),
+                "type": "success",
+            }
+        notification["link"] = {
+            "label": gettext("Reveal to recipient"),
+            "url": reverse("gift_manager:relation_reveal", kwargs={"pk": self.object.relation_id}),
+        }
+        events["showNotification"] = notification
+        response["HX-Trigger"] = json.dumps(events)
+
+
+class PersonRelationCreateView(RevealOfferMixin, BaseCreateView):
     model = Relation
     form_class = PersonRelationForm
     context_object_name = "relation"
@@ -136,7 +179,7 @@ class PersonRelationCreateView(BaseCreateView):
         return form
 
 
-class PersonGroupRelationCreateView(BaseCreateView):
+class PersonGroupRelationCreateView(RevealOfferMixin, BaseCreateView):
     model = Relation
     form_class = PersonGroupRelationForm
     context_object_name = "relation"
@@ -175,7 +218,7 @@ class PersonGroupRelationCreateView(BaseCreateView):
         return form
 
 
-class GiftRelationCreateView(BaseCreateView):
+class GiftRelationCreateView(RevealOfferMixin, BaseCreateView):
     model = Relation
     form_class = GiftRelationForm
     context_object_name = "relation"
@@ -718,7 +761,7 @@ class RelationAdvancedListView(RelationListView):
     show_advanced_list = True
 
 
-class RelationCreateView(BaseCreateView):
+class RelationCreateView(RevealOfferMixin, BaseCreateView):
     model = Relation
     form_class = RelationForm
     success_url = reverse_lazy("gift_manager:relations")
@@ -789,7 +832,7 @@ class RelationCreateView(BaseCreateView):
         return context
 
 
-class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
+class RelationUpdateView(RevealOfferMixin, PermissionUpdateMixin, BaseUpdateView):
     model = Relation
     form_class = RelationForm
     pk_name = "relation_id"
@@ -819,42 +862,6 @@ class RelationUpdateView(PermissionUpdateMixin, BaseUpdateView):
             "name"
         )
         return form
-
-    def form_valid(self, form):
-        previous_relation = (
-            Relation.objects.select_related("status").filter(pk=form.instance.pk).first()
-        )
-        was_given = previous_relation is not None and is_given_status(previous_relation.status)
-        response = super().form_valid(form)
-        transitioned_to_given = not was_given and is_given_status(self.object.status)
-        if (
-            self.is_htmx
-            and transitioned_to_given
-            and can_reveal_plan(self.object, self.request.user)
-        ):
-            self._attach_reveal_notification_link(response)
-        return response
-
-    def _attach_reveal_notification_link(self, response: HttpResponse) -> None:
-        raw_trigger = response.get("HX-Trigger")
-        try:
-            events = json.loads(raw_trigger) if raw_trigger else {}
-        except ValueError:
-            events = {}
-        if not isinstance(events, dict):
-            events = {}
-        notification = events.get("showNotification")
-        if not isinstance(notification, dict):
-            notification = {
-                "message": self.get_success_message() or gettext("Gift plan marked as given."),
-                "type": "success",
-            }
-        notification["link"] = {
-            "label": gettext("Reveal to recipient"),
-            "url": reverse("gift_manager:relation_reveal", kwargs={"pk": self.object.relation_id}),
-        }
-        events["showNotification"] = notification
-        response["HX-Trigger"] = json.dumps(events)
 
     def get_success_url(self):
         if self.object.person_id is not None:
@@ -905,6 +912,10 @@ class RelationDetailView(BaseDetailView):
             )
         if self.request.GET.get("surface") == "page":
             context["full_page_detail"] = True
+        # Reached from a stale reveal link: say why the reveal form did not open
+        context["already_revealed_notice"] = bool(
+            self.object.revealed_at and self.request.GET.get(ALREADY_REVEALED_PARAM)
+        )
 
         # Add action buttons
         is_editor = context["is_editor"]

@@ -521,7 +521,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             relationpermission__permission_type=PermissionLevel.OWNER,
         ).select_related("status")
         planned_relations_by_wish = {
-            plan.wish_id: plan for plan in active_plans if not is_abandoned_status(plan.status)
+            plan.wish_id: plan for plan in active_plans if wishlist.reserves_wish(plan)
         }
 
         for w in raw_wishes:

@@ -29,7 +29,6 @@ from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.services import PermissionService
-from gift_manager.statuses import is_abandoned_status
 from gift_manager.views.base import HTMXResponseMixin
 
 
@@ -269,7 +268,7 @@ def annotate_wish_for_giver(wish, viewer, person, viewer_friend_ids=None):
         relationpermission__user=viewer,
         relationpermission__permission_type=PermissionLevel.OWNER,
     ).select_related("status")
-    active_plan = next((p for p in active_plans if not is_abandoned_status(p.status)), None)
+    active_plan = next((p for p in active_plans if wishlist.reserves_wish(p)), None)
     wish.planned_relation = active_plan
     wish.is_planned_by_viewer = active_plan is not None
     return wish

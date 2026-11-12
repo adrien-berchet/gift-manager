@@ -681,3 +681,10 @@ select[multiple] option:checked {
     margin-left: auto;
     padding: 0;
 }
+
+/* Reveal form: summary of the snapshot the recipient will get. The app switches themes with
+   data-theme, which Bootstrap's bg-body-* utilities ignore, so use the theme tokens. */
+.reveal-snapshot-summary {
+    background-color: var(--surface-background);
+    color: var(--text-primary);
+}

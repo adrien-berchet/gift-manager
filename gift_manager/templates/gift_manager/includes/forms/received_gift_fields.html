@@ -53,6 +53,11 @@
     </h3>
   </div>
   <div class="card-body py-2">
+    {% if form.snapshot_givers_summary %}
+    <p class="form-text mt-0 mb-2 received-gift-snapshot-givers">
+      <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% blocktrans with givers=form.snapshot_givers_summary %}From the revealed gift plan: {{ givers }}{% endblocktrans %}
+    </p>
+    {% endif %}
     {# Known people/groups or a free-text name: the radio picks the panel that is shown and kept #}
     <fieldset class="guided-choice" aria-labelledby="received-gift-givers-heading">
       {% if form.giver_contacts_available %}

@@ -1572,6 +1572,10 @@ OCCASION_MODE_EVENT = "event"
 OCCASION_MODE_OTHER = "other"
 
 
+# Received dates accept any day; the form only warns about a future one (form-initializer.js)
+FUTURE_DATE_WARNING = gettext_lazy("This date is in the future.")
+
+
 class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
     """Form to create and update a received gift.
 
@@ -1640,7 +1644,10 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
             ),
             "description": forms.Textarea(attrs={"rows": 3}),
             "url": forms.URLInput(attrs={"class": "form-input-text", "placeholder": "https://"}),
-            "received_on": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "received_on": forms.DateInput(
+                attrs={"type": "date", "data-future-date-warning": FUTURE_DATE_WARNING},
+                format="%Y-%m-%d",
+            ),
             "event": forms.Select(attrs={"class": "form-select"}),
             "wish": forms.Select(attrs={"class": "form-select"}),
             "occasion_text": forms.TextInput(
@@ -1728,6 +1735,7 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         self._giver_person_count = len(persons)
         self.fields["givers"].choices = person_group_choices(persons, groups)
         self.giver_contacts_available = bool(self.giver_objects)
+        self._init_snapshot_givers()
 
         if not self.giver_contacts_available or (
             self.instance.pk and not current and self.instance.giver_label
@@ -1736,6 +1744,20 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         else:
             mode = self.initial.get("giver_mode", GIVER_MODE_CONTACTS)
         self.initial["giver_mode"] = mode
+
+    def _init_snapshot_givers(self) -> None:
+        """Summarise the plan owners kept on a revealed gift; they count as its givers."""
+        from gift_manager.received_gifts import annotate_snapshot_givers  # noqa: PLC0415
+        from gift_manager.received_gifts import snapshot_givers_summary  # noqa: PLC0415
+
+        self.has_snapshot_givers = bool(
+            self.instance.pk and self.user and self.instance.giver_accounts.exists()
+        )
+        self.snapshot_givers_summary = ""
+        if self.has_snapshot_givers:
+            # A free-text giver only replaces the display: the hint still lists the plan givers
+            annotate_snapshot_givers(self.user, [self.instance], ignore_label=True)
+            self.snapshot_givers_summary = snapshot_givers_summary(self.instance)
 
     def _init_occasion(self) -> None:
         self.event_choices_available = self.fields["event"].queryset.exists()
@@ -1812,6 +1834,8 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
             # Not posted: infer it from what is filled
             mode = GIVER_MODE_CONTACTS if givers else GIVER_MODE_OTHER if label else None
         if mode is None:
+            if self.has_snapshot_givers:
+                return
             if "givers" in cleaned_data:  # an invalid choice already reported its own error
                 raise DjangoValidationError(
                     gettext(
@@ -1825,13 +1849,16 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
         if mode == GIVER_MODE_CONTACTS:
             self._errors.pop("giver_label", None)
             cleaned_data["giver_label"] = ""
-            if not givers and "givers" in cleaned_data:
+            if not givers and "givers" in cleaned_data and not self.has_snapshot_givers:
                 self.add_error("givers", gettext("Select at least one person or group."))
         else:
             self._errors.pop("givers", None)
             cleaned_data["givers"] = []
             cleaned_data["giver_label"] = label
-            if not label and "giver_label" in cleaned_data:
+            # Without contacts, "other" is the only (hidden) mode: a revealed gift keeps its
+            # plan givers, so a name is only needed when the user chose "Someone else"
+            name_optional = self.has_snapshot_givers and not self.giver_contacts_available
+            if not label and "giver_label" in cleaned_data and not name_optional:
                 self.add_error("giver_label", gettext("Enter who gave this gift."))
 
     def _clean_occasion(self, cleaned_data) -> None:
@@ -1847,8 +1874,23 @@ class ReceivedGiftForm(BaseFormMixin, forms.ModelForm):
     def _save_m2m(self) -> None:
         super()._save_m2m()
         selected = [self.giver_objects[value] for value in self.cleaned_data.get("givers", [])]
-        self.instance.giver_persons.set([obj for obj in selected if isinstance(obj, Person)])
+        selected_persons = [obj for obj in selected if isinstance(obj, Person)]
+        # Unticking a contact means that person did not give it; a free-text giver only
+        # replaces the display, so the plan givers are kept (regift warnings, AI context)
+        removed_accounts = (
+            {
+                person.account_id
+                for person in self.instance.giver_persons.all()
+                if person.account_id and person not in selected_persons
+            }
+            if self.cleaned_data.get("giver_mode") == GIVER_MODE_CONTACTS
+            else set()
+        )
+        self.instance.giver_persons.set(selected_persons)
         self.instance.giver_groups.set([obj for obj in selected if isinstance(obj, PersonGroup)])
+        if removed_accounts:
+            # A revealed gift's plan owner whose contact was unticked is no longer a giver
+            self.instance.giver_accounts.remove(*removed_accounts)
 
 
 class RelationRevealForm(BaseFormMixin, forms.Form):
@@ -1862,7 +1904,10 @@ class RelationRevealForm(BaseFormMixin, forms.Form):
     received_on = forms.DateField(
         label=gettext_lazy("Date given"),
         required=False,
-        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        widget=forms.DateInput(
+            attrs={"type": "date", "data-future-date-warning": FUTURE_DATE_WARNING},
+            format="%Y-%m-%d",
+        ),
     )
     occasion_text = forms.CharField(
         label=gettext_lazy("Occasion"),
@@ -1874,7 +1919,6 @@ class RelationRevealForm(BaseFormMixin, forms.Form):
         max_length=2000,
         required=False,
         assume_scheme="https",
-        validators=[validate_http_url],
         widget=forms.URLInput(attrs={"class": "form-input-text", "placeholder": "https://"}),
         help_text=gettext_lazy("Product or gift link for the recipient's reference."),
     )
@@ -1889,6 +1933,13 @@ class RelationRevealForm(BaseFormMixin, forms.Form):
             }
         ),
     )
+
+    def clean_url(self) -> str:
+        """Only accept http(s) links, checked once the link is a valid URL (a single error)."""
+        url = self.cleaned_data.get("url") or ""
+        if url:
+            validate_http_url(url)
+        return url
 
     def clean_title(self) -> str:
         """Reject whitespace-only reveal titles."""
