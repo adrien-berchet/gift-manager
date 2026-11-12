@@ -196,3 +196,56 @@ Without a Referer, Cancel links to the literal string `gift_manager:user_account
   - gift "QA Board Game" with the Books tag.
 - **Deleted:** plan `a5818b58-8731-4ca6-89f7-20f03f1c14c9` and Alice's received gift for
   QA Headphones.
+
+## Second pass (after commits 2efed5d and 806e9fd)
+
+Method: link crawl as testuser, alice and bob (English and French), cross-user access checks
+between alice and bob, then browser scenarios with Playwright against the live Docker app
+(the Chrome extension stopped delivering clicks during this pass).
+
+### All decided fixes verified
+
+Reveal from a plan created as Given (toast stays open), readable reveal summary in dark mode,
+stacked snapshot fields without sideways scrolling, future-date warning, one error for an unsafe
+link, co-givers shown as "testuser and 1 other" (no unknown name), editing a revealed gift
+without contacts, wish reopened by the recipient becoming "Available" with Claim and Plan
+again, person page refreshing after a side-panel save, stale reveal link redirecting to the plan
+with "This gift plan was already revealed.", Birthday event locked for the superuser (detail,
+grid, edit URL 403), Household shown with 2 members on both pages, account Cancel links to the
+profile, French "En attente de réaction" section, no horizontal overflow at 390 px. No 500 in
+the crawl and no cross-user data leak.
+
+### New findings
+
+| ID | Severity | Finding |
+|----|----------|---------|
+| N1 | Medium | The future-date warning is unreadable in dark mode (contrast 1.83:1): `text-warning-emphasis` follows Bootstrap's `data-bs-theme`, not the app's `data-theme` (introduced by the R6 fix). |
+| N2 | Medium | For a viewer (bob on Mom), the Delete button on person, gift and event pages leads to a bare 403, although its tooltip says the object "will only be unshared with you". The leave flow only works with `?intent=leave_access`, and its confirmation page still says "Are you sure you want to delete this item?". |
+| N3 | Low | Plan lists on event and gift pages show Edit links to viewers, which lead to a 403. |
+| N4 | Low | The "Needs attention" tile also counts unassigned gifts: it shows an orange "2" while the section below says "No gift plans need attention." |
+| N5 | Low | On a recipient's wishlist, the giver still sees "Claimed by you · Planned" after marking the plan Given (until it is revealed). |
+| N6 | Low | The person page says "No gift plans found for this person. Add one?" when the person has given plans (only the in-progress list is empty). |
+| N7 | Low | Creating a plan directly as Given shows "Gift plan marked as given." instead of a creation message. |
+
+### Decisions on the second pass
+
+| Finding | Decision |
+|---------|----------|
+| N1 | Fix the warning colour (regression from R6). |
+| N2 | A viewer's Delete becomes "Remove my access". |
+| N4 | Unassigned gifts are ideas kept for later, not attention items; the Gifts page gets a "Not in a plan yet" view, linked from the dashboard tile. |
+| N3, N5-N7 | Fix. |
+
+### Notes from the review of the N1-N7 fixes
+
+- "Delete" now always does what the button says: while someone else holds access, deleting
+  only removes the user's own access (this was already the server rule for editors and
+  co-owners too), so those users also see "Remove my access".
+- **Open question:** the only owner of an object shared with others cannot delete it (the
+  server refuses with "At least one owner is required."). The button is now disabled with that
+  reason instead of failing after confirmation. Should the sole owner be able to delete it for
+  everyone, or hand ownership over first?
+- Known limitations, left as they are: a user who has both a direct share and an inherited
+  access to a group keeps seeing it after "Remove my access"; grid rows and bulk delete still
+  offer no "Remove my access" for viewers; on every grid page, search and filters keep their
+  initial data after a background refresh (pre-existing, not specific to the new gift filter).
