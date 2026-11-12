@@ -86,6 +86,9 @@ status and notes to reflect the move.
 | 0032 | Managed Wishlists For Children And Dependents | Proposed | Sharing | Wishlists anchored to owned Person records with query isolation in WishQuerySet and parent-coordination claim visibility rules. |
 | 0033 | Read-Only Guest Wishlist Links | Proposed | Sharing | Unguessable token links rendering all active wishes uniformly without claim state to avoid owner surprise leaks, with Referrer-Policy protection. |
 | 0034 | Secret Santa Draws For Groups | Considering | Gift Plans | Automated holiday draw pairings with exclusion rules, exchange wishlist grants, and dashboard delivery, leaving anonymous Q&A to a later phase. |
+| 0035 | Search Received Gifts And Wishes | Proposed | Search | Global search returns the user's own received gifts and wishes, scoped with `for_user` / `for_wisher`. From the 2026-11-12 QA pass. |
+| 0036 | Filter Received Gifts By Free-Text Giver | Proposed | Gift Plans | Giver filter also matches free-text and revealed giver names, not only address-book people and groups. From the 2026-11-12 QA pass. |
+| 0037 | Consistent Price Formatting | Proposed | i18n | One locale-aware price format on the gifts grid and server-rendered pages ("€24.50" vs "24.50 €" today). From the 2026-11-12 QA pass. |
 
 
 ## Working With Ideas
