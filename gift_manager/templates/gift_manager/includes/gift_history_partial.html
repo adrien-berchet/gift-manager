@@ -19,7 +19,7 @@
                        class="fw-semibold"
                        data-action="detail"
                        data-detail-url="{% url 'gift_manager:relation_detail' relation.relation_id %}">{{ relation.gift.name }}</a>
-                    <span class="badge bg-info">{{ relation.status }}</span>
+                    <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge bg-info">{{ relation.status }}</span></a>
                     {% if relation.revealed_at %}
                     <span class="badge bg-success-subtle text-success-emphasis border"
                           title="{% trans 'This gift plan has been revealed to the recipient' %}">

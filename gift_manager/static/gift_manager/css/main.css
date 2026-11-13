@@ -688,3 +688,14 @@ body.has-fixed-action-bar {
         font-size: 0.875rem;
     }
 }
+
+/* A status badge links to the page listing every gift plan with that status */
+.status-link {
+    text-decoration: none;
+}
+
+.status-link:hover > *,
+.status-link:focus-visible > * {
+    filter: brightness(0.92);
+    text-decoration: underline;
+}
