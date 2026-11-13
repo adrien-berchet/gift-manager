@@ -101,7 +101,7 @@
                 </div>
             </div>
             {% endif %}
-            {% if object.due_date %}
+            {% if object.due_date and object.due_date != object.given_on %}
             <div class="col-md-6">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Due Date" %}</label>
