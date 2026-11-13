@@ -89,6 +89,7 @@ status and notes to reflect the move.
 | 0035 | Search Received Gifts And Wishes | Proposed | Search | Global search returns the user's own received gifts and wishes, scoped with `for_user` / `for_wisher`. From the 2026-11-12 QA pass. |
 | 0036 | Filter Received Gifts By Free-Text Giver | Proposed | Gift Plans | Giver filter also matches free-text and revealed giver names, not only address-book people and groups. From the 2026-11-12 QA pass. |
 | 0037 | Consistent Price Formatting | Proposed | i18n | One locale-aware price format on the gifts grid and server-rendered pages ("€24.50" vs "24.50 €" today). From the 2026-11-12 QA pass. |
+| 0038 | Delete For Everyone With Copies For Dependent Plans | Proposed | Sharing | The only owner of a shared object deletes it for everyone; owners of dependent plans keep a copy, so no plan is lost and no surprise is revealed. |
 
 
 ## Working With Ideas
