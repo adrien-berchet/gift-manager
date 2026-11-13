@@ -94,7 +94,7 @@
                         <a href="{% url 'gift_manager:relation_status_detail' object.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="gift-plan-status-badge {{ gift_plan_status_class }}">
                             {{ object.status }}
                         </span></a>
-                        {% if object.is_surprise %}
+                        {% if object.is_surprise and not object.revealed_at %}
                         <span class="badge bg-warning text-dark ms-2"><i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Surprise" %}</span>
                         {% endif %}
                     </div>
@@ -113,7 +113,7 @@
                     </div>
                 </div>
             </div>
-            {% else %}
+            {% elif not gift_plan_is_given %}
             <div class="col-md-6">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Due Date" %}</label>
@@ -121,6 +121,19 @@
                         <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
                             <i class="fas fa-calendar-plus" aria-hidden="true"></i>
                             {% trans "No date" %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.given_on %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Given on" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-due-badge gift-plan-due-badge--completed">
+                            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                            {{ object.given_on|date:"DATE_FORMAT" }}
                         </span>
                     </div>
                 </div>

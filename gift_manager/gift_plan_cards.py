@@ -21,6 +21,7 @@ from gift_manager.services import PermissionService
 from gift_manager.statuses import GIVEN_STATUS_SLUGS
 from gift_manager.statuses import can_rate_status
 from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_given_status
 from gift_manager.statuses import is_idea_status
 from gift_manager.statuses import is_terminal_status
 from gift_manager.statuses import relation_status_slug
@@ -52,6 +53,7 @@ def build_gift_plan_card(
         "relation": relation,
         "urgency_key": urgency_key,
         "status_class": gift_plan_status_class(relation.status),
+        "is_given": is_given_status(relation.status),
         "detail_url": reverse("gift_manager:relation_detail", kwargs={"pk": relation.relation_id}),
         "edit_url": reverse("gift_manager:relation_edit", kwargs={"pk": relation.relation_id}),
         "duplicate_url": duplicate_plan_url(relation),

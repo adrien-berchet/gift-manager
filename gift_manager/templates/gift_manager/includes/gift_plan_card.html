@@ -12,7 +12,14 @@
             <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
         </span>
         {% endif %}
-        {% if card.relation.due_date %}
+        {% if card.is_given %}
+        {% if card.relation.given_on %}
+        <span class="gift-plan-due-badge gift-plan-due-badge--completed">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            {% blocktrans with date=card.relation.given_on|date:"DATE_FORMAT" %}Given on {{ date }}{% endblocktrans %}
+        </span>
+        {% endif %}
+        {% elif card.relation.due_date %}
         <span class="gift-plan-due-badge gift-plan-due-badge--{{ card.urgency_key }}">
             <i class="fas fa-calendar-day" aria-hidden="true"></i>
             {{ card.relation.due_date|date:"DATE_FORMAT" }}
