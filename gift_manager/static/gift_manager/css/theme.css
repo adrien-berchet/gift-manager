@@ -27,18 +27,22 @@
     /* Semantic Colors */
     --color-success: #10b981;
     --color-success-hover: #059669;
+    --color-success-text: #047857; /* readable on --color-success-light */
     --color-success-light: #d1fae5;
 
     --color-danger: #ef4444;
     --color-danger-hover: #dc2626;
+    --color-danger-text: #b91c1c; /* readable on --color-danger-light */
     --color-danger-light: #fee2e2;
 
     --color-warning: #f59e0b;
     --color-warning-hover: #d97706;
+    --color-warning-text: #92400e; /* readable on --color-warning-light */
     --color-warning-light: #fef3c7;
 
     --color-info: #3b82f6;
     --color-info-hover: #2563eb;
+    --color-info-text: #1d4ed8; /* readable on --color-info-light */
     --color-info-light: #dbeafe;
 
     /* Neutral Colors */
@@ -109,8 +113,8 @@
     --field-tone-price: #a16207;
     --field-tone-tags: #0f766e;
     --field-tone-event: #be185d;
-    --field-tone-person: var(--color-info-hover);
-    --field-tone-group: var(--color-success-hover);
+    --field-tone-person: var(--color-info-text);
+    --field-tone-group: var(--color-success-text);
     --field-tone-due-date: #c2410c;
 
     /* Spacing Scale */
@@ -184,18 +188,22 @@
 
     --color-success: #6ee7b7;
     --color-success-hover: #a7f3d0;
+    --color-success-text: #a7f3d0;
     --color-success-light: #064e3b;
 
     --color-danger: #fca5a5;
     --color-danger-hover: #fecaca;
+    --color-danger-text: #fecaca;
     --color-danger-light: #7f1d1d;
 
     --color-warning: #fcd34d;
     --color-warning-hover: #fde68a;
+    --color-warning-text: #fde68a;
     --color-warning-light: #78350f;
 
     --color-info: #93c5fd;
     --color-info-hover: #bfdbfe;
+    --color-info-text: #bfdbfe;
     --color-info-light: #1e3a8a;
 
     /* Inverted gray scale for dark mode */
@@ -3905,4 +3913,85 @@ h4, h5, h6 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+/* ==========================================================================
+   Bootstrap colour utilities under the app theme
+   The app switches theme with data-theme and never sets data-bs-theme, so Bootstrap's
+   "emphasis" and "subtle" utilities would keep their light values on dark surfaces.
+   Give their variables the Bootstrap dark values here, instead of enabling Bootstrap's own
+   dark mode, which would restyle every component and fight the rules above.
+   ========================================================================== */
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bs-emphasis-color: #ffffff;
+    --bs-emphasis-color-rgb: 255, 255, 255;
+    --bs-secondary-bg: #334155;
+    --bs-tertiary-bg: #1e293b;
+    --bs-primary-text-emphasis: #a5b4fc;
+    --bs-secondary-text-emphasis: #cbd5e1;
+    --bs-success-text-emphasis: #6ee7b7;
+    --bs-info-text-emphasis: #7dd3fc;
+    --bs-warning-text-emphasis: #fcd34d;
+    --bs-danger-text-emphasis: #fca5a5;
+    --bs-light-text-emphasis: #f8fafc;
+    --bs-dark-text-emphasis: #e2e8f0;
+    --bs-primary-bg-subtle: #1e1b4b;
+    --bs-secondary-bg-subtle: #1e293b;
+    --bs-success-bg-subtle: #064e3b;
+    --bs-info-bg-subtle: #0c4a6e;
+    --bs-warning-bg-subtle: #78350f;
+    --bs-danger-bg-subtle: #7f1d1d;
+    --bs-light-bg-subtle: #334155;
+    --bs-dark-bg-subtle: #1e293b;
+    --bs-primary-border-subtle: #3730a3;
+    --bs-secondary-border-subtle: #475569;
+    --bs-success-border-subtle: #047857;
+    --bs-info-border-subtle: #0369a1;
+    --bs-warning-border-subtle: #b45309;
+    --bs-danger-border-subtle: #b91c1c;
+    --bs-light-border-subtle: #475569;
+    --bs-dark-border-subtle: #334155;
+}
+
+/* text-dark is a fixed colour: keep it readable on the badges that use it */
+.badge.bg-info.text-dark {
+    color: #111827 !important;
+}
+
+[data-theme="dark"] .badge.bg-info.text-dark {
+    --bs-info-rgb: 3, 105, 161;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .badge.bg-light.text-dark {
+    color: var(--text-primary) !important;
+}
+
+/* "Shared with" permission label: an outlined badge (bg-outline-secondary is not Bootstrap's) */
+.badge.bg-outline-secondary {
+    border: 1px solid var(--border-color-hover);
+    background-color: transparent;
+    color: var(--text-secondary);
+}
+
+/* White headings on a primary card header need a darker indigo than the brand colour */
+.card-header.bg-primary.text-white {
+    --bs-primary-rgb: 67, 56, 202;
+}
+
+.card-header.bg-primary.text-white :is(h1, h2, h3, h4, h5, h6) {
+    color: #ffffff;
+}
+
+/* Collapsible section titles of the share page follow the text colour, not Bootstrap's blue */
+#shareAccordion .card-header .btn-link {
+    color: var(--text-primary);
+}
+
+/* Tag badges are links inside grid cells: keep the badge text colour, not the dark link colour */
+[data-theme="dark"] .gridjs-td a.badge:not(.btn),
+[data-theme="dark"] .gridjs-td a.badge:not(.btn):hover {
+    color: #ffffff;
 }

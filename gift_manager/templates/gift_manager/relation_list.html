@@ -51,7 +51,7 @@
                 <strong>{{ workspace_summary.total }}</strong>
                 <span>{% trans "Total" %}</span>
             </span>
-            <span class="gift-plan-summary-item gift-plan-summary-item--attention">
+            <span class="gift-plan-summary-item{% if workspace_summary.attention %} gift-plan-summary-item--attention{% endif %}">
                 <strong>{{ workspace_summary.attention }}</strong>
                 <span>{% trans "Needs attention" %}</span>
             </span>
