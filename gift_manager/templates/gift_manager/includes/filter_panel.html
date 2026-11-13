@@ -40,7 +40,7 @@
         </div>
         {# View toggle section #}
         <div class="filter-section view-section">
-            <span class="filter-section-label" id="{{ grid_id }}-view-label">{% trans "View" %}</span>
+            <span class="filter-section-label" id="{{ grid_id }}-view-label">{% trans "View" context "list display mode" %}</span>
             <div class="view-toggle-options" id="{{ grid_id }}-view-options" role="group" aria-labelledby="{{ grid_id }}-view-label">
                 <button type="button" class="view-option active" data-view="list" title="{% trans 'List view' %}" aria-pressed="true">
                     <i class="fas fa-list" aria-hidden="true"></i>

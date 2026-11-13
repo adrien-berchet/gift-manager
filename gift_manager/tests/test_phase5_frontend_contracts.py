@@ -561,7 +561,7 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert "background-color: var(--gift-plan-action-secondary-bg)" in secondary_button_styles
     assert "color: var(--gift-plan-action-secondary-text)" in secondary_button_styles
     assert "background-color: var(--color-danger-light)" in missing_badge_styles
-    assert "color: var(--color-danger-hover)" in missing_badge_styles
+    assert "color: var(--color-danger-text)" in missing_badge_styles
     assert "rgba(239, 68, 68, 0.35)" in missing_badge_styles
     assert "var(--color-danger)" in missing_row_marker_styles
 

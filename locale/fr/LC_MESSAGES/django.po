@@ -6393,13 +6393,52 @@ msgstr "Modifier les détails de l'instantané"
 msgid "Save & reveal to recipient…"
 msgstr "Enregistrer et révéler au destinataire…"
 
-#~ msgid "No"
-#~ msgstr "Non"
-
-#~ msgid "Yes"
-#~ msgstr "Oui"
-
 #, python-brace-format
+
+msgid "See all gift plans with this status"
+msgstr "Voir tous les projets de cadeaux ayant ce statut"
+
+msgid "Given on"
+msgstr "Offert le"
+
+#, python-format
+msgid "Given on %(date)s"
+msgstr "Offert le %(date)s"
+
+msgid "Filters"
+msgstr "Filtres"
+
+msgid "Filter…"
+msgstr "Filtrer…"
+
+msgid "From"
+msgstr "Du"
+
+msgid "To"
+msgstr "Au"
+
+msgid "Min"
+msgstr "Min"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "Yes"
+msgstr "Oui"
+
+msgid "No"
+msgstr "Non"
+
+msgid "No results match your current filters"
+msgstr "Aucun résultat ne correspond à vos filtres"
+
+msgid "Shift+click or enable Multi mode to add as secondary sort"
+msgstr "Maj+clic ou mode Multi pour ajouter un tri secondaire"
+
+msgctxt "list display mode"
+msgid "View"
+msgstr "Affichage"
+
 #~ msgid "Please correct {count} error{s} in the form."
 #~ msgstr "Veuillez corriger {count} erreur{s} dans le formulaire."
 

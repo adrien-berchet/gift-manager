@@ -141,12 +141,12 @@ def test_action_bar_matches_the_dashboard_card(
     page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
     dashboard_details = page.locator('.gift-plan-card-utility-action[data-action="detail"]').first
     expect(dashboard_details).to_be_visible()
-    page.wait_for_timeout(300)  # theme transition
+    page.wait_for_timeout(700)  # theme transition (inherited colours chain their transitions)
     dashboard_style = dashboard_details.evaluate(STYLE_JS)
 
     rows = _open_list(page, live_server, "relations/advanced", "relation-grid", view)
     page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
-    page.wait_for_timeout(300)
+    page.wait_for_timeout(700)
     bar = rows.filter(has_text="Parity plan gift").locator(".grid-action-bar")
     details = bar.locator('[data-action="detail"]')
     duplicate = bar.locator('[data-action-type="duplicate"]')

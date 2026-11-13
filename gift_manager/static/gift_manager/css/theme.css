@@ -3237,6 +3237,12 @@ h4, h5, h6 {
     border: 1px solid var(--border-color);
 }
 
+/* Grid.js defaults to a fixed layout with rounded pixel widths per column, whose sum can
+   exceed the wrapper by 1px and show a horizontal scrollbar under a table that fits */
+.gridjs-wrapper > .gridjs-table {
+    table-layout: auto;
+}
+
 [data-view="list"] .gridjs-table {
     display: table;
     width: 100%;

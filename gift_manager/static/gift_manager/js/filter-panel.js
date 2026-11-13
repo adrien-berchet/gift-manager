@@ -204,6 +204,9 @@
                 // Skip non-sortable columns
                 if (col.sort === false) return false;
 
+                // Skip the bulk selection column: its id is not a label
+                if (col.id === 'checkbox') return false;
+
                 const name = typeof col === 'object' ? (col.name || col.id || '') : col;
 
                 // Skip Actions column
@@ -237,7 +240,9 @@
                 btn.type = 'button';
                 btn.className = 'sort-option';
                 btn.dataset.columnIndex = visibleIndex;
-                btn.title = colName + ' (Shift+click or enable Multi mode to add as secondary sort)';
+                const sortHint = (window.gridTranslations && window.gridTranslations.sortHint)
+                    || 'Shift+click or enable Multi mode to add as secondary sort';
+                btn.title = colName + ' (' + sortHint + ')';
                 btn.setAttribute('aria-pressed', 'false');
                 btn.innerHTML = '<span>' + colName + '</span>' +
                     '<span class="sort-direction"><i class="fas fa-sort" aria-hidden="true"></i></span>';
