@@ -27,6 +27,8 @@ Useful references:
   `skills/add-idea/SKILL.md`.
 - When asked to review a branch, PR, or merge candidate, read and follow
   `skills/deep-code-review/SKILL.md`.
+- When asked to QA the app, test it in a browser, or run a pre-release check, read and
+  follow `skills/qa-pass/SKILL.md`.
 - Agent-specific discovery entries may link to a canonical skill. Keep the
   canonical skill as the single source of truth rather than copying it.
 
