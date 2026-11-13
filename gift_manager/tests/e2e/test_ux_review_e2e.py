@@ -100,3 +100,28 @@ def test_viewer_removes_their_access_from_a_grid_row(page: Page, live_server, se
     assert PermissionService.get_permission(mom, bob) == PermissionLevel.NONE
     mom.refresh_from_db()
     assert PermissionService.get_permission(mom, seed_data_e2e.alice) == PermissionLevel.OWNER
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_new_gift_plan_creates_the_gift_it_names(page: Page, live_server, seed_data_e2e):
+    from gift_manager.models import Gift
+    from gift_manager.models import Relation
+
+    login_as(page, live_server.url, "alice")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:relations')}")
+    page.get_by_role("link", name="Create new gift plan").click()
+
+    panel = page.locator(".offcanvas.show")
+    expect(panel.locator('[name="new_gift_name"]')).to_be_visible()
+    sister = seed_data_e2e.persons["sister"]
+    panel.locator('[name="recipient"]').select_option(f"person:{sister.person_id}")
+    panel.locator('[name="new_gift_name"]').fill("Kite")
+    panel.get_by_role("button", name="Save").click()
+
+    # The workspace shows the new plan without a reload
+    expect(page.locator(".gift-plan-card", has_text="Kite")).to_be_visible()
+    gift = Gift.objects.get(name="Kite")
+    plan = Relation.objects.get(gift=gift)
+    assert plan.person == sister
+    assert gift in Gift.objects.accessible_by(seed_data_e2e.alice)

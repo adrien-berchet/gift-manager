@@ -6439,6 +6439,18 @@ msgctxt "list display mode"
 msgid "View"
 msgstr "Affichage"
 
+msgid "Or a new gift"
+msgstr "Ou un nouveau cadeau"
+
+msgid "Name a gift that is not in your list yet: it is added to it."
+msgstr "Nommez un cadeau qui n'est pas encore dans votre liste : il y sera ajouté."
+
+msgid "Choose an existing gift or name a new one, not both."
+msgstr "Choisissez un cadeau existant ou nommez-en un nouveau, pas les deux."
+
+msgid "Choose a gift or name a new one."
+msgstr "Choisissez un cadeau ou nommez-en un nouveau."
+
 #~ msgid "Please correct {count} error{s} in the form."
 #~ msgstr "Veuillez corriger {count} erreur{s} dans le formulaire."
 
