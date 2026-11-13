@@ -63,9 +63,7 @@ def get_person_grid_column_names():
     }
 
 
-def get_person_grid_queryset(
-    user, column_names=None, accessible_groups=None, *, exclude_account=None
-):
+def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
     """Return person rows formatted for the shared Grid.js management view."""
     from django.db import connection
 
@@ -84,8 +82,6 @@ def get_person_grid_queryset(
             "account__username",
         )
     )
-    if exclude_account is not None:
-        base_queryset = base_queryset.exclude(account=exclude_account)
 
     if connection.vendor == "postgresql":
         return base_queryset.annotate(

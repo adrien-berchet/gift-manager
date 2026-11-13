@@ -224,23 +224,38 @@ def test_groups_are_nested_under_recipients_in_primary_navigation(client, url_na
 
 
 @pytest.mark.django_db
-def test_recipient_list_excludes_own_person_record(client):
+def test_recipient_list_includes_own_person_record(client):
+    """The user's own person is a recipient like any other, marked "This is you"."""
     user = UserFactory()
     client.force_login(user)
 
     friend_person = PersonFactory(first_name="Ada", family_name="Lovelace", owner=user)
     own_person = PersonFactory(first_name="My", family_name="Self", owner=user, account=user)
 
-    # 1. "all" view excludes own person record
     response_all = client.get(reverse("gift_manager:recipients"))
     assert response_all.status_code == 200
-    recipient_keys = [r["key"] for r in response_all.context["recipients"]]
-    assert f"person:{friend_person.person_id}" in recipient_keys
-    assert f"person:{own_person.person_id}" not in recipient_keys
+    recipients = {r["key"]: r for r in response_all.context["recipients"]}
+    assert f"person:{friend_person.person_id}" in recipients
+    own = recipients[f"person:{own_person.person_id}"]
+    assert own["link_label"] == "This is you"
+    # Gift plans are hidden for one's own record, so the row offers no "New Gift Plan"
+    assert own["gift_plan_url"] is None
+    assert recipients[f"person:{friend_person.person_id}"]["link_label"] == ""
+    assert response_all.context["person_count"] == 2
+    assert response_all.context["recipient_count"] == 2
+    content = response_all.content.decode("utf-8")
+    assert "This is you" in content
+    own_plan_url = reverse(
+        "gift_manager:person_relation_create", kwargs={"pk": own_person.person_id}
+    )
+    assert own_plan_url not in content
 
-    # 2. "people" view excludes own person record
     response_people = client.get(f"{reverse('gift_manager:recipients')}?view=people")
     assert response_people.status_code == 200
     grid_person_ids = [str(row["person_id"]) for row in response_people.context["person_grid_data"]]
     assert str(friend_person.person_id) in grid_person_ids
-    assert str(own_person.person_id) not in grid_person_ids
+    assert str(own_person.person_id) in grid_person_ids
+    assert response_people.context["person_count"] == 2
+
+    response_groups = client.get(f"{reverse('gift_manager:recipients')}?view=groups")
+    assert response_groups.context["person_count"] == 2
