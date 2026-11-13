@@ -55,6 +55,15 @@ class TestRelationForm:
         assert plan.gift == gift
         assert PermissionService.get_permission(gift, user) == PermissionLevel.OWNER
 
+    def test_saving_twice_creates_the_gift_once(self, user, person, status):
+        form = RelationForm(_data(person, status, new_gift_name="Telescope"), user=user)
+        assert form.is_valid(), form.errors
+
+        form.save(commit=False)
+        form.save()
+
+        assert Gift.objects.filter(name="Telescope").count() == 1
+
     def test_an_existing_gift_still_works_and_creates_nothing(self, user, person, status):
         gift = GiftFactory(name="Book", shared_with=[user])
 

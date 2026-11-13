@@ -96,6 +96,20 @@ def test_detail_page_keeps_the_due_date_of_a_given_plan(client, user):
 
 
 @pytest.mark.django_db
+def test_detail_page_does_not_repeat_a_given_date_taken_from_the_due_date(client, user):
+    relation = _plan(user, "Given", due_date=date(2026, 3, 1))
+    _set_status_date(relation, None)
+
+    content = client.get(
+        reverse("gift_manager:relation_detail", args=[relation.relation_id])
+    ).content.decode()
+
+    assert "Given on" in content
+    assert "Due Date" not in content
+    assert content.count("March 1, 2026") == 1
+
+
+@pytest.mark.django_db
 def test_detail_page_of_a_plan_in_progress_still_asks_for_a_date(client, user):
     relation = _plan(user, "Planned")
 

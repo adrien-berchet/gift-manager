@@ -3971,7 +3971,9 @@ h4, h5, h6 {
     color: #ffffff !important;
 }
 
+/* bg-light is not themed everywhere: set both colours so the pair stays readable */
 [data-theme="dark"] .badge.bg-light.text-dark {
+    background-color: #334155 !important;
     color: var(--text-primary) !important;
 }
 

@@ -55,8 +55,7 @@
                 "{{ relation.relation_id }}",
                 "{% url 'gift_manager:relation_detail' relation.relation_id %}",
                 "{% url 'gift_manager:relation_edit' relation.relation_id %}",
-                "{% url 'gift_manager:relation_delete' relation.relation_id %}",
-                {% if relation.is_group_targeted %}false{% else %} true{% endif %}
+                "{% url 'gift_manager:relation_delete' relation.relation_id %}"
             ],
             {% endfor %}
         ];
@@ -131,7 +130,6 @@
         { name: 'relation_detail_url', hidden: true },
         { name: 'relation_edit_url', hidden: true },
         { name: 'relation_delete_url', hidden: true },
-        { name: 'canDelete', hidden: true },
         {
             name: "{% trans 'Actions' %}",
             width: '180px',
@@ -142,11 +140,7 @@
                     edit: (row) => row.cells[13].data,
                     delete: (row) => row.cells[14].data
                 },
-                [
-                    'details',
-                    'edit',
-                    { type: 'delete', condition: (row) => row.cells[15].data }
-                ],
+                ['details', 'edit', 'delete'],
                 { idResolver: (row) => row.cells[11].data },
                 JSON.parse(document.getElementById('user-permissions').textContent)
             )

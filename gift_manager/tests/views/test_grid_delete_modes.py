@@ -130,6 +130,8 @@ def test_status_page_grid_follows_the_rights_on_each_plan(client, owner, viewer)
         str(own.relation_id): PermissionLevel.OWNER,
     }
     assert "permissionAwareActionFormatter" in response.content.decode()
+    # Group plans follow the same delete modes as the others
+    assert "canDelete" not in response.content.decode()
 
 
 def test_gift_page_offers_to_leave_a_plan_the_user_cannot_delete(client, owner, viewer):

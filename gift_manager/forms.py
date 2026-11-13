@@ -910,7 +910,7 @@ class BaseRelationScopedForm(
             max_length=NEW_GIFT_NAME_MAX_LENGTH,
             label=gettext_lazy("Or a new gift"),
             help_text=gettext_lazy("Name a gift that is not in your list yet: it is added to it."),
-            widget=forms.TextInput(attrs={"autocomplete": "off"}),
+            widget=forms.TextInput(attrs={"class": "form-input-text w-100", "autocomplete": "off"}),
         )
 
     def clean(self):
@@ -934,7 +934,8 @@ class BaseRelationScopedForm(
         plan (``CreatePermissionMixin``) cascades to it like to any gift the user owns.
         """
         name = self.cleaned_data.get("new_gift_name") if "new_gift_name" in self.fields else ""
-        if not name:
+        # A second save() (after save(commit=False)) must not create the gift twice
+        if not name or self.instance.gift_id:
             return super().save(commit=commit)
         with transaction.atomic():
             gift = Gift.objects.create(name=name)
