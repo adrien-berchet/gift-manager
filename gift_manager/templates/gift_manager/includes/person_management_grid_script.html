@@ -1,6 +1,7 @@
 {% load i18n %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}
+{% include "gift_manager/includes/grid_delete_modes.html" %}
 
 <script>
     (function () {

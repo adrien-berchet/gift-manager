@@ -179,9 +179,11 @@ def test_action_bar_matches_the_dashboard_card(
 @pytest.mark.parametrize("position", ["first", "last"])
 @pytest.mark.parametrize("view", ["card", "list"])
 def test_overflow_menu_is_keyboard_operable_and_not_clipped(
-    logged_in_page: Page, live_server, view, position
+    logged_in_page: Page, live_server, seed_data_e2e, view, position
 ):
     page = logged_in_page
+    # Gifts nobody else can access, so their menu holds both Share and Delete
+    _own(seed_data_e2e.alice, GiftFactory(name="AAA own gift"), GiftFactory(name="ZZZ own gift"))
     rows = _open_list(page, live_server, "gifts", "gift-grid", view)
     # The first row's menu overlaps the following rows; the last row's menu is the most exposed
     # to the clipping of the grid wrapper and of the card
@@ -293,8 +295,9 @@ def test_viewer_sees_a_lock_and_no_overflow_actions(
     expect(bar.locator('[data-action="detail"]')).to_be_enabled()
 
 
-def test_actions_are_translated(logged_in_page: Page, live_server):
+def test_actions_are_translated(logged_in_page: Page, live_server, seed_data_e2e):
     page = logged_in_page
+    _own(seed_data_e2e.alice, GiftFactory(name="AAA own gift"))  # deletable: not shared
     rows = _open_list(page, live_server, "gifts", "gift-grid", "card", language="fr")
     bar = rows.first.locator(".grid-action-bar")
 

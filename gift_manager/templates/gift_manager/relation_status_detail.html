@@ -20,7 +20,10 @@
 {% load static %}
 <script src="{% static 'gift_manager/js/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/js/grid-utils.js' %}"></script>
+<script src="{% static 'gift_manager/js/permission-utils.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
+{{ user_permissions|json_script:"user-permissions" }}
+{% include "gift_manager/includes/grid_delete_modes.html" %}
 
 <script>
     (function () {
@@ -133,19 +136,19 @@
             name: "{% trans 'Actions' %}",
             width: '180px',
             sort: false,
-            formatter: GridUtils.actionButtonsFormatter(
+            formatter: PermissionUtils.permissionAwareActionFormatter(
                 {
-                    give: (row) => row.cells[6].data,
                     details: (row) => row.cells[12].data,
                     edit: (row) => row.cells[13].data,
                     delete: (row) => row.cells[14].data
                 },
                 [
-                    'give',
                     'details',
                     'edit',
                     { type: 'delete', condition: (row) => row.cells[15].data }
-                ]
+                ],
+                { idResolver: (row) => row.cells[11].data },
+                JSON.parse(document.getElementById('user-permissions').textContent)
             )
         }
     ];

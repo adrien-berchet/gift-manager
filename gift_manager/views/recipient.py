@@ -68,6 +68,8 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             context["person_grid_data"] = person_grid_data
             context["person_column_names"] = person_column_names
             context["user_permissions"] = person_permission_context["user_permissions"]
+            context["user_delete_modes"] = person_permission_context["user_delete_modes"]
+            context["user_delete_reasons"] = person_permission_context["user_delete_reasons"]
             context["grid_data"] = get_person_grid_data(person_grid_data, viewer=user)
             context["recipients"] = []
             context["person_count"] = len(person_grid_data)
@@ -85,6 +87,8 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             context["person_group_tree_data"] = group_context["tree_data"]
             context["person_group_has_hierarchy"] = group_context["has_hierarchy"]
             context["user_permissions"] = group_context.get("user_permissions", {})
+            context["user_delete_modes"] = group_context["user_delete_modes"]
+            context["user_delete_reasons"] = group_context["user_delete_reasons"]
             context["grid_data"] = group_context["grid_data"]
             context["recipients"] = []
             context["person_count"] = accessible_persons.count()

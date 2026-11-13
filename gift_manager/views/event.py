@@ -27,6 +27,7 @@ from gift_manager.plan_repeat import find_repeat_candidates
 from gift_manager.plan_repeat import repeat_plans
 from gift_manager.plan_repeat import supports_plan_again
 from gift_manager.services import BudgetService
+from gift_manager.services import PermissionService
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
 from gift_manager.views.base import BaseDetailView
@@ -142,12 +143,16 @@ class EventDetailView(BaseDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["relations"] = (
+        relations = (
             Relation.objects.accessible_by(self.request.user)
             .filter(event=self.object)
             .select_related("person", "group", "gift", "event", "status")
             .with_edit_flag(self.request.user)
             .order_by("status__pk", "person__first_name", "person__family_name", "gift__name")
+        )
+        # Each plan carries what deleting it does for the user: delete, or only leave it
+        context["relations"] = PermissionService.with_delete_modes(
+            self.request.user, relations, "relation_id"
         )
         context["relation_statuses"] = RelationStatus.objects.all()
         context["budget"] = BudgetService.for_event(self.request.user, self.object)

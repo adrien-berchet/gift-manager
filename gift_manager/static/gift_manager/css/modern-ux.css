@@ -928,3 +928,12 @@
         min-height: 2.75rem;
     }
 }
+
+/* Row menu: why a Delete entry is disabled */
+.grid-action-menu-reason {
+    max-width: 16rem;
+    padding-top: 0;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    white-space: normal;
+}

@@ -142,12 +142,22 @@
                            title="{% trans 'Edit gift plan' %}">
                             <i class="fas fa-edit" aria-hidden="true"></i>
                         </a>
+                        {% endif %}
+                        {% if relation.delete_mode == "delete" %}
                         <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
                            class="btn btn-outline-danger btn-sm"
                            data-action="delete"
                            data-delete-url="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
                            title="{% trans 'Delete gift plan' %}">
                             <i class="fas fa-trash" aria-hidden="true"></i>
+                        </a>
+                        {% elif relation.delete_mode == "leave" or relation.delete_mode == "handover" %}
+                        <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}?intent=leave_access"
+                           class="btn btn-outline-danger btn-sm"
+                           data-action="delete"
+                           data-delete-url="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}?intent=leave_access"
+                           title="{% if relation.delete_mode == 'handover' %}{% trans 'Hand over and remove my access' %}{% else %}{% trans 'Remove my access' %}{% endif %}">
+                            <i class="fas fa-user-minus" aria-hidden="true"></i>
                         </a>
                         {% endif %}
                     </div>

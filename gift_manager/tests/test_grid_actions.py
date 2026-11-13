@@ -19,7 +19,7 @@ const vm = require("vm");
 
 const context = {
   window: { gridTranslations: TRANSLATIONS },
-  document: { cookie: "" },
+  document: { cookie: "", getElementById: () => null },
   gridjs: { html: (value) => value },
   console: { log: console.log, warn: () => {} },
 };
@@ -117,12 +117,87 @@ def test_viewer_sees_locked_edit_and_no_overflow_menu():
     assert 'disabled title="You do not have permission to perform this action."' in html
 
 
-def test_editor_menu_has_share_but_not_delete():
+def test_editor_edits_but_neither_shares_nor_deletes():
+    """Sharing needs the owner level, like SharingService.assert_can_share."""
     html = run_scenario(f"return bar(20, {ALL_ACTIONS});")
-    _, menu = parse(html)
-    assert "fa-share-nodes" in menu
-    assert "fa-trash" not in menu
+    assert "grid-action-menu" not in html
     assert 'data-action="edit"' in html
+
+
+def with_delete_mode(mode: str, level: int) -> str:
+    return run_scenario(
+        f'window.GridActions.setDeleteModes({{ 7: "{mode}" }}); return bar({level}, {ALL_ACTIONS});'
+    )
+
+
+def test_delete_mode_delete_shows_delete_even_to_an_editor():
+    """An editor deletes an object nobody else can access (the server's rule)."""
+    _, menu = parse(with_delete_mode("delete", 20))
+    assert "fa-trash" in menu
+    assert 'data-delete-url="/gifts/7/delete/"' in menu
+    assert "Delete" in menu
+
+
+@pytest.mark.parametrize(
+    "mode, label",
+    [("leave", "Remove my access"), ("handover", "Hand over and remove my access")],
+)
+def test_delete_mode_leave_turns_delete_into_remove_my_access(mode, label):
+    """A viewer of a shared object can remove their own access from the row menu."""
+    html = with_delete_mode(mode, 10)
+    _, menu = parse(html)
+    assert label in menu
+    assert "fa-user-minus" in menu
+    assert "fa-trash" not in menu
+    # Same confirmation flow as Delete, with the leave intent in the URL
+    assert 'data-action="delete" data-delete-url="/gifts/7/delete/?intent=leave_access"' in menu
+    assert 'href="/gifts/7/delete/?intent=leave_access"' in menu
+    assert "fa-lock" in html  # Edit stays locked for a viewer
+
+
+def test_delete_mode_none_hides_delete_even_from_an_owner():
+    """Without a reason from the server, a blocked Delete is simply left out."""
+    _, menu = parse(with_delete_mode("none", 30))
+    assert "fa-trash" not in menu
+    assert "fa-user-minus" not in menu
+    assert "fa-share-nodes" in menu
+
+
+def blocked(level: int) -> str:
+    return run_scenario(
+        'window.GridActions.setDeleteModes({ 7: "none" }, { 7: "At least <one> owner" });'
+        f" return bar({level}, {ALL_ACTIONS});"
+    )
+
+
+def test_blocked_delete_tells_an_owner_why():
+    """The only owner of a shared object sees a disabled Delete and the reason."""
+    _, menu = parse(blocked(30))
+    assert 'class="dropdown-item disabled grid-action-menu-item" aria-disabled="true"' in menu
+    assert "fa-trash" in menu
+    assert "At least &lt;one&gt; owner" in menu  # escaped
+    # Not a trigger of the delete flow
+    assert 'data-action="delete"' not in menu
+    assert "/gifts/7/delete/" not in menu
+
+
+def test_blocked_delete_is_not_shown_to_a_viewer():
+    assert "fa-trash" not in blocked(10)
+
+
+def test_rows_missing_from_the_delete_modes_get_no_delete():
+    html = run_scenario(
+        f'window.GridActions.setDeleteModes({{ 8: "delete" }}); return bar(30, {ALL_ACTIONS});'
+    )
+    assert "fa-trash" not in html
+
+
+def test_leave_labels_are_translated():
+    html = run_scenario(
+        f'window.GridActions.setDeleteModes({{ 7: "leave" }}); return bar(10, {ALL_ACTIONS});',
+        {"actionLeave": "Retirer mon accès"},
+    )
+    assert "Retirer mon accès" in html
 
 
 def test_icons_are_decorative_and_buttons_keep_accessible_names():

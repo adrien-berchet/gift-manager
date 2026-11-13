@@ -16,6 +16,30 @@ from gift_manager.sharing_service import SharingService
 
 logger = logging.getLogger(__name__)
 
+# Public id field of each shareable model, as used in URLs and grid rows
+PUBLIC_ID_FIELDS = {
+    "Person": "person_id",
+    "PersonGroup": "group_id",
+    "Gift": "gift_id",
+    "GiftTag": "tag_id",
+    "Event": "event_id",
+    "Relation": "relation_id",
+}
+
+
+def delete_state_context(states: dict[str, tuple[str, str | None]]) -> dict[str, dict]:
+    """Return the template context of ``PermissionService.delete_states_for`` results.
+
+    ``user_delete_modes`` maps each row id to its mode and ``user_delete_reasons`` gives why
+    nothing is possible for the blocked rows (rendered by ``includes/grid_delete_modes.html``).
+    """
+    return {
+        "user_delete_modes": {object_id: mode for object_id, (mode, _reason) in states.items()},
+        "user_delete_reasons": {
+            object_id: str(reason) for object_id, (_mode, reason) in states.items() if reason
+        },
+    }
+
 
 class PermissionContextMixin:
     """Mixin to add permission context data to views."""
@@ -33,6 +57,7 @@ class PermissionContextMixin:
         if not self.request.user.is_authenticated:
             return {
                 "user_permissions": {},
+                **delete_state_context({}),
                 "permission_levels": PermissionLevel.CHOICES,
             }
 
@@ -49,12 +74,34 @@ class PermissionContextMixin:
                 objects = []
 
         # Build permission mapping
+        objects = list(objects)
         permissions = self._build_permissions_mapping(objects)
 
         return {
             "user_permissions": permissions,
+            **delete_state_context(self._build_delete_states(objects)),
             "permission_levels": PermissionLevel.CHOICES,
         }
+
+    def _build_delete_states(self, objects: list) -> dict[str, tuple[str, str | None]]:
+        """Map each listed object's public id to what deleting it does for the current user.
+
+        "delete", "leave" (only the user's own access is removed), "handover" (the only owner
+        names a new one first) or "none" with the reason: grid rows show the matching action,
+        like detail pages.
+        """
+        if not objects:
+            return {}
+        first = objects[0]
+        model = getattr(self, "model", None) if isinstance(first, dict) else type(first)
+        id_field = PUBLIC_ID_FIELDS.get(getattr(model, "__name__", ""))
+        if id_field is None:
+            return {}
+        if isinstance(first, dict):
+            object_ids = [obj.get(id_field) for obj in objects]
+        else:
+            object_ids = [getattr(obj, id_field, None) for obj in objects]
+        return PermissionService.delete_states_for(self.request.user, model, object_ids, id_field)
 
     def _build_permissions_mapping(self, objects) -> dict[str, int]:
         """Build a mapping of object IDs to permission levels.

@@ -208,6 +208,110 @@ class PermissionService:
         return cls.DELETE_MODE_LEAVE, None
 
     @classmethod
+    def delete_modes_for(cls, user, model, object_ids, id_field: str) -> dict[str, str]:
+        """Return the delete mode of each object of a list, keyed by its public id.
+
+        See ``delete_states_for``, which also gives why nothing is possible.
+        """
+        return {
+            object_id: mode
+            for object_id, (mode, _reason) in cls.delete_states_for(
+                user, model, object_ids, id_field
+            ).items()
+        }
+
+    @classmethod
+    def delete_states_for(
+        cls, user, model, object_ids, id_field: str
+    ) -> dict[str, tuple[str, str | None]]:
+        """Return ``delete_mode_for`` of each object of a list, keyed by its public id.
+
+        For grid rows: the permissions of the whole list are read at once instead of several
+        queries per row. Groups inherit access from their ancestors, so they keep the
+        per-object rule.
+
+        Args:
+            user: The user looking at the list.
+            model: The model of the listed objects.
+            object_ids: Their public ids (``person_id``, ``gift_id``...).
+            id_field: The name of that public id field.
+        """
+        object_ids = [object_id for object_id in object_ids if object_id]
+        if not object_ids:
+            return {}
+        objects = list(model.objects.filter(**{f"{id_field}__in": object_ids}))
+        if model is PersonGroup:
+            return {str(getattr(obj, id_field)): cls.delete_mode_for(user, obj) for obj in objects}
+
+        permission_model = model.shared_with.through
+        object_attr = permission_model.filter_name
+        holders: dict[int, list[tuple[int, int, bool]]] = {}
+        for object_pk, user_id, level, is_active in permission_model.objects.filter(
+            **{f"{object_attr}__in": objects}
+        ).values_list(f"{object_attr}_id", "user_id", "permission_type", "user__is_active"):
+            holders.setdefault(object_pk, []).append((user_id, level, is_active))
+        try:
+            friend_ids = set(user.profile.friends.values_list("user_id", flat=True))
+        except ObjectDoesNotExist:
+            friend_ids = set()
+        return {
+            str(getattr(obj, id_field)): cls._delete_state_from_holders(
+                user, obj, holders.get(obj.pk, []), friend_ids
+            )
+            for obj in objects
+        }
+
+    @classmethod
+    def with_delete_modes(cls, user, objects, id_field: str) -> list:
+        """Return ``objects`` as a list, each carrying its ``delete_mode`` for ``user``."""
+        objects = list(objects)
+        if objects:
+            modes = cls.delete_modes_for(
+                user, type(objects[0]), [getattr(obj, id_field) for obj in objects], id_field
+            )
+            for obj in objects:
+                obj.delete_mode = modes.get(str(getattr(obj, id_field)), cls.DELETE_MODE_NONE)
+        return objects
+
+    @classmethod
+    def _delete_state_from_holders(  # noqa: PLR0911 - one return per case of the rule
+        cls, user, obj, holders, friend_ids
+    ) -> tuple[str, str | None]:
+        """Apply the rule of ``delete_mode_for`` to an object's (user, level, active) holders."""
+        if getattr(obj, "is_public", False):
+            return cls.DELETE_MODE_NONE, gettext("A public tag cannot be deleted or left.")
+        if getattr(obj, "is_global", False):
+            return cls.DELETE_MODE_NONE, str(GLOBAL_OBJECT_REMOVAL_ERROR)
+        direct = next(
+            (level for user_id, level, _active in holders if user_id == user.pk),
+            PermissionLevel.NONE,
+        )
+        effective = PermissionLevel.OWNER if user.is_superuser else direct
+        others = [holder for holder in holders if holder[0] != user.pk]
+        if not others:
+            if effective >= PermissionLevel.EDITOR:
+                return cls.DELETE_MODE_DELETE, None
+            return cls.DELETE_MODE_NONE, gettext(
+                "You do not have permission to delete this object."
+            )
+
+        other_active_owner = any(
+            level == PermissionLevel.OWNER and is_active for _user_id, level, is_active in others
+        )
+        needs_handover = direct == PermissionLevel.OWNER and not other_active_owner
+        if needs_handover:
+            has_candidate = any(
+                is_active and user_id in friend_ids for user_id, _level, is_active in others
+            )
+            if has_candidate:
+                return cls.DELETE_MODE_HANDOVER, None
+            # Leaving would leave the object without an active owner
+            return cls.DELETE_MODE_NONE, gettext("At least one owner is required.")
+        if effective < PermissionLevel.VIEWER:
+            return cls.DELETE_MODE_NONE, gettext("You do not have access to this object.")
+        return cls.DELETE_MODE_LEAVE, None
+
+    @classmethod
     def _needs_handover(cls, user, obj) -> bool:
         """Whether ``user`` is the only active owner of ``obj`` and must name a new one to leave.
 

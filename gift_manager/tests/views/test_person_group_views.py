@@ -183,7 +183,9 @@ class TestPersonGroupListView:
             response = self.client.get(url)
 
         assert response.status_code == 200
-        assert get_effective_permission.call_count == 2
+        # Once per group for its permission level and once for its delete mode: the mixin
+        # does not compute them a second time
+        assert get_effective_permission.call_count == 4
 
     def test_list_view_requires_login(self):
         """Test list view requires authentication."""

@@ -66,3 +66,37 @@ def test_small_grids_do_not_scroll_sideways(page: Page, live_server, seed_data_e
         "wrapper => wrapper.scrollWidth - wrapper.clientWidth"
     )
     assert overflow <= 0
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_viewer_removes_their_access_from_a_grid_row(page: Page, live_server, seed_data_e2e):
+    from gift_manager.models import PermissionLevel
+    from gift_manager.services import PermissionService
+
+    mom = seed_data_e2e.persons["mom"]
+    bob = seed_data_e2e.bob
+    PermissionService.create_or_update_permission(bob, mom, permission_level=PermissionLevel.VIEWER)
+
+    login_as(page, live_server.url, "bob")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:persons')}")
+    row = page.locator("#person-grid .gridjs-tr", has_text=mom.first_name).first
+    expect(row).to_be_visible()
+    # A viewer cannot edit, but can leave: the row menu holds a single "Remove my access"
+    expect(row.locator(".grid-action--locked")).to_be_visible()
+    row.locator(".grid-action-menu-toggle").click()
+    menu_item = page.locator(".grid-action-menu-list.show .dropdown-item")
+    expect(menu_item).to_have_count(1)
+    expect(menu_item).to_have_text("Remove my access")
+    menu_item.click()
+
+    dialog = page.locator(".modal.show")
+    expect(dialog).to_contain_text("Remove my access")
+    confirm = dialog.locator("#confirmAction")
+    expect(confirm).to_have_text("Remove my access")
+    confirm.click()
+
+    expect(page.locator("#person-grid .gridjs-tr", has_text=mom.first_name)).to_have_count(0)
+    assert PermissionService.get_permission(mom, bob) == PermissionLevel.NONE
+    mom.refresh_from_db()
+    assert PermissionService.get_permission(mom, seed_data_e2e.alice) == PermissionLevel.OWNER

@@ -1,0 +1,4 @@
+{# What "Delete" does for the user on each grid row, read by grid-actions.js: the mode of #}
+{# every row and, for rows where nothing is possible, the reason. #}
+{{ user_delete_modes|json_script:"user-delete-modes" }}
+{{ user_delete_reasons|json_script:"user-delete-reasons" }}

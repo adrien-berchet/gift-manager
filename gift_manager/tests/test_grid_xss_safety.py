@@ -24,7 +24,7 @@ const vm = require("vm");
 
 const context = {
   window: {},
-  document: { cookie: "" },
+  document: { cookie: "", getElementById: () => null },
   gridjs: { html: (value) => value },
   console,
   setTimeout,
@@ -108,7 +108,7 @@ assert(actionsHtml.includes('data-entity-id="&lt;img'), "permission action IDs s
 
 const fallbackContext = {
   window: {},
-  document: { cookie: "" },
+  document: { cookie: "", getElementById: () => null },
   gridjs: { html: (value) => value },
   console,
 };
@@ -152,7 +152,7 @@ const vm = require("vm");
 
 const context = {
   window: {},
-  document: { cookie: "csrftoken=test-token" },
+  document: { cookie: "csrftoken=test-token", getElementById: () => null },
   URLSearchParams,
   console,
   alert: (message) => { context.alertMessage = message; },
