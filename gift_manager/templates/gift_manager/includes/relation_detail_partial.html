@@ -91,9 +91,9 @@
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Status" %}</label>
                     <div class="detail-value">
-                        <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
+                        <a href="{% url 'gift_manager:relation_status_detail' object.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="gift-plan-status-badge {{ gift_plan_status_class }}">
                             {{ object.status }}
-                        </span>
+                        </span></a>
                         {% if object.is_surprise %}
                         <span class="badge bg-warning text-dark ms-2"><i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Surprise" %}</span>
                         {% endif %}

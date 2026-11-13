@@ -51,7 +51,7 @@
                         <i class="fas fa-gift text-primary" aria-hidden="true"></i>
                         <strong class="me-1">{{ relation.gift.name }}</strong>
                         {% if relation.status %}
-                        <span class="badge {{ relation.status|status_badge_class }}">{{ relation.status }}</span>
+                        <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge {{ relation.status|status_badge_class }}">{{ relation.status }}</span></a>
                         {% endif %}
                         {% if relation.has_visible_reaction %}
                         {% rating_stars relation.reaction_rating %}

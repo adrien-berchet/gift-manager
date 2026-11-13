@@ -237,13 +237,15 @@ class TestRelationStatusGridDataSerialization:
         status = RelationStatusFactory(status="Pending Idea")
         view = RelationStatusListView()
         items = list(RelationStatus.objects.values("pk", "status").filter(pk=status.pk))
-        rows = view.get_grid_data(items)
+        rows = view.get_grid_data(items, {status.pk: 3})
         assert len(rows) == 1
         assert rows[0] == [
             "Pending Idea",
+            3,
             str(status.pk),
             reverse("gift_manager:relation_status_detail", args=[status.pk]),
         ]
+        assert view.get_grid_data(items)[0][1] == 0
 
     def test_relation_status_list_page_serves_valid_grid_data(self, authenticated_client):
         RelationStatusFactory(status="Purchased")
@@ -252,6 +254,23 @@ class TestRelationStatusGridDataSerialization:
         grid_data = _extract_grid_data_json(response.content.decode())
         statuses = [row[0] for row in grid_data]
         assert "Purchased" in statuses
+
+    def test_relation_status_list_counts_only_accessible_plans(self, authenticated_client, user):
+        """Each status shows how many of the user's gift plans have it."""
+        purchased = RelationStatusFactory(status="Purchased")
+        unused = RelationStatusFactory(status="Unused")
+        RelationFactory(status=purchased, shared_with=[user])
+        RelationFactory(status=purchased, shared_with=[user])
+        RelationFactory(status=purchased)  # someone else's plan
+
+        response = authenticated_client.get(reverse("gift_manager:relation_statuses"))
+
+        counts = {row[0]: row[1] for row in _extract_grid_data_json(response.content.decode())}
+        assert counts["Purchased"] == 2
+        assert counts["Unused"] == 0
+        assert str(unused.pk)
+        content = response.content.decode()
+        assert "<h1>Statuses</h1>" in content
 
 
 @pytest.mark.django_db

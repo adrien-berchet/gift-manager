@@ -11,6 +11,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Case
 from django.db.models import CharField
+from django.db.models import Count
 from django.db.models import F
 from django.db.models import Prefetch
 from django.db.models import TextField
@@ -274,20 +275,32 @@ class RelationStatusListView(BaseListView):
         super().__init__(*args, **kwargs)
         self.column_names = {
             "status": gettext("Status"),
+            "plan_count": gettext("Gift Plans"),
         }
 
     def get_queryset(self):
         """Return RelationStatus."""
-        return RelationStatus.objects.values("pk", *self.column_names).order_by("pk")
+        return RelationStatus.objects.values("pk", "status").order_by("pk")
 
-    def get_grid_data(self, items) -> list:
-        """Format status rows for Grid.js."""
+    def get_plan_counts(self) -> dict:
+        """Return how many gift plans the user can access, per status id."""
+        return dict(
+            Relation.objects.accessible_by(self.request.user)
+            .order_by()
+            .values_list("status_id")
+            .annotate(count=Count("pk", distinct=True))
+        )
+
+    def get_grid_data(self, items, plan_counts: dict | None = None) -> list:
+        """Format status rows for Grid.js: name, number of gift plans, id and detail URL."""
+        plan_counts = plan_counts or {}
         rows = []
         for item in items:
             pk = str(item["pk"])
             rows.append(
                 [
                     item.get("status") or "",
+                    plan_counts.get(item["pk"], 0),
                     pk,
                     reverse("gift_manager:relation_status_detail", args=[pk]),
                 ]
@@ -296,7 +309,8 @@ class RelationStatusListView(BaseListView):
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
-        context["grid_data"] = self.get_grid_data(context.get("data", []))
+        context["translated_type"] = gettext("Statuses")
+        context["grid_data"] = self.get_grid_data(context.get("data", []), self.get_plan_counts())
         return context
 
 

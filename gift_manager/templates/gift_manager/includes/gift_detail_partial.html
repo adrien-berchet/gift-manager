@@ -94,7 +94,7 @@
                                 {{ relation.recipient_type_label }}
                             </span>
                             {% if relation.status %}
-                            <span class="badge bg-info ms-2">{{ relation.status }}</span>
+                            <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge bg-info ms-2">{{ relation.status }}</span></a>
                             {% endif %}
                         </div>
                         {% if relation.is_group_targeted %}
