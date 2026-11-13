@@ -20,7 +20,7 @@
 {% block content %}
 {# Page header with title and actions #}
 <div class="page-header">
-    <h1>{{ translated_type }}</h1>
+    <h1{% if show_advanced_list %} id="gift-plan-advanced-heading"{% endif %}>{{ translated_type }}</h1>
     <div class="page-header-actions">
         <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
             <i class="fas fa-plus me-2"></i>{% trans "Create new gift plan" %}
@@ -51,7 +51,7 @@
                 <strong>{{ workspace_summary.total }}</strong>
                 <span>{% trans "Total" %}</span>
             </span>
-            <span class="gift-plan-summary-item gift-plan-summary-item--attention">
+            <span class="gift-plan-summary-item{% if workspace_summary.attention %} gift-plan-summary-item--attention{% endif %}">
                 <strong>{{ workspace_summary.attention }}</strong>
                 <span>{% trans "Needs attention" %}</span>
             </span>
@@ -164,12 +164,6 @@
 
 {% if show_advanced_list %}
 <section class="gift-plan-advanced-list" id="gift-plan-advanced-list" aria-labelledby="gift-plan-advanced-heading">
-    <div class="gift-plan-advanced-header">
-        <div>
-            <h2 id="gift-plan-advanced-heading">{% trans "Advanced Gift Plans List" %}</h2>
-        </div>
-    </div>
-
     {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="relation-grid" show_bulk_select=True %}
 
     <!-- Grid.js container -->
@@ -255,6 +249,7 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}
+{% include "gift_manager/includes/grid_delete_modes.html" %}
 <script>
     {% trans "Status" as bulk_status_label %}
     {% trans "Choose status" as bulk_status_choose_label %}

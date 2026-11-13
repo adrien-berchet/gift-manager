@@ -62,8 +62,8 @@
 
                 <!-- Planned badge -->
                 {% if wish.is_planned_by_viewer and wish.planned_relation %}
-                <a href="{% url 'gift_manager:relation_detail' pk=wish.planned_relation.relation_id %}" class="badge bg-primary text-decoration-none">
-                    <i class="fas fa-calendar-check me-1" aria-hidden="true"></i>{% trans "Planned" %}
+                <a href="{% url 'gift_manager:relation_detail' pk=wish.planned_relation.relation_id %}" class="badge {% if wish.planned_is_given %}bg-success{% else %}bg-primary{% endif %} text-decoration-none">
+                    {% if wish.planned_is_given %}<i class="fas fa-check me-1" aria-hidden="true"></i>{% trans "Given" %}{% else %}<i class="fas fa-calendar-check me-1" aria-hidden="true"></i>{% trans "Planned" %}{% endif %}
                 </a>
                 {% endif %}
             </div>

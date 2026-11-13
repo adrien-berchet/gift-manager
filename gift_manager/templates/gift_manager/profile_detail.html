@@ -209,6 +209,33 @@
         </div>
     </div>
 
+    <!-- Received Gifts Section -->
+    <div class="profile-section">
+        <h2>
+            <i class="fas fa-box-open"></i> {% trans "Received Gifts" %}
+            <a href="{% url 'gift_manager:received_gift_list' %}" class="btn btn-primary btn-sm ms-auto text-nowrap">
+                <i class="fas fa-list me-1" aria-hidden="true"></i>{% trans "View received gifts" %}
+            </a>
+        </h2>
+        <p class="text-muted mb-3">
+            {% trans "Your private memory timeline of gifts received from family and friends." %}
+        </p>
+        <div class="d-flex align-items-center flex-wrap gap-3">
+            <span class="badge bg-secondary fs-6">
+                {% blocktrans count counter=received_gifts_count %}{{ counter }} recorded gift{% plural %}{{ counter }} recorded gifts{% endblocktrans %}
+            </span>
+            {% if pending_thank_you_count > 0 %}
+            <span class="badge bg-warning text-dark fs-6">
+                <i class="fas fa-clock me-1" aria-hidden="true"></i>
+                {% blocktrans count counter=pending_thank_you_count %}{{ counter }} thank-you pending{% plural %}{{ counter }} thank-yous pending{% endblocktrans %}
+            </span>
+            {% endif %}
+            <a href="{% url 'gift_manager:received_gift_create' %}" class="btn btn-outline-primary btn-sm" data-action="create">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Record a received gift" %}
+            </a>
+        </div>
+    </div>
+
     <!-- Preferences Section -->
     <div class="profile-section">
         <h2><i class="fas fa-heart"></i> {% trans "Gift Preferences" %}</h2>

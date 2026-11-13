@@ -13,6 +13,19 @@
     </ul>
 </div>
 {% endif %}
+{% if regifts %}
+<div class="alert alert-warning py-2 mb-3" role="status" data-regift-warning>
+    <i class="fas fa-rotate-left me-1" aria-hidden="true"></i>
+    {% blocktrans with gift=gift.name %}You recorded receiving "{{ gift }}" from this person:{% endblocktrans %}
+    <ul class="mb-0 small">
+        {% for received in regifts %}
+        <li>
+            {% if received.occasion_text %}{{ received.occasion_text }} — {% endif %}{{ received.received_on|date:"DATE_FORMAT" }}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% if suggestions %}
 <div class="alert alert-light border py-2 mb-3" data-interest-suggestions>
     <div class="small fw-semibold mb-1">

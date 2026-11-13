@@ -10,6 +10,11 @@
     const FILTER_DEBOUNCE_DELAY = 200; // milliseconds
     const STORAGE_PREFIX = "filter-state-";
 
+    /** Translated label from window.gridTranslations (grid-translations.html), or its fallback. */
+    function translate(key, fallback) {
+        return (window.gridTranslations && window.gridTranslations[key]) || fallback;
+    }
+
     /**
      * Initialize dynamic filtering for a grid
      * @param {string} gridId - The ID of the grid container
@@ -62,7 +67,7 @@
             filtersSection.innerHTML = `
                 <div class="filter-section-header">
                     <label class="filter-section-label">
-                        <i class="fas fa-filter me-1"></i>Filters
+                        <i class="fas fa-filter me-1"></i>${escapeHtml(translate("filters", "Filters"))}
                     </label>
                 </div>
                 <div class="filters-container"></div>
@@ -81,7 +86,7 @@
 
         // Create filters for each filterable column
         columns.forEach((column, index) => {
-            if (column.hidden || column.sort === false) return;
+            if (column.hidden || column.sort === false || column.id === "checkbox") return;
 
             const columnName = typeof column === "object" ? column.name || column.id : column;
             if (!columnName || columnName.toLowerCase().includes("action")) return;
@@ -209,7 +214,7 @@
                             id="${filterId}"
                             data-column-index="${columnIndex}"
                             data-filter-type="select">
-                        <option value="">All ${escapeHtml(columnName)}</option>
+                        <option value="">${escapeHtml(translate("filterAll", "All"))}</option>
                         ${options}
                     </select>
                 `;
@@ -223,12 +228,12 @@
                                id="${filterId}-from"
                                data-column-index="${columnIndex}"
                                data-filter-type="date-from"
-                               placeholder="From">
+                               placeholder="${escapeHtml(translate("filterFrom", "From"))}">
                         <input type="date" class="form-control form-control-sm column-filter"
                                id="${filterId}-to"
                                data-column-index="${columnIndex}"
                                data-filter-type="date-to"
-                               placeholder="To">
+                               placeholder="${escapeHtml(translate("filterTo", "To"))}">
                     </div>
                 `;
                 break;
@@ -241,12 +246,12 @@
                                id="${filterId}-min"
                                data-column-index="${columnIndex}"
                                data-filter-type="number-min"
-                               placeholder="Min">
+                               placeholder="${escapeHtml(translate("filterMin", "Min"))}">
                         <input type="number" class="form-control form-control-sm column-filter"
                                id="${filterId}-max"
                                data-column-index="${columnIndex}"
                                data-filter-type="number-max"
-                               placeholder="Max">
+                               placeholder="${escapeHtml(translate("filterMax", "Max"))}">
                     </div>
                 `;
                 break;
@@ -258,9 +263,9 @@
                             id="${filterId}"
                             data-column-index="${columnIndex}"
                             data-filter-type="boolean">
-                        <option value="">All</option>
-                        <option value="true">Yes</option>
-                        <option value="false">No</option>
+                        <option value="">${escapeHtml(translate("filterAll", "All"))}</option>
+                        <option value="true">${escapeHtml(translate("yes", "Yes"))}</option>
+                        <option value="false">${escapeHtml(translate("no", "No"))}</option>
                     </select>
                 `;
                 break;
@@ -273,8 +278,9 @@
                                id="${filterId}"
                                data-column-index="${columnIndex}"
                                data-filter-type="text"
-                               placeholder="Filter ${escapeHtml(columnName)}...">
-                        <button type="button" class="input-clear-btn" aria-label="Clear">
+                               placeholder="${escapeHtml(translate("filterPlaceholder", "Filter…"))}"
+                               aria-label="${escapeHtml(columnName)}">
+                        <button type="button" class="input-clear-btn" aria-label="${escapeHtml(translate("clear", "Clear"))}">
                             <i class="fas fa-times"></i>
                         </button>
                     </div>
@@ -525,7 +531,7 @@
         const clearButton = document.createElement("button");
         clearButton.type = "button";
         clearButton.className = "btn btn-sm btn-outline-secondary clear-filters-btn";
-        clearButton.innerHTML = '<i class="fas fa-times me-1"></i>Clear';
+        clearButton.innerHTML = `<i class="fas fa-times me-1"></i>${escapeHtml(translate("clear", "Clear"))}`;
 
         clearButton.addEventListener("click", () => {
             // Clear all filter inputs
@@ -575,8 +581,8 @@
 
             const hasActiveFilters = filterState.search || filterState.columnFilters.size > 0;
             const message = hasActiveFilters
-                ? "No results match your current filters"
-                : "No data available";
+                ? translate("noFilterResults", "No results match your current filters")
+                : translate("noData", "No data available");
             const icon = hasActiveFilters ? "fa-filter" : "fa-inbox";
 
             emptyState.innerHTML = `

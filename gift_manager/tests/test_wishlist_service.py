@@ -10,6 +10,7 @@ from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.received_gifts import reveal_plan
 from gift_manager.services import PermissionService
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import RelationFactory
@@ -333,6 +334,88 @@ def test_ungiving_the_plan_clears_fulfilled(wish, bob, wisher_person):
     assert wish.is_fulfilled is False
 
 
+def _give_and_reveal(wish, bob, wisher_person):
+    """Give Bob's plan for the wish and reveal it: the wisher gets a received gift for it."""
+    relation = wishlist.plan_wish(wish, bob, wisher_person)
+    _set_status(relation, "Given")
+    [received] = reveal_plan(relation, bob)
+    assert received.wish_id == wish.pk
+    return relation, received
+
+
+def test_revealed_plan_leaves_the_wish_to_the_recipients_received_gift(wish, bob, wisher_person):
+    _relation, received = _give_and_reveal(wish, bob, wisher_person)
+    wish.refresh_from_db()
+    assert wish.is_fulfilled is True
+
+    received.fulfills_wish = False
+    received.save(update_fields=["fulfills_wish"])
+
+    wish.refresh_from_db()
+    assert wish.is_fulfilled is False
+
+
+def test_deleting_the_revealed_received_gift_reopens_the_wish(wish, bob, wisher_person):
+    _relation, received = _give_and_reveal(wish, bob, wisher_person)
+
+    received.delete()
+
+    wish.refresh_from_db()
+    assert wish.is_fulfilled is False
+
+
+def test_plan_changes_after_the_reveal_keep_the_recipients_choice(wish, bob, wisher_person):
+    relation, received = _give_and_reveal(wish, bob, wisher_person)
+    received.fulfills_wish = False
+    received.save(update_fields=["fulfills_wish"])
+
+    relation.comment = "Edited after the reveal"
+    relation.save()
+
+    wish.refresh_from_db()
+    assert wish.is_fulfilled is False
+
+
+def test_revealing_the_plan_releases_its_claim(wish, bob, wisher_person, carol):
+    _give_and_reveal(wish, bob, wisher_person)
+
+    wish.refresh_from_db()
+    assert wish.claimed_by is None
+    assert wishlist.format_claimer_label(wish, carol) == "Already given"
+
+
+def test_reopened_wish_is_available_to_every_friend_again(wish, bob, wisher_person, carol):
+    _relation, received = _give_and_reveal(wish, bob, wisher_person)
+    received.fulfills_wish = False
+    received.save(update_fields=["fulfills_wish"])
+    wish.refresh_from_db()
+
+    assert wishlist.format_claimer_label(wish, carol) == "Available"
+    assert wishlist.claim_wish(wish, carol).claimed_by == carol
+
+
+def test_giver_can_plan_a_reopened_wish_again(wish, bob, wisher_person):
+    first_plan, received = _give_and_reveal(wish, bob, wisher_person)
+    received.delete()
+    wish.refresh_from_db()
+
+    second_plan = wishlist.plan_wish(wish, bob, wisher_person)
+
+    assert second_plan.pk != first_plan.pk
+    wish.refresh_from_db()
+    assert wish.claimed_by == bob
+
+
+def test_editing_a_revealed_plan_does_not_claim_the_wish_again(wish, bob, wisher_person):
+    relation, _received = _give_and_reveal(wish, bob, wisher_person)
+
+    relation.comment = "Note added later"
+    relation.save()
+
+    wish.refresh_from_db()
+    assert wish.claimed_by is None
+
+
 def test_reviving_an_abandoned_plan_reclaims_the_wish_for_its_owner(wish, bob, wisher_person):
     relation = wishlist.plan_wish(wish, bob, wisher_person)
     _set_status(relation, "Abandoned")
@@ -479,6 +562,15 @@ def test_label_uses_precomputed_friend_ids_without_queries(
         )
 
     assert label == f"Claimed by @{bob.username}"
+
+    # Neither wisher nor claimed_by needs to be select_related when using viewer_friend_ids
+    # for a non-friend claimer.
+    plain_wish = Wish.objects.get(pk=wish.pk)
+    with django_assert_num_queries(0):
+        masked_label = wishlist.format_claimer_label(
+            plain_wish, carol, viewer_friend_ids={plain_wish.wisher_id}
+        )
+    assert masked_label == "Claimed by a friend"
 
 
 # --- delete ------------------------------------------------------------------------------------

@@ -4,8 +4,40 @@
 {% block edit_url %}{% url 'gift_manager:relation_edit' pk=object.relation_id %}{% endblock %}
 {% block delete_url %}{% url 'gift_manager:relation_delete' pk=object.relation_id %}{% endblock %}
 
+{% block title_badges %}
+    {% if object.revealed_at %}
+    <span class="badge bg-success ms-2" title="{% trans 'This gift plan has been revealed to the recipient' %}">
+        <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
+    </span>
+    {% endif %}
+{% endblock %}
+
 {% block detail_fields %}
 <div class="detail-fields">
+    {% if object.revealed_at %}
+    <div class="alert alert-success d-flex align-items-center mb-3 py-2" role="alert">
+        <i class="fas fa-check-circle me-2" aria-hidden="true"></i>
+        <div>
+            <strong>{% if already_revealed_notice %}{% trans "This gift plan was already revealed." %}{% else %}{% trans "Revealed to recipient" %}{% endif %}</strong>
+            <small class="d-block text-muted">{% trans "Revealed on" %} {{ object.revealed_at|date:"DATE_FORMAT" }}</small>
+        </div>
+    </div>
+    {% elif can_reveal %}
+    <div class="card border-info mb-3">
+        <div class="card-body p-2 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="small">
+                <i class="fas fa-bullhorn text-info me-1" aria-hidden="true"></i>
+                <strong>{% trans "Reveal plan" %}</strong>: {% trans "Share this gift with the recipient so they can log it." %}
+            </div>
+            <a href="{{ reveal_url }}"
+               class="btn btn-sm btn-primary text-nowrap"
+               data-action="edit"
+               data-edit-url="{{ reveal_url }}">
+                <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal to recipient" %}
+            </a>
+        </div>
+    </div>
+    {% endif %}
     {% if object.wish and object.wish.claimed_by_id == request.user.pk %}
         {% if object.wish.is_archived or object.wish.is_deleted_by_wisher %}
         <div class="alert alert-warning py-2 mb-3" role="alert">
@@ -59,17 +91,17 @@
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Status" %}</label>
                     <div class="detail-value">
-                        <span class="gift-plan-status-badge {{ gift_plan_status_class }}">
+                        <a href="{% url 'gift_manager:relation_status_detail' object.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="gift-plan-status-badge {{ gift_plan_status_class }}">
                             {{ object.status }}
-                        </span>
-                        {% if object.is_surprise %}
+                        </span></a>
+                        {% if object.is_surprise and not object.revealed_at %}
                         <span class="badge bg-warning text-dark ms-2"><i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Surprise" %}</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
             {% endif %}
-            {% if object.due_date %}
+            {% if object.due_date and object.due_date != object.given_on %}
             <div class="col-md-6">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Due Date" %}</label>
@@ -81,7 +113,7 @@
                     </div>
                 </div>
             </div>
-            {% else %}
+            {% elif not gift_plan_is_given %}
             <div class="col-md-6">
                 <div class="detail-field">
                     <label class="detail-label">{% trans "Due Date" %}</label>
@@ -89,6 +121,19 @@
                         <span class="gift-plan-due-badge gift-plan-due-badge--no_date">
                             <i class="fas fa-calendar-plus" aria-hidden="true"></i>
                             {% trans "No date" %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if object.given_on %}
+            <div class="col-md-6">
+                <div class="detail-field">
+                    <label class="detail-label">{% trans "Given on" %}</label>
+                    <div class="detail-value">
+                        <span class="gift-plan-due-badge gift-plan-due-badge--completed">
+                            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+                            {{ object.given_on|date:"DATE_FORMAT" }}
                         </span>
                     </div>
                 </div>

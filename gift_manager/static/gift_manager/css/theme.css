@@ -27,18 +27,22 @@
     /* Semantic Colors */
     --color-success: #10b981;
     --color-success-hover: #059669;
+    --color-success-text: #047857; /* readable on --color-success-light */
     --color-success-light: #d1fae5;
 
     --color-danger: #ef4444;
     --color-danger-hover: #dc2626;
+    --color-danger-text: #b91c1c; /* readable on --color-danger-light */
     --color-danger-light: #fee2e2;
 
     --color-warning: #f59e0b;
     --color-warning-hover: #d97706;
+    --color-warning-text: #92400e; /* readable on --color-warning-light */
     --color-warning-light: #fef3c7;
 
     --color-info: #3b82f6;
     --color-info-hover: #2563eb;
+    --color-info-text: #1d4ed8; /* readable on --color-info-light */
     --color-info-light: #dbeafe;
 
     /* Neutral Colors */
@@ -109,8 +113,8 @@
     --field-tone-price: #a16207;
     --field-tone-tags: #0f766e;
     --field-tone-event: #be185d;
-    --field-tone-person: var(--color-info-hover);
-    --field-tone-group: var(--color-success-hover);
+    --field-tone-person: var(--color-info-text);
+    --field-tone-group: var(--color-success-text);
     --field-tone-due-date: #c2410c;
 
     /* Spacing Scale */
@@ -153,6 +157,7 @@
     --bs-secondary-rgb: 139, 92, 246;
     --bs-success-rgb: 16, 185, 129;
     --bs-danger-rgb: 239, 68, 68;
+    --bs-warning: #f59e0b;
     --bs-warning-rgb: 245, 158, 11;
     --bs-info-rgb: 59, 130, 246;
 }
@@ -183,18 +188,22 @@
 
     --color-success: #6ee7b7;
     --color-success-hover: #a7f3d0;
+    --color-success-text: #a7f3d0;
     --color-success-light: #064e3b;
 
     --color-danger: #fca5a5;
     --color-danger-hover: #fecaca;
+    --color-danger-text: #fecaca;
     --color-danger-light: #7f1d1d;
 
     --color-warning: #fcd34d;
     --color-warning-hover: #fde68a;
+    --color-warning-text: #fde68a;
     --color-warning-light: #78350f;
 
     --color-info: #93c5fd;
     --color-info-hover: #bfdbfe;
+    --color-info-text: #bfdbfe;
     --color-info-light: #1e3a8a;
 
     /* Inverted gray scale for dark mode */
@@ -237,6 +246,7 @@
     --bs-secondary-rgb: 124, 58, 237;
     --bs-success-rgb: 5, 150, 105;
     --bs-danger-rgb: 220, 38, 38;
+    --bs-warning: #d97706;
     --bs-warning-rgb: 217, 119, 6;
     --bs-info-rgb: 2, 132, 199;
     --bs-body-color: #f8fafc;
@@ -298,13 +308,28 @@
 }
 
 [data-theme="dark"] .btn-warning {
-    background-color: #d97706;
-    color: #ffffff;
+    --bs-btn-bg: rgb(var(--bs-warning-rgb));
+    --bs-btn-border-color: #b45309;
+    --bs-btn-color: #111827;
+    --bs-btn-hover-bg: #f59e0b;
+    --bs-btn-hover-border-color: #f59e0b;
+    --bs-btn-hover-color: #111827;
+    --bs-btn-active-bg: #f59e0b;
+    --bs-btn-active-border-color: #d97706;
+    --bs-btn-active-color: #111827;
+    --bs-btn-disabled-bg: rgb(var(--bs-warning-rgb));
+    --bs-btn-disabled-border-color: #b45309;
+    --bs-btn-disabled-color: #111827;
+    background-color: rgb(var(--bs-warning-rgb));
+    border-color: #b45309;
+    color: #111827;
 }
 
-[data-theme="dark"] .btn-warning:hover {
+[data-theme="dark"] .btn-warning:hover,
+[data-theme="dark"] .btn-warning:focus-visible {
     background-color: #f59e0b;
-    color: #ffffff;
+    border-color: #f59e0b;
+    color: #111827;
 }
 
 [data-theme="dark"] .btn-info {
@@ -339,13 +364,16 @@
 }
 
 [data-theme="dark"] .quick-action-btn.btn-warning {
-    background-color: #d97706;
-    color: #ffffff;
+    background-color: rgb(var(--bs-warning-rgb));
+    border-color: #b45309;
+    color: #111827;
 }
 
-[data-theme="dark"] .quick-action-btn.btn-warning:hover {
+[data-theme="dark"] .quick-action-btn.btn-warning:hover,
+[data-theme="dark"] .quick-action-btn.btn-warning:focus-visible {
     background-color: #f59e0b;
-    color: #ffffff;
+    border-color: #f59e0b;
+    color: #111827;
 }
 
 [data-theme="dark"] .quick-action-btn.btn-danger {
@@ -414,7 +442,11 @@
 
 /* Dark mode form elements */
 [data-theme="dark"] .form-control,
-[data-theme="dark"] .form-select {
+[data-theme="dark"] .form-select,
+[data-theme="dark"] .form-input-text,
+[data-theme="dark"] .form-textarea,
+[data-theme="dark"] .form-date-input,
+[data-theme="dark"] .searchable-select-wrapper select {
     background-color: #334155;
     border-color: #475569;
     color: #f8fafc;
@@ -422,7 +454,10 @@
 
 [data-theme="dark"] .form-control:disabled,
 [data-theme="dark"] .form-control[readonly],
-[data-theme="dark"] .form-select:disabled {
+[data-theme="dark"] .form-select:disabled,
+[data-theme="dark"] .form-input-text:disabled,
+[data-theme="dark"] .form-textarea:disabled,
+[data-theme="dark"] .form-date-input:disabled {
     background-color: #1e293b;
     border-color: #334155;
     color: #cbd5e1;
@@ -441,13 +476,31 @@
     color: #f8fafc;
 }
 
-[data-theme="dark"] .form-control::placeholder {
+[data-theme="dark"] .form-control::placeholder,
+[data-theme="dark"] .form-input-text::placeholder,
+[data-theme="dark"] .form-textarea::placeholder {
     color: #94a3b8;
 }
 
-[data-theme="dark"] .form-select option {
+/* The app's own form widget classes (forms.css) hard-code light colors */
+[data-theme="dark"] input[type="date"].form-date-input,
+[data-theme="dark"] input[type="date"].form-control {
+    color-scheme: dark;
+}
+
+[data-theme="dark"] .form-select option,
+[data-theme="dark"] .searchable-select-wrapper select option {
     background-color: #1e293b;
     color: #f8fafc;
+}
+
+[data-theme="dark"] .giver-picker {
+    background-color: #334155;
+    border-color: #475569;
+}
+
+[data-theme="dark"] .giver-picker-title {
+    color: #cbd5e1;
 }
 
 /* Floating labels mask their overlap with the input border using
@@ -461,7 +514,10 @@
 }
 
 [data-theme="dark"] .form-control:focus,
-[data-theme="dark"] .form-select:focus {
+[data-theme="dark"] .form-select:focus,
+[data-theme="dark"] .form-input-text:focus,
+[data-theme="dark"] .form-textarea:focus,
+[data-theme="dark"] .form-date-input:focus {
     border-color: #818cf8;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
 }
@@ -572,6 +628,12 @@
     background-color: rgba(30, 58, 138, 0.5);
     border-color: #3b82f6;
     color: #93c5fd;
+}
+
+[data-theme="dark"] .alert-light {
+    background-color: #334155;
+    border-color: #475569;
+    color: #e2e8f0;
 }
 
 /* Dark mode tree view */
@@ -1002,13 +1064,28 @@ html .navbar-nav .nav-link.active {
 }
 
 .btn-warning {
-    background-color: var(--color-warning);
-    color: var(--text-inverse);
+    --bs-btn-bg: rgb(var(--bs-warning-rgb));
+    --bs-btn-border-color: #d97706;
+    --bs-btn-color: #111827;
+    --bs-btn-hover-bg: #d97706;
+    --bs-btn-hover-border-color: #b45309;
+    --bs-btn-hover-color: #111827;
+    --bs-btn-active-bg: #b45309;
+    --bs-btn-active-border-color: #92400e;
+    --bs-btn-active-color: #ffffff;
+    --bs-btn-disabled-bg: rgb(var(--bs-warning-rgb));
+    --bs-btn-disabled-border-color: #d97706;
+    --bs-btn-disabled-color: #111827;
+    background-color: rgb(var(--bs-warning-rgb));
+    border-color: #d97706;
+    color: #111827;
 }
 
-.btn-warning:hover {
-    background-color: var(--color-warning-hover);
-    color: var(--text-inverse);
+.btn-warning:hover,
+.btn-warning:focus-visible {
+    background-color: #d97706;
+    border-color: #b45309;
+    color: #111827;
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
 }
@@ -1443,7 +1520,7 @@ html .navbar-nav .nav-link.active {
 .badge.bg-secondary { --bs-secondary-rgb: 75, 85, 99; color: #ffffff; }
 
 .badge.bg-warning {
-    color: var(--text-inverse);
+    color: #111827;
 }
 
 [data-theme="dark"] .detail-label {
@@ -1460,6 +1537,12 @@ html .navbar-nav .nav-link.active {
     background-color: rgba(148, 163, 184, 0.2) !important;
     color: #e2e8f0 !important;
     border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] .badge.bg-info-subtle {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    color: #bfdbfe !important;
+    border: 1px solid rgba(147, 197, 253, 0.3);
 }
 
 [data-theme="dark"] .btn-outline-danger {
@@ -3154,6 +3237,12 @@ h4, h5, h6 {
     border: 1px solid var(--border-color);
 }
 
+/* Grid.js defaults to a fixed layout with rounded pixel widths per column, whose sum can
+   exceed the wrapper by 1px and show a horizontal scrollbar under a table that fits */
+.gridjs-wrapper > .gridjs-table {
+    table-layout: auto;
+}
+
 [data-view="list"] .gridjs-table {
     display: table;
     width: 100%;
@@ -3830,4 +3919,87 @@ h4, h5, h6 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+/* ==========================================================================
+   Bootstrap colour utilities under the app theme
+   The app switches theme with data-theme and never sets data-bs-theme, so Bootstrap's
+   "emphasis" and "subtle" utilities would keep their light values on dark surfaces.
+   Give their variables the Bootstrap dark values here, instead of enabling Bootstrap's own
+   dark mode, which would restyle every component and fight the rules above.
+   ========================================================================== */
+
+[data-theme="dark"] {
+    color-scheme: dark;
+    --bs-emphasis-color: #ffffff;
+    --bs-emphasis-color-rgb: 255, 255, 255;
+    --bs-secondary-bg: #334155;
+    --bs-tertiary-bg: #1e293b;
+    --bs-primary-text-emphasis: #a5b4fc;
+    --bs-secondary-text-emphasis: #cbd5e1;
+    --bs-success-text-emphasis: #6ee7b7;
+    --bs-info-text-emphasis: #7dd3fc;
+    --bs-warning-text-emphasis: #fcd34d;
+    --bs-danger-text-emphasis: #fca5a5;
+    --bs-light-text-emphasis: #f8fafc;
+    --bs-dark-text-emphasis: #e2e8f0;
+    --bs-primary-bg-subtle: #1e1b4b;
+    --bs-secondary-bg-subtle: #1e293b;
+    --bs-success-bg-subtle: #064e3b;
+    --bs-info-bg-subtle: #0c4a6e;
+    --bs-warning-bg-subtle: #78350f;
+    --bs-danger-bg-subtle: #7f1d1d;
+    --bs-light-bg-subtle: #334155;
+    --bs-dark-bg-subtle: #1e293b;
+    --bs-primary-border-subtle: #3730a3;
+    --bs-secondary-border-subtle: #475569;
+    --bs-success-border-subtle: #047857;
+    --bs-info-border-subtle: #0369a1;
+    --bs-warning-border-subtle: #b45309;
+    --bs-danger-border-subtle: #b91c1c;
+    --bs-light-border-subtle: #475569;
+    --bs-dark-border-subtle: #334155;
+}
+
+/* text-dark is a fixed colour: keep it readable on the badges that use it */
+.badge.bg-info.text-dark {
+    color: #111827 !important;
+}
+
+[data-theme="dark"] .badge.bg-info.text-dark {
+    --bs-info-rgb: 3, 105, 161;
+    color: #ffffff !important;
+}
+
+/* bg-light is not themed everywhere: set both colours so the pair stays readable */
+[data-theme="dark"] .badge.bg-light.text-dark {
+    background-color: #334155 !important;
+    color: var(--text-primary) !important;
+}
+
+/* "Shared with" permission label: an outlined badge (bg-outline-secondary is not Bootstrap's) */
+.badge.bg-outline-secondary {
+    border: 1px solid var(--border-color-hover);
+    background-color: transparent;
+    color: var(--text-secondary);
+}
+
+/* White headings on a primary card header need a darker indigo than the brand colour */
+.card-header.bg-primary.text-white {
+    --bs-primary-rgb: 67, 56, 202;
+}
+
+.card-header.bg-primary.text-white :is(h1, h2, h3, h4, h5, h6) {
+    color: #ffffff;
+}
+
+/* Collapsible section titles of the share page follow the text colour, not Bootstrap's blue */
+#shareAccordion .card-header .btn-link {
+    color: var(--text-primary);
+}
+
+/* Tag badges are links inside grid cells: keep the badge text colour, not the dark link colour */
+[data-theme="dark"] .gridjs-td a.badge:not(.btn),
+[data-theme="dark"] .gridjs-td a.badge:not(.btn):hover {
+    color: #ffffff;
 }

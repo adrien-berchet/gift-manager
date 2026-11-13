@@ -40,7 +40,7 @@
          hx-target="this"
          hx-swap="outerHTML">
     <div class="dashboard-summary-strip" aria-label="{% trans 'Dashboard summary' %}">
-        <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="dashboard-summary-tile dashboard-summary-tile--attention">
+        <a href="{% url 'gift_manager:relations' %}#gift-plan-workspace-heading" class="dashboard-summary-tile{% if dashboard_summary.attention %} dashboard-summary-tile--attention{% endif %}">
             <i class="fas fa-bell" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.attention|default:0 }}</strong>
@@ -61,7 +61,7 @@
                 <span>{% trans "Due soon" %}</span>
             </div>
         </a>
-        <a href="{% url 'gift_manager:gifts' %}" class="dashboard-summary-tile">
+        <a href="{% url 'gift_manager:gifts' %}?unassigned=1" class="dashboard-summary-tile">
             <i class="fas fa-gift" aria-hidden="true"></i>
             <div>
                 <strong>{{ dashboard_summary.unassigned_gifts|default:0 }}</strong>
@@ -78,55 +78,10 @@
             </a>
         </div>
 
-        {% if dashboard_action_groups %}
+        {% if dashboard_attention_groups %}
         <div class="action-group-grid">
-            {% for group in dashboard_action_groups %}
-            <section class="dashboard-action-group dashboard-action-group--{{ group.key }}{% if group.is_compact %} dashboard-action-group--compact{% endif %}"
-                     {% if group.is_paginated %}data-dashboard-action-paginated{% endif %}
-                     {% if group.is_compact %}data-dashboard-rows-per-page="1"{% endif %}
-                     aria-labelledby="dashboard-action-group-{{ group.key }}">
-                <div class="dashboard-action-heading">
-                    <h3 id="dashboard-action-group-{{ group.key }}">
-                        <i class="fas {{ group.icon }}" aria-hidden="true"></i>{{ group.label }}
-                    </h3>
-                    <div class="d-flex align-items-center gap-2">
-                        {% if group.is_compact and group.workspace_focus %}
-                        <a href="{% url 'gift_manager:relations' %}?focus={{ group.workspace_focus }}#gift-plan-group-{{ group.workspace_focus }}"
-                           class="dashboard-action-link">
-                            {% trans "View all" %}
-                            <i class="fas fa-arrow-right" aria-hidden="true"></i>
-                        </a>
-                        {% endif %}
-                        <span class="dashboard-action-count">{{ group.items|length }}</span>
-                    </div>
-                </div>
-                <div class="dashboard-action-list gift-plan-card-grid{% if group.is_paginated %} gift-plan-card-grid--paginated{% endif %}"
-                     {% if group.is_paginated %}data-dashboard-action-list{% endif %}>
-                    {% for card in group.display_items %}
-                    {% include "gift_manager/includes/gift_plan_card.html" with card=card %}
-                    {% endfor %}
-                </div>
-                {% if group.is_paginated %}
-                <div class="dashboard-action-pagination" data-dashboard-pagination hidden>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary"
-                            data-dashboard-page="previous"
-                            aria-label="{% trans 'Previous page' %}">
-                        <i class="fas fa-chevron-left" aria-hidden="true"></i>
-                    </button>
-                    <span class="dashboard-action-page-status"
-                          data-dashboard-page-status
-                          aria-live="polite"
-                          aria-atomic="true">1 / 1</span>
-                    <button type="button"
-                            class="btn btn-sm btn-outline-secondary"
-                            data-dashboard-page="next"
-                            aria-label="{% trans 'Next page' %}">
-                        <i class="fas fa-chevron-right" aria-hidden="true"></i>
-                    </button>
-                </div>
-                {% endif %}
-            </section>
+            {% for group in dashboard_attention_groups %}
+            {% include "gift_manager/includes/dashboard_action_group.html" with group=group %}
             {% endfor %}
         </div>
         {% else %}
@@ -140,7 +95,7 @@
                 &middot; {{ next_upcoming_item.date|date:"MONTH_DAY_FORMAT" }}
                 ({% if next_upcoming_item.days_until == 0 %}{% trans "Today" %}{% elif next_upcoming_item.days_until == 1 %}{% trans "Tomorrow" %}{% else %}{% blocktrans with days=next_upcoming_item.days_until %}In {{ days }} days{% endblocktrans %}{% endif %})
             </p>
-            {% else %}
+            {% elif not stats.relations %}
             <p class="mb-0">{% trans "Create a gift plan to start tracking what you will give next." %}</p>
             {% endif %}
             <a href="{% url 'gift_manager:relation_create' %}" class="btn btn-primary" data-action="create">
@@ -152,6 +107,18 @@
         </div>
         {% endif %}
     </section>
+
+    {% if dashboard_reaction_group %}
+    <section class="next-action-board dashboard-reaction-board" aria-labelledby="dashboard-reaction-heading">
+        <div class="section-heading">
+            <h2 id="dashboard-reaction-heading">{{ dashboard_reaction_group.label }}</h2>
+            <span class="dashboard-action-count">{{ dashboard_reaction_group.items|length }}</span>
+        </div>
+        <div class="action-group-grid">
+            {% include "gift_manager/includes/dashboard_action_group.html" with group=dashboard_reaction_group labelled_by="dashboard-reaction-heading" %}
+        </div>
+    </section>
+    {% endif %}
 
     {% if upcoming_birthdays %}
     <section class="dashboard-birthdays" aria-labelledby="dashboard-birthdays-heading">
@@ -200,6 +167,9 @@
                 </a>
                 <a href="{% url 'gift_manager:event_create' %}" class="quick-action-btn" data-action="create">
                     <i class="fas fa-calendar-plus"></i>{% trans "New Event" %}
+                </a>
+                <a href="{% url 'gift_manager:received_gift_create' %}" class="quick-action-btn" data-action="create">
+                    <i class="fas fa-box-open"></i>{% trans "Received gift" %}
                 </a>
             </div>
         </div>

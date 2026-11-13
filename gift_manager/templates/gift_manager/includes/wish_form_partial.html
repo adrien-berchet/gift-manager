@@ -24,3 +24,6 @@
 
   {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" action=action translated_type=translated_type %}
 </form>
+{% if wish.pk %}
+{% include "gift_manager/includes/wish_received_forms.html" %}
+{% endif %}

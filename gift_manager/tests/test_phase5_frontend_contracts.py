@@ -561,7 +561,7 @@ def test_gift_plan_set_date_uses_detached_picker_and_quick_action_refresh_contra
     assert "background-color: var(--gift-plan-action-secondary-bg)" in secondary_button_styles
     assert "color: var(--gift-plan-action-secondary-text)" in secondary_button_styles
     assert "background-color: var(--color-danger-light)" in missing_badge_styles
-    assert "color: var(--color-danger-hover)" in missing_badge_styles
+    assert "color: var(--color-danger-text)" in missing_badge_styles
     assert "rgba(239, 68, 68, 0.35)" in missing_badge_styles
     assert "var(--color-danger)" in missing_row_marker_styles
 
@@ -705,3 +705,35 @@ assert(received.length === 2 && received[1].msg === "Direct alert", "delegates t
         check=True,
         text=True,
     )
+
+
+def test_warning_colors_align_on_theme_warning_tokens():
+    theme_styles = read(STATIC_ROOT / "css/theme.css")
+    modern_ux_styles = read(STATIC_ROOT / "css/modern-ux.css")
+    received_styles = read(STATIC_ROOT / "css/received-gifts.css")
+    permission_styles = read(STATIC_ROOT / "css/permission-ui.css")
+    inline_styles = read(STATIC_ROOT / "css/inline-editing.css")
+    touch_styles = read(STATIC_ROOT / "css/touch-gestures.css")
+
+    assert "--bs-warning: #f59e0b;" in theme_styles
+    assert "--bs-warning-rgb: 245, 158, 11;" in theme_styles
+    assert "--bs-warning: #d97706;" in theme_styles
+    assert "--bs-warning-rgb: 217, 119, 6;" in theme_styles
+
+    # Button variants inherit the dashboard badge warning tokens cleanly without white-on-amber text
+    btn_warning_block = css_block(theme_styles, ".btn-warning")
+    assert "rgb(var(--bs-warning-rgb))" in btn_warning_block
+    assert "color: #111827;" in btn_warning_block
+
+    badge_warning_block = css_block(theme_styles, ".badge.bg-warning")
+    assert "color: #111827;" in badge_warning_block
+
+    assert "received-gift-pending-btn" not in received_styles
+    assert "--color-warning-dark" not in modern_ux_styles
+
+    for label, content in [
+        ("permission-ui.css", permission_styles),
+        ("inline-editing.css", inline_styles),
+        ("touch-gestures.css", touch_styles),
+    ]:
+        assert "#ffc107" not in content, f"Legacy #ffc107 warning color found in {label}"

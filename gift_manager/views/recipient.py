@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.translation import gettext
 from django.views.generic import TemplateView
 
+from gift_manager.account_links import link_label
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -42,12 +43,14 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
         recipient_view = self.get_recipient_view()
 
         accessible_groups = PersonGroup.objects.accessible_by(user).order_by("name").distinct()
+        # The user's own person is listed like any other recipient (marked "This is you")
         accessible_persons = (
             Person.objects.accessible_by(user)
-            .exclude(account=user)
+            .select_related("account")
             .order_by("family_name", "first_name")
             .distinct()
         )
+        member_persons = Person.objects.accessible_by(user).distinct()
 
         context["recipient_view"] = recipient_view
 
@@ -58,7 +61,6 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                     user,
                     person_column_names,
                     accessible_groups,
-                    exclude_account=user,
                 )
             )
             populate_person_grid_group_info(person_grid_data, user, accessible_groups)
@@ -66,6 +68,8 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
             context["person_grid_data"] = person_grid_data
             context["person_column_names"] = person_column_names
             context["user_permissions"] = person_permission_context["user_permissions"]
+            context["user_delete_modes"] = person_permission_context["user_delete_modes"]
+            context["user_delete_reasons"] = person_permission_context["user_delete_reasons"]
             context["grid_data"] = get_person_grid_data(person_grid_data, viewer=user)
             context["recipients"] = []
             context["person_count"] = len(person_grid_data)
@@ -76,13 +80,15 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
         if recipient_view == "groups":
             group_context = get_person_group_management_context(
                 user,
-                member_queryset=accessible_persons,
+                member_queryset=member_persons,
             )
             context["person_group_grid_data"] = group_context["data"]
             context["person_group_column_names"] = group_context["column_names"]
             context["person_group_tree_data"] = group_context["tree_data"]
             context["person_group_has_hierarchy"] = group_context["has_hierarchy"]
             context["user_permissions"] = group_context.get("user_permissions", {})
+            context["user_delete_modes"] = group_context["user_delete_modes"]
+            context["user_delete_reasons"] = group_context["user_delete_reasons"]
             context["grid_data"] = group_context["grid_data"]
             context["recipients"] = []
             context["person_count"] = accessible_persons.count()
@@ -108,7 +114,7 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                 ),
                 Prefetch(
                     "person_set",
-                    queryset=accessible_persons,
+                    queryset=member_persons,
                     to_attr="accessible_members",
                 ),
             )
@@ -136,9 +142,15 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                 "detail_url": reverse(
                     "gift_manager:person_detail", kwargs={"pk": person.person_id}
                 ),
-                "gift_plan_url": reverse(
-                    "gift_manager:person_relation_create", kwargs={"pk": person.person_id}
+                # Gift plans are hidden for the user's own record
+                "gift_plan_url": (
+                    None
+                    if person.account_id == user.pk
+                    else reverse(
+                        "gift_manager:person_relation_create", kwargs={"pk": person.person_id}
+                    )
                 ),
+                "link_label": link_label(person, user),
                 "groups": list(person.accessible_groups),
                 "member_count": None,
                 "child_count": None,
@@ -160,6 +172,7 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                         "gift_manager:person_group_relation_create",
                         kwargs={"pk": group.group_id},
                     ),
+                    "link_label": "",
                     "groups": [],
                     "member_count": len(group.accessible_members),
                     "child_count": len(group.accessible_child_groups),

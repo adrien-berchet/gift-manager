@@ -1,0 +1,28 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Reveal to Recipient" %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header mb-4">
+    <h1>{% trans "Reveal to Recipient" %}</h1>
+  </div>
+
+  <form method="post"
+        action="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
+        id="main-form"
+        class="page-form reveal-form"
+        data-form-type="relation_reveal"
+        novalidate>
+    {% csrf_token %}
+
+    <div class="form-fields">
+      {% include "gift_manager/includes/forms/errors.html" %}
+      {% include "gift_manager/includes/forms/relation_reveal_fields.html" %}
+    </div>
+
+    {% include "gift_manager/includes/forms/actions.html" with form_surface="page" cancel_url=cancel_url submit_label=submit_label %}
+  </form>
+</div>
+{% endblock %}

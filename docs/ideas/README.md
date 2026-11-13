@@ -81,11 +81,15 @@ status and notes to reflect the move.
 | 0027 | Recipient Preference Profiles And Feedback Persistence | Implemented | Gift Plans | Aggregate all-time recipient preference profiles to avoid history truncation in suggestions, with opt-in feedback promotion to profile notes and interests. Moved to `implemented/`. |
 | 0028 | Wishlists And Collaborative Gift Giving | Implemented | Sharing | Person-account link (project A), own profile and wishlist (B), group gifts with a contribution tally (C). Moved to `implemented/`. |
 | 0029 | MCP Server For AI Agents | Proposed | Platform | Read-only MCP server inside the Django app with per-user bearer tokens, reusing `accessible_by` and `PermissionService`; writes deferred. |
-| 0030 | Received Gifts Log | Proposed | Gift Plans | Private log of received gifts (manual or revealed by friends), with thank-you tracking, wish fulfillment, re-gifting warnings and AI context when giving back. |
+| 0030 | Received Gifts Log | Implemented | Gift Plans | Private log of received gifts (manual or revealed by friends), with thank-you tracking, wish fulfillment, re-gifting warnings and AI context when giving back. Moved to `implemented/`. |
 | 0031 | Browser Bookmarklet For Quick Gift And Wish Entry | Proposed | Interaction | Drag-and-drop browser bookmarklet extracting Open Graph and Schema.org metadata client-side to pre-fill guided plan and wishlist creation without serverless scraping risks. |
 | 0032 | Managed Wishlists For Children And Dependents | Proposed | Sharing | Wishlists anchored to owned Person records with query isolation in WishQuerySet and parent-coordination claim visibility rules. |
 | 0033 | Read-Only Guest Wishlist Links | Proposed | Sharing | Unguessable token links rendering all active wishes uniformly without claim state to avoid owner surprise leaks, with Referrer-Policy protection. |
 | 0034 | Secret Santa Draws For Groups | Considering | Gift Plans | Automated holiday draw pairings with exclusion rules, exchange wishlist grants, and dashboard delivery, leaving anonymous Q&A to a later phase. |
+| 0035 | Search Received Gifts And Wishes | Proposed | Search | Global search returns the user's own received gifts and wishes, scoped with `for_user` / `for_wisher`. From the 2026-11-12 QA pass. |
+| 0036 | Filter Received Gifts By Free-Text Giver | Proposed | Gift Plans | Giver filter also matches free-text and revealed giver names, not only address-book people and groups. From the 2026-11-12 QA pass. |
+| 0037 | Consistent Price Formatting | Proposed | i18n | One locale-aware price format on the gifts grid and server-rendered pages ("€24.50" vs "24.50 €" today). From the 2026-11-12 QA pass. |
+| 0038 | Delete For Everyone With Copies For Dependent Plans | Proposed | Sharing | The only owner of a shared object deletes it for everyone; owners of dependent plans keep a copy, so no plan is lost and no surprise is revealed. |
 
 
 ## Working With Ideas

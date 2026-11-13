@@ -138,6 +138,11 @@
                                     <i class="fas fa-tasks me-2" aria-hidden="true"></i>{% trans "Statuses" %}
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item {% if 'received_gift' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:received_gift_list' %}">
+                                    <i class="fas fa-box-open me-2" aria-hidden="true"></i>{% trans "Received Gifts" %}
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item {% if request.resolver_match.url_name == 'share_objects' %}active{% endif %}" href="{% url 'gift_manager:share_objects' %}">

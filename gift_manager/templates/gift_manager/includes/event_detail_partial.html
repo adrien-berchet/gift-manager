@@ -101,7 +101,7 @@
                             <i class="fas fa-gift me-2 text-primary"></i>
                             <strong>{{ relation.gift.name }}</strong>
                             {% if relation.status %}
-                            <span class="badge bg-info ms-2">{{ relation.status }}</span>
+                            <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge bg-info ms-2">{{ relation.status }}</span></a>
                             {% endif %}
                         </div>
 
@@ -146,6 +146,7 @@
                            title="{% trans 'View gift plan details' %}">
                             <i class="fas fa-eye" aria-hidden="true"></i>
                         </a>
+                        {% if relation.can_edit %}
                         <a href="{% url 'gift_manager:relation_edit' pk=relation.relation_id %}"
                            class="btn btn-outline-primary btn-sm"
                            data-action="edit"
@@ -153,6 +154,8 @@
                            title="{% trans 'Edit gift plan' %}">
                             <i class="fas fa-edit" aria-hidden="true"></i>
                         </a>
+                        {% endif %}
+                        {% if relation.delete_mode == "delete" %}
                         <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}"
                            class="btn btn-outline-danger btn-sm"
                            data-action="delete"
@@ -160,6 +163,15 @@
                            title="{% trans 'Delete gift plan' %}">
                             <i class="fas fa-trash" aria-hidden="true"></i>
                         </a>
+                        {% elif relation.delete_mode == "leave" or relation.delete_mode == "handover" %}
+                        <a href="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}?intent=leave_access"
+                           class="btn btn-outline-danger btn-sm"
+                           data-action="delete"
+                           data-delete-url="{% url 'gift_manager:relation_delete' pk=relation.relation_id %}?intent=leave_access"
+                           title="{% if relation.delete_mode == 'handover' %}{% trans 'Hand over and remove my access' %}{% else %}{% trans 'Remove my access' %}{% endif %}">
+                            <i class="fas fa-user-minus" aria-hidden="true"></i>
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>

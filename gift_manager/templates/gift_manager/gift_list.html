@@ -26,6 +26,16 @@
     </div>
 </div>
 
+{# All gifts, or only the ones no gift plan uses yet (ideas kept for later) #}
+<nav class="btn-group mb-3" aria-label="{% trans 'Gifts to show' %}">
+    <a href="{% url 'gift_manager:gifts' %}"
+       class="btn btn-sm {% if show_unassigned %}btn-outline-primary{% else %}btn-primary{% endif %}"
+       {% if not show_unassigned %}aria-current="page"{% endif %}>{% trans "All gifts" %}</a>
+    <a href="{% url 'gift_manager:gifts' %}?unassigned=1"
+       class="btn btn-sm {% if show_unassigned %}btn-primary{% else %}btn-outline-primary{% endif %}"
+       {% if show_unassigned %}aria-current="page"{% endif %}>{% trans "Not in a plan yet" %}</a>
+</nav>
+
 {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="gift-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
@@ -44,6 +54,7 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}
+{% include "gift_manager/includes/grid_delete_modes.html" %}
 <script>
     (function () {
         // Get permission data from template (stored globally for refresh updates)

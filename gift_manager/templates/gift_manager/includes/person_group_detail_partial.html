@@ -149,7 +149,7 @@
                             <i class="fas fa-gift me-2 text-primary"></i>
                             <strong>{{ relation.gift.name }}</strong>
                             {% if relation.status %}
-                            <span class="badge bg-info ms-2">{{ relation.status }}</span>
+                            <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge bg-info ms-2">{{ relation.status }}</span></a>
                             {% endif %}
                         </div>
 
@@ -175,6 +175,7 @@
                         {% endif %}
                     </div>
 
+                    {% if relation.can_edit %}
                     <div class="relation-actions">
                         <button type="button"
                                 class="btn btn-outline-primary btn-sm"
@@ -184,6 +185,7 @@
                             <i class="fas fa-edit"></i>
                         </button>
                     </div>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}

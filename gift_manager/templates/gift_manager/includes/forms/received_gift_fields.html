@@ -1,0 +1,150 @@
+{% load i18n %}
+{% load custom_filters %}
+
+<div class="card mb-3">
+  <div class="card-header bg-light py-2">
+    <h3 class="h6 mb-0 text-muted" id="received-gift-gift-heading">
+      <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "What did you receive?" %}
+    </h3>
+  </div>
+  <div class="card-body py-2">
+    {# A new gift (typed title and link) or a fulfilled wish (its title and link are copied) #}
+    <fieldset class="guided-choice" aria-labelledby="received-gift-gift-heading">
+      {% if form.wish_choices_available %}
+      {% include "gift_manager/includes/forms/mode_choice_options.html" with field=form.gift_mode %}
+      {% else %}
+      <input type="hidden" name="{{ form.gift_mode.html_name }}" value="new">
+      {% endif %}
+      <div class="guided-panels">
+      <div class="guided-panel guided-panel--new">
+        {% include "gift_manager/includes/forms/field.html" with field=form.title required=form.title_required %}
+        {% include "gift_manager/includes/forms/field.html" with field=form.url %}
+      </div>
+      {% if form.wish_choices_available %}
+      <div class="guided-panel guided-panel--wish">
+        {% include "gift_manager/includes/forms/field.html" with field=form.wish label_class="visually-hidden" %}
+        <div class="form-check mb-3" data-unsaved-quiet>
+          {{ form.fulfills_wish }}
+          <label class="form-check-label" for="{{ form.fulfills_wish.id_for_label }}">{{ form.fulfills_wish.label }}</label>
+        </div>
+      </div>
+      {% endif %}
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    {% include "gift_manager/includes/forms/field.html" with field=form.received_on %}
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    {% include "gift_manager/includes/forms/field.html" with field=form.description %}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header bg-light py-2">
+    <h3 class="h6 mb-0 text-muted" id="received-gift-givers-heading">
+      <i class="fas fa-users me-1" aria-hidden="true"></i>{% trans "Who gave this gift?" %}
+    </h3>
+  </div>
+  <div class="card-body py-2">
+    {% if form.snapshot_givers_summary %}
+    <p class="form-text mt-0 mb-2 received-gift-snapshot-givers">
+      <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% blocktrans with givers=form.snapshot_givers_summary %}From the revealed gift plan: {{ givers }}{% endblocktrans %}
+    </p>
+    {% endif %}
+    {# Known people/groups or a free-text name: the radio picks the panel that is shown and kept #}
+    <fieldset class="guided-choice" aria-labelledby="received-gift-givers-heading">
+      {% if form.giver_contacts_available %}
+      {% include "gift_manager/includes/forms/mode_choice_options.html" with field=form.giver_mode %}
+      {% endif %}
+      <div class="guided-panels">
+      {% if form.giver_contacts_available %}
+      <div class="guided-panel guided-panel--contacts">
+        <div class="form-group form-field mb-3{% if form.givers.errors %} has-errors{% endif %}">
+          <div class="giver-picker" role="group" aria-label="{{ form.givers.label }}" data-unsaved-quiet>
+            {% for label, options in form.giver_sections %}
+            <div class="giver-picker-section" role="group" aria-label="{{ label }}">
+              <div class="giver-picker-title" aria-hidden="true">{{ label }}</div>
+              {% for option in options %}
+              <div class="form-check">
+                {{ option.tag }}
+                <label class="form-check-label" for="{{ option.id_for_label }}">{{ option.choice_label }}</label>
+              </div>
+              {% endfor %}
+            </div>
+            {% endfor %}
+          </div>
+          {% if form.givers.errors %}
+          <div class="invalid-feedback d-block">
+            {% for error in form.givers.errors %}<div>{{ error }}</div>{% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% else %}
+      <input type="hidden" name="{{ form.giver_mode.html_name }}" value="other">
+      {% endif %}
+      <div class="guided-panel guided-panel--other">
+        {% include "gift_manager/includes/forms/field.html" with field=form.giver_label %}
+      </div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header bg-light py-2">
+    <h3 class="h6 mb-0 text-muted" id="received-gift-occasion-heading">
+      <i class="fas fa-calendar-alt me-1" aria-hidden="true"></i>{% trans "Occasion" %}
+    </h3>
+  </div>
+  <div class="card-body py-2">
+    {# A known event or a free-text occasion: the radio picks the panel that is shown and kept #}
+    <fieldset class="guided-choice" aria-labelledby="received-gift-occasion-heading">
+      {% if form.event_choices_available %}
+      {% include "gift_manager/includes/forms/mode_choice_options.html" with field=form.occasion_mode %}
+      {% endif %}
+      <div class="guided-panels">
+      {% if form.event_choices_available %}
+      <div class="guided-panel guided-panel--event">
+        {% include "gift_manager/includes/forms/field.html" with field=form.event label_class="visually-hidden" %}
+      </div>
+      {% else %}
+      <input type="hidden" name="{{ form.occasion_mode.html_name }}" value="other">
+      {% endif %}
+      <div class="guided-panel guided-panel--other">
+        {% include "gift_manager/includes/forms/field.html" with field=form.occasion_text label_class="visually-hidden" %}
+      </div>
+      </div>
+    </fieldset>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-header bg-light py-2">
+    <h3 class="h6 mb-0 text-muted">
+      <i class="fas fa-heart me-1" aria-hidden="true"></i>{% trans "Personal Reaction" %}
+    </h3>
+  </div>
+  <div class="card-body py-2">
+    <div class="mb-3">
+      {% rating_input form.reaction_rating %}
+    </div>
+    {% include "gift_manager/includes/forms/field.html" with field=form.reaction_note %}
+  </div>
+</div>
+
+<div class="mb-3">
+  <div class="form-check form-switch">
+    {{ form.thank_you_sent }}
+    <label class="form-check-label fw-semibold" for="{{ form.thank_you_sent.id_for_label }}">
+      <i class="fas fa-envelope-open-text text-primary me-1" aria-hidden="true"></i>{{ form.thank_you_sent.label }}
+    </label>
+  </div>
+</div>

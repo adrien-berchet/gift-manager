@@ -3,10 +3,23 @@
 <article class="gift-plan-card gift-plan-card--{{ card.urgency_key }}"
          data-recipient-key="{{ card.relation.recipient_key }}">
     <div class="gift-plan-card-topline">
-        <span class="gift-plan-status-badge {{ card.status_class }}">
+        <a href="{% url 'gift_manager:relation_status_detail' card.relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="gift-plan-status-badge {{ card.status_class }}">
             {{ card.relation.status }}
+        </span></a>
+        {% if card.relation.revealed_at %}
+        <span class="badge bg-success-subtle text-success-emphasis border gift-plan-revealed-badge"
+              title="{% trans 'This gift plan has been revealed to the recipient' %}">
+            <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
         </span>
-        {% if card.relation.due_date %}
+        {% endif %}
+        {% if card.is_given %}
+        {% if card.relation.given_on %}
+        <span class="gift-plan-due-badge gift-plan-due-badge--completed">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i>
+            {% blocktrans with date=card.relation.given_on|date:"DATE_FORMAT" %}Given on {{ date }}{% endblocktrans %}
+        </span>
+        {% endif %}
+        {% elif card.relation.due_date %}
         <span class="gift-plan-due-badge gift-plan-due-badge--{{ card.urgency_key }}">
             <i class="fas fa-calendar-day" aria-hidden="true"></i>
             {{ card.relation.due_date|date:"DATE_FORMAT" }}
@@ -182,6 +195,15 @@
             </form>
             {% endif %}
         {% endfor %}
+        {% if card.can_reveal %}
+        <a href="{{ card.reveal_url }}"
+           class="btn btn-sm btn-outline-primary"
+           data-action="edit"
+           data-edit-url="{{ card.reveal_url }}"
+           title="{% trans 'Reveal to recipient' %}">
+            <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal" %}
+        </a>
+        {% endif %}
         <a href="{{ card.detail_url }}"
            class="btn btn-sm btn-outline-secondary gift-plan-card-utility-action"
            data-action="detail"

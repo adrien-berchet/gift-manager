@@ -1,0 +1,39 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% load static %}
+
+{% block title %}Gift Manager - {{ action }} {{ translated_type }}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header mb-4">
+    <h1>{{ action }} {{ translated_type }}</h1>
+  </div>
+
+  <form method="post"
+        {% if object and object.received_gift_id %}
+        action="{% url 'gift_manager:received_gift_edit' object.received_gift_id %}"
+        {% else %}
+        action="{% url 'gift_manager:received_gift_create' %}"
+        {% endif %}
+        id="main-form"
+        class="page-form received-gift-form"
+        data-form-type="received_gift"
+        data-track-changes
+        novalidate>
+    {% csrf_token %}
+
+    <div class="form-fields">
+      {% include "gift_manager/includes/forms/errors.html" %}
+      {% include "gift_manager/includes/forms/received_gift_fields.html" %}
+    </div>
+
+    {% include "gift_manager/includes/forms/actions.html" with form_surface="page" cancel_url=cancel_url %}
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'gift_manager/js/unsaved-changes.js' %}"></script>
+{% endblock %}

@@ -23,6 +23,7 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationComment
 from gift_manager.models import RelationContribution
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_terminal_status
 
 MAX_COMMENT_LENGTH = 2000
 
@@ -193,7 +194,8 @@ def coordination_context(relation: Relation, user: User) -> dict:
     return {
         "claimed_by": claimed_by,
         "claimed_at": relation.claimed_at if claimed_by else None,
-        "can_claim": claimed_by is None,
+        # Nothing is left to buy or give once the plan is given or abandoned
+        "can_claim": claimed_by is None and not is_terminal_status(relation.status),
         "can_release": claimed_by is not None and (claimed_by.pk == user.pk or is_owner),
         "can_comment": True,
         "comments": [
@@ -204,16 +206,8 @@ def coordination_context(relation: Relation, user: User) -> dict:
     }
 
 
-def hidden_recipient_ids(relation: Relation) -> set[int]:
-    """Return the users a surprise plan is hidden from, in a constant number of queries.
-
-    These are the linked user of the recipient person, or the linked users of the members of the
-    recipient group (nested groups included), except the owners of the plan. It is the same rule
-    as ``Relation.objects.hidden_surprises_for``, computed from the plan's side so a list of
-    people can be checked at once.
-    """
-    if not relation.is_surprise:
-        return set()
+def plan_recipient_account_ids(relation: Relation) -> set[int]:
+    """Return non-owner user IDs representing this plan's recipient (person or group members)."""
     candidates: set[int | None] = set()
     if relation.person_id is not None:
         candidates = {relation.person.account_id} - {None}
@@ -231,6 +225,19 @@ def hidden_recipient_ids(relation: Relation) -> set[int]:
         if level == PermissionLevel.OWNER
     }
     return candidates - owner_ids
+
+
+def hidden_recipient_ids(relation: Relation) -> set[int]:
+    """Return the users a surprise plan is hidden from, in a constant number of queries.
+
+    These are the linked user of the recipient person, or the linked users of the members of the
+    recipient group (nested groups included), except the owners of the plan. It is the same rule
+    as ``Relation.objects.hidden_surprises_for``, computed from the plan's side so a list of
+    people can be checked at once.
+    """
+    if not relation.is_surprise:
+        return set()
+    return plan_recipient_account_ids(relation)
 
 
 def surprise_sharing_warning(obj: object, users: Iterable[User]) -> str:

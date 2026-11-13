@@ -2,6 +2,24 @@
 <!-- Reusable Delete Confirmation Modal Content Template -->
 <!-- This template is designed to be loaded dynamically via HTMX -->
 
+{% if is_leave_access %}
+<div class="d-flex align-items-start mb-4"
+     {% if handover_candidates %}data-confirm-title="{% trans 'Hand over and remove my access' %}"
+     data-confirm-label="{% trans 'Hand over and remove my access' %}"{% else %}data-confirm-title="{% trans 'Remove my access' %}"
+     data-confirm-label="{% trans 'Remove my access' %}"{% endif %}>
+  <div class="text-danger me-3 flex-shrink-0">
+    <i class="fas fa-user-minus fa-2x"></i>
+  </div>
+  <div class="flex-grow-1">
+    <h6 class="mb-2 fw-semibold">
+      {% blocktrans with entity_type=entity_type|lower %}You will no longer see this {{ entity_type }}.{% endblocktrans %}
+    </h6>
+    <p class="text-muted mb-0 small">
+      {% trans "It stays shared with the other people who have access, and they can share it with you again." %}
+    </p>
+  </div>
+</div>
+{% else %}
 <div class="d-flex align-items-start mb-4"
      data-confirm-title="{% trans 'Confirm Deletion' %}"
      data-confirm-label="{% trans 'Delete' %}">
@@ -17,9 +35,12 @@
     </p>
   </div>
 </div>
+{% endif %}
+
+{% include "gift_manager/includes/handover_owner_field.html" with form_attr="deleteForm" %}
 
 <!-- Entity Information Display -->
-<div class="border rounded-3 p-3 mb-3" style="background-color: var(--bs-gray-50);">
+<div class="border rounded-3 p-3 mb-3" style="background-color: var(--color-gray-50);">
   <div class="d-flex align-items-center">
     <div class="me-3">
       <i class="fas fa-{{ entity_icon|default:'cube' }} fa-lg text-primary"></i>
@@ -40,8 +61,8 @@
   </div>
 </div>
 
-<!-- Related Objects Warning (if any) -->
-{% if related_objects %}
+<!-- Related Objects Warning (if any): only an actual deletion affects them -->
+{% if related_objects and not is_leave_access %}
 <div class="alert alert-warning py-2 px-3 mb-3">
   <div class="d-flex align-items-start">
     <i class="fas fa-exclamation-circle text-warning me-2 mt-1 flex-shrink-0"></i>
@@ -69,7 +90,7 @@
 {% endif %}
 
 <!-- Cascade Deletion Warning (if applicable) -->
-{% if cascade_warning %}
+{% if cascade_warning and not is_leave_access %}
 <div class="alert alert-danger py-2 px-3 mb-3">
   <div class="d-flex align-items-start">
     <i class="fas fa-exclamation-triangle text-danger me-2 mt-1 flex-shrink-0"></i>

@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -56,6 +57,12 @@ class PermissionService:
     DELETE_RESULT_DELETED = "deleted"
     DELETE_RESULT_UNSHARED = "shared_removed"
 
+    # What "delete" means for a user on an object (see delete_mode_for)
+    DELETE_MODE_DELETE = "delete"
+    DELETE_MODE_LEAVE = "leave"
+    DELETE_MODE_HANDOVER = "handover"
+    DELETE_MODE_NONE = "none"
+
     @staticmethod
     def get_permission_model(obj) -> type[Model] | None:
         """Get the permission model for the given object."""
@@ -95,17 +102,17 @@ class PermissionService:
     @classmethod
     def get_effective_permission(cls, obj, user) -> int:
         """Get permission level for an object and user."""
+        if getattr(obj, "is_global", False):
+            # Global objects (e.g. the Birthday event) are shared by every user and read-only
+            # for everyone, superusers included: changing them would affect every account
+            return PermissionLevel.VIEWER
         if user.is_superuser:
             return PermissionLevel.OWNER
 
         if isinstance(obj, PersonGroup):
             return cls.get_effective_permission_for_group(obj, user)
 
-        permission = cls.get_permission(obj, user)
-        if getattr(obj, "is_global", False):
-            # Global objects (e.g. the Birthday event) are read-only for everyone
-            return max(permission, PermissionLevel.VIEWER)
-        return permission
+        return cls.get_permission(obj, user)
 
     @classmethod
     def validate_permission_level(cls, permission_level: int) -> int:
@@ -167,11 +174,195 @@ class PermissionService:
         if isinstance(obj, PersonGroup) and cls.get_permission(obj, user) == PermissionLevel.NONE:
             raise PermissionDenied(gettext("This group access is inherited from a parent group."))
 
-        if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
+        if cls._needs_handover(user, obj):
+            # Leaving would leave the object without an active owner
             raise PermissionDenied(gettext("At least one owner is required."))
 
     @classmethod
-    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False) -> str:
+    def delete_mode_for(cls, user, obj) -> tuple[str, str | None]:
+        """Return what deleting ``obj`` does for ``user`` and, when nothing, why.
+
+        Mirrors ``delete_or_leave``: while someone else holds access, deleting only removes the
+        user's own access ("leave"); otherwise editors delete the object. Public tags and global
+        objects are visible to everyone, so there is nothing to delete or leave.
+        """
+        if getattr(obj, "is_public", False):
+            return cls.DELETE_MODE_NONE, gettext("A public tag cannot be deleted or left.")
+        if getattr(obj, "is_global", False):
+            return cls.DELETE_MODE_NONE, str(GLOBAL_OBJECT_REMOVAL_ERROR)
+        if cls.has_other_access_holder(obj, user):
+            return cls._shared_delete_mode(user, obj)
+        if cls.get_effective_permission(obj, user) >= PermissionLevel.EDITOR:
+            return cls.DELETE_MODE_DELETE, None
+        return cls.DELETE_MODE_NONE, gettext("You do not have permission to delete this object.")
+
+    @classmethod
+    def _shared_delete_mode(cls, user, obj) -> tuple[str, str | None]:
+        """Delete mode while someone else holds access: leave, hand over, or nothing."""
+        if cls._needs_handover(user, obj) and cls.handover_candidates(user, obj):
+            return cls.DELETE_MODE_HANDOVER, None
+        try:
+            cls.assert_can_leave_object(user, obj)
+        except PermissionDenied as exc:
+            return cls.DELETE_MODE_NONE, str(exc)
+        return cls.DELETE_MODE_LEAVE, None
+
+    @classmethod
+    def delete_modes_for(cls, user, model, object_ids, id_field: str) -> dict[str, str]:
+        """Return the delete mode of each object of a list, keyed by its public id.
+
+        See ``delete_states_for``, which also gives why nothing is possible.
+        """
+        return {
+            object_id: mode
+            for object_id, (mode, _reason) in cls.delete_states_for(
+                user, model, object_ids, id_field
+            ).items()
+        }
+
+    @classmethod
+    def delete_states_for(
+        cls, user, model, object_ids, id_field: str
+    ) -> dict[str, tuple[str, str | None]]:
+        """Return ``delete_mode_for`` of each object of a list, keyed by its public id.
+
+        For grid rows: the permissions of the whole list are read at once instead of several
+        queries per row. Groups inherit access from their ancestors, so they keep the
+        per-object rule.
+
+        Args:
+            user: The user looking at the list.
+            model: The model of the listed objects.
+            object_ids: Their public ids (``person_id``, ``gift_id``...).
+            id_field: The name of that public id field.
+        """
+        object_ids = [object_id for object_id in object_ids if object_id]
+        if not object_ids:
+            return {}
+        objects = list(model.objects.filter(**{f"{id_field}__in": object_ids}))
+        if model is PersonGroup:
+            return {str(getattr(obj, id_field)): cls.delete_mode_for(user, obj) for obj in objects}
+
+        permission_model = model.shared_with.through
+        object_attr = permission_model.filter_name
+        holders: dict[int, list[tuple[int, int, bool]]] = {}
+        for object_pk, user_id, level, is_active in permission_model.objects.filter(
+            **{f"{object_attr}__in": objects}
+        ).values_list(f"{object_attr}_id", "user_id", "permission_type", "user__is_active"):
+            holders.setdefault(object_pk, []).append((user_id, level, is_active))
+        try:
+            friend_ids = set(user.profile.friends.values_list("user_id", flat=True))
+        except ObjectDoesNotExist:
+            friend_ids = set()
+        return {
+            str(getattr(obj, id_field)): cls._delete_state_from_holders(
+                user, obj, holders.get(obj.pk, []), friend_ids
+            )
+            for obj in objects
+        }
+
+    @classmethod
+    def with_delete_modes(cls, user, objects, id_field: str) -> list:
+        """Return ``objects`` as a list, each carrying its ``delete_mode`` for ``user``."""
+        objects = list(objects)
+        if objects:
+            modes = cls.delete_modes_for(
+                user, type(objects[0]), [getattr(obj, id_field) for obj in objects], id_field
+            )
+            for obj in objects:
+                obj.delete_mode = modes.get(str(getattr(obj, id_field)), cls.DELETE_MODE_NONE)
+        return objects
+
+    @classmethod
+    def _delete_state_from_holders(  # noqa: PLR0911 - one return per case of the rule
+        cls, user, obj, holders, friend_ids
+    ) -> tuple[str, str | None]:
+        """Apply the rule of ``delete_mode_for`` to an object's (user, level, active) holders."""
+        if getattr(obj, "is_public", False):
+            return cls.DELETE_MODE_NONE, gettext("A public tag cannot be deleted or left.")
+        if getattr(obj, "is_global", False):
+            return cls.DELETE_MODE_NONE, str(GLOBAL_OBJECT_REMOVAL_ERROR)
+        direct = next(
+            (level for user_id, level, _active in holders if user_id == user.pk),
+            PermissionLevel.NONE,
+        )
+        effective = PermissionLevel.OWNER if user.is_superuser else direct
+        others = [holder for holder in holders if holder[0] != user.pk]
+        if not others:
+            if effective >= PermissionLevel.EDITOR:
+                return cls.DELETE_MODE_DELETE, None
+            return cls.DELETE_MODE_NONE, gettext(
+                "You do not have permission to delete this object."
+            )
+
+        other_active_owner = any(
+            level == PermissionLevel.OWNER and is_active for _user_id, level, is_active in others
+        )
+        needs_handover = direct == PermissionLevel.OWNER and not other_active_owner
+        if needs_handover:
+            has_candidate = any(
+                is_active and user_id in friend_ids for user_id, _level, is_active in others
+            )
+            if has_candidate:
+                return cls.DELETE_MODE_HANDOVER, None
+            # Leaving would leave the object without an active owner
+            return cls.DELETE_MODE_NONE, gettext("At least one owner is required.")
+        if effective < PermissionLevel.VIEWER:
+            return cls.DELETE_MODE_NONE, gettext("You do not have access to this object.")
+        return cls.DELETE_MODE_LEAVE, None
+
+    @classmethod
+    def _needs_handover(cls, user, obj) -> bool:
+        """Whether ``user`` is the only active owner of ``obj`` and must name a new one to leave.
+
+        Only a direct owner permission can be handed over: inherited group ownership and a
+        superuser's implicit access are not removed by leaving.
+        """
+        if getattr(obj, "is_global", False):
+            return False
+        if cls.get_permission(obj, user) != PermissionLevel.OWNER:
+            return False
+        active_owner_ids = set(
+            User.objects.filter(pk__in=cls._owner_user_ids(obj), is_active=True).values_list(
+                "pk", flat=True
+            )
+        )
+        return active_owner_ids <= {user.pk}
+
+    @classmethod
+    def handover_candidates(cls, user, obj) -> list:
+        """Return who can take over ``obj`` from its only owner ``user``, editors first.
+
+        Only users the object is directly shared with and who are still ``user``'s friends:
+        handing over must not extend access to anyone new.
+        """
+        model = cls.get_permission_model(obj)
+        object_attr = cls._get_permission_object_attr(obj, model)
+        permissions = (
+            model.objects.filter(**{object_attr: obj})
+            .exclude(user=user)
+            .select_related("user")
+            .order_by("-permission_type", "user__username")
+        )
+        try:
+            friend_ids = set(user.profile.friends.values_list("user_id", flat=True))
+        except ObjectDoesNotExist:
+            friend_ids = set()
+        return [
+            permission.user
+            for permission in permissions
+            if permission.user.is_active and permission.user_id in friend_ids
+        ]
+
+    @classmethod
+    def _hand_over(cls, actor, obj, new_owner) -> None:
+        """Make ``new_owner`` an owner of ``obj`` so its only owner ``actor`` can leave it."""
+        if new_owner is None or new_owner not in cls.handover_candidates(actor, obj):
+            raise PermissionDenied(gettext("Choose who becomes the new owner."))
+        cls.create_or_update_permission(new_owner, obj, permission_level=PermissionLevel.OWNER)
+
+    @classmethod
+    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False, new_owner=None) -> str:
         """Delete an object, or remove actor's access if it is shared with other users.
 
         Args:
@@ -179,6 +370,8 @@ class PermissionService:
             obj: The model instance to delete or leave.
             is_leave_request: If True, actor explicitly requested to leave access (does not
                 require editor permission, but still enforces assert_can_leave_object).
+            new_owner: When actor is the only owner of a shared object, the user (one of
+                ``handover_candidates``) who becomes its owner before actor leaves it.
 
         Returns:
             "shared_removed" if actor's access was removed while other users retain access.
@@ -188,6 +381,9 @@ class PermissionService:
             PermissionDenied: If actor lacks permission to delete the object or leave access.
         """
         cls.lock_object(obj)
+
+        if cls.has_other_access_holder(obj, actor) and cls._needs_handover(actor, obj):
+            cls._hand_over(actor, obj, new_owner)
 
         if is_leave_request:
             cls.assert_can_leave_object(actor, obj)

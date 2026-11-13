@@ -6,6 +6,7 @@ outcome is identical whatever that state is.
 """
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 
 from django.contrib.auth.models import User
 from django.core.exceptions import PermissionDenied
@@ -19,6 +20,7 @@ from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
 from gift_manager.models import Wish
@@ -46,14 +48,23 @@ def _owner_ids(relation: Relation) -> set[int]:
     )
 
 
+def reserves_wish(plan: Relation) -> bool:
+    """Whether *plan* still holds its wish: not abandoned and not revealed yet.
+
+    Once revealed, the wisher's received gift decides whether the wish stays received, so the
+    plan no longer keeps the wish claimed (see ``_wish_is_fulfilled``).
+    """
+    return plan.revealed_at is None and not is_abandoned_status(plan.status)
+
+
 def _active_plans_owned_by(wish: Wish, user: User) -> list[Relation]:
-    """Return the non-abandoned plans fulfilling *wish* that *user* owns."""
+    """Return the plans fulfilling *wish* that *user* owns and that still reserve it."""
     permissions = RelationPermission.objects.filter(
         user=user,
         permission_type=PermissionLevel.OWNER,
         relation__wish=wish,
     ).select_related("relation__status")
-    return [p.relation for p in permissions if not is_abandoned_status(p.relation.status)]
+    return [p.relation for p in permissions if reserves_wish(p.relation)]
 
 
 def _release(wish: Wish) -> None:
@@ -184,6 +195,98 @@ def plan_wish(wish: Wish, friend: User, person: Person, event: Event | None = No
         return relation
 
 
+@dataclass(frozen=True)
+class WishReceipt:
+    """What the wisher recorded receiving for one wish."""
+
+    received_gift: ReceivedGift | None  # latest gift that marks the wish as received
+    last_gift: ReceivedGift  # latest gift linked to the wish, counted or not
+
+
+def own_receipts(user: User, wishes: Iterable[Wish]) -> dict[int, WishReceipt]:
+    """Map wish pk -> the wisher's own received gifts for it, in one query.
+
+    Anti-spoiler: built from the gifts the wisher recorded (or that a giver revealed to them),
+    never from ``Wish.is_fulfilled``, which a friend's "Given" plan also sets.
+    """
+    gifts = (
+        ReceivedGift.objects.for_user(user)
+        .filter(wish__in=list(wishes))
+        .order_by("-received_on", "-created_at")
+        .only("received_gift_id", "wish_id", "received_on", "fulfills_wish")
+    )
+    latest: dict[int, ReceivedGift] = {}
+    counted: dict[int, ReceivedGift] = {}
+    for gift in gifts:
+        latest.setdefault(gift.wish_id, gift)
+        if gift.fulfills_wish:
+            counted.setdefault(gift.wish_id, gift)
+    return {
+        wish_id: WishReceipt(received_gift=counted.get(wish_id), last_gift=gift)
+        for wish_id, gift in latest.items()
+    }
+
+
+def count_active_wishes(user: User) -> int:
+    """Count the wishes shown as active on the user's wishlist (not archived, not received).
+
+    Like ``own_receipts``, "received" comes from the user's own received gifts, never from
+    ``Wish.is_fulfilled``, which a friend's "Given" plan also sets.
+    """
+    received_wish_ids = (
+        ReceivedGift.objects.for_user(user)
+        .filter(fulfills_wish=True, wish__isnull=False)
+        .values("wish_id")
+    )
+    return get_wisher_wishes(user).exclude(pk__in=received_wish_ids).count()
+
+
+def own_received_gifts(user: User, wish: Wish) -> list[ReceivedGift]:
+    """The wisher's received gifts linked to *wish*, newest first, givers prefetched."""
+    from gift_manager.received_gifts import annotate_snapshot_givers  # noqa: PLC0415
+
+    return annotate_snapshot_givers(
+        user,
+        ReceivedGift.objects.for_user(user)
+        .filter(wish=wish)
+        .prefetch_related("giver_persons", "giver_groups", "giver_accounts")
+        .order_by("-received_on", "-created_at"),
+    )
+
+
+def _wish_is_fulfilled(wish: Wish, active_plans: Iterable[Relation]) -> bool:
+    """Whether a given plan or one of the wisher's received gifts fulfils *wish*.
+
+    Once a given plan is revealed, the wisher holds a received gift for it and decides: turning
+    off "Mark the wish as received" on that gift, or deleting it, reopens the wish (e.g. food
+    that can be received again), so a revealed plan no longer counts on its own.
+    """
+    has_given = any(
+        is_given_status(plan.status) and plan.revealed_at is None for plan in active_plans
+    )
+    return has_given or ReceivedGift.objects.filter(wish=wish, fulfills_wish=True).exists()
+
+
+def recompute_wish_fulfilled(wish: Wish) -> bool:
+    """Recompute and save ``wish.is_fulfilled`` from fulfilling plans and received gifts."""
+    plans = Relation.objects.filter(wish=wish).select_related("status")
+    active = [plan for plan in plans if not is_abandoned_status(plan.status)]
+    fulfilled = _wish_is_fulfilled(wish, active)
+
+    if wish.is_fulfilled != fulfilled:
+        wish.is_fulfilled = fulfilled
+        wish.save(update_fields=["is_fulfilled"])
+    return fulfilled
+
+
+def recompute_wish_fulfilled_by_id(wish_id: int) -> None:
+    """Lock and recompute ``wish.is_fulfilled`` by ID."""
+    with transaction.atomic():
+        wish = Wish.objects.select_for_update().filter(pk=wish_id).first()
+        if wish is not None:
+            recompute_wish_fulfilled(wish)
+
+
 def sync_wish_on_plan_change(relation: Relation, *, is_deleted: bool = False) -> None:
     """Re-derive a wish's fulfilled flag and claim from the plans that fulfil it."""
     if relation.wish_id is None:
@@ -196,12 +299,15 @@ def sync_wish_on_plan_change(relation: Relation, *, is_deleted: bool = False) ->
         plans = Relation.objects.filter(wish=wish).select_related("status")
         if is_deleted:
             plans = plans.exclude(pk=relation.pk)
-        active = [plan for plan in plans if not is_abandoned_status(plan.status)]
-        has_given = any(is_given_status(plan.status) for plan in active)
+        plans = list(plans)
+        fulfilled = _wish_is_fulfilled(
+            wish, [plan for plan in plans if not is_abandoned_status(plan.status)]
+        )
+        active = [plan for plan in plans if reserves_wish(plan)]
 
         update_fields = []
-        if wish.is_fulfilled != has_given:
-            wish.is_fulfilled = has_given
+        if wish.is_fulfilled != fulfilled:
+            wish.is_fulfilled = fulfilled
             update_fields.append("is_fulfilled")
 
         if not active:
@@ -302,6 +408,22 @@ def detach_plans(plans: Iterable[Relation]) -> None:
             purge_if_orphaned(wish)
 
 
+def _viewer_is_friend(
+    viewer: User, wish: Wish, user_attr: str, viewer_friend_ids: set[int] | None
+) -> bool:
+    if viewer_friend_ids is not None:
+        return getattr(wish, f"{user_attr}_id") in viewer_friend_ids
+    return PermissionService.users_are_friends(viewer, getattr(wish, user_attr))
+
+
+def _own_claim_label(wish: Wish, viewer: User) -> str:
+    if wish.is_fulfilled and ReceivedGift.objects.filter(wish=wish, fulfills_wish=True).exists():
+        active_plans = _active_plans_owned_by(wish, viewer)
+        if not any(is_given_status(plan.status) for plan in active_plans):
+            return _("Already received")
+    return _("Claimed by you")
+
+
 def format_claimer_label(
     wish: Wish, viewer: User, viewer_friend_ids: set[int] | None = None
 ) -> str:
@@ -311,20 +433,14 @@ def format_claimer_label(
     """
     if viewer.pk == wish.wisher_id:
         return ""
-    if viewer_friend_ids is not None:
-        is_wisher_friend = wish.wisher_id in viewer_friend_ids
-    else:
-        is_wisher_friend = PermissionService.users_are_friends(viewer, wish.wisher)
+    is_wisher_friend = _viewer_is_friend(viewer, wish, "wisher", viewer_friend_ids)
     if not (viewer.is_superuser or is_wisher_friend):
         return ""
     if wish.claimed_by_id is None:
         return _("Already given") if wish.is_fulfilled else _("Available")
     if viewer.pk == wish.claimed_by_id:
-        return _("Claimed by you")
-    if viewer_friend_ids is not None:
-        knows_claimer = wish.claimed_by_id in viewer_friend_ids
-    else:
-        knows_claimer = PermissionService.users_are_friends(viewer, wish.claimed_by)
+        return _own_claim_label(wish, viewer)
+    knows_claimer = _viewer_is_friend(viewer, wish, "claimed_by", viewer_friend_ids)
     if knows_claimer:
         return _("Claimed by @%(username)s") % {"username": wish.claimed_by.username}
     return _("Claimed by a friend")
@@ -345,5 +461,8 @@ def delete_wish(wish: Wish, actor: User) -> None:
             wish.is_deleted_by_wisher = True
             wish.is_archived = True
             wish.save(update_fields=["is_deleted_by_wisher", "is_archived"])
+            # Mirror hard-delete behavior on the wisher's side: unlink received gifts and recompute
+            ReceivedGift.objects.filter(wish=wish).update(wish=None)
+            recompute_wish_fulfilled(wish)
         else:
             wish.delete()

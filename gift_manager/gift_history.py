@@ -13,8 +13,10 @@ from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import RelationPermission
+from gift_manager.received_gifts import revealable_relation_pks
 from gift_manager.statuses import is_abandoned_status
 from gift_manager.statuses import is_given_status
 
@@ -31,6 +33,7 @@ class HistoryEntry:
     group_name: str | None
     person_name: str | None
     can_rate_inline: bool = False
+    can_reveal: bool = False
 
 
 @dataclass(frozen=True)
@@ -89,14 +92,14 @@ def build_gift_history(
     directly carry no recipient name.
     """
     relations = list(relations)
+    given_relations = [r for r in relations if is_given_status(r.status)]
     editable_relation_pks: set[int] = set()
+    revealable_pks: set[int] = set()
     if user is not None:
         if getattr(user, "is_superuser", False):
             editable_relation_pks = {r.pk for r in relations}
         else:
-            unrated_pks = [
-                r.pk for r in relations if is_given_status(r.status) and r.reaction_rating is None
-            ]
+            unrated_pks = [r.pk for r in given_relations if r.reaction_rating is None]
             if unrated_pks:
                 editable_relation_pks = set(
                     RelationPermission.objects.filter(
@@ -105,11 +108,10 @@ def build_gift_history(
                         permission_type__gte=PermissionLevel.EDITOR,
                     ).values_list("relation_id", flat=True)
                 )
+        revealable_pks = revealable_relation_pks(given_relations, user)
 
     by_year: dict[int | None, list[HistoryEntry]] = {}
-    for relation in relations:
-        if not is_given_status(relation.status):
-            continue
+    for relation in given_relations:
         group_name = (
             relation.group.name
             if relation.group_id is not None
@@ -125,7 +127,13 @@ def build_gift_history(
         )
         can_rate_inline = relation.reaction_rating is None and relation.pk in editable_relation_pks
         by_year.setdefault(history_year(relation), []).append(
-            HistoryEntry(relation, group_name, person_name, can_rate_inline=can_rate_inline)
+            HistoryEntry(
+                relation,
+                group_name,
+                person_name,
+                can_rate_inline=can_rate_inline,
+                can_reveal=relation.pk in revealable_pks,
+            )
         )
 
     years = sorted(by_year, key=lambda year: (year is None, -(year or 0)))
@@ -154,3 +162,33 @@ def find_repeat_gift_plans(
         queryset = queryset.exclude(pk=exclude.pk)
     queryset = queryset.select_related("status", "event").order_by("-creation_date")
     return [relation for relation in queryset if not is_abandoned_status(relation.status)]
+
+
+def find_regift_warnings(user, person: Person | None, gift_name: str):
+    """Return received gifts the viewer recorded receiving from *person* matching *gift_name*."""
+    if not person or not gift_name or not user or not user.is_authenticated:
+        return []
+
+    memberships = Person.groups.through.objects.filter(person=person).values("persongroup_id")
+    groups = PersonGroup.hierarchy_subquery(memberships, ancestors=True, include_start=True)
+
+    giver_filter = Q(giver_persons=person) | Q(giver_groups__in=groups)
+    if person.account_id is not None:
+        giver_filter |= Q(giver_accounts=person.account)
+
+    candidates = (
+        ReceivedGift.objects.for_user(user)
+        .filter(giver_filter)
+        .distinct()
+        .prefetch_related("giver_persons", "giver_groups")
+        .select_related("event")
+        .order_by("-received_on")
+    )
+
+    norm_target = " ".join(gift_name.split()).casefold()
+    matches = []
+    for candidate in candidates:
+        norm_title = " ".join(candidate.title.split()).casefold()
+        if norm_title == norm_target:
+            matches.append(candidate)
+    return matches

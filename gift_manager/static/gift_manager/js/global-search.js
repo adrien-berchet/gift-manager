@@ -142,16 +142,37 @@
             if (!searchInput.value.trim()) {
                 setResultsHtml(renderEmptyState());
             }
+            // The input only takes focus once the backdrop and the modal have faded in:
+            // until then, keep the characters typed right after opening the search
+            document.addEventListener('keydown', bufferEarlyKey, true);
         });
+
+        function bufferEarlyKey(event) {
+            if (document.activeElement === searchInput) return;
+            if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) return;
+            event.preventDefault();
+            searchInput.value += event.key;
+        }
+
+        function stopBufferingEarlyKeys() {
+            document.removeEventListener('keydown', bufferEarlyKey, true);
+        }
 
         searchModal.addEventListener('shown.bs.modal', () => {
             syncResultSemantics();
+            stopBufferingEarlyKeys();
             searchInput.focus();
-            searchInput.select();
+            if (searchInput.value) {
+                // Characters typed while the modal was opening: search them, caret at the end
+                searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                searchInput.select();
+            }
         });
 
         // Clear input and reset results when modal closes
         searchModal.addEventListener('hidden.bs.modal', () => {
+            stopBufferingEarlyKeys();
             trackVisibleArea(false);
             abortSearch();
             searchInput.value = '';

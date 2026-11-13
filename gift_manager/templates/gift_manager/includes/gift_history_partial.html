@@ -19,7 +19,13 @@
                        class="fw-semibold"
                        data-action="detail"
                        data-detail-url="{% url 'gift_manager:relation_detail' relation.relation_id %}">{{ relation.gift.name }}</a>
-                    <span class="badge bg-info">{{ relation.status }}</span>
+                    <a href="{% url 'gift_manager:relation_status_detail' relation.status.pk %}" class="status-link" title="{% trans 'See all gift plans with this status' %}"><span class="badge bg-info">{{ relation.status }}</span></a>
+                    {% if relation.revealed_at %}
+                    <span class="badge bg-success-subtle text-success-emphasis border"
+                          title="{% trans 'This gift plan has been revealed to the recipient' %}">
+                        <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Revealed" %}
+                    </span>
+                    {% endif %}
                     {% if relation.event %}
                     <span class="text-muted small"><i class="fas fa-calendar-alt me-1" aria-hidden="true"></i>{{ relation.event.name }}</span>
                     {% endif %}
@@ -41,6 +47,15 @@
                     {% include "gift_manager/includes/rating_inline.html" with relation=relation %}
                     {% else %}
                     <span class="text-muted small fst-italic">{% trans "Awaiting reaction" %}</span>
+                    {% endif %}
+                    {% if entry.can_reveal %}
+                    <a href="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
+                       class="btn btn-outline-primary btn-sm ms-auto"
+                       data-action="edit"
+                       data-edit-url="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
+                       title="{% trans 'Reveal to recipient' %}">
+                        <i class="fas fa-bullhorn me-1" aria-hidden="true"></i>{% trans "Reveal" %}
+                    </a>
                     {% endif %}
                 </div>
                 {% if relation.comment %}

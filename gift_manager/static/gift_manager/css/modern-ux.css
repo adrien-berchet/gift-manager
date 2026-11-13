@@ -214,16 +214,18 @@
 }
 
 .quick-action-btn.btn-warning {
-    background-color: var(--color-warning);
-    color: var(--color-gray-800);
+    background-color: rgb(var(--bs-warning-rgb));
+    border-color: #d97706;
+    color: #111827;
 }
 
-.quick-action-btn.btn-warning:hover {
-    background-color: var(--color-warning-dark);
+.quick-action-btn.btn-warning:hover,
+.quick-action-btn.btn-warning:focus-visible {
+    background-color: #d97706;
     transform: translateY(-1px);
     box-shadow: var(--shadow-md);
-    border-color: var(--color-warning-dark);
-    color: white;
+    border-color: #b45309;
+    color: #111827;
 }
 
 .quick-action-btn.btn-danger {
@@ -925,4 +927,13 @@
     .grid-action-menu-item {
         min-height: 2.75rem;
     }
+}
+
+/* Row menu: why a Delete entry is disabled */
+.grid-action-menu-reason {
+    max-width: 16rem;
+    padding-top: 0;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    white-space: normal;
 }

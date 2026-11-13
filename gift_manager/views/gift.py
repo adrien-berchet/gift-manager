@@ -25,6 +25,7 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import PERMISSION_LEVELS
+from gift_manager.services import PermissionService
 from gift_manager.templatetags.custom_filters import safe_http_url
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
@@ -32,6 +33,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import QueryStringPrefillMixin
+from gift_manager.views.base import delete_action_button
 
 
 class GiftListView(
@@ -55,6 +57,11 @@ class GiftListView(
             "price": gettext("Price"),
             "tags": gettext("Tags"),
         }
+
+    @property
+    def show_unassigned(self) -> bool:
+        """Whether only gifts not used by any visible gift plan are listed (?unassigned=1)."""
+        return self.request.GET.get("unassigned") == "1"
 
     def get_grid_data(self, items) -> list:
         rows = []
@@ -96,6 +103,7 @@ class GiftListView(
             .distinct()
             .order_by("name")
         )
+        context["show_unassigned"] = self.show_unassigned
         return context
 
     def _populate_tag_info_fallback(self, data) -> None:
@@ -127,6 +135,8 @@ class GiftListView(
         from django.db import connection
 
         base_queryset = Gift.objects.accessible_by(self.request.user).order_by("name")
+        if self.show_unassigned:
+            base_queryset = base_queryset.not_in_visible_plans(self.request.user)
 
         # Use database-specific aggregation
         if connection.vendor == "postgresql":
@@ -281,10 +291,11 @@ class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
-        context["relations"] = (
+        relations = (
             Relation.objects.accessible_by(self.request.user)
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
+            .with_edit_flag(self.request.user)
             .order_by(
                 "status__pk",
                 "person__first_name",
@@ -292,6 +303,10 @@ class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
                 "group__name",
                 "event__name",
             )
+        )
+        # Each plan carries what deleting it does for the user: delete, or only leave it
+        context["relations"] = PermissionService.with_delete_modes(
+            self.request.user, relations, "relation_id"
         )
         context["relation_statuses"] = RelationStatus.objects.all()
 
@@ -307,17 +322,10 @@ class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
                 if not is_editor
                 else None,
             },
-            {
-                "type": "delete",
-                "url": reverse("gift_manager:gift_delete", kwargs={"pk": self.object.gift_id}),
-                "label": _("Delete gift"),
-                "enabled": True,
-                "tooltip": _(
-                    "You do not have permission to delete this object so it will only be "
-                    "unshared with you"
-                )
-                if not is_editor
-                else None,
-            },
+            delete_action_button(
+                context,
+                url=reverse("gift_manager:gift_delete", kwargs={"pk": self.object.gift_id}),
+                label=_("Delete gift"),
+            ),
         ]
         return context

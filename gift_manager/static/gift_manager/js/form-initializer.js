@@ -181,6 +181,57 @@
     });
 
     /**
+     * Future date warning
+     * Date inputs with data-future-date-warning accept any day but warn below the field when the
+     * chosen day is after today (e.g. a received gift dated in the future).
+     */
+    FormInitializer.register("futureDateWarning", function (form) {
+        form.querySelectorAll("input[data-future-date-warning]").forEach((input) => {
+            if (input.dataset.futureDateWarningInit) {
+                return;
+            }
+            input.dataset.futureDateWarningInit = "true";
+
+            const warning = document.createElement("div");
+            warning.className = "form-text future-date-warning";
+            warning.id = `${input.id || input.name}-future-warning`;
+            warning.setAttribute("role", "status");
+            warning.hidden = true;
+            const icon = document.createElement("i");
+            icon.className = "fas fa-exclamation-triangle me-1";
+            icon.setAttribute("aria-hidden", "true");
+            warning.append(icon, document.createTextNode(input.dataset.futureDateWarning));
+            (input.closest(".form-field") || input.parentElement).appendChild(warning);
+
+            const today = () => {
+                const now = new Date();
+                const month = String(now.getMonth() + 1).padStart(2, "0");
+                const day = String(now.getDate()).padStart(2, "0");
+                return `${now.getFullYear()}-${month}-${day}`;
+            };
+            const update = () => {
+                // Values are ISO dates (Y-m-d), so string order is date order
+                const isFuture = /^\d{4}-\d{2}-\d{2}$/.test(input.value) && input.value > today();
+                warning.hidden = !isFuture;
+                const describedBy = (input.getAttribute("aria-describedby") || "")
+                    .split(/\s+/)
+                    .filter((token) => token && token !== warning.id);
+                if (isFuture) {
+                    describedBy.push(warning.id);
+                }
+                if (describedBy.length) {
+                    input.setAttribute("aria-describedby", describedBy.join(" "));
+                } else {
+                    input.removeAttribute("aria-describedby");
+                }
+            };
+            input.addEventListener("change", update);
+            input.addEventListener("input", update);
+            update();
+        });
+    });
+
+    /**
      * Event schedule initializer
      * Shows date and recurrence controls based on the selected schedule type.
      */
@@ -222,6 +273,9 @@
 
         // Handle form submission validation
         const handleSubmit = function (e) {
+            if (form.noValidate || e.submitter?.formNoValidate) {
+                return;
+            }
             // Only prevent submission if form is invalid
             if (!form.checkValidity()) {
                 e.preventDefault();
@@ -409,22 +463,48 @@
     // Export to global scope
     window.FormInitializer = FormInitializer;
 
+    function focusRevealForm(form) {
+        if (form.id !== "relation-reveal-form") return;
+        const panel = form.closest("#editPanel");
+        if (!panel || form.contains(document.activeElement)) return;
+        // Run after the frame settles so focus traps on the offcanvas do not override it.
+        window.requestAnimationFrame(() => {
+            if (form.isConnected && panel.contains(form) && !form.contains(document.activeElement)) {
+                const focusTarget = form.querySelector("#id_giver_note") || form.querySelector(".form-fields");
+                focusTarget?.focus();
+            }
+        });
+    }
+
+    function initFormsInContainer(container) {
+        if (!container || typeof container.querySelectorAll !== "function") return;
+        const forms = container.querySelectorAll("form[data-form-type]");
+        forms.forEach((form) => {
+            FormInitializer.initForm(form);
+            focusRevealForm(form);
+        });
+        if (container.tagName === "FORM" && container.dataset.formType) {
+            FormInitializer.initForm(container);
+            focusRevealForm(container);
+        }
+    }
+
     // Auto-initialize forms after HTMX swaps
     document.body.addEventListener("htmx:afterSwap", function (e) {
         // An outerHTML swap reports the replaced (detached) element as the target: the new
-        // content is what the event itself is dispatched on.
-        const target = e.detail.target?.isConnected ? e.detail.target : e.target;
+        // content is e.detail.elt or e.target.
+        const target = e.detail?.elt?.isConnected
+            ? e.detail.elt
+            : e.detail.target?.isConnected
+              ? e.detail.target
+              : e.target;
+        initFormsInContainer(target);
+    });
 
-        // Find forms in the swapped content
-        const forms = target.querySelectorAll("form[data-form-type]");
-        forms.forEach((form) => {
-            FormInitializer.initForm(form);
-        });
-
-        // Check if target itself is a form
-        if (target.tagName === "FORM" && target.dataset.formType) {
-            FormInitializer.initForm(target);
-        }
+    // outerHTML swaps can dispatch htmx:afterSwap on the detached node before bubbling, whereas
+    // htmx:load fires on every newly connected node.
+    document.body.addEventListener("htmx:load", function (e) {
+        initFormsInContainer(e.detail?.elt || e.target);
     });
 
     // Initialize forms on page load

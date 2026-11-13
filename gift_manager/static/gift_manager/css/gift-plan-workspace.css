@@ -54,7 +54,7 @@
 .gift-plan-summary-item--attention {
     border-color: rgba(245, 158, 11, 0.4);
     background: var(--color-warning-light);
-    color: var(--color-warning-hover);
+    color: var(--color-warning-text);
 }
 
 .gift-plan-focus-note {
@@ -765,7 +765,7 @@
 .gift-plan-card--needs_details .gift-plan-due-badge--no_date {
     background-color: var(--color-danger-light);
     border-color: rgba(239, 68, 68, 0.35);
-    color: var(--color-danger-hover);
+    color: var(--color-danger-text);
 }
 
 .gift-plan-empty-state {
@@ -855,7 +855,7 @@
     border: 1px solid rgba(239, 68, 68, 0.35);
     border-radius: var(--radius-full);
     background-color: var(--color-danger-light);
-    color: var(--color-danger-hover);
+    color: var(--color-danger-text);
     font-size: 0.66rem;
     font-weight: 600;
     line-height: 1.1;

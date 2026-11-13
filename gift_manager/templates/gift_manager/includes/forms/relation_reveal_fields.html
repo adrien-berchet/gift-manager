@@ -1,0 +1,66 @@
+{% load i18n %}
+
+<div class="alert alert-info py-2 small mb-3">
+  <i class="fas fa-shield-alt me-1" aria-hidden="true"></i>
+  {% trans "Revealing creates a permanent snapshot in your recipient's private Received Gifts log." %}
+  <div class="mt-1 text-muted">
+    {% trans "Comments, prices, contributions, and claims are strictly private and will never be revealed." %}
+  </div>
+</div>
+
+<!-- Target recipients -->
+<div class="mb-3">
+  <div class="form-label small fw-semibold text-muted">{% trans "Will be revealed to:" %}</div>
+  <div class="d-flex flex-wrap gap-1">
+    {% for target in targets %}
+    <span class="badge bg-primary-subtle text-primary-emphasis border">
+      <i class="fas fa-user me-1" aria-hidden="true"></i>{{ target.get_full_name|default:target.username }}
+    </span>
+    {% empty %}
+    <span class="text-danger small">{% trans "No eligible friends found to receive this snapshot." %}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Co-owners displayed -->
+<div class="mb-3">
+  <div class="form-label small fw-semibold text-muted">{% trans "Givers shown on snapshot:" %}</div>
+  <div class="d-flex flex-wrap gap-1">
+    {% for owner in co_owners %}
+    <span class="badge bg-secondary-subtle text-secondary-emphasis">
+      <i class="fas fa-user-check me-1 text-success" aria-hidden="true"></i>{{ owner.get_full_name|default:owner.username }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+<hr class="my-3">
+
+<!-- Compact snapshot summary -->
+{% if preview.title or preview.received_on or preview.occasion_text %}
+<div class="reveal-snapshot-summary border rounded-3 p-2 px-3 mb-3 small">
+  {% if preview.title %}
+  <div class="fw-semibold">{{ preview.title }}</div>
+  {% endif %}
+  {% if preview.received_on or preview.occasion_text %}
+  <div class="text-muted">
+    {% if preview.received_on %}{{ preview.received_on|date:"DATE_FORMAT" }}{% endif %}
+    {% if preview.received_on and preview.occasion_text %} · {% endif %}
+    {% if preview.occasion_text %}{{ preview.occasion_text }}{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% include "gift_manager/includes/forms/field.html" with field=form.giver_note %}
+
+<details class="mb-3"{% if expand_details %} open{% endif %}>
+  <summary class="small fw-semibold text-primary mb-2" style="cursor: pointer;">
+    {% trans "Adjust snapshot details" %}
+  </summary>
+  {% include "gift_manager/includes/forms/field.html" with field=form.title %}
+  {# Stacked like the other fields: the side panel is too narrow for two columns #}
+  {% include "gift_manager/includes/forms/field.html" with field=form.received_on %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.occasion_text %}
+  {% include "gift_manager/includes/forms/field.html" with field=form.url %}
+</details>

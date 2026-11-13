@@ -107,6 +107,15 @@
                         submitUndo(data.undo);
                     }
                 };
+            } else if (data.link && data.link.url) {
+                // A follow-up step (e.g. "Reveal to recipient") stays until the user closes it
+                options.persistent = true;
+                options.action = {
+                    label: data.link.label,
+                    onClick: function() {
+                        loadFormInPanel(data.link.url, data.link.target || 'editPanel');
+                    }
+                };
             }
             showNotification(data.message, data.type || 'info', options);
         });
@@ -154,7 +163,7 @@
                 return;
             }
             const panel = document.getElementById('editPanel');
-            if (panel && panel.querySelector('#relation-reaction-form')) {
+            if (panel && (panel.querySelector('#relation-reaction-form') || panel.querySelector('#relation-reveal-form'))) {
                 closeEditPanel();
             }
         });
@@ -201,7 +210,7 @@
 
             toastContainer.insertAdjacentHTML('beforeend', toastHtml);
             const toastElement = document.getElementById(toastId);
-            const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+            const toast = new bootstrap.Toast(toastElement, { autohide: !options.persistent, delay: 5000 });
             toast.show();
 
             const actionButton = toastElement.querySelector('[data-toast-action]');
@@ -499,7 +508,9 @@
                 }
                 deleteInFlight = true;
                 htmx.ajax('POST', form.action, {
-                    values: new FormData(form),
+                    // htmx 1.9 merges `values` as a plain object: a FormData would be dropped,
+                    // losing the leave intent and the new owner of a hand-over
+                    values: Object.fromEntries(new FormData(form)),
                     swap: 'none',
                     headers: { 'HX-Request': 'true' }
                 }).catch(function(error) {

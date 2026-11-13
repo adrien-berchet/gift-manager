@@ -1,0 +1,65 @@
+/* Received gifts timeline: cards reuse the gift plan workspace card styles. */
+
+/* Comma-separated giver names in a card meta row */
+.received-gift-givers {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.received-gift-givers .received-gift-giver:not(:last-child)::after {
+    content: ",";
+}
+
+.received-gift-givers .received-gift-giver + .received-gift-giver {
+    margin-left: 0.25em;
+}
+
+/* The paginated card grid turns meta-row links into blocks; keep giver names inline */
+.gift-plan-card-grid--paginated .received-gift-givers a {
+    display: inline;
+}
+
+/* Year and giver filters: no dropdown chevron (the theme's select padding
+   leaves no room for it, so it overlapped the selected label). */
+.form-select.received-gift-filter-select {
+    background-image: none;
+}
+
+.received-gift-filter-occasion {
+    width: 11rem;
+    max-width: 100%;
+}
+
+@media (max-width: 575.98px) {
+    .received-gift-thank-you-group {
+        flex-wrap: wrap;
+        max-width: 100%;
+    }
+
+    .received-gift-thank-you-group > .btn {
+        flex: 0 1 auto;
+        white-space: normal;
+        text-align: center;
+    }
+
+    .received-gift-filter-occasion {
+        width: 100%;
+    }
+}
+
+/* Filtering gives feedback on the results, not on the filter buttons (the form
+   opts out of button spinners, which widened a button and shifted its siblings).
+   Only the filter form targets this element; background list refreshes (after a
+   card action) put htmx-request on the container and leave the cards alone.
+   The delay keeps fast responses from flickering; the swap restores full opacity. */
+.received-gifts-results {
+    transition: opacity 0.15s ease-in-out;
+}
+
+.received-gifts-results.htmx-request {
+    opacity: 0.5;
+    pointer-events: none;
+    transition-delay: 0.2s;
+}

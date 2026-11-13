@@ -177,7 +177,16 @@
     border-radius: 0.375rem 0.375rem 0 0;
 }
 
+/* The list joins the search box above it. Most of these selects carry no widget class, so give
+   them the full-width control look here instead of relying on .form-control. */
 .searchable-select-wrapper select {
+    display: block;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    color: var(--bs-body-color);
+    background-color: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
     border-radius: 0 0 0.375rem 0.375rem;
     border-top: none;
 }
@@ -591,4 +600,101 @@ select[multiple] option:checked {
 .guided-choice:has(input[value="new"]:checked) .guided-panel--existing,
 .guided-choice:has(input[value="none"]:checked) .guided-panel {
     display: none;
+}
+
+/* Two-way choices keyed by the radio value (received gift: gift, giver and occasion).
+   Both panels share one grid cell and the unchosen one is only made invisible, so the
+   section keeps the height of its taller panel and nothing moves when switching.
+   Where :has() is not supported, both panels stay visible, one below the other. */
+@supports selector(:has(*)) {
+    .guided-panels {
+        display: grid;
+    }
+
+    .guided-panels > .guided-panel {
+        grid-area: 1 / 1;
+        min-width: 0;
+    }
+
+    .guided-choice:has(> .guided-choice-options input[value="new"]:checked) .guided-panel--wish,
+    .guided-choice:has(> .guided-choice-options input[value="wish"]:checked) .guided-panel--new,
+    .guided-choice:has(> .guided-choice-options input[value="contacts"]:checked) .guided-panel--other,
+    .guided-choice:has(> .guided-choice-options input[value="event"]:checked) .guided-panel--other,
+    .guided-choice:has(> .guided-choice-options input[value="other"]:checked) .guided-panel--contacts,
+    .guided-choice:has(> .guided-choice-options input[value="other"]:checked) .guided-panel--event {
+        visibility: hidden;
+    }
+}
+
+/* Giver picker: people and groups as two sections of one scrollable checkbox list */
+.giver-picker {
+    max-height: 14rem;
+    overflow-y: auto;
+    padding: 0.5rem 0.75rem;
+    border: var(--bs-border-width, 1px) solid var(--bs-border-color, #dee2e6);
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: var(--bs-body-bg, #fff);
+}
+
+.giver-picker-section + .giver-picker-section {
+    margin-top: 0.5rem;
+}
+
+.giver-picker-title {
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+/* Keep each checkbox centred on its label, including the 44px mobile touch-target labels */
+.giver-picker .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-left: 0;
+}
+
+.giver-picker .form-check .form-check-input {
+    flex-shrink: 0;
+    float: none;
+    margin: 0;
+}
+
+/* Wish panel: received gifts linked to the wish */
+.wish-received-item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.wish-received-item--not-counted .wish-received-date,
+.wish-received-item--not-counted .received-gift-givers {
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.wish-received-toggle {
+    margin-left: auto;
+    padding: 0;
+}
+
+/* Reveal form: summary of the snapshot the recipient will get. The app switches themes with
+   data-theme, which Bootstrap's bg-body-* utilities ignore, so use the theme tokens. */
+.reveal-snapshot-summary {
+    background-color: var(--surface-background);
+    color: var(--text-primary);
+}
+
+/* Non-blocking future-date warning (form-initializer.js). Bootstrap's text-warning-emphasis
+   follows data-bs-theme, which the app does not set, so use readable amber shades per theme. */
+.future-date-warning {
+    color: #92400e;
+}
+
+[data-theme="dark"] .future-date-warning {
+    color: var(--color-warning);
 }

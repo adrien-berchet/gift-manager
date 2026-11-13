@@ -1,0 +1,22 @@
+{% load i18n %}
+
+<form method="post"
+      id="relation-reveal-form"
+      action="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
+      hx-post="{% url 'gift_manager:relation_reveal' relation.relation_id %}"
+      hx-trigger="submit"
+      hx-target="this"
+      hx-swap="outerHTML"
+      hx-indicator="#offcanvasLoading"
+      class="offcanvas-form reveal-form"
+      data-form-type="relation_reveal"
+      novalidate>
+  {% csrf_token %}
+
+  <div class="form-fields" tabindex="-1">
+    {% include "gift_manager/includes/forms/errors.html" %}
+    {% include "gift_manager/includes/forms/relation_reveal_fields.html" %}
+  </div>
+
+  {% include "gift_manager/includes/forms/actions.html" with form_surface="offcanvas" action=action translated_type=translated_type submit_label=submit_label %}
+</form>

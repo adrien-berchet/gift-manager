@@ -27,8 +27,9 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.models import Wish
+from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.services import PermissionService
-from gift_manager.statuses import is_abandoned_status
+from gift_manager.statuses import is_given_status
 from gift_manager.views.base import HTMXResponseMixin
 
 
@@ -41,15 +42,19 @@ class WishListView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         # Strict privacy invariant: defer columns related to claim/plan state
         # so template evaluation cannot access or trigger queries on them.
-        wishes = Wish.objects.for_wisher(request.user).defer(
-            "claimed_by", "claimed_at", "is_fulfilled"
+        wishes = list(
+            Wish.objects.for_wisher(request.user).defer("claimed_by", "claimed_at", "is_fulfilled")
         )
-        active_wishes = list(wishes.filter(is_archived=False))
-        archived_wishes = list(wishes.filter(is_archived=True))
+        # "Received" comes from the wisher's own received gifts only (see own_receipts)
+        receipts = wishlist.own_receipts(request.user, wishes)
+        for wish in wishes:
+            wish.receipt = receipts.get(wish.pk)
+            wish.is_received = bool(wish.receipt and wish.receipt.received_gift)
 
         context = {
-            "active_wishes": active_wishes,
-            "archived_wishes": archived_wishes,
+            "active_wishes": [w for w in wishes if not w.is_archived and not w.is_received],
+            "received_wishes": [w for w in wishes if not w.is_archived and w.is_received],
+            "archived_wishes": [w for w in wishes if w.is_archived],
         }
 
         if request.headers.get("HX-Request") == "true":
@@ -139,6 +144,13 @@ class WishUpdateView(LoginRequiredMixin, HTMXResponseMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context["action"] = gettext("Edit")
         context["translated_type"] = gettext("Wish")
+        received_gifts = wishlist.own_received_gifts(self.request.user, self.object)
+        linkable_person_ids, linkable_group_ids = linkable_giver_ids(
+            self.request.user, received_gifts
+        )
+        context["received_gifts"] = received_gifts
+        context["linkable_person_ids"] = linkable_person_ids
+        context["linkable_group_ids"] = linkable_group_ids
         context["form_surface"] = "offcanvas" if self.is_htmx else "page"
         context["cancel_url"] = self.success_url
         return context
@@ -257,9 +269,10 @@ def annotate_wish_for_giver(wish, viewer, person, viewer_friend_ids=None):
         relationpermission__user=viewer,
         relationpermission__permission_type=PermissionLevel.OWNER,
     ).select_related("status")
-    active_plan = next((p for p in active_plans if not is_abandoned_status(p.status)), None)
+    active_plan = next((p for p in active_plans if wishlist.reserves_wish(p)), None)
     wish.planned_relation = active_plan
     wish.is_planned_by_viewer = active_plan is not None
+    wish.planned_is_given = bool(active_plan and is_given_status(active_plan.status))
     return wish
 
 

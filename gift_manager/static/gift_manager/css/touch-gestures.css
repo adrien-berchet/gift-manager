@@ -48,7 +48,7 @@
 
 .swipe-actions-right {
     justify-content: flex-end;
-    background: linear-gradient(90deg, var(--color-warning, #ffc107), var(--color-danger, #dc3545));
+    background: linear-gradient(90deg, rgb(var(--bs-warning-rgb, 245, 158, 11)), var(--color-danger, #dc3545));
     padding-right: var(--space-3, 12px);
     margin-left: auto;
     transform: translateX(100%);
@@ -99,8 +99,8 @@
 }
 
 .swipe-action-archive {
-    background: var(--color-warning, #ffc107);
-    color: var(--text-primary, #333);
+    background: rgb(var(--bs-warning-rgb, 245, 158, 11));
+    color: #111827;
 }
 
 .swipe-action-edit {

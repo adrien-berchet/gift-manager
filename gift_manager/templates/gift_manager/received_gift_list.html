@@ -1,0 +1,32 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n static %}
+
+{% block title %}Gift Manager - {% trans "Received Gifts" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/received-gifts.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% trans "Received Gifts" %}</h1>
+  <div class="page-header-actions">
+    <a href="{% url 'gift_manager:received_gift_create' %}"
+       class="btn btn-primary"
+       data-action="create">
+      <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "Record a received gift" %}
+    </a>
+    <a href="{% url 'gift_manager:wishlist_list' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-gift me-2" aria-hidden="true"></i>{% trans "My Wishlist" %}
+    </a>
+  </div>
+</div>
+
+<p class="text-muted mb-4">
+  {% trans "Your private memory timeline of gifts received from family and friends. Keep track of what you received, thank-you notes, and reactions." %}
+</p>
+
+{% include "gift_manager/includes/received_gift_list_partial.html" %}
+{% endblock %}

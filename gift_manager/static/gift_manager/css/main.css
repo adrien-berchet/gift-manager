@@ -370,25 +370,25 @@ body.has-fixed-action-bar {
 .gift-plan-status--purchased {
     background-color: var(--color-info-light);
     border-color: rgba(59, 130, 246, 0.35);
-    color: var(--color-info-hover);
+    color: var(--color-info-text);
 }
 
 .gift-plan-status--abandoned {
     background-color: var(--color-danger-light);
     border-color: rgba(239, 68, 68, 0.35);
-    color: var(--color-danger-hover);
+    color: var(--color-danger-text);
 }
 
 .gift-plan-status--given {
     background-color: var(--color-success-light);
     border-color: rgba(16, 185, 129, 0.35);
-    color: var(--color-success-hover);
+    color: var(--color-success-text);
 }
 
 .gift-plan-due-badge--overdue {
     background-color: var(--color-danger-light);
     border-color: rgba(239, 68, 68, 0.35);
-    color: var(--color-danger-hover);
+    color: var(--color-danger-text);
 }
 
 .gift-plan-due-badge--due_soon,
@@ -401,7 +401,7 @@ body.has-fixed-action-bar {
 .gift-plan-due-badge--later {
     background-color: var(--color-info-light);
     border-color: rgba(59, 130, 246, 0.35);
-    color: var(--color-info-hover);
+    color: var(--color-info-text);
 }
 
 .gift-plan-due-badge--ideas {
@@ -419,7 +419,7 @@ body.has-fixed-action-bar {
 .gift-plan-due-badge--completed {
     background-color: var(--color-success-light);
     border-color: rgba(16, 185, 129, 0.35);
-    color: var(--color-success-hover);
+    color: var(--color-success-text);
 }
 
 .gift-plan-tag-badge {
@@ -687,4 +687,15 @@ body.has-fixed-action-bar {
         padding: 0.25rem 0.5rem;
         font-size: 0.875rem;
     }
+}
+
+/* A status badge links to the page listing every gift plan with that status */
+.status-link {
+    text-decoration: none;
+}
+
+.status-link:hover > *,
+.status-link:focus-visible > * {
+    filter: brightness(0.92);
+    text-decoration: underline;
 }

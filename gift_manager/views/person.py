@@ -49,6 +49,7 @@ from gift_manager.views.base import BaseDetailView
 from gift_manager.views.base import BaseListView
 from gift_manager.views.base import BaseUpdateView
 from gift_manager.views.base import QueryStringPrefillMixin
+from gift_manager.views.base import delete_action_button
 from gift_manager.views.suggestions import suggestions_url_for
 
 
@@ -62,9 +63,7 @@ def get_person_grid_column_names():
     }
 
 
-def get_person_grid_queryset(
-    user, column_names=None, accessible_groups=None, *, exclude_account=None
-):
+def get_person_grid_queryset(user, column_names=None, accessible_groups=None):
     """Return person rows formatted for the shared Grid.js management view."""
     from django.db import connection
 
@@ -83,8 +82,6 @@ def get_person_grid_queryset(
             "account__username",
         )
     )
-    if exclude_account is not None:
-        base_queryset = base_queryset.exclude(account=exclude_account)
 
     if connection.vendor == "postgresql":
         return base_queryset.annotate(
@@ -386,6 +383,7 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             Relation.objects.accessible_by(self.request.user)
             .filter(Q(person=self.object) | Q(group__in=all_groups_with_ancestors))
             .select_related("status", "gift", "event", "person", "group", "claimed_by")
+            .with_edit_flag(self.request.user)
             .prefetch_related("gift__tags")
             .order_by("status__pk", "gift__name")
         )
@@ -460,17 +458,21 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
                 )
         action_buttons.append(
             {
-                "type": "delete",
-                "url": reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
-                "label": _("Delete person"),
-                "enabled": True,  # Always enabled, but tooltip explains behavior
-                "tooltip": _(
-                    "You do not have permission to delete this object so it will only be "
-                    "unshared with you"
-                )
-                if not is_editor
-                else None,
+                "type": "custom",
+                "url": reverse("gift_manager:received_gift_create")
+                + f"?giver={self.object.person_id}",
+                "label": _("Record a gift from this person"),
+                "icon": "fas fa-box-open",
+                "btn_class": "btn-outline-secondary",
+                "data_action": "create",
             }
+        )
+        action_buttons.append(
+            delete_action_button(
+                context,
+                url=reverse("gift_manager:person_delete", kwargs={"pk": self.object.person_id}),
+                label=_("Delete person"),
+            )
         )
 
         context["action_buttons"] = action_buttons
@@ -510,13 +512,16 @@ class PersonDetailView(QueryOptimizationMixin, SingleObjectPermissionMixin, Base
             relationpermission__permission_type=PermissionLevel.OWNER,
         ).select_related("status")
         planned_relations_by_wish = {
-            plan.wish_id: plan for plan in active_plans if not is_abandoned_status(plan.status)
+            plan.wish_id: plan for plan in active_plans if wishlist.reserves_wish(plan)
         }
 
         for w in raw_wishes:
             w.claimer_label = wishlist.format_claimer_label(w, self.request.user, viewer_friend_ids)
             w.planned_relation = planned_relations_by_wish.get(w.pk)
             w.is_planned_by_viewer = w.pk in planned_relations_by_wish
+            w.planned_is_given = bool(
+                w.planned_relation and is_given_status(w.planned_relation.status)
+            )
             w.is_claimed_by_viewer = w.claimed_by_id == self.request.user.id
             w.modified_after_claim = w.is_updated_after_claim()
 

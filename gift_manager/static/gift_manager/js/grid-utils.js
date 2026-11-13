@@ -845,6 +845,17 @@
                 if (permEl && permEl.textContent) {
                     extractedPermissions = JSON.parse(permEl.textContent);
                 }
+                // What deleting each refreshed row does for the user (see grid-actions.js)
+                const deleteModesEl = doc.getElementById('user-delete-modes');
+                const deleteReasonsEl = doc.getElementById('user-delete-reasons');
+                if (deleteModesEl && deleteModesEl.textContent && window.GridActions) {
+                    window.GridActions.setDeleteModes(
+                        JSON.parse(deleteModesEl.textContent),
+                        deleteReasonsEl && deleteReasonsEl.textContent
+                            ? JSON.parse(deleteReasonsEl.textContent)
+                            : {}
+                    );
+                }
             } catch (domErr) {
                 console.warn(`[${entityType}List] DOMParser error on refreshed page:`, domErr);
             }
