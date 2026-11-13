@@ -178,6 +178,11 @@
           <a href="{{ recipient.detail_url }}" class="fw-semibold text-decoration-none">
             {{ recipient.name }}
           </a>
+          {% if recipient.link_label %}
+          <span class="badge bg-secondary">
+            <i class="fas fa-link me-1" aria-hidden="true"></i>{{ recipient.link_label }}
+          </span>
+          {% endif %}
           <span class="recipient-plan-count">
             {% blocktrans count count=recipient.plan_count %}{{ count }} gift plan{% plural %}{{ count }} gift plans{% endblocktrans %}
           </span>
@@ -204,9 +209,11 @@
       </div>
     </div>
     <div class="recipient-actions d-flex gap-2 justify-content-end">
+      {% if recipient.gift_plan_url %}
       <a href="{{ recipient.gift_plan_url }}" class="btn btn-sm btn-primary" data-action="create">
         <i class="fas fa-hand-holding-heart me-1"></i>{% trans "New Gift Plan" %}
       </a>
+      {% endif %}
       <a href="{{ recipient.detail_url }}" class="btn btn-sm btn-outline-secondary">
         <i class="fas fa-eye me-1"></i>{% trans "Open" %}
       </a>

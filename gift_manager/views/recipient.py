@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.translation import gettext
 from django.views.generic import TemplateView
 
+from gift_manager.account_links import link_label
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
@@ -42,14 +43,13 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
         recipient_view = self.get_recipient_view()
 
         accessible_groups = PersonGroup.objects.accessible_by(user).order_by("name").distinct()
+        # The user's own person is listed like any other recipient (marked "This is you")
         accessible_persons = (
             Person.objects.accessible_by(user)
-            .exclude(account=user)
+            .select_related("account")
             .order_by("family_name", "first_name")
             .distinct()
         )
-        # The user's own person is not listed as a recipient but still counts as a group member,
-        # so member counts match the group pages
         member_persons = Person.objects.accessible_by(user).distinct()
 
         context["recipient_view"] = recipient_view
@@ -61,7 +61,6 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                     user,
                     person_column_names,
                     accessible_groups,
-                    exclude_account=user,
                 )
             )
             populate_person_grid_group_info(person_grid_data, user, accessible_groups)
@@ -139,9 +138,15 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                 "detail_url": reverse(
                     "gift_manager:person_detail", kwargs={"pk": person.person_id}
                 ),
-                "gift_plan_url": reverse(
-                    "gift_manager:person_relation_create", kwargs={"pk": person.person_id}
+                # Gift plans are hidden for the user's own record
+                "gift_plan_url": (
+                    None
+                    if person.account_id == user.pk
+                    else reverse(
+                        "gift_manager:person_relation_create", kwargs={"pk": person.person_id}
+                    )
                 ),
+                "link_label": link_label(person, user),
                 "groups": list(person.accessible_groups),
                 "member_count": None,
                 "child_count": None,
@@ -163,6 +168,7 @@ class RecipientListView(LoginRequiredMixin, PermissionContextMixin, TemplateView
                         "gift_manager:person_group_relation_create",
                         kwargs={"pk": group.group_id},
                     ),
+                    "link_label": "",
                     "groups": [],
                     "member_count": len(group.accessible_members),
                     "child_count": len(group.accessible_child_groups),
