@@ -4,8 +4,9 @@
 
 {% if is_leave_access %}
 <div class="d-flex align-items-start mb-4"
-     data-confirm-title="{% trans 'Remove my access' %}"
-     data-confirm-label="{% trans 'Remove my access' %}">
+     {% if handover_candidates %}data-confirm-title="{% trans 'Hand over and remove my access' %}"
+     data-confirm-label="{% trans 'Hand over and remove my access' %}"{% else %}data-confirm-title="{% trans 'Remove my access' %}"
+     data-confirm-label="{% trans 'Remove my access' %}"{% endif %}>
   <div class="text-danger me-3 flex-shrink-0">
     <i class="fas fa-user-minus fa-2x"></i>
   </div>
@@ -35,6 +36,8 @@
   </div>
 </div>
 {% endif %}
+
+{% include "gift_manager/includes/handover_owner_field.html" with form_attr="deleteForm" %}
 
 <!-- Entity Information Display -->
 <div class="border rounded-3 p-3 mb-3" style="background-color: var(--bs-gray-50);">

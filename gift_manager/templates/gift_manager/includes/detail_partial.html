@@ -55,14 +55,14 @@
                 <i class="fas fa-lock me-1"></i>{% trans "Edit" %}
             </button>
             {% endif %}
-            {% if delete_mode == "delete" or delete_mode == "leave" or is_editor and not delete_mode %}
+            {% if delete_mode == "delete" or delete_mode == "leave" or delete_mode == "handover" or is_editor and not delete_mode %}
             {# While others hold access, deleting only removes the user's own access #}
             <button type="button"
                     class="btn btn-outline-danger btn-sm"
                     data-action="delete"
-                    data-delete-url="{% block delete_url %}#{% endblock %}{% if delete_mode == "leave" %}?intent=leave_access{% endif %}"
-                    title="{% if delete_mode == "leave" %}{% trans 'It stays shared with the other people who have access.' %}{% else %}{% trans 'Delete' %}{% endif %}">
-                {% if delete_mode == "leave" %}<i class="fas fa-user-minus me-1"></i>{% trans "Remove my access" %}{% else %}<i class="fas fa-trash me-1"></i>{% trans "Delete" %}{% endif %}
+                    data-delete-url="{% block delete_url %}#{% endblock %}{% if delete_mode == "leave" or delete_mode == "handover" %}?intent=leave_access{% endif %}"
+                    title="{% if delete_mode == "leave" %}{% trans 'It stays shared with the other people who have access.' %}{% elif delete_mode == "handover" %}{% trans 'You are its only owner: choose who becomes the owner before you leave it.' %}{% else %}{% trans 'Delete' %}{% endif %}">
+                {% if delete_mode == "leave" %}<i class="fas fa-user-minus me-1"></i>{% trans "Remove my access" %}{% elif delete_mode == "handover" %}<i class="fas fa-user-minus me-1"></i>{% trans "Hand over and remove my access" %}{% else %}<i class="fas fa-trash me-1"></i>{% trans "Delete" %}{% endif %}
             </button>
             {% else %}
             <button type="button"

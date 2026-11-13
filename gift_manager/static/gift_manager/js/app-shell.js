@@ -508,7 +508,9 @@
                 }
                 deleteInFlight = true;
                 htmx.ajax('POST', form.action, {
-                    values: new FormData(form),
+                    // htmx 1.9 merges `values` as a plain object: a FormData would be dropped,
+                    // losing the leave intent and the new owner of a hand-over
+                    values: Object.fromEntries(new FormData(form)),
                     swap: 'none',
                     headers: { 'HX-Request': 'true' }
                 }).catch(function(error) {

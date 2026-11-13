@@ -1,12 +1,21 @@
 {% load i18n %}
 
 <div class="{% if form_surface == 'page' %}page-form-actions{% else %}panel-form-actions{% endif %}{% if secondary_submit_actions %} has-secondary-submit-actions{% endif %}"{% if form_surface != 'page' and action and translated_type %} data-panel-title="{{ action }} {{ translated_type }}"{% endif %}>
-  {% if delete_url %}
+  {% if delete_disabled_reason %}
+  <button type="button"
+          class="btn btn-outline-danger form-delete-action"
+          data-action="delete"
+          disabled
+          title="{{ delete_disabled_reason }}">
+    <i class="fas fa-lock me-1" aria-hidden="true"></i>
+    {% trans "Delete" %}
+  </button>
+  {% elif delete_url %}
   <a href="{{ delete_url }}"
      class="btn btn-outline-danger form-delete-action"
      data-action="delete">
-    <i class="fas fa-trash me-1" aria-hidden="true"></i>
-    {% trans "Delete" %}
+    <i class="fas {% if delete_label %}fa-user-minus{% else %}fa-trash{% endif %} me-1" aria-hidden="true"></i>
+    {% if delete_label %}{{ delete_label }}{% else %}{% trans "Delete" %}{% endif %}
   </a>
   {% endif %}
 
