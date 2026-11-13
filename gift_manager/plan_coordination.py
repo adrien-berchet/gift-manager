@@ -23,6 +23,7 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationComment
 from gift_manager.models import RelationContribution
 from gift_manager.services import PermissionService
+from gift_manager.statuses import is_terminal_status
 
 MAX_COMMENT_LENGTH = 2000
 
@@ -193,7 +194,8 @@ def coordination_context(relation: Relation, user: User) -> dict:
     return {
         "claimed_by": claimed_by,
         "claimed_at": relation.claimed_at if claimed_by else None,
-        "can_claim": claimed_by is None,
+        # Nothing is left to buy or give once the plan is given or abandoned
+        "can_claim": claimed_by is None and not is_terminal_status(relation.status),
         "can_release": claimed_by is not None and (claimed_by.pk == user.pk or is_owner),
         "can_comment": True,
         "comments": [

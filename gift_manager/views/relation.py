@@ -895,6 +895,7 @@ class RelationDetailView(BaseDetailView):
         context["gift_plan_status_class"] = gift_plan_status_class(self.object.status)
         context["gift_plan_urgency_key"] = gift_plan_urgency_key(self.object)
         context["is_abandoned"] = is_abandoned_status(self.object.status)
+        context["gift_plan_is_given"] = is_given_status(self.object.status)
         context["coordination"] = plan_coordination.coordination_context(
             self.object, self.request.user
         )

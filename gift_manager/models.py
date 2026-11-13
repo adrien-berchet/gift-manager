@@ -45,6 +45,7 @@ from django.utils.translation import gettext_lazy
 from .email_encoding import decode_email
 from .email_encoding import encode_email
 from .statuses import can_rate_status
+from .statuses import is_given_status
 from .validators import validate_http_url
 
 _PERMISSION_LEVEL_DICT = {"none": 0, "viewer": 10, "editor": 20, "owner": 30}
@@ -1733,6 +1734,19 @@ class Relation(models.Model):
             return self.status_changed_at is None
         loaded_status_id = getattr(self, "_loaded_status_id", _STATUS_NOT_LOADED)
         return loaded_status_id is not _STATUS_NOT_LOADED and loaded_status_id != self.status_id
+
+    @property
+    def given_on(self) -> date_class | None:
+        """Return the day a Given plan was given, or None when unknown or not given.
+
+        The day the status became Given, falling back to the due date for plans whose status
+        change was never recorded.
+        """
+        if not is_given_status(self.status):
+            return None
+        if self.status_changed_at:
+            return timezone.localdate(self.status_changed_at)
+        return self.due_date
 
     @property
     def has_visible_reaction(self) -> bool:
