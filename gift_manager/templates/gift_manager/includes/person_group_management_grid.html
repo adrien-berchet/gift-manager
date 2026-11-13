@@ -31,11 +31,13 @@
                      data-group-name="{{ node.name }}"
                      data-has-children="{{ node.has_children|yesno:'true,false' }}"
                      {% if node.parent_ids %}data-parent-ids="{{ node.parent_ids|join:',' }}"{% endif %}
-                     draggable="true">
+                     {% if node.can_edit %}draggable="true"{% endif %}>
                     <div class="tree-node-content">
+                        {% if node.can_edit %}
                         <span class="drag-handle" title="{% trans 'Drag to reparent' %}">
                             <i class="fas fa-grip-vertical"></i>
                         </span>
+                        {% endif %}
                         {% if node.has_children %}
                             <span class="tree-node-icon toggle-icon">
                                 <i class="fas fa-chevron-down"></i>
@@ -49,7 +51,8 @@
                         <span class="badge bg-secondary badge-count ms-2">{{ node.member_count }} {% trans "members" %}</span>
                     </div>
                     <div class="tree-node-actions">
-                        <button type="button"
+{% if node.can_edit %}
+                                                <button type="button"
                                 class="btn btn-sm btn-outline-secondary tree-move-btn"
                                 data-bs-toggle="modal"
                                 data-bs-target="#groupMoveModal"
@@ -58,7 +61,8 @@
                                 title="{% trans 'Move group' %}">
                             <i class="fas fa-arrows-alt me-1" aria-hidden="true"></i>{% trans "Move" %}
                         </button>
-                        {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True %}
+                        {% endif %}
+                        {% include "gift_manager/includes/person_group_action_buttons.html" with group_id=node.group_id stop_propagation=True can_edit=node.can_edit can_share=node.can_share delete_mode=node.delete_mode %}
                     </div>
                 </div>
                 {% endfor %}

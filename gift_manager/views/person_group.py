@@ -31,6 +31,7 @@ from gift_manager.forms import PersonGroupForm
 from gift_manager.group_hierarchy_service import GroupHierarchyService
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
+from gift_manager.mixins.permissions import delete_state_context
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.models import Relation
@@ -65,12 +66,13 @@ class PersonGroupListView(PermissionContextMixin, BaseListView):
         """Format person group items into rows for Grid.js."""
         return get_person_group_grid_data(items)
 
+    def get_permission_context(self, objects=None) -> dict:  # noqa: ARG002 - mixin signature
+        """Leave permissions to the group management context, which builds them once."""
+        return {"permission_levels": PermissionLevel.CHOICES}
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        group_context = get_person_group_management_context(
-            self.request.user, include_permissions=False
-        )
-        context.update(group_context)
+        context.update(get_person_group_management_context(self.request.user))
         return context
 
 
@@ -163,6 +165,22 @@ def get_person_group_management_context(
             for group in all_groups
         }
         context["user_permissions"] = permissions
+        context.update(
+            delete_state_context(
+                PermissionService.delete_states_for(
+                    user, PersonGroup, [group.group_id for group in all_groups], "group_id"
+                )
+            )
+        )
+        delete_modes = context["user_delete_modes"]
+        # The tree view is rendered by the server: each node carries what the user may do
+        for node in tree_data:
+            permission = permissions.get(node["group_id"], PermissionLevel.NONE)
+            node["can_edit"] = permission >= PermissionLevel.EDITOR
+            node["can_share"] = permission >= PermissionLevel.OWNER
+            node["delete_mode"] = delete_modes.get(
+                node["group_id"], PermissionService.DELETE_MODE_NONE
+            )
 
     return context
 

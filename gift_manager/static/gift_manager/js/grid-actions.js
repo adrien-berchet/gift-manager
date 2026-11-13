@@ -99,7 +99,7 @@
             order: 50,
             titleKey: "actionShare",
             title: "Share",
-            requiredPermission: PERMISSION_LEVELS.EDITOR,
+            requiredPermission: PERMISSION_LEVELS.OWNER,
         }),
         delete: Object.freeze({
             action: "delete",
@@ -113,6 +113,80 @@
             requiredPermission: PERMISSION_LEVELS.OWNER,
         }),
     });
+
+    // What "Delete" does for the user on a row, as computed by the server
+    // (PermissionService.delete_mode_for): the object is deleted, only the user's own access is
+    // removed ("leave", after naming a new owner for "handover"), or nothing is possible.
+    const DELETE_MODES = Object.freeze({
+        DELETE: "delete",
+        LEAVE: "leave",
+        HANDOVER: "handover",
+        NONE: "none",
+    });
+    const LEAVE_ACCESS_QUERY = "intent=leave_access";
+
+    // The delete action of a row whose deletion only removes the user's own access. It goes
+    // through the same confirmation flow as Delete, which reads the intent from the URL.
+    const LEAVE_ACTIONS = Object.freeze({
+        [DELETE_MODES.LEAVE]: Object.freeze({
+            ...ACTION_CONFIG.delete,
+            icon: "fa-user-minus",
+            titleKey: "actionLeave",
+            title: "Remove my access",
+        }),
+        [DELETE_MODES.HANDOVER]: Object.freeze({
+            ...ACTION_CONFIG.delete,
+            icon: "fa-user-minus",
+            titleKey: "actionHandover",
+            title: "Hand over and remove my access",
+        }),
+    });
+
+    let deleteModes = null;
+    let deleteReasons = null;
+
+    /**
+     * Replace the delete modes of the listed rows ({entityId: mode}) and the reasons of the
+     * blocked ones ({entityId: reason}), e.g. after a refresh.
+     */
+    function setDeleteModes(modes, reasons) {
+        deleteModes = modes && typeof modes === "object" ? modes : null;
+        deleteReasons = reasons && typeof reasons === "object" ? reasons : {};
+    }
+
+    /** Parsed content of a json_script element, or null when the page has none. */
+    function readJsonScript(elementId) {
+        const element = document.getElementById(elementId);
+        if (!element) return null;
+        try {
+            return JSON.parse(element.textContent) || {};
+        } catch (error) {
+            return {};
+        }
+    }
+
+    /**
+     * Delete mode of a row, or null when the page provides none (permission levels then decide).
+     * Modes and reasons come from includes/grid_delete_modes.html, rendered next to the grid data.
+     */
+    function deleteModeFor(id) {
+        if (deleteModes === null) {
+            deleteModes = readJsonScript("user-delete-modes");
+            if (deleteModes === null) return null;
+            deleteReasons = readJsonScript("user-delete-reasons") || {};
+        }
+        return deleteModes[id] || DELETE_MODES.NONE;
+    }
+
+    /** Why a row can be neither deleted nor left, when the server gave a reason. */
+    function deleteReasonFor(id) {
+        return (deleteReasons && deleteReasons[id]) || "";
+    }
+
+    /** Add the leave intent to a delete URL. */
+    function leaveUrl(url) {
+        return url + (url.includes("?") ? "&" : "?") + LEAVE_ACCESS_QUERY;
+    }
 
     function escapeHtml(value) {
         return window.GMUtils.escapeHtml(value);
@@ -176,7 +250,7 @@
 
     function inlineButtonHtml(item, safeId, permissionLevel, allowed) {
         const { config } = item;
-        const title = actionTitle(item.type);
+        const title = translate(config.titleKey, config.title);
         const safeTitle = escapeAttribute(title);
         const attributes = commonAttributes(item, safeId, permissionLevel);
 
@@ -211,7 +285,7 @@
 
     function menuItemHtml(item, safeId, permissionLevel) {
         const { config } = item;
-        const title = actionTitle(item.type);
+        const title = translate(config.titleKey, config.title);
         const href = safeUrl(item.url);
         const urlAttribute = config.urlAttribute ? ` ${config.urlAttribute}="${href}"` : "";
         const dangerClass = config.danger ? " grid-action-menu-item--danger" : "";
@@ -219,7 +293,15 @@
                    data-action="${escapeAttribute(config.action)}"${urlAttribute} ${commonAttributes(item, safeId, permissionLevel)}>${iconHtml(config.icon, " fa-fw")}<span>${escapeHtml(title)}</span></a></li>`;
     }
 
-    function menuHtml(items, safeId, permissionLevel) {
+    /** A Delete entry that cannot be used, with the reason below it. */
+    function blockedMenuItemHtml(item, reason) {
+        const title = translate(item.config.titleKey, item.config.title);
+        return `<li><span class="dropdown-item disabled grid-action-menu-item" aria-disabled="true"
+                   data-action-type="${escapeAttribute(item.type)}">${iconHtml(item.config.icon, " fa-fw")}<span>${escapeHtml(title)}</span></span>
+                <span class="dropdown-item-text grid-action-menu-reason">${escapeHtml(reason)}</span></li>`;
+    }
+
+    function menuHtml(items, safeId, permissionLevel, blockedDeleteReason = "") {
         if (items.length === 0) return "";
         const moreActions = escapeAttribute(translate("moreActions", "More actions"));
         // A fixed popper escapes the clipping of the Grid.js wrapper and of the card itself
@@ -228,7 +310,11 @@
                         data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}'
                         aria-expanded="false" title="${moreActions}" aria-label="${moreActions}">${iconHtml("fa-ellipsis")}</button>
                 <ul class="dropdown-menu dropdown-menu-end grid-action-menu-list">${items
-                    .map((item) => menuItemHtml(item, safeId, permissionLevel))
+                    .map((item) =>
+                        item.type === "delete" && blockedDeleteReason
+                            ? blockedMenuItemHtml(item, blockedDeleteReason)
+                            : menuItemHtml(item, safeId, permissionLevel)
+                    )
                     .join("")}</ul>
             </div>`;
     }
@@ -247,18 +333,36 @@
      */
     function renderActionBar({ urls, actions, row, id, permissionLevel = null }) {
         const safeId = escapeAttribute(id);
-        const isAllowed = (item) =>
-            permissionLevel === null || permissionLevel >= item.config.requiredPermission;
-        const items = resolveActions(urls, actions, row, id);
+        // With permission checks on, the server's delete mode decides what Delete does
+        const deleteMode = permissionLevel === null ? null : deleteModeFor(id);
+        const isAllowed = (item) => {
+            if (permissionLevel === null) return true;
+            if (item.type === "delete" && deleteMode !== null) return deleteMode !== DELETE_MODES.NONE;
+            return permissionLevel >= item.config.requiredPermission;
+        };
+        const items = resolveActions(urls, actions, row, id).map((item) => {
+            const leaveConfig = item.type === "delete" ? LEAVE_ACTIONS[deleteMode] : null;
+            return leaveConfig ? { ...item, config: leaveConfig, url: leaveUrl(item.url) } : item;
+        });
 
         const inline = items
             .filter((item) => !item.config.menu)
             .map((item) => inlineButtonHtml(item, safeId, permissionLevel, isAllowed(item)));
-        // Overflow actions the user may not use are hidden rather than disabled
+        // Overflow actions the user may not use are hidden rather than disabled, except a
+        // Delete that someone who can edit the row would expect: it says why it is blocked
+        const blockedDeleteReason =
+            deleteMode === DELETE_MODES.NONE && permissionLevel >= PERMISSION_LEVELS.EDITOR
+                ? deleteReasonFor(id)
+                : "";
         const menu = menuHtml(
-            items.filter((item) => item.config.menu && isAllowed(item)),
+            items.filter(
+                (item) =>
+                    item.config.menu &&
+                    (isAllowed(item) || (item.type === "delete" && blockedDeleteReason))
+            ),
             safeId,
-            permissionLevel
+            permissionLevel,
+            blockedDeleteReason
         );
         const permissionAttribute =
             permissionLevel === null ? "" : ` data-permission-level="${escapeAttribute(permissionLevel)}"`;
@@ -269,7 +373,9 @@
     window.GridActions = {
         PERMISSION_LEVELS: PERMISSION_LEVELS,
         ACTION_CONFIG: ACTION_CONFIG,
+        DELETE_MODES: DELETE_MODES,
         actionTitle: actionTitle,
+        setDeleteModes: setDeleteModes,
         renderActionBar: renderActionBar,
     };
 })(window);

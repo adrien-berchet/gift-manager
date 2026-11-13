@@ -150,7 +150,8 @@ class TestViewerRemovesTheirAccess:
 
         assert response.context["delete_mode"] == "none"
         content = response.content.decode()
-        assert LEAVE_LABEL not in content
+        assert "intent=leave_access" not in content
+        assert f"</i>{LEAVE_LABEL}" not in content.replace("\n", "").replace("  ", "")
         assert "A public tag cannot be deleted or left." in content
 
     def test_confirmation_page_says_remove_my_access(self, client, viewer, shared_objects):
@@ -239,10 +240,15 @@ class TestPlanListsHideEditFromViewers:
         client.force_login(owner)
         owner_page = client.get(detail_url).content.decode()
 
+        leave_link = f'href="{delete_url}?intent=leave_access"'
         assert edit_url not in viewer_page
         assert f'href="{delete_url}"' not in viewer_page
+        # The plan stays shared with its owner: the viewer can only remove their own access
+        assert leave_link in viewer_page
         assert edit_url in owner_page
-        assert f'href="{delete_url}"' in owner_page
+        # Its only owner cannot delete it while it is shared, and has no friend to hand it to
+        assert f'href="{delete_url}"' not in owner_page
+        assert leave_link not in owner_page
 
 
 class TestPlanLinksFollowPlanRights:

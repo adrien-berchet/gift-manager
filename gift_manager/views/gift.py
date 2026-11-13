@@ -25,6 +25,7 @@ from gift_manager.models import GiftTag
 from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import PERMISSION_LEVELS
+from gift_manager.services import PermissionService
 from gift_manager.templatetags.custom_filters import safe_http_url
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
@@ -290,7 +291,7 @@ class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
 
     def get_context_data(self, **kwargs) -> dict:
         context = super().get_context_data(**kwargs)
-        context["relations"] = (
+        relations = (
             Relation.objects.accessible_by(self.request.user)
             .filter(gift=self.object)
             .select_related("status", "person", "group", "event")
@@ -302,6 +303,10 @@ class GiftDetailView(SingleObjectPermissionMixin, BaseDetailView):
                 "group__name",
                 "event__name",
             )
+        )
+        # Each plan carries what deleting it does for the user: delete, or only leave it
+        context["relations"] = PermissionService.with_delete_modes(
+            self.request.user, relations, "relation_id"
         )
         context["relation_statuses"] = RelationStatus.objects.all()
 

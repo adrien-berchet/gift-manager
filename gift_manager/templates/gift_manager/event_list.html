@@ -43,6 +43,7 @@
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}
+{% include "gift_manager/includes/grid_delete_modes.html" %}
 <script>
     (function () {
         // Get permission data from template (stored globally for refresh updates)

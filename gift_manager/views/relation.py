@@ -65,6 +65,7 @@ from gift_manager.gift_plan_cards import build_gift_plan_card
 from gift_manager.gift_plan_cards import gift_plan_status_class
 from gift_manager.mixins.permissions import PermissionContextMixin
 from gift_manager.mixins.permissions import PermissionUpdateMixin
+from gift_manager.mixins.permissions import delete_state_context
 from gift_manager.models import Event
 from gift_manager.models import Gift
 from gift_manager.models import PermissionLevel
@@ -337,12 +338,31 @@ class RelationStatusDetailView(BaseDetailView):
         # Add relations that have this status (filtered by user)
         # Use with_related_objects() to avoid N+1 queries when accessing
         # person, group, gift, event in the template
-        context["relations"] = (
-            Relation.objects.accessible_by(self.request.user)
+        user = self.request.user
+        relations = list(
+            Relation.objects.accessible_by(user)
             .with_related_objects()
             .filter(status=self.object)
-            .with_edit_flag(self.request.user)
+            .with_edit_flag(user)
             .order_by(F("due_date").asc(nulls_last=True), "gift__name")
+        )
+        context["relations"] = relations
+        # Row actions follow the user's rights on each plan, like the other grids
+        relation_ids = [relation.relation_id for relation in relations]
+        if user.is_superuser:
+            permissions = {str(relation_id): PermissionLevel.OWNER for relation_id in relation_ids}
+        else:
+            permissions = {
+                str(relation_id): level
+                for relation_id, level in RelationPermission.objects.filter(
+                    user=user, relation__in=relations
+                ).values_list("relation__relation_id", "permission_type")
+            }
+        context["user_permissions"] = permissions
+        context.update(
+            delete_state_context(
+                PermissionService.delete_states_for(user, Relation, relation_ids, "relation_id")
+            )
         )
         return context
 
