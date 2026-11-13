@@ -634,6 +634,37 @@ msgstr "Projet de cadeau créé."
 msgid "Remove my access"
 msgstr "Retirer mon accès"
 
+#: gift_manager/views/base.py
+#: gift_manager/templates/gift_manager/confirm_delete.html
+#: gift_manager/templates/gift_manager/includes/delete_confirmation_modal.html
+#: gift_manager/templates/gift_manager/includes/detail_partial.html
+#: gift_manager/templates/gift_manager/gift_tag_detail.html
+msgid "Hand over and remove my access"
+msgstr "Transmettre et retirer mon accès"
+
+#: gift_manager/views/base.py
+#: gift_manager/templates/gift_manager/includes/detail_partial.html
+msgid "You are its only owner: choose who becomes the owner before you leave it."
+msgstr ""
+"Vous en êtes le seul propriétaire : choisissez qui en devient propriétaire "
+"avant de le quitter."
+
+#: gift_manager/services.py
+msgid "Choose who becomes the new owner."
+msgstr "Choisissez qui devient le nouveau propriétaire."
+
+#: gift_manager/templates/gift_manager/includes/handover_owner_field.html
+msgid "New owner"
+msgstr "Nouveau propriétaire"
+
+#: gift_manager/templates/gift_manager/includes/handover_owner_field.html
+msgid ""
+"You are its only owner: this person becomes its owner, then you no longer see "
+"it."
+msgstr ""
+"Vous en êtes le seul propriétaire : cette personne en devient propriétaire, "
+"puis vous ne le voyez plus."
+
 #: gift_manager/services.py
 msgid "A public tag cannot be deleted or left."
 msgstr "Une étiquette publique ne peut être ni supprimée ni quittée."

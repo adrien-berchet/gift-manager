@@ -103,3 +103,62 @@ def test_gift_list_switches_to_gifts_not_in_a_plan(page: Page, live_server, seed
 
     page.get_by_role("link", name="All gifts").click()
     expect(grid.get_by_text("Novel")).to_be_visible()
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+@pytest.mark.parametrize("surface", ["page", "modal"])
+def test_only_owner_hands_over_before_leaving(page: Page, live_server, seed_data_e2e, surface):
+    alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+    alice.profile.friends.add(bob.profile)
+    sister = seed_data_e2e.persons["sister"]
+    PermissionService.create_or_update_permission(
+        bob, sister, permission_level=PermissionLevel.VIEWER
+    )
+
+    login_as(page, live_server.url, "alice")
+    if surface == "page":
+        open_page(
+            page,
+            f"{live_server.url}{reverse('gift_manager:person_detail', args=[sister.person_id])}",
+        )
+        page.get_by_role("link", name="Hand over and remove my access").click()
+        page.get_by_label("New owner").select_option(str(bob.pk))
+        page.get_by_role("button", name="Hand over and remove my access").click()
+        page.wait_for_url(lambda url: str(sister.person_id) not in url)
+    else:
+        open_page(page, f"{live_server.url}{reverse('gift_manager:home')}")
+        page.evaluate(
+            "url => window.GiftManager.confirmDelete(url)",
+            reverse("gift_manager:person_delete", args=[sister.person_id]) + "?intent=leave_access",
+        )
+        modal = page.locator("#confirmModal")
+        expect(modal).to_be_visible()
+        modal.get_by_label("New owner").select_option(str(bob.pk))
+        with page.expect_response(lambda r: "/delete/" in r.url and r.request.method == "POST"):
+            modal.locator("#confirmAction").click()
+        expect(modal).not_to_be_visible()
+
+    assert PermissionService.get_permission(sister, bob) == PermissionLevel.OWNER
+    assert PermissionService.get_permission(sister, alice) == PermissionLevel.NONE
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_viewer_removes_their_access_from_the_detail_panel(page: Page, live_server, seed_data_e2e):
+    mom, bob = seed_data_e2e.persons["mom"], seed_data_e2e.bob
+    PermissionService.create_or_update_permission(bob, mom, permission_level=PermissionLevel.VIEWER)
+
+    login_as(page, live_server.url, "bob")
+    open_page(page, f"{live_server.url}{reverse('gift_manager:home')}")
+    page.evaluate(
+        "url => window.GiftManager.confirmDelete(url)",
+        reverse("gift_manager:person_delete", args=[mom.person_id]) + "?intent=leave_access",
+    )
+    modal = page.locator("#confirmModal")
+    expect(modal.locator("#confirmAction")).to_have_text("Remove my access")
+    with page.expect_response(lambda r: "/delete/" in r.url and r.request.method == "POST"):
+        modal.locator("#confirmAction").click()
+    expect(modal).not_to_be_visible()
+
+    assert PermissionService.get_permission(mom, bob) == PermissionLevel.NONE

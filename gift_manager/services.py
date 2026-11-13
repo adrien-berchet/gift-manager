@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from decimal import Decimal
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -59,6 +60,7 @@ class PermissionService:
     # What "delete" means for a user on an object (see delete_mode_for)
     DELETE_MODE_DELETE = "delete"
     DELETE_MODE_LEAVE = "leave"
+    DELETE_MODE_HANDOVER = "handover"
     DELETE_MODE_NONE = "none"
 
     @staticmethod
@@ -172,7 +174,8 @@ class PermissionService:
         if isinstance(obj, PersonGroup) and cls.get_permission(obj, user) == PermissionLevel.NONE:
             raise PermissionDenied(gettext("This group access is inherited from a parent group."))
 
-        if user_permission == PermissionLevel.OWNER and len(cls._owner_user_ids(obj)) <= 1:
+        if cls._needs_handover(user, obj):
+            # Leaving would leave the object without an active owner
             raise PermissionDenied(gettext("At least one owner is required."))
 
     @classmethod
@@ -188,17 +191,74 @@ class PermissionService:
         if getattr(obj, "is_global", False):
             return cls.DELETE_MODE_NONE, str(GLOBAL_OBJECT_REMOVAL_ERROR)
         if cls.has_other_access_holder(obj, user):
-            try:
-                cls.assert_can_leave_object(user, obj)
-            except PermissionDenied as exc:
-                return cls.DELETE_MODE_NONE, str(exc)
-            return cls.DELETE_MODE_LEAVE, None
+            return cls._shared_delete_mode(user, obj)
         if cls.get_effective_permission(obj, user) >= PermissionLevel.EDITOR:
             return cls.DELETE_MODE_DELETE, None
         return cls.DELETE_MODE_NONE, gettext("You do not have permission to delete this object.")
 
     @classmethod
-    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False) -> str:
+    def _shared_delete_mode(cls, user, obj) -> tuple[str, str | None]:
+        """Delete mode while someone else holds access: leave, hand over, or nothing."""
+        if cls._needs_handover(user, obj) and cls.handover_candidates(user, obj):
+            return cls.DELETE_MODE_HANDOVER, None
+        try:
+            cls.assert_can_leave_object(user, obj)
+        except PermissionDenied as exc:
+            return cls.DELETE_MODE_NONE, str(exc)
+        return cls.DELETE_MODE_LEAVE, None
+
+    @classmethod
+    def _needs_handover(cls, user, obj) -> bool:
+        """Whether ``user`` is the only active owner of ``obj`` and must name a new one to leave.
+
+        Only a direct owner permission can be handed over: inherited group ownership and a
+        superuser's implicit access are not removed by leaving.
+        """
+        if getattr(obj, "is_global", False):
+            return False
+        if cls.get_permission(obj, user) != PermissionLevel.OWNER:
+            return False
+        active_owner_ids = set(
+            User.objects.filter(pk__in=cls._owner_user_ids(obj), is_active=True).values_list(
+                "pk", flat=True
+            )
+        )
+        return active_owner_ids <= {user.pk}
+
+    @classmethod
+    def handover_candidates(cls, user, obj) -> list:
+        """Return who can take over ``obj`` from its only owner ``user``, editors first.
+
+        Only users the object is directly shared with and who are still ``user``'s friends:
+        handing over must not extend access to anyone new.
+        """
+        model = cls.get_permission_model(obj)
+        object_attr = cls._get_permission_object_attr(obj, model)
+        permissions = (
+            model.objects.filter(**{object_attr: obj})
+            .exclude(user=user)
+            .select_related("user")
+            .order_by("-permission_type", "user__username")
+        )
+        try:
+            friend_ids = set(user.profile.friends.values_list("user_id", flat=True))
+        except ObjectDoesNotExist:
+            friend_ids = set()
+        return [
+            permission.user
+            for permission in permissions
+            if permission.user.is_active and permission.user_id in friend_ids
+        ]
+
+    @classmethod
+    def _hand_over(cls, actor, obj, new_owner) -> None:
+        """Make ``new_owner`` an owner of ``obj`` so its only owner ``actor`` can leave it."""
+        if new_owner is None or new_owner not in cls.handover_candidates(actor, obj):
+            raise PermissionDenied(gettext("Choose who becomes the new owner."))
+        cls.create_or_update_permission(new_owner, obj, permission_level=PermissionLevel.OWNER)
+
+    @classmethod
+    def delete_or_leave(cls, actor, obj, *, is_leave_request: bool = False, new_owner=None) -> str:
         """Delete an object, or remove actor's access if it is shared with other users.
 
         Args:
@@ -206,6 +266,8 @@ class PermissionService:
             obj: The model instance to delete or leave.
             is_leave_request: If True, actor explicitly requested to leave access (does not
                 require editor permission, but still enforces assert_can_leave_object).
+            new_owner: When actor is the only owner of a shared object, the user (one of
+                ``handover_candidates``) who becomes its owner before actor leaves it.
 
         Returns:
             "shared_removed" if actor's access was removed while other users retain access.
@@ -215,6 +277,9 @@ class PermissionService:
             PermissionDenied: If actor lacks permission to delete the object or leave access.
         """
         cls.lock_object(obj)
+
+        if cls.has_other_access_holder(obj, actor) and cls._needs_handover(actor, obj):
+            cls._hand_over(actor, obj, new_owner)
 
         if is_leave_request:
             cls.assert_can_leave_object(actor, obj)

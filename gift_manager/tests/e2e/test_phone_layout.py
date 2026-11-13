@@ -145,8 +145,11 @@ def test_phone_edit_actions_stay_visible_while_fields_scroll(phone_page, live_se
     expect(panel).not_to_be_visible()
 
 
-def test_phone_edit_save_cancel_and_delete_confirmation(phone_page, live_server):
+def test_phone_edit_save_cancel_and_delete_confirmation(phone_page, live_server, seed_data_e2e):
     page = phone_page
+    # Alice may be the only owner of a gift shared with Bob: as friends, she can hand it over,
+    # so the form keeps a delete-like action that opens the confirmation
+    seed_data_e2e.alice.profile.friends.add(seed_data_e2e.bob.profile)
     page.set_viewport_size({"width": 375, "height": 667})
     page.goto(f"{live_server.url}/en/gifts/")
     page.locator('[data-action="edit"]:visible').first.click()

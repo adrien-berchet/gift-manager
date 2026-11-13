@@ -232,6 +232,15 @@ def delete_action_button(context: dict, *, url: str, label: str) -> dict:
             "label": gettext("Remove my access"),
             "tooltip": gettext("It stays shared with the other people who have access."),
         }
+    if mode == PermissionService.DELETE_MODE_HANDOVER:
+        return {
+            "type": "leave",
+            "url": f"{url}?{LEAVE_ACCESS_QUERY}",
+            "label": gettext("Hand over and remove my access"),
+            "tooltip": gettext(
+                "You are its only owner: choose who becomes the owner before you leave it."
+            ),
+        }
     return {
         "type": "delete",
         "url": url,
@@ -253,7 +262,10 @@ class ContextPermissionMixin:
         mode, reason = PermissionService.delete_mode_for(user, self.object)
         context["delete_mode"] = mode
         context["delete_disabled_reason"] = reason
-        context["can_leave_access"] = mode == PermissionService.DELETE_MODE_LEAVE
+        context["can_leave_access"] = mode in {
+            PermissionService.DELETE_MODE_LEAVE,
+            PermissionService.DELETE_MODE_HANDOVER,
+        }
         return context
 
 
@@ -765,8 +777,28 @@ class BaseUpdateView(
         context["form_surface"] = "offcanvas" if self.is_htmx else "page"
         context["sharing_mode"] = "edit"
         context["show_sharing_section"] = self.show_sharing_section
-        context["delete_url"] = self.get_delete_url()
+        context.update(self._delete_action_context(self.get_delete_url()))
         return context
+
+    def _delete_action_context(self, delete_url: str | None) -> dict:
+        """The edit form's delete button follows what deleting does for this user."""
+        if delete_url is None:
+            return {"delete_url": None}
+        mode, reason = PermissionService.delete_mode_for(self.request.user, self.object)
+        if mode == PermissionService.DELETE_MODE_LEAVE:
+            return {
+                "delete_url": f"{delete_url}?{LEAVE_ACCESS_QUERY}",
+                "delete_label": gettext("Remove my access"),
+            }
+        if mode == PermissionService.DELETE_MODE_HANDOVER:
+            return {
+                "delete_url": f"{delete_url}?{LEAVE_ACCESS_QUERY}",
+                "delete_label": gettext("Hand over and remove my access"),
+            }
+        if mode == PermissionService.DELETE_MODE_DELETE:
+            return {"delete_url": delete_url}
+        # Shown disabled with the reason (e.g. the only owner with nobody to hand it over to)
+        return {"delete_url": delete_url, "delete_disabled_reason": reason}
 
     def get_cancel_url(self) -> str:
         """URL to redirect to when the cancel button is clicked."""
@@ -803,6 +835,14 @@ class DeleteSharedMixin:
         """Return the user-facing object type used in delete messages."""
         return getattr(self, "display_object_type", self.object_type)
 
+    def get_new_owner(self):
+        """Return the user chosen to take over the object (only owner leaving), if any."""
+        try:
+            new_owner_id = int(self.request.POST.get("new_owner", ""))
+        except ValueError:
+            return None
+        return User.objects.filter(pk=new_owner_id).first()
+
     def is_leave_access_request(self) -> bool:
         """Return whether this request explicitly asks to remove only current access."""
         if self.request.method == "POST":
@@ -822,7 +862,10 @@ class DeleteSharedMixin:
             self.object = self.get_object()
             success_url = self.get_success_url()
             action = PermissionService.delete_or_leave(
-                request.user, self.object, is_leave_request=self.is_leave_access_request()
+                request.user,
+                self.object,
+                is_leave_request=self.is_leave_access_request(),
+                new_owner=self.get_new_owner(),
             )
 
             if action == PermissionService.DELETE_RESULT_UNSHARED:
@@ -1004,9 +1047,17 @@ class BaseDeleteView(
         if self.is_leave_access_request() or PermissionService.has_other_access_holder(
             obj, self.request.user
         ):
-            # Deleting a shared object only removes the user's own access (delete_or_leave)
-            PermissionService.assert_can_leave_object(self.request.user, obj)
-            return
+            # Deleting a shared object only removes the user's own access (delete_or_leave);
+            # its only owner first hands it over to someone
+            mode, reason = PermissionService.delete_mode_for(self.request.user, obj)
+            if mode in {
+                PermissionService.DELETE_MODE_LEAVE,
+                PermissionService.DELETE_MODE_HANDOVER,
+            }:
+                return
+            if mode == PermissionService.DELETE_MODE_DELETE and not self.is_leave_access_request():
+                return
+            raise PermissionDenied(reason or gettext("You do not have access to this object."))
 
         if permission < self.required_delete_permission:
             raise PermissionDenied(gettext("You do not have permission to delete this object."))
@@ -1034,6 +1085,14 @@ class BaseDeleteView(
                 or PermissionService.has_other_access_holder(self.object, self.request.user),
             }
         )
+        if (
+            context["is_leave_access"]
+            and PermissionService.delete_mode_for(self.request.user, self.object)[0]
+            == PermissionService.DELETE_MODE_HANDOVER
+        ):
+            context["handover_candidates"] = PermissionService.handover_candidates(
+                self.request.user, self.object
+            )
         if context["is_leave_access"]:
             # Leaving only removes the user's own access: the templates then hide the related
             # objects and cascade warnings, which only apply to an actual deletion

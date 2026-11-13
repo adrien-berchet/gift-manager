@@ -1,0 +1,17 @@
+{% load i18n %}
+{% comment %}
+  New-owner picker shown when the only owner of a shared object leaves it.
+  Context: handover_candidates (users, editors first); optional form_attr to attach the select
+  to a form elsewhere in the page (the confirm modal's hidden #deleteForm).
+{% endcomment %}
+{% if handover_candidates %}
+<div class="mb-3">
+  <label for="handover-new-owner" class="form-label fw-semibold">{% trans "New owner" %}</label>
+  <select id="handover-new-owner" name="new_owner" class="form-select" required{% if form_attr %} form="{{ form_attr }}"{% endif %}>
+    {% for candidate in handover_candidates %}
+    <option value="{{ candidate.pk }}"{% if forloop.first %} selected{% endif %}>{{ candidate.get_full_name|default:candidate.username }}</option>
+    {% endfor %}
+  </select>
+  <div class="form-text">{% trans "You are its only owner: this person becomes its owner, then you no longer see it." %}</div>
+</div>
+{% endif %}
