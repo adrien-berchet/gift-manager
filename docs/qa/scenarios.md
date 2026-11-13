@@ -12,6 +12,11 @@ feature ships or a pass finds a gap.
   recipient is a friend with an account.
 - **Quick actions** (any user): mark a card Given; the reaction prompt offers "Save & reveal".
   Undo the action.
+- **New gift from the plan form** (any user): create a plan with "Or a new gift" filled and
+  no gift chosen; the gift appears on the Gifts page, owned by the user. Choosing a gift and
+  naming one is refused; sharing the new plan with a friend shares the new gift.
+- **Given plan** (any user): a plan marked Given shows "Given on" on its card and its page
+  instead of "No date", no "I'll take this" button, and no Surprise badge once revealed.
 - **Viewer rights** (alice shares a plan with bob as viewer): bob sees no Edit or Delete links
   for it in person, group, event and gift pages.
 
@@ -39,6 +44,11 @@ feature ships or a pass finds a gap.
 - **Only owner hands over** (alice owns Mom, shares it with bob, they are friends): "Hand over
   and remove my access" asks for the new owner (editors first); bob becomes owner. Without a
   friend to hand over to, the button is disabled with the reason.
+- **Row menus** (alice shares Mom with bob as viewer): in the People grid, bob's row menu
+  holds only "Remove my access"; confirming removes the row and alice still owns Mom. The
+  only owner of a shared object with no friend to hand it to sees a disabled Delete with
+  the reason. The group tree view, the status page grid and the plan lists of gift and
+  event pages offer no Edit or Delete the user may not use.
 - **Global Birthday event**: nobody, superuser included, can edit or delete it (page, grid,
   edit URL, Django admin).
 
@@ -49,6 +59,12 @@ feature ships or a pass finds a gap.
 - "Unassigned gifts" opens the Gifts page in "Not in a plan yet"; planning one of them removes
   it from that view.
 - Group member counts match on the recipients page and the group explorer.
+- The Recipients page lists the user's own person with "This is you" and no "New Gift Plan";
+  its count matches the dashboard's Recipients tile.
+- The Statuses page gives the number of the user's plans per status; a status badge on a
+  card or a detail page opens that status's plans.
+- The filter panel of a grid is fully translated in French and offers no "checkbox" sort.
+- Ctrl+K then typing at once: no character is lost.
 
 ## Profile and wishlist
 
