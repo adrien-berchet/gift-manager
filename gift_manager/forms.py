@@ -757,6 +757,10 @@ class PersonGroupAddMultipleChildGroupsForm(forms.Form):
         parent_group.save()
 
 
+# Longest name of a gift created from a gift plan form
+NEW_GIFT_NAME_MAX_LENGTH = 150
+
+
 class SurpriseFieldMixin:
     """Add the ``is_surprise`` checkbox to a gift plan form.
 
@@ -892,9 +896,53 @@ class BaseRelationScopedForm(
         super().__init__(*args, **kwargs)
         if "gift" in self.fields:
             self.fields["gift"].queryset = _accessible_or_none(Gift, self.user)
+            if not self.instance.pk:
+                self._offer_new_gift()
         if "event" in self.fields:
-            self.fields["event"].queryset = _accessible_or_none(Event, self.user)
             self.fields["event"].required = False
+            self.fields["event"].queryset = _accessible_or_none(Event, self.user)
+
+    def _offer_new_gift(self) -> None:
+        """Let a new plan name a gift that does not exist yet, instead of choosing one."""
+        self.fields["gift"].required = False
+        self.fields["new_gift_name"] = forms.CharField(
+            required=False,
+            max_length=NEW_GIFT_NAME_MAX_LENGTH,
+            label=gettext_lazy("Or a new gift"),
+            help_text=gettext_lazy("Name a gift that is not in your list yet: it is added to it."),
+            widget=forms.TextInput(attrs={"autocomplete": "off"}),
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if "new_gift_name" in self.fields:
+            name = (cleaned_data.get("new_gift_name") or "").strip()
+            cleaned_data["new_gift_name"] = name
+            if name and cleaned_data.get("gift"):
+                self.add_error(
+                    "new_gift_name",
+                    gettext("Choose an existing gift or name a new one, not both."),
+                )
+            elif not name and not cleaned_data.get("gift") and "gift" not in self.errors:
+                self.add_error("gift", gettext("Choose a gift or name a new one."))
+        return cleaned_data
+
+    def save(self, *, commit=True):  # pylint: disable=arguments-differ
+        """Save the plan, creating the gift it names first (owned by the user).
+
+        The gift exists and belongs to the user before the plan is saved, so sharing the new
+        plan (``CreatePermissionMixin``) cascades to it like to any gift the user owns.
+        """
+        name = self.cleaned_data.get("new_gift_name") if "new_gift_name" in self.fields else ""
+        if not name:
+            return super().save(commit=commit)
+        with transaction.atomic():
+            gift = Gift.objects.create(name=name)
+            PermissionService.create_or_update_permission(
+                self.user, gift, permission_level=PermissionLevel.OWNER, object_attr="gift"
+            )
+            self.instance.gift = gift
+            return super().save(commit=commit)
 
 
 class BaseRecipientBoundRelationForm(BaseRelationScopedForm):
