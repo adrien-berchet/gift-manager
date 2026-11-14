@@ -18,6 +18,7 @@ from .base import EditPermissionMixin
 from .base import FilterByUserMixin
 from .base import GetObjectByTokenMixin
 from .base import SharedUsersMixin
+from .capture import CaptureView
 from .common import get_user
 from .common import global_search
 from .common import home
@@ -160,9 +161,12 @@ from .wishlist import WishArchiveView
 from .wishlist import WishClaimToggleView
 from .wishlist import WishCreateView
 from .wishlist import WishDeleteView
+from .wishlist import WishlistShareDisableView
+from .wishlist import WishlistShareRegenerateView
 from .wishlist import WishListView
 from .wishlist import WishPlanView
 from .wishlist import WishUpdateView
+from .wishlist import wishlist_guest
 
 __all__ = [
     "AcceptInvitationView",
@@ -173,6 +177,7 @@ __all__ = [
     "BaseUpdateView",
     "CancelInvitationView",
     "CancelToPreviousMixin",
+    "CaptureView",
     "ConfirmRemoveFriendView",
     "ContextPermissionMixin",
     "CreatePermissionMixin",
@@ -252,6 +257,8 @@ __all__ = [
     "WishListView",
     "WishPlanView",
     "WishUpdateView",
+    "WishlistShareDisableView",
+    "WishlistShareRegenerateView",
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",
@@ -300,4 +307,5 @@ __all__ = [
     "surprise_default_hint",
     "translate_url_safe",
     "update_relation_status",
+    "wishlist_guest",
 ]

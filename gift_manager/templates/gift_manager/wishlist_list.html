@@ -30,4 +30,44 @@
 </p>
 
 {% include "gift_manager/includes/wishlist_body_partial.html" %}
+
+<section class="wishlist-share mt-5 pt-3 border-top" aria-labelledby="wishlist-share-title">
+  <h2 class="h5" id="wishlist-share-title"><i class="fas fa-share-alt me-2" aria-hidden="true"></i>{% trans "Share link" %}</h2>
+  <p class="text-muted small">
+    {% trans "Anyone with this link can see your active wishes without an account, and nothing else." %}
+  </p>
+  {% if wishlist_share_url %}
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="wishlist-share-url" value="{{ wishlist_share_url }}" readonly aria-label="{% trans 'Share link' %}">
+      <button type="button" class="btn btn-outline-secondary" data-copy-target="wishlist-share-url" data-copied-label="{% trans 'Copied' %}">
+        <i class="fas fa-copy me-1" aria-hidden="true"></i><span data-copy-label>{% trans "Copy link" %}</span>
+      </button>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <form method="post" action="{% url 'gift_manager:wishlist_share_regenerate' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary btn-sm">
+          <i class="fas fa-sync-alt me-1" aria-hidden="true"></i>{% trans "Generate a new link" %}
+        </button>
+      </form>
+      <form method="post" action="{% url 'gift_manager:wishlist_share_disable' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="fas fa-ban me-1" aria-hidden="true"></i>{% trans "Disable" %}
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <form method="post" action="{% url 'gift_manager:wishlist_share_regenerate' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="fas fa-link me-1" aria-hidden="true"></i>{% trans "Enable share link" %}
+      </button>
+    </form>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'gift_manager/js/copy-link.js' %}"></script>
 {% endblock %}

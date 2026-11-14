@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -100,4 +100,12 @@ Recommended starting context:
 
 ## Open Questions
 
-- Should guest links support an optional expiration date (for example, auto-disabling 30 days after creation or after an event date)?
+- Should guest links support an optional expiration date (for example, auto-disabling 30 days after creation or after an event date)? Not done: the owner disables or regenerates the link.
+- Resolved: only personal wishlists are shared for now. Links for a dependent's wishlist wait
+  for `0032`, which does not exist yet.
+- Resolved: no `WishlistShare` model. The secret is `Profile.wishlist_share_token`, like
+  `Profile.calendar_token`: one nullable unique column gives "at most one active link" without
+  extra constraints. A dependent's link can be a token on `Person` when `0032` lands.
+- Resolved: wishes the owner marked as received are left out, like on the owner's own active
+  list. This comes from the owner's received gifts, never from `Wish.is_fulfilled`, so it
+  reveals nothing the owner does not already see.

@@ -209,6 +209,17 @@
         </div>
     </div>
 
+    <!-- Bookmarklet Section -->
+    <div class="profile-section">
+        <h2><i class="fas fa-bookmark"></i> {% trans "Browser bookmarklet" %}</h2>
+        <p class="text-muted mb-3">
+            {% trans "Drag this button to your bookmarks bar, then click it on a product page to save it as a wish or a gift." %}
+        </p>
+        <a href="{{ bookmarklet_url }}" class="btn btn-outline-primary btn-sm bookmarklet-link" draggable="true">
+            <i class="fas fa-gift me-1" aria-hidden="true"></i>{% trans "Add to Gift Manager" %}
+        </a>
+    </div>
+
     <!-- Received Gifts Section -->
     <div class="profile-section">
         <h2>

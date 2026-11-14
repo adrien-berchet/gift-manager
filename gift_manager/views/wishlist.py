@@ -7,6 +7,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
@@ -17,6 +18,7 @@ from django.urls import reverse
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.utils.translation import gettext
+from django.views.decorators.http import require_safe
 from django.views.generic import CreateView
 from django.views.generic import UpdateView
 from django.views.generic import View
@@ -25,12 +27,14 @@ from gift_manager import wishlist
 from gift_manager.forms import WishForm
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
+from gift_manager.models import Profile
 from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.received_gifts import linkable_giver_ids
 from gift_manager.services import PermissionService
 from gift_manager.statuses import is_given_status
 from gift_manager.views.base import HTMXResponseMixin
+from gift_manager.views.base import QueryStringPrefillMixin
 
 
 class WishListView(LoginRequiredMixin, View):
@@ -56,14 +60,26 @@ class WishListView(LoginRequiredMixin, View):
             "received_wishes": [w for w in wishes if not w.is_archived and w.is_received],
             "archived_wishes": [w for w in wishes if w.is_archived],
         }
+        share_token = request.user.profile.wishlist_share_token
+        if share_token:
+            context["wishlist_share_url"] = request.build_absolute_uri(
+                reverse("gift_manager:wishlist_guest", kwargs={"token": share_token})
+            )
 
         if request.headers.get("HX-Request") == "true":
             return render(request, self.partial_template_name, context)
         return render(request, self.template_name, context)
 
 
-class WishCreateView(LoginRequiredMixin, HTMXResponseMixin, CreateView):
+class WishCreateView(QueryStringPrefillMixin, LoginRequiredMixin, HTMXResponseMixin, CreateView):
     """Add a new wish to wisher's personal wishlist."""
+
+    prefill_fields = {
+        "title": "title",
+        "url": "url",
+        "price_hint": "price_hint",
+        "notes": "notes",
+    }
 
     model = Wish
     form_class = WishForm
@@ -421,3 +437,44 @@ class WishPlanView(LoginRequiredMixin, View):
             response["HX-Redirect"] = detail_url
             return response
         return redirect(detail_url)
+
+
+class WishlistShareRegenerateView(LoginRequiredMixin, View):
+    """Enable the wishlist share link, or replace its secret (the old link stops working)."""
+
+    def post(self, request, *args, **kwargs):
+        request.user.profile.regenerate_wishlist_share_token()
+        messages.success(request, gettext("Your wishlist share link has been updated."))
+        return redirect("gift_manager:wishlist_list")
+
+
+class WishlistShareDisableView(LoginRequiredMixin, View):
+    """Disable the wishlist share link."""
+
+    def post(self, request, *args, **kwargs):
+        request.user.profile.clear_wishlist_share_token()
+        return redirect("gift_manager:wishlist_list")
+
+
+@require_safe
+def wishlist_guest(request, token):
+    """Show the wishlist of the user who owns this secret token, read-only and without login."""
+    profile = get_object_or_404(
+        Profile.objects.select_related("user"), wishlist_share_token=token, user__is_active=True
+    )
+    if not profile.wishlist_share_token:  # defensive: a null token must never match
+        raise Http404
+    owner = profile.user
+    response = render(
+        request,
+        "gift_manager/wishlist_guest.html",
+        {
+            "owner_name": owner.get_full_name().strip() or owner.username,
+            "owner_currency": profile.currency,
+            "wishes": wishlist.guest_wishes(owner),
+        },
+    )
+    response["Cache-Control"] = "private, no-store"
+    response["Referrer-Policy"] = "no-referrer"
+    response["X-Robots-Tag"] = "noindex, nofollow"
+    return response

@@ -97,6 +97,18 @@ urlpatterns = [
         name="wish_delete",
     ),
     path(
+        "profile/wishlist/share/regenerate/",
+        views.WishlistShareRegenerateView.as_view(),
+        name="wishlist_share_regenerate",
+    ),
+    path(
+        "profile/wishlist/share/disable/",
+        views.WishlistShareDisableView.as_view(),
+        name="wishlist_share_disable",
+    ),
+    path("wishes/share/<str:token>/", views.wishlist_guest, name="wishlist_guest"),
+    path("capture/", views.CaptureView.as_view(), name="capture"),
+    path(
         "profile/received-gifts/",
         views.ReceivedGiftListView.as_view(),
         name="received_gift_list",
