@@ -26,6 +26,7 @@ from gift_manager.models import Relation
 from gift_manager.models import RelationStatus
 from gift_manager.permissions import PERMISSION_LEVELS
 from gift_manager.services import PermissionService
+from gift_manager.templatetags.custom_filters import format_price
 from gift_manager.templatetags.custom_filters import safe_http_url
 from gift_manager.views.base import BaseCreateView
 from gift_manager.views.base import BaseDeleteView
@@ -65,6 +66,7 @@ class GiftListView(
 
     def get_grid_data(self, items) -> list:
         rows = []
+        currency = self.request.user.profile.currency
         for item in items:
             gift_id = str(item["gift_id"])
             tags_info = [
@@ -89,6 +91,7 @@ class GiftListView(
                     reverse("gift_manager:gift_detail", args=[gift_id]),  # Index 8
                     reverse("gift_manager:gift_edit", args=[gift_id]),  # Index 9
                     reverse("gift_manager:gift_delete", args=[gift_id]),  # Index 10
+                    format_price(price, currency),  # Index 11
                 ]
             )
         return rows

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -62,7 +62,6 @@ Recommended starting context:
 
 ## Open Questions
 
-- Dropdown entries or a free-text search box: which fits the filter bar better
-  on mobile?
-- Should matching be case-insensitive and partial ("Marie" matching
-  "Aunt Marie and Uncle Paul")?
+- Resolved: dropdown entries. Free-text givers get an "Other givers" section (whole label,
+  case-insensitive) and friends named on revealed gifts a "Friends" section.
+  `source_givers_text` is never matched: it names owners the recipient only sees as a count.

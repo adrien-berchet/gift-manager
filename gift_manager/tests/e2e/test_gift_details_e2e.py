@@ -13,7 +13,9 @@ from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
 from gift_manager.tests.factories import GiftTagFactory
+from gift_manager.tests.factories import ReceivedGiftFactory
 from gift_manager.tests.factories import RelationFactory
+from gift_manager.tests.factories import WishFactory
 
 
 def login(page: Page, base_url: str):
@@ -179,3 +181,45 @@ class TestDashboardCardWithDetails:
         assert layout["clipped"] is False, layout
         assert layout["squashed"] == [], layout
         assert layout["noteHeight"] > 0 and layout["noteVisible"], layout
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+@pytest.mark.parametrize(("prefix", "expected"), [("", "€1,234.50"), ("/fr", "1 234,50 €")])
+def test_gifts_list_and_gift_detail_show_the_same_price(
+    page: Page, live_server, seed_data_e2e, prefix, expected
+):
+    gift = GiftFactory(
+        name="Same Price Gift", shared_with=[seed_data_e2e.alice], price=Decimal("1234.50")
+    )
+    login(page, live_server.url)
+
+    page.goto(f"{live_server.url}{prefix}/gifts/", wait_until="domcontentloaded")
+    row = page.locator(".gridjs-tr", has_text="Same Price Gift")
+    expect(row.locator("td[data-column-id='price']")).to_have_text(expected)
+
+    page.goto(f"{live_server.url}{prefix}/gifts/{gift.gift_id}/", wait_until="domcontentloaded")
+    expect(page.locator(".link-price-display__price")).to_contain_text(expected)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_global_search_lists_received_gifts_and_wishes(page: Page, live_server, seed_data_e2e):
+    alice = seed_data_e2e.alice
+    received = ReceivedGiftFactory(
+        recipient_user=alice, title="Quokka Lamp", description="", giver_label="Aunt Marie"
+    )
+    WishFactory(wisher=alice, title="Quokka Poster", notes="")
+    login(page, live_server.url)
+    page.goto(f"{live_server.url}/", wait_until="domcontentloaded")
+
+    page.keyboard.press("Control+k")
+    page.locator("#globalSearchInput").fill("quokka")
+
+    results = page.locator("#searchResults")
+    expect(results.locator(".search-category")).to_have_text(["Received Gifts", "Wishlist"])
+    expect(results.locator(".search-result-item")).to_have_count(2)
+    results.locator(".search-result-item", has_text="Quokka Lamp").click()
+    page.wait_for_url(f"**/profile/received-gifts/{received.received_gift_id}/")

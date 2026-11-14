@@ -119,19 +119,9 @@
                     return left === right ? 0 : (left > right ? 1 : -1);
                 }
             },
-            formatter: (cell) => {
-                if (cell === '' || cell === null || cell === undefined) return '';
-                const amount = parseFloat(cell);
-                if (Number.isNaN(amount)) return '';
-                try {
-                    return new Intl.NumberFormat(document.documentElement.lang || undefined, {
-                        style: 'currency',
-                        currency: '{{ request.user.profile.currency|default:"EUR"|escapejs }}'
-                    }).format(amount);
-                } catch (error) {
-                    return amount.toFixed(2);
-                }
-            }
+            // The cell keeps the raw amount for sorting and filtering; the text shown is
+            // formatted by the server so that it matches every other page
+            formatter: (cell, row) => row.cells[11].data || ''
         },
         {
             id: 'tags',
@@ -144,6 +134,7 @@
         { name: 'gift_detail_url', hidden: true },
         { name: 'gift_edit_url', hidden: true },
         { name: 'gift_delete_url', hidden: true },
+        { name: 'price_display', hidden: true },
         {
             id: 'actions',
             name: '{% trans "Actions"|escapejs %}',

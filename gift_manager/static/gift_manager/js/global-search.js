@@ -36,7 +36,9 @@
             gift: i18n.gifts,
             recipient: i18n.recipients,
             event: i18n.events,
-            tag: i18n.tags
+            tag: i18n.tags,
+            received_gift: i18n.receivedGifts,
+            wish: i18n.wishlist
         };
 
         function loadRecentItems() {

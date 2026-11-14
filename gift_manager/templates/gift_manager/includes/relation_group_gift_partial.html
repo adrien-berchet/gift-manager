@@ -1,4 +1,4 @@
-{% load i18n l10n %}
+{% load i18n l10n custom_filters %}
 {% if group_gift %}
 <div id="relation-group-gift" class="detail-section mb-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -92,8 +92,8 @@
     {% if group_gift.is_overfunded %}
     <div class="alert alert-warning py-2 mb-3" role="alert">
         <i class="fas fa-exclamation-circle me-2" aria-hidden="true"></i>
-        {% blocktrans trimmed with extra=group_gift.total_collected|floatformat:2 price=group_gift.total_price|floatformat:2 currency=group_gift.currency %}
-        The recorded payments ({{ extra }} {{ currency }}) exceed the gift price ({{ price }} {{ currency }}).
+        {% blocktrans trimmed with extra=group_gift.total_collected|format_price:group_gift.currency price=group_gift.total_price|format_price:group_gift.currency %}
+        The recorded payments ({{ extra }}) exceed the gift price ({{ price }}).
         {% endblocktrans %}
     </div>
     {% endif %}
@@ -103,16 +103,16 @@
         <div class="d-flex justify-content-between align-items-center mb-2">
             <span>
                 <strong>{% trans "Total Collected:" %}</strong>
-                {{ group_gift.total_collected|floatformat:2 }} {{ group_gift.currency }} /
-                {{ group_gift.total_price|floatformat:2 }} {{ group_gift.currency }}
+                {{ group_gift.total_collected|format_price:group_gift.currency }} /
+                {{ group_gift.total_price|format_price:group_gift.currency }}
             </span>
             <span>
                 {% if group_gift.is_fully_paid %}
                 <span class="badge bg-success"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>{% trans "Fully funded" %}</span>
                 {% elif group_gift.buyer %}
                 <small class="text-muted">
-                    {% blocktrans trimmed with owed=group_gift.owed_to_buyer|floatformat:2 curr=group_gift.currency buyer=group_gift.buyer.username %}
-                    Owed to {{ buyer }}: <strong>{{ owed }} {{ curr }}</strong>
+                    {% blocktrans trimmed with owed=group_gift.owed_to_buyer|format_price:group_gift.currency buyer=group_gift.buyer.username %}
+                    Owed to {{ buyer }}: <strong>{{ owed }}</strong>
                     {% endblocktrans %}
                 </small>
                 {% endif %}
@@ -128,7 +128,7 @@
                  aria-valuenow="{{ group_gift.total_collected }}"
                  aria-valuemin="0"
                  aria-valuemax="{{ group_gift.total_price }}"
-                 aria-valuetext="{% blocktrans with collected=group_gift.total_collected total=group_gift.total_price curr=group_gift.currency %}{{ collected }} {{ curr }} of {{ total }} {{ curr }}{% endblocktrans %}"
+                 aria-valuetext="{% blocktrans with collected=group_gift.total_collected|format_price:group_gift.currency total=group_gift.total_price|format_price:group_gift.currency %}{{ collected }} of {{ total }}{% endblocktrans %}"
                  aria-label="{% trans 'Contribution progress' %}">
             </div>
             {% else %}
@@ -147,8 +147,8 @@
         {% if relation.split_mode == 'custom' and group_gift.total_unallocated > 0 %}
         <small class="text-warning-emphasis">
             <i class="fas fa-info-circle me-1" aria-hidden="true"></i>
-            {% blocktrans trimmed with unallocated=group_gift.total_unallocated|floatformat:2 curr=group_gift.currency %}
-            Unallocated balance: {{ unallocated }} {{ curr }} remaining to be assigned.
+            {% blocktrans trimmed with unallocated=group_gift.total_unallocated|format_price:group_gift.currency %}
+            Unallocated balance: {{ unallocated }} remaining to be assigned.
             {% endblocktrans %}
         </small>
         {% endif %}
@@ -202,7 +202,7 @@
                             </button>
                         </form>
                         {% else %}
-                        <span>{{ row.share_amount|floatformat:2 }} {{ group_gift.currency }}</span>
+                        <span>{{ row.share_amount|format_price:group_gift.currency }}</span>
                         {% endif %}
                     </td>
                     <td>

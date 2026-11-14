@@ -646,3 +646,114 @@ def test_received_gift_detail_page_htmx_surface_and_linkable_givers(client):
     assert alice_url in html
     assert "Book Club" in html
     assert group_url not in html
+
+
+def _giver_option_values(html):
+    """Values offered by the giver dropdown of the received gifts list."""
+    select = html.split('name="giver"', 1)[1].split("</select>", 1)[0]
+    return [part.split('"', 1)[0] for part in select.split('<option value="')[1:]]
+
+
+@pytest.mark.django_db
+def test_received_gift_list_filters_by_free_text_giver(client):
+    user = UserFactory()
+    client.force_login(user)
+    ReceivedGiftFactory(recipient_user=user, title="Marie Book", giver_label="Aunt Marie")
+    ReceivedGiftFactory(recipient_user=user, title="Marie Scarf", giver_label="aunt marie")
+    ReceivedGiftFactory(recipient_user=user, title="Paul Mug", giver_label="Uncle Paul")
+    ReceivedGiftFactory(recipient_user=UserFactory(), giver_label="Stranger Label")
+    url = reverse("gift_manager:received_gift_list")
+
+    html = client.get(url).content.decode()
+    # One entry per label whatever its case, and never another user's labels
+    assert _giver_option_values(html) == ["", "label:Aunt Marie", "label:Uncle Paul"]
+    assert "Stranger Label" not in html
+
+    filtered = client.get(url, {"giver": "label:AUNT MARIE"}).content.decode()
+    assert "Marie Book" in filtered
+    assert "Marie Scarf" in filtered
+    assert "Paul Mug" not in filtered
+    assert '<option value="label:Aunt Marie" selected>' in filtered
+
+    # A label is matched as a whole, and an empty one is ignored
+    assert "Marie Book" not in client.get(url, {"giver": "label:Marie"}).content.decode()
+    assert "Paul Mug" in client.get(url, {"giver": "label:"}).content.decode()
+
+
+@pytest.mark.django_db
+def test_received_gift_list_filters_by_givers_kept_from_revealed_plans(client):
+    user = UserFactory()
+    client.force_login(user)
+    friend = UserFactory(username="friend_giver", first_name="Fiona", last_name="Friend")
+    contact_account = UserFactory(username="contact_giver")
+    stranger = UserFactory(username="stranger_giver", first_name="Sam", last_name="Stranger")
+    user.profile.friends.add(friend.profile)
+    friend.profile.friends.add(user.profile)
+    contact = PersonFactory(first_name="Carla", family_name="Contact", account=contact_account)
+    PermissionService.create_or_update_permission(
+        user, contact, permission_level=PermissionLevel.OWNER
+    )
+
+    def revealed(title, *accounts, giver_label=""):
+        gift = ReceivedGiftFactory(recipient_user=user, title=title, giver_label=giver_label)
+        gift.giver_accounts.add(*accounts)
+        return gift
+
+    revealed("Friend Gift", friend, stranger)
+    revealed("Contact Gift", contact_account)
+    revealed("Stranger Gift", stranger)
+    revealed("Relabelled Gift", friend, contact_account, giver_label="The team")
+    url = reverse("gift_manager:received_gift_list")
+
+    html = client.get(url).content.decode()
+    assert _giver_option_values(html) == [
+        "",
+        f"person:{contact.person_id}",
+        "account:friend_giver",
+        "label:The team",
+    ]
+    # Owners who are neither contacts nor friends stay anonymous
+    assert "Sam Stranger" not in html
+    assert "stranger_giver" not in html
+
+    by_friend = client.get(url, {"giver": "account:friend_giver"}).content.decode()
+    assert "Friend Gift" in by_friend
+    assert "Contact Gift" not in by_friend
+    # A typed label replaces the kept givers, in the filter as on the cards
+    assert "Relabelled Gift" not in by_friend
+
+    by_contact = client.get(url, {"giver": f"person:{contact.person_id}"}).content.decode()
+    assert "Contact Gift" in by_contact
+    assert "Friend Gift" not in by_contact
+    assert "Relabelled Gift" not in by_contact
+
+    # Filtering on a hidden owner, an unknown account or oneself is ignored
+    for value in ("account:stranger_giver", "account:nobody", f"account:{user.username}"):
+        ignored = client.get(url, {"giver": value})
+        assert ignored.status_code == 200
+        content = ignored.content.decode()
+        assert all(
+            title in content
+            for title in ("Friend Gift", "Contact Gift", "Stranger Gift", "Relabelled Gift")
+        )
+        assert " selected>" not in content.split('name="giver"', 1)[1].split("</select>", 1)[0]
+
+
+@pytest.mark.django_db
+def test_received_gift_person_filter_ignores_accounts_of_inaccessible_contacts(client):
+    user = UserFactory()
+    client.force_login(user)
+    account = UserFactory()
+    hidden_contact = PersonFactory(account=account)
+    direct = ReceivedGiftFactory(recipient_user=user, title="Direct Gift", giver_label="")
+    direct.giver_persons.add(hidden_contact)
+    kept = ReceivedGiftFactory(recipient_user=user, title="Kept Gift", giver_label="")
+    kept.giver_accounts.add(account)
+
+    content = client.get(
+        reverse("gift_manager:received_gift_list"), {"giver": f"person:{hidden_contact.person_id}"}
+    ).content.decode()
+
+    # Same result as before for the linked contact, without probing the kept accounts
+    assert "Direct Gift" in content
+    assert "Kept Gift" not in content

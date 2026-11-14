@@ -10,6 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import PermissionDenied
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import ngettext
 
@@ -343,6 +344,50 @@ def linkable_giver_ids(user: User, gifts: Iterable[ReceivedGift]) -> tuple[set[i
         else set()
     )
     return linkable_person_ids, linkable_group_ids
+
+
+def named_snapshot_givers(user: User) -> tuple[list[Person], list[tuple[str, str]]]:
+    """Return the givers kept from revealed plans that ``user`` sees by name, for the giver filter.
+
+    Follows ``annotate_snapshot_givers``: an account is named through ``user``'s contact for it,
+    or as a confirmed friend; a typed giver label hides the kept givers. The result is the
+    contacts, and the ``(username, display name)`` of the friends without a contact. Owners who
+    are neither stay anonymous: they are never listed.
+    """
+    account_ids = set(
+        ReceivedGift.objects.for_user(user)
+        .filter(giver_label="", giver_accounts__isnull=False)
+        .values_list("giver_accounts", flat=True)
+    ) - {user.pk}
+    if not account_ids:
+        return [], []
+    contacts = list(Person.objects.accessible_by(user).filter(account_id__in=account_ids))
+    friend_ids = (account_ids & _active_friend_ids(user)) - {p.account_id for p in contacts}
+    friends = sorted(
+        (
+            (account.username, _account_display_name(account))
+            for account in User.objects.filter(pk__in=friend_ids)
+        ),
+        key=lambda friend: friend[1].lower(),
+    )
+    return contacts, friends
+
+
+def snapshot_giver_account_q(user: User, account_id: int | None) -> Q:
+    """Match the gifts whose kept giver ``account_id`` is shown by name to ``user``."""
+    if account_id is None or account_id == user.pk:
+        return Q(pk__in=[])
+    return Q(giver_label="", giver_accounts=account_id)
+
+
+def friend_giver_account_id(user: User, username: str) -> int | None:
+    """Return the id of the confirmed friend of ``user`` named ``username``, if any."""
+    return (
+        User.objects.filter(username=username, pk__in=_active_friend_ids(user))
+        .exclude(pk=user.pk)
+        .values_list("pk", flat=True)
+        .first()
+    )
 
 
 def _account_display_name(account: User) -> str:

@@ -7,6 +7,7 @@ import uuid
 from decimal import Decimal
 
 import pytest
+from django.test import RequestFactory
 from django.urls import reverse
 from django.utils import formats
 from django.utils import translation
@@ -124,6 +125,8 @@ class TestGiftGridDataSerialization:
         )
 
         view = GiftListView()
+        view.request = RequestFactory().get("/")
+        view.request.user = user
         items = [
             {
                 "gift_id": gift.gift_id,
@@ -163,6 +166,7 @@ class TestGiftGridDataSerialization:
         assert clean_row[8] == reverse("gift_manager:gift_detail", args=[gift.gift_id])
         assert clean_row[9] == reverse("gift_manager:gift_edit", args=[gift.gift_id])
         assert clean_row[10] == reverse("gift_manager:gift_delete", args=[gift.gift_id])
+        assert clean_row[11] == "€29.99"  # Price as displayed, formatted by the server
 
         hostile_row = rows[1]
         assert hostile_row[1] == "Hostile URL Gift"
@@ -170,6 +174,7 @@ class TestGiftGridDataSerialization:
         assert hostile_row[3] == ""  # javascript: URL is sanitized to empty string
         assert hostile_row[4] == ""  # None price becomes empty string
         assert hostile_row[5] == []
+        assert hostile_row[11] == ""
 
     def test_gift_list_page_serves_valid_grid_data_and_refreshes(self, authenticated_client, user):
         """The gift list template outputs valid JSON in #grid-data that updates on change."""

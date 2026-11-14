@@ -2,6 +2,7 @@ from urllib.parse import urlsplit
 
 from django import template
 from django.utils import formats
+from django.utils.translation import get_language
 from django.utils.translation import gettext
 
 from gift_manager.account_links import link_label as _link_label
@@ -140,11 +141,21 @@ def visible_groups(person, request):
 
 @register.filter
 def format_price(value, currency="EUR"):
-    """Format a decimal price with two decimals in the active locale and a currency symbol."""
+    """Format a price with two decimals and a currency symbol, following the active language.
+
+    English puts the symbol first ("€24.50", "CHF 24.50"); other languages put it after the
+    amount ("24,50 €"). Every displayed price goes through this filter so that all pages agree.
+    """
     if value is None:
         return ""
     amount = formats.number_format(value, decimal_pos=2, use_l10n=True, force_grouping=True)
-    return f"{amount}\u00a0{_CURRENCY_SYMBOLS.get(currency, currency)}"
+    symbol = _CURRENCY_SYMBOLS.get(currency, currency) or ""
+    if (get_language() or "").startswith("en"):
+        # Letter codes such as "CHF" need a space before the amount, symbols do not
+        separator = "\u00a0" if symbol[-1:].isalpha() else ""
+        sign = "-" if amount.startswith("-") else ""
+        return f"{sign}{symbol}{separator}{amount.removeprefix('-')}"
+    return f"{amount}\u00a0{symbol}"
 
 
 @register.filter

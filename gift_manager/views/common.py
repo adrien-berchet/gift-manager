@@ -22,7 +22,9 @@ from gift_manager.models import Gift
 from gift_manager.models import GiftTag
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
+from gift_manager.models import Wish
 from gift_manager.models import birthday_event_name_q
 from gift_manager.statuses import is_terminal_status
 
@@ -282,6 +284,68 @@ def global_search(request):
             "url": reverse("gift_manager:gift_tag_detail", kwargs={"pk": tag.tag_id}),
         }
         for tag in tags
+    )
+
+    # Search the user's own received gifts (title, description, occasion and givers).
+    # Givers kept from a revealed plan are left out: some of them are only shown as a count.
+    matching_persons = Person.objects.accessible_by(user).filter(
+        Q(first_name__icontains=query) | Q(family_name__icontains=query)
+    )
+    matching_groups = PersonGroup.objects.accessible_by(user).filter(name__icontains=query)
+    received_gifts = (
+        ReceivedGift.objects.for_user(user)
+        .select_related("event")
+        .filter(
+            Q(title__icontains=query)
+            | Q(description__icontains=query)
+            | Q(occasion_text__icontains=query)
+            | Q(event__name__icontains=query)
+            | birthday_event_name_q(query, "event__")
+            | Q(giver_label__icontains=query)
+            | Q(giver_persons__in=matching_persons)
+            | Q(giver_groups__in=matching_groups)
+        )
+        .distinct()
+        .order_by("-received_on", "-pk")[:max_per_category]
+    )
+    results.extend(
+        {
+            "type": "received_gift",
+            "icon": "fa-box-open",
+            "title": received_gift.title,
+            "subtitle": " · ".join(
+                part
+                for part in (
+                    received_gift.giver_label,
+                    received_gift.occasion_text
+                    or (received_gift.event.name if received_gift.event else ""),
+                    str(received_gift.received_on.year),
+                )
+                if part
+            ),
+            "url": reverse(
+                "gift_manager:received_gift_detail",
+                kwargs={"pk": received_gift.received_gift_id},
+            ),
+        }
+        for received_gift in received_gifts
+    )
+
+    # Search the user's own wishes
+    wishes = (
+        Wish.objects.for_wisher(user)
+        .filter(Q(title__icontains=query) | Q(notes__icontains=query))
+        .order_by("-created_at", "-pk")[:max_per_category]
+    )
+    results.extend(
+        {
+            "type": "wish",
+            "icon": "fa-star",
+            "title": wish.title,
+            "subtitle": wish.notes[:50] + "..." if len(wish.notes) > 50 else wish.notes,
+            "url": reverse("gift_manager:wish_edit", kwargs={"wish_id": wish.wish_id}),
+        }
+        for wish in wishes
     )
 
     return JsonResponse({"results": results})

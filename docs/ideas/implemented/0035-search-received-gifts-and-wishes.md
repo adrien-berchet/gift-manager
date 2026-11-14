@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -68,5 +68,6 @@ Recommended starting context:
 
 ## Open Questions
 
-- Should received gifts and wishes be grouped under a single "My profile"
-  heading or shown as two separate result types?
+- Resolved: two separate result types, "Received Gifts" and "Wishlist", listed after the
+  existing ones. Received gifts also match their event and address-book givers; givers kept
+  from a revealed plan are not searched, because some of them are only shown as a count.
