@@ -16,6 +16,9 @@ from gift_manager.guided_plan import create_inline_objects
 
 from .relation import RelationCreateView
 
+# Values of the gift step that a link may prefill (see the capture page of the bookmarklet)
+PREFILL_NAMES = ("new_gift-name", "new_gift-url", "new_gift-price")
+
 STEP_LABELS = {
     "recipient": gettext_lazy("Recipient"),
     "gift": gettext_lazy("Gift"),
@@ -39,7 +42,7 @@ class RelationGuidedCreateView(RelationCreateView):
     def get(self, request, *args, **kwargs):
         self.object = None
         step = self._parse_step(request.GET.get("step"))
-        return self._render_step(step, self._initial_form(step, {}))
+        return self._render_step(step, self._initial_form(step, self._posted()))
 
     def post(self, request, *args, **kwargs):
         self.object = None
@@ -82,7 +85,25 @@ class RelationGuidedCreateView(RelationCreateView):
         )
 
     def _posted(self) -> QueryDict:
-        return self.request.POST if self.request.method == "POST" else QueryDict()
+        """Return the answers entered so far: the posted data, or a link's prefilled values."""
+        if self.request.method == "POST":
+            return self.request.POST
+        return self._query_prefill()
+
+    def _query_prefill(self) -> QueryDict:
+        """Return the new-gift values named in the query string, and nothing else.
+
+        They only prefill the gift step, carried as hidden inputs like any earlier answer; the
+        step validates them when it is submitted.
+        """
+        prefill = QueryDict(mutable=True)
+        for name in PREFILL_NAMES:
+            value = self.request.GET.get(name, "").strip()
+            if value:
+                prefill[name] = value
+        if "new_gift-name" in prefill:
+            prefill["gift_mode"] = "new"
+        return prefill
 
     def _initial_form(self, step: int, data) -> forms.Form:
         """Return an unbound form of ``step`` showing the values already entered in ``data``."""

@@ -1,0 +1,43 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+{% load custom_filters %}
+
+{% block title %}Gift Manager - {% trans "Save this product" %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header mb-4">
+    <h1>{% trans "Save this product" %}</h1>
+  </div>
+
+  {% if capture.is_empty %}
+  <p class="text-muted capture-empty">{% trans "No product details were found on that page. You can still fill them in yourself." %}</p>
+  {% else %}
+  <div class="card mb-4 capture-preview">
+    <div class="card-body">
+      {% if capture.title %}<h2 class="h5 card-title">{{ capture.title }}</h2>{% endif %}
+      {% if capture.price is not None %}
+      <p class="mb-2"><i class="fas fa-tag field-icon--price me-1" aria-hidden="true"></i>{{ capture.price|format_price:user.profile.currency }}</p>
+      {% endif %}
+      {% if capture.notes %}<p class="text-muted mb-2">{{ capture.notes }}</p>{% endif %}
+      {% with link=capture.url|safe_http_url %}{% if link %}
+      <p class="mb-0 text-break small"><a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ link|truncatechars:120 }}</a></p>
+      {% endif %}{% endwith %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ targets.plan }}" class="btn btn-primary" data-capture-target="plan">
+      <i class="fas fa-gift me-2" aria-hidden="true"></i>{% trans "Plan for someone" %}
+    </a>
+    <a href="{{ targets.wish }}" class="btn btn-outline-primary" data-capture-target="wish">
+      <i class="fas fa-star me-2" aria-hidden="true"></i>{% trans "Add to my wishlist" %}
+    </a>
+    <a href="{{ targets.gift }}" class="btn btn-outline-secondary" data-capture-target="gift">
+      <i class="fas fa-box me-2" aria-hidden="true"></i>{% trans "Save as a gift" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

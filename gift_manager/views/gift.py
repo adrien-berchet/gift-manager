@@ -185,7 +185,7 @@ class GiftCreateView(
     form_css_class = "gift-form"
     form_type = "gift"
     close_offcanvas = True
-    prefill_fields = {"name": "name"}
+    prefill_fields = {"name": "name", "url": "url", "price": "price"}
     create_gift_plan_action = "create_gift_plan"
     gift_plan_template_name = "gift_manager/includes/relation_form_partial.html"
 

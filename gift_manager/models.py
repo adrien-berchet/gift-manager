@@ -469,6 +469,10 @@ class Profile(models.Model):
     calendar_token = models.CharField(
         max_length=64, unique=True, null=True, blank=True, editable=False
     )
+    # Secret of the read-only wishlist share link; null while the link is disabled
+    wishlist_share_token = models.CharField(
+        max_length=64, unique=True, null=True, blank=True, editable=False
+    )
     ai_share_person_notes = models.BooleanField(
         default=False,
         verbose_name=gettext_lazy("Share recipient notes with AI"),
@@ -534,6 +538,17 @@ class Profile(models.Model):
         """Disable the calendar feed."""
         self.calendar_token = None
         self.save(update_fields=["calendar_token"])
+
+    def regenerate_wishlist_share_token(self) -> str:
+        """Create a new wishlist share secret; the previous share link stops working."""
+        self.wishlist_share_token = secrets.token_urlsafe(32)
+        self.save(update_fields=["wishlist_share_token"])
+        return self.wishlist_share_token
+
+    def clear_wishlist_share_token(self) -> None:
+        """Disable the wishlist share link."""
+        self.wishlist_share_token = None
+        self.save(update_fields=["wishlist_share_token"])
 
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)

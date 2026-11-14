@@ -95,7 +95,9 @@ Recommended starting context:
 
 - Builds on `0028` (Wishlists And Collaborative Gift Giving) and `0006` (Recipient Notes And Interests).
 - Can be combined with `0031` (Bookmarklet) to quickly add items to a child's list.
-- Can be viewed via `0033` (Read-Only Guest Wishlist Links) if public sharing is enabled.
+- `0033` (Read-Only Guest Wishlist Links) is implemented for personal wishlists only
+  (`Profile.wishlist_share_token`, `wishlist.guest_wishes`). A guest link for a dependent's
+  list, managed by the `OWNER` of the `Person`, remains to be added with this idea.
 
 ## Open Questions
 

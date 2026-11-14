@@ -227,8 +227,8 @@ def own_receipts(user: User, wishes: Iterable[Wish]) -> dict[int, WishReceipt]:
     }
 
 
-def count_active_wishes(user: User) -> int:
-    """Count the wishes shown as active on the user's wishlist (not archived, not received).
+def active_wishes(user: User) -> QuerySet[Wish]:
+    """Return the wishes shown as active on the user's wishlist (not archived, not received).
 
     Like ``own_receipts``, "received" comes from the user's own received gifts, never from
     ``Wish.is_fulfilled``, which a friend's "Given" plan also sets.
@@ -238,7 +238,25 @@ def count_active_wishes(user: User) -> int:
         .filter(fulfills_wish=True, wish__isnull=False)
         .values("wish_id")
     )
-    return get_wisher_wishes(user).exclude(pk__in=received_wish_ids).count()
+    return get_wisher_wishes(user).exclude(pk__in=received_wish_ids)
+
+
+def count_active_wishes(user: User) -> int:
+    """Count the wishes shown as active on the user's wishlist (see ``active_wishes``)."""
+    return active_wishes(user).count()
+
+
+# What a visitor of the share link may read; claim and fulfillment columns are never loaded
+GUEST_WISH_FIELDS = ("title", "url", "price_hint", "notes", "priority")
+
+
+def guest_wishes(owner: User) -> QuerySet[Wish]:
+    """Return the owner's active wishes as shown to a visitor of their share link.
+
+    Anti-spoiler: the owner can open their own link, so it must show nothing that the owner's
+    wishlist page hides. Only ``GUEST_WISH_FIELDS`` are loaded.
+    """
+    return active_wishes(owner).only(*GUEST_WISH_FIELDS)
 
 
 def own_received_gifts(user: User, wish: Wish) -> list[ReceivedGift]:

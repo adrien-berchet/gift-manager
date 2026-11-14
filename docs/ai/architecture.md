@@ -31,6 +31,16 @@
   `.ics` feed. Both read through `accessible_by(user)` and render in `Profile.language`. The digest is
   sent by `gift_manager/digest_sending.py`, run by `manage.py send_gift_digest` from a plain scheduler or
   by the Vercel Cron endpoint `/cron/send-gift-digest/`; see `docs/operations/reminders.md`.
+- Wishlist share link: `Profile.wishlist_share_token` is the secret of a read-only page
+  (`views.wishlist.wishlist_guest`) open to anyone, like the calendar feed. The owner can open
+  their own link, so the page must show nothing their wishlist page hides: read wishes through
+  `wishlist.guest_wishes`, which never loads the claim or fulfillment columns, and render every
+  wish the same way. `wishlist_guest.html` is standalone (no `base.html`, no app scripts).
+- Bookmarklet: `gift_manager/capture.py` builds the `javascript:` link shown on the profile and
+  cleans what it sends to the capture page (`views.capture.CaptureView`). The server never
+  fetches the product page. Captured values are untrusted and only prefill unbound forms
+  (`QueryStringPrefillMixin`, `RelationGuidedCreateView._query_prefill`); each form validates
+  them when submitted.
 - Duplicating a plan and "Plan again" (recreating a repeating event's last occurrence as `Idea`
   plans, Birthday event included) live in `gift_manager/plan_repeat.py`; copies are owned by the
   creating user only and never carry reactions or sharing.

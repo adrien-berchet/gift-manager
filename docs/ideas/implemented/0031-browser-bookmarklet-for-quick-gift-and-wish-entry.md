@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -90,4 +90,9 @@ Recommended starting context:
 
 ## Open Questions
 
-- None identified.
+- Resolved: the price is kept only when the page states a currency and it is the user's own.
+  A price with no stated currency is dropped too, since it cannot be told apart from an
+  amount in another currency.
+- Resolved: captured values are cleaned one by one (`gift_manager/capture.py`); an unusable
+  value is dropped and never blocks the others. A URL must already be `http(s)`; no scheme is
+  guessed.
