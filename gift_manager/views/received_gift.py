@@ -40,10 +40,13 @@ from gift_manager.received_gifts import ShareReactionResult
 from gift_manager.received_gifts import annotate_snapshot_givers
 from gift_manager.received_gifts import can_reveal_plan
 from gift_manager.received_gifts import can_share_reaction
+from gift_manager.received_gifts import friend_giver_account_id
 from gift_manager.received_gifts import get_reveal_targets
 from gift_manager.received_gifts import linkable_giver_ids
+from gift_manager.received_gifts import named_snapshot_givers
 from gift_manager.received_gifts import reveal_plan
 from gift_manager.received_gifts import share_reaction_feedback
+from gift_manager.received_gifts import snapshot_giver_account_q
 from gift_manager.received_gifts import user_is_plan_owner
 from gift_manager.services import PermissionService
 from gift_manager.validators import validate_http_url
@@ -53,10 +56,70 @@ from gift_manager.wishlist import own_received_gifts
 User = get_user_model()
 
 
-def _parse_giver_filter(raw_giver: str) -> tuple[str, Q | None]:
-    """Parse ``person:<uuid>``, ``group:<uuid>``, or a bare UUID into a queryset filter."""
+def _parse_named_giver_filter(raw_giver: str, user) -> tuple[str, Q | None]:
+    """Parse a ``label:<free-text giver>`` or ``account:<username>`` giver filter value."""
+    if raw_giver.startswith("label:"):
+        label = raw_giver.removeprefix("label:").strip()
+        return (f"label:{label}", Q(giver_label__iexact=label)) if label else ("", None)
+    username = raw_giver.removeprefix("account:")
+    account_id = friend_giver_account_id(user, username)
+    if account_id is None:
+        return "", None
+    return f"account:{username}", snapshot_giver_account_q(user, account_id)
+
+
+def _giver_filter_choices(user, gifts, filter_giver: str) -> tuple[list, str]:
+    """Build the giver dropdown of the received gifts list of ``user``.
+
+    Lists the accessible people and groups linked on ``gifts``, the givers kept from revealed
+    plans that ``user`` sees by name, and the free-text givers. Also returns ``filter_giver``
+    aligned on the listed entry, so that it is shown as selected.
+    """
+    giver_person_pks = gifts.values_list("giver_persons", flat=True).distinct()
+    giver_group_pks = gifts.values_list("giver_groups", flat=True).distinct()
+    snapshot_contacts, snapshot_friends = named_snapshot_givers(user)
+    persons = (
+        Person.objects.accessible_by(user)
+        .filter(Q(pk__in=giver_person_pks) | Q(pk__in=[person.pk for person in snapshot_contacts]))
+        .order_by("family_name", "first_name")
+    )
+    groups = PersonGroup.objects.accessible_by(user).filter(pk__in=giver_group_pks).order_by("name")
+    choices = person_group_choices(persons, groups)
+    if snapshot_friends:
+        choices.append(
+            (_("Friends"), [(f"account:{username}", name) for username, name in snapshot_friends])
+        )
+
+    # Free-text givers, one entry per label whatever its case
+    stored_labels = gifts.exclude(giver_label="").values_list("giver_label", flat=True)
+    giver_labels: dict[str, str] = {}
+    for label in sorted({label.strip() for label in stored_labels} - {""}):
+        giver_labels.setdefault(label.casefold(), label)
+    if giver_labels:
+        choices.append(
+            (
+                _("Other givers"),
+                [(f"label:{label}", label) for _key, label in sorted(giver_labels.items())],
+            )
+        )
+    if filter_giver.startswith("label:"):
+        # Select the listed entry even when the requested label differs by case
+        listed = giver_labels.get(filter_giver.removeprefix("label:").casefold())
+        filter_giver = f"label:{listed}" if listed else filter_giver
+    return choices, filter_giver
+
+
+def _parse_giver_filter(raw_giver: str, user) -> tuple[str, Q | None]:
+    """Parse a giver filter value into a queryset filter on the received gifts of ``user``.
+
+    Accepts ``person:<uuid>``, ``group:<uuid>``, a bare UUID, ``label:<free-text giver>`` and
+    ``account:<username>`` (a friend named as a giver kept from a revealed plan). Anything else
+    is ignored.
+    """
     if not raw_giver:
         return "", None
+    if raw_giver.startswith(("label:", "account:")):
+        return _parse_named_giver_filter(raw_giver, user)
     kind = None
     uuid_part = raw_giver
     if raw_giver.startswith("person:"):
@@ -71,11 +134,23 @@ def _parse_giver_filter(raw_giver: str) -> tuple[str, Q | None]:
     except ValueError:
         return "", None
 
+    person_query = Q(giver_persons__person_id=parsed)
+    if kind != "group":
+        # A contact also matches the gifts kept from a revealed plan where it is shown by name
+        contact_account_id = (
+            Person.objects.accessible_by(user)
+            .filter(person_id=parsed, account__isnull=False)
+            .values_list("account_id", flat=True)
+            .first()
+        )
+        if contact_account_id is not None:
+            person_query |= snapshot_giver_account_q(user, contact_account_id)
+
     if kind == "person":
-        return f"person:{parsed}", Q(giver_persons__person_id=parsed)
+        return f"person:{parsed}", person_query
     if kind == "group":
         return f"group:{parsed}", Q(giver_groups__group_id=parsed)
-    return str(parsed), Q(giver_persons__person_id=parsed) | Q(giver_groups__group_id=parsed)
+    return str(parsed), person_query | Q(giver_groups__group_id=parsed)
 
 
 class ReceivedGiftListView(LoginRequiredMixin, View):
@@ -107,7 +182,7 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             else:
                 filter_year = ""
 
-        filter_giver, giver_query = _parse_giver_filter(filter_giver_raw)
+        filter_giver, giver_query = _parse_giver_filter(filter_giver_raw, user)
         if giver_query is not None:
             queryset = queryset.filter(giver_query).distinct()
 
@@ -135,18 +210,9 @@ class ReceivedGiftListView(LoginRequiredMixin, View):
             reverse=True,
         )
 
-        # Available givers (accessible people and groups linked on the user's received gifts)
-        giver_person_pks = all_user_gifts.values_list("giver_persons", flat=True).distinct()
-        giver_group_pks = all_user_gifts.values_list("giver_groups", flat=True).distinct()
-        available_persons = (
-            Person.objects.accessible_by(user)
-            .filter(pk__in=giver_person_pks)
-            .order_by("family_name", "first_name")
+        available_giver_choices, filter_giver = _giver_filter_choices(
+            user, all_user_gifts, filter_giver
         )
-        available_groups = (
-            PersonGroup.objects.accessible_by(user).filter(pk__in=giver_group_pks).order_by("name")
-        )
-        available_giver_choices = person_group_choices(available_persons, available_groups)
 
         # Group gifts by year (newest first)
         by_year = defaultdict(list)

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Implemented
 
 ## Summary
 
@@ -60,5 +60,5 @@ Recommended starting context:
 
 ## Open Questions
 
-- Should English use the symbol before the amount ("€24.50") and French after
-  it ("24,50 €"), following each locale's convention?
+- Resolved: yes. `format_price` is the single source of truth ("€24.50" in English,
+  "24,50 €" in French); the gifts grid displays the string formatted by the server.

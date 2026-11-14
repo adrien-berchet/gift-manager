@@ -329,7 +329,7 @@ def test_wisher_existing_surfaces_identical_across_states(
 
 
 def test_wisher_search_never_exposes_surprise_plan_or_gift(client, alice, bob, wisher_person, wish):
-    """Alice searching for the secret gift title returns 0 results, while Bob sees it."""
+    """Alice searching for the secret gift title only finds her own wish, while Bob sees the plan."""
     relation = wishlist.plan_wish(wish, bob, wisher_person)
     search_url = reverse("gift_manager:global_search")
 
@@ -338,7 +338,11 @@ def test_wisher_search_never_exposes_surprise_plan_or_gift(client, alice, bob, w
     res_alice = client.get(search_url, {"q": wish.title})
     assert res_alice.status_code == 200
     alice_data = res_alice.json()
-    assert alice_data.get("results") == []
+    # Her own wish is the only result: neither the plan nor its gift shows up
+    assert [(r["type"], r["title"]) for r in alice_data.get("results")] == [("wish", wish.title)]
+    assert alice_data["results"][0]["url"] == reverse(
+        "gift_manager:wish_edit", kwargs={"wish_id": wish.wish_id}
+    )
 
     # Bob searches for the same title and sees his gift plan
     client.force_login(bob)
