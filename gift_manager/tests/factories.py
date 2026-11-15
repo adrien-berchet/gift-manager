@@ -41,6 +41,9 @@ from gift_manager.models import RelationContribution
 from gift_manager.models import RelationStatus
 from gift_manager.models import Wish
 from gift_manager.models import WishPriority
+from gift_manager.secret_santa.models import Exchange
+from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.models import ExclusionSet
 
 
 class UserFactory(DjangoModelFactory):
@@ -353,3 +356,47 @@ class ReceivedGiftFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         self.giver_accounts.add(*extracted)
+
+
+class ExchangeFactory(DjangoModelFactory):
+    """Factory for creating Secret Santa exchanges."""
+
+    class Meta:
+        model = Exchange
+
+    organizer = factory.SubFactory(UserFactory)
+    name = factory.Sequence(lambda n: f"Secret Santa {n}")
+    exchange_date = factory.LazyFunction(lambda: timezone.localdate() + timedelta(days=30))
+    budget = Decimal("30.00")
+    currency = "EUR"
+
+
+class ExchangeParticipantFactory(DjangoModelFactory):
+    """Factory for creating Secret Santa participants."""
+
+    class Meta:
+        model = ExchangeParticipant
+
+    exchange = factory.SubFactory(ExchangeFactory)
+    name = factory.Sequence(lambda n: f"Participant {n}")
+    # Email is stored encoded for privacy
+    email_address = factory.LazyAttribute(
+        lambda obj: encode_email(f"{obj.name.lower().replace(' ', '.')}@example.com")
+    )
+
+
+class ExclusionSetFactory(DjangoModelFactory):
+    """Factory for creating Secret Santa exclusion sets."""
+
+    class Meta:
+        model = ExclusionSet
+        skip_postgeneration_save = True
+
+    exchange = factory.SubFactory(ExchangeFactory)
+    name = factory.Sequence(lambda n: f"Household {n}")
+
+    @factory.post_generation
+    def participants(self, create, extracted, **kwargs):
+        if not create or not extracted:
+            return
+        self.participants.add(*extracted)
