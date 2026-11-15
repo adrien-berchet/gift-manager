@@ -483,3 +483,133 @@ def test_put_back_only_before_the_draw(exchange):
     service.run_draw(exchange, rng=seeded(1))
     with pytest.raises(ExchangeError, match="The draw is done"):
         service.put_back(a)
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: starting from a previous exchange
+# ---------------------------------------------------------------------------
+
+
+def copy_of(previous, **kwargs):
+    return service.copy_exchange(
+        previous,
+        previous.organizer,
+        name="Next year",
+        exchange_date=previous.exchange_date,
+        **kwargs,
+    )
+
+
+def test_copy_copies_participants_and_sets(exchange):
+    a, b, c, _d = add_people(exchange, "A", "B", "C", "D")
+    service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+
+    copy = copy_of(exchange)
+
+    assert copy.previous_exchange == exchange
+    assert copy.no_repeat_draw
+    names = dict(copy.participants.values_list("name", "previous_participant__name"))
+    assert names == {"A": "A", "B": "B", "C": "C", "D": "D"}
+    (copied_set,) = copy.exclusion_sets.all()
+    assert copied_set.name == "Couple"
+    assert {p.name for p in copied_set.participants.all()} == {"A", "B"}
+    new_c = copy.participants.get(name="C")
+    assert new_c.token != c.token
+    assert new_c.email == c.email
+
+
+def test_copy_keeps_emails_stopped_and_source_links_only(exchange, organizer):
+    person_account = UserFactory()
+    person = PersonFactory(
+        first_name="Pat", family_name="", account=person_account, owner=organizer
+    )
+    service.import_persons(exchange, organizer, [person])
+    self_attached = ExchangeParticipantFactory(
+        exchange=exchange,
+        name="Self",
+        linked_account=UserFactory(),
+        account_attached_by_participant=True,
+        emails_stopped=True,
+        declined=True,
+        note_for_santa="note",
+    )
+    ExchangeParticipantFactory(exchange=exchange, name="Olivia", linked_account=organizer)
+
+    copy = copy_of(exchange)
+
+    assert copy.participants.get(name="Pat").linked_account == person_account
+    assert copy.participants.get(name="Olivia").linked_account == organizer
+    new_self = copy.participants.get(name="Self")
+    assert new_self.linked_account is None
+    assert new_self.emails_stopped
+    assert not new_self.declined
+    assert new_self.note_for_santa == ""
+    assert new_self.previous_participant == self_attached
+
+
+def test_copy_drops_a_set_left_with_one_member(exchange):
+    a, b, _c = add_people(exchange, "A", "B", "C")
+    service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+    ExchangeParticipant.objects.filter(pk=b.pk).delete()
+
+    assert not copy_of(exchange).exclusion_sets.exists()
+
+
+def test_no_repeat_forbids_last_years_pairs(exchange):
+    add_people(exchange, "A", "B", "C", "D", "E")
+    service.run_draw(exchange, rng=seeded(1))
+    before = {
+        (giver, recipient)
+        for giver, recipient in exchange.participants.values_list("name", "gives_to__name")
+    }
+
+    copy = copy_of(exchange)
+    forbidden, _ = service.draw_rules(copy)
+    names = dict(copy.participants.values_list("pk", "name"))
+    assert {(names[g], names[r]) for g, r in forbidden} == before
+
+    for seed in range(10):
+        service.run_draw(copy, rng=seeded(seed))
+        after = set(copy.participants.values_list("name", "gives_to__name"))
+        assert not after & before
+
+
+def test_no_repeat_off_or_without_history_forbids_nothing(exchange):
+    add_people(exchange, "A", "B", "C")
+    copy = copy_of(exchange)  # the previous exchange was never drawn
+    assert service.draw_rules(copy) == (set(), False)
+
+    service.run_draw(exchange, rng=seeded(1))
+    assert copy_of(exchange, no_repeat_draw=False).no_repeat_draw is False
+    assert service.draw_rules(copy_of(exchange, no_repeat_draw=False))[0] == set()
+
+
+def test_no_repeat_survives_a_deleted_previous_exchange(exchange):
+    add_people(exchange, "A", "B", "C", "D")
+    service.run_draw(exchange, rng=seeded(1))
+    copy = copy_of(exchange)
+
+    exchange.delete()
+    copy.refresh_from_db()
+
+    assert service.draw_rules(copy)[0] == set()
+    service.run_draw(copy, rng=seeded(2))
+
+
+def test_no_repeat_switch_only_changes_before_the_draw(exchange):
+    add_people(exchange, "A", "B", "C")
+    copy = copy_of(exchange)
+    fields = {
+        "name": copy.name,
+        "exchange_date": copy.exchange_date,
+        "budget": None,
+        "guidelines": "",
+        "no_mutual_draw": False,
+    }
+    service.update_exchange(copy, no_repeat_draw=False, **fields)
+    copy.refresh_from_db()
+    assert not copy.no_repeat_draw
+
+    service.run_draw(copy, rng=seeded(1))
+    with pytest.raises(ExchangeError, match="The draw is done"):
+        service.update_exchange(copy, no_repeat_draw=True, **fields)

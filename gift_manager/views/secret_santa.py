@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count
 from django.db.models import Prefetch
@@ -480,11 +481,31 @@ def secret_santa_list(request):
 @login_required
 @require_http_methods(["GET", "POST"])
 def secret_santa_create(request):
-    """Create an exchange, then go to its page."""
-    form = ExchangeForm(request.POST or None)
+    """Create an exchange, or start one from a previous exchange (``?from=<uuid>``)."""
+    previous = None
+    source = request.GET.get("from")
+    if source:
+        try:
+            previous = service.organized_by(request.user).get(exchange_id=source)
+        except (Exchange.DoesNotExist, ValidationError):
+            raise Http404 from None
+    initial = {}
+    if previous is not None:
+        initial = {
+            "name": previous.name,
+            "budget": previous.budget,
+            "guidelines": previous.guidelines,
+            "no_mutual_draw": previous.no_mutual_draw,
+            "no_repeat_draw": True,
+        }
+    form = ExchangeForm(request.POST or None, initial=initial, has_previous=previous is not None)
     if request.method == "POST" and form.is_valid():
-        exchange = service.create_exchange(request.user, **form.cleaned_data)
-        messages.success(request, gettext("Exchange created. Add the participants."))
+        if previous is not None:
+            exchange = service.copy_exchange(previous, request.user, **form.cleaned_data)
+            messages.success(request, gettext("Exchange created from the previous one."))
+        else:
+            exchange = service.create_exchange(request.user, **form.cleaned_data)
+            messages.success(request, gettext("Exchange created. Add the participants."))
         return _to_detail(exchange)
     return render(
         request,
@@ -492,6 +513,7 @@ def secret_santa_create(request):
         {
             "form": form,
             "exchange": None,
+            "previous": previous,
             "currency_label": request.user.profile.currency,
             "cancel_url": reverse("gift_manager:secret_santa_list"),
         },
@@ -522,12 +544,14 @@ def secret_santa_edit(request, exchange_id):
         request.POST or None,
         creating=False,
         switch_locked=not exchange.is_draft,
+        has_previous=exchange.previous_exchange_id is not None,
         initial={
             "name": exchange.name,
             "exchange_date": exchange.exchange_date,
             "budget": exchange.budget,
             "guidelines": exchange.guidelines,
             "no_mutual_draw": exchange.no_mutual_draw,
+            "no_repeat_draw": exchange.no_repeat_draw,
         },
     )
     if request.method == "POST" and form.is_valid():

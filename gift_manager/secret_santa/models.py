@@ -74,6 +74,16 @@ class Exchange(models.Model):
         gettext_lazy("Nobody draws the person who drew them"), default=False
     )
     drawn_at = models.DateTimeField(null=True, blank=True)
+    # The exchange this one was started from: its pairings may be avoided
+    previous_exchange = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
+    )
+    no_repeat_draw = models.BooleanField(
+        gettext_lazy("Nobody draws the same person as in the previous exchange"), default=False
+    )
+    # Chosen at closing: every participant then sees who gave to whom
+    pairings_revealed = models.BooleanField(default=False)
+    closed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -127,6 +137,10 @@ class ExchangeParticipant(models.Model):
         blank=True,
         on_delete=models.SET_NULL,
         related_name="drawn_by",
+    )
+    # The same person in the exchange this one was copied from
+    previous_participant = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.SET_NULL, related_name="+"
     )
     emails_stopped = models.BooleanField(default=False)
     last_emailed_at = models.DateTimeField(null=True, blank=True)
