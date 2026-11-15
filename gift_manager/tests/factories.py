@@ -43,6 +43,7 @@ from gift_manager.models import Wish
 from gift_manager.models import WishPriority
 from gift_manager.secret_santa.models import Exchange
 from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.models import ExchangeWish
 from gift_manager.secret_santa.models import ExclusionSet
 
 
@@ -400,3 +401,15 @@ class ExclusionSetFactory(DjangoModelFactory):
         if not create or not extracted:
             return
         self.participants.add(*extracted)
+
+
+class ExchangeWishFactory(DjangoModelFactory):
+    """Factory for creating Secret Santa exchange wishes."""
+
+    class Meta:
+        model = ExchangeWish
+
+    participant = factory.SubFactory(ExchangeParticipantFactory)
+    title = factory.Sequence(lambda n: f"Exchange wish {n}")
+    url = "https://example.com/wish"
+    price = Decimal("20.00")

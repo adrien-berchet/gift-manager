@@ -6,12 +6,15 @@ from django.db import transaction
 
 from gift_manager.secret_santa.models import Exchange
 from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.models import ExchangeWish
 from gift_manager.secret_santa.models import ExclusionSet
 from gift_manager.tests.factories import ExchangeFactory
 from gift_manager.tests.factories import ExchangeParticipantFactory
+from gift_manager.tests.factories import ExchangeWishFactory
 from gift_manager.tests.factories import ExclusionSetFactory
 from gift_manager.tests.factories import PersonFactory
 from gift_manager.tests.factories import UserFactory
+from gift_manager.tests.factories import WishFactory
 
 pytestmark = pytest.mark.django_db
 
@@ -129,3 +132,29 @@ def test_exchange_status_helpers():
     exchange.status = Exchange.Status.CLOSED
     assert exchange.is_closed
     assert str(exchange) == exchange.name
+
+
+def test_new_participant_defaults():
+    participant = ExchangeParticipantFactory()
+    assert not participant.declined
+    assert participant.invited_at is None
+    assert not participant.account_attached_by_participant
+    assert not participant.wishlist_confirmed
+    assert participant.note_for_santa == ""
+    assert not participant.shared_wishes.exists()
+
+
+def test_exchange_wishes_are_deleted_with_the_participant():
+    wish = ExchangeWishFactory()
+    wish.participant.delete()
+    assert not ExchangeWish.objects.exists()
+
+
+def test_deleting_a_shared_wish_removes_it_from_the_selection():
+    participant = ExchangeParticipantFactory()
+    wish = WishFactory()
+    participant.shared_wishes.add(wish)
+
+    wish.delete()
+
+    assert not participant.shared_wishes.exists()

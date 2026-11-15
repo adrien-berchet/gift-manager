@@ -19,10 +19,22 @@ from django.utils.translation import gettext_lazy
 
 from gift_manager.email_encoding import decode_email
 from gift_manager.email_encoding import encode_email
+from gift_manager.validators import validate_http_url
 
-__all__ = ["MAX_PARTICIPANTS", "Exchange", "ExchangeParticipant", "ExclusionSet"]
+__all__ = [
+    "MAX_EXCHANGE_WISHES",
+    "MAX_NOTE_LENGTH",
+    "MAX_PARTICIPANTS",
+    "Exchange",
+    "ExchangeParticipant",
+    "ExchangeWish",
+    "ExclusionSet",
+]
 
 MAX_PARTICIPANTS = 100
+# Limits of what a participant may write from their personal page, which needs no login
+MAX_EXCHANGE_WISHES = 30
+MAX_NOTE_LENGTH = 2000
 
 
 def new_participant_token() -> str:
@@ -118,6 +130,16 @@ class ExchangeParticipant(models.Model):
     )
     emails_stopped = models.BooleanField(default=False)
     last_emailed_at = models.DateTimeField(null=True, blank=True)
+    # Said from their personal page, before the draw, that they cannot take part
+    declined = models.BooleanField(default=False)
+    # When the personal link was first sent before the draw
+    invited_at = models.DateTimeField(null=True, blank=True)
+    # The participant linked their account themselves (not through an import)
+    account_attached_by_participant = models.BooleanField(default=False)
+    note_for_santa = models.TextField(blank=True, max_length=MAX_NOTE_LENGTH)
+    # The linked account confirmed which real wishes its Santa may see
+    wishlist_confirmed = models.BooleanField(default=False)
+    shared_wishes = models.ManyToManyField("gift_manager.Wish", blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -160,6 +182,36 @@ class ExchangeParticipant(models.Model):
         self.token = new_participant_token()
         self.save(update_fields=["token"])
         return self.token
+
+
+class ExchangeWish(models.Model):
+    """A wish written for one exchange only, shown to the participant's Santa."""
+
+    wish_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    participant = models.ForeignKey(
+        ExchangeParticipant, on_delete=models.CASCADE, related_name="exchange_wishes"
+    )
+    title = models.CharField(gettext_lazy("Title"), max_length=200)
+    url = models.URLField(
+        gettext_lazy("Link"), max_length=2000, blank=True, validators=[validate_http_url]
+    )
+    price = models.DecimalField(
+        gettext_lazy("Price"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        verbose_name = gettext_lazy("Exchange wish")
+        verbose_name_plural = gettext_lazy("Exchange wishes")
+
+    def __str__(self) -> str:
+        return self.title
 
 
 class ExclusionSet(models.Model):

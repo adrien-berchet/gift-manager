@@ -2352,6 +2352,7 @@ def sync_wish_after_received_gift_deletion(sender, instance, **kwargs):
 # Secret Santa models live in their own package; importing them here registers them with Django
 from gift_manager.secret_santa.models import Exchange  # noqa: E402
 from gift_manager.secret_santa.models import ExchangeParticipant  # noqa: E402
+from gift_manager.secret_santa.models import ExchangeWish  # noqa: E402
 from gift_manager.secret_santa.models import ExclusionSet  # noqa: E402
 
-SECRET_SANTA_MODELS = (Exchange, ExchangeParticipant, ExclusionSet)
+SECRET_SANTA_MODELS = (Exchange, ExchangeParticipant, ExchangeWish, ExclusionSet)
