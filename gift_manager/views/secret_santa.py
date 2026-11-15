@@ -928,12 +928,20 @@ def secret_santa_regenerate_link(request, exchange_id, participant_id):
         service.regenerate_token(participant)
     except ExchangeError as error:
         messages.error(request, error.message)
-    else:
-        messages.success(
-            request,
-            gettext("%(name)s has a new personal link. The old one no longer works.")
-            % {"name": participant.name},
-        )
+        return _to_detail(exchange)
+    messages.success(
+        request,
+        gettext("%(name)s has a new personal link. The old one no longer works.")
+        % {"name": participant.name},
+    )
+    if request.POST.get("send") == "1":
+        # The same email and limits as "Send again", so a new link never skips the cooldown
+        try:
+            report = emails.send_again(participant, request.build_absolute_uri)
+        except ExchangeError as error:
+            messages.error(request, error.message)
+        else:
+            _flash_report(request, report)
     return _to_detail(exchange)
 
 

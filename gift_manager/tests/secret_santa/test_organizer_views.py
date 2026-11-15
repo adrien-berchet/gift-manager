@@ -423,6 +423,57 @@ def test_regenerate_link_kills_the_old_one(authenticated_client, client, drawn_e
     page = "gift_manager:secret_santa_participant"
     assert Client().get(reverse(page, args=[old])).status_code == 404
     assert Client().get(reverse(page, args=[participant.token])).status_code == 200
+    assert mail.outbox == []
+
+
+def test_regenerate_link_can_email_the_new_link(authenticated_client, drawn_exchange):
+    participant = drawn_exchange.participants.first()
+    old = participant.token
+
+    response = authenticated_client.post(
+        url("secret_santa_regenerate_link", drawn_exchange, participant.participant_id),
+        {"send": "1"},
+        follow=True,
+    )
+
+    participant.refresh_from_db()
+    assert "1 email sent." in messages_of(response)
+    (message,) = mail.outbox
+    assert participant.token in message.body
+    assert old not in message.body
+
+
+def test_regenerate_link_email_follows_the_send_again_cooldown(
+    authenticated_client, drawn_exchange
+):
+    participant = drawn_exchange.participants.first()
+    authenticated_client.post(
+        url("secret_santa_send_again", drawn_exchange, participant.participant_id)
+    )
+
+    response = authenticated_client.post(
+        url("secret_santa_regenerate_link", drawn_exchange, participant.participant_id),
+        {"send": "1"},
+        follow=True,
+    )
+
+    assert "has a new personal link" in " ".join(messages_of(response))
+    assert "Wait a few minutes before sending this email again." in messages_of(response)
+    assert len(mail.outbox) == 1
+
+
+def test_new_link_form_offers_the_email_only_when_send_again_would(
+    authenticated_client, drawn_exchange
+):
+    with_email = drawn_exchange.participants.get(name="Anna")
+    without_email = drawn_exchange.participants.get(name="Bob")
+    without_email.email_address = None
+    without_email.save(update_fields=["email_address"])
+
+    html = authenticated_client.get(url("secret_santa_detail", drawn_exchange)).content.decode()
+
+    assert f'id="new-link-send-{with_email.participant_id}"' in html
+    assert f'id="new-link-send-{without_email.participant_id}"' not in html
 
 
 def test_send_again_and_its_cooldown(authenticated_client, drawn_exchange):
