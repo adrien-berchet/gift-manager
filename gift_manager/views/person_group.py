@@ -661,6 +661,7 @@ class PersonGroupExplorerView(LoginRequiredMixin, View):
                 context["members"] = (
                     Person.objects.accessible_by(request.user)
                     .filter(groups=selected_group)
+                    .with_edit_flag(request.user)
                     .order_by("family_name", "first_name")
                 )
 

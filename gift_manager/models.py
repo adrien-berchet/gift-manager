@@ -125,6 +125,20 @@ class UserPermissionQuerySet(models.QuerySet):
 class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
 
+    def with_edit_flag(self, user):
+        """Annotate ``can_edit``: whether ``user`` may edit each person (the edit view's check)."""
+        if user.is_superuser:
+            return self.annotate(can_edit=Value(value=True, output_field=models.BooleanField()))
+        return self.annotate(
+            can_edit=Exists(
+                PersonPermission.objects.filter(
+                    person=OuterRef("pk"),
+                    user=user,
+                    permission_type__gte=PermissionLevel.EDITOR,
+                )
+            )
+        )
+
     def with_groups_annotated(self, user=None):
         """Return persons with groups information annotated for Grid.js.
 

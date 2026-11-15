@@ -555,6 +555,24 @@ class TestPersonGroupExplorerView:
         assert response.status_code == 200
         assert response.context["selected_group"] == group
 
+    def test_explorer_offers_edit_only_for_members_the_user_can_edit(self):
+        """A viewer of a member gets no Edit link that would end in a 403 (QA 2026-11-15)."""
+        group = PersonGroupFactory(name="Family")
+        create_or_update_permission(self.user, group, permission_level=PermissionLevel.VIEWER)
+        viewed = PersonFactory(first_name="Viewed", groups=[group])
+        edited = PersonFactory(first_name="Edited", groups=[group])
+        create_or_update_permission(self.user, viewed, permission_level=PermissionLevel.VIEWER)
+        create_or_update_permission(self.user, edited, permission_level=PermissionLevel.EDITOR)
+
+        url = reverse(
+            "gift_manager:person_group_explorer_with_group", kwargs={"pk": group.group_id}
+        )
+        html = self.client.get(url).content.decode()
+
+        assert reverse("gift_manager:person_detail", kwargs={"pk": viewed.person_id}) in html
+        assert reverse("gift_manager:person_edit", kwargs={"pk": viewed.person_id}) not in html
+        assert reverse("gift_manager:person_edit", kwargs={"pk": edited.person_id}) in html
+
     def test_explorer_no_access_redirects(self):
         """Test explorer redirects when user has no access to group."""
         group = PersonGroupFactory(name="Private Group")
