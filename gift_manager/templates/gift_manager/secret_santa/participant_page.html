@@ -9,8 +9,8 @@
 {# linked account is shown only to a visitor logged in as that account (linked_viewer). #}
 <head>
     <meta charset="UTF-8">
-    {# Before any other resource: the address of this page is a secret #}
-    <meta name="referrer" content="no-referrer">
+    {# Before any other resource: the address of this page is a secret (only the origin is sent; see PERSONAL_PAGE_REFERRER_POLICY) #}
+    <meta name="referrer" content="{{ referrer_policy }}">
     <meta name="robots" content="noindex, nofollow">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% trans "Secret Santa" %} - {{ exchange.name }}</title>
