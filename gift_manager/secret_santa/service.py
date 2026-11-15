@@ -218,16 +218,25 @@ def copy_exchange(
                 "gives_to", "note_for_santa"
             )
         )
-        used_accounts = (
-            {organizer.pk} if any(old.linked_account_id == organizer.pk for old in olds) else set()
-        )
+        # Accounts linked by their owner come first: the organizer's own, and those a
+        # participant attached themselves, which they need not attach again every year.
+        # Only an account record links, never an email address: nothing is matched.
+        kept_accounts = {
+            old.pk: old.linked_account_id
+            for old in olds
+            if old.linked_account_id is not None
+            and (old.linked_account_id == organizer.pk or old.account_attached_by_participant)
+        }
+        used_accounts = set(kept_accounts.values())
         copies = {}
         for old in olds:
             source = old.source_person if old.source_person_id in accessible else None
-            account_id = None
-            if old.linked_account_id == organizer.pk:
-                account_id = organizer.pk
-            elif source is not None and source.account_id not in (None, *used_accounts):
+            account_id = kept_accounts.get(old.pk)
+            if (
+                account_id is None
+                and source is not None
+                and source.account_id not in (None, *used_accounts)
+            ):
                 account_id = source.account_id
                 used_accounts.add(account_id)
             copies[old.pk] = ExchangeParticipant.objects.create(

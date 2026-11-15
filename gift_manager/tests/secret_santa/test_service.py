@@ -519,17 +519,19 @@ def test_copy_copies_participants_and_sets(exchange):
     assert new_c.email == c.email
 
 
-def test_copy_keeps_emails_stopped_and_source_links_only(exchange, organizer):
+def test_copy_keeps_emails_stopped_and_linked_accounts(exchange, organizer):
     person_account = UserFactory()
     person = PersonFactory(
         first_name="Pat", family_name="", account=person_account, owner=organizer
     )
     service.import_persons(exchange, organizer, [person])
+    self_account = UserFactory()
     self_attached = ExchangeParticipantFactory(
         exchange=exchange,
         name="Self",
-        linked_account=UserFactory(),
+        linked_account=self_account,
         account_attached_by_participant=True,
+        wishlist_confirmed=True,
         emails_stopped=True,
         declined=True,
         note_for_santa="note",
@@ -541,11 +543,38 @@ def test_copy_keeps_emails_stopped_and_source_links_only(exchange, organizer):
     assert copy.participants.get(name="Pat").linked_account == person_account
     assert copy.participants.get(name="Olivia").linked_account == organizer
     new_self = copy.participants.get(name="Self")
-    assert new_self.linked_account is None
+    # The participant linked their account themselves: the copy keeps it, so they need not
+    # attach it again. Like an imported account, it only shows the exchange once invited or
+    # drawn, and nothing of their wishlist is shared until they confirm for this exchange.
+    assert new_self.linked_account == self_account
+    assert not new_self.account_attached_by_participant
+    assert not new_self.wishlist_confirmed
+    assert not new_self.shared_wishes.exists()
     assert new_self.emails_stopped
     assert not new_self.declined
     assert new_self.note_for_santa == ""
     assert new_self.previous_participant == self_attached
+
+
+def test_copy_links_an_account_once_preferring_the_participant_who_attached_it(exchange, organizer):
+    # Pat was imported before their person record was linked to an account; since then the
+    # record was linked to the account Sam attached to their own participation.
+    person = PersonFactory(first_name="Pat", family_name="", owner=organizer)
+    service.import_persons(exchange, organizer, [person])
+    account = UserFactory()
+    person.account = account
+    person.save(update_fields=["account"])
+    ExchangeParticipantFactory(
+        exchange=exchange,
+        name="Sam",
+        linked_account=account,
+        account_attached_by_participant=True,
+    )
+
+    copy = copy_of(exchange)
+
+    assert copy.participants.get(name="Sam").linked_account == account
+    assert copy.participants.get(name="Pat").linked_account is None
 
 
 def test_copy_drops_a_set_left_with_one_member(exchange):
