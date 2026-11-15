@@ -228,6 +228,10 @@ An exchange belongs to its organizer only. It is not shared through the permissi
   carries the token, and the attachment needs an explicit confirmation once logged in
   ("Link your account to participant X?"). It is refused when the account is already linked
   to another participant of the exchange, and it can be undone.
+- Known limit (accepted after the QA pass of 2026-11-15): trying to attach an account tells
+  whoever holds a personal link whether that participation is already linked, before any
+  confirmation. That includes the organizer, who can open any link through "Show link". No
+  refusal can hide it, and the link holder already sees far more (the assignment).
 - A participant page reads only its own `gives_to`. The reverse relation (who drew me) is
   never read on a participant page before pairings are revealed.
 - Recipient wishes shown to a Santa come only from `access.py`: exchange wishes, plus the

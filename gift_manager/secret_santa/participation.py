@@ -101,6 +101,27 @@ def rejoin(participant: ExchangeParticipant) -> None:
     participant.declined = False
 
 
+def attach_refusal(participant: ExchangeParticipant, user: User) -> str | None:
+    """Return why ``user`` cannot link their account to ``participant``, or None.
+
+    Saying that a participation is linked tells it to whoever holds its personal link; that
+    person can already read the assignment, so the plain answer is kept (QA 2026-11-15, R1).
+    """
+    if participant.linked_account_id == user.pk:
+        return None
+    if participant.linked_account_id is not None:
+        return gettext(
+            "This page is already linked to another Gift Manager account. If it is yours, log "
+            "in with that account."
+        )
+    taken = ExchangeParticipant.objects.filter(
+        exchange_id=participant.exchange_id, linked_account=user
+    ).exists()
+    if taken:
+        return gettext("Your account is already linked to another participant of this exchange.")
+    return None
+
+
 def attach_account(participant: ExchangeParticipant, user: User) -> None:
     """Link the participation to the account of the logged-in participant."""
     with transaction.atomic():
@@ -108,15 +129,9 @@ def attach_account(participant: ExchangeParticipant, user: User) -> None:
         current = ExchangeParticipant.objects.select_for_update().get(pk=participant.pk)
         if current.linked_account_id == user.pk:
             return
-        if current.linked_account_id is not None:
-            raise ExchangeError(gettext("This participation is already linked to an account."))
-        taken = ExchangeParticipant.objects.filter(
-            exchange_id=current.exchange_id, linked_account=user
-        ).exists()
-        if taken:
-            raise ExchangeError(
-                gettext("Your account is already linked to another participant of this exchange.")
-            )
+        refusal = attach_refusal(current, user)
+        if refusal:
+            raise ExchangeError(refusal)
         try:
             with transaction.atomic():
                 ExchangeParticipant.objects.filter(pk=current.pk).update(

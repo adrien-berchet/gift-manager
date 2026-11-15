@@ -322,6 +322,14 @@ def secret_santa_attach_confirm(request):
             )
         request.session.pop(ATTACH_SESSION_KEY, None)
         return _see_other(_page_url(participant))
+    refusal = participation.attach_refusal(participant, request.user)
+    if refusal:
+        # Say it before asking for a confirmation that could only fail
+        request.session.pop(ATTACH_SESSION_KEY, None)
+        return _private(
+            render(request, template, {"participant": participant, "error": refusal}),
+            referrer_policy=PERSONAL_PAGE_REFERRER_POLICY,
+        )
     # The form of this page posts: see PERSONAL_PAGE_REFERRER_POLICY
     return _private(
         render(request, template, {"participant": participant}),

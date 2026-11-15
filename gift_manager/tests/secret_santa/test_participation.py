@@ -134,7 +134,7 @@ def test_attach_refused_when_linked_to_another_account(anna):
     first = UserFactory()
     participation.attach_account(anna, first)
 
-    with pytest.raises(ExchangeError, match="already linked to an account"):
+    with pytest.raises(ExchangeError, match="already linked to another Gift Manager account"):
         participation.attach_account(anna, UserFactory())
     anna.refresh_from_db()
     assert anna.linked_account == first
