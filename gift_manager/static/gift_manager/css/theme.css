@@ -1162,6 +1162,30 @@ html .navbar-nav .nav-link.active {
     color: var(--text-inverse);
 }
 
+/* Cautious actions (redraw, fallback edit): Bootstrap's yellow text is unreadable on white,
+   so the text uses the theme's warning text colour; the dark theme redefines the variables */
+.btn-outline-warning {
+    --bs-btn-color: var(--color-warning-text);
+    --bs-btn-border-color: var(--color-warning);
+    --bs-btn-hover-color: var(--color-warning-text);
+    --bs-btn-hover-bg: var(--color-warning-light);
+    --bs-btn-hover-border-color: var(--color-warning-hover);
+    --bs-btn-active-color: var(--color-warning-text);
+    --bs-btn-active-bg: var(--color-warning-light);
+    --bs-btn-active-border-color: var(--color-warning-hover);
+    background-color: transparent;
+    border: 2px solid var(--color-warning);
+    color: var(--color-warning-text);
+}
+
+.btn-outline-warning:hover,
+.btn-outline-warning.active,
+.btn-outline-warning:active {
+    background-color: var(--color-warning-light);
+    border-color: var(--color-warning-hover);
+    color: var(--color-warning-text);
+}
+
 .btn-outline-secondary:hover {
     background-color: var(--color-gray-100);
     border-color: var(--border-color-hover);
@@ -1577,9 +1601,10 @@ html .navbar-nav .nav-link.active {
 [data-theme="dark"] .btn-outline-danger:focus-visible,
 [data-theme="dark"] .btn-outline-danger.active,
 [data-theme="dark"] .btn-outline-danger:active {
+    /* The dark --color-danger is pale: white text needs a deeper red behind it */
     color: #ffffff;
-    background-color: var(--color-danger);
-    border-color: var(--color-danger);
+    background-color: #dc2626;
+    border-color: #dc2626;
 }
 
 /* ==========================================================================
