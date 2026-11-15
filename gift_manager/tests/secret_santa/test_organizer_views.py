@@ -483,3 +483,53 @@ def test_unknown_exchange_is_404(authenticated_client):
         reverse("gift_manager:secret_santa_detail", args=[uuid.uuid4()])
     )
     assert response.status_code == 404
+
+
+def test_invite_and_put_back_urls_are_scoped(other_client, exchange):
+    participant = exchange.participants.first()
+    assert other_client.post(url("secret_santa_invite", exchange)).status_code == 404
+    response = other_client.post(url("secret_santa_put_back", exchange, participant.participant_id))
+    assert response.status_code == 404
+
+
+def test_invite_sends_the_personal_links(authenticated_client, exchange):
+    response = authenticated_client.post(url("secret_santa_invite", exchange), follow=True)
+
+    assert "4 emails sent." in messages_of(response)
+    assert len(mail.outbox) == 4
+    assert "Invited" in response.content.decode()
+    again = authenticated_client.post(url("secret_santa_invite", exchange), follow=True)
+    assert "Everyone with an email address has their link." in messages_of(again)
+
+
+def test_declined_participant_is_shown_and_can_be_put_back(authenticated_client, exchange):
+    dora = exchange.participants.get(name="Dora")
+    ExchangeParticipant.objects.filter(pk=dora.pk).update(declined=True)
+
+    content = authenticated_client.get(url("secret_santa_detail", exchange)).content.decode()
+    assert "secret-santa-declined" in content
+    assert url("secret_santa_put_back", exchange, dora.participant_id) in content
+
+    authenticated_client.post(url("secret_santa_put_back", exchange, dora.participant_id))
+    dora.refresh_from_db()
+    assert not dora.declined
+
+
+def test_draw_button_counts_non_declined(authenticated_client, exchange):
+    ExchangeParticipant.objects.filter(exchange=exchange, name__in=["Carl", "Dora"]).update(
+        declined=True
+    )
+    content = authenticated_client.get(url("secret_santa_detail", exchange)).content.decode()
+    assert "secret-santa-draw-button" not in content
+
+
+def test_pairings_leave_out_declined(authenticated_client, exchange):
+    ExchangeParticipant.objects.filter(exchange=exchange, name="Dora").update(declined=True)
+    service.run_draw(exchange, rng=seeded(1))
+
+    content = authenticated_client.post(
+        url("secret_santa_pairings", exchange), {"confirm": "1"}, HTTP_HX_REQUEST="true"
+    ).content.decode()
+
+    assert content.count('class="secret-santa-pairing"') == 3
+    assert "Dora gives to" not in content

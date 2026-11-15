@@ -179,6 +179,16 @@ urlpatterns = [
         name="secret_santa_set_delete",
     ),
     path(
+        "secret-santa/<uuid:exchange_id>/invite/",
+        views.secret_santa_invite,
+        name="secret_santa_invite",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/put-back/",
+        views.secret_santa_put_back,
+        name="secret_santa_put_back",
+    ),
+    path(
         "secret-santa/<uuid:exchange_id>/draw/",
         views.secret_santa_draw,
         name="secret_santa_draw",

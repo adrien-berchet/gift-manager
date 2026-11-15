@@ -364,7 +364,8 @@ def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[Ex
     with transaction.atomic():
         locked = _lock(exchange)
         _check_open(locked)
-        participants = list(locked.participants.defer("gives_to").order_by("pk"))
+        # Participants who said they cannot take part are left out of the draw
+        participants = list(taking_part(locked).defer("gives_to").order_by("pk"))
         try:
             result = draw_engine.draw(
                 [participant.pk for participant in participants],
@@ -379,6 +380,7 @@ def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[Ex
             # Only an email sent for this draw counts as sent (and starts the cooldown)
             participant.last_emailed_at = None
         ExchangeParticipant.objects.bulk_update(participants, ["gives_to", "last_emailed_at"])
+        locked.participants.filter(declined=True).update(gives_to=None)
         locked.status = Exchange.Status.DRAWN
         locked.drawn_at = timezone.now()
         locked.save(update_fields=["status", "drawn_at"])
@@ -387,11 +389,28 @@ def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[Ex
     return participants
 
 
+def taking_part(exchange: Exchange) -> QuerySet[ExchangeParticipant]:
+    """Return the participants who did not decline."""
+    return exchange.participants.filter(declined=False)
+
+
+def put_back(participant: ExchangeParticipant) -> None:
+    """Before the draw, count again a participant who had said they cannot take part."""
+    with transaction.atomic():
+        locked = _lock(participant.exchange)
+        _check_draft(locked)
+        ExchangeParticipant.objects.filter(pk=participant.pk).update(declined=False)
+    participant.declined = False
+
+
 def delete_exchange(exchange: Exchange) -> None:
     """Delete an exchange with its participants, pairings and exclusion sets."""
     exchange.delete()
 
 
 def participants_without_pairings(exchange: Exchange) -> QuerySet[ExchangeParticipant]:
-    """Return the participants for organizer pages, never loading who they drew."""
-    return exchange.participants.defer("gives_to").order_by(Lower("name"), "pk")
+    """Return the participants for organizer pages, never loading who they drew.
+
+    Their note for their Santa is not loaded either: it is meant for the Santa only.
+    """
+    return exchange.participants.defer("gives_to", "note_for_santa").order_by(Lower("name"), "pk")

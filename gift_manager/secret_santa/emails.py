@@ -104,9 +104,20 @@ def _reserve_quota(exchange: Exchange) -> bool:
 
 def _language(participant: ExchangeParticipant) -> str:
     account = participant.linked_account
-    if account is not None:
+    if account is not None and account.is_active:
         return account.profile.language
     return participant.exchange.organizer.profile.language
+
+
+ASSIGNMENT = "assignment"
+INVITATION = "invitation"
+
+
+def _subject(kind: str, exchange: Exchange, participant: ExchangeParticipant) -> str:
+    values = {"exchange": exchange.name, "participant": participant.name}
+    if kind == INVITATION:
+        return gettext('Secret Santa "%(exchange)s": your page, %(participant)s') % values
+    return gettext('Secret Santa "%(exchange)s": your link, %(participant)s') % values
 
 
 def _build_message(
@@ -114,6 +125,7 @@ def _build_message(
     recipient: str,
     build_absolute_uri: Callable[[str], str],
     connection,
+    kind: str = ASSIGNMENT,
 ) -> EmailMultiAlternatives:
     exchange = participant.exchange
     personal_url = build_absolute_uri(participant_path(participant))
@@ -127,13 +139,10 @@ def _build_message(
             "stop_url": stop_url,
             "LANGUAGE_CODE": translation.get_language(),
         }
-        subject = gettext('Secret Santa "%(exchange)s": your link, %(participant)s') % {
-            "exchange": exchange.name,
-            "participant": participant.name,
-        }
+        template = f"gift_manager/email/secret_santa_{kind}"
         message = EmailMultiAlternatives(
-            subject=subject,
-            body=render_to_string("gift_manager/email/secret_santa_assignment.txt", context),
+            subject=_subject(kind, exchange, participant),
+            body=render_to_string(f"{template}.txt", context),
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[recipient],
             headers={
@@ -143,7 +152,7 @@ def _build_message(
             connection=connection,
         )
         message.attach_alternative(
-            render_to_string("gift_manager/email/secret_santa_assignment.html", context),
+            render_to_string(f"{template}.html", context),
             "text/html",
         )
     return message
@@ -156,9 +165,11 @@ def _sort_out(
     wanted = [participant.pk for participant in participants]
     rows = {
         participant.pk: participant
-        for participant in ExchangeParticipant.objects.filter(exchange=exchange, pk__in=wanted)
+        for participant in ExchangeParticipant.objects.filter(
+            exchange=exchange, pk__in=wanted, declined=False
+        )
         .select_related("exchange__organizer__profile", "linked_account__profile")
-        .defer("gives_to")
+        .defer("gives_to", "note_for_santa")
     }
     eligible: list[tuple[ExchangeParticipant, str]] = []
     for participant in (rows[pk] for pk in dict.fromkeys(wanted) if pk in rows):
@@ -178,13 +189,14 @@ def _send_each(
     build_absolute_uri: Callable[[str], str],
     connection,
     report: SendReport,
+    kind: str,
 ) -> None:
     for index, (participant, address) in enumerate(eligible):
         if not _reserve_quota(exchange):
             report.over_limit.extend(rest for rest, _ in eligible[index:])
             return
         try:
-            _build_message(participant, address, build_absolute_uri, connection).send()
+            _build_message(participant, address, build_absolute_uri, connection, kind).send()
         except Exception:
             # One broken recipient must not stop the emails of the others
             logger.exception("Could not send the Secret Santa email to %s", participant.pk)
@@ -199,6 +211,31 @@ def send_assignments(
     build_absolute_uri: Callable[[str], str],
 ) -> SendReport:
     """Email each participant their personal link; return what happened to each of them."""
+    return _send(exchange, participants, build_absolute_uri, ASSIGNMENT)
+
+
+def send_invitations(exchange: Exchange, build_absolute_uri: Callable[[str], str]) -> SendReport:
+    """Before the draw, email their personal link to the participants not invited yet.
+
+    Declined participants are left out. Each participant reached is marked as invited.
+    """
+    if exchange.status != Exchange.Status.DRAFT:
+        raise ExchangeError(gettext("The draw is done: the personal links were already sent."))
+    participants = exchange.participants.filter(declined=False, invited_at__isnull=True).only("pk")
+    report = _send(exchange, list(participants), build_absolute_uri, INVITATION)
+    sent = [participant.pk for participant in report.sent]
+    ExchangeParticipant.objects.filter(pk__in=sent, invited_at__isnull=True).update(
+        invited_at=timezone.now()
+    )
+    return report
+
+
+def _send(
+    exchange: Exchange,
+    participants: Iterable[ExchangeParticipant],
+    build_absolute_uri: Callable[[str], str],
+    kind: str,
+) -> SendReport:
     report = SendReport()
     eligible = _sort_out(exchange, participants, report)
     if not eligible:
@@ -212,7 +249,7 @@ def send_assignments(
         report.failed.extend(participant for participant, _ in eligible)
         return report
     try:
-        _send_each(exchange, eligible, build_absolute_uri, connection, report)
+        _send_each(exchange, eligible, build_absolute_uri, connection, report, kind)
     finally:
         try:
             connection.close()
@@ -239,10 +276,19 @@ def can_send_again(participant: ExchangeParticipant, now: datetime | None = None
 def send_again(
     participant: ExchangeParticipant, build_absolute_uri: Callable[[str], str]
 ) -> SendReport:
-    """Send a participant's email again, after the draw and outside the cooldown."""
+    """Send a participant's email again, outside the cooldown.
+
+    After the draw it is the assignment email; before it, the invitation, and only to a
+    participant who was already invited.
+    """
     exchange = participant.exchange
-    if exchange.status != Exchange.Status.DRAWN:
-        raise ExchangeError(gettext("The draw has not been done yet."))
+    if exchange.status == Exchange.Status.CLOSED:
+        raise ExchangeError(gettext("This exchange is closed."))
+    if participant.declined:
+        raise ExchangeError(gettext("This participant does not take part."))
+    if exchange.status == Exchange.Status.DRAFT and participant.invited_at is None:
+        raise ExchangeError(gettext("Send the invitations first."))
     if not can_send_again(participant):
         raise ExchangeError(gettext("Wait a few minutes before sending this email again."))
-    return send_assignments(exchange, [participant], build_absolute_uri)
+    kind = INVITATION if exchange.status == Exchange.Status.DRAFT else ASSIGNMENT
+    return _send(exchange, [participant], build_absolute_uri, kind)

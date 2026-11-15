@@ -286,3 +286,68 @@ def test_a_redraw_resets_the_email_state_of_whoever_was_not_reached(exchange, mo
     unreached = ExchangeParticipant.objects.get(pk=people[0].pk)
     assert unreached.last_emailed_at is None
     assert emails.can_send_again(unreached)
+
+
+def test_invitations_go_to_non_declined_not_yet_invited(exchange):
+    people = [ExchangeParticipantFactory(exchange=exchange, name=f"P{i}") for i in range(4)]
+    ExchangeParticipant.objects.filter(pk=people[0].pk).update(declined=True)
+    ExchangeParticipant.objects.filter(pk=people[1].pk).update(email_address=None)
+
+    report = emails.send_invitations(exchange, build)
+
+    assert sorted(p.pk for p in report.sent) == sorted(p.pk for p in people[2:])
+    assert report.no_email == [people[1]]
+    assert len(mail.outbox) == 2
+    assert ExchangeParticipant.objects.filter(invited_at__isnull=False).count() == 2
+    assert not emails.send_invitations(exchange, build).sent
+    assert len(mail.outbox) == 2
+
+
+def test_invitation_content(exchange):
+    me = ExchangeParticipantFactory(exchange=exchange, name="Chloe")
+
+    emails.send_invitations(exchange, build)
+
+    (message,) = mail.outbox
+    assert message.subject == 'Secret Santa "Family 2026": your page, Chloe'
+    assert message.body.startswith("Hello Chloe,")
+    assert "Olivia Organizer invites you" in message.body
+    assert me.token in message.body
+    assert "SECRET-GUIDELINES" not in message.body + message.alternatives[0][0]
+    assert "List-Unsubscribe" in message.extra_headers
+
+
+def test_invitations_refused_after_the_draw(exchange):
+    drawn(exchange)
+    with pytest.raises(ExchangeError):
+        emails.send_invitations(exchange, build)
+
+
+def test_send_again_in_draft_resends_the_invitation_only_when_invited(exchange):
+    me = ExchangeParticipantFactory(exchange=exchange)
+    with pytest.raises(ExchangeError, match="invitations first"):
+        emails.send_again(me, build)
+
+    emails.send_invitations(exchange, build)
+    ExchangeParticipant.objects.update(last_emailed_at=None)
+    me.refresh_from_db()
+    emails.send_again(me, build)
+
+    assert len(mail.outbox) == 2
+    assert "your page" in mail.outbox[-1].subject
+
+
+def test_send_again_refuses_a_declined_participant(exchange):
+    me = ExchangeParticipantFactory(exchange=exchange, declined=True)
+    with pytest.raises(ExchangeError, match="does not take part"):
+        emails.send_again(me, build)
+
+
+def test_redraw_never_emails_declined(exchange):
+    people = drawn(exchange, count=4)
+    ExchangeParticipant.objects.filter(pk=people[0].pk).update(declined=True)
+
+    report = send_assignments(exchange, people, build)
+
+    assert people[0] not in report.sent
+    assert len(mail.outbox) == 3

@@ -40,7 +40,9 @@ def exchange(organizer):
 
 
 def add_people(exchange, *names):
-    return [service.add_participant(exchange, name=name, email=f"{name}@example.com") for name in names]
+    return [
+        service.add_participant(exchange, name=name, email=f"{name}@example.com") for name in names
+    ]
 
 
 def pairings(exchange):
@@ -52,7 +54,7 @@ def test_create_exchange_copies_the_organizer_currency(organizer):
     organizer.profile.save()
 
     exchange = service.create_exchange(
-        organizer, name="Family", exchange_date=timezone.localdate(), budget=Decimal("20")
+        organizer, name="Family", exchange_date=timezone.localdate(), budget=Decimal(20)
     )
 
     assert exchange.currency == "CHF"
@@ -428,3 +430,56 @@ def test_participants_without_pairings_does_not_load_gives_to(exchange):
     participants = list(service.participants_without_pairings(exchange))
 
     assert all("gives_to_id" in p.get_deferred_fields() for p in participants)
+
+
+def test_declined_participants_are_left_out_of_the_draw(exchange):
+    people = add_people(exchange, "A", "B", "C", "D")
+    ExchangeParticipant.objects.filter(pk=people[3].pk).update(declined=True)
+
+    service.run_draw(exchange, rng=seeded(1))
+
+    result = pairings(exchange)
+    assert result[people[3].pk] is None
+    assert people[3].pk not in result.values()
+    assert draw_engine.is_valid(
+        {k: v for k, v in result.items() if k != people[3].pk},
+        [p.pk for p in people[:3]],
+        set(),
+        no_mutual=False,
+    )
+
+
+def test_too_few_after_declines(exchange):
+    people = add_people(exchange, "A", "B", "C")
+    ExchangeParticipant.objects.filter(pk=people[0].pk).update(declined=True)
+
+    with pytest.raises(ExchangeError, match="At least 3"):
+        service.run_draw(exchange)
+
+
+def test_declined_member_of_an_exclusion_set_is_ignored(exchange):
+    a, b, _c, d, _e = add_people(exchange, "A", "B", "C", "D", "E")
+    service.save_exclusion_set(exchange, name="Trio", participants=[a, b, d])
+    ExchangeParticipant.objects.filter(pk=d.pk).update(declined=True)
+
+    for seed in range(10):
+        service.run_draw(exchange, rng=seeded(seed))
+        result = pairings(exchange)
+        assert result[d.pk] is None
+        assert d.pk not in result.values()
+        assert result[a.pk] != b.pk
+        assert result[b.pk] != a.pk
+
+
+def test_put_back_only_before_the_draw(exchange):
+    a, _b, _c, d = add_people(exchange, "A", "B", "C", "D")
+    ExchangeParticipant.objects.filter(pk=d.pk).update(declined=True)
+    d.refresh_from_db()
+
+    service.put_back(d)
+    d.refresh_from_db()
+    assert not d.declined
+
+    service.run_draw(exchange, rng=seeded(1))
+    with pytest.raises(ExchangeError, match="The draw is done"):
+        service.put_back(a)
