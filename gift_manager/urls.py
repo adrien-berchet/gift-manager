@@ -205,6 +205,51 @@ urlpatterns = [
         name="secret_santa_participant",
     ),
     path(
+        "secret-santa/p/<str:token>/wishes/add/",
+        views.secret_santa_wish_add,
+        name="secret_santa_wish_add",
+    ),
+    path(
+        "secret-santa/p/<str:token>/wishes/<uuid:wish_id>/delete/",
+        views.secret_santa_wish_delete,
+        name="secret_santa_wish_delete",
+    ),
+    path(
+        "secret-santa/p/<str:token>/note/",
+        views.secret_santa_note,
+        name="secret_santa_note",
+    ),
+    path(
+        "secret-santa/p/<str:token>/decline/",
+        views.secret_santa_decline,
+        name="secret_santa_decline",
+    ),
+    path(
+        "secret-santa/p/<str:token>/rejoin/",
+        views.secret_santa_rejoin,
+        name="secret_santa_rejoin",
+    ),
+    path(
+        "secret-santa/p/<str:token>/attach/",
+        views.secret_santa_attach_start,
+        name="secret_santa_attach_start",
+    ),
+    path(
+        "secret-santa/p/<str:token>/detach/",
+        views.secret_santa_detach,
+        name="secret_santa_detach",
+    ),
+    path(
+        "secret-santa/p/<str:token>/share/",
+        views.secret_santa_share,
+        name="secret_santa_share",
+    ),
+    path(
+        "secret-santa/attach/",
+        views.secret_santa_attach_confirm,
+        name="secret_santa_attach_confirm",
+    ),
+    path(
         "secret-santa/stop/<str:token>/",
         views.SecretSantaStopEmailsView.as_view(),
         name="secret_santa_stop_emails",
