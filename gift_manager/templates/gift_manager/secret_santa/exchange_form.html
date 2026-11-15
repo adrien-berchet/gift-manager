@@ -8,6 +8,7 @@
 <div class="container form-page-container">
   <div class="form-page-header mb-4">
     <h1>{% if exchange %}{% trans "Edit the exchange" %}{% else %}{% trans "New Secret Santa" %}{% endif %}</h1>
+    {% if previous %}<p class="text-muted mb-0">{% blocktrans with name=previous.name %}Started from "{{ name }}": its participants and exclusion sets are copied.{% endblocktrans %}</p>{% endif %}
   </div>
 
   <form method="post" id="main-form" class="page-form secret-santa-exchange-form" novalidate>
@@ -23,6 +24,13 @@
         <label class="form-check-label" for="{{ form.no_mutual_draw.id_for_label }}">{{ form.no_mutual_draw.label }}</label>
         {% if form.no_mutual_draw.help_text %}<div class="form-text">{{ form.no_mutual_draw.help_text }}</div>{% endif %}
       </div>
+      {% if form.no_repeat_draw %}
+      <div class="form-check mb-2">
+        {{ form.no_repeat_draw }}
+        <label class="form-check-label" for="{{ form.no_repeat_draw.id_for_label }}">{{ form.no_repeat_draw.label }}</label>
+        {% if form.no_repeat_draw.help_text %}<div class="form-text">{{ form.no_repeat_draw.help_text }}</div>{% endif %}
+      </div>
+      {% endif %}
       {% if form.organizer_takes_part %}
       <div class="form-check mb-3">
         {{ form.organizer_takes_part }}

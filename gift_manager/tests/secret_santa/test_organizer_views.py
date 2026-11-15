@@ -533,3 +533,32 @@ def test_pairings_leave_out_declined(authenticated_client, exchange):
 
     assert content.count('class="secret-santa-pairing"') == 3
     assert "Dora gives to" not in content
+
+
+def test_create_from_a_previous_exchange(authenticated_client, exchange):
+    target = reverse("gift_manager:secret_santa_create") + f"?from={exchange.exchange_id}"
+    page = authenticated_client.get(target).content.decode()
+    assert 'name="no_repeat_draw"' in page
+    assert "Family 2026" in page
+
+    response = authenticated_client.post(
+        target, {"name": "Family 2027", "exchange_date": "2027-12-24", "no_repeat_draw": "on"}
+    )
+
+    copy = Exchange.objects.get(name="Family 2027")
+    assert response["Location"] == url("secret_santa_detail", copy)
+    assert copy.previous_exchange == exchange
+    assert copy.no_repeat_draw
+    assert copy.participants.count() == 4
+
+
+def test_create_from_an_exchange_of_another_user_is_404(authenticated_client):
+    foreign = ExchangeFactory()
+    target = reverse("gift_manager:secret_santa_create") + f"?from={foreign.exchange_id}"
+    assert authenticated_client.get(target).status_code == 404
+    assert (
+        authenticated_client.get(
+            reverse("gift_manager:secret_santa_create") + "?from=x"
+        ).status_code
+        == 404
+    )

@@ -152,22 +152,88 @@ def update_exchange(
     budget: Decimal | None,
     guidelines: str,
     no_mutual_draw: bool,
+    no_repeat_draw: bool | None = None,
 ) -> Exchange:
-    """Edit the exchange; the mutual-draw switch only changes before the draw."""
+    """Edit the exchange; the rules of the draw only change before the draw."""
     with transaction.atomic():
         locked = _lock(exchange)
         _check_open(locked)
-        if no_mutual_draw != locked.no_mutual_draw:
+        if no_repeat_draw is None or locked.previous_exchange_id is None:
+            no_repeat_draw = locked.no_repeat_draw
+        if (no_mutual_draw, no_repeat_draw) != (locked.no_mutual_draw, locked.no_repeat_draw):
             _check_draft(locked)
         locked.name = name
         locked.exchange_date = exchange_date
         locked.budget = budget
         locked.guidelines = guidelines
         locked.no_mutual_draw = no_mutual_draw
+        locked.no_repeat_draw = no_repeat_draw
         locked.save(
-            update_fields=["name", "exchange_date", "budget", "guidelines", "no_mutual_draw"]
+            update_fields=[
+                "name",
+                "exchange_date",
+                "budget",
+                "guidelines",
+                "no_mutual_draw",
+                "no_repeat_draw",
+            ]
         )
     return locked
+
+
+def copy_exchange(
+    previous: Exchange,
+    organizer: User,
+    *,
+    name: str,
+    exchange_date: date,
+    budget: Decimal | None = None,
+    guidelines: str = "",
+    no_mutual_draw: bool = False,
+    no_repeat_draw: bool = True,
+) -> Exchange:
+    """Start a new exchange from ``previous``: same participants and exclusion sets.
+
+    An account link is kept only when it comes from the participant's source person or is the
+    organizer taking part; a link the participant attached themselves is not copied. Declines,
+    invitations, wishes, notes and wishlist selections start afresh, with new personal links.
+    """
+    with transaction.atomic():
+        exchange = Exchange.objects.create(
+            organizer=organizer,
+            name=name,
+            exchange_date=exchange_date,
+            budget=budget,
+            currency=organizer.profile.currency,
+            guidelines=guidelines,
+            no_mutual_draw=no_mutual_draw,
+            no_repeat_draw=no_repeat_draw,
+            previous_exchange=previous,
+        )
+        copies = {}
+        for old in previous.participants.select_related("source_person").defer(
+            "gives_to", "note_for_santa"
+        ):
+            account_id = None
+            if old.source_person is not None and old.source_person.account_id is not None:
+                account_id = old.source_person.account_id
+            elif old.linked_account_id == organizer.pk:
+                account_id = organizer.pk
+            copies[old.pk] = ExchangeParticipant.objects.create(
+                exchange=exchange,
+                name=old.name,
+                email_address=old.email_address,
+                source_person=old.source_person,
+                linked_account_id=account_id,
+                previous_participant=old,
+                emails_stopped=old.emails_stopped,
+            )
+        for old_set in previous.exclusion_sets.prefetch_related("participants"):
+            members = [copies[p.pk] for p in old_set.participants.all() if p.pk in copies]
+            if len(members) >= 2:
+                new_set = ExclusionSet.objects.create(exchange=exchange, name=old_set.name)
+                new_set.participants.set(members)
+    return exchange
 
 
 def add_participant(exchange: Exchange, *, name: str, email: str = "") -> ExchangeParticipant:
@@ -366,6 +432,29 @@ def forbidden_pairs(exchange: Exchange) -> set[tuple[int, int]]:
     }
 
 
+def previous_pairs(exchange: Exchange) -> set[tuple[int, int]]:
+    """Return the pairs (p, q) of this exchange whose people were paired in the previous one."""
+    if not exchange.no_repeat_draw or exchange.previous_exchange_id is None:
+        return set()
+    copies = dict(
+        exchange.participants.filter(
+            previous_participant__exchange_id=exchange.previous_exchange_id
+        ).values_list("previous_participant_id", "pk")
+    )
+    before = ExchangeParticipant.objects.filter(
+        pk__in=list(copies), gives_to_id__in=list(copies)
+    ).values_list("pk", "gives_to_id")
+    return {(copies[giver], copies[recipient]) for giver, recipient in before}
+
+
+def draw_rules(exchange: Exchange) -> tuple[set[tuple[int, int]], bool]:
+    """Return every active rule of the exchange: forbidden pairs and the mutual-draw switch.
+
+    Draws and repairs use this one place, so a repair is checked against the same rules.
+    """
+    return forbidden_pairs(exchange) | previous_pairs(exchange), exchange.no_mutual_draw
+
+
 def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[ExchangeParticipant]:
     """Draw (or redraw) every pairing in one transaction; nothing changes on failure."""
     with transaction.atomic():
@@ -373,11 +462,12 @@ def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[Ex
         _check_open(locked)
         # Participants who said they cannot take part are left out of the draw
         participants = list(taking_part(locked).defer("gives_to").order_by("pk"))
+        forbidden, no_mutual = draw_rules(locked)
         try:
             result = draw_engine.draw(
                 [participant.pk for participant in participants],
-                forbidden_pairs(locked),
-                no_mutual=locked.no_mutual_draw,
+                forbidden,
+                no_mutual=no_mutual,
                 rng=rng,
             )
         except draw_engine.NoDrawPossible as error:

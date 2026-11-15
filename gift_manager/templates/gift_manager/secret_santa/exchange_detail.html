@@ -21,6 +21,9 @@
       <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Edit" %}
     </a>
     {% endif %}
+    <a href="{% url 'gift_manager:secret_santa_create' %}?from={{ exchange.exchange_id }}" class="btn btn-outline-secondary secret-santa-copy">
+      <i class="fas fa-copy me-1" aria-hidden="true"></i>{% trans "Start a new exchange from this one" %}
+    </a>
     <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteExchangeModal">
       <i class="fas fa-trash me-1" aria-hidden="true"></i>{% trans "Delete" %}
     </button>
@@ -31,6 +34,7 @@
   <i class="fas fa-calendar-alt me-1" aria-hidden="true"></i>{{ exchange.exchange_date|date:"DATE_FORMAT" }}
   {% if exchange.budget is not None %}· {% trans "Budget" %} {{ exchange.budget|format_price:exchange.currency }}{% endif %}
   {% if exchange.no_mutual_draw %}· {% trans "Nobody draws the person who drew them" %}{% endif %}
+  {% if exchange.no_repeat_draw and exchange.previous_exchange_id %}· {% trans "Nobody draws the same person as in the previous exchange" %}{% endif %}
 </p>
 
 <div id="secret-santa-reveal">{% if revealed_template %}{% include revealed_template %}{% endif %}</div>

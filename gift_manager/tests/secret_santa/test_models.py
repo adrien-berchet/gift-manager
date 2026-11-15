@@ -158,3 +158,17 @@ def test_deleting_a_shared_wish_removes_it_from_the_selection():
     wish.delete()
 
     assert not participant.shared_wishes.exists()
+
+
+def test_deleting_the_previous_exchange_keeps_the_copy():
+    previous = ExchangeFactory()
+    old = ExchangeParticipantFactory(exchange=previous)
+    copy = ExchangeFactory(previous_exchange=previous, organizer=previous.organizer)
+    new = ExchangeParticipantFactory(exchange=copy, previous_participant=old)
+
+    previous.delete()
+    copy.refresh_from_db()
+    new.refresh_from_db()
+
+    assert copy.previous_exchange is None
+    assert new.previous_participant is None

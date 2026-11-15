@@ -43,21 +43,38 @@ class ExchangeForm(forms.Form):
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    no_repeat_draw = forms.BooleanField(
+        label=gettext_lazy("Nobody draws the same person as in the previous exchange"),
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     organizer_takes_part = forms.BooleanField(
         label=gettext_lazy("I take part in the draw"),
         required=False,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
-    def __init__(self, *args, creating: bool = True, switch_locked: bool = False, **kwargs):
+    def __init__(
+        self,
+        *args,
+        creating: bool = True,
+        switch_locked: bool = False,
+        has_previous: bool = False,
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
-        if not creating:
+        if not creating or has_previous:
+            # A copy brings its participants: the organizer is there already if they took part
             del self.fields["organizer_takes_part"]
+        if not has_previous:
+            del self.fields["no_repeat_draw"]
         if switch_locked:
-            self.fields["no_mutual_draw"].disabled = True
-            self.fields["no_mutual_draw"].help_text = gettext_lazy(
-                "This rule can only change before the draw."
-            )
+            for name in ("no_mutual_draw", "no_repeat_draw"):
+                if name in self.fields:
+                    self.fields[name].disabled = True
+                    self.fields[name].help_text = gettext_lazy(
+                        "This rule can only change before the draw."
+                    )
 
 
 class ParticipantForm(forms.Form):
