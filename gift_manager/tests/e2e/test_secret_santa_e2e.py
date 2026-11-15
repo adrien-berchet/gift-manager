@@ -337,6 +337,11 @@ class TestSecretSantaAfterTheDrawE2E:
             cid = exchange.participants.get(name="Cid")
             cid_santa = ExchangeParticipant.objects.get(gives_to=cid).name
             row = page.locator(".secret-santa-participant", has_text="Cid")
+            # A red outlined button like the other row actions (QA 2026-11-15, R2)
+            remove_border = row.locator(".secret-santa-remove > summary").evaluate(
+                "el => getComputedStyle(el).borderTopStyle"
+            )
+            assert remove_border == "solid"
             row.locator(".secret-santa-remove > summary").click()
             row.locator(".secret-santa-remove-repair").click()
             expect(page.locator(".secret-santa-participant", has_text="Cid")).to_have_count(0)

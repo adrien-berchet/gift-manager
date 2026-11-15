@@ -1139,6 +1139,29 @@ html .navbar-nav .nav-link.active {
     color: var(--text-secondary);
 }
 
+/* Destructive secondary actions: outlined in red, like the other outlined buttons */
+.btn-outline-danger {
+    --bs-btn-color: var(--color-danger-hover);
+    --bs-btn-border-color: var(--color-danger);
+    --bs-btn-hover-color: var(--text-inverse);
+    --bs-btn-hover-bg: var(--color-danger-hover);
+    --bs-btn-hover-border-color: var(--color-danger-hover);
+    --bs-btn-active-color: var(--text-inverse);
+    --bs-btn-active-bg: var(--color-danger-hover);
+    --bs-btn-active-border-color: var(--color-danger-hover);
+    background-color: transparent;
+    border: 2px solid var(--color-danger);
+    color: var(--color-danger-hover);
+}
+
+.btn-outline-danger:hover,
+.btn-outline-danger.active,
+.btn-outline-danger:active {
+    background-color: var(--color-danger-hover);
+    border-color: var(--color-danger-hover);
+    color: var(--text-inverse);
+}
+
 .btn-outline-secondary:hover {
     background-color: var(--color-gray-100);
     border-color: var(--border-color-hover);
@@ -1551,7 +1574,9 @@ html .navbar-nav .nav-link.active {
 }
 
 [data-theme="dark"] .btn-outline-danger:hover,
-[data-theme="dark"] .btn-outline-danger:focus-visible {
+[data-theme="dark"] .btn-outline-danger:focus-visible,
+[data-theme="dark"] .btn-outline-danger.active,
+[data-theme="dark"] .btn-outline-danger:active {
     color: #ffffff;
     background-color: var(--color-danger);
     border-color: var(--color-danger);
