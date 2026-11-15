@@ -78,9 +78,21 @@
         <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#redrawModal">
           <i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Redraw everything" %}
         </button>
+        {% if can_close %}
+        <button type="button" class="btn btn-outline-dark secret-santa-close-button" data-bs-toggle="modal" data-bs-target="#closeModal">
+          <i class="fas fa-flag-checkered me-1" aria-hidden="true"></i>{% trans "Close the exchange" %}
+        </button>
+        {% endif %}
       </div>
+      {% if not can_close %}
+      <p class="card-text text-muted small mt-2 mb-0">{% blocktrans with date=exchange.exchange_date|date:"DATE_FORMAT" %}The exchange can be closed from {{ date }}.{% endblocktrans %}</p>
+      {% endif %}
     {% else %}
-      <p class="card-text mb-0">{% trans "This exchange is over." %}</p>
+      <p class="card-text secret-santa-closed-text">{% trans "This exchange is over." %}
+      {% if exchange.pairings_revealed %}{% trans "Every participant can see who gave to whom." %}{% endif %}</p>
+      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#pairingsModal">
+        <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Show all pairings" %}
+      </button>
     {% endif %}
   </div>
 </section>
@@ -221,6 +233,32 @@
     </div>
   </div>
 </div>
+{% if can_close %}
+<div class="modal fade" id="closeModal" tabindex="-1" aria-labelledby="closeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'gift_manager:secret_santa_close' exchange.exchange_id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="closeModalLabel">{% trans "Close the exchange" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="modal-body">
+          <p>{% trans "Closing is final: personal pages then only say that the exchange is over, and what was shared for it is no longer shown." %}</p>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="reveal" value="1" id="close-reveal">
+            <label class="form-check-label" for="close-reveal">{% trans "Show every participant who gave to whom" %}</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-dark secret-santa-close-confirm">{% trans "Close the exchange" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% if exchange.is_drawn %}
 <div class="modal fade" id="redrawModal" tabindex="-1" aria-labelledby="redrawModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -242,6 +280,8 @@
     </div>
   </div>
 </div>
+{% endif %}
+{% if not exchange.is_draft %}
 <div class="modal fade" id="pairingsModal" tabindex="-1" aria-labelledby="pairingsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">

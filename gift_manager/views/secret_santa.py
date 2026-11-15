@@ -141,23 +141,39 @@ def _render_page(
             "participant": participant,
             "exchange": exchange,
             "organizer_name": emails.organizer_name(exchange),
-            "names": list(
-                service.taking_part(exchange)
-                .order_by(Lower("name"), "pk")
-                .values_list("name", flat=True)
-            ),
-            "recipient": access.recipient_view(participant),
-            "own_wishes": list(participant.exchange_wishes.all()),
-            "wish_form": wish_form or ExchangeWishForm(),
-            "note_form": note_form or NoteForm(initial={"note": participant.note_for_santa}),
             "linked_viewer": linked_viewer,
             "error": error,
-            "max_wishes": MAX_EXCHANGE_WISHES,
+            "referrer_policy": PERSONAL_PAGE_REFERRER_POLICY,
         }
+        if exchange.is_closed:
+            # Over: nothing shared is shown any more; the pairings only if they were revealed
+            if exchange.pairings_revealed:
+                context["revealed_pairings"] = list(
+                    service.taking_part(exchange)
+                    .order_by(Lower("name"), "pk")
+                    .values_list("name", "gives_to__name")
+                )
+            response = render(
+                request, "gift_manager/secret_santa/participant_page.html", context, status=status
+            )
+            return _private(response, referrer_policy=PERSONAL_PAGE_REFERRER_POLICY)
+        context.update(
+            {
+                "names": list(
+                    service.taking_part(exchange)
+                    .order_by(Lower("name"), "pk")
+                    .values_list("name", flat=True)
+                ),
+                "recipient": access.recipient_view(participant),
+                "own_wishes": list(participant.exchange_wishes.all()),
+                "wish_form": wish_form or ExchangeWishForm(),
+                "note_form": note_form or NoteForm(initial={"note": participant.note_for_santa}),
+                "max_wishes": MAX_EXCHANGE_WISHES,
+            }
+        )
         if linked_viewer:
             context["shareable_wishes"] = participation.shareable_wishes(participant)
             context["account_currency"] = request.user.profile.currency
-        context["referrer_policy"] = PERSONAL_PAGE_REFERRER_POLICY
         response = render(
             request, "gift_manager/secret_santa/participant_page.html", context, status=status
         )
@@ -458,6 +474,7 @@ def _detail_context(request, exchange: Exchange, **extra) -> dict:
             participant.linked_account_id == request.user.pk for participant in participants
         ),
         "can_draw": sum(not p.declined for p in participants) >= MIN_PARTICIPANTS,
+        "can_close": exchange.is_drawn and timezone.localdate() >= exchange.exchange_date,
         "uninvited_count": sum(
             1 for p in participants if not p.declined and p.invited_at is None and p.email_address
         ),
@@ -802,6 +819,21 @@ def secret_santa_add_latecomer(request, exchange_id):
         else:
             message = gettext("%(name)s added. Two Santas and %(name)s have a new assignment.")
         messages.success(request, message % {"name": name})
+    return _to_detail(exchange)
+
+
+@login_required
+@require_POST
+def secret_santa_close(request, exchange_id):
+    """Close the exchange; optionally reveal every pairing to every participant."""
+    exchange = _get_exchange(request, exchange_id)
+    reveal = request.POST.get("reveal") in ("1", "on")
+    try:
+        service.close_exchange(exchange, reveal=reveal)
+    except ExchangeError as error:
+        messages.error(request, error.message)
+    else:
+        messages.success(request, gettext("The exchange is closed."))
     return _to_detail(exchange)
 
 

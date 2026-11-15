@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from django.db import IntegrityError
 from django.db import transaction
 from django.db.models.functions import Lower
+from django.utils import formats
 from django.utils import timezone
 from django.utils.translation import gettext
 
@@ -665,3 +666,26 @@ def add_and_redraw(
             locked, participant=participant, name=name, email=email, exclusion_sets=exclusion_sets
         )
         return run_draw(locked, rng=rng)
+
+
+def close_exchange(exchange: Exchange, *, reveal: bool, today: date | None = None) -> None:
+    """Close a drawn exchange, from its date on; when ``reveal``, everyone sees the pairings.
+
+    Closing is final. The pairings are kept, so a later exchange can avoid repeating them.
+    """
+    with transaction.atomic():
+        locked = lock_open(exchange)
+        if locked.status != Exchange.Status.DRAWN:
+            raise ExchangeError(gettext("Only a drawn exchange can be closed."))
+        if (today or timezone.localdate()) < locked.exchange_date:
+            raise ExchangeError(
+                gettext("The exchange can be closed from %(date)s.")
+                % {"date": formats.date_format(locked.exchange_date, "DATE_FORMAT")}
+            )
+        locked.status = Exchange.Status.CLOSED
+        locked.closed_at = timezone.now()
+        locked.pairings_revealed = reveal
+        locked.save(update_fields=["status", "closed_at", "pairings_revealed"])
+    exchange.status = locked.status
+    exchange.closed_at = locked.closed_at
+    exchange.pairings_revealed = locked.pairings_revealed

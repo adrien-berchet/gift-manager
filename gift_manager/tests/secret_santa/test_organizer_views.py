@@ -10,6 +10,7 @@ from django.db import connection
 from django.test import Client
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import timezone
 
 from gift_manager.secret_santa import service
 from gift_manager.secret_santa.models import Exchange
@@ -671,3 +672,52 @@ def test_detail_page_still_never_loads_gives_to(authenticated_client, drawn_exch
     assert all(
         "gives_to_id" not in q["sql"] for q in queries.captured_queries if "exchange" in q["sql"]
     )
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: closing
+# ---------------------------------------------------------------------------
+
+
+def make_closable(exchange):
+    Exchange.objects.filter(pk=exchange.pk).update(exchange_date=timezone.localdate())
+    exchange.refresh_from_db()
+
+
+def test_close_url_is_scoped(other_client, drawn_exchange):
+    make_closable(drawn_exchange)
+    assert other_client.post(url("secret_santa_close", drawn_exchange)).status_code == 404
+    drawn_exchange.refresh_from_db()
+    assert drawn_exchange.is_drawn
+
+
+def test_close_is_offered_from_the_date(authenticated_client, drawn_exchange):
+    detail = url("secret_santa_detail", drawn_exchange)
+    assert "secret-santa-close-button" not in authenticated_client.get(detail).content.decode()
+
+    make_closable(drawn_exchange)
+    assert "secret-santa-close-button" in authenticated_client.get(detail).content.decode()
+
+    authenticated_client.post(url("secret_santa_close", drawn_exchange), {"reveal": "1"})
+    drawn_exchange.refresh_from_db()
+    assert drawn_exchange.is_closed
+    assert drawn_exchange.pairings_revealed
+
+
+def test_closed_detail_page_offers_no_change(authenticated_client, drawn_exchange):
+    make_closable(drawn_exchange)
+    service.close_exchange(drawn_exchange, reveal=False)
+
+    content = authenticated_client.get(url("secret_santa_detail", drawn_exchange)).content.decode()
+
+    for marker in (
+        "secret-santa-latecomer",
+        "secret-santa-remove",
+        "secret-santa-draw-button",
+        "redrawModal",
+        url("secret_santa_edit", drawn_exchange),
+        "secret-santa-show-link",
+    ):
+        assert marker not in content, marker
+    assert "secret-santa-copy" in content
+    assert 'id="pairingsModal"' in content

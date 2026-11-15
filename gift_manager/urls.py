@@ -204,6 +204,11 @@ urlpatterns = [
         name="secret_santa_add_latecomer",
     ),
     path(
+        "secret-santa/<uuid:exchange_id>/close/",
+        views.secret_santa_close,
+        name="secret_santa_close",
+    ),
+    path(
         "secret-santa/<uuid:exchange_id>/draw/",
         views.secret_santa_draw,
         name="secret_santa_draw",

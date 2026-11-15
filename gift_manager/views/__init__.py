@@ -135,6 +135,7 @@ from .secret_santa import SecretSantaStopEmailsView
 from .secret_santa import secret_santa_add_latecomer
 from .secret_santa import secret_santa_attach_confirm
 from .secret_santa import secret_santa_attach_start
+from .secret_santa import secret_santa_close
 from .secret_santa import secret_santa_create
 from .secret_santa import secret_santa_decline
 from .secret_santa import secret_santa_delete
@@ -339,6 +340,7 @@ __all__ = [
     "secret_santa_add_latecomer",
     "secret_santa_attach_confirm",
     "secret_santa_attach_start",
+    "secret_santa_close",
     "secret_santa_create",
     "secret_santa_decline",
     "secret_santa_delete",

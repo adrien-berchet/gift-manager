@@ -517,3 +517,50 @@ def test_santa_sees_shared_wishes_after_confirmation_only(client, exchange):
 
     client.post(action("detach", me))
     assert "Shared real wish" not in text(Client().get(santa_page))
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: closed exchanges
+# ---------------------------------------------------------------------------
+
+
+def close(exchange, *, reveal):
+    Exchange.objects.filter(pk=exchange.pk).update(
+        status=Exchange.Status.CLOSED, pairings_revealed=reveal
+    )
+
+
+def test_closed_without_reveal_reads_no_other_pairing(client, drawn_exchange):
+    me = drawn_exchange.participants.get(name="Bob")
+    close(drawn_exchange, reveal=False)
+
+    with CaptureQueriesContext(connection) as queries:
+        content = text(client.get(page(me.token)))
+
+    assert "This exchange is over." in content
+    assert "gave to" not in content
+    later = [q["sql"] for q in queries.captured_queries[1:]]
+    assert all("gives_to" not in sql for sql in later)
+
+
+def test_closed_with_reveal_lists_everyone_who_took_part(client, drawn_exchange):
+    me = drawn_exchange.participants.get(name="Bob")
+    close(drawn_exchange, reveal=True)
+
+    content = text(client.get(page(me.token)))
+
+    for participant in drawn_exchange.participants.select_related("gives_to"):
+        assert f"{participant.name} gave to {participant.gives_to.name}" in content
+
+
+def test_closed_page_hides_shared_content_and_refuses_writes(client, drawn_exchange):
+    me = drawn_exchange.participants.get(name="Bob")
+    santa = santa_of(me)
+    client.post(action("wish_add", me), {"title": "Puzzle"})
+    close(drawn_exchange, reveal=False)
+
+    assert "Puzzle" not in text(client.get(page(santa.token)))
+    assert "Puzzle" not in text(client.get(page(me.token)))
+    for name, data in (("wish_add", {"title": "X"}), ("note", {"note": "X"}), ("decline", {})):
+        assert client.post(action(name, me), data).status_code == 400
+    assert me.exchange_wishes.count() == 1
