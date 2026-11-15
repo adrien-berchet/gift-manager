@@ -987,3 +987,43 @@ class TestStatusAndSurpriseMarkup:
 
         tag = re.search(r'<input[^>]*name="is_surprise"[^>]*>', response.content.decode()).group(0)
         assert " checked" in tag
+
+
+class TestRecipientQueryPrefill:
+    """Links (the Secret Santa "Plan a gift") may preselect the recipient of step 1."""
+
+    def test_query_prefill_selects_an_accessible_recipient(self, authenticated_client, url, person):
+        response = authenticated_client.get(url, {"recipient": _recipient(person)})
+
+        form = response.context["step_form"]
+        assert form.mode == "existing"
+        assert form["recipient"].value() == _recipient(person)
+
+    def test_query_prefill_ignores_an_inaccessible_recipient(self, authenticated_client, url):
+        stranger = PersonFactory(first_name="Stranger")
+
+        response = authenticated_client.get(url, {"recipient": _recipient(stranger)})
+
+        form = response.context["step_form"]
+        assert not form["recipient"].value()
+        assert "Stranger" not in response.content.decode()
+
+    def test_query_prefill_new_person_names(self, authenticated_client, url):
+        response = authenticated_client.get(
+            url, {"new_person-first_name": "Chloe", "new_person-family_name": "Martin"}
+        )
+
+        form = response.context["step_form"]
+        assert form.mode == "new"
+        assert form.new_form["first_name"].value() == "Chloe"
+        assert form.new_form["family_name"].value() == "Martin"
+
+    def test_query_prefill_names_are_ignored_with_a_valid_recipient(
+        self, authenticated_client, url, person
+    ):
+        response = authenticated_client.get(
+            url, {"recipient": _recipient(person), "new_person-first_name": "Chloe"}
+        )
+        form = response.context["step_form"]
+        assert form.mode == "existing"
+        assert not form.new_form["first_name"].value()

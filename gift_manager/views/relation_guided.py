@@ -9,6 +9,7 @@ from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy
 
 from gift_manager.forms import RelationForm
+from gift_manager.forms import resolve_recipient_choice
 from gift_manager.guided_plan import GUIDED_STEPS
 from gift_manager.guided_plan import STEP_FORMS
 from gift_manager.guided_plan import build_relation_data
@@ -18,6 +19,8 @@ from .relation import RelationCreateView
 
 # Values of the gift step that a link may prefill (see the capture page of the bookmarklet)
 PREFILL_NAMES = ("new_gift-name", "new_gift-url", "new_gift-price")
+# Names of a new recipient that a link may prefill (see "Plan a gift" of the Secret Santa)
+NEW_PERSON_PREFILL_NAMES = ("new_person-first_name", "new_person-family_name")
 
 STEP_LABELS = {
     "recipient": gettext_lazy("Recipient"),
@@ -103,7 +106,29 @@ class RelationGuidedCreateView(RelationCreateView):
                 prefill[name] = value
         if "new_gift-name" in prefill:
             prefill["gift_mode"] = "new"
+        recipient = self._prefilled_recipient()
+        if recipient:
+            prefill["recipient"] = recipient
+            prefill["recipient_mode"] = "existing"
+        else:
+            for name in NEW_PERSON_PREFILL_NAMES:
+                value = self.request.GET.get(name, "").strip()
+                if value:
+                    prefill[name] = value
+            if "new_person-first_name" in prefill:
+                prefill["recipient_mode"] = "new"
         return prefill
+
+    def _prefilled_recipient(self) -> str:
+        """Return the person named by the query string when the user can access it, else ''."""
+        value = self.request.GET.get("recipient", "").strip()
+        if not value.startswith("person:"):
+            return ""
+        try:
+            resolve_recipient_choice(value, self.request.user)
+        except forms.ValidationError:
+            return ""
+        return value
 
     def _initial_form(self, step: int, data) -> forms.Form:
         """Return an unbound form of ``step`` showing the values already entered in ``data``."""

@@ -120,6 +120,10 @@
     </section>
     {% endif %}
 
+    {% if secret_santa_cards %}
+    {% include "gift_manager/includes/secret_santa_dashboard.html" %}
+    {% endif %}
+
     {% if upcoming_birthdays %}
     <section class="dashboard-birthdays" aria-labelledby="dashboard-birthdays-heading">
         <div class="section-heading">

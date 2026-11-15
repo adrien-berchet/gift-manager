@@ -11,6 +11,7 @@ import hashlib
 import hmac
 from functools import wraps
 from typing import TYPE_CHECKING
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -41,6 +42,7 @@ from django.views.decorators.http import require_safe
 from gift_manager.secret_santa import access
 from gift_manager.secret_santa import emails
 from gift_manager.secret_santa import participation
+from gift_manager.secret_santa import planning
 from gift_manager.secret_santa import service
 from gift_manager.secret_santa.draw import MIN_PARTICIPANTS
 from gift_manager.secret_santa.forms import ExchangeForm
@@ -817,3 +819,20 @@ def secret_santa_pairings(request, exchange_id):
         "gift_manager/includes/secret_santa_pairings.html",
         {"pairings": pairings},
     )
+
+
+@login_required
+@require_safe
+def secret_santa_plan_gift(request, participant_id):
+    """Open the guided plan for the recipient of the user's own participation."""
+    santa = get_object_or_404(
+        ExchangeParticipant.objects.select_related("exchange").defer("note_for_santa"),
+        participant_id=participant_id,
+        linked_account=request.user,
+        declined=False,
+        gives_to__isnull=False,
+        exchange__status=Exchange.Status.DRAWN,
+        exchange__organizer__is_active=True,
+    )
+    query = urlencode(planning.plan_prefill(santa, request.user))
+    return redirect(f"{reverse('gift_manager:relation_guided_create')}?{query}")
