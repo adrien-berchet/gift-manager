@@ -36,6 +36,12 @@
   {% if exchange.no_mutual_draw %}· {% trans "Nobody draws the person who drew them" %}{% endif %}
   {% if exchange.no_repeat_draw and exchange.previous_exchange_id %}· {% trans "Nobody draws the same person as in the previous exchange" %}{% endif %}
 </p>
+{% if exchange.guidelines %}
+<div class="secret-santa-guidelines mb-3">
+  <h2 class="h6 mb-1">{% trans "Guidelines" %}</h2>
+  <p class="mb-0">{{ exchange.guidelines|linebreaksbr }}</p>
+</div>
+{% endif %}
 
 <div id="secret-santa-reveal">{% if revealed_template %}{% include revealed_template %}{% endif %}</div>
 

@@ -411,6 +411,15 @@ def test_pairings_warning_is_stronger_when_the_organizer_takes_part(
     assert "secret-santa-self-warning" in authenticated_client.get(detail_url).content.decode()
 
 
+def test_detail_page_shows_the_guidelines(authenticated_client, exchange):
+    exchange.guidelines = "Handmade <b>please</b>\nNo socks"
+    exchange.save(update_fields=["guidelines"])
+
+    html = authenticated_client.get(url("secret_santa_detail", exchange)).content.decode()
+
+    assert "Handmade &lt;b&gt;please&lt;/b&gt;<br>No socks" in html
+
+
 def test_regenerate_link_kills_the_old_one(authenticated_client, client, drawn_exchange):
     participant = drawn_exchange.participants.first()
     old = participant.token
