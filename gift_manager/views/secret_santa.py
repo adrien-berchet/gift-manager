@@ -64,10 +64,16 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def _private(response: HttpResponse) -> HttpResponse:
-    """Mark a response as private: no cache, no referrer, no indexing."""
+# The personal page holds forms: with "no-referrer", browsers send "Origin: null" on their POST
+# and the CSRF check refuses them. "strict-origin" never sends the path (where the secret token
+# is) to anyone, only the site's origin, so the token does not leak either.
+PERSONAL_PAGE_REFERRER_POLICY = "strict-origin"
+
+
+def _private(response: HttpResponse, *, referrer_policy: str = "no-referrer") -> HttpResponse:
+    """Mark a response as private: no cache, no referrer path, no indexing."""
     response["Cache-Control"] = "private, no-store"
-    response["Referrer-Policy"] = "no-referrer"
+    response["Referrer-Policy"] = referrer_policy
     response["X-Robots-Tag"] = "noindex, nofollow"
     return response
 
@@ -149,10 +155,11 @@ def _render_page(
         if linked_viewer:
             context["shareable_wishes"] = participation.shareable_wishes(participant)
             context["account_currency"] = request.user.profile.currency
+        context["referrer_policy"] = PERSONAL_PAGE_REFERRER_POLICY
         response = render(
             request, "gift_manager/secret_santa/participant_page.html", context, status=status
         )
-    return _private(response)
+    return _private(response, referrer_policy=PERSONAL_PAGE_REFERRER_POLICY)
 
 
 @require_safe
@@ -277,7 +284,10 @@ def secret_santa_attach_confirm(request):
     participant = _pending_attachment(request)
     if participant is None:
         request.session.pop(ATTACH_SESSION_KEY, None)
-        return _private(render(request, template, {"expired": True}, status=400))
+        return _private(
+            render(request, template, {"expired": True}, status=400),
+            referrer_policy=PERSONAL_PAGE_REFERRER_POLICY,
+        )
     if request.method == "POST":
         try:
             participation.attach_account(participant, request.user)
@@ -289,11 +299,16 @@ def secret_santa_attach_confirm(request):
                     template,
                     {"participant": participant, "error": error.message},
                     status=400,
-                )
+                ),
+                referrer_policy=PERSONAL_PAGE_REFERRER_POLICY,
             )
         request.session.pop(ATTACH_SESSION_KEY, None)
         return _see_other(_page_url(participant))
-    return _private(render(request, template, {"participant": participant}))
+    # The form of this page posts: see PERSONAL_PAGE_REFERRER_POLICY
+    return _private(
+        render(request, template, {"participant": participant}),
+        referrer_policy=PERSONAL_PAGE_REFERRER_POLICY,
+    )
 
 
 @method_decorator(csrf_exempt, name="dispatch")

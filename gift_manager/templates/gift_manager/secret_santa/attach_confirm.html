@@ -10,7 +10,7 @@
     <div class="card-body">
       <h1 class="h4 card-title">{% trans "Link your account" %}</h1>
       {% if expired %}
-      <p class="card-text mb-0">{% trans "This request has expired. Open your personal link again and choose \"I have a Gift Manager account\"." %}</p>
+      <p class="card-text mb-0">{% trans 'This request has expired. Open your personal link again and choose "I have a Gift Manager account".' %}</p>
       {% elif error %}
       <div class="alert alert-danger" role="alert">{{ error }}</div>
       {% else %}

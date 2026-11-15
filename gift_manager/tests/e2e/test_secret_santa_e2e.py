@@ -12,6 +12,7 @@
 import os
 import re
 from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -21,7 +22,10 @@ from playwright.sync_api import Browser
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import Wish
+from gift_manager.secret_santa import service
 from gift_manager.secret_santa.models import Exchange
+from gift_manager.secret_santa.models import ExchangeParticipant
 
 # Set to a directory to keep screenshots of the pages for a visual check
 SCREENSHOT_DIR = os.environ.get("SECRET_SANTA_SCREENSHOTS")
@@ -177,3 +181,129 @@ class TestSecretSantaE2E:
         finally:
             guest_context.close()
             context.close()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestSecretSantaTellYourSantaE2E:
+    def test_wishes_decline_account_and_plan_a_gift(
+        self, browser: Browser, browser_context_args, live_server, seed_data_e2e
+    ):
+        alice, bob = seed_data_e2e.alice, seed_data_e2e.bob
+        Wish.objects.create(wisher=bob, title="Mechanical keyboard", price_hint=Decimal(20))
+        exchange = service.create_exchange(
+            alice,
+            name="Family 2026",
+            exchange_date=timezone.localdate() + timedelta(days=30),
+            budget=Decimal(30),
+        )
+        for name, email in (
+            ("Bob", "bob@example.com"),
+            ("Chris", "chris@example.com"),
+            ("Dana", "dana@example.com"),
+            ("Eve", "eve@example.com"),
+        ):
+            service.add_participant(exchange, name=name, email=email)
+        token = {p.name: p.token for p in exchange.participants.all()}
+
+        def personal(name):
+            return f"{live_server.url}{reverse('gift_manager:secret_santa_participant', args=[token[name]])}"
+
+        detail = f"{live_server.url}{reverse('gift_manager:secret_santa_detail', args=[exchange.exchange_id])}"
+        organizer_context = browser.new_context(**browser_context_args)
+        phone_context = browser.new_context(
+            **{**browser_context_args, "viewport": {"width": 390, "height": 844}}
+        )
+        bob_context = browser.new_context(**browser_context_args)
+        try:
+            organizer = organizer_context.new_page()
+            login_as(organizer, live_server.url, "alice")
+
+            # The organizer sends the personal links before the draw
+            open_page(organizer, detail)
+            organizer.locator(".secret-santa-invite-button").click()
+            expect(
+                organizer.locator(".secret-santa-participant", has_text="Chris")
+            ).to_contain_text("Invited")
+
+            # Chris, on a phone and without an account, tells their Santa what they would like
+            chris = phone_context.new_page()
+            chris.goto(personal("Chris"), wait_until="domcontentloaded")
+            wish_form = chris.locator(".secret-santa-wish-form")
+            wish_form.locator('input[name="title"]').fill("Puzzle")
+            wish_form.locator('input[name="url"]').fill("https://example.com/puzzle")
+            wish_form.get_by_role("button", name="Add this wish").click()
+            expect(chris.locator(".secret-santa-own-wishes")).to_contain_text("Puzzle")
+            chris.locator('textarea[name="note"]').fill("Size M, no chocolate")
+            chris.get_by_role("button", name="Save the note").click()
+            expect(chris.locator('textarea[name="note"]')).to_have_value("Size M, no chocolate")
+            assert chris.evaluate(
+                "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
+            )
+            screenshot(chris, "participant-tell-your-santa")
+
+            # Eve cannot take part
+            eve = phone_context.new_page()
+            eve.goto(personal("Eve"), wait_until="domcontentloaded")
+            eve.locator(".secret-santa-decline > summary").click()
+            eve.locator(".secret-santa-decline-confirm").click()
+            expect(eve.locator(".secret-santa-declined-card")).to_be_visible()
+
+            # Bob links his account through the login page and shares a real wish
+            bob_page = bob_context.new_page()
+            bob_page.goto(personal("Bob"), wait_until="domcontentloaded")
+            bob_page.get_by_role("button", name="I have a Gift Manager account").click()
+            bob_page.wait_for_url("**/accounts/login/**")
+            assert token["Bob"] not in bob_page.url
+            bob_page.fill('input[name="login"]', "bob")
+            bob_page.fill('input[name="password"]', "bob_password")
+            bob_page.click('button[type="submit"]')
+            bob_page.wait_for_url("**/secret-santa/attach/")
+            bob_page.get_by_role("button", name="Link my account").click()
+            bob_page.wait_for_url(f"**{token['Bob']}/")
+            share_form = bob_page.locator(".secret-santa-share-form")
+            # Within the budget, in the same currency: ticked in advance
+            expect(share_form.get_by_label("Mechanical keyboard", exact=False)).to_be_checked()
+            share_form.get_by_role("button", name="Share these wishes with my Santa").click()
+            expect(bob_page.locator(".secret-santa-linked")).to_be_visible()
+            screenshot(bob_page, "participant-linked")
+
+            # The organizer draws: Eve is left out
+            organizer.reload(wait_until="domcontentloaded")
+            expect(organizer.locator(".secret-santa-declined")).to_contain_text("Eve")
+            organizer.locator(".secret-santa-draw-button").click()
+            expect(organizer.locator(".secret-santa-drawn-text")).to_be_visible()
+
+            # Each Santa sees what their recipient shared
+            by_name = {p.name: p for p in exchange.participants.all()}
+            assert by_name["Eve"].gives_to_id is None
+            chris_santa = ExchangeParticipant.objects.get(gives_to=by_name["Chris"])
+            bob_santa = ExchangeParticipant.objects.get(gives_to=by_name["Bob"])
+            santa_page = phone_context.new_page()
+            santa_page.goto(personal(chris_santa.name), wait_until="domcontentloaded")
+            recipient_box = santa_page.locator(".secret-santa-recipient-wishes")
+            expect(recipient_box).to_contain_text("Puzzle")
+            expect(recipient_box).to_contain_text("Size M, no chocolate")
+            if bob_santa.name != "Bob":
+                anonymous = phone_context.new_page()
+                anonymous.goto(personal(bob_santa.name), wait_until="domcontentloaded")
+                expect(anonymous.locator(".secret-santa-recipient-wishes")).to_contain_text(
+                    "Mechanical keyboard"
+                )
+
+            # Bob's dashboard card and "Plan a gift"
+            open_page(bob_page, f"{live_server.url}{reverse('gift_manager:home')}")
+            card = bob_page.locator(".secret-santa-card", has_text="Family 2026")
+            recipient_name = ExchangeParticipant.objects.get(pk=by_name["Bob"].gives_to_id).name
+            expect(card).to_contain_text(recipient_name)
+            screenshot(bob_page, "dashboard-card")
+            card.get_by_role("link", name="Plan a gift").click()
+            bob_page.wait_for_url("**/guided/**")
+            expect(bob_page.locator('input[name="new_person-first_name"]')).to_have_value(
+                recipient_name.split(" ")[0]
+            )
+        finally:
+            bob_context.close()
+            phone_context.close()
+            organizer_context.close()

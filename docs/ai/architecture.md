@@ -96,6 +96,13 @@
   `ExchangeParticipant.gives_to` except in the two reveal actions (POST with `confirm=1`, not
   cached); a personal page reads only its own `gives_to` and nothing of a linked account. Emails
   are sent after the draw commits, with a signed stop link and a per-organizer quota.
+  `access.py` is the only place deciding what a Santa sees of their recipient (exchange wishes,
+  note, and the real wishes the recipient shared, read through `wishlist.guest_wishes`). A
+  personal page shows anything of a linked account only to a visitor logged in as that account
+  (`access.viewer_is_linked`). Linking an account goes through the session (participant pk and
+  a hash of the token) and a login-protected confirmation; no login or confirmation URL carries
+  the token. Pages with forms use `Referrer-Policy: strict-origin`, not `no-referrer`: with
+  `no-referrer` browsers post `Origin: null` and the CSRF check refuses the form.
 - Gift suggestions: `gift_manager/suggestions/` holds catalogue scoring and LLM ideation.
   Candidates, history, ratings and tags are strictly scoped to the viewing user via `accessible_by`
   and `metadata_visibility.VisibleMetadata`; hidden surprise plans are never read. AI payloads are

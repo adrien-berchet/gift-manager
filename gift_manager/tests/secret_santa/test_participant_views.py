@@ -126,10 +126,10 @@ def test_headers_and_meta(client, exchange):
     response = client.get(page(me.token))
 
     assert response["Cache-Control"] == "private, no-store"
-    assert response["Referrer-Policy"] == "no-referrer"
+    assert response["Referrer-Policy"] == "strict-origin"
     assert response["X-Robots-Tag"] == "noindex, nofollow"
     content = text(response)
-    assert content.index('<meta name="referrer" content="no-referrer">') < content.index("<link")
+    assert content.index('<meta name="referrer" content="strict-origin">') < content.index("<link")
     assert "<nav" not in content
 
 

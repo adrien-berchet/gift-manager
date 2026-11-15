@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 16:47+0100\n"
+"POT-Creation-Date: 2026-11-15 17:24+0100\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -122,7 +122,8 @@ msgstr[1] "Gift Manager : %(count)d éléments nécessitent votre attention"
 
 #: gift_manager/forms.py:63 gift_manager/models.py:1134
 #: gift_manager/models.py:1441 gift_manager/models.py:1590
-#: gift_manager/models.py:2153
+#: gift_manager/models.py:2153 gift_manager/secret_santa/forms.py:144
+#: gift_manager/secret_santa/models.py:196
 #: gift_manager/templates/gift_manager/friend_link_person.html:44
 #: gift_manager/templates/gift_manager/includes/friend_link_form_partial.html:33
 #: gift_manager/templates/gift_manager/includes/person_link_suggestion_banner.html:22
@@ -146,7 +147,7 @@ msgid "People"
 msgstr "Personnes"
 
 #: gift_manager/forms.py:131 gift_manager/forms.py:232
-#: gift_manager/forms.py:1828 gift_manager/templates/gift_manager/home.html:190
+#: gift_manager/forms.py:1828 gift_manager/templates/gift_manager/home.html:194
 #: gift_manager/templates/gift_manager/includes/person_detail_partial.html:104
 #: gift_manager/templates/gift_manager/recipient_list.html:123
 #: gift_manager/views/person.py:62
@@ -256,17 +257,17 @@ msgid "Child groups"
 msgstr "Groupes enfants"
 
 #: gift_manager/forms.py:457 gift_manager/forms.py:1014
-#: gift_manager/forms.py:1137 gift_manager/secret_santa/forms.py:17
-#: gift_manager/secret_santa/forms.py:65 gift_manager/secret_santa/forms.py:81
-#: gift_manager/secret_santa/models.py:47
-#: gift_manager/secret_santa/models.py:93
-#: gift_manager/secret_santa/models.py:170
+#: gift_manager/forms.py:1137 gift_manager/secret_santa/forms.py:19
+#: gift_manager/secret_santa/forms.py:67 gift_manager/secret_santa/forms.py:83
+#: gift_manager/secret_santa/models.py:59
+#: gift_manager/secret_santa/models.py:105
+#: gift_manager/secret_santa/models.py:222
 #: gift_manager/templates/gift_manager/gift_tag_detail.html:93
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:18
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:18
 #: gift_manager/templates/gift_manager/includes/gift_tag_detail_partial.html:18
 #: gift_manager/templates/gift_manager/includes/person_group_detail_partial.html:18
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:45
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:55
 #: gift_manager/templates/gift_manager/person_group_detail.html:570
 #: gift_manager/templates/gift_manager/secret_santa/set_form.html:6
 msgid "Name"
@@ -320,7 +321,7 @@ msgstr "Sélectionnez les groupes à ajouter comme enfants de ce groupe"
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:57
 #: gift_manager/templates/gift_manager/person_group_detail.html:701
 #: gift_manager/templates/gift_manager/relation_status_detail.html:89
-#: gift_manager/views/relation.py:390 gift_manager/views/relation_guided.py:24
+#: gift_manager/views/relation.py:390 gift_manager/views/relation_guided.py:27
 msgid "Gift"
 msgstr "Cadeau"
 
@@ -430,7 +431,7 @@ msgstr "Ajouter ce parent créerait un cycle dans la hiérarchie des tags."
 #: gift_manager/templates/gift_manager/includes/relation_detail_partial.html:68
 #: gift_manager/templates/gift_manager/person_group_detail.html:713
 #: gift_manager/templates/gift_manager/relation_status_detail.html:67
-#: gift_manager/views/relation.py:392 gift_manager/views/relation_guided.py:23
+#: gift_manager/views/relation.py:392 gift_manager/views/relation_guided.py:26
 msgid "Recipient"
 msgstr "Destinataire"
 
@@ -451,7 +452,7 @@ msgstr "Planification"
 
 #: gift_manager/forms.py:1140
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:65
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:53
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:139
 #: gift_manager/views/event.py:94
 msgid "Date"
 msgstr "Date"
@@ -1068,11 +1069,11 @@ msgstr "à"
 #: gift_manager/models.py:677 gift_manager/models.py:1795
 #: gift_manager/templates/gift_manager/relation_list.html:263
 #: gift_manager/templates/gift_manager/relation_status_detail.html:31
-#: gift_manager/views/common.py:228 gift_manager/views/recipient.py:140
+#: gift_manager/views/common.py:230 gift_manager/views/recipient.py:140
 msgid "Person"
 msgstr "Personne"
 
-#: gift_manager/models.py:678 gift_manager/secret_santa/forms.py:112
+#: gift_manager/models.py:678 gift_manager/secret_santa/forms.py:114
 #: gift_manager/templates/gift_manager/share_objects.html:107
 msgid "Persons"
 msgstr "Personnes"
@@ -1111,7 +1112,7 @@ msgstr "Groupe de personnes"
 #: gift_manager/templates/gift_manager/base.html:407
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:142
 #: gift_manager/templates/gift_manager/gift_detail.html:14
-#: gift_manager/templates/gift_manager/home.html:197
+#: gift_manager/templates/gift_manager/home.html:201
 #: gift_manager/templates/gift_manager/share_objects.html:177
 msgid "Gifts"
 msgstr "Cadeaux"
@@ -1154,7 +1155,7 @@ msgstr "Annuel"
 #: gift_manager/templates/gift_manager/base.html:414
 #: gift_manager/templates/gift_manager/event_detail.html:14
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:143
-#: gift_manager/templates/gift_manager/home.html:204
+#: gift_manager/templates/gift_manager/home.html:208
 #: gift_manager/templates/gift_manager/share_objects.html:212
 msgid "Events"
 msgstr "Événements"
@@ -1212,6 +1213,7 @@ msgid "Must have"
 msgstr "Indispensable"
 
 #: gift_manager/models.py:1439 gift_manager/models.py:2146
+#: gift_manager/secret_santa/models.py:194
 #: gift_manager/templates/gift_manager/includes/received_gift_detail_partial.html:19
 msgid "Title"
 msgstr "Titre"
@@ -1265,8 +1267,8 @@ msgstr "Marqué comme réalisé une fois offert ou reçu."
 msgid "Tracks when wisher last modified the wish."
 msgstr "Indique quand l'auteur a modifié le souhait pour la dernière fois."
 
-#: gift_manager/models.py:1500 gift_manager/views/wishlist.py:94
-#: gift_manager/views/wishlist.py:162
+#: gift_manager/models.py:1500 gift_manager/secret_santa/forms.py:139
+#: gift_manager/views/wishlist.py:94 gift_manager/views/wishlist.py:162
 msgid "Wish"
 msgstr "Souhait"
 
@@ -1339,7 +1341,7 @@ msgstr "Le destinataire doit représenter l'auteur de ce souhait."
 #: gift_manager/models.py:1797
 #: gift_manager/templates/gift_manager/relation_list.html:264
 #: gift_manager/templates/gift_manager/relation_status_detail.html:32
-#: gift_manager/views/common.py:245 gift_manager/views/recipient.py:166
+#: gift_manager/views/common.py:247 gift_manager/views/recipient.py:166
 msgid "Group"
 msgstr "Groupe"
 
@@ -1558,116 +1560,183 @@ msgid_plural "%(count)d other givers"
 msgstr[0] "%(count)d autre donateur"
 msgstr[1] "%(count)d autres donateurs"
 
-#: gift_manager/secret_santa/emails.py:130
+#: gift_manager/secret_santa/emails.py:119
+#, python-format
+msgid "Secret Santa \"%(exchange)s\": your page, %(participant)s"
+msgstr "Père Noël secret « %(exchange)s » : votre page, %(participant)s"
+
+#: gift_manager/secret_santa/emails.py:120
 #, python-format
 msgid "Secret Santa \"%(exchange)s\": your link, %(participant)s"
 msgstr "Père Noël secret « %(exchange)s » : votre lien, %(participant)s"
 
-#: gift_manager/secret_santa/emails.py:245
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:44
-#: gift_manager/views/secret_santa.py:567
-msgid "The draw has not been done yet."
-msgstr "Le tirage au sort n'a pas encore eu lieu."
+#: gift_manager/secret_santa/emails.py:223
+msgid "The draw is done: the personal links were already sent."
+msgstr "Le tirage au sort est fait : les liens personnels ont déjà été envoyés."
 
-#: gift_manager/secret_santa/emails.py:247
+#: gift_manager/secret_santa/emails.py:286
+#: gift_manager/secret_santa/service.py:73
+#: gift_manager/views/secret_santa.py:230
+#: gift_manager/views/secret_santa.py:519
+msgid "This exchange is closed."
+msgstr "Cet échange est terminé."
+
+#: gift_manager/secret_santa/emails.py:288
+msgid "This participant does not take part."
+msgstr "Ce participant ne participe pas."
+
+#: gift_manager/secret_santa/emails.py:290
+msgid "Send the invitations first."
+msgstr "Envoyez d'abord les invitations."
+
+#: gift_manager/secret_santa/emails.py:292
 msgid "Wait a few minutes before sending this email again."
 msgstr "Attendez quelques minutes avant de renvoyer cet email."
 
-#: gift_manager/secret_santa/forms.py:22 gift_manager/secret_santa/models.py:48
+#: gift_manager/secret_santa/forms.py:24 gift_manager/secret_santa/models.py:60
 msgid "Exchange date"
 msgstr "Date de l'échange"
 
-#: gift_manager/secret_santa/forms.py:26 gift_manager/secret_santa/models.py:50
+#: gift_manager/secret_santa/forms.py:28 gift_manager/secret_santa/models.py:62
 #: gift_manager/templates/gift_manager/includes/budget_summary.html:5
 #: gift_manager/templates/gift_manager/includes/gift_suggestions_ai_block.html:77
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:32
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:56
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:142
 msgid "Budget"
 msgstr "Budget"
 
-#: gift_manager/secret_santa/forms.py:34 gift_manager/secret_santa/models.py:59
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:61
+#: gift_manager/secret_santa/forms.py:36 gift_manager/secret_santa/models.py:71
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:147
 msgid "Guidelines"
 msgstr "Consignes"
 
-#: gift_manager/secret_santa/forms.py:37
+#: gift_manager/secret_santa/forms.py:39
 msgid "Shown on the personal page of every participant."
 msgstr "Affichées sur la page personnelle de chaque participant."
 
-#: gift_manager/secret_santa/forms.py:40 gift_manager/secret_santa/models.py:62
+#: gift_manager/secret_santa/forms.py:42 gift_manager/secret_santa/models.py:74
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:33
 msgid "Nobody draws the person who drew them"
 msgstr "Personne ne tire la personne qui l'a tiré"
 
-#: gift_manager/secret_santa/forms.py:45
+#: gift_manager/secret_santa/forms.py:47
 msgid "I take part in the draw"
 msgstr "Je participe au tirage au sort"
 
-#: gift_manager/secret_santa/forms.py:57
+#: gift_manager/secret_santa/forms.py:59
 msgid "This rule can only change before the draw."
 msgstr "Cette règle ne peut changer qu'avant le tirage au sort."
 
-#: gift_manager/secret_santa/forms.py:70
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:47
+#: gift_manager/secret_santa/forms.py:72
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:57
 #: gift_manager/views/person.py:215
 msgid "Email"
 msgstr "Email"
 
-#: gift_manager/secret_santa/forms.py:86
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:72
+#: gift_manager/secret_santa/forms.py:88
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:87
 #: gift_manager/templates/gift_manager/secret_santa/set_form.html:10
 msgid "Participants"
 msgstr "Participants"
 
-#: gift_manager/secret_santa/forms.py:104
+#: gift_manager/secret_santa/forms.py:106
 msgid "A group"
 msgstr "Un groupe"
 
-#: gift_manager/secret_santa/forms.py:108
+#: gift_manager/secret_santa/forms.py:110
 msgid "No group"
 msgstr "Aucun groupe"
 
-#: gift_manager/secret_santa/forms.py:129
+#: gift_manager/secret_santa/forms.py:131
 msgid "Choose a group or some persons."
 msgstr "Choisissez un groupe ou des personnes."
 
-#: gift_manager/secret_santa/models.py:37
+#: gift_manager/secret_santa/forms.py:152
+#: gift_manager/secret_santa/models.py:199 gift_manager/views/gift.py:58
+msgid "Price"
+msgstr "Prix"
+
+#: gift_manager/secret_santa/forms.py:165
+msgid "A note for your Santa"
+msgstr "Une note pour votre Père Noël"
+
+#: gift_manager/secret_santa/models.py:49
 msgid "Draft"
 msgstr "Brouillon"
 
-#: gift_manager/secret_santa/models.py:38
+#: gift_manager/secret_santa/models.py:50
 msgid "Drawn"
 msgstr "Tiré au sort"
 
-#: gift_manager/secret_santa/models.py:39
+#: gift_manager/secret_santa/models.py:51
 #: gift_manager/templates/gift_manager/secret_santa/status_badge.html:1
 msgid "Closed"
 msgstr "Terminé"
 
-#: gift_manager/secret_santa/models.py:69
+#: gift_manager/secret_santa/models.py:81
 msgid "Secret Santa exchange"
 msgstr "Échange de Père Noël secret"
 
-#: gift_manager/secret_santa/models.py:70
+#: gift_manager/secret_santa/models.py:82
 msgid "Secret Santa exchanges"
 msgstr "Échanges de Père Noël secret"
 
-#: gift_manager/secret_santa/models.py:125
+#: gift_manager/secret_santa/models.py:147
 msgid "Secret Santa participant"
 msgstr "Participant au Père Noël secret"
 
-#: gift_manager/secret_santa/models.py:126
+#: gift_manager/secret_santa/models.py:148
 msgid "Secret Santa participants"
 msgstr "Participants au Père Noël secret"
 
-#: gift_manager/secret_santa/models.py:175
+#: gift_manager/secret_santa/models.py:210
+msgid "Exchange wish"
+msgstr "Souhait de l'échange"
+
+#: gift_manager/secret_santa/models.py:211
+msgid "Exchange wishes"
+msgstr "Souhaits de l'échange"
+
+#: gift_manager/secret_santa/models.py:227
 msgid "Exclusion set"
 msgstr "Groupe d'exclusion"
 
-#: gift_manager/secret_santa/models.py:176
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:107
+#: gift_manager/secret_santa/models.py:228
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:122
 msgid "Exclusion sets"
 msgstr "Groupes d'exclusion"
+
+#: gift_manager/secret_santa/participation.py:36
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:52
+msgid "You do not take part in this exchange."
+msgstr "Vous ne participez pas à cet échange."
+
+#: gift_manager/secret_santa/participation.py:42
+msgid "The draw is done: tell the organizer if you cannot take part."
+msgstr "Le tirage au sort est fait : prévenez l'organisateur si vous ne pouvez pas participer."
+
+#: gift_manager/secret_santa/participation.py:59
+#, python-format
+msgid "You can add at most %(count)d wishes."
+msgstr "Vous pouvez ajouter au plus %(count)d souhaits."
+
+#: gift_manager/secret_santa/participation.py:79
+#, python-format
+msgid "The note can have at most %(count)d characters."
+msgstr "La note ne peut pas dépasser %(count)d caractères."
+
+#: gift_manager/secret_santa/participation.py:112
+msgid "This participation is already linked to an account."
+msgstr "Cette participation est déjà liée à un compte."
+
+#: gift_manager/secret_santa/participation.py:118
+#: gift_manager/secret_santa/participation.py:127
+msgid "Your account is already linked to another participant of this exchange."
+msgstr "Votre compte est déjà lié à un autre participant de cet échange."
+
+#: gift_manager/secret_santa/participation.py:135
+msgid "This participation is not linked to your account."
+msgstr "Cette participation n'est pas liée à votre compte."
 
 #: gift_manager/secret_santa/service.py:46
 #, python-format
@@ -1693,31 +1762,26 @@ msgstr ""
 "Aucun tirage au sort n'a été trouvé. Réessayez ou assouplissez les "
 "exclusions."
 
-#: gift_manager/secret_santa/service.py:73
-#: gift_manager/views/secret_santa.py:296
-msgid "This exchange is closed."
-msgstr "Cet échange est terminé."
-
-#: gift_manager/secret_santa/service.py:80
+#: gift_manager/secret_santa/service.py:87
 msgid "The draw is done. Redraw to change the participants or the exclusions."
 msgstr ""
 "Le tirage au sort est fait. Refaites le tirage pour changer les participants "
 "ou les exclusions."
 
-#: gift_manager/secret_santa/service.py:88
-#: gift_manager/secret_santa/service.py:321
+#: gift_manager/secret_santa/service.py:95
+#: gift_manager/secret_santa/service.py:328
 msgid "Enter a name."
 msgstr "Saisissez un nom."
 
-#: gift_manager/secret_santa/service.py:249
+#: gift_manager/secret_santa/service.py:256
 msgid "This group was not found."
 msgstr "Ce groupe est introuvable."
 
-#: gift_manager/secret_santa/service.py:326
+#: gift_manager/secret_santa/service.py:333
 msgid "This exclusion set was not found."
 msgstr "Ce groupe d'exclusion est introuvable."
 
-#: gift_manager/secret_santa/service.py:330
+#: gift_manager/secret_santa/service.py:337
 msgid "An exclusion set needs at least two participants of this exchange."
 msgstr ""
 "Un groupe d'exclusion doit contenir au moins deux participants de cet "
@@ -1879,9 +1943,10 @@ msgstr "Réactiver le compte"
 #: gift_manager/templates/gift_manager/person_group_remove_person_confirm.html:23
 #: gift_manager/templates/gift_manager/profile_detail.html:542
 #: gift_manager/templates/gift_manager/received_gift_confirm_delete.html:29
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:163
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:184
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:208
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:22
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:178
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:199
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:223
 #: gift_manager/templates/gift_manager/secret_santa/exchange_form.html:36
 #: gift_manager/templates/gift_manager/send_invitation.html:24
 #: gift_manager/templates/gift_manager/send_invitation.html:52
@@ -1927,7 +1992,7 @@ msgstr "Supprimer mon compte utilisateur"
 #: gift_manager/templates/account/login.html:32
 #: gift_manager/templates/allauth/layouts/base.html:72
 #: gift_manager/templates/gift_manager/base.html:222
-#: gift_manager/templates/gift_manager/home.html:226
+#: gift_manager/templates/gift_manager/home.html:230
 msgid "Sign In"
 msgstr "Connexion"
 
@@ -1966,7 +2031,7 @@ msgid "Sign Out"
 msgstr "Déconnexion"
 
 #: gift_manager/templates/allauth/layouts/base.html:75
-#: gift_manager/templates/gift_manager/home.html:229
+#: gift_manager/templates/gift_manager/home.html:233
 #: gift_manager/templates/gift_manager/invitation_expired.html:41
 msgid "Sign Up"
 msgstr "Inscription"
@@ -1990,7 +2055,7 @@ msgstr "Tableau de bord"
 #: gift_manager/templates/gift_manager/base.html:408
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:144
 #: gift_manager/templates/gift_manager/home.html:28
-#: gift_manager/templates/gift_manager/home.html:211
+#: gift_manager/templates/gift_manager/home.html:215
 #: gift_manager/templates/gift_manager/includes/event_detail_partial.html:91
 #: gift_manager/templates/gift_manager/includes/gift_detail_partial.html:77
 #: gift_manager/templates/gift_manager/relation_detail.html:14
@@ -2003,7 +2068,7 @@ msgstr "Projets de cadeaux"
 #: gift_manager/templates/gift_manager/base.html:344
 #: gift_manager/templates/gift_manager/base.html:413
 #: gift_manager/templates/gift_manager/fallback/base_fallback.html:141
-#: gift_manager/templates/gift_manager/home.html:183
+#: gift_manager/templates/gift_manager/home.html:187
 #: gift_manager/templates/gift_manager/person_detail.html:14
 #: gift_manager/templates/gift_manager/recipient_list.html:5
 #: gift_manager/templates/gift_manager/recipient_list.html:85
@@ -2021,9 +2086,12 @@ msgstr "Statuts"
 
 #: gift_manager/templates/gift_manager/base.html:148
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.html:3
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:3
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:5
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:5
 #: gift_manager/templates/gift_manager/secret_santa/exchange_list.html:5
 #: gift_manager/templates/gift_manager/secret_santa/exchange_list.html:14
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:15
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:16
 msgid "Secret Santa"
 msgstr "Père Noël secret"
 
@@ -2118,7 +2186,7 @@ msgid "Create New"
 msgstr "Créer"
 
 #: gift_manager/templates/gift_manager/base.html:297
-#: gift_manager/templates/gift_manager/home.html:163
+#: gift_manager/templates/gift_manager/home.html:167
 msgid "New Gift"
 msgstr "Nouveau cadeau"
 
@@ -2127,7 +2195,7 @@ msgid "Add a new gift"
 msgstr "Ajouter un nouveau cadeau"
 
 #: gift_manager/templates/gift_manager/base.html:304
-#: gift_manager/templates/gift_manager/home.html:166
+#: gift_manager/templates/gift_manager/home.html:170
 #: gift_manager/templates/gift_manager/recipient_list.html:88
 msgid "New Person"
 msgstr "Nouvelle Personne"
@@ -2137,7 +2205,7 @@ msgid "Add a new person"
 msgstr "Ajouter une nouvelle personne"
 
 #: gift_manager/templates/gift_manager/base.html:311
-#: gift_manager/templates/gift_manager/home.html:169
+#: gift_manager/templates/gift_manager/home.html:173
 msgid "New Event"
 msgstr "Nouvel Événement"
 
@@ -2181,9 +2249,9 @@ msgstr "Création"
 #: gift_manager/templates/gift_manager/includes/person_link_form_partial.html:5
 #: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:13
 #: gift_manager/templates/gift_manager/profile_detail.html:531
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:157
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:178
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:201
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:172
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:193
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:216
 msgid "Close"
 msgstr "Fermer"
 
@@ -2447,7 +2515,7 @@ msgstr "Êtes-vous sûr de vouloir supprimer cet élément ?"
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:36
 #: gift_manager/templates/gift_manager/received_gift_confirm_delete.html:32
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:25
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:164
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:179
 msgid "Delete"
 msgstr "Supprimer"
 
@@ -2520,13 +2588,13 @@ msgstr[1] "Échéance dans les %(days)s prochains jours"
 
 #: gift_manager/templates/gift_manager/email/digest.html:20
 #: gift_manager/templates/gift_manager/email/digest.txt:11
-#: gift_manager/templates/gift_manager/home.html:126
+#: gift_manager/templates/gift_manager/home.html:130
 msgid "Upcoming birthdays"
 msgstr "Anniversaires à venir"
 
 #: gift_manager/templates/gift_manager/email/digest.html:22
 #: gift_manager/templates/gift_manager/email/digest.txt:12
-#: gift_manager/templates/gift_manager/home.html:146
+#: gift_manager/templates/gift_manager/home.html:150
 msgid "No gift plan yet"
 msgstr "Aucun projet de cadeau"
 
@@ -2541,6 +2609,8 @@ msgstr "Pour ne plus recevoir ces emails, ouvrez ce lien :"
 
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.html:5
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.txt:1
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:5
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.txt:1
 #, python-format
 msgid "Hello %(name)s,"
 msgstr "Bonjour %(name)s,"
@@ -2556,22 +2626,36 @@ msgstr ""
 "personnelle vous indique à qui vous offrez un cadeau :"
 
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.html:7
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:7
 msgid "Open my personal page"
 msgstr "Ouvrir ma page personnelle"
 
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.html:8
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.txt:6
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:8
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.txt:6
 msgid "This link is yours alone: do not share it."
 msgstr "Ce lien n'est qu'à vous : ne le partagez pas."
 
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.html:9
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:9
 #: gift_manager/templates/gift_manager/secret_santa/stop_emails.html:32
 msgid "Stop emails for this exchange"
 msgstr "Ne plus recevoir d'emails pour cet échange"
 
 #: gift_manager/templates/gift_manager/email/secret_santa_assignment.txt:8
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.txt:8
 msgid "To stop receiving emails for this exchange, open this link:"
 msgstr "Pour ne plus recevoir d'emails pour cet échange, ouvrez ce lien :"
+
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.html:6
+#: gift_manager/templates/gift_manager/email/secret_santa_invitation.txt:3
+#, python-format
+msgid ""
+"%(organizer)s invites you to the Secret Santa \"%(exchange)s\". On your "
+"personal page, tell your Santa what you would like, or say that you cannot "
+"take part. The draw comes later."
+msgstr "%(organizer)s vous invite au Père Noël secret « %(exchange)s ». Sur votre page personnelle, dites à votre Père Noël ce qui vous ferait plaisir, ou indiquez que vous ne pouvez pas participer. Le tirage au sort aura lieu plus tard."
 
 #: gift_manager/templates/gift_manager/event_detail.html:4
 #: gift_manager/templates/gift_manager/event_detail.html:11
@@ -2749,10 +2833,10 @@ msgstr "Lecture"
 #: gift_manager/templates/gift_manager/includes/person_group_action_buttons.html:26
 #: gift_manager/templates/gift_manager/includes/received_gift_card.html:89
 #: gift_manager/templates/gift_manager/includes/received_gift_card.html:90
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:42
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:52
 #: gift_manager/templates/gift_manager/person_group_explorer.html:227
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:21
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:126
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:141
 #: gift_manager/tests/e2e/test_dashboard_layout.py:581
 #: gift_manager/views/base.py:771 gift_manager/views/received_gift.py:383
 #: gift_manager/views/wishlist.py:161
@@ -2846,7 +2930,7 @@ msgstr "Recherche : \"%(query)s\""
 #: gift_manager/templates/gift_manager/fallback/list_fallback.html:18
 #: gift_manager/templates/gift_manager/includes/relation_cards_partial.html:32
 #: gift_manager/templates/gift_manager/includes/relation_group_gift_partial.html:312
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:88
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:103
 #: gift_manager/views/wishlist.py:93
 msgid "Add"
 msgstr "Ajouter"
@@ -3173,17 +3257,17 @@ msgid "Coming up next:"
 msgstr "À venir :"
 
 #: gift_manager/templates/gift_manager/home.html:96
-#: gift_manager/templates/gift_manager/home.html:138
+#: gift_manager/templates/gift_manager/home.html:142
 msgid "Today"
 msgstr "Aujourd'hui"
 
 #: gift_manager/templates/gift_manager/home.html:96
-#: gift_manager/templates/gift_manager/home.html:138
+#: gift_manager/templates/gift_manager/home.html:142
 msgid "Tomorrow"
 msgstr "Demain"
 
 #: gift_manager/templates/gift_manager/home.html:96
-#: gift_manager/templates/gift_manager/home.html:138
+#: gift_manager/templates/gift_manager/home.html:142
 #, python-format
 msgid "In %(days)s days"
 msgstr "Dans %(days)s jours"
@@ -3195,27 +3279,27 @@ msgstr ""
 "ensuite."
 
 #: gift_manager/templates/gift_manager/home.html:102
-#: gift_manager/templates/gift_manager/home.html:148
+#: gift_manager/templates/gift_manager/home.html:152
 msgid "Create a gift plan"
 msgstr "Créer un projet de cadeau"
 
-#: gift_manager/templates/gift_manager/home.html:144
+#: gift_manager/templates/gift_manager/home.html:148
 msgid "Gift plan in progress"
 msgstr "Projet de cadeau en cours"
 
-#: gift_manager/templates/gift_manager/home.html:160
+#: gift_manager/templates/gift_manager/home.html:164
 msgid "Library"
 msgstr "Bibliothèque"
 
-#: gift_manager/templates/gift_manager/home.html:172
+#: gift_manager/templates/gift_manager/home.html:176
 msgid "Received gift"
 msgstr "Cadeau reçu"
 
-#: gift_manager/templates/gift_manager/home.html:222
+#: gift_manager/templates/gift_manager/home.html:226
 msgid "Welcome to Gift Manager"
 msgstr "Bienvenue sur Gift Manager"
 
-#: gift_manager/templates/gift_manager/home.html:223
+#: gift_manager/templates/gift_manager/home.html:227
 msgid ""
 "The perfect tool to organize your gift-giving. Track gifts, manage "
 "recipients, and never miss a special occasion."
@@ -3223,21 +3307,21 @@ msgstr ""
 "L'outil parfait pour organiser vos cadeaux. Suivez vos cadeaux, gérez vos "
 "destinataires et ne manquez jamais une occasion spéciale."
 
-#: gift_manager/templates/gift_manager/home.html:237
+#: gift_manager/templates/gift_manager/home.html:241
 msgid "Track Gifts"
 msgstr "Suivez vos Cadeaux"
 
-#: gift_manager/templates/gift_manager/home.html:238
+#: gift_manager/templates/gift_manager/home.html:242
 msgid "Keep a catalog of gift ideas and track what you've given to whom."
 msgstr ""
 "Conservez un catalogue d'idées de cadeaux et suivez ce que vous avez offert "
 "à qui."
 
-#: gift_manager/templates/gift_manager/home.html:242
+#: gift_manager/templates/gift_manager/home.html:246
 msgid "Manage Recipients"
 msgstr "Gérer les destinataires"
 
-#: gift_manager/templates/gift_manager/home.html:243
+#: gift_manager/templates/gift_manager/home.html:247
 msgid ""
 "Organize people and groups to easily manage gift-giving for families and "
 "friends."
@@ -3245,11 +3329,11 @@ msgstr ""
 "Organisez les personnes et les groupes pour gérer facilement les remises de "
 "cadeaux pour la famille et les amis."
 
-#: gift_manager/templates/gift_manager/home.html:247
+#: gift_manager/templates/gift_manager/home.html:251
 msgid "Never Forget"
 msgstr "N'oubliez jamais"
 
-#: gift_manager/templates/gift_manager/home.html:248
+#: gift_manager/templates/gift_manager/home.html:252
 msgid ""
 "Set up events and due dates to remember birthdays, holidays, and special "
 "occasions."
@@ -3257,11 +3341,11 @@ msgstr ""
 "Configurez des événements et des dates limites pour vous souvenir des "
 "anniversaires, des fêtes et des occasions spéciales."
 
-#: gift_manager/templates/gift_manager/home.html:252
+#: gift_manager/templates/gift_manager/home.html:256
 msgid "Share & Collaborate"
 msgstr "Partager et collaborer"
 
-#: gift_manager/templates/gift_manager/home.html:253
+#: gift_manager/templates/gift_manager/home.html:257
 msgid "Share your gift lists with family members and coordinate together."
 msgstr ""
 "Partagez vos listes de cadeaux avec les membres de votre famille et "
@@ -3591,7 +3675,7 @@ msgstr "Enregistrer les modifications"
 #: gift_manager/templates/gift_manager/includes/gift_plan_card.html:184
 #: gift_manager/templates/gift_manager/includes/person_link_form_partial.html:66
 #: gift_manager/templates/gift_manager/includes/relation_reaction_partial.html:67
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:49
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:59
 #: gift_manager/templates/gift_manager/includes/unsaved_changes_translations.html:7
 #: gift_manager/templates/gift_manager/secret_santa/exchange_form.html:39
 msgid "Save"
@@ -3605,7 +3689,7 @@ msgstr "Prêt à sauvegarder"
 #: gift_manager/templates/gift_manager/includes/forms/guided_errors.html:7
 #: gift_manager/views/received_gift.py:336
 #: gift_manager/views/received_gift.py:665
-#: gift_manager/views/relation_guided.py:148 gift_manager/views/wishlist.py:129
+#: gift_manager/views/relation_guided.py:173 gift_manager/views/wishlist.py:129
 #: gift_manager/views/wishlist.py:208
 msgid "Please correct the errors below."
 msgstr "Veuillez corriger les erreurs ci-dessous."
@@ -3655,7 +3739,7 @@ msgstr "Plus de détails sur l'événement"
 #: gift_manager/views/received_gift.py:564 gift_manager/views/relation.py:152
 #: gift_manager/views/relation.py:189 gift_manager/views/relation.py:228
 #: gift_manager/views/relation.py:791 gift_manager/views/relation.py:862
-#: gift_manager/views/relation_guided.py:64
+#: gift_manager/views/relation_guided.py:67
 msgid "Gift Plan"
 msgstr "Projet de cadeau"
 
@@ -4891,7 +4975,7 @@ msgid "Mark paid"
 msgstr "Marquer payé"
 
 #: gift_manager/templates/gift_manager/includes/relation_group_gift_partial.html:258
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:63
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:73
 #, python-format
 msgid "Remove %(name)s"
 msgstr "Supprimer %(name)s"
@@ -4994,6 +5078,35 @@ msgstr "Vous avez enregistré avoir reçu « %(gift)s » de cette personne :"
 msgid "Matches this person's interests"
 msgstr "Correspond aux centres d'intérêt de cette personne"
 
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:17
+msgid "You organize it"
+msgstr "Vous l'organisez"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:20
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:63
+#, python-format
+msgid "You give a gift to: <strong>%(name)s</strong>"
+msgstr "Vous offrez un cadeau à : <strong>%(name)s</strong>"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:22
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:72
+#: gift_manager/views/secret_santa.py:824
+msgid "The draw has not been done yet."
+msgstr "Le tirage au sort n'a pas encore eu lieu."
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:29
+msgid "My page"
+msgstr "Ma page"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:33
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:68
+msgid "Plan a gift"
+msgstr "Préparer un cadeau"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_dashboard.html:39
+msgid "Manage"
+msgstr "Gérer"
+
 #: gift_manager/templates/gift_manager/includes/secret_santa_pairings.html:3
 msgid "Who gives to whom"
 msgstr "Qui offre à qui"
@@ -5007,62 +5120,74 @@ msgstr "%(giver)s offre à %(recipient)s"
 msgid "No email"
 msgstr "Pas d'email"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:14
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:13
+msgid "Declined"
+msgstr "Ne participe pas"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:15
+msgid "Invited"
+msgstr "Invité(e)"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:18
 msgid "Emails stopped"
 msgstr "Emails arrêtés"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:15
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:19
 msgid "Link to hand out"
 msgstr "Lien à donner"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:16
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:20
 msgid "Email sent"
 msgstr "Email envoyé"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:17
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:21
 msgid "Email not sent"
 msgstr "Email non envoyé"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:26
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:30
+msgid "Put back"
+msgstr "Réintégrer"
+
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:36
 msgid "Send again"
 msgstr "Renvoyer"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:30
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:40
 msgid "Show link"
 msgstr "Voir le lien"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:37
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:47
 #, python-format
 msgid "Opening this link shows who %(name)s drew. Give it to them only."
 msgstr ""
 "Ouvrir ce lien montre qui %(name)s a tiré. Ne le donnez qu'à cette personne."
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:37
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:47
 #, python-format
 msgid "This is the personal page of %(name)s. Give it to them only."
 msgstr ""
 "C'est la page personnelle de %(name)s. Ne la donnez qu'à cette personne."
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:38
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:48
 msgid "Show the link"
 msgstr "Afficher le lien"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:53
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:63
 msgid "New link"
 msgstr "Nouveau lien"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:56
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:66
 msgid ""
 "The current link stops working. Use it when a link reached the wrong person."
 msgstr ""
 "Le lien actuel ne fonctionnera plus. Utile quand un lien est arrivé à la "
 "mauvaise personne."
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:57
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:67
 msgid "Create a new link"
 msgstr "Créer un nouveau lien"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:75
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:85
 msgid "No participant yet."
 msgstr "Aucun participant pour l'instant."
 
@@ -5822,8 +5947,35 @@ msgstr "Révéler au destinataire"
 msgid "Gift Plan status details"
 msgstr "Détails du statut du projet de cadeau"
 
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:11
+msgid "Link your account"
+msgstr "Lier votre compte"
+
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:13
+msgid ""
+"This request has expired. Open your personal link again and choose \"I have "
+"a Gift Manager account\"."
+msgstr "Cette demande a expiré. Rouvrez votre lien personnel et choisissez « J'ai un compte Gift Manager »."
+
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:17
+#, python-format
+msgid ""
+"Link your account to participant <strong>%(name)s</strong> of the Secret "
+"Santa \"%(exchange)s\"?"
+msgstr "Lier votre compte au participant <strong>%(name)s</strong> du Père Noël secret « %(exchange)s » ?"
+
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:18
+msgid ""
+"You can then share wishes from your wishlist with your Santa. The organizer "
+"is not told."
+msgstr "Vous pourrez ensuite partager des souhaits de votre liste avec votre Père Noël. L'organisateur n'en est pas informé."
+
+#: gift_manager/templates/gift_manager/secret_santa/attach_confirm.html:21
+msgid "Link my account"
+msgstr "Lier mon compte"
+
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:40
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:47
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:52
 msgid "Draw"
 msgstr "Tirer au sort"
 
@@ -5835,12 +5987,22 @@ msgstr ""
 "Après le tirage au sort, chaque participant ayant une adresse email reçoit "
 "son lien personnel. Donnez vous-même leur lien aux autres."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:51
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:45
 #, python-format
 msgid "Add at least %(count)s participants to draw."
 msgstr "Ajoutez au moins %(count)s participants pour faire le tirage au sort."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:54
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:60
+msgid "Send the personal links now"
+msgstr "Envoyer les liens personnels maintenant"
+
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:66
+msgid ""
+"Optional: before the draw, participants can tell their Santa what they would "
+"like, or say that they cannot take part."
+msgstr "Facultatif : avant le tirage au sort, les participants peuvent dire à leur Père Noël ce qui leur ferait plaisir, ou indiquer qu'ils ne peuvent pas participer."
+
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:69
 #, python-format
 msgid ""
 "The draw was done on %(date)s. Every participant can see who they give a "
@@ -5849,57 +6011,58 @@ msgstr ""
 "Le tirage au sort a été fait le %(date)s. Chaque participant voit à qui il "
 "offre un cadeau sur sa page personnelle."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:57
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:200
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:72
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:215
 msgid "Show all pairings"
 msgstr "Voir tout le tirage"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:60
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:177
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:185
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:75
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:192
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:200
 msgid "Redraw everything"
 msgstr "Refaire tout le tirage"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:64
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:34
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:79
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:39
 msgid "This exchange is over."
 msgstr "Cet échange est terminé."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:84
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:99
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:106
 msgid "optional"
 msgstr "facultatif"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:93
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:108
 msgid "Import from my address book"
 msgstr "Importer depuis mon carnet d'adresses"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:98
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:113
 msgid "Import"
 msgstr "Importer"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:108
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:123
 msgid "Nobody draws someone from one of their sets: a couple, a household."
 msgstr ""
 "Personne ne tire quelqu'un de l'un de ses groupes : un couple, un foyer."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:118
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:133
 #, python-format
 msgid "Delete the set %(name)s"
 msgstr "Supprimer le groupe %(name)s"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:137
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:152
 msgid "New exclusion set"
 msgstr "Nouveau groupe d'exclusion"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:142
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:157
 msgid "No exclusion set."
 msgstr "Aucun groupe d'exclusion."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:156
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:171
 msgid "Delete the exchange"
 msgstr "Supprimer l'échange"
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:160
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:175
 msgid ""
 "The participants, their personal links and the draw are deleted. This action "
 "cannot be undone."
@@ -5907,7 +6070,7 @@ msgstr ""
 "Les participants, leurs liens personnels et le tirage au sort sont "
 "supprimés. Cette action est irréversible."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:181
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:196
 msgid ""
 "Everyone will get a new assignment, and every participant with an email "
 "address gets a new email."
@@ -5915,11 +6078,11 @@ msgstr ""
 "Chacun aura un nouveau tirage, et chaque participant ayant une adresse email "
 "reçoit un nouvel email."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:204
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:219
 msgid "This shows who every participant drew."
 msgstr "Cela montre qui chaque participant a tiré."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:205
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:220
 msgid ""
 "You take part: you will also see who drew you, and the surprise is gone for "
 "you."
@@ -5927,7 +6090,7 @@ msgstr ""
 "Vous participez : vous verrez aussi qui vous a tiré, et la surprise sera "
 "gâchée pour vous."
 
-#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:209
+#: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:224
 msgid "Show the pairings"
 msgstr "Afficher le tirage"
 
@@ -5947,7 +6110,7 @@ msgid "New Secret Santa"
 msgstr "Nouveau Père Noël secret"
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_list.html:30
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:70
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:156
 #, python-format
 msgid "%(counter)s participant"
 msgid_plural "%(counter)s participants"
@@ -5966,32 +6129,121 @@ msgstr ""
 "Tirez au sort qui offre un cadeau à qui, en famille ou entre collègues, même "
 "pour ceux qui n'ont pas de compte."
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:29
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:5
+msgid "From your wishlist"
+msgstr "Depuis votre liste de souhaits"
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:7
+#, python-format
+msgid "This participation is linked to your account (%(username)s)."
+msgstr "Cette participation est liée à votre compte (%(username)s)."
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:8
+msgid "Nothing from your wishlist is shared yet: choose and confirm."
+msgstr "Rien de votre liste de souhaits n'est encore partagé : choisissez puis confirmez."
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:14
+msgid "Wishes to share with your Santa"
+msgstr "Souhaits à partager avec votre Père Noël"
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:24
+msgid "Share these wishes with my Santa"
+msgstr "Partager ces souhaits avec mon Père Noël"
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:27
+msgid "Your wishlist has no active wish."
+msgstr "Votre liste de souhaits n'a aucun souhait actif."
+
+#: gift_manager/templates/gift_manager/secret_santa/linked_account.html:31
+msgid "Unlink my account from this participation"
+msgstr "Délier mon compte de cette participation"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:30
 #, python-format
 msgid "Personal page of %(name)s"
 msgstr "Page personnelle de %(name)s"
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:30
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:31
 #, python-format
 msgid "Organized by %(organizer)s"
 msgstr "Organisé par %(organizer)s"
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:38
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:46
+msgid "You said that you cannot take part. The draw will leave you out."
+msgstr "Vous avez indiqué ne pas pouvoir participer. Le tirage au sort vous laissera de côté."
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:49
+msgid "I can take part after all"
+msgstr "Finalement, je peux participer"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:60
 msgid "Your assignment"
 msgstr "Votre tirage"
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:41
-#, python-format
-msgid "You give a gift to: <strong>%(name)s</strong>"
-msgstr "Vous offrez un cadeau à : <strong>%(name)s</strong>"
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:79
+msgid "Tell your Santa"
+msgstr "Dites-le à votre Père Noël"
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:51
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:80
+msgid "Your Santa sees these wishes and this note once the draw is done."
+msgstr "Votre Père Noël verra ces souhaits et cette note une fois le tirage au sort fait."
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:91
+#, python-format
+msgid "Remove %(title)s"
+msgstr "Retirer %(title)s"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:116
+msgid "Add this wish"
+msgstr "Ajouter ce souhait"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:125
+msgid "Save the note"
+msgstr "Enregistrer la note"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:137
 msgid "The exchange"
 msgstr "L'échange"
 
-#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:79
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:167
+msgid "Do you use Gift Manager?"
+msgstr "Utilisez-vous Gift Manager ?"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:168
+msgid ""
+"Link this participation to your account to share wishes from your wishlist "
+"with your Santa."
+msgstr "Liez cette participation à votre compte pour partager des souhaits de votre liste avec votre Père Noël."
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:171
+msgid "I have a Gift Manager account"
+msgstr "J'ai un compte Gift Manager"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:179
+msgid "I cannot take part"
+msgstr "Je ne peux pas participer"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:182
+msgid "The draw will leave you out. You can change your mind until the draw."
+msgstr "Le tirage au sort vous laissera de côté. Vous pouvez changer d'avis jusqu'au tirage."
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:183
+msgid "Confirm that I cannot take part"
+msgstr "Confirmer que je ne peux pas participer"
+
+#: gift_manager/templates/gift_manager/secret_santa/participant_page.html:189
 msgid "This page is yours alone: do not share its address."
 msgstr "Cette page n'est qu'à vous : ne partagez pas son adresse."
+
+#: gift_manager/templates/gift_manager/secret_santa/recipient_wishes.html:5
+#, python-format
+msgid "What %(name)s would like"
+msgstr "Ce qui ferait plaisir à %(name)s"
+
+#: gift_manager/templates/gift_manager/secret_santa/recipient_wishes.html:29
+#, python-format
+msgid "%(name)s has not shared anything yet."
+msgstr "%(name)s n'a encore rien partagé."
 
 #: gift_manager/templates/gift_manager/secret_santa/set_form.html:7
 msgid "A couple, a household"
@@ -6487,10 +6739,6 @@ msgstr "Aucun projet de cadeau n'a été créé."
 msgid "Gift name"
 msgstr "Nom du cadeau"
 
-#: gift_manager/views/gift.py:58
-msgid "Price"
-msgstr "Prix"
-
 #: gift_manager/views/gift.py:205
 msgid "Save and create gift plan"
 msgstr "Sauvegarder et créer un projet de cadeau"
@@ -6838,11 +7086,11 @@ msgstr "Choisissez une note de 1 à 5."
 msgid "Gift Plan not found"
 msgstr "Projet de cadeau introuvable"
 
-#: gift_manager/views/relation_guided.py:25
+#: gift_manager/views/relation_guided.py:28
 msgid "Event and gift plan"
 msgstr "Événement et projet de cadeau"
 
-#: gift_manager/views/relation_guided.py:184
+#: gift_manager/views/relation_guided.py:209
 msgid "The gift plan could not be created."
 msgstr "Le projet de cadeau n'a pas pu être créé."
 
@@ -6858,26 +7106,30 @@ msgstr "Choisissez des préférences de rappel valides."
 msgid "Your calendar feed link has been updated."
 msgstr "Le lien de votre flux de calendrier a été mis à jour."
 
-#: gift_manager/views/secret_santa.py:190
+#: gift_manager/views/secret_santa.py:257
+msgid "Choose among your active wishes."
+msgstr "Choisissez parmi vos souhaits actifs."
+
+#: gift_manager/views/secret_santa.py:406
 #, python-format
 msgid "%(count)d email sent."
 msgid_plural "%(count)d emails sent."
 msgstr[0] "%(count)d email envoyé."
 msgstr[1] "%(count)d emails envoyés."
 
-#: gift_manager/views/secret_santa.py:196
+#: gift_manager/views/secret_santa.py:412
 #, python-format
 msgid "No email for %(names)s: hand out their personal link."
 msgstr "Pas d'email pour %(names)s : donnez-leur leur lien personnel."
 
-#: gift_manager/views/secret_santa.py:202
+#: gift_manager/views/secret_santa.py:418
 #, python-format
 msgid "The email could not be sent to %(names)s. Use Send again or Show link."
 msgstr ""
 "L'email n'a pas pu être envoyé à %(names)s. Utilisez « Renvoyer » ou « Voir "
 "le lien »."
 
-#: gift_manager/views/secret_santa.py:209
+#: gift_manager/views/secret_santa.py:425
 #, python-format
 msgid ""
 "The email limit is reached: nothing was sent to %(names)s. Try again "
@@ -6886,55 +7138,64 @@ msgstr ""
 "La limite d'emails est atteinte : rien n'a été envoyé à %(names)s. Réessayez "
 "demain ou donnez-leur leur lien personnel."
 
-#: gift_manager/views/secret_santa.py:264
+#: gift_manager/views/secret_santa.py:487
 msgid "Exchange created. Add the participants."
 msgstr "Échange créé. Ajoutez les participants."
 
-#: gift_manager/views/secret_santa.py:316
+#: gift_manager/views/secret_santa.py:539
 msgid "Exchange updated."
 msgstr "Échange modifié."
 
-#: gift_manager/views/secret_santa.py:335
+#: gift_manager/views/secret_santa.py:558
 msgid "Exchange deleted."
 msgstr "Échange supprimé."
 
-#: gift_manager/views/secret_santa.py:354
+#: gift_manager/views/secret_santa.py:577
 #, python-format
 msgid "%(name)s added."
 msgstr "%(name)s ajouté(e)."
 
-#: gift_manager/views/secret_santa.py:382
+#: gift_manager/views/secret_santa.py:605
 #, python-format
 msgid "%(added)d added, %(skipped)d already there."
 msgstr "%(added)d ajouté(s), %(skipped)d déjà présent(s)."
 
-#: gift_manager/views/secret_santa.py:404
+#: gift_manager/views/secret_santa.py:627
 #, python-format
 msgid "%(name)s updated."
 msgstr "%(name)s modifié(e)."
 
-#: gift_manager/views/secret_santa.py:418
+#: gift_manager/views/secret_santa.py:641
 #, python-format
 msgid "%(name)s removed."
 msgstr "%(name)s retiré(e)."
 
-#: gift_manager/views/secret_santa.py:445
+#: gift_manager/views/secret_santa.py:668
 msgid "Exclusion set saved."
 msgstr "Groupe d'exclusion enregistré."
 
-#: gift_manager/views/secret_santa.py:459
+#: gift_manager/views/secret_santa.py:682
 msgid "Exclusion set deleted."
 msgstr "Groupe d'exclusion supprimé."
 
-#: gift_manager/views/secret_santa.py:484
+#: gift_manager/views/secret_santa.py:707
 msgid "The draw was done again. Everyone has a new assignment."
 msgstr "Le tirage au sort a été refait. Chacun a un nouveau tirage."
 
-#: gift_manager/views/secret_santa.py:487
+#: gift_manager/views/secret_santa.py:710
 msgid "The draw is done."
 msgstr "Le tirage au sort est fait."
 
-#: gift_manager/views/secret_santa.py:553
+#: gift_manager/views/secret_santa.py:729
+msgid "Everyone with an email address has their link."
+msgstr "Chaque participant ayant une adresse email a reçu son lien."
+
+#: gift_manager/views/secret_santa.py:745
+#, python-format
+msgid "%(name)s takes part again."
+msgstr "%(name)s participe de nouveau."
+
+#: gift_manager/views/secret_santa.py:810
 #, python-format
 msgid "%(name)s has a new personal link. The old one no longer works."
 msgstr "%(name)s a un nouveau lien personnel. L'ancien ne fonctionne plus."
