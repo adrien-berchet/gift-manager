@@ -262,3 +262,8 @@ def test_any_repair_result_is_valid(data, count, no_mutual):
         assert is_valid(removal, rest, forbidden, no_mutual=no_mutual)
     if insertion is not None:
         assert is_valid(insertion, [*participants, 99], forbidden, no_mutual=no_mutual)
+
+
+def test_removal_of_someone_unknown_is_refused():
+    with pytest.raises(NoDrawPossible):
+        repair_removal(CYCLE, 42)

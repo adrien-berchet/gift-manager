@@ -225,7 +225,9 @@ def repair_removal(
     """
     if len(assignment) - 1 < MIN_PARTICIPANTS:
         raise NoDrawPossible(TOO_FEW)
-    santa = next(giver for giver, recipient in assignment.items() if recipient == removed)
+    santa = next((giver for giver, recipient in assignment.items() if recipient == removed), None)
+    if santa is None or removed not in assignment:
+        raise NoDrawPossible(IMPOSSIBLE)
     result = {giver: recipient for giver, recipient in assignment.items() if giver != removed}
     result[santa] = assignment[removed]
     if _breaks_a_rule([(santa, result[santa])], result, set(forbidden), no_mutual=no_mutual):

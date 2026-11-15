@@ -210,20 +210,30 @@ def copy_exchange(
             no_repeat_draw=no_repeat_draw,
             previous_exchange=previous,
         )
+        # The address book may have changed since: only persons still shared are kept
+        accessible = set(Person.objects.accessible_by(organizer).values_list("pk", flat=True))
+        olds = list(
+            previous.participants.select_related("source_person").defer(
+                "gives_to", "note_for_santa"
+            )
+        )
+        used_accounts = (
+            {organizer.pk} if any(old.linked_account_id == organizer.pk for old in olds) else set()
+        )
         copies = {}
-        for old in previous.participants.select_related("source_person").defer(
-            "gives_to", "note_for_santa"
-        ):
+        for old in olds:
+            source = old.source_person if old.source_person_id in accessible else None
             account_id = None
-            if old.source_person is not None and old.source_person.account_id is not None:
-                account_id = old.source_person.account_id
-            elif old.linked_account_id == organizer.pk:
+            if old.linked_account_id == organizer.pk:
                 account_id = organizer.pk
+            elif source is not None and source.account_id not in (None, *used_accounts):
+                account_id = source.account_id
+                used_accounts.add(account_id)
             copies[old.pk] = ExchangeParticipant.objects.create(
                 exchange=exchange,
                 name=old.name,
                 email_address=old.email_address,
-                source_person=old.source_person,
+                source_person=source,
                 linked_account_id=account_id,
                 previous_participant=old,
                 emails_stopped=old.emails_stopped,
@@ -236,24 +246,30 @@ def copy_exchange(
     return exchange
 
 
+def _new_participant(locked: Exchange, name: str, email: str) -> ExchangeParticipant:
+    """Create a typed participant in a locked exchange, within the limits."""
+    name = _clean_name(name)
+    if locked.participants.count() >= MAX_PARTICIPANTS:
+        raise _too_many()
+    if _name_taken(locked, name):
+        raise _duplicate_name()
+    participant = ExchangeParticipant(exchange=locked, name=name)
+    participant.set_email((email or "").strip() or None)
+    try:
+        with transaction.atomic():
+            participant.save()
+    except IntegrityError as error:
+        raise _duplicate_name() from error
+    return participant
+
+
 def add_participant(exchange: Exchange, *, name: str, email: str = "") -> ExchangeParticipant:
     """Add a typed participant before the draw."""
-    name = _clean_name(name)
+    _clean_name(name)
     with transaction.atomic():
         locked = _lock(exchange)
         _check_draft(locked)
-        if locked.participants.count() >= MAX_PARTICIPANTS:
-            raise _too_many()
-        if _name_taken(locked, name):
-            raise _duplicate_name()
-        participant = ExchangeParticipant(exchange=locked, name=name)
-        participant.set_email((email or "").strip() or None)
-        try:
-            with transaction.atomic():
-                participant.save()
-        except IntegrityError as error:
-            raise _duplicate_name() from error
-    return participant
+        return _new_participant(locked, name, email)
 
 
 def import_persons(
@@ -442,7 +458,7 @@ def previous_pairs(exchange: Exchange) -> set[tuple[int, int]]:
         ).values_list("previous_participant_id", "pk")
     )
     before = ExchangeParticipant.objects.filter(
-        pk__in=list(copies), gives_to_id__in=list(copies)
+        pk__in=list(copies), gives_to_id__in=list(copies), declined=False
     ).values_list("pk", "gives_to_id")
     return {(copies[giver], copies[recipient]) for giver, recipient in before}
 
@@ -511,3 +527,141 @@ def participants_without_pairings(exchange: Exchange) -> QuerySet[ExchangePartic
     Their note for their Santa is not loaded either: it is meant for the Santa only.
     """
     return exchange.participants.defer("gives_to", "note_for_santa").order_by(Lower("name"), "pk")
+
+
+# ---------------------------------------------------------------------------
+# After the draw: removing or adding someone without starting over
+# ---------------------------------------------------------------------------
+
+
+def _repair_error(error: draw_engine.NoDrawPossible) -> ExchangeError:
+    if error.reason == draw_engine.TOO_FEW:
+        return ExchangeError(_draw_messages()[draw_engine.TOO_FEW])
+    return ExchangeError(gettext("No repair keeps every rule. Redraw everything instead."))
+
+
+def _lock_drawn(exchange: Exchange) -> Exchange:
+    locked = lock_open(exchange)
+    if locked.status != Exchange.Status.DRAWN:
+        raise ExchangeError(gettext("The draw has not been done yet."))
+    return locked
+
+
+def _assignment(locked: Exchange) -> dict[int, int]:
+    return dict(taking_part(locked).filter(gives_to__isnull=False).values_list("pk", "gives_to_id"))
+
+
+def _save_repair(assignment: dict[int, int], changed: set[int]) -> list[ExchangeParticipant]:
+    """Save the new recipients of ``changed``; only an email for the new pairing counts."""
+    participants = list(
+        ExchangeParticipant.objects.filter(pk__in=changed).defer("gives_to", "note_for_santa")
+    )
+    for participant in participants:
+        participant.gives_to_id = assignment[participant.pk]
+        participant.last_emailed_at = None
+    ExchangeParticipant.objects.bulk_update(participants, ["gives_to", "last_emailed_at"])
+    return participants
+
+
+def _fresh(locked: Exchange, participant: ExchangeParticipant) -> ExchangeParticipant:
+    return locked.participants.select_for_update().get(pk=participant.pk)
+
+
+def remove_and_repair(participant: ExchangeParticipant) -> list[ExchangeParticipant]:
+    """Remove a participant: whoever had drawn them now gives to the person they had drawn.
+
+    Returns the participants to email: that one Santa (nobody for a participant who had
+    declined and was left out of the draw).
+    """
+    with transaction.atomic():
+        locked = _lock_drawn(participant.exchange)
+        fresh = _fresh(locked, participant)
+        assignment = _assignment(locked)
+        if fresh.pk not in assignment:
+            fresh.delete()
+            return []
+        forbidden, no_mutual = draw_rules(locked)
+        try:
+            repaired = draw_engine.repair_removal(
+                assignment, fresh.pk, forbidden, no_mutual=no_mutual
+            )
+        except draw_engine.NoDrawPossible as error:
+            raise _repair_error(error) from error
+        santa = next(giver for giver, recipient in assignment.items() if recipient == fresh.pk)
+        fresh.delete()
+        return _save_repair(repaired, {santa})
+
+
+def remove_and_redraw(participant: ExchangeParticipant) -> list[ExchangeParticipant]:
+    """Remove a participant and redraw everything, as one operation (nothing on failure)."""
+    with transaction.atomic():
+        locked = _lock_drawn(participant.exchange)
+        _fresh(locked, participant).delete()
+        return run_draw(locked)
+
+
+def _join(
+    locked: Exchange,
+    *,
+    participant: ExchangeParticipant | None,
+    name: str,
+    email: str,
+    exclusion_sets: Iterable[ExclusionSet],
+) -> ExchangeParticipant:
+    """Bring a latecomer in: a new participant, or one who had declined, put back."""
+    if participant is not None:
+        newcomer = _fresh(locked, participant)
+        if not newcomer.declined:
+            raise ExchangeError(gettext("This participant already takes part."))
+        ExchangeParticipant.objects.filter(pk=newcomer.pk).update(declined=False)
+        newcomer.declined = False
+    else:
+        newcomer = _new_participant(locked, name, email)
+    for exclusion_set in exclusion_sets:
+        if exclusion_set.exchange_id != locked.pk:
+            raise ExchangeError(gettext("This exclusion set was not found."))
+        exclusion_set.participants.add(newcomer)
+    return newcomer
+
+
+def add_and_repair(
+    exchange: Exchange,
+    *,
+    participant: ExchangeParticipant | None = None,
+    name: str = "",
+    email: str = "",
+    exclusion_sets: Iterable[ExclusionSet] = (),
+    rng: random.Random | None = None,
+) -> list[ExchangeParticipant]:
+    """Insert a latecomer by changing two pairings; return the three participants to email."""
+    with transaction.atomic():
+        locked = _lock_drawn(exchange)
+        newcomer = _join(
+            locked, participant=participant, name=name, email=email, exclusion_sets=exclusion_sets
+        )
+        forbidden, no_mutual = draw_rules(locked)
+        try:
+            repaired, changed = draw_engine.repair_insertion(
+                _assignment(locked), newcomer.pk, forbidden, no_mutual=no_mutual, rng=rng
+            )
+        except draw_engine.NoDrawPossible as error:
+            raise _repair_error(error) from error
+        return _save_repair(repaired, changed)
+
+
+def add_and_redraw(
+    exchange: Exchange,
+    *,
+    participant: ExchangeParticipant | None = None,
+    name: str = "",
+    email: str = "",
+    exclusion_sets: Iterable[ExclusionSet] = (),
+    rng: random.Random | None = None,
+) -> list[ExchangeParticipant]:
+    """Bring a latecomer in and redraw everything, as one operation (nothing on failure)."""
+    with transaction.atomic():
+        locked = _lock_drawn(exchange)
+        _join(
+            locked, participant=participant, name=name, email=email, exclusion_sets=exclusion_sets
+        )
+        return run_draw(locked, rng=rng)

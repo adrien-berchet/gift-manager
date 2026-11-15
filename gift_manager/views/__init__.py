@@ -132,6 +132,7 @@ from .reminders import RegenerateCalendarFeedView
 from .reminders import UpdateReminderPreferencesView
 from .reminders import calendar_feed
 from .secret_santa import SecretSantaStopEmailsView
+from .secret_santa import secret_santa_add_latecomer
 from .secret_santa import secret_santa_attach_confirm
 from .secret_santa import secret_santa_attach_start
 from .secret_santa import secret_santa_create
@@ -154,6 +155,8 @@ from .secret_santa import secret_santa_plan_gift
 from .secret_santa import secret_santa_put_back
 from .secret_santa import secret_santa_regenerate_link
 from .secret_santa import secret_santa_rejoin
+from .secret_santa import secret_santa_remove_redraw
+from .secret_santa import secret_santa_remove_repair
 from .secret_santa import secret_santa_send_again
 from .secret_santa import secret_santa_set_delete
 from .secret_santa import secret_santa_set_save
@@ -333,6 +336,7 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "secret_santa_add_latecomer",
     "secret_santa_attach_confirm",
     "secret_santa_attach_start",
     "secret_santa_create",
@@ -355,6 +359,8 @@ __all__ = [
     "secret_santa_put_back",
     "secret_santa_regenerate_link",
     "secret_santa_rejoin",
+    "secret_santa_remove_redraw",
+    "secret_santa_remove_repair",
     "secret_santa_send_again",
     "secret_santa_set_delete",
     "secret_santa_set_save",

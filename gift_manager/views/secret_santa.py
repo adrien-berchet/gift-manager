@@ -50,6 +50,7 @@ from gift_manager.secret_santa.forms import ExchangeForm
 from gift_manager.secret_santa.forms import ExchangeWishForm
 from gift_manager.secret_santa.forms import ExclusionSetForm
 from gift_manager.secret_santa.forms import ImportForm
+from gift_manager.secret_santa.forms import LatecomerForm
 from gift_manager.secret_santa.forms import NoteForm
 from gift_manager.secret_santa.forms import ParticipantForm
 from gift_manager.secret_santa.forms import SharedWishesForm
@@ -713,27 +714,94 @@ def secret_santa_draw(request, exchange_id):
     """Draw (or redraw), then email every participant their personal link."""
     exchange = _get_exchange(request, exchange_id)
     redraw = exchange.is_drawn
+    if _change_and_email(request, exchange, lambda: service.run_draw(exchange)):
+        if redraw:
+            message = gettext("The draw was done again. Everyone has a new assignment.")
+        else:
+            message = gettext("The draw is done.")
+        messages.success(request, message)
+    return _to_detail(exchange)
+
+
+def _change_and_email(request, exchange: Exchange, operation: Callable) -> bool:
+    """Run a change of the pairings, then email the participants it returns.
+
+    The emails are sent after the commit only: a failed email must never undo the change.
+    Returns False (with the error flashed) when the change was refused.
+    """
     reports: list[emails.SendReport] = []
     try:
         with transaction.atomic():
-            participants = service.run_draw(exchange)
-            # After the commit only: a failed email must never undo the draw
+            changed = operation()
             transaction.on_commit(
                 lambda: reports.append(
-                    emails.send_assignments(exchange, participants, request.build_absolute_uri)
+                    emails.send_assignments(exchange, changed, request.build_absolute_uri)
                 )
             )
     except ExchangeError as error:
         messages.error(request, error.message)
-        return _to_detail(exchange)
-    if redraw:
-        messages.success(
-            request, gettext("The draw was done again. Everyone has a new assignment.")
-        )
-    else:
-        messages.success(request, gettext("The draw is done."))
+        return False
     if reports:
         _flash_report(request, reports[0])
+    return True
+
+
+@login_required
+@require_POST
+def secret_santa_remove_repair(request, exchange_id, participant_id):
+    """After the draw, remove a participant; only their Santa gets a new assignment."""
+    exchange = _get_exchange(request, exchange_id)
+    participant = _get_participant(exchange, participant_id)
+    if _change_and_email(request, exchange, lambda: service.remove_and_repair(participant)):
+        messages.success(
+            request,
+            gettext("%(name)s removed. Their Santa has a new assignment.")
+            % {"name": participant.name},
+        )
+    return _to_detail(exchange)
+
+
+@login_required
+@require_POST
+def secret_santa_remove_redraw(request, exchange_id, participant_id):
+    """After the draw, remove a participant and redraw everything."""
+    exchange = _get_exchange(request, exchange_id)
+    participant = _get_participant(exchange, participant_id)
+    if _change_and_email(request, exchange, lambda: service.remove_and_redraw(participant)):
+        messages.success(
+            request,
+            gettext("%(name)s removed. Everyone has a new assignment.")
+            % {"name": participant.name},
+        )
+    return _to_detail(exchange)
+
+
+@login_required
+@require_POST
+def secret_santa_add_latecomer(request, exchange_id):
+    """After the draw, bring in a latecomer (new, or a participant who had declined)."""
+    exchange = _get_exchange(request, exchange_id)
+    form = LatecomerForm(request.POST, exchange=exchange)
+    if not form.is_valid():
+        _form_error(request, form)
+        return _to_detail(exchange)
+    data = form.cleaned_data
+    participant = data["participant"]
+    arguments = {
+        "participant": participant,
+        "name": data["name"],
+        "email": data["email"],
+        "exclusion_sets": data["sets"],
+    }
+    redraw = data["mode"] == LatecomerForm.REDRAW
+    operation = service.add_and_redraw if redraw else service.add_and_repair
+    if _change_and_email(request, exchange, lambda: operation(exchange, **arguments)):
+        name = participant.name if participant else data["name"]
+        if redraw:
+            message = gettext("%(name)s added. Everyone has a new assignment.")
+        else:
+            message = gettext("%(name)s added. Two Santas and %(name)s have a new assignment.")
+        messages.success(request, message % {"name": name})
     return _to_detail(exchange)
 
 
