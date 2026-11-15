@@ -192,3 +192,82 @@ class _Search:
             self.givers[edge_recipient].add(edge_giver)
         self.drawn.discard(self.assignment.pop(giver))
         self.unassigned.add(giver)
+
+
+def _breaks_a_rule(
+    pairs: Iterable[tuple[int, int]],
+    assignment: Mapping[int, int],
+    forbidden: Collection[tuple[int, int]],
+    *,
+    no_mutual: bool,
+) -> bool:
+    """Return whether one of the new ``pairs`` breaks a rule within ``assignment``."""
+    for giver, recipient in pairs:
+        if giver == recipient or (giver, recipient) in forbidden:
+            return True
+        if no_mutual and assignment.get(recipient) == giver:
+            return True
+    return False
+
+
+def repair_removal(
+    assignment: Mapping[int, int],
+    removed: int,
+    forbidden: Collection[tuple[int, int]] = (),
+    *,
+    no_mutual: bool = False,
+) -> dict[int, int]:
+    """Remove ``removed``: whoever drew them now gives to the person they had drawn.
+
+    Only that one pairing changes. Raises ``NoDrawPossible`` when fewer than
+    ``MIN_PARTICIPANTS`` would remain or when the new pairing breaks a rule, which includes
+    removing someone from a mutual pair (their Santa would draw themselves).
+    """
+    if len(assignment) - 1 < MIN_PARTICIPANTS:
+        raise NoDrawPossible(TOO_FEW)
+    santa = next(giver for giver, recipient in assignment.items() if recipient == removed)
+    result = {giver: recipient for giver, recipient in assignment.items() if giver != removed}
+    result[santa] = assignment[removed]
+    if _breaks_a_rule([(santa, result[santa])], result, set(forbidden), no_mutual=no_mutual):
+        raise NoDrawPossible(IMPOSSIBLE)
+    return result
+
+
+def repair_insertion(
+    assignment: Mapping[int, int],
+    newcomer: int,
+    forbidden: Collection[tuple[int, int]] = (),
+    *,
+    no_mutual: bool = False,
+    rng: random.Random | None = None,
+) -> tuple[dict[int, int], set[int]]:
+    """Insert ``newcomer`` by changing two pairings, so that nobody can deduce their recipient.
+
+    If A gave to B and C gave to D, then A gives to the newcomer, the newcomer gives to D and C
+    gives to B. The choice of (A, C) is random among every choice that keeps all the rules.
+    Returns the new assignment and the participants whose recipient changed (A, C and the
+    newcomer). Raises ``NoDrawPossible`` when no choice keeps every rule.
+    """
+    forbidden_pairs = set(forbidden)
+    givers = sorted(assignment)
+    choices = []
+    for first in givers:
+        former = assignment[first]
+        for second in givers:
+            if second in (first, former):
+                continue
+            result = dict(assignment)
+            result[first] = newcomer
+            result[newcomer] = assignment[second]
+            result[second] = former
+            new_pairs = [(first, newcomer), (newcomer, assignment[second]), (second, former)]
+            if not _breaks_a_rule(new_pairs, result, forbidden_pairs, no_mutual=no_mutual):
+                choices.append((first, second))
+    if not choices:
+        raise NoDrawPossible(IMPOSSIBLE)
+    first, second = (rng or random.SystemRandom()).choice(choices)
+    result = dict(assignment)
+    result[first] = newcomer
+    result[newcomer] = assignment[second]
+    result[second] = assignment[first]
+    return result, {first, second, newcomer}

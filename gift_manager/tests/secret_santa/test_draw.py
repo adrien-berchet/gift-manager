@@ -12,6 +12,8 @@ from gift_manager.secret_santa.draw import MIN_PARTICIPANTS
 from gift_manager.secret_santa.draw import NoDrawPossible
 from gift_manager.secret_santa.draw import draw
 from gift_manager.secret_santa.draw import is_valid
+from gift_manager.secret_santa.draw import repair_insertion
+from gift_manager.secret_santa.draw import repair_removal
 
 
 def seeded(seed: int) -> random.Random:
@@ -160,3 +162,103 @@ def test_any_result_is_valid(data, count, no_mutual):
         assert reason in {"impossible", "gave_up"}
     else:
         assert is_valid(result, participants, forbidden, no_mutual=no_mutual)
+
+
+# ---------------------------------------------------------------------------
+# Repairs after the draw
+# ---------------------------------------------------------------------------
+
+CYCLE = {1: 2, 2: 3, 3: 4, 4: 5, 5: 1}
+
+
+def test_removal_reconnects_the_chain():
+    assert repair_removal(CYCLE, 3) == {1: 2, 2: 4, 4: 5, 5: 1}
+
+
+def test_removal_from_a_mutual_pair_is_refused():
+    assignment = {1: 2, 2: 1, 3: 4, 4: 5, 5: 3}
+    with pytest.raises(NoDrawPossible) as error:
+        repair_removal(assignment, 2)
+    assert error.value.reason == "impossible"
+
+
+def test_removal_respecting_forbidden_and_mutual():
+    with pytest.raises(NoDrawPossible):
+        repair_removal(CYCLE, 3, {(2, 4)})
+    # 2 would give to 1 while 1 gives to 2
+    assignment = {1: 2, 2: 3, 3: 1, 4: 5, 5: 4}
+    assert repair_removal(assignment, 3) == {1: 2, 2: 1, 4: 5, 5: 4}
+    with pytest.raises(NoDrawPossible):
+        repair_removal(assignment, 3, no_mutual=True)
+
+
+def test_removal_below_three_is_refused():
+    with pytest.raises(NoDrawPossible) as error:
+        repair_removal({1: 2, 2: 3, 3: 1}, 3)
+    assert error.value.reason == "too_few"
+
+
+def test_insertion_changes_two_pairings_only():
+    for seed in range(30):
+        result, changed = repair_insertion(CYCLE, 9, rng=seeded(seed))
+        assert is_valid(result, [*CYCLE, 9], set(), no_mutual=False)
+        assert 9 in changed and len(changed) == 3
+        unchanged = set(CYCLE) - changed
+        assert all(result[giver] == CYCLE[giver] for giver in unchanged)
+
+
+def test_insertion_never_gives_the_newcomer_as_former_recipient():
+    for seed in range(50):
+        result, changed = repair_insertion(CYCLE, 9, rng=seeded(seed))
+        first = next(giver for giver in changed if giver != 9 and result[giver] == 9)
+        assert result[9] != CYCLE[first]
+
+
+def test_insertion_respects_forbidden_pairs_of_the_newcomer():
+    forbidden = {(9, r) for r in (1, 2, 3)} | {(g, 9) for g in (1, 2, 3)}
+    for seed in range(30):
+        result, _ = repair_insertion(CYCLE, 9, forbidden, no_mutual=True, rng=seeded(seed))
+        assert is_valid(result, [*CYCLE, 9], forbidden, no_mutual=True)
+
+
+def test_insertion_impossible():
+    forbidden = {(9, r) for r in CYCLE} | {(g, 9) for g in CYCLE}
+    with pytest.raises(NoDrawPossible) as error:
+        repair_insertion(CYCLE, 9, forbidden)
+    assert error.value.reason == "impossible"
+
+
+def test_insertion_choices_vary_with_the_seed():
+    results = {
+        tuple(sorted(repair_insertion(CYCLE, 9, rng=seeded(s))[0].items())) for s in range(30)
+    }
+    assert len(results) > 1
+
+
+@settings(max_examples=60, deadline=None)
+@given(data=st.data(), count=st.integers(min_value=3, max_value=15), no_mutual=st.booleans())
+def test_any_repair_result_is_valid(data, count, no_mutual):
+    participants = list(range(count))
+    pairs = [(a, b) for a in [*participants, 99] for b in [*participants, 99] if a != b]
+    forbidden = set(data.draw(st.lists(st.sampled_from(pairs), max_size=count * 2)))
+    try:
+        assignment = draw(participants, forbidden, no_mutual=no_mutual, rng=seeded(0))
+    except NoDrawPossible:
+        return
+    removed = data.draw(st.sampled_from(participants))
+
+    def attempt(repair):
+        try:
+            return repair()
+        except NoDrawPossible:
+            return None
+
+    removal = attempt(lambda: repair_removal(assignment, removed, forbidden, no_mutual=no_mutual))
+    insertion = attempt(
+        lambda: repair_insertion(assignment, 99, forbidden, no_mutual=no_mutual, rng=seeded(1))[0]
+    )
+    if removal is not None:
+        rest = [p for p in participants if p != removed]
+        assert is_valid(removal, rest, forbidden, no_mutual=no_mutual)
+    if insertion is not None:
+        assert is_valid(insertion, [*participants, 99], forbidden, no_mutual=no_mutual)
