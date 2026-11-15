@@ -1,0 +1,48 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n static custom_filters %}
+
+{% block title %}Gift Manager - {% trans "Secret Santa" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/secret-santa.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>{% trans "Secret Santa" %}</h1>
+  <div class="page-header-actions">
+    <a href="{% url 'gift_manager:secret_santa_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "New exchange" %}
+    </a>
+  </div>
+</div>
+
+{% if exchanges %}
+<div class="list-group secret-santa-exchange-list">
+  {% for exchange in exchanges %}
+  <a href="{% url 'gift_manager:secret_santa_detail' exchange.exchange_id %}" class="list-group-item list-group-item-action d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span>
+      <span class="fw-semibold">{{ exchange.name }}</span>
+      <span class="text-muted small d-block">
+        {{ exchange.exchange_date|date:"DATE_FORMAT" }}
+        · {% blocktrans count counter=exchange.participant_count %}{{ counter }} participant{% plural %}{{ counter }} participants{% endblocktrans %}
+        {% if exchange.budget is not None %}· {{ exchange.budget|format_price:exchange.currency }}{% endif %}
+      </span>
+    </span>
+    {% include "gift_manager/secret_santa/status_badge.html" %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="gift-plan-empty-state">
+  <i class="fas fa-hat-wizard" aria-hidden="true"></i>
+  <h3>{% trans "No Secret Santa yet." %}</h3>
+  <p class="text-muted small mb-0">{% trans "Draw who gives a gift to whom, for your family or your colleagues, even those without an account." %}</p>
+  <a href="{% url 'gift_manager:secret_santa_create' %}" class="btn btn-primary">
+    <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "New exchange" %}
+  </a>
+</div>
+{% endif %}
+{% endblock %}

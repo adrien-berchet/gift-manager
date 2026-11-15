@@ -1,0 +1,44 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+
+{% block title %}Gift Manager - {% if exchange %}{% trans "Edit the exchange" %}{% else %}{% trans "New exchange" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="form-page-header mb-4">
+    <h1>{% if exchange %}{% trans "Edit the exchange" %}{% else %}{% trans "New Secret Santa" %}{% endif %}</h1>
+  </div>
+
+  <form method="post" id="main-form" class="page-form secret-santa-exchange-form" novalidate>
+    {% csrf_token %}
+    <div class="form-fields">
+      {% include "gift_manager/includes/forms/errors.html" %}
+      {% include "gift_manager/includes/forms/field.html" with field=form.name %}
+      {% include "gift_manager/includes/forms/field.html" with field=form.exchange_date %}
+      {% include "gift_manager/includes/forms/field.html" with field=form.budget suffix=currency_label %}
+      {% include "gift_manager/includes/forms/field.html" with field=form.guidelines %}
+      <div class="form-check mb-2">
+        {{ form.no_mutual_draw }}
+        <label class="form-check-label" for="{{ form.no_mutual_draw.id_for_label }}">{{ form.no_mutual_draw.label }}</label>
+        {% if form.no_mutual_draw.help_text %}<div class="form-text">{{ form.no_mutual_draw.help_text }}</div>{% endif %}
+      </div>
+      {% if form.organizer_takes_part %}
+      <div class="form-check mb-3">
+        {{ form.organizer_takes_part }}
+        <label class="form-check-label" for="{{ form.organizer_takes_part.id_for_label }}">{{ form.organizer_takes_part.label }}</label>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="page-form-actions">
+      <a href="{{ cancel_url }}" class="btn btn-secondary">
+        <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Cancel" %}
+      </a>
+      <button type="submit" class="btn btn-primary">
+        <i class="fas fa-save me-1" aria-hidden="true"></i>{% if exchange %}{% trans "Save" %}{% else %}{% trans "Create" %}{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

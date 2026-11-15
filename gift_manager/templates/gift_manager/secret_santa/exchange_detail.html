@@ -1,0 +1,216 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n static custom_filters %}
+
+{% block title %}Gift Manager - {{ exchange.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/secret-santa.css' %}">
+{% endblock %}
+
+{% block content %}
+{# Secrecy: this page never shows a pairing unless the organizer confirmed a reveal (POST). #}
+<div class="page-header">
+  <h1 class="d-flex flex-wrap align-items-center gap-2">
+    <span>{{ exchange.name }}</span>
+    {% include "gift_manager/secret_santa/status_badge.html" %}
+  </h1>
+  <div class="page-header-actions">
+    {% if not exchange.is_closed %}
+    <a href="{% url 'gift_manager:secret_santa_edit' exchange.exchange_id %}" class="btn btn-outline-secondary">
+      <i class="fas fa-pen me-1" aria-hidden="true"></i>{% trans "Edit" %}
+    </a>
+    {% endif %}
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteExchangeModal">
+      <i class="fas fa-trash me-1" aria-hidden="true"></i>{% trans "Delete" %}
+    </button>
+  </div>
+</div>
+
+<p class="text-muted secret-santa-summary">
+  <i class="fas fa-calendar-alt me-1" aria-hidden="true"></i>{{ exchange.exchange_date|date:"DATE_FORMAT" }}
+  {% if exchange.budget is not None %}· {% trans "Budget" %} {{ exchange.budget|format_price:exchange.currency }}{% endif %}
+  {% if exchange.no_mutual_draw %}· {% trans "Nobody draws the person who drew them" %}{% endif %}
+</p>
+
+<div id="secret-santa-reveal" aria-live="polite">{% if revealed_template %}{% include revealed_template %}{% endif %}</div>
+
+<section class="card mb-4 secret-santa-draw-card" aria-labelledby="draw-title">
+  <div class="card-body">
+    <h2 class="h5 card-title" id="draw-title">{% trans "Draw" %}</h2>
+    {% if exchange.is_draft %}
+      {% if can_draw %}
+      <p class="card-text">{% trans "Once drawn, every participant with an email address gets their personal link. Give the others their link yourself." %}</p>
+      <form method="post" action="{% url 'gift_manager:secret_santa_draw' exchange.exchange_id %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary secret-santa-draw-button">
+          <i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Draw" %}
+        </button>
+      </form>
+      {% else %}
+      <p class="card-text text-muted mb-0">{% blocktrans with count=min_participants %}Add at least {{ count }} participants to draw.{% endblocktrans %}</p>
+      {% endif %}
+    {% elif exchange.is_drawn %}
+      <p class="card-text secret-santa-drawn-text">{% blocktrans with date=exchange.drawn_at|date:"DATETIME_FORMAT" %}The draw was done on {{ date }}. Every participant can see who they give a gift to on their personal page.{% endblocktrans %}</p>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#pairingsModal">
+          <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Show all pairings" %}
+        </button>
+        <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#redrawModal">
+          <i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Redraw everything" %}
+        </button>
+      </div>
+    {% else %}
+      <p class="card-text mb-0">{% trans "This exchange is over." %}</p>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card mb-4" aria-labelledby="participants-title">
+  <div class="card-body">
+    <h2 class="h5 card-title" id="participants-title">
+      {% trans "Participants" %} <span class="text-muted fw-normal">({{ participants|length }}/{{ max_participants }})</span>
+    </h2>
+    {% include "gift_manager/includes/secret_santa_participants.html" %}
+
+    {% if exchange.is_draft %}
+    <form method="post" action="{% url 'gift_manager:secret_santa_participant_add' exchange.exchange_id %}" class="row g-2 align-items-end mt-3 secret-santa-add-form">
+      {% csrf_token %}
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="{{ participant_form.name.id_for_label }}">{{ participant_form.name.label }}</label>
+        {{ participant_form.name }}
+      </div>
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="{{ participant_form.email.id_for_label }}">{{ participant_form.email.label }} <span class="text-muted small">({% trans "optional" %})</span></label>
+        {{ participant_form.email }}
+      </div>
+      <div class="col-12 col-md-2 d-grid">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus me-1" aria-hidden="true"></i>{% trans "Add" %}</button>
+      </div>
+    </form>
+
+    <details class="mt-3 secret-santa-import">
+      <summary>{% trans "Import from my address book" %}</summary>
+      <form method="post" action="{% url 'gift_manager:secret_santa_participant_import' exchange.exchange_id %}" class="mt-2">
+        {% csrf_token %}
+        {% include "gift_manager/includes/forms/field.html" with field=import_form.group %}
+        {% include "gift_manager/includes/forms/field.html" with field=import_form.persons %}
+        <button type="submit" class="btn btn-outline-primary"><i class="fas fa-file-import me-1" aria-hidden="true"></i>{% trans "Import" %}</button>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+</section>
+
+<section class="card mb-4" aria-labelledby="sets-title">
+  <div class="card-body">
+    <h2 class="h5 card-title" id="sets-title">{% trans "Exclusion sets" %}</h2>
+    <p class="card-text text-muted small">{% trans "Nobody draws someone from one of their sets: a couple, a household." %}</p>
+    {% if exclusion_sets %}
+    <ul class="list-group mb-3">
+      {% for exclusion_set in exclusion_sets %}
+      <li class="list-group-item secret-santa-set">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <span><span class="fw-semibold">{{ exclusion_set.name }}</span>: {{ exclusion_set.participants.all|join:", " }}</span>
+          {% if exchange.is_draft %}
+          <form method="post" action="{% url 'gift_manager:secret_santa_set_delete' exchange.exchange_id exclusion_set.set_id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="{% blocktrans with name=exclusion_set.name %}Delete the set {{ name }}{% endblocktrans %}">
+              <i class="fas fa-trash" aria-hidden="true"></i>
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        {% if exchange.is_draft %}
+        <details class="mt-2">
+          <summary class="small">{% trans "Edit" %}</summary>
+          {% include "gift_manager/secret_santa/set_form.html" with instance=exclusion_set %}
+        </details>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% if exchange.is_draft %}
+      {% if participants|length >= 2 %}
+      <details class="secret-santa-new-set">
+        <summary>{% trans "New exclusion set" %}</summary>
+        {% include "gift_manager/secret_santa/set_form.html" with instance=None %}
+      </details>
+      {% endif %}
+    {% elif not exclusion_sets %}
+    <p class="text-muted mb-0">{% trans "No exclusion set." %}</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block body_end %}
+{{ block.super }}
+<div class="modal fade" id="deleteExchangeModal" tabindex="-1" aria-labelledby="deleteExchangeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'gift_manager:secret_santa_delete' exchange.exchange_id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteExchangeModalLabel">{% trans "Delete the exchange" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">{% trans "The participants, their personal links and the draw are deleted. This action cannot be undone." %}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-danger"><i class="fas fa-trash me-1" aria-hidden="true"></i>{% trans "Delete" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% if exchange.is_drawn %}
+<div class="modal fade" id="redrawModal" tabindex="-1" aria-labelledby="redrawModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'gift_manager:secret_santa_draw' exchange.exchange_id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="redrawModalLabel">{% trans "Redraw everything" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">{% trans "Everyone will get a new assignment, and every participant with an email address gets a new email." %}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-warning secret-santa-redraw-confirm"><i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Redraw everything" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="pairingsModal" tabindex="-1" aria-labelledby="pairingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="{% url 'gift_manager:secret_santa_pairings' exchange.exchange_id %}"
+            hx-post="{% url 'gift_manager:secret_santa_pairings' exchange.exchange_id %}"
+            hx-target="#secret-santa-reveal" hx-swap="innerHTML show:#secret-santa-reveal:top">
+        {% csrf_token %}
+        <input type="hidden" name="confirm" value="1">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pairingsModalLabel">{% trans "Show all pairings" %}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{% trans 'Close' %}"></button>
+        </div>
+        <div class="modal-body">
+          <p class="mb-0">{% trans "This shows who every participant drew." %}
+          {% if organizer_takes_part %}<strong class="d-block mt-2 text-danger secret-santa-self-warning">{% trans "You take part: you will also see who drew you, and the surprise is gone for you." %}</strong>{% endif %}</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+          <button type="submit" class="btn btn-warning secret-santa-pairings-confirm" data-bs-dismiss="modal"><i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Show the pairings" %}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

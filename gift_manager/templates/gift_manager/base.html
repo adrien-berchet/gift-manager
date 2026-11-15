@@ -143,6 +143,11 @@
                                     <i class="fas fa-box-open me-2" aria-hidden="true"></i>{% trans "Received Gifts" %}
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item {% if 'secret_santa' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gift_manager:secret_santa_list' %}">
+                                    <i class="fas fa-hat-wizard me-2" aria-hidden="true"></i>{% trans "Secret Santa" %}
+                                </a>
+                            </li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item {% if request.resolver_match.url_name == 'share_objects' %}active{% endif %}" href="{% url 'gift_manager:share_objects' %}">
