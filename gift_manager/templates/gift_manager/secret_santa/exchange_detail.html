@@ -92,6 +92,41 @@
     </h2>
     {% include "gift_manager/includes/secret_santa_participants.html" %}
 
+    {% if exchange.is_drawn %}
+    <details class="mt-3 secret-santa-latecomer">
+      <summary>{% trans "Add a latecomer" %}</summary>
+      <form method="post" action="{% url 'gift_manager:secret_santa_add_latecomer' exchange.exchange_id %}" class="mt-2">
+        {% csrf_token %}
+        <div class="row g-2">
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="latecomer-name">{% trans "Name" %}</label>
+            <input type="text" name="name" maxlength="120" required class="form-control" id="latecomer-name" autocomplete="off">
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label" for="latecomer-email">{% trans "Email" %} <span class="text-muted small">({% trans "optional" %})</span></label>
+            <input type="email" name="email" class="form-control" id="latecomer-email" autocomplete="off">
+          </div>
+        </div>
+        {% if exclusion_sets %}
+        <fieldset class="mt-2">
+          <legend class="form-label fs-6">{% trans "Exclusion sets" %}</legend>
+          {% for exclusion_set in exclusion_sets %}
+          <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="sets" value="{{ exclusion_set.set_id }}" id="latecomer-set-{{ exclusion_set.set_id }}">
+            <label class="form-check-label" for="latecomer-set-{{ exclusion_set.set_id }}">{{ exclusion_set.name }}</label>
+          </div>
+          {% endfor %}
+        </fieldset>
+        {% endif %}
+        <p class="small text-muted mt-2 mb-2">{% trans "With a repair, only two Santas and the latecomer get a new assignment, and nobody can guess whom the latecomer drew." %}</p>
+        <div class="d-flex flex-wrap gap-2">
+          <button type="submit" name="mode" value="repair" class="btn btn-primary secret-santa-add-repair">{% trans "Add and repair" %}</button>
+          <button type="submit" name="mode" value="redraw" class="btn btn-outline-warning">{% trans "Add and redraw everything" %}</button>
+        </div>
+      </form>
+    </details>
+    {% endif %}
+
     {% if exchange.is_draft %}
     <form method="post" action="{% url 'gift_manager:secret_santa_participant_add' exchange.exchange_id %}" class="row g-2 align-items-end mt-3 secret-santa-add-form">
       {% csrf_token %}

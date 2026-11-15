@@ -613,3 +613,186 @@ def test_no_repeat_switch_only_changes_before_the_draw(exchange):
     service.run_draw(copy, rng=seeded(1))
     with pytest.raises(ExchangeError, match="The draw is done"):
         service.update_exchange(copy, no_repeat_draw=True, **fields)
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: repairs after the draw
+# ---------------------------------------------------------------------------
+
+
+def drawn_people(exchange, *names, seed=1):
+    people = add_people(exchange, *names)
+    service.run_draw(exchange, rng=seeded(seed))
+    return people
+
+
+def test_remove_and_repair_changes_one_pairing_and_returns_the_santa(exchange):
+    people = drawn_people(exchange, "A", "B", "C", "D", "E")
+    before = pairings(exchange)
+    removed = people[2]
+    santa_pk = next(g for g, r in before.items() if r == removed.pk)
+    ExchangeParticipant.objects.update(last_emailed_at=timezone.now())
+
+    changed = service.remove_and_repair(removed)
+
+    after = pairings(exchange)
+    assert [p.pk for p in changed] == [santa_pk]
+    assert after[santa_pk] == before[removed.pk]
+    assert all(after[g] == r for g, r in before.items() if g not in (santa_pk, removed.pk))
+    assert ExchangeParticipant.objects.get(pk=santa_pk).last_emailed_at is None
+    assert not ExchangeParticipant.objects.filter(pk=removed.pk).exists()
+
+
+def test_remove_from_a_mutual_pair_is_refused_and_nothing_changes(exchange):
+    a, b, c, d, e = add_people(exchange, "A", "B", "C", "D", "E")
+    for giver, recipient in ((a, b), (b, a), (c, d), (d, e), (e, c)):
+        ExchangeParticipant.objects.filter(pk=giver.pk).update(gives_to=recipient)
+    Exchange.objects.filter(pk=exchange.pk).update(status=Exchange.Status.DRAWN)
+    before = pairings(exchange)
+
+    with pytest.raises(ExchangeError, match="No repair keeps every rule"):
+        service.remove_and_repair(b)
+
+    assert pairings(exchange) == before
+
+
+def test_remove_below_three_is_refused(exchange):
+    people = drawn_people(exchange, "A", "B", "C")
+    with pytest.raises(ExchangeError, match="At least 3"):
+        service.remove_and_repair(people[0])
+    with pytest.raises(ExchangeError, match="At least 3"):
+        service.remove_and_redraw(people[0])
+    assert exchange.participants.count() == 3
+
+
+def test_remove_a_declined_participant_after_the_draw(exchange):
+    people = add_people(exchange, "A", "B", "C", "D")
+    ExchangeParticipant.objects.filter(pk=people[3].pk).update(declined=True)
+    service.run_draw(exchange, rng=seeded(1))
+    before = pairings(exchange)
+
+    assert service.remove_and_repair(people[3]) == []
+    before.pop(people[3].pk)
+    assert pairings(exchange) == before
+
+
+def test_remove_and_redraw_rolls_back_on_failure(exchange, monkeypatch):
+    people = drawn_people(exchange, "A", "B", "C", "D")
+    before = pairings(exchange)
+
+    def give_up(*args, **kwargs):
+        raise draw_engine.NoDrawPossible(draw_engine.GAVE_UP)
+
+    monkeypatch.setattr(draw_engine, "draw", give_up)
+    with pytest.raises(ExchangeError):
+        service.remove_and_redraw(people[0])
+
+    assert pairings(exchange) == before
+
+
+def test_remove_and_redraw(exchange):
+    people = drawn_people(exchange, "A", "B", "C", "D")
+    changed = service.remove_and_redraw(people[0])
+    assert len(changed) == 3
+    assert draw_engine.is_valid(
+        pairings(exchange), [p.pk for p in people[1:]], set(), no_mutual=False
+    )
+
+
+def test_add_and_repair_changes_two_pairings(exchange):
+    people = drawn_people(exchange, "A", "B", "C", "D", "E")
+    before = pairings(exchange)
+
+    changed = service.add_and_repair(exchange, name="Late", email="late@example.com", rng=seeded(3))
+
+    late = exchange.participants.get(name="Late")
+    after = pairings(exchange)
+    assert late.pk in {p.pk for p in changed}
+    assert len(changed) == 3
+    assert sum(after[g] != r for g, r in before.items()) == 2
+    assert draw_engine.is_valid(after, [p.pk for p in people] + [late.pk], set(), no_mutual=False)
+
+
+def test_add_and_repair_puts_back_a_declined_participant(exchange):
+    people = add_people(exchange, "A", "B", "C", "D", "E")
+    ExchangeParticipant.objects.filter(pk=people[4].pk).update(declined=True)
+    service.run_draw(exchange, rng=seeded(1))
+
+    service.add_and_repair(exchange, participant=people[4], rng=seeded(2))
+
+    late = ExchangeParticipant.objects.get(pk=people[4].pk)
+    assert not late.declined
+    assert late.gives_to_id is not None
+    with pytest.raises(ExchangeError, match="already takes part"):
+        service.add_and_repair(exchange, participant=people[0])
+
+
+def test_add_and_repair_joins_the_chosen_sets(exchange):
+    a, b, _c, _d, _e = drawn_people(exchange, "A", "B", "C", "D", "E")
+    household = ExclusionSetFactory(exchange=exchange, participants=[a, b])
+    service.add_and_repair(exchange, name="Late", exclusion_sets=[household], rng=seeded(1))
+
+    late = exchange.participants.get(name="Late")
+    assert late in household.participants.all()
+    assert late.gives_to_id not in (a.pk, b.pk)
+    assert pairings(exchange)[a.pk] != late.pk
+    assert pairings(exchange)[b.pk] != late.pk
+
+
+def test_impossible_insertion_saves_nothing(exchange):
+    people = drawn_people(exchange, "A", "B", "C")
+    everyone = ExclusionSetFactory(exchange=exchange, participants=people)
+    before = pairings(exchange)
+
+    with pytest.raises(ExchangeError, match="Redraw everything instead"):
+        service.add_and_repair(exchange, name="Late", exclusion_sets=[everyone])
+
+    assert not exchange.participants.filter(name="Late").exists()
+    assert pairings(exchange) == before
+
+
+def test_add_and_redraw(exchange):
+    drawn_people(exchange, "A", "B", "C")
+    changed = service.add_and_redraw(exchange, name="Late", rng=seeded(4))
+    assert len(changed) == 4
+    assert exchange.participants.get(name="Late").gives_to_id is not None
+
+
+def test_repairs_respect_no_repeat(exchange):
+    drawn_people(exchange, "A", "B", "C", "D", "E", "F")
+    copy = copy_of(exchange)
+    service.run_draw(copy, rng=seeded(2))
+    forbidden, _ = service.draw_rules(copy)
+    for seed in range(5):
+        service.add_and_repair(copy, name=f"Late {seed}", rng=seeded(seed))
+        assert not set(pairings(copy).items()) & forbidden
+
+
+def test_repairs_keep_wishes_and_notes(exchange):
+    people = drawn_people(exchange, "A", "B", "C", "D", "E")
+    ExchangeParticipant.objects.filter(pk=people[1].pk).update(note_for_santa="Size M")
+    service.add_and_repair(exchange, name="Late", rng=seeded(1))
+    service.remove_and_repair(exchange.participants.get(name="Late"))
+    assert ExchangeParticipant.objects.get(pk=people[1].pk).note_for_santa == "Size M"
+
+
+def test_repairs_need_a_drawn_exchange(exchange):
+    people = add_people(exchange, "A", "B", "C", "D")
+    with pytest.raises(ExchangeError, match="not been done"):
+        service.remove_and_repair(people[0])
+    with pytest.raises(ExchangeError, match="not been done"):
+        service.add_and_repair(exchange, name="Late")
+
+
+def test_copy_skips_a_person_no_longer_shared(exchange, organizer):
+    from gift_manager.models import PersonPermission
+
+    account = UserFactory()
+    person = PersonFactory(first_name="Pat", family_name="", account=account, owner=organizer)
+    service.import_persons(exchange, organizer, [person])
+    PersonPermission.objects.filter(person=person, user=organizer).delete()
+
+    copied = copy_of(exchange).participants.get(name="Pat")
+
+    assert copied.source_person is None
+    assert copied.linked_account is None

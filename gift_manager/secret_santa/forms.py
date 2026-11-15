@@ -9,6 +9,7 @@ from gift_manager.models import Person
 from gift_manager.models import PersonGroup
 from gift_manager.secret_santa.models import MAX_NOTE_LENGTH
 from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.models import ExclusionSet
 from gift_manager.validators import validate_http_url
 
 
@@ -194,3 +195,49 @@ class SharedWishesForm(forms.Form):
     def __init__(self, *args, choices, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["wishes"].choices = choices
+
+
+class LatecomerForm(forms.Form):
+    """After the draw: a new latecomer, or a participant who had declined, with how to fit them."""
+
+    REPAIR = "repair"
+    REDRAW = "redraw"
+
+    participant = forms.ModelChoiceField(
+        queryset=ExchangeParticipant.objects.none(),
+        to_field_name="participant_id",
+        required=False,
+        widget=forms.HiddenInput,
+    )
+    name = forms.CharField(
+        label=gettext_lazy("Name"),
+        max_length=120,
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    email = forms.EmailField(
+        label=gettext_lazy("Email"),
+        required=False,
+        widget=forms.EmailInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    sets = forms.ModelMultipleChoiceField(
+        label=gettext_lazy("Exclusion sets"),
+        queryset=ExclusionSet.objects.none(),
+        to_field_name="set_id",
+        required=False,
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
+    )
+    mode = forms.ChoiceField(choices=[(REPAIR, REPAIR), (REDRAW, REDRAW)])
+
+    def __init__(self, *args, exchange, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["participant"].queryset = exchange.participants.filter(declined=True).defer(
+            "gives_to", "note_for_santa"
+        )
+        self.fields["sets"].queryset = exchange.exclusion_sets.all()
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("participant") and not (cleaned.get("name") or "").strip():
+            raise forms.ValidationError(gettext_lazy("Enter a name."))
+        return cleaned

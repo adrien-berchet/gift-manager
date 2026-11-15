@@ -562,3 +562,112 @@ def test_create_from_an_exchange_of_another_user_is_404(authenticated_client):
         ).status_code
         == 404
     )
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: repairs after the draw
+# ---------------------------------------------------------------------------
+
+
+def run_on_commit_now(monkeypatch):
+    monkeypatch.setattr("django.db.transaction.on_commit", lambda func, *a, **k: func())
+
+
+def test_repair_urls_are_scoped(other_client, drawn_exchange):
+    participant = drawn_exchange.participants.first()
+    for name in ("secret_santa_remove_repair", "secret_santa_remove_redraw"):
+        response = other_client.post(url(name, drawn_exchange, participant.participant_id))
+        assert response.status_code == 404
+    response = other_client.post(
+        url("secret_santa_add_latecomer", drawn_exchange), {"name": "X", "mode": "repair"}
+    )
+    assert response.status_code == 404
+    assert drawn_exchange.participants.count() == 4
+
+
+def test_remove_and_repair_emails_only_the_santa(authenticated_client, exchange, monkeypatch):
+    ExchangeParticipantFactory(exchange=exchange, name="Eve")
+    service.run_draw(exchange, rng=seeded(1))
+    run_on_commit_now(monkeypatch)
+    carl = exchange.participants.get(name="Carl")
+    santa = ExchangeParticipant.objects.get(gives_to=carl)
+
+    response = authenticated_client.post(
+        url("secret_santa_remove_repair", exchange, carl.participant_id), follow=True
+    )
+
+    assert "Carl removed. Their Santa has a new assignment." in messages_of(response)
+    assert [message.to for message in mail.outbox] == [[santa.email]]
+    assert "gives to" not in response.content.decode()
+
+
+def test_remove_from_a_mutual_pair_shows_the_message(authenticated_client, drawn_exchange):
+    anna, bob, carl, dora = (
+        drawn_exchange.participants.get(name=n) for n in ["Anna", "Bob", "Carl", "Dora"]
+    )
+    for giver, recipient in ((anna, bob), (bob, anna), (carl, dora), (dora, carl)):
+        ExchangeParticipant.objects.filter(pk=giver.pk).update(gives_to=recipient)
+
+    response = authenticated_client.post(
+        url("secret_santa_remove_repair", drawn_exchange, bob.participant_id), follow=True
+    )
+
+    assert "No repair keeps every rule. Redraw everything instead." in messages_of(response)
+    assert drawn_exchange.participants.filter(pk=bob.pk).exists()
+    assert not mail.outbox
+
+
+def test_add_and_repair_emails_three_people(authenticated_client, drawn_exchange, monkeypatch):
+    run_on_commit_now(monkeypatch)
+
+    response = authenticated_client.post(
+        url("secret_santa_add_latecomer", drawn_exchange),
+        {"name": "Late", "email": "late@example.com", "mode": "repair"},
+        follow=True,
+    )
+
+    assert "Late added. Two Santas and Late have a new assignment." in messages_of(response)
+    assert len(mail.outbox) == 3
+    assert ["late@example.com"] in [message.to for message in mail.outbox]
+
+
+def test_put_back_after_the_draw_with_a_redraw(authenticated_client, exchange, monkeypatch):
+    dora = exchange.participants.get(name="Dora")
+    ExchangeParticipant.objects.filter(pk=dora.pk).update(declined=True)
+    service.run_draw(exchange, rng=seeded(1))
+    run_on_commit_now(monkeypatch)
+
+    authenticated_client.post(
+        url("secret_santa_add_latecomer", exchange),
+        {"participant": str(dora.participant_id), "mode": "redraw"},
+    )
+
+    dora.refresh_from_db()
+    assert not dora.declined
+    assert dora.gives_to_id is not None
+    assert len(mail.outbox) == 4
+
+
+def test_latecomer_needs_a_name(authenticated_client, drawn_exchange):
+    response = authenticated_client.post(
+        url("secret_santa_add_latecomer", drawn_exchange), {"mode": "repair"}, follow=True
+    )
+    assert "Enter a name." in messages_of(response)
+    assert drawn_exchange.participants.count() == 4
+
+
+def test_detail_page_still_never_loads_gives_to(authenticated_client, drawn_exchange):
+    ExclusionSetFactory(
+        exchange=drawn_exchange, participants=list(drawn_exchange.participants.all()[:2])
+    )
+
+    with CaptureQueriesContext(connection) as queries:
+        content = authenticated_client.get(
+            url("secret_santa_detail", drawn_exchange)
+        ).content.decode()
+
+    assert "secret-santa-latecomer" in content
+    assert "secret-santa-remove-repair" in content
+    assert all(
+        "gives_to_id" not in q["sql"] for q in queries.captured_queries if "exchange" in q["sql"]
+    )

@@ -189,6 +189,21 @@ urlpatterns = [
         name="secret_santa_put_back",
     ),
     path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/remove-repair/",
+        views.secret_santa_remove_repair,
+        name="secret_santa_remove_repair",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/remove-redraw/",
+        views.secret_santa_remove_redraw,
+        name="secret_santa_remove_redraw",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/latecomer/",
+        views.secret_santa_add_latecomer,
+        name="secret_santa_add_latecomer",
+    ),
+    path(
         "secret-santa/<uuid:exchange_id>/draw/",
         views.secret_santa_draw,
         name="secret_santa_draw",
