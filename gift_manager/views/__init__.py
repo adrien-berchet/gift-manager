@@ -131,6 +131,8 @@ from .reminders import DisableCalendarFeedView
 from .reminders import RegenerateCalendarFeedView
 from .reminders import UpdateReminderPreferencesView
 from .reminders import calendar_feed
+from .secret_santa import SecretSantaStopEmailsView
+from .secret_santa import secret_santa_participant
 
 # Sharing views
 from .sharing import ShareObjectsView
@@ -244,6 +246,7 @@ __all__ = [
     "RelationStatusListView",
     "RelationUpdateView",
     "RemoveFriendView",
+    "SecretSantaStopEmailsView",
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
@@ -302,6 +305,7 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "secret_santa_participant",
     "set_language",
     "suggestions_url_for",
     "surprise_default_hint",

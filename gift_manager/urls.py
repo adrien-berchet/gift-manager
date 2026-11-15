@@ -107,6 +107,16 @@ urlpatterns = [
         name="wishlist_share_disable",
     ),
     path("wishes/share/<str:token>/", views.wishlist_guest, name="wishlist_guest"),
+    path(
+        "secret-santa/p/<str:token>/",
+        views.secret_santa_participant,
+        name="secret_santa_participant",
+    ),
+    path(
+        "secret-santa/stop/<str:token>/",
+        views.SecretSantaStopEmailsView.as_view(),
+        name="secret_santa_stop_emails",
+    ),
     path("capture/", views.CaptureView.as_view(), name="capture"),
     path(
         "profile/received-gifts/",
