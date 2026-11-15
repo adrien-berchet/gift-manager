@@ -443,6 +443,38 @@ def test_contested_attach_shows_the_error_and_forgets_the_request(client, exchan
     assert "secret_santa_attach" not in client.session
 
 
+def test_attach_to_a_participation_linked_elsewhere_is_refused_before_confirming(client, exchange):
+    me = exchange.participants.get(name="Bob")
+    link(me)
+    client.force_login(UserFactory())
+    client.post(action("attach_start", me))
+
+    confirm_page = client.get(reverse("gift_manager:secret_santa_attach_confirm"))
+
+    page_text = text(confirm_page)
+    assert "already linked to another Gift Manager account" in page_text
+    assert "If it is yours, log in with that account." in page_text
+    assert "Link my account" not in page_text
+    assert "secret_santa_attach" not in client.session
+
+
+def test_attach_of_an_account_used_by_another_participant_is_refused_before_confirming(
+    client, exchange
+):
+    me = exchange.participants.get(name="Bob")
+    account = UserFactory()
+    ExchangeParticipant.objects.filter(exchange=exchange, name="Carl").update(
+        linked_account=account
+    )
+    client.force_login(account)
+    client.post(action("attach_start", me))
+
+    confirm_page = client.get(reverse("gift_manager:secret_santa_attach_confirm"))
+
+    assert "another participant" in text(confirm_page)
+    assert "Link my account" not in text(confirm_page)
+
+
 def link(participant, username="linked_user", **profile):
     account = UserFactory(username=username)
     for key, value in profile.items():
