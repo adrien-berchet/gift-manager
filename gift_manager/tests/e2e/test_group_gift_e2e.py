@@ -32,6 +32,7 @@ import pytest
 from django.contrib.auth.models import User
 from django.urls import reverse
 from django.utils import timezone
+from django.utils import translation
 from playwright.sync_api import Browser
 from playwright.sync_api import Page
 from playwright.sync_api import expect
@@ -43,6 +44,7 @@ from gift_manager.models import PermissionLevel
 from gift_manager.models import Person
 from gift_manager.models import Relation
 from gift_manager.permissions import create_or_update_permission
+from gift_manager.templatetags.custom_filters import format_price
 from gift_manager.tests.factories import GiftFactory
 
 
@@ -269,7 +271,13 @@ class TestGroupGiftE2E:
             surprise_plan.refresh_from_db()
             summary = group_gifts.get_group_gift_summary(surprise_plan, alice)
             currency = summary.currency
-            expect(alice_page.locator("#relation-group-gift")).to_contain_text(f"30.00 {currency}")
+
+            def price(value):
+                # As the page shows it: the shared price filter, in alice's English
+                with translation.override("en"):
+                    return format_price(Decimal(value), currency)
+
+            expect(alice_page.locator("#relation-group-gift")).to_contain_text(price("30.00"))
 
             # ------------------------------------------------------------------
             # 6. Alice marks Carol as paid via HTMX
@@ -297,9 +305,9 @@ class TestGroupGiftE2E:
             # Alice (buyer, 30.00 paid) + Carol (30.00 paid) = 60.00 paid of 90.00
             # Dave owes 30.00 to Alice
             section_text = alice_page.locator("#relation-group-gift").inner_text()
-            assert f"60.00 {currency}" in section_text
-            assert f"90.00 {currency}" in section_text
-            assert f"30.00 {currency}" in section_text
+            assert price("60.00") in section_text
+            assert price("90.00") in section_text
+            assert price("30.00") in section_text
             assert "alice" in section_text
 
             progress_bar = alice_page.locator("#relation-group-gift .progress-bar")
