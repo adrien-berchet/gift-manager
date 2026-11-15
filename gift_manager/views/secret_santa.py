@@ -7,8 +7,14 @@ account. Organizer pages are behind login and scoped to the exchanges the user o
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+from functools import wraps
+from typing import TYPE_CHECKING
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.db import transaction
 from django.db.models import Count
 from django.db.models import Prefetch
@@ -16,6 +22,7 @@ from django.db.models.functions import Lower
 from django.http import Http404
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
@@ -31,18 +38,28 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.http import require_POST
 from django.views.decorators.http import require_safe
 
+from gift_manager.secret_santa import access
 from gift_manager.secret_santa import emails
+from gift_manager.secret_santa import participation
 from gift_manager.secret_santa import service
 from gift_manager.secret_santa.draw import MIN_PARTICIPANTS
 from gift_manager.secret_santa.forms import ExchangeForm
+from gift_manager.secret_santa.forms import ExchangeWishForm
 from gift_manager.secret_santa.forms import ExclusionSetForm
 from gift_manager.secret_santa.forms import ImportForm
+from gift_manager.secret_santa.forms import NoteForm
 from gift_manager.secret_santa.forms import ParticipantForm
+from gift_manager.secret_santa.forms import SharedWishesForm
+from gift_manager.secret_santa.models import MAX_EXCHANGE_WISHES
 from gift_manager.secret_santa.models import MAX_PARTICIPANTS
 from gift_manager.secret_santa.models import Exchange
 from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.models import ExchangeWish
 from gift_manager.secret_santa.models import ExclusionSet
 from gift_manager.secret_santa.service import ExchangeError
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 def _private(response: HttpResponse) -> HttpResponse:
@@ -58,41 +75,223 @@ def _private(response: HttpResponse) -> HttpResponse:
 # ---------------------------------------------------------------------------
 
 
-@require_safe
-def secret_santa_participant(request, token):
-    """Show a participant the exchange and, once drawn, who they give a gift to."""
+ATTACH_SESSION_KEY = "secret_santa_attach"
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _participant_by_token(token: str) -> ExchangeParticipant:
+    """Return the participant of a personal link, or 404."""
     if not token:
         raise Http404
-    participant = get_object_or_404(
-        ExchangeParticipant.objects.select_related("exchange__organizer__profile"),
+    return get_object_or_404(
+        ExchangeParticipant.objects.select_related(
+            "exchange__organizer__profile", "linked_account__profile"
+        ),
         token=token,
         exchange__organizer__is_active=True,
     )
+
+
+def _page_url(participant: ExchangeParticipant) -> str:
+    return reverse("gift_manager:secret_santa_participant", args=[participant.token])
+
+
+def _see_other(url: str) -> HttpResponse:
+    """Redirect after a POST of the personal page, without leaking it anywhere."""
+    response = HttpResponseRedirect(url)
+    response.status_code = 303
+    return _private(response)
+
+
+def _render_page(
+    request,
+    participant: ExchangeParticipant,
+    *,
+    status: int = 200,
+    error: str | None = None,
+    wish_form: ExchangeWishForm | None = None,
+    note_form: NoteForm | None = None,
+) -> HttpResponse:
+    """Render the personal page.
+
+    Only a visitor logged in as the linked account sees anything of that account (its real
+    wishes, the link itself, its language); everyone else gets the same page whether the
+    participant is linked or not.
+    """
     exchange = participant.exchange
-    with translation.override(exchange.organizer.profile.language):
-        recipient_name = None
-        if exchange.is_drawn and participant.gives_to_id is not None:
-            # Only the name of the participant's own recipient; who drew them is never read
-            recipient_name = (
-                ExchangeParticipant.objects.filter(pk=participant.gives_to_id, exchange=exchange)
+    linked_viewer = access.viewer_is_linked(participant, request.user)
+    language = (
+        request.user.profile.language if linked_viewer else exchange.organizer.profile.language
+    )
+    with translation.override(language):
+        context = {
+            "participant": participant,
+            "exchange": exchange,
+            "organizer_name": emails.organizer_name(exchange),
+            "names": list(
+                service.taking_part(exchange)
+                .order_by(Lower("name"), "pk")
                 .values_list("name", flat=True)
-                .first()
-            )
-        names = list(
-            exchange.participants.order_by(Lower("name"), "pk").values_list("name", flat=True)
-        )
+            ),
+            "recipient": access.recipient_view(participant),
+            "own_wishes": list(participant.exchange_wishes.all()),
+            "wish_form": wish_form or ExchangeWishForm(),
+            "note_form": note_form or NoteForm(initial={"note": participant.note_for_santa}),
+            "linked_viewer": linked_viewer,
+            "error": error,
+            "max_wishes": MAX_EXCHANGE_WISHES,
+        }
+        if linked_viewer:
+            context["shareable_wishes"] = participation.shareable_wishes(participant)
+            context["account_currency"] = request.user.profile.currency
         response = render(
-            request,
-            "gift_manager/secret_santa/participant_page.html",
-            {
-                "participant": participant,
-                "exchange": exchange,
-                "organizer_name": emails.organizer_name(exchange),
-                "names": names,
-                "recipient_name": recipient_name,
-            },
+            request, "gift_manager/secret_santa/participant_page.html", context, status=status
         )
     return _private(response)
+
+
+@require_safe
+def secret_santa_participant(request, token):
+    """Show a participant the exchange, what they share and, once drawn, who they drew."""
+    return _render_page(request, _participant_by_token(token))
+
+
+def _participant_action(action: Callable) -> Callable:
+    """Wrap a POST of the personal page: 404 for a bad link, errors shown on the page."""
+
+    @wraps(action)
+    @require_POST
+    def view(request, token, *args, **kwargs) -> HttpResponse:
+        participant = _participant_by_token(token)
+        try:
+            result = action(request, participant, *args, **kwargs)
+        except ExchangeError as error:
+            return _render_page(request, participant, status=400, error=error.message)
+        return result or _see_other(_page_url(participant))
+
+    return view
+
+
+@_participant_action
+def secret_santa_wish_add(request, participant):
+    form = ExchangeWishForm(request.POST)
+    if not form.is_valid():
+        return _render_page(request, participant, status=400, wish_form=form)
+    participation.add_exchange_wish(participant, **form.cleaned_data)
+    return None
+
+
+@_participant_action
+def secret_santa_wish_delete(request, participant, wish_id):  # noqa: ARG001
+    try:
+        participation.delete_exchange_wish(participant, wish_id)
+    except ExchangeWish.DoesNotExist:
+        raise Http404 from None
+
+
+@_participant_action
+def secret_santa_note(request, participant):
+    form = NoteForm(request.POST)
+    if not form.is_valid():
+        return _render_page(request, participant, status=400, note_form=form)
+    participation.save_note(participant, form.cleaned_data["note"])
+    return None
+
+
+@_participant_action
+def secret_santa_decline(request, participant):  # noqa: ARG001
+    participation.decline(participant)
+
+
+@_participant_action
+def secret_santa_rejoin(request, participant):  # noqa: ARG001
+    participation.rejoin(participant)
+
+
+@_participant_action
+def secret_santa_attach_start(request, participant):
+    """Remember the participant in the session, then confirm once logged in.
+
+    Neither the login URL nor the confirmation URL carries the token.
+    """
+    if participant.exchange.is_closed:
+        raise ExchangeError(gettext("This exchange is closed."))
+    request.session[ATTACH_SESSION_KEY] = {
+        "participant": participant.pk,
+        "token_hash": _token_hash(participant.token),
+    }
+    target = reverse("gift_manager:secret_santa_attach_confirm")
+    if request.user.is_authenticated:
+        return _private(redirect(target))
+    return _private(redirect_to_login(target))
+
+
+@_participant_action
+def secret_santa_detach(request, participant):
+    if not access.viewer_is_linked(participant, request.user):
+        raise Http404
+    participation.detach_account(participant, request.user)
+
+
+@_participant_action
+def secret_santa_share(request, participant):
+    if not access.viewer_is_linked(participant, request.user):
+        raise Http404
+    choices = [
+        (str(wish.wish_id), wish.title) for wish, _ in participation.shareable_wishes(participant)
+    ]
+    form = SharedWishesForm(request.POST, choices=choices)
+    if not form.is_valid():
+        raise ExchangeError(gettext("Choose among your active wishes."))
+    participation.save_shared_wishes(participant, request.user, form.cleaned_data["wishes"])
+
+
+def _pending_attachment(request) -> ExchangeParticipant | None:
+    """Return the participant remembered by the attach flow, if its link is still valid."""
+    data = request.session.get(ATTACH_SESSION_KEY)
+    if not isinstance(data, dict):
+        return None
+    participant = (
+        ExchangeParticipant.objects.select_related("exchange__organizer__profile")
+        .defer("gives_to", "note_for_santa")
+        .filter(pk=data.get("participant"), exchange__organizer__is_active=True)
+        .first()
+    )
+    if participant is None or not hmac.compare_digest(
+        _token_hash(participant.token), str(data.get("token_hash", ""))
+    ):
+        return None
+    return participant
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def secret_santa_attach_confirm(request):
+    """Ask the logged-in participant to confirm the link to their account."""
+    template = "gift_manager/secret_santa/attach_confirm.html"
+    participant = _pending_attachment(request)
+    if participant is None:
+        request.session.pop(ATTACH_SESSION_KEY, None)
+        return _private(render(request, template, {"expired": True}, status=400))
+    if request.method == "POST":
+        try:
+            participation.attach_account(participant, request.user)
+        except ExchangeError as error:
+            request.session.pop(ATTACH_SESSION_KEY, None)
+            return _private(
+                render(
+                    request,
+                    template,
+                    {"participant": participant, "error": error.message},
+                    status=400,
+                )
+            )
+        request.session.pop(ATTACH_SESSION_KEY, None)
+        return _see_other(_page_url(participant))
+    return _private(render(request, template, {"participant": participant}))
 
 
 @method_decorator(csrf_exempt, name="dispatch")

@@ -132,13 +132,18 @@ from .reminders import RegenerateCalendarFeedView
 from .reminders import UpdateReminderPreferencesView
 from .reminders import calendar_feed
 from .secret_santa import SecretSantaStopEmailsView
+from .secret_santa import secret_santa_attach_confirm
+from .secret_santa import secret_santa_attach_start
 from .secret_santa import secret_santa_create
+from .secret_santa import secret_santa_decline
 from .secret_santa import secret_santa_delete
+from .secret_santa import secret_santa_detach
 from .secret_santa import secret_santa_detail
 from .secret_santa import secret_santa_draw
 from .secret_santa import secret_santa_edit
 from .secret_santa import secret_santa_invite
 from .secret_santa import secret_santa_list
+from .secret_santa import secret_santa_note
 from .secret_santa import secret_santa_pairings
 from .secret_santa import secret_santa_participant
 from .secret_santa import secret_santa_participant_add
@@ -147,10 +152,14 @@ from .secret_santa import secret_santa_participant_import
 from .secret_santa import secret_santa_participant_remove
 from .secret_santa import secret_santa_put_back
 from .secret_santa import secret_santa_regenerate_link
+from .secret_santa import secret_santa_rejoin
 from .secret_santa import secret_santa_send_again
 from .secret_santa import secret_santa_set_delete
 from .secret_santa import secret_santa_set_save
+from .secret_santa import secret_santa_share
 from .secret_santa import secret_santa_show_link
+from .secret_santa import secret_santa_wish_add
+from .secret_santa import secret_santa_wish_delete
 
 # Sharing views
 from .sharing import ShareObjectsView
@@ -323,13 +332,18 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "secret_santa_attach_confirm",
+    "secret_santa_attach_start",
     "secret_santa_create",
+    "secret_santa_decline",
     "secret_santa_delete",
+    "secret_santa_detach",
     "secret_santa_detail",
     "secret_santa_draw",
     "secret_santa_edit",
     "secret_santa_invite",
     "secret_santa_list",
+    "secret_santa_note",
     "secret_santa_pairings",
     "secret_santa_participant",
     "secret_santa_participant_add",
@@ -338,10 +352,14 @@ __all__ = [
     "secret_santa_participant_remove",
     "secret_santa_put_back",
     "secret_santa_regenerate_link",
+    "secret_santa_rejoin",
     "secret_santa_send_again",
     "secret_santa_set_delete",
     "secret_santa_set_save",
+    "secret_santa_share",
     "secret_santa_show_link",
+    "secret_santa_wish_add",
+    "secret_santa_wish_delete",
     "set_language",
     "suggestions_url_for",
     "surprise_default_hint",

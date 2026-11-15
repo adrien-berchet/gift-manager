@@ -5,7 +5,8 @@
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}" data-theme="light">
 {# Standalone page for participants without an account: no app navigation and no app scripts. #}
-{# Secrecy: only the participant's own recipient is shown, never who drew them. #}
+{# Secrecy: only the participant's own recipient is shown, never who drew them. Anything of a #}
+{# linked account is shown only to a visitor logged in as that account (linked_viewer). #}
 <head>
     <meta charset="UTF-8">
     {# Before any other resource: the address of this page is a secret #}
@@ -30,21 +31,101 @@
         · {% blocktrans with organizer=organizer_name %}Organized by {{ organizer }}{% endblocktrans %}
     </p>
 
+    {% if error %}
+    <div class="alert alert-danger secret-santa-error" role="alert">{{ error }}</div>
+    {% endif %}
+
     {% if exchange.is_closed %}
     <div class="alert alert-secondary" role="status">{% trans "This exchange is over." %}</div>
     {% else %}
+
+    {% if participant.declined %}
+    <section class="card mb-4 secret-santa-declined-card">
+        <div class="card-body">
+            {% if exchange.is_draft %}
+            <p>{% trans "You said that you cannot take part. The draw will leave you out." %}</p>
+            <form method="post" action="{% url 'gift_manager:secret_santa_rejoin' participant.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-primary">{% trans "I can take part after all" %}</button>
+            </form>
+            {% else %}
+            <p class="mb-0">{% trans "You do not take part in this exchange." %}</p>
+            {% endif %}
+        </div>
+    </section>
+    {% else %}
+
     <section class="card mb-4" aria-labelledby="assignment-title">
         <div class="card-body">
             <h2 class="h5 card-title" id="assignment-title">{% trans "Your assignment" %}</h2>
-            {% if recipient_name %}
-            <p class="fs-4 mb-0 secret-santa-recipient">
-                {% blocktrans with name=recipient_name %}You give a gift to: <strong>{{ name }}</strong>{% endblocktrans %}
+            {% if recipient %}
+            <p class="fs-4 secret-santa-recipient">
+                {% blocktrans with name=recipient.name %}You give a gift to: <strong>{{ name }}</strong>{% endblocktrans %}
             </p>
+            {% include "gift_manager/secret_santa/recipient_wishes.html" %}
             {% else %}
             <p class="mb-0">{% trans "The draw has not been done yet." %}</p>
             {% endif %}
         </div>
     </section>
+
+    <section class="card mb-4 secret-santa-tell" aria-labelledby="tell-title">
+        <div class="card-body">
+            <h2 class="h5 card-title" id="tell-title">{% trans "Tell your Santa" %}</h2>
+            <p class="card-text text-muted small">{% trans "Your Santa sees these wishes and this note once the draw is done." %}</p>
+            {% if own_wishes %}
+            <ul class="list-group mb-3 secret-santa-own-wishes">
+                {% for wish in own_wishes %}
+                <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                    <span class="secret-santa-wish-text">
+                        {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
+                        {% if wish.price is not None %}<span class="text-muted small">· {{ wish.price|format_price:exchange.currency }}</span>{% endif %}
+                    </span>
+                    <form method="post" action="{% url 'gift_manager:secret_santa_wish_delete' participant.token wish.wish_id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="{% blocktrans with title=wish.title %}Remove {{ title }}{% endblocktrans %}"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                    </form>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+            {% if own_wishes|length < max_wishes %}
+            <form method="post" action="{% url 'gift_manager:secret_santa_wish_add' participant.token %}" class="row g-2 align-items-end mb-3 secret-santa-wish-form" novalidate>
+                {% csrf_token %}
+                <div class="col-12">
+                    <label class="form-label" for="{{ wish_form.title.id_for_label }}">{{ wish_form.title.label }}</label>
+                    {{ wish_form.title }}
+                    {% for error in wish_form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-sm-8">
+                    <label class="form-label" for="{{ wish_form.url.id_for_label }}">{{ wish_form.url.label }} <span class="text-muted small">({% trans "optional" %})</span></label>
+                    {{ wish_form.url }}
+                    {% for error in wish_form.url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 col-sm-4">
+                    <label class="form-label" for="{{ wish_form.price.id_for_label }}">{{ wish_form.price.label }} <span class="text-muted small">({{ exchange.currency }})</span></label>
+                    {{ wish_form.price }}
+                    {% for error in wish_form.price.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add this wish" %}</button>
+                </div>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'gift_manager:secret_santa_note' participant.token %}" class="secret-santa-note-form">
+                {% csrf_token %}
+                <label class="form-label" for="{{ note_form.note.id_for_label }}">{{ note_form.note.label }}</label>
+                {{ note_form.note }}
+                {% for error in note_form.note.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                <button type="submit" class="btn btn-outline-primary mt-2">{% trans "Save the note" %}</button>
+            </form>
+        </div>
+    </section>
+
+    {% if linked_viewer %}
+    {% include "gift_manager/secret_santa/linked_account.html" %}
+    {% endif %}
+    {% endif %}
 
     <section class="card mb-4" aria-labelledby="exchange-title">
         <div class="card-body">
@@ -74,6 +155,30 @@
             </ul>
         </div>
     </section>
+
+    {% if not linked_viewer %}
+    <section class="card mb-4 secret-santa-account" aria-labelledby="account-title">
+        <div class="card-body">
+            <h2 class="h6 card-title" id="account-title">{% trans "Do you use Gift Manager?" %}</h2>
+            <p class="card-text small text-muted">{% trans "Link this participation to your account to share wishes from your wishlist with your Santa." %}</p>
+            <form method="post" action="{% url 'gift_manager:secret_santa_attach_start' participant.token %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-secondary btn-sm">{% trans "I have a Gift Manager account" %}</button>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
+    {% if exchange.is_draft and not participant.declined %}
+    <details class="mb-4 secret-santa-decline">
+        <summary class="text-muted small">{% trans "I cannot take part" %}</summary>
+        <form method="post" action="{% url 'gift_manager:secret_santa_decline' participant.token %}" class="mt-2">
+            {% csrf_token %}
+            <p class="small mb-2">{% trans "The draw will leave you out. You can change your mind until the draw." %}</p>
+            <button type="submit" class="btn btn-sm btn-outline-danger secret-santa-decline-confirm">{% trans "Confirm that I cannot take part" %}</button>
+        </form>
+    </details>
+    {% endif %}
     {% endif %}
 
     <p class="text-muted small mt-4">{% trans "This page is yours alone: do not share its address." %}</p>

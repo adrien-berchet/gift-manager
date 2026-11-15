@@ -7,7 +7,9 @@ from django.utils.translation import gettext_lazy
 
 from gift_manager.models import Person
 from gift_manager.models import PersonGroup
+from gift_manager.secret_santa.models import MAX_NOTE_LENGTH
 from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.validators import validate_http_url
 
 
 class ExchangeForm(forms.Form):
@@ -128,3 +130,50 @@ class ImportForm(forms.Form):
         if not cleaned.get("group") and not cleaned.get("persons"):
             raise forms.ValidationError(gettext_lazy("Choose a group or some persons."))
         return cleaned
+
+
+class ExchangeWishForm(forms.Form):
+    """A wish for this exchange only, written from the personal page."""
+
+    title = forms.CharField(
+        label=gettext_lazy("Wish"),
+        max_length=200,
+        widget=forms.TextInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    url = forms.URLField(
+        label=gettext_lazy("Link"),
+        required=False,
+        max_length=2000,
+        assume_scheme="https",
+        validators=[validate_http_url],
+        widget=forms.URLInput(attrs={"class": "form-control", "autocomplete": "off"}),
+    )
+    price = forms.DecimalField(
+        label=gettext_lazy("Price"),
+        required=False,
+        min_value=0,
+        max_digits=10,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0"}),
+    )
+
+
+class NoteForm(forms.Form):
+    """The participant's note for their Santa."""
+
+    note = forms.CharField(
+        label=gettext_lazy("A note for your Santa"),
+        required=False,
+        max_length=MAX_NOTE_LENGTH,
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": 3}),
+    )
+
+
+class SharedWishesForm(forms.Form):
+    """The real wishes a linked participant shares with their Santa."""
+
+    wishes = forms.MultipleChoiceField(required=False, widget=forms.CheckboxSelectMultiple)
+
+    def __init__(self, *args, choices, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["wishes"].choices = choices

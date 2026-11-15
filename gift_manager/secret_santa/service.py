@@ -73,6 +73,13 @@ def _check_open(exchange: Exchange) -> None:
         raise ExchangeError(gettext("This exchange is closed."))
 
 
+def lock_open(exchange: Exchange) -> Exchange:
+    """Lock the exchange row (inside a transaction) and refuse a closed exchange."""
+    locked = _lock(exchange)
+    _check_open(locked)
+    return locked
+
+
 def _check_draft(exchange: Exchange) -> None:
     _check_open(exchange)
     if exchange.status != Exchange.Status.DRAFT:

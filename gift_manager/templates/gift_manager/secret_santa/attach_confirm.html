@@ -1,0 +1,28 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Secret Santa" %}{% endblock %}
+
+{% block content %}
+<div class="container form-page-container">
+  <div class="card secret-santa-attach">
+    <div class="card-body">
+      <h1 class="h4 card-title">{% trans "Link your account" %}</h1>
+      {% if expired %}
+      <p class="card-text mb-0">{% trans "This request has expired. Open your personal link again and choose \"I have a Gift Manager account\"." %}</p>
+      {% elif error %}
+      <div class="alert alert-danger" role="alert">{{ error }}</div>
+      {% else %}
+      <p class="card-text">{% blocktrans with name=participant.name exchange=participant.exchange.name %}Link your account to participant <strong>{{ name }}</strong> of the Secret Santa "{{ exchange }}"?{% endblocktrans %}</p>
+      <p class="card-text small text-muted">{% trans "You can then share wishes from your wishlist with your Santa. The organizer is not told." %}</p>
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{% trans "Link my account" %}</button>
+        <a href="{% url 'gift_manager:home' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

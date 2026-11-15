@@ -1,0 +1,34 @@
+{% load i18n custom_filters %}
+{# Shown only to a visitor logged in as the account linked to this participant. #}
+<section class="card mb-4 secret-santa-linked" aria-labelledby="linked-title">
+  <div class="card-body">
+    <h2 class="h5 card-title" id="linked-title">{% trans "From your wishlist" %}</h2>
+    <p class="card-text small text-muted">
+      {% blocktrans with username=request.user.username %}This participation is linked to your account ({{ username }}).{% endblocktrans %}
+      {% if not participant.wishlist_confirmed %}{% trans "Nothing from your wishlist is shared yet: choose and confirm." %}{% endif %}
+    </p>
+    {% if shareable_wishes %}
+    <form method="post" action="{% url 'gift_manager:secret_santa_share' participant.token %}" class="secret-santa-share-form">
+      {% csrf_token %}
+      <fieldset class="mb-2">
+        <legend class="visually-hidden">{% trans "Wishes to share with your Santa" %}</legend>
+        {% for wish, checked in shareable_wishes %}
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="wishes" value="{{ wish.wish_id }}" id="share-{{ wish.wish_id }}"{% if checked %} checked{% endif %}>
+          <label class="form-check-label" for="share-{{ wish.wish_id }}">
+            {{ wish.title }}{% if wish.price_hint is not None %} <span class="text-muted small">· {{ wish.price_hint|format_price:account_currency }}</span>{% endif %}
+          </label>
+        </div>
+        {% endfor %}
+      </fieldset>
+      <button type="submit" class="btn btn-primary btn-sm">{% trans "Share these wishes with my Santa" %}</button>
+    </form>
+    {% else %}
+    <p class="small mb-2">{% trans "Your wishlist has no active wish." %}</p>
+    {% endif %}
+    <form method="post" action="{% url 'gift_manager:secret_santa_detach' participant.token %}" class="mt-3">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-link btn-sm p-0 text-muted">{% trans "Unlink my account from this participation" %}</button>
+    </form>
+  </div>
+</section>
