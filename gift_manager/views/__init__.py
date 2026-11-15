@@ -150,6 +150,7 @@ from .secret_santa import secret_santa_participant_add
 from .secret_santa import secret_santa_participant_edit
 from .secret_santa import secret_santa_participant_import
 from .secret_santa import secret_santa_participant_remove
+from .secret_santa import secret_santa_plan_gift
 from .secret_santa import secret_santa_put_back
 from .secret_santa import secret_santa_regenerate_link
 from .secret_santa import secret_santa_rejoin
@@ -350,6 +351,7 @@ __all__ = [
     "secret_santa_participant_edit",
     "secret_santa_participant_import",
     "secret_santa_participant_remove",
+    "secret_santa_plan_gift",
     "secret_santa_put_back",
     "secret_santa_regenerate_link",
     "secret_santa_rejoin",

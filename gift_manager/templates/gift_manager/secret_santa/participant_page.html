@@ -63,6 +63,11 @@
                 {% blocktrans with name=recipient.name %}You give a gift to: <strong>{{ name }}</strong>{% endblocktrans %}
             </p>
             {% include "gift_manager/secret_santa/recipient_wishes.html" %}
+            {% if linked_viewer %}
+            <a href="{% url 'gift_manager:secret_santa_plan_gift' participant.participant_id %}" class="btn btn-primary mt-3 secret-santa-plan-gift">
+                <i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Plan a gift" %}
+            </a>
+            {% endif %}
             {% else %}
             <p class="mb-0">{% trans "The draw has not been done yet." %}</p>
             {% endif %}

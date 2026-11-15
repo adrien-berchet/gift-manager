@@ -26,6 +26,7 @@ from gift_manager.models import ReceivedGift
 from gift_manager.models import Relation
 from gift_manager.models import Wish
 from gift_manager.models import birthday_event_name_q
+from gift_manager.secret_santa import dashboard as secret_santa_dashboard
 from gift_manager.statuses import is_terminal_status
 
 # Type definitions for clarity
@@ -147,6 +148,7 @@ def home(request):
         )
 
         context["upcoming_birthdays"] = build_upcoming_birthdays(user, today)
+        context["secret_santa_cards"] = secret_santa_dashboard.cards(user)
 
         if not attention_groups:
             context["next_upcoming_item"] = _find_next_upcoming_item(gift_plans, user, today)

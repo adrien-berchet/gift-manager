@@ -250,6 +250,11 @@ urlpatterns = [
         name="secret_santa_attach_confirm",
     ),
     path(
+        "secret-santa/participations/<uuid:participant_id>/plan/",
+        views.secret_santa_plan_gift,
+        name="secret_santa_plan_gift",
+    ),
+    path(
         "secret-santa/stop/<str:token>/",
         views.SecretSantaStopEmailsView.as_view(),
         name="secret_santa_stop_emails",
