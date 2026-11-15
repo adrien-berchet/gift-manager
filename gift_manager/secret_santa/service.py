@@ -82,7 +82,8 @@ def _check_draft(exchange: Exchange) -> None:
 
 
 def _clean_name(name: str) -> str:
-    name = (name or "").strip()
+    # One line of single spaces: names go into email subjects and must not break headers
+    name = " ".join((name or "").split())
     if not name:
         raise ExchangeError(gettext("Enter a name."))
     return name[: ExchangeParticipant._meta.get_field("name").max_length]  # noqa: SLF001
@@ -104,7 +105,7 @@ def organized_by(user: User) -> QuerySet[Exchange]:
     return Exchange.objects.filter(organizer=user)
 
 
-def create_exchange(  # noqa: PLR0913 - mirrors the creation form
+def create_exchange(
     organizer: User,
     *,
     name: str,
@@ -136,7 +137,7 @@ def create_exchange(  # noqa: PLR0913 - mirrors the creation form
     return exchange
 
 
-def update_exchange(  # noqa: PLR0913 - mirrors the edit form
+def update_exchange(
     exchange: Exchange,
     *,
     name: str,
@@ -212,7 +213,7 @@ def import_persons(
             person = accessible.get(pk)
             if person is None:
                 continue
-            name = str(person).strip()[:120]
+            name = " ".join(str(person).split())[:120]
             if (
                 not name
                 or person.pk in sources
@@ -315,7 +316,7 @@ def save_exclusion_set(
 ) -> ExclusionSet:
     """Create or update an exclusion set of at least two participants of this exchange."""
     members = {participant.pk: participant for participant in participants}
-    name = (name or "").strip()
+    name = " ".join((name or "").split())
     if not name:
         raise ExchangeError(gettext("Enter a name."))
     with transaction.atomic():
@@ -323,10 +324,8 @@ def save_exclusion_set(
         _check_draft(locked)
         if instance is not None and instance.exchange_id != locked.pk:
             raise ExchangeError(gettext("This exclusion set was not found."))
-        valid = set(
-            locked.participants.filter(pk__in=list(members)).values_list("pk", flat=True)
-        )
-        if len(members) < 2 or valid != set(members):  # noqa: PLR2004
+        valid = set(locked.participants.filter(pk__in=list(members)).values_list("pk", flat=True))
+        if len(members) < 2 or valid != set(members):
             raise ExchangeError(
                 gettext("An exclusion set needs at least two participants of this exchange.")
             )

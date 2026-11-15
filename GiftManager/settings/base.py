@@ -174,6 +174,11 @@ ACCOUNT_RATE_LIMITS = {
 INVITATION_EXPIRY_DAYS = 7
 INVITATION_SEND_LIMIT = 10
 INVITATION_SEND_WINDOW_SECONDS = 3600
+# Secret Santa: emails one organizer may send per window, and the wait between two
+# "Send again" for the same participant
+SECRET_SANTA_EMAIL_LIMIT = 300
+SECRET_SANTA_EMAIL_WINDOW_SECONDS = 86400
+SECRET_SANTA_RESEND_COOLDOWN_SECONDS = 300
 
 # Email encryption key for privacy
 # Generate with:
