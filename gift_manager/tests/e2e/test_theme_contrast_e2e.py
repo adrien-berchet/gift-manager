@@ -2,10 +2,12 @@
 
 import pytest
 from django.urls import reverse
+from django.utils import timezone
 from playwright.sync_api import Page
 
 from gift_manager.models import PermissionLevel
 from gift_manager.models import Relation
+from gift_manager.secret_santa import service as secret_santa_service
 from gift_manager.services import PermissionService
 from gift_manager.tests.e2e.test_qa_second_pass_e2e import _contrast
 from gift_manager.tests.e2e.test_received_gift_e2e import login_as
@@ -128,3 +130,47 @@ def test_needs_attention_chip_is_highlighted_only_when_not_zero(
         assert not chips.evaluate(
             "el => el.classList.contains('gift-plan-summary-item--attention')"
         )
+
+
+# Own colours of an element and its first opaque background, after a hover if asked
+OWN_COLORS_JS = """(el) => {
+    let node = el, bg = 'rgba(0, 0, 0, 0)';
+    while (node && bg === 'rgba(0, 0, 0, 0)') {
+        bg = getComputedStyle(node).backgroundColor; node = node.parentElement;
+    }
+    const style = getComputedStyle(el);
+    return [style.color, bg, style.borderTopStyle];
+}"""
+
+
+@pytest.mark.frontend
+@pytest.mark.e2e
+def test_outlined_warning_and_danger_buttons_are_outlined_and_readable(
+    page: Page, live_server, seed_data_e2e
+):
+    """QA 2026-11-15: yellow outlined buttons had no border and faint text; the dark red
+    hover had white text on pale red.
+    """
+    exchange = secret_santa_service.create_exchange(
+        seed_data_e2e.alice, name="Office", exchange_date=timezone.localdate()
+    )
+    for name in ("Ann", "Ben", "Cid"):
+        secret_santa_service.add_participant(exchange, name=name)
+    secret_santa_service.run_draw(exchange)
+    login_as(page, live_server.url, "alice")
+    url = f"{live_server.url}{reverse('gift_manager:secret_santa_detail', args=[exchange.exchange_id])}"
+    redraw = "button.btn-outline-warning[data-bs-target='#redrawModal']"
+    remove = ".secret-santa-remove > summary"
+    for theme in ("light", "dark"):
+        open_page(page, url)
+        page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
+        page.wait_for_timeout(600)  # colours transition
+        for selector in (redraw, remove):
+            fg, bg, border = page.locator(selector).first.evaluate(OWN_COLORS_JS)
+            assert border == "solid", (theme, selector)
+            assert _contrast(fg, bg) >= MIN_CONTRAST, (theme, selector, fg, bg)
+            page.locator(selector).first.hover()
+            page.wait_for_timeout(400)
+            fg, bg, _ = page.locator(selector).first.evaluate(OWN_COLORS_JS)
+            assert _contrast(fg, bg) >= MIN_CONTRAST, (theme, selector, "hover", fg, bg)
+            page.mouse.move(0, 0)
