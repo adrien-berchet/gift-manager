@@ -86,6 +86,16 @@
   Removed because visible: create and update confirmations, sharing row changes, inline edits,
   bulk status updates (unless items were skipped), invitations sent, gift plans repeated for an
   event, a friendship accepted and a disabled calendar feed.
+- Secret Santa: `gift_manager/secret_santa/` holds its own models (`Exchange`,
+  `ExchangeParticipant`, `ExclusionSet`), a pure draw engine (`draw.py`, no Django), the business
+  rules (`service.py`) and the emails (`emails.py`). An exchange belongs to its organizer only and
+  bypasses `PermissionService` on purpose: organizer views look exchanges up through
+  `service.organized_by(request.user)` (404 otherwise). Participants are not `Person` rows; each
+  has a secret token that opens a standalone personal page (`views.secret_santa`, no
+  `base.html`, no-store, no-referrer, noindex). Secrecy: organizer pages never load
+  `ExchangeParticipant.gives_to` except in the two reveal actions (POST with `confirm=1`, not
+  cached); a personal page reads only its own `gives_to` and nothing of a linked account. Emails
+  are sent after the draw commits, with a signed stop link and a per-organizer quota.
 - Gift suggestions: `gift_manager/suggestions/` holds catalogue scoring and LLM ideation.
   Candidates, history, ratings and tags are strictly scoped to the viewing user via `accessible_by`
   and `metadata_visibility.VisibleMetadata`; hidden surprise plans are never read. AI payloads are

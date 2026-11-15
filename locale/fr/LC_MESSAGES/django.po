@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-15 16:31+0100\n"
+"POT-Creation-Date: 2026-11-15 16:47+0100\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -5034,12 +5034,14 @@ msgstr "Voir le lien"
 #: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:37
 #, python-format
 msgid "Opening this link shows who %(name)s drew. Give it to them only."
-msgstr "Ouvrir ce lien montre qui %(name)s a tiré. Ne le donnez qu'à cette personne."
+msgstr ""
+"Ouvrir ce lien montre qui %(name)s a tiré. Ne le donnez qu'à cette personne."
 
 #: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:37
 #, python-format
 msgid "This is the personal page of %(name)s. Give it to them only."
-msgstr "C'est la page personnelle de %(name)s. Ne la donnez qu'à cette personne."
+msgstr ""
+"C'est la page personnelle de %(name)s. Ne la donnez qu'à cette personne."
 
 #: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:38
 msgid "Show the link"
@@ -5052,13 +5054,15 @@ msgstr "Nouveau lien"
 #: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:56
 msgid ""
 "The current link stops working. Use it when a link reached the wrong person."
-msgstr "Le lien actuel ne fonctionnera plus. Utile quand un lien est arrivé à la mauvaise personne."
+msgstr ""
+"Le lien actuel ne fonctionnera plus. Utile quand un lien est arrivé à la "
+"mauvaise personne."
 
 #: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:57
 msgid "Create a new link"
 msgstr "Créer un nouveau lien"
 
-#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:74
+#: gift_manager/templates/gift_manager/includes/secret_santa_participants.html:75
 msgid "No participant yet."
 msgstr "Aucun participant pour l'instant."
 
@@ -5067,7 +5071,9 @@ msgstr "Aucun participant pour l'instant."
 msgid ""
 "Personal link of <strong>%(name)s</strong>. Give it to them only: opening it "
 "shows who they drew."
-msgstr "Lien personnel de <strong>%(name)s</strong>. Ne le donnez qu'à cette personne : l'ouvrir montre qui elle a tiré."
+msgstr ""
+"Lien personnel de <strong>%(name)s</strong>. Ne le donnez qu'à cette "
+"personne : l'ouvrir montre qui elle a tiré."
 
 #: gift_manager/templates/gift_manager/includes/secret_santa_revealed_link.html:6
 msgid "Personal link"
@@ -5825,7 +5831,9 @@ msgstr "Tirer au sort"
 msgid ""
 "Once drawn, every participant with an email address gets their personal "
 "link. Give the others their link yourself."
-msgstr "Après le tirage au sort, chaque participant ayant une adresse email reçoit son lien personnel. Donnez vous-même leur lien aux autres."
+msgstr ""
+"Après le tirage au sort, chaque participant ayant une adresse email reçoit "
+"son lien personnel. Donnez vous-même leur lien aux autres."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:51
 #, python-format
@@ -5837,7 +5845,9 @@ msgstr "Ajoutez au moins %(count)s participants pour faire le tirage au sort."
 msgid ""
 "The draw was done on %(date)s. Every participant can see who they give a "
 "gift to on their personal page."
-msgstr "Le tirage au sort a été fait le %(date)s. Chaque participant voit à qui il offre un cadeau sur sa page personnelle."
+msgstr ""
+"Le tirage au sort a été fait le %(date)s. Chaque participant voit à qui il "
+"offre un cadeau sur sa page personnelle."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:57
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:200
@@ -5869,7 +5879,8 @@ msgstr "Importer"
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:108
 msgid "Nobody draws someone from one of their sets: a couple, a household."
-msgstr "Personne ne tire quelqu'un de l'un de ses groupes : un couple, un foyer."
+msgstr ""
+"Personne ne tire quelqu'un de l'un de ses groupes : un couple, un foyer."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:118
 #, python-format
@@ -5892,13 +5903,17 @@ msgstr "Supprimer l'échange"
 msgid ""
 "The participants, their personal links and the draw are deleted. This action "
 "cannot be undone."
-msgstr "Les participants, leurs liens personnels et le tirage au sort sont supprimés. Cette action est irréversible."
+msgstr ""
+"Les participants, leurs liens personnels et le tirage au sort sont "
+"supprimés. Cette action est irréversible."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:181
 msgid ""
 "Everyone will get a new assignment, and every participant with an email "
 "address gets a new email."
-msgstr "Chacun aura un nouveau tirage, et chaque participant ayant une adresse email reçoit un nouvel email."
+msgstr ""
+"Chacun aura un nouveau tirage, et chaque participant ayant une adresse email "
+"reçoit un nouvel email."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:204
 msgid "This shows who every participant drew."
@@ -5908,7 +5923,9 @@ msgstr "Cela montre qui chaque participant a tiré."
 msgid ""
 "You take part: you will also see who drew you, and the surprise is gone for "
 "you."
-msgstr "Vous participez : vous verrez aussi qui vous a tiré, et la surprise sera gâchée pour vous."
+msgstr ""
+"Vous participez : vous verrez aussi qui vous a tiré, et la surprise sera "
+"gâchée pour vous."
 
 #: gift_manager/templates/gift_manager/secret_santa/exchange_detail.html:209
 msgid "Show the pairings"
@@ -5945,7 +5962,9 @@ msgstr "Aucun Père Noël secret pour l'instant."
 msgid ""
 "Draw who gives a gift to whom, for your family or your colleagues, even "
 "those without an account."
-msgstr "Tirez au sort qui offre un cadeau à qui, en famille ou entre collègues, même pour ceux qui n'ont pas de compte."
+msgstr ""
+"Tirez au sort qui offre un cadeau à qui, en famille ou entre collègues, même "
+"pour ceux qui n'ont pas de compte."
 
 #: gift_manager/templates/gift_manager/secret_santa/participant_page.html:29
 #, python-format
@@ -6854,14 +6873,18 @@ msgstr "Pas d'email pour %(names)s : donnez-leur leur lien personnel."
 #: gift_manager/views/secret_santa.py:202
 #, python-format
 msgid "The email could not be sent to %(names)s. Use Send again or Show link."
-msgstr "L'email n'a pas pu être envoyé à %(names)s. Utilisez « Renvoyer » ou « Voir le lien »."
+msgstr ""
+"L'email n'a pas pu être envoyé à %(names)s. Utilisez « Renvoyer » ou « Voir "
+"le lien »."
 
 #: gift_manager/views/secret_santa.py:209
 #, python-format
 msgid ""
 "The email limit is reached: nothing was sent to %(names)s. Try again "
 "tomorrow or hand out their personal link."
-msgstr "La limite d'emails est atteinte : rien n'a été envoyé à %(names)s. Réessayez demain ou donnez-leur leur lien personnel."
+msgstr ""
+"La limite d'emails est atteinte : rien n'a été envoyé à %(names)s. Réessayez "
+"demain ou donnez-leur leur lien personnel."
 
 #: gift_manager/views/secret_santa.py:264
 msgid "Exchange created. Add the participants."

@@ -2,7 +2,12 @@
 
 ## Status
 
-Considering
+Ready
+
+The design document `docs/superpowers/specs/2026-11-14-secret-santa-design.md` supersedes this
+idea where they differ (participants without accounts, personal links, exclusion sets). Its
+first slice (the draw: organizer pages, draw and redraw, emails, personal page) is implemented;
+slices 2 and 3 are not.
 
 ## Summary
 
