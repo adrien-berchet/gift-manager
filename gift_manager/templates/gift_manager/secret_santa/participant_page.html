@@ -70,7 +70,7 @@
                 {% blocktrans count counter=names|length %}{{ counter }} participant{% plural %}{{ counter }} participants{% endblocktrans %}
             </h2>
             <ul class="list-inline mb-0">
-                {% for name in names %}<li class="list-inline-item badge text-bg-light border fw-normal fs-6 mb-1">{{ name }}</li>{% endfor %}
+                {% for name in names %}<li class="list-inline-item secret-santa-name-chip">{{ name }}</li>{% endfor %}
             </ul>
         </div>
     </section>

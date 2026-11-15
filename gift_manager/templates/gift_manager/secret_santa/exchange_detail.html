@@ -33,7 +33,7 @@
   {% if exchange.no_mutual_draw %}· {% trans "Nobody draws the person who drew them" %}{% endif %}
 </p>
 
-<div id="secret-santa-reveal" aria-live="polite">{% if revealed_template %}{% include revealed_template %}{% endif %}</div>
+<div id="secret-santa-reveal">{% if revealed_template %}{% include revealed_template %}{% endif %}</div>
 
 <section class="card mb-4 secret-santa-draw-card" aria-labelledby="draw-title">
   <div class="card-body">
@@ -51,7 +51,7 @@
       <p class="card-text text-muted mb-0">{% blocktrans with count=min_participants %}Add at least {{ count }} participants to draw.{% endblocktrans %}</p>
       {% endif %}
     {% elif exchange.is_drawn %}
-      <p class="card-text secret-santa-drawn-text">{% blocktrans with date=exchange.drawn_at|date:"DATETIME_FORMAT" %}The draw was done on {{ date }}. Every participant can see who they give a gift to on their personal page.{% endblocktrans %}</p>
+      <p class="card-text secret-santa-drawn-text">{% blocktrans with date=exchange.drawn_at|date:"DATE_FORMAT" %}The draw was done on {{ date }}. Every participant can see who they give a gift to on their personal page.{% endblocktrans %}</p>
       <div class="d-flex flex-wrap gap-2">
         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#pairingsModal">
           <i class="fas fa-eye me-1" aria-hidden="true"></i>{% trans "Show all pairings" %}
@@ -193,7 +193,7 @@
     <div class="modal-content">
       <form method="post" action="{% url 'gift_manager:secret_santa_pairings' exchange.exchange_id %}"
             hx-post="{% url 'gift_manager:secret_santa_pairings' exchange.exchange_id %}"
-            hx-target="#secret-santa-reveal" hx-swap="innerHTML show:#secret-santa-reveal:top">
+            hx-target="#secret-santa-reveal" hx-swap="innerHTML">
         {% csrf_token %}
         <input type="hidden" name="confirm" value="1">
         <div class="modal-header">

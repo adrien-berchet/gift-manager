@@ -271,3 +271,18 @@ def test_personal_path_uses_the_organizer_language_prefix(exchange):
     exchange.organizer.profile.save()
     participant.exchange.organizer.profile.refresh_from_db()
     assert emails.participant_path(participant) == f"/fr/secret-santa/p/{participant.token}/"
+
+
+def test_a_redraw_resets_the_email_state_of_whoever_was_not_reached(exchange, monkeypatch):
+    people = drawn(exchange)
+    send_assignments(exchange, people, build)
+    service.run_draw(exchange, rng=random.Random(2))  # noqa: S311 - reproducible test
+    connection = FlakyConnection(people[0].email)
+    monkeypatch.setattr(emails, "get_connection", lambda: connection)
+
+    report = send_assignments(exchange, people, build)
+
+    assert report.failed == [people[0]]
+    unreached = ExchangeParticipant.objects.get(pk=people[0].pk)
+    assert unreached.last_emailed_at is None
+    assert emails.can_send_again(unreached)

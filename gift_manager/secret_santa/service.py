@@ -376,7 +376,9 @@ def run_draw(exchange: Exchange, *, rng: random.Random | None = None) -> list[Ex
             raise ExchangeError(_draw_messages()[error.reason]) from error
         for participant in participants:
             participant.gives_to_id = result[participant.pk]
-        ExchangeParticipant.objects.bulk_update(participants, ["gives_to"])
+            # Only an email sent for this draw counts as sent (and starts the cooldown)
+            participant.last_emailed_at = None
+        ExchangeParticipant.objects.bulk_update(participants, ["gives_to", "last_emailed_at"])
         locked.status = Exchange.Status.DRAWN
         locked.drawn_at = timezone.now()
         locked.save(update_fields=["status", "drawn_at"])
