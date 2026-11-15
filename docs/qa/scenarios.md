@@ -71,6 +71,33 @@ feature ships or a pass finds a gap.
 - The profile's active wish count leaves out received wishes.
 - The delete-account and deactivate-account pages cancel back to the profile.
 
+## Secret Santa
+
+- **Draw** (alice organizes and takes part): import a group, type a participant without email,
+  add an exclusion set, draw. Pairings respect the set and "no mutual draw"; each participant
+  with an email gets one with the link and a stop link; an impossible draw saves nothing.
+- **Personal page** (logged out, as bob, as the linked account): the first two look the same;
+  only the linked account sees its wishlist; shared wishes need a confirmation; the Santa sees
+  exchange wishes, shared wishes and the note. Headers: no-store, noindex.
+- **Attach** (bob): from his link, log in, confirm; the login URL has no token; the exchange
+  appears on his dashboard with "Plan a gift". Attaching to a participation linked to another
+  account is refused.
+- **Access** (bob): every organizer URL of alice's exchange returns 404; "Plan a gift" with
+  someone else's participation returns 404.
+- **After the draw** (alice): a repair that breaks an exclusion is refused; a valid removal
+  emails only the Santa; a latecomer changes two pairings and emails three people; "Send
+  again" respects the cooldown; a new link kills the old one.
+- **Close and copy** (alice): close with reveal, then personal pages are read-only and POSTs
+  fail; copy with "no repeat", invite, decline from a personal page, draw: no 2026 pair comes
+  back and the decliner is left out.
+
+## Capture and guest wishlist
+
+- The capture page drops `javascript:` links, prices in another currency and out-of-range
+  values, and prefills the wish, plan and gift forms.
+- The guest wishlist link shows no claim state, is not cached or indexed, dies when
+  regenerated or disabled.
+
 ## Everywhere
 
 - French pages show no English text on changed screens.
