@@ -83,8 +83,14 @@ reviewer agent, journeys re-run on the live app):
 | R2 | Fix | Light-theme `.btn-outline-danger` had no border anywhere in the app (`.btn { border: none }`); it now has a red outline like the other outlined buttons, and the dark pressed state keeps a readable fill |
 | A1 | Fix | The explorer shows Edit only for members the user can edit (`PersonQuerySet.with_edit_flag`) |
 
-Left open: "Redraw everything" and other `.btn-outline-warning` buttons are borderless in the
-light theme for the same reason as R2.
+Found while fixing R2 and fixed too: light-theme `.btn-outline-warning` ("Redraw everything")
+had no border and Bootstrap's yellow text (about 1.6:1 on white); the dark-theme
+`.btn-outline-danger` hover put white text on a pale red (about 1.9:1). Left open: the
+`btn-outline-success`, `-info`, `-dark` and `-light` variants (one use each) have no border in
+the light theme either.
+
+The QA scripts default to port 8001 while `docker-compose.yml` publishes `${WEB_PORT:-8000}`:
+a machine without `WEB_PORT=8001` in its `.env` needs `QA_BASE_URL`.
 
 The original questions follow.
 
