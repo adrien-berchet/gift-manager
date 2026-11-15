@@ -3,10 +3,37 @@
 
 import os
 import re
+import subprocess
 
 import requests
 
-BASE_URL = os.environ.get("QA_BASE_URL", "http://localhost:8001").rstrip("/")
+WEB_CONTAINER = "gift-manager-web"  # container_name in docker-compose.yml
+
+
+def _base_url() -> str:
+    """Return QA_BASE_URL, else the host port Docker publishes for the web container.
+
+    docker-compose.yml publishes ``${WEB_PORT:-8000}``, and WEB_PORT is set in a machine's
+    ``.env`` (read by compose, not by this shell), so the port is asked from Docker.
+    """
+    if os.environ.get("QA_BASE_URL"):
+        return os.environ["QA_BASE_URL"].rstrip("/")
+    try:
+        published = subprocess.run(  # noqa: S603 - fixed arguments, no user input
+            ["docker", "port", WEB_CONTAINER, "8000/tcp"],  # noqa: S607 - docker from PATH
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        ).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        published = ""
+    # One line per address, such as "127.0.0.1:8001"; they share the port
+    match = re.search(r":(\d+)$", published.strip().split("\n")[0])
+    return f"http://localhost:{match.group(1) if match else 8000}"
+
+
+BASE_URL = _base_url()
 
 # Seed accounts (`manage.py seed_data`); override with QA_PASSWORD_<USERNAME>
 DEFAULT_PASSWORDS = {"alice": "alice_password", "bob": "bob_password", "testuser": "testpass123"}
