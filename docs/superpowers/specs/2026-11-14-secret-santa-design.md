@@ -1,6 +1,6 @@
 # Secret Santa Exchanges: Design
 
-Date: 2026-11-14. Source idea: `docs/ideas/0034-secret-santa-draws-for-groups.md`.
+Date: 2026-11-14. Source idea: `docs/ideas/implemented/0034-secret-santa-draws-for-groups.md`.
 This design replaces several decisions of that idea; where they differ, this document wins.
 
 ## Intent

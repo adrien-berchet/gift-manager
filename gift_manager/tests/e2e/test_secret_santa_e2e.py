@@ -307,3 +307,88 @@ class TestSecretSantaTellYourSantaE2E:
             bob_context.close()
             phone_context.close()
             organizer_context.close()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestSecretSantaAfterTheDrawE2E:
+    def test_repair_close_reveal_and_copy(
+        self, browser: Browser, browser_context_args, live_server, seed_data_e2e
+    ):
+        alice = seed_data_e2e.alice
+        exchange = service.create_exchange(
+            alice, name="Office 2026", exchange_date=timezone.localdate()
+        )
+        for name in ("Ann", "Ben", "Cid", "Dee", "Eli"):
+            service.add_participant(exchange, name=name, email=f"{name.lower()}@example.com")
+        service.run_draw(exchange)
+        detail = f"{live_server.url}{reverse('gift_manager:secret_santa_detail', args=[exchange.exchange_id])}"
+        context = browser.new_context(**browser_context_args)
+        guest_context = browser.new_context(
+            **{**browser_context_args, "viewport": {"width": 390, "height": 844}}
+        )
+        try:
+            page = context.new_page()
+            login_as(page, live_server.url, "alice")
+            open_page(page, detail)
+
+            # Remove and repair: only Cid's Santa gets a new assignment
+            cid = exchange.participants.get(name="Cid")
+            cid_santa = ExchangeParticipant.objects.get(gives_to=cid).name
+            row = page.locator(".secret-santa-participant", has_text="Cid")
+            row.locator(".secret-santa-remove > summary").click()
+            row.locator(".secret-santa-remove-repair").click()
+            expect(page.locator(".secret-santa-participant", has_text="Cid")).to_have_count(0)
+            assert "gives to" not in page.content()
+            assert ExchangeParticipant.objects.get(
+                name=cid_santa, exchange=exchange
+            ).last_emailed_at
+
+            # Add and repair: a latecomer, two Santas and the latecomer get a new assignment
+            page.locator(".secret-santa-latecomer > summary").click()
+            page.fill("#latecomer-name", "Fay")
+            page.fill("#latecomer-email", "fay@example.com")
+            page.locator(".secret-santa-add-repair").click()
+            expect(page.locator(".secret-santa-participant", has_text="Fay")).to_be_visible()
+            fay = exchange.participants.get(name="Fay")
+            assert fay.gives_to_id is not None
+            assert ExchangeParticipant.objects.filter(gives_to=fay).count() == 1
+            screenshot(page, "organizer-after-repairs")
+
+            # Close, revealing the pairings to everyone
+            page.locator(".secret-santa-close-button").click()
+            page.check("#close-reveal")
+            page.locator(".secret-santa-close-confirm").click()
+            expect(page.locator(".secret-santa-closed-text")).to_be_visible()
+            guest = guest_context.new_page()
+            ann = exchange.participants.get(name="Ann")
+            guest.goto(
+                f"{live_server.url}{reverse('gift_manager:secret_santa_participant', args=[ann.token])}",
+                wait_until="domcontentloaded",
+            )
+            expect(guest.locator(".secret-santa-revealed-pairing")).to_have_count(5)
+            screenshot(guest, "participant-closed-revealed")
+
+            # Start next year's exchange from this one: no pair is repeated
+            page.locator(".secret-santa-copy").click()
+            page.fill('input[name="name"]', "Office 2027")
+            page.wait_for_function("document.getElementById('id_exchange_date')._flatpickr")
+            page.evaluate(
+                "(value) => document.getElementById('id_exchange_date')._flatpickr"
+                ".setDate(value, true)",
+                (timezone.localdate() + timedelta(days=365)).isoformat(),
+            )
+            expect(page.locator('input[name="no_repeat_draw"]')).to_be_checked()
+            page.get_by_role("button", name="Create").click()
+            page.wait_for_url("**/secret-santa/*-*/")
+            copy = Exchange.objects.get(name="Office 2027")
+            assert copy.participants.count() == 5
+            page.locator(".secret-santa-draw-button").click()
+            expect(page.locator(".secret-santa-drawn-text")).to_be_visible()
+            before = set(exchange.participants.values_list("name", "gives_to__name"))
+            after = set(copy.participants.values_list("name", "gives_to__name"))
+            assert not before & after
+        finally:
+            guest_context.close()
+            context.close()

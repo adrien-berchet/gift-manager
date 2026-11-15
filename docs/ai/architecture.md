@@ -103,6 +103,11 @@
   a hash of the token) and a login-protected confirmation; no login or confirmation URL carries
   the token. Pages with forms use `Referrer-Policy: strict-origin`, not `no-referrer`: with
   `no-referrer` browsers post `Origin: null` and the CSRF check refuses the form.
+  After the draw, repairs (`draw.repair_removal`, `draw.repair_insertion`) change one or two
+  pairings and are checked against the same rules as a draw (`service.draw_rules`: exclusion
+  sets, previous-exchange pairs, mutual draws); only participants whose recipient changed are
+  emailed. A closed exchange keeps its pairings for the next exchange's "no repeat" rule; its
+  personal pages show other pairings only when the organizer revealed them at closing.
 - Gift suggestions: `gift_manager/suggestions/` holds catalogue scoring and LLM ideation.
   Candidates, history, ratings and tags are strictly scoped to the viewing user via `accessible_by`
   and `metadata_visibility.VisibleMetadata`; hidden surprise plans are never read. AI payloads are

@@ -2,13 +2,13 @@
 
 ## Status
 
-Ready
+Implemented
 
 The design document `docs/superpowers/specs/2026-11-14-secret-santa-design.md` supersedes this
-idea where they differ (participants without accounts, personal links, exclusion sets). Its
-first slice (the draw: organizer pages, draw and redraw, emails, personal page) and second slice
-(wishes and notes for the Santa, invitations and declining, linking an account, sharing real
-wishes, dashboard card, "Plan a gift") are implemented; slice 3 is not.
+idea where they differ (participants without accounts, personal links, exclusion sets). All
+three of its slices are implemented: the draw, telling your Santa (wishes, notes, accounts,
+dashboard), and after the draw (repairs, closing with a reveal, starting from a previous
+exchange). Plans: `docs/superpowers/plans/2026-11-1*-secret-santa-slice-*.md`.
 
 ## Summary
 
