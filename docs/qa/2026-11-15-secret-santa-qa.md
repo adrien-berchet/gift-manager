@@ -89,8 +89,9 @@ had no border and Bootstrap's yellow text (about 1.6:1 on white); the dark-theme
 `btn-outline-success`, `-info`, `-dark` and `-light` variants (one use each) have no border in
 the light theme either.
 
-The QA scripts default to port 8001 while `docker-compose.yml` publishes `${WEB_PORT:-8000}`:
-a machine without `WEB_PORT=8001` in its `.env` needs `QA_BASE_URL`.
+The QA scripts assumed port 8001 while `docker-compose.yml` publishes `${WEB_PORT:-8000}`
+(`WEB_PORT=8001` is set in the `.env` of another machine only). They now ask Docker for the
+published port (`QA_BASE_URL` still overrides it), and `.env.example` documents `WEB_PORT`.
 
 The original questions follow.
 
@@ -180,9 +181,9 @@ The original questions follow.
 
 ## Test environment notes
 
-- The app listens on port 8000; the skill scripts default to 8001, so set
-  `QA_BASE_URL=http://localhost:8000`. `crawl.py` and `cross_user_access.py` need `requests`,
-  which only the `.tox/e2e` Python has.
+- The app listens on port 8000 on this machine (no `WEB_PORT`); the skill scripts then
+  defaulted to 8001 (fixed since, see above). `crawl.py` and `cross_user_access.py` need
+  `requests`, which only the `.tox/e2e` Python has here.
 - The local `main` branch is far behind `origin/main`; `git diff main...HEAD` overstates the scope.
 - Docker logs show local time (Europe/Paris) while the database stores UTC: allow for it when
   checking cooldowns.

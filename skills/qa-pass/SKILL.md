@@ -13,9 +13,11 @@ Read `docs/qa/README.md` (report format, severity, rules) and `docs/qa/scenarios
 
 ## 1. Prepare
 
-1. Check the stack: `docker ps` shows the web container, and
-   `curl -s -o /dev/null -w '%{http_code}' http://localhost:8001/accounts/login/` returns 200.
-   If not, ask the user to run `docker compose up`.
+1. Check the stack: `docker ps` shows the web container, `docker port gift-manager-web 8000`
+   gives its host port (`WEB_PORT` in `.env`, 8000 by default), and
+   `curl -s -o /dev/null -w '%{http_code}' http://localhost:<port>/accounts/login/` returns 200.
+   If not, ask the user to run `docker compose up`. The scripts below find the port the same
+   way; `QA_BASE_URL` overrides it. They need `requests`: `.tox/e2e/bin/python` has it.
 2. Serve the current code: `docker exec <web> python manage.py collectstatic --noinput`, and
    restart the web container after a `.mo` change.
 3. Data: the pass changes data. Ask before resetting it with
