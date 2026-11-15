@@ -152,7 +152,10 @@ at closing.
   what was shared for the exchange is no longer visible.
 - At closing, the organizer can choose to reveal all pairings to every participant.
 - Pairings are kept so that a later exchange can avoid repeats.
-- "Start from a previous exchange" copies participants and exclusion sets.
+- "Start from a previous exchange" copies participants and exclusion sets. A participant keeps
+  the account they attached themselves (decided after the QA pass of 2026-11-15), so they need
+  not attach it again; like an imported account, it shows the copy only once invited or drawn,
+  and their wishlist selection starts empty.
 
 ### Budget and language
 
