@@ -1,0 +1,430 @@
+"""Tests of the Secret Santa service layer."""
+
+import random
+from decimal import Decimal
+
+import pytest
+from django.utils import timezone
+
+from gift_manager.email_encoding import encode_email
+from gift_manager.models import PermissionLevel
+from gift_manager.models import PersonGroupPermission
+from gift_manager.secret_santa import draw as draw_engine
+from gift_manager.secret_santa import service
+from gift_manager.secret_santa.models import MAX_PARTICIPANTS
+from gift_manager.secret_santa.models import Exchange
+from gift_manager.secret_santa.models import ExchangeParticipant
+from gift_manager.secret_santa.service import ExchangeError
+from gift_manager.tests.factories import ExchangeFactory
+from gift_manager.tests.factories import ExchangeParticipantFactory
+from gift_manager.tests.factories import ExclusionSetFactory
+from gift_manager.tests.factories import PersonFactory
+from gift_manager.tests.factories import PersonGroupFactory
+from gift_manager.tests.factories import UserFactory
+
+pytestmark = pytest.mark.django_db
+
+
+def seeded(seed: int) -> random.Random:
+    return random.Random(seed)  # noqa: S311 - reproducible tests, not a secret
+
+
+@pytest.fixture
+def organizer():
+    return UserFactory(first_name="Olivia", last_name="Organizer")
+
+
+@pytest.fixture
+def exchange(organizer):
+    return ExchangeFactory(organizer=organizer)
+
+
+def add_people(exchange, *names):
+    return [service.add_participant(exchange, name=name, email=f"{name}@example.com") for name in names]
+
+
+def pairings(exchange):
+    return dict(exchange.participants.values_list("pk", "gives_to_id"))
+
+
+def test_create_exchange_copies_the_organizer_currency(organizer):
+    organizer.profile.currency = "CHF"
+    organizer.profile.save()
+
+    exchange = service.create_exchange(
+        organizer, name="Family", exchange_date=timezone.localdate(), budget=Decimal("20")
+    )
+
+    assert exchange.currency == "CHF"
+    assert exchange.status == Exchange.Status.DRAFT
+    assert not exchange.participants.exists()
+
+
+def test_organizer_taking_part_becomes_a_linked_participant(organizer):
+    exchange = service.create_exchange(
+        organizer, name="Family", exchange_date=timezone.localdate(), organizer_takes_part=True
+    )
+
+    participant = exchange.participants.get()
+    assert participant.name == "Olivia Organizer"
+    assert participant.linked_account == organizer
+    assert participant.email == organizer.profile.email
+
+
+def test_organizer_without_full_name_takes_part_under_their_username():
+    organizer = UserFactory(first_name="", last_name="", username="santa_boss")
+    exchange = service.create_exchange(
+        organizer, name="Office", exchange_date=timezone.localdate(), organizer_takes_part=True
+    )
+    assert exchange.participants.get().name == "santa_boss"
+
+
+def test_add_participant_refuses_a_duplicate_name_ignoring_case(exchange):
+    service.add_participant(exchange, name="Anna")
+
+    with pytest.raises(ExchangeError, match="same name"):
+        service.add_participant(exchange, name="  aNNa ")
+
+    assert exchange.participants.count() == 1
+
+
+def test_add_participant_without_email(exchange):
+    participant = service.add_participant(exchange, name="Ben", email="")
+    assert participant.email_address is None
+
+
+def test_add_participant_refuses_an_empty_name(exchange):
+    with pytest.raises(ExchangeError):
+        service.add_participant(exchange, name="   ")
+
+
+def test_add_participant_refuses_the_101st(exchange):
+    ExchangeParticipant.objects.bulk_create(
+        ExchangeParticipant(exchange=exchange, name=f"P{i}", token=f"token-{i}")
+        for i in range(MAX_PARTICIPANTS)
+    )
+
+    with pytest.raises(ExchangeError, match="at most 100"):
+        service.add_participant(exchange, name="One too many")
+
+
+def test_import_persons_copies_name_email_and_account_link(exchange, organizer):
+    account = UserFactory()
+    person = PersonFactory(
+        first_name="Chloe",
+        family_name="Martin",
+        email_address=encode_email("chloe@example.com"),
+        account=account,
+        owner=organizer,
+    )
+
+    assert service.import_persons(exchange, organizer, [person]) == (1, 0)
+
+    participant = exchange.participants.get()
+    assert participant.name == "Chloe Martin"
+    assert participant.email == "chloe@example.com"
+    assert participant.source_person == person
+    assert participant.linked_account == account
+
+
+def test_import_skips_people_already_present(exchange, organizer):
+    account = UserFactory()
+    person = PersonFactory(first_name="Dan", family_name="One", account=account, owner=organizer)
+    same_account = PersonFactory(
+        first_name="Daniel", family_name="One", account=account, owner=organizer
+    )
+    same_name = PersonFactory(first_name="dan", family_name="ONE", owner=organizer)
+
+    result = service.import_persons(exchange, organizer, [person, person, same_account, same_name])
+
+    assert result == (1, 3)
+    assert exchange.participants.count() == 1
+
+
+def test_import_skips_a_typed_participant_with_the_same_name(exchange, organizer):
+    service.add_participant(exchange, name="Eve Adams")
+    person = PersonFactory(first_name="Eve", family_name="Adams", owner=organizer)
+
+    assert service.import_persons(exchange, organizer, [person]) == (0, 1)
+
+
+def test_import_ignores_persons_the_organizer_cannot_access(exchange, organizer):
+    stranger = PersonFactory()
+
+    assert service.import_persons(exchange, organizer, [stranger]) == (0, 0)
+    assert not exchange.participants.exists()
+
+
+def test_import_refuses_to_go_over_the_limit(exchange, organizer):
+    ExchangeParticipant.objects.bulk_create(
+        ExchangeParticipant(exchange=exchange, name=f"P{i}", token=f"token-{i}")
+        for i in range(MAX_PARTICIPANTS - 1)
+    )
+    persons = PersonFactory.create_batch(2, owner=organizer)
+
+    with pytest.raises(ExchangeError, match="at most 100"):
+        service.import_persons(exchange, organizer, persons)
+
+    assert exchange.participants.count() == MAX_PARTICIPANTS - 1
+
+
+def test_import_group_includes_nested_members_once(exchange, organizer):
+    parent = PersonGroupFactory()
+    PersonGroupPermission.objects.create(
+        user=organizer,
+        group=parent,
+        permission_type=PermissionLevel.VIEWER,
+        inherit_permissions=True,
+    )
+    child = PersonGroupFactory()
+    child.parent_groups.add(parent)
+    in_both = PersonFactory(owner=organizer, groups=[parent, child])
+    in_child = PersonFactory(owner=organizer, groups=[child])
+
+    assert service.import_group(exchange, organizer, parent) == (2, 0)
+    assert set(exchange.participants.values_list("source_person", flat=True)) == {
+        in_both.pk,
+        in_child.pk,
+    }
+
+
+def test_import_group_leaves_out_nested_groups_the_organizer_cannot_see(exchange, organizer):
+    parent = PersonGroupFactory(shared_with=[organizer])
+    hidden_child = PersonGroupFactory()
+    hidden_child.parent_groups.add(parent)
+    PersonFactory(owner=organizer, groups=[hidden_child])
+
+    assert service.import_group(exchange, organizer, parent) == (0, 0)
+
+
+def test_import_group_the_organizer_cannot_access_is_refused(exchange, organizer):
+    group = PersonGroupFactory()
+    PersonFactory(owner=organizer, groups=[group])
+
+    with pytest.raises(ExchangeError):
+        service.import_group(exchange, organizer, group)
+
+    assert not exchange.participants.exists()
+
+
+def test_forbidden_pairs_cover_every_pair_of_a_set_in_both_directions(exchange):
+    a, b, c, d = add_people(exchange, "A", "B", "C", "D")
+    ExclusionSetFactory(exchange=exchange, participants=[a, b, c])
+    ExclusionSetFactory(exchange=exchange, participants=[c, d])
+
+    assert service.forbidden_pairs(exchange) == {
+        (a.pk, b.pk),
+        (b.pk, a.pk),
+        (a.pk, c.pk),
+        (c.pk, a.pk),
+        (b.pk, c.pk),
+        (c.pk, b.pk),
+        (c.pk, d.pk),
+        (d.pk, c.pk),
+    }
+
+
+def test_exclusion_set_needs_two_participants_of_the_same_exchange(exchange):
+    a, b = add_people(exchange, "A", "B")
+    foreigner = ExchangeParticipantFactory()
+
+    with pytest.raises(ExchangeError, match="at least two"):
+        service.save_exclusion_set(exchange, name="Alone", participants=[a])
+    with pytest.raises(ExchangeError, match="at least two"):
+        service.save_exclusion_set(exchange, name="Mixed", participants=[a, foreigner])
+
+    exclusion_set = service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+    assert set(exclusion_set.participants.all()) == {a, b}
+
+
+def test_exclusion_set_can_be_updated_and_deleted(exchange):
+    a, b, c = add_people(exchange, "A", "B", "C")
+    exclusion_set = service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+
+    service.save_exclusion_set(
+        exchange, name="Trio", participants=[a, b, c], instance=exclusion_set
+    )
+    exclusion_set.refresh_from_db()
+    assert exclusion_set.name == "Trio"
+    assert exclusion_set.participants.count() == 3
+
+    service.delete_exclusion_set(exclusion_set)
+    assert not exchange.exclusion_sets.exists()
+
+
+def test_run_draw_assigns_everyone_and_marks_the_exchange_drawn(exchange):
+    exchange.no_mutual_draw = True
+    exchange.save()
+    people = add_people(exchange, "A", "B", "C", "D", "E", "F")
+    ExclusionSetFactory(exchange=exchange, participants=people[:2])
+
+    service.run_draw(exchange, rng=seeded(1))
+
+    exchange.refresh_from_db()
+    assert exchange.status == Exchange.Status.DRAWN
+    assert exchange.drawn_at is not None
+    assert draw_engine.is_valid(
+        pairings(exchange),
+        [p.pk for p in people],
+        service.forbidden_pairs(exchange),
+        no_mutual=True,
+    )
+
+
+def test_run_draw_with_impossible_exclusions_saves_nothing(exchange):
+    people = add_people(exchange, "A", "B", "C", "D", "E")
+    ExclusionSetFactory(exchange=exchange, participants=people[:3])
+
+    with pytest.raises(ExchangeError, match="No draw is possible"):
+        service.run_draw(exchange)
+
+    exchange.refresh_from_db()
+    assert exchange.status == Exchange.Status.DRAFT
+    assert not exchange.participants.filter(gives_to__isnull=False).exists()
+
+
+def test_run_draw_needs_three_participants(exchange):
+    add_people(exchange, "A", "B")
+
+    with pytest.raises(ExchangeError, match="At least 3"):
+        service.run_draw(exchange)
+
+
+def test_redraw_replaces_every_pairing_in_one_go(exchange):
+    people = add_people(exchange, *"ABCDEFGH")
+    service.run_draw(exchange, rng=seeded(1))
+    exchange.refresh_from_db()
+    first, first_at = pairings(exchange), exchange.drawn_at
+
+    service.run_draw(exchange, rng=seeded(2))
+
+    exchange.refresh_from_db()
+    second = pairings(exchange)
+    assert second != first
+    assert exchange.drawn_at > first_at
+    assert draw_engine.is_valid(second, [p.pk for p in people], set(), no_mutual=False)
+
+
+def test_failed_redraw_keeps_the_previous_pairings(exchange, monkeypatch):
+    add_people(exchange, "A", "B", "C", "D")
+    service.run_draw(exchange, rng=seeded(1))
+    before = pairings(exchange)
+
+    def give_up(*args, **kwargs):
+        raise draw_engine.NoDrawPossible(draw_engine.GAVE_UP)
+
+    monkeypatch.setattr(draw_engine, "draw", give_up)
+    with pytest.raises(ExchangeError, match="No draw was found"):
+        service.run_draw(exchange)
+
+    assert pairings(exchange) == before
+
+
+def test_participants_and_sets_are_frozen_after_the_draw_except_name_and_email(exchange):
+    a, b, c, _d = add_people(exchange, "A", "B", "C", "D")
+    exclusion_set = service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+    service.run_draw(exchange, rng=seeded(1))
+    frozen = "The draw is done"
+
+    with pytest.raises(ExchangeError, match=frozen):
+        service.add_participant(exchange, name="Late")
+    with pytest.raises(ExchangeError, match=frozen):
+        service.remove_participant(c)
+    with pytest.raises(ExchangeError, match=frozen):
+        service.save_exclusion_set(exchange, name="Other", participants=[a, c])
+    with pytest.raises(ExchangeError, match=frozen):
+        service.delete_exclusion_set(exclusion_set)
+    with pytest.raises(ExchangeError, match=frozen):
+        service.update_exchange(
+            exchange,
+            name=exchange.name,
+            exchange_date=exchange.exchange_date,
+            budget=exchange.budget,
+            guidelines="",
+            no_mutual_draw=True,
+        )
+
+    service.update_participant(c, name="Charlie", email="charlie@example.com")
+    c.refresh_from_db()
+    assert (c.name, c.email) == ("Charlie", "charlie@example.com")
+    assert c.gives_to_id is not None
+
+
+def test_closed_exchange_refuses_every_change(exchange):
+    (a,) = add_people(exchange, "A")
+    Exchange.objects.filter(pk=exchange.pk).update(status=Exchange.Status.CLOSED)
+
+    with pytest.raises(ExchangeError, match="closed"):
+        service.update_participant(a, name="B", email="")
+    with pytest.raises(ExchangeError, match="closed"):
+        service.run_draw(exchange)
+    with pytest.raises(ExchangeError, match="closed"):
+        service.add_participant(exchange, name="C")
+
+
+def test_update_participant_email_clears_the_send_again_cooldown(exchange):
+    (a,) = add_people(exchange, "A")
+    ExchangeParticipant.objects.filter(pk=a.pk).update(last_emailed_at=timezone.now())
+    a.refresh_from_db()
+    token = a.token
+
+    service.update_participant(a, name="A", email="A@example.com")
+    a.refresh_from_db()
+    assert a.last_emailed_at is not None  # same address
+
+    service.update_participant(a, name="A", email="new@example.com")
+    a.refresh_from_db()
+    assert a.last_emailed_at is None
+    assert a.token == token
+
+
+def test_renaming_to_an_existing_name_is_refused_after_the_draw_too(exchange):
+    a, _b, _c = add_people(exchange, "A", "B", "C")
+    service.run_draw(exchange, rng=seeded(1))
+
+    with pytest.raises(ExchangeError, match="same name"):
+        service.update_participant(a, name="b", email="")
+
+
+def test_remove_participant_before_the_draw(exchange):
+    a, b = add_people(exchange, "A", "B")
+    service.save_exclusion_set(exchange, name="Couple", participants=[a, b])
+
+    service.remove_participant(a)
+
+    assert list(exchange.participants.all()) == [b]
+
+
+def test_regenerate_token(exchange):
+    (a,) = add_people(exchange, "A")
+    old = a.token
+
+    service.regenerate_token(a)
+
+    assert not ExchangeParticipant.objects.filter(token=old).exists()
+
+
+def test_delete_exchange_removes_everything(exchange):
+    people = add_people(exchange, "A", "B", "C", "D")
+    service.save_exclusion_set(exchange, name="Couple", participants=people[:2])
+    service.run_draw(exchange, rng=seeded(1))
+
+    service.delete_exchange(exchange)
+
+    assert not Exchange.objects.exists()
+    assert not ExchangeParticipant.objects.exists()
+
+
+def test_organized_by_returns_only_my_exchanges(exchange, organizer):
+    ExchangeFactory()
+
+    assert list(service.organized_by(organizer)) == [exchange]
+
+
+def test_participants_without_pairings_does_not_load_gives_to(exchange):
+    add_people(exchange, "A", "B", "C")
+    service.run_draw(exchange, rng=seeded(1))
+
+    participants = list(service.participants_without_pairings(exchange))
+
+    assert all("gives_to_id" in p.get_deferred_fields() for p in participants)
