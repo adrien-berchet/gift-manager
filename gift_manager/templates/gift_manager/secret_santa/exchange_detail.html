@@ -41,14 +41,29 @@
     {% if exchange.is_draft %}
       {% if can_draw %}
       <p class="card-text">{% trans "Once drawn, every participant with an email address gets their personal link. Give the others their link yourself." %}</p>
-      <form method="post" action="{% url 'gift_manager:secret_santa_draw' exchange.exchange_id %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-primary secret-santa-draw-button">
-          <i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Draw" %}
-        </button>
-      </form>
       {% else %}
-      <p class="card-text text-muted mb-0">{% blocktrans with count=min_participants %}Add at least {{ count }} participants to draw.{% endblocktrans %}</p>
+      <p class="card-text text-muted">{% blocktrans with count=min_participants %}Add at least {{ count }} participants to draw.{% endblocktrans %}</p>
+      {% endif %}
+      <div class="d-flex flex-wrap gap-2">
+        {% if can_draw %}
+        <form method="post" action="{% url 'gift_manager:secret_santa_draw' exchange.exchange_id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary secret-santa-draw-button">
+            <i class="fas fa-random me-1" aria-hidden="true"></i>{% trans "Draw" %}
+          </button>
+        </form>
+        {% endif %}
+        {% if uninvited_count %}
+        <form method="post" action="{% url 'gift_manager:secret_santa_invite' exchange.exchange_id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-primary secret-santa-invite-button">
+            <i class="fas fa-envelope me-1" aria-hidden="true"></i>{% trans "Send the personal links now" %}
+          </button>
+        </form>
+        {% endif %}
+      </div>
+      {% if uninvited_count %}
+      <p class="card-text text-muted small mt-2 mb-0">{% trans "Optional: before the draw, participants can tell their Santa what they would like, or say that they cannot take part." %}</p>
       {% endif %}
     {% elif exchange.is_drawn %}
       <p class="card-text secret-santa-drawn-text">{% blocktrans with date=exchange.drawn_at|date:"DATE_FORMAT" %}The draw was done on {{ date }}. Every participant can see who they give a gift to on their personal page.{% endblocktrans %}</p>

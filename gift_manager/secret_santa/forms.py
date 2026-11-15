@@ -92,9 +92,9 @@ class ExclusionSetForm(forms.Form):
     def __init__(self, *args, exchange, **kwargs):
         super().__init__(*args, **kwargs)
         # Pairings are never loaded by organizer pages
-        self.fields["participants"].queryset = exchange.participants.defer("gives_to").order_by(
-            "name"
-        )
+        self.fields["participants"].queryset = exchange.participants.defer(
+            "gives_to", "note_for_santa"
+        ).order_by("name")
 
 
 class ImportForm(forms.Form):

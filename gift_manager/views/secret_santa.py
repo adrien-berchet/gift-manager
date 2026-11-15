@@ -155,7 +155,7 @@ def _get_exchange(request, exchange_id) -> Exchange:
 def _get_participant(exchange: Exchange, participant_id) -> ExchangeParticipant:
     """Return a participant of this exchange, without who they drew."""
     return get_object_or_404(
-        ExchangeParticipant.objects.defer("gives_to").select_related("exchange"),
+        ExchangeParticipant.objects.defer("gives_to", "note_for_santa").select_related("exchange"),
         exchange=exchange,
         participant_id=participant_id,
     )
@@ -220,12 +220,16 @@ def _detail_context(request, exchange: Exchange, **extra) -> dict:
         participant.can_send_again = (
             bool(participant.email_address)
             and not participant.emails_stopped
+            and not participant.declined
+            and (exchange.is_drawn or participant.invited_at is not None)
             and emails.can_send_again(participant, now)
         )
     exclusion_sets = exchange.exclusion_sets.prefetch_related(
         Prefetch(
             "participants",
-            queryset=ExchangeParticipant.objects.defer("gives_to").order_by(Lower("name")),
+            queryset=ExchangeParticipant.objects.defer("gives_to", "note_for_santa").order_by(
+                Lower("name")
+            ),
         )
     )
     context = {
@@ -235,7 +239,10 @@ def _detail_context(request, exchange: Exchange, **extra) -> dict:
         "organizer_takes_part": any(
             participant.linked_account_id == request.user.pk for participant in participants
         ),
-        "can_draw": len(participants) >= MIN_PARTICIPANTS,
+        "can_draw": sum(not p.declined for p in participants) >= MIN_PARTICIPANTS,
+        "uninvited_count": sum(
+            1 for p in participants if not p.declined and p.invited_at is None and p.email_address
+        ),
         "min_participants": MIN_PARTICIPANTS,
         "max_participants": MAX_PARTICIPANTS,
         "participant_form": ParticipantForm(),
@@ -492,6 +499,40 @@ def secret_santa_draw(request, exchange_id):
 
 @login_required
 @require_POST
+def secret_santa_invite(request, exchange_id):
+    """Before the draw, send their personal link to the participants not invited yet."""
+    exchange = _get_exchange(request, exchange_id)
+    try:
+        report = emails.send_invitations(exchange, request.build_absolute_uri)
+    except ExchangeError as error:
+        messages.error(request, error.message)
+    else:
+        if report.sent or report.failed or report.over_limit:
+            _flash_report(request, report)
+        else:
+            messages.info(request, gettext("Everyone with an email address has their link."))
+    return _to_detail(exchange)
+
+
+@login_required
+@require_POST
+def secret_santa_put_back(request, exchange_id, participant_id):
+    """Before the draw, count again a participant who had said they cannot take part."""
+    exchange = _get_exchange(request, exchange_id)
+    participant = _get_participant(exchange, participant_id)
+    try:
+        service.put_back(participant)
+    except ExchangeError as error:
+        messages.error(request, error.message)
+    else:
+        messages.success(
+            request, gettext("%(name)s takes part again.") % {"name": participant.name}
+        )
+    return _to_detail(exchange)
+
+
+@login_required
+@require_POST
 def secret_santa_send_again(request, exchange_id, participant_id):
     exchange = _get_exchange(request, exchange_id)
     participant = _get_participant(exchange, participant_id)
@@ -567,7 +608,9 @@ def secret_santa_pairings(request, exchange_id):
         messages.error(request, gettext("The draw has not been done yet."))
         return _to_detail(exchange)
     pairings = list(
-        exchange.participants.order_by(Lower("name"), "pk").values_list("name", "gives_to__name")
+        service.taking_part(exchange)
+        .order_by(Lower("name"), "pk")
+        .values_list("name", "gives_to__name")
     )
     return _reveal_response(
         request,
