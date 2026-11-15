@@ -1,6 +1,7 @@
 """Tests of the Secret Santa service layer."""
 
 import random
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
@@ -796,3 +797,47 @@ def test_copy_skips_a_person_no_longer_shared(exchange, organizer):
 
     assert copied.source_person is None
     assert copied.linked_account is None
+
+
+# ---------------------------------------------------------------------------
+# Slice 3: closing
+# ---------------------------------------------------------------------------
+
+
+def test_close_only_drawn_and_from_the_date(exchange):
+    add_people(exchange, "A", "B", "C")
+    with pytest.raises(ExchangeError, match="Only a drawn exchange"):
+        service.close_exchange(exchange, reveal=False, today=exchange.exchange_date)
+
+    service.run_draw(exchange, rng=seeded(1))
+    with pytest.raises(ExchangeError, match="can be closed from"):
+        service.close_exchange(
+            exchange, reveal=False, today=exchange.exchange_date - timedelta(days=1)
+        )
+
+    service.close_exchange(exchange, reveal=True, today=exchange.exchange_date)
+    exchange.refresh_from_db()
+    assert exchange.status == Exchange.Status.CLOSED
+    assert exchange.pairings_revealed
+    assert exchange.closed_at is not None
+
+
+def test_close_twice_is_refused(exchange):
+    add_people(exchange, "A", "B", "C")
+    service.run_draw(exchange, rng=seeded(1))
+    service.close_exchange(exchange, reveal=False, today=exchange.exchange_date)
+
+    with pytest.raises(ExchangeError, match="closed"):
+        service.close_exchange(exchange, reveal=True, today=exchange.exchange_date)
+    exchange.refresh_from_db()
+    assert not exchange.pairings_revealed
+
+
+def test_close_keeps_pairings(exchange):
+    add_people(exchange, "A", "B", "C")
+    service.run_draw(exchange, rng=seeded(1))
+    before = pairings(exchange)
+
+    service.close_exchange(exchange, reveal=False, today=exchange.exchange_date)
+
+    assert pairings(exchange) == before

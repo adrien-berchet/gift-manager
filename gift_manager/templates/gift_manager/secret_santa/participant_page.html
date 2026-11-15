@@ -37,6 +37,18 @@
 
     {% if exchange.is_closed %}
     <div class="alert alert-secondary" role="status">{% trans "This exchange is over." %}</div>
+    {% if revealed_pairings %}
+    <section class="card mb-4 secret-santa-revealed" aria-labelledby="revealed-title">
+        <div class="card-body">
+            <h2 class="h5 card-title" id="revealed-title">{% trans "Who gave to whom" %}</h2>
+            <ul class="mb-0">
+                {% for giver, recipient in revealed_pairings %}
+                <li class="secret-santa-revealed-pairing">{% blocktrans %}{{ giver }} gave to {{ recipient }}{% endblocktrans %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </section>
+    {% endif %}
     {% else %}
 
     {% if participant.declined %}
