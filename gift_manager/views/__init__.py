@@ -132,7 +132,23 @@ from .reminders import RegenerateCalendarFeedView
 from .reminders import UpdateReminderPreferencesView
 from .reminders import calendar_feed
 from .secret_santa import SecretSantaStopEmailsView
+from .secret_santa import secret_santa_create
+from .secret_santa import secret_santa_delete
+from .secret_santa import secret_santa_detail
+from .secret_santa import secret_santa_draw
+from .secret_santa import secret_santa_edit
+from .secret_santa import secret_santa_list
+from .secret_santa import secret_santa_pairings
 from .secret_santa import secret_santa_participant
+from .secret_santa import secret_santa_participant_add
+from .secret_santa import secret_santa_participant_edit
+from .secret_santa import secret_santa_participant_import
+from .secret_santa import secret_santa_participant_remove
+from .secret_santa import secret_santa_regenerate_link
+from .secret_santa import secret_santa_send_again
+from .secret_santa import secret_santa_set_delete
+from .secret_santa import secret_santa_set_save
+from .secret_santa import secret_santa_show_link
 
 # Sharing views
 from .sharing import ShareObjectsView
@@ -305,7 +321,23 @@ __all__ = [
     "reparent_group",
     "repeat_gift_hint",
     "restore_url_for",
+    "secret_santa_create",
+    "secret_santa_delete",
+    "secret_santa_detail",
+    "secret_santa_draw",
+    "secret_santa_edit",
+    "secret_santa_list",
+    "secret_santa_pairings",
     "secret_santa_participant",
+    "secret_santa_participant_add",
+    "secret_santa_participant_edit",
+    "secret_santa_participant_import",
+    "secret_santa_participant_remove",
+    "secret_santa_regenerate_link",
+    "secret_santa_send_again",
+    "secret_santa_set_delete",
+    "secret_santa_set_save",
+    "secret_santa_show_link",
     "set_language",
     "suggestions_url_for",
     "surprise_default_hint",

@@ -107,6 +107,88 @@ urlpatterns = [
         name="wishlist_share_disable",
     ),
     path("wishes/share/<str:token>/", views.wishlist_guest, name="wishlist_guest"),
+    # Secret Santa: organizer pages
+    path(
+        "secret-santa/",
+        views.secret_santa_list,
+        name="secret_santa_list",
+    ),
+    path(
+        "secret-santa/new/",
+        views.secret_santa_create,
+        name="secret_santa_create",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/",
+        views.secret_santa_detail,
+        name="secret_santa_detail",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/edit/",
+        views.secret_santa_edit,
+        name="secret_santa_edit",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/delete/",
+        views.secret_santa_delete,
+        name="secret_santa_delete",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/add/",
+        views.secret_santa_participant_add,
+        name="secret_santa_participant_add",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/import/",
+        views.secret_santa_participant_import,
+        name="secret_santa_participant_import",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/edit/",
+        views.secret_santa_participant_edit,
+        name="secret_santa_participant_edit",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/remove/",
+        views.secret_santa_participant_remove,
+        name="secret_santa_participant_remove",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/send-again/",
+        views.secret_santa_send_again,
+        name="secret_santa_send_again",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/show-link/",
+        views.secret_santa_show_link,
+        name="secret_santa_show_link",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/participants/<uuid:participant_id>/regenerate-link/",
+        views.secret_santa_regenerate_link,
+        name="secret_santa_regenerate_link",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/sets/save/",
+        views.secret_santa_set_save,
+        name="secret_santa_set_save",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/sets/<uuid:set_id>/delete/",
+        views.secret_santa_set_delete,
+        name="secret_santa_set_delete",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/draw/",
+        views.secret_santa_draw,
+        name="secret_santa_draw",
+    ),
+    path(
+        "secret-santa/<uuid:exchange_id>/pairings/",
+        views.secret_santa_pairings,
+        name="secret_santa_pairings",
+    ),
+    # Secret Santa: participant pages, by secret token and without login
     path(
         "secret-santa/p/<str:token>/",
         views.secret_santa_participant,

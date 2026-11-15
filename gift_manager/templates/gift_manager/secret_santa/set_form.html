@@ -1,0 +1,21 @@
+{% load i18n %}
+<form method="post" action="{% url 'gift_manager:secret_santa_set_save' exchange.exchange_id %}" class="mt-2 secret-santa-set-form">
+  {% csrf_token %}
+  {% if instance %}<input type="hidden" name="set_id" value="{{ instance.set_id }}">{% endif %}
+  <div class="mb-2">
+    <label class="form-label" for="set-name-{{ instance.set_id|default:'new' }}">{% trans "Name" %}</label>
+    <input type="text" name="name" maxlength="120" required class="form-control" id="set-name-{{ instance.set_id|default:'new' }}" value="{{ instance.name|default:'' }}" placeholder="{% trans 'A couple, a household' %}">
+  </div>
+  <fieldset class="mb-2">
+    <legend class="form-label fs-6">{% trans "Participants" %}</legend>
+    <div class="secret-santa-set-choices">
+      {% for participant in participants %}
+      <div class="form-check form-check-inline">
+        <input class="form-check-input" type="checkbox" name="participants" value="{{ participant.participant_id }}" id="set-{{ instance.set_id|default:'new' }}-{{ participant.participant_id }}"{% if instance and participant in instance.participants.all %} checked{% endif %}>
+        <label class="form-check-label" for="set-{{ instance.set_id|default:'new' }}-{{ participant.participant_id }}">{{ participant.name }}</label>
+      </div>
+      {% endfor %}
+    </div>
+  </fieldset>
+  <button type="submit" class="btn btn-sm btn-outline-primary">{% trans "Save the set" %}</button>
+</form>

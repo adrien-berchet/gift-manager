@@ -1,0 +1,1 @@
+{% load i18n %}{% if exchange.is_draft %}<span class="badge text-bg-secondary secret-santa-status">{% trans "Draw not done" %}</span>{% elif exchange.is_drawn %}<span class="badge text-bg-success secret-santa-status">{% trans "Draw done" %}</span>{% else %}<span class="badge text-bg-dark secret-santa-status">{% trans "Closed" %}</span>{% endif %}
