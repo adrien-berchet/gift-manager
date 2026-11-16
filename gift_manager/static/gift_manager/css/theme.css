@@ -1186,6 +1186,76 @@ html .navbar-nav .nav-link.active {
     color: var(--color-warning-text);
 }
 
+/* Green, blue and dark outlined buttons follow the same pattern: theme text colour, theme
+   border, a light tint on hover. The dark theme redefines the variables, so they need no
+   dark rules. */
+.btn-outline-success {
+    --bs-btn-color: var(--color-success-text);
+    --bs-btn-border-color: var(--color-success);
+    --bs-btn-hover-color: var(--color-success-text);
+    --bs-btn-hover-bg: var(--color-success-light);
+    --bs-btn-hover-border-color: var(--color-success-hover);
+    --bs-btn-active-color: var(--color-success-text);
+    --bs-btn-active-bg: var(--color-success-light);
+    --bs-btn-active-border-color: var(--color-success-hover);
+    background-color: transparent;
+    border: 2px solid var(--color-success);
+    color: var(--color-success-text);
+}
+
+.btn-outline-success:hover,
+.btn-outline-success.active,
+.btn-outline-success:active {
+    background-color: var(--color-success-light);
+    border-color: var(--color-success-hover);
+    color: var(--color-success-text);
+}
+
+.btn-outline-info {
+    --bs-btn-color: var(--color-info-text);
+    --bs-btn-border-color: var(--color-info);
+    --bs-btn-hover-color: var(--color-info-text);
+    --bs-btn-hover-bg: var(--color-info-light);
+    --bs-btn-hover-border-color: var(--color-info-hover);
+    --bs-btn-active-color: var(--color-info-text);
+    --bs-btn-active-bg: var(--color-info-light);
+    --bs-btn-active-border-color: var(--color-info-hover);
+    background-color: transparent;
+    border: 2px solid var(--color-info);
+    color: var(--color-info-text);
+}
+
+.btn-outline-info:hover,
+.btn-outline-info.active,
+.btn-outline-info:active {
+    background-color: var(--color-info-light);
+    border-color: var(--color-info-hover);
+    color: var(--color-info-text);
+}
+
+/* "Dark" means strong text, so it turns light in the dark theme (the gray scale is inverted) */
+.btn-outline-dark {
+    --bs-btn-color: var(--color-gray-800);
+    --bs-btn-border-color: var(--color-gray-700);
+    --bs-btn-hover-color: var(--color-gray-900);
+    --bs-btn-hover-bg: var(--color-gray-100);
+    --bs-btn-hover-border-color: var(--color-gray-900);
+    --bs-btn-active-color: var(--color-gray-900);
+    --bs-btn-active-bg: var(--color-gray-100);
+    --bs-btn-active-border-color: var(--color-gray-900);
+    background-color: transparent;
+    border: 2px solid var(--color-gray-700);
+    color: var(--color-gray-800);
+}
+
+.btn-outline-dark:hover,
+.btn-outline-dark.active,
+.btn-outline-dark:active {
+    background-color: var(--color-gray-100);
+    border-color: var(--color-gray-900);
+    color: var(--color-gray-900);
+}
+
 .btn-outline-secondary:hover {
     background-color: var(--color-gray-100);
     border-color: var(--border-color-hover);
