@@ -85,9 +85,12 @@ reviewer agent, journeys re-run on the live app):
 
 Found while fixing R2 and fixed too: light-theme `.btn-outline-warning` ("Redraw everything")
 had no border and Bootstrap's yellow text (about 1.6:1 on white); the dark-theme
-`.btn-outline-danger` hover put white text on a pale red (about 1.9:1). Left open: the
-`btn-outline-success`, `-info`, `-dark` and `-light` variants (one use each) have no border in
-the light theme either.
+`.btn-outline-danger` hover put white text on a pale red (about 1.9:1). The
+`btn-outline-success` (expired invitation "Sign Up"), `-info` (gift plan link on relation
+cards) and `-dark` ("Close the exchange", dark text on the dark theme too) variants had no
+border either; they now follow the yellow pattern (theme text colour, border, light tint on
+hover). `btn-outline-light` is only used in the allauth layout the app does not extend, so it
+was left as is.
 
 The QA scripts assumed port 8001 while `docker-compose.yml` publishes `${WEB_PORT:-8000}`
 (`WEB_PORT=8001` is set in the `.env` of another machine only). They now ask Docker for the

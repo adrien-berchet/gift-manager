@@ -145,11 +145,13 @@ OWN_COLORS_JS = """(el) => {
 
 @pytest.mark.frontend
 @pytest.mark.e2e
-def test_outlined_warning_and_danger_buttons_are_outlined_and_readable(
-    page: Page, live_server, seed_data_e2e
-):
-    """QA 2026-11-15: yellow outlined buttons had no border and faint text; the dark red
-    hover had white text on pale red.
+def test_outlined_buttons_are_outlined_and_readable(page: Page, live_server, seed_data_e2e):
+    """QA 2026-11-15: yellow, green, blue and dark outlined buttons had no border (and the
+    yellow one faint text); the dark red hover had white text on pale red.
+
+    The green and blue variants are used once each on pages that are slow to set up
+    (expired invitation, relation cards), so they are added to this page with the classes
+    those pages use. ``btn-outline-light`` is only in the unused allauth layout.
     """
     exchange = secret_santa_service.create_exchange(
         seed_data_e2e.alice, name="Office", exchange_date=timezone.localdate()
@@ -161,11 +163,20 @@ def test_outlined_warning_and_danger_buttons_are_outlined_and_readable(
     url = f"{live_server.url}{reverse('gift_manager:secret_santa_detail', args=[exchange.exchange_id])}"
     redraw = "button.btn-outline-warning[data-bs-target='#redrawModal']"
     remove = ".secret-santa-remove > summary"
+    close = ".secret-santa-close-button"
+    success = "#outline-probe .btn-outline-success"
+    info = "#outline-probe .btn-outline-info"
     for theme in ("light", "dark"):
         open_page(page, url)
+        page.evaluate(
+            """() => document.querySelector('.secret-santa-close-button').insertAdjacentHTML(
+                'afterend',
+                '<span id="outline-probe"><a href="#" class="btn btn-outline-success">Sign Up</a>'
+                + '<a href="#" class="btn btn-outline-info btn-sm">Plan</a></span>')"""
+        )
         page.evaluate(f"document.documentElement.setAttribute('data-theme', '{theme}')")
         page.wait_for_timeout(600)  # colours transition
-        for selector in (redraw, remove):
+        for selector in (redraw, remove, close, success, info):
             fg, bg, border = page.locator(selector).first.evaluate(OWN_COLORS_JS)
             assert border == "solid", (theme, selector)
             assert _contrast(fg, bg) >= MIN_CONTRAST, (theme, selector, fg, bg)
