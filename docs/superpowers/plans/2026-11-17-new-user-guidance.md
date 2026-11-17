@@ -81,15 +81,20 @@ class TestOwnedBy:
 
     @pytest.mark.parametrize("level", [PermissionLevel.VIEWER, PermissionLevel.EDITOR])
     def test_non_owner_levels_excluded(self, user_factory, level): ...
-        # gift with create_or_update_permission(alice, gift, level) -> not in Gift.objects.owned_by(alice)
+        # gift with create_or_update_permission(alice, gift, permission_level=level)
+        # -> not in Gift.objects.owned_by(alice)
 
     def test_works_for_groups_gifts_and_plans(self, user_factory): ...
-        # one owned PersonGroup, Gift, Relation each (owner rows via create_or_update_permission)
+        # one owned PersonGroup, Gift, Relation each
+        # (create_or_update_permission(alice, obj, permission_level=PermissionLevel.OWNER))
         # -> each appears in its model's owned_by(alice)
 ```
 
-`create_or_update_permission` lives in `gift_manager/permissions.py`. Check its signature
-there before using it.
+`create_or_update_permission(user, obj, *, permission_level=PermissionLevel.VIEWER,
+object_attr=None)` lives in `gift_manager/permissions.py`. `permission_level` is keyword-only.
+`Person`, `PersonGroup`, `Gift` and `Relation` managers are all built with
+`models.Manager.from_queryset(<X>QuerySet)` on subclasses of `UserPermissionQuerySet`, so the
+method is available on all four.
 
 - [ ] **Step 2: Run the tests and check that they fail**
 
@@ -213,7 +218,9 @@ Expected: FAIL with `NoReverseMatch` / `ImportError`.
   - statuses run Idea → Planned → Purchased → Given, with Abandoned as the way out;
   - suggestions from the catalogue and from AI on the recipient page;
   - a typical workflow from first plan to Given.
-- **Navbar Help link.** Add an `<li class="nav-item">` link to `help_index`
+- **Navbar Help link.** The utilities list (`ul.navbar-utilities`, `base.html:145`) sits inside
+  `#navbarSupportedContent`, so on phones it is reached through the navbar toggler. Add an
+  `<li class="nav-item">` link to `help_index`
   (`fas fa-circle-question`, label "Help") before the Profile item. Mark it active when
   `request.resolver_match.url_name` starts with `help`.
 
