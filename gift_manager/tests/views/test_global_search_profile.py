@@ -57,7 +57,9 @@ def test_received_gift_payload(client, user):
             "icon": "fa-box-open",
             "title": "Zebra Telescope",
             "subtitle": "Aunt Marie · QA Party · 2024",
-            "url": reverse("gift_manager:received_gift_detail", kwargs={"pk": gift.received_gift_id}),
+            "url": reverse(
+                "gift_manager:received_gift_detail", kwargs={"pk": gift.received_gift_id}
+            ),
         }
     ]
 
