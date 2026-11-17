@@ -491,6 +491,9 @@ class Profile(models.Model):
     # Day of the last digest email actually sent; lets a re-run of the command skip the users
     # who already got theirs (e.g. after a partial failure)
     last_digest_sent_on = models.DateField(null=True, blank=True, editable=False)
+    # When the user hid the getting-started checklist; null while it shows on the dashboard.
+    # Only an explicit hide sets it, so the card never comes back on its own.
+    getting_started_hidden_at = models.DateTimeField(null=True, blank=True, editable=False)
     # Secret of the private calendar feed URL; null while the feed is disabled
     calendar_token = models.CharField(
         max_length=64, unique=True, null=True, blank=True, editable=False

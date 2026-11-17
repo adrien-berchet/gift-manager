@@ -29,4 +29,14 @@
   </li>
   {% endfor %}
 </ul>
+
+{% if getting_started_hidden %}
+<form method="post" action="{% url 'gift_manager:getting_started_show' %}" class="help-show-again">
+  {% csrf_token %}
+  <p class="mb-2">{% trans "You hid the getting-started checklist from your dashboard." %}</p>
+  <button type="submit" class="btn btn-outline-primary btn-sm">
+    <i class="fas fa-list-check me-1" aria-hidden="true"></i>{% trans "Show the getting-started checklist on my dashboard" %}
+  </button>
+</form>
+{% endif %}
 {% endblock %}

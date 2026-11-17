@@ -86,10 +86,12 @@ from .plan_coordination import relation_release
 from .profile import AcceptInvitationView
 from .profile import CancelInvitationView
 from .profile import ConfirmRemoveFriendView
+from .profile import HideGettingStartedView
 from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import ShowGettingStartedView
 from .profile import UpdateProfilePreferencesView
 from .profile import UpdateViewPreferencesView
 
@@ -244,6 +246,7 @@ __all__ = [
     "GiftUpdateView",
     "HelpIndexView",
     "HelpTopicView",
+    "HideGettingStartedView",
     "InvitationExpiredView",
     "PersonCreateView",
     "PersonDeleteView",
@@ -284,6 +287,7 @@ __all__ = [
     "RemoveFriendView",
     "SecretSantaStopEmailsView",
     "SendInvitationView",
+    "ShowGettingStartedView",
     "ShareObjectsView",
     "SharedUsersMixin",
     "UpdateProfilePreferencesView",

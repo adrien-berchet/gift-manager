@@ -15,7 +15,10 @@ class HelpIndexView(TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["topics"] = HELP_TOPICS
-        context["getting_started_hidden"] = False
+        user = self.request.user
+        context["getting_started_hidden"] = bool(
+            user.is_authenticated and user.profile.getting_started_hidden_at
+        )
         return context
 
 

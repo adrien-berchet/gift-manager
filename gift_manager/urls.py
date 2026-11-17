@@ -26,6 +26,16 @@ urlpatterns = [
     path("api/search/", views.global_search, name="global_search"),
     path("help/", views.HelpIndexView.as_view(), name="help_index"),
     path("help/<slug:topic>/", views.HelpTopicView.as_view(), name="help_topic"),
+    path(
+        "getting-started/hide/",
+        views.HideGettingStartedView.as_view(),
+        name="getting_started_hide",
+    ),
+    path(
+        "getting-started/show/",
+        views.ShowGettingStartedView.as_view(),
+        name="getting_started_show",
+    ),
     path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
     path("send-invitation/", views.SendInvitationView.as_view(), name="send_invitation"),
     path(

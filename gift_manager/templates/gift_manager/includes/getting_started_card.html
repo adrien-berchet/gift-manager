@@ -1,0 +1,33 @@
+{% load i18n %}
+{% comment %}
+Getting-started checklist on the dashboard. Expects ``getting_started`` (a GettingStarted).
+Step links open in the side panel like the dashboard's other create buttons, except the
+"progress" step, which goes to the gift plans list.
+{% endcomment %}
+<section id="getting-started" class="getting-started-card" aria-labelledby="getting-started-heading">
+  <div class="getting-started-header">
+    <h2 id="getting-started-heading">{% trans "Getting started" %}</h2>
+    <span class="getting-started-count"><span aria-hidden="true">{{ getting_started.core_done_count }}/4</span><span class="visually-hidden">{% blocktrans with done=getting_started.core_done_count %}{{ done }} of 4 steps done{% endblocktrans %}</span></span>
+    <form method="post" action="{% url 'gift_manager:getting_started_hide' %}" class="getting-started-hide">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">{% trans "Hide" %}</button>
+    </form>
+  </div>
+
+  {% if getting_started.all_done %}
+  <p class="getting-started-done-note">{% trans "You're all set. You can hide this checklist; it stays available from Help." %}</p>
+  {% endif %}
+
+  <ul class="getting-started-steps">
+    {% for step in getting_started.core_steps %}
+      {% include "gift_manager/includes/getting_started_step.html" %}
+    {% endfor %}
+  </ul>
+
+  <h3 class="getting-started-subheading">{% trans "Explore more" %}</h3>
+  <ul class="getting-started-steps">
+    {% for step in getting_started.optional_steps %}
+      {% include "gift_manager/includes/getting_started_step.html" %}
+    {% endfor %}
+  </ul>
+</section>
