@@ -3,8 +3,8 @@
 {% load static %}
 {% load custom_filters %}
 {% get_current_language as LANGUAGE_CODE %}
-<html lang="{{ LANGUAGE_CODE }}" data-theme="light">
-{# Standalone page for participants without an account: no app navigation and no app scripts. #}
+<html lang="{{ LANGUAGE_CODE }}">
+{# Standalone page for participants without an account: only a minimal navbar and its scripts. #}
 {# Secrecy: only the participant's own recipient is shown, never who drew them. Anything of a #}
 {# linked account is shown only to a visitor logged in as that account (linked_viewer). #}
 <head>
@@ -20,11 +20,13 @@
     <link rel="stylesheet" href="{% static 'gift_manager/css/theme.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/css/main.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/css/secret-santa.css' %}">
+    {% include "gift_manager/includes/theme_init_script.html" %}
 </head>
 <body>
+{% include "gift_manager/includes/standalone_navbar.html" %}
 <main class="container py-4 secret-santa-narrow secret-santa-participant-page" id="main-content">
     <h1 class="h3 mb-1">
-        <i class="fas fa-hat-wizard me-2 text-danger" aria-hidden="true"></i>{{ exchange.name }}
+        <img src="{% static 'gift_manager/images/gift.png' %}" alt="" height="32" class="me-2 align-text-bottom secret-santa-logo">{{ exchange.name }}
     </h1>
     <p class="text-muted mb-4">
         {% blocktrans with name=participant.name %}Personal page of {{ name }}{% endblocktrans %}
@@ -90,52 +92,64 @@
         <div class="card-body">
             <h2 class="h5 card-title" id="tell-title">{% trans "Tell your Santa" %}</h2>
             <p class="card-text text-muted small">{% trans "Your Santa sees these wishes and this note once the draw is done." %}</p>
-            {% if own_wishes %}
-            <ul class="list-group mb-3 secret-santa-own-wishes">
-                {% for wish in own_wishes %}
-                <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
-                    <span class="secret-santa-wish-text">
-                        {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
-                        {% if wish.price is not None %}<span class="text-muted small">· {{ wish.price|format_price:exchange.currency }}</span>{% endif %}
-                    </span>
-                    <form method="post" action="{% url 'gift_manager:secret_santa_wish_delete' participant.token wish.wish_id %}">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="{% blocktrans with title=wish.title %}Remove {{ title }}{% endblocktrans %}"><i class="fas fa-trash" aria-hidden="true"></i></button>
-                    </form>
-                </li>
-                {% endfor %}
-            </ul>
-            {% endif %}
-            {% if own_wishes|length < max_wishes %}
-            <form method="post" action="{% url 'gift_manager:secret_santa_wish_add' participant.token %}" class="row g-2 align-items-end mb-3 secret-santa-wish-form" novalidate>
-                {% csrf_token %}
-                <div class="col-12">
-                    <label class="form-label" for="{{ wish_form.title.id_for_label }}">{{ wish_form.title.label }}</label>
-                    {{ wish_form.title }}
-                    {% for error in wish_form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                </div>
-                <div class="col-12 col-sm-8">
-                    <label class="form-label" for="{{ wish_form.url.id_for_label }}">{{ wish_form.url.label }} <span class="text-muted small">({% trans "optional" %})</span></label>
-                    {{ wish_form.url }}
-                    {% for error in wish_form.url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                </div>
-                <div class="col-12 col-sm-4">
-                    <label class="form-label" for="{{ wish_form.price.id_for_label }}">{{ wish_form.price.label }} <span class="text-muted small">({{ exchange.currency }})</span></label>
-                    {{ wish_form.price }}
-                    {% for error in wish_form.price.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                </div>
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add this wish" %}</button>
-                </div>
-            </form>
-            {% endif %}
-            <form method="post" action="{% url 'gift_manager:secret_santa_note' participant.token %}" class="secret-santa-note-form">
-                {% csrf_token %}
-                <label class="form-label" for="{{ note_form.note.id_for_label }}">{{ note_form.note.label }}</label>
-                {{ note_form.note }}
-                {% for error in note_form.note.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
-                <button type="submit" class="btn btn-outline-primary mt-2">{% trans "Save the note" %}</button>
-            </form>
+
+            <div class="secret-santa-subsection secret-santa-wishes-part">
+                <h3 class="h6 secret-santa-subsection-title">
+                    <i class="fas fa-gift me-2" aria-hidden="true"></i>{% trans "Your wishes" %}
+                </h3>
+                {% if own_wishes %}
+                <ul class="list-group mb-3 secret-santa-own-wishes">
+                    {% for wish in own_wishes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                        <span class="secret-santa-wish-text">
+                            {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
+                            {% if wish.price is not None %}<span class="text-muted small">· {{ wish.price|format_price:exchange.currency }}</span>{% endif %}
+                        </span>
+                        <form method="post" action="{% url 'gift_manager:secret_santa_wish_delete' participant.token wish.wish_id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="{% blocktrans with title=wish.title %}Remove {{ title }}{% endblocktrans %}"><i class="fas fa-trash" aria-hidden="true"></i></button>
+                        </form>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+                {% if own_wishes|length < max_wishes %}
+                <form method="post" action="{% url 'gift_manager:secret_santa_wish_add' participant.token %}" class="row g-2 align-items-end secret-santa-wish-form" novalidate>
+                    {% csrf_token %}
+                    <div class="col-12">
+                        <label class="form-label" for="{{ wish_form.title.id_for_label }}">{{ wish_form.title.label }}</label>
+                        {{ wish_form.title }}
+                        {% for error in wish_form.title.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-12 col-sm-8">
+                        <label class="form-label" for="{{ wish_form.url.id_for_label }}">{{ wish_form.url.label }} <span class="text-muted small">({% trans "optional" %})</span></label>
+                        {{ wish_form.url }}
+                        {% for error in wish_form.url.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-12 col-sm-4">
+                        <label class="form-label" for="{{ wish_form.price.id_for_label }}">{{ wish_form.price.label }} <span class="text-muted small">({{ exchange.currency }})</span></label>
+                        {{ wish_form.price }}
+                        {% for error in wish_form.price.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="col-12">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-plus me-1" aria-hidden="true"></i>{% trans "Add this wish" %}</button>
+                    </div>
+                </form>
+                {% endif %}
+            </div>
+
+            <div class="secret-santa-subsection secret-santa-note-part">
+                <h3 class="h6 secret-santa-subsection-title">
+                    <i class="fas fa-comment-dots me-2" aria-hidden="true"></i>{% trans "Your note" %}
+                </h3>
+                <form method="post" action="{% url 'gift_manager:secret_santa_note' participant.token %}" class="secret-santa-note-form">
+                    {% csrf_token %}
+                    <label class="visually-hidden" for="{{ note_form.note.id_for_label }}">{{ note_form.note.label }}</label>
+                    {{ note_form.note }}
+                    {% for error in note_form.note.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                    <button type="submit" class="btn btn-outline-primary mt-2">{% trans "Save the note" %}</button>
+                </form>
+            </div>
         </div>
     </section>
 
@@ -196,9 +210,19 @@
         </form>
     </details>
     {% endif %}
+
+    {% if linked_viewer and not participant.declined %}
+    <form method="post" action="{% url 'gift_manager:secret_santa_detach' participant.token %}" class="mb-4 secret-santa-detach">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="fas fa-unlink me-1" aria-hidden="true"></i>{% trans "Unlink my account from this participation" %}
+        </button>
+    </form>
+    {% endif %}
     {% endif %}
 
     <p class="text-muted small mt-4">{% trans "This page is yours alone: do not share its address." %}</p>
 </main>
+<script src="{% static 'gift_manager/js/theme-toggle.js' %}"></script>
 </body>
 </html>

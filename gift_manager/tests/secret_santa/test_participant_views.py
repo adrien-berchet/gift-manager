@@ -4,10 +4,12 @@ import random
 import re
 
 import pytest
+from django.conf import settings
 from django.db import connection
 from django.test import Client
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
+from django.utils import translation
 
 from gift_manager.secret_santa import emails
 from gift_manager.secret_santa import service
@@ -130,7 +132,9 @@ def test_headers_and_meta(client, exchange):
     assert response["X-Robots-Tag"] == "noindex, nofollow"
     content = text(response)
     assert content.index('<meta name="referrer" content="strict-origin">') < content.index("<link")
-    assert "<nav" not in content
+    # Only the minimal navbar: no link into the app beyond its brand
+    assert content.count("<nav") == 1
+    assert "nav-link" not in content
 
 
 def test_unknown_token_and_inactive_organizer_are_404(client, exchange):
@@ -340,6 +344,40 @@ def test_my_santa_sees_my_wishes_and_note_after_the_draw(client, exchange):
     assert "No chocolate" not in other_page
 
 
+def test_wishes_and_note_are_titled_apart(client, exchange):
+    me = exchange.participants.get(name="Bob")
+    client.post(action("wish_add", me), {"title": "Puzzle"})
+    client.post(action("note", me), {"note": "No chocolate"})
+    service.run_draw(exchange, rng=seeded(1))
+
+    own_page = text(client.get(page(me.token)))
+    santa_page = text(client.get(page(santa_of(me).token)))
+
+    # The writer's card: one titled part for the wishes, another for the note
+    wishes_at, note_at = own_page.index("Your wishes"), own_page.index("Your note")
+    assert wishes_at < own_page.index("Puzzle") < note_at < own_page.index("No chocolate")
+    # The Santa's card: the note has its own title and box, after the wishes
+    note_title = santa_page.index("Note from Bob")
+    assert santa_page.index("What Bob would like") < santa_page.index("Puzzle") < note_title
+    assert (
+        note_title
+        < santa_page.index("secret-santa-recipient-note")
+        < santa_page.index("No chocolate")
+    )
+
+
+def test_blank_note_shows_no_note_part(client, exchange):
+    me = exchange.participants.get(name="Bob")
+    client.post(action("wish_add", me), {"title": "Puzzle"})
+    ExchangeParticipant.objects.filter(pk=me.pk).update(note_for_santa="   ")
+    service.run_draw(exchange, rng=seeded(1))
+
+    santa_page = text(client.get(page(santa_of(me).token)))
+
+    assert "Puzzle" in santa_page
+    assert "Note from Bob" not in santa_page
+
+
 def test_wish_and_note_survive_a_redraw(client, exchange):
     me = exchange.participants.get(name="Bob")
     client.post(action("wish_add", me), {"title": "Puzzle"})
@@ -514,6 +552,82 @@ def test_linked_viewer_sees_selection_and_own_language(client, exchange):
     assert "Real wish" in content
     assert 'lang="fr"' in content
     assert f"/secret-santa/p/{me.token}/share/" in content
+
+
+def page_in(language, token):
+    with translation.override(language):
+        return page(token)
+
+
+def test_page_has_a_navbar_with_theme_and_language_only(client, exchange):
+    me = exchange.participants.get(name="Bob")
+
+    content = text(client.get(page(me.token)))
+
+    navbar = content[content.index('<nav class="navbar') : content.index("</nav>")]
+    assert "Gift Manager" in navbar
+    assert 'id="theme-toggle"' in navbar
+    assert 'name="language"' in navbar
+    assert f'name="next" value="{page(me.token)}"' in navbar
+    assert "nav-link" not in navbar
+    assert "gift_manager/js/theme-toggle.js" in content
+
+
+def test_language_chosen_in_the_navbar_overrides_the_default(client, exchange):
+    me = exchange.participants.get(name="Bob")
+
+    response = client.post(
+        reverse("set_language"), {"language": "fr", "next": page_in("en", me.token)}
+    )
+
+    assert response.status_code == 302
+    assert response["Location"] == page_in("fr", me.token)
+    assert 'lang="fr"' in text(client.get(response["Location"]))
+    # Back to the organizer's language: the cookie no longer matches the page prefix
+    client.cookies.load({settings.LANGUAGE_COOKIE_NAME: "en"})
+    assert 'lang="en"' in text(client.get(page_in("en", me.token)))
+
+
+def test_only_a_chosen_language_overrides_the_default(client, exchange):
+    me = exchange.participants.get(name="Bob")
+    account = link(me, preferred_language="fr")
+    client.force_login(account)
+
+    # A prefix without a matching cookie (the emailed link) keeps the account's language
+    assert 'lang="fr"' in text(client.get(page_in("en", me.token)))
+    # A cookie for another prefix (set while using the app) does not override it either
+    client.cookies.load({settings.LANGUAGE_COOKIE_NAME: "en"})
+    assert 'lang="fr"' in text(client.get(page_in("fr", me.token)))
+    # A cookie matching the prefix is a choice made on this page
+    assert 'lang="en"' in text(client.get(page_in("en", me.token)))
+
+
+def test_language_switch_after_an_error_returns_to_the_page(client, exchange):
+    me = exchange.participants.get(name="Bob")
+
+    content = text(client.post(action("note", me), {"note": "x" * 2001}))
+
+    assert f'name="next" value="{page(me.token)}"' in content
+
+
+def test_unlink_button_is_last_on_the_page_and_red(client, exchange):
+    me = exchange.participants.get(name="Bob")
+    detach_url = action("detach", me)
+    assert detach_url not in text(client.get(page(me.token)))
+
+    client.force_login(link(me))
+    content = text(client.get(page(me.token)))
+
+    unlink = re.search(
+        rf'<form method="post" action="{re.escape(detach_url)}"[^>]*>.*?</form>', content, re.DOTALL
+    )
+    assert unlink is not None
+    assert "btn-outline-danger" in unlink.group(0)
+    # Below every section and the decline control: only the closing note follows
+    after = content[unlink.end() :]
+    assert "<section" not in after
+    assert "secret-santa-decline" not in after
+    assert "gift_manager/images/gift.png" in content[: content.index("</h1>")]
 
 
 def test_share_and_detach_need_the_linked_account(client, exchange):

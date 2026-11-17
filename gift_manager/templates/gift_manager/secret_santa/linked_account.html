@@ -24,11 +24,7 @@
       <button type="submit" class="btn btn-primary btn-sm">{% trans "Share these wishes with my Santa" %}</button>
     </form>
     {% else %}
-    <p class="small mb-2">{% trans "Your wishlist has no active wish." %}</p>
+    <p class="small mb-0">{% trans "Your wishlist has no active wish." %}</p>
     {% endif %}
-    <form method="post" action="{% url 'gift_manager:secret_santa_detach' participant.token %}" class="mt-3">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-link btn-sm p-0 text-muted">{% trans "Unlink my account from this participation" %}</button>
-    </form>
   </div>
 </section>

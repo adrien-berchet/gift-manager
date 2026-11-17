@@ -28,23 +28,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
     <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- Theme Initialization (must run before page renders to prevent flicker) -->
-    <script>
-        (function() {
-            // Get saved theme or default
-            function getTheme() {
-                const saved = localStorage.getItem('theme');
-                if (saved) return saved;
-                // Check system preference
-                if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                    return 'dark';
-                }
-                return 'light';
-            }
-            // Apply theme immediately
-            document.documentElement.setAttribute('data-theme', getTheme());
-        })();
-    </script>
+    {% include "gift_manager/includes/theme_init_script.html" %}
     <!-- Theme & Custom Styles -->
     <link rel="stylesheet" href="{% static 'gift_manager/css/theme.css' %}">
     <link rel="stylesheet" href="{% static 'gift_manager/css/main.css' %}">
@@ -171,14 +155,7 @@
                     {% endif %}
                     <!-- Theme Toggle -->
                     <li class="nav-item">
-                        <button class="theme-toggle" id="theme-toggle" aria-label="{% trans 'Toggle dark mode' %}" title="{% trans 'Toggle dark mode' %}">
-                            <svg class="icon-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                            </svg>
-                            <svg class="icon-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                            </svg>
-                        </button>
+                        {% include "gift_manager/includes/theme_toggle_button.html" %}
                     </li>
                     {% if user.is_superuser %}
                     <li class="nav-item">
@@ -195,20 +172,7 @@
                     </li>
                     {% endif %}
                     <li class="nav-item">
-                        <form action="{% url 'set_language' %}" method="post" class="d-flex align-items-center">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <label for="language-select" class="visually-hidden">{% trans "Select Language" %}</label>
-                            <select id="language-select" name="language" onchange="if (this.form.requestSubmit) { this.form.requestSubmit(); } else { this.form.submit(); }" class="form-select form-select-sm language-select" aria-label="{% trans 'Select Language' %}">
-                                {% get_current_language as LANGUAGE_CODE %}
-                                {% get_available_languages as LANGUAGES %}
-                                {% for lang in LANGUAGES %}
-                                <option value="{{ lang.0 }}" {% if lang.0 == LANGUAGE_CODE %}selected{% endif %}>
-                                    {{ lang.1 }}
-                                </option>
-                                {% endfor %}
-                            </select>
-                        </form>
+                        {% include "gift_manager/includes/language_select_form.html" %}
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">

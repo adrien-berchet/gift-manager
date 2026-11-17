@@ -95,6 +95,11 @@ class TestSecretSantaE2E:
             )
             page.fill('input[name="budget"]', "25")
             page.check('input[name="organizer_takes_part"]')
+            # Unsaved changes are tracked, but the Cancel/Create bar keeps its look
+            expect(page.locator("#main-form")).to_have_class(re.compile(r"\bform-modified\b"))
+            expect(page.locator(".page-form-actions")).not_to_have_class(
+                re.compile(r"\bhas-unsaved-changes\b")
+            )
             page.get_by_role("button", name="Create").click()
             page.wait_for_url("**/secret-santa/*-*/")
             exchange = Exchange.objects.get(name="Family 2026")
@@ -135,16 +140,29 @@ class TestSecretSantaE2E:
             chris_link = link_input.input_value()
             assert "/secret-santa/p/" in chris_link
 
-            # 5. The anonymous phone visitor sees a valid recipient, without the app chrome
+            # 5. The anonymous phone visitor sees a valid recipient, with a minimal navbar only
             response = guest.goto(chris_link, wait_until="domcontentloaded")
             assert response.status == 200
             recipient = guest.locator(".secret-santa-recipient strong").inner_text()
             assert recipient in {organizer_name, "Bea"}
-            assert guest.locator("nav").count() == 0
+            assert guest.locator(".standalone-navbar .nav-link").count() == 0
             assert guest.evaluate(
                 "document.documentElement.scrollWidth <= document.documentElement.clientWidth"
             )
             screenshot(guest, "participant-page")
+            # The navbar switches the theme and the language of the page
+            html = guest.locator("html")
+            expect(html).to_have_attribute("data-theme", "light")
+            guest.locator("#theme-toggle").click()
+            expect(html).to_have_attribute("data-theme", "dark")
+            screenshot(guest, "participant-page-dark")
+            guest.locator("#theme-toggle").click()
+            expect(html).to_have_attribute("data-theme", "light")
+            guest.locator("#language-select").select_option("fr")
+            expect(html).to_have_attribute("lang", "fr")
+            expect(guest.locator("#assignment-title")).to_have_text("Votre tirage")
+            guest.locator("#language-select").select_option("en")
+            expect(html).to_have_attribute("lang", "en")
 
             # 6. All pairings, behind the stronger warning: four lines, Chris's matches
             page.locator('button[data-bs-target="#pairingsModal"]').click()
@@ -284,7 +302,10 @@ class TestSecretSantaTellYourSantaE2E:
             santa_page.goto(personal(chris_santa.name), wait_until="domcontentloaded")
             recipient_box = santa_page.locator(".secret-santa-recipient-wishes")
             expect(recipient_box).to_contain_text("Puzzle")
-            expect(recipient_box).to_contain_text("Size M, no chocolate")
+            expect(recipient_box.locator(".secret-santa-recipient-note")).to_have_text(
+                "Size M, no chocolate"
+            )
+            screenshot(santa_page, "participant-recipient")
             if bob_santa.name != "Bob":
                 anonymous = phone_context.new_page()
                 anonymous.goto(personal(bob_santa.name), wait_until="domcontentloaded")
