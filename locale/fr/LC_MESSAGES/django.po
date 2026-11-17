@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GiftManager\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-17 19:29+0100\n"
+"POT-Creation-Date: 2026-11-17 19:33+0100\n"
 "PO-Revision-Date: 2026-02-19 12:00+0100\n"
 "Last-Translator: Adrien <adrien@adriencadot.com>\n"
 "Language-Team: French\n"
@@ -690,6 +690,32 @@ msgstr "Mot personnel pour le destinataire (facultatif)"
 msgid "e.g. Hope you loved celebrating with us!"
 msgstr "ex. En espérant que cette fête t'a plu !"
 
+#: gift_manager/getting_started.py:78
+#: gift_manager/templates/gift_manager/help/topics/how-it-works.html:18
+msgid "Add a recipient"
+msgstr "Ajouter un destinataire"
+
+#: gift_manager/getting_started.py:87
+#: gift_manager/templates/gift_manager/help/topics/how-it-works.html:24
+msgid "Add a gift idea"
+msgstr "Ajouter une idée de cadeau"
+
+#: gift_manager/getting_started.py:95
+msgid "Create your first gift plan"
+msgstr "Créer votre premier projet de cadeau"
+
+#: gift_manager/getting_started.py:104
+msgid "Move a plan to Purchased or Given"
+msgstr "Passer un projet en Acheté ou Offert"
+
+#: gift_manager/getting_started.py:112
+msgid "Add something to your wishlist"
+msgstr "Ajouter quelque chose à votre liste de souhaits"
+
+#: gift_manager/getting_started.py:121
+msgid "Connect with a friend"
+msgstr "Vous connecter avec un ami"
+
 #: gift_manager/gift_plan_actions.py:52
 msgid "Add details"
 msgstr "Ajouter des détails"
@@ -935,7 +961,9 @@ msgstr "Comment fonctionne Gift Manager"
 msgid ""
 "Gift plans, recipients, gifts, events and statuses, and how they fit "
 "together."
-msgstr "Projets de cadeaux, destinataires, cadeaux, événements et statuts, et comment ils s'articulent."
+msgstr ""
+"Projets de cadeaux, destinataires, cadeaux, événements et statuts, et "
+"comment ils s'articulent."
 
 #: gift_manager/help_topics.py:35
 msgid "Wishlist and guest links"
@@ -945,7 +973,9 @@ msgstr "Liste de souhaits et liens invités"
 msgid ""
 "List what you would like to receive and share it, even with people without "
 "an account."
-msgstr "Listez ce que vous aimeriez recevoir et partagez-le, même avec des personnes sans compte."
+msgstr ""
+"Listez ce que vous aimeriez recevoir et partagez-le, même avec des personnes "
+"sans compte."
 
 #: gift_manager/help_topics.py:42
 msgid "Friends and sharing"
@@ -955,7 +985,9 @@ msgstr "Amis et partage"
 msgid ""
 "Invite friends and plan gifts together by sharing recipients, gifts and gift "
 "plans."
-msgstr "Invitez des amis et préparez des cadeaux ensemble en partageant destinataires, cadeaux et projets de cadeaux."
+msgstr ""
+"Invitez des amis et préparez des cadeaux ensemble en partageant "
+"destinataires, cadeaux et projets de cadeaux."
 
 #: gift_manager/help_topics.py:49
 #: gift_manager/templates/gift_manager/base.html:132
@@ -979,7 +1011,9 @@ msgstr "Cadeaux reçus"
 
 #: gift_manager/help_topics.py:57
 msgid "Remember what you received, from whom, and who you still need to thank."
-msgstr "Gardez en mémoire ce que vous avez reçu, de qui, et qui vous devez encore remercier."
+msgstr ""
+"Gardez en mémoire ce que vous avez reçu, de qui, et qui vous devez encore "
+"remercier."
 
 #: gift_manager/help_topics.py:63
 msgid "Quick capture (bookmarklet)"
@@ -987,7 +1021,9 @@ msgstr "Capture rapide (marque-page)"
 
 #: gift_manager/help_topics.py:64
 msgid "Save a product page as a gift or a wish in one click from your browser."
-msgstr "Enregistrez une page produit comme cadeau ou souhait en un clic depuis votre navigateur."
+msgstr ""
+"Enregistrez une page produit comme cadeau ou souhait en un clic depuis votre "
+"navigateur."
 
 #: gift_manager/help_topics.py:70
 msgid "Reminders and calendar feed"
@@ -997,7 +1033,9 @@ msgstr "Rappels et flux de calendrier"
 msgid ""
 "Get reminder emails before due dates and see your gift plans in your "
 "calendar."
-msgstr "Recevez des e-mails de rappel avant les échéances et voyez vos projets de cadeaux dans votre agenda."
+msgstr ""
+"Recevez des e-mails de rappel avant les échéances et voyez vos projets de "
+"cadeaux dans votre agenda."
 
 #: gift_manager/models.py:53
 msgid "none"
@@ -3338,7 +3376,9 @@ msgstr "Tous les cadeaux accessibles ont actuellement au moins un tag."
 
 #: gift_manager/templates/gift_manager/help/index.html:15
 msgid "Start with how Gift Manager works, then explore the features you need."
-msgstr "Commencez par le fonctionnement de Gift Manager, puis découvrez les fonctionnalités dont vous avez besoin."
+msgstr ""
+"Commencez par le fonctionnement de Gift Manager, puis découvrez les "
+"fonctionnalités dont vous avez besoin."
 
 #: gift_manager/templates/gift_manager/help/topic.html:12
 msgid "Breadcrumb"
@@ -3361,7 +3401,10 @@ msgstr "À quoi ça sert"
 msgid ""
 "Friends are other Gift Manager users you trust. Once connected, you can see "
 "each other's wishlists and plan gifts together."
-msgstr "Vos amis sont d'autres utilisateurs de Gift Manager en qui vous avez confiance. Une fois connectés, vous voyez vos listes de souhaits respectives et pouvez préparer des cadeaux ensemble."
+msgstr ""
+"Vos amis sont d'autres utilisateurs de Gift Manager en qui vous avez "
+"confiance. Une fois connectés, vous voyez vos listes de souhaits respectives "
+"et pouvez préparer des cadeaux ensemble."
 
 #: gift_manager/templates/gift_manager/help/topics/friends-and-sharing.html:8
 #: gift_manager/templates/gift_manager/help/topics/quick-capture.html:8
@@ -3376,19 +3419,26 @@ msgstr "Quand l'utiliser"
 msgid ""
 "Invite a friend by email from your profile. They become a confirmed friend "
 "when they accept."
-msgstr "Invitez un ami par e-mail depuis votre profil. Il devient un ami confirmé lorsqu'il accepte."
+msgstr ""
+"Invitez un ami par e-mail depuis votre profil. Il devient un ami confirmé "
+"lorsqu'il accepte."
 
 #: gift_manager/templates/gift_manager/help/topics/friends-and-sharing.html:11
 msgid ""
 "Share recipients, gifts or gift plans with friends, as viewers or as "
 "editors, to prepare a shared gift or split the work."
-msgstr "Partagez des destinataires, des cadeaux ou des projets de cadeaux avec vos amis, en lecture ou en modification, pour préparer un cadeau commun ou vous répartir le travail."
+msgstr ""
+"Partagez des destinataires, des cadeaux ou des projets de cadeaux avec vos "
+"amis, en lecture ou en modification, pour préparer un cadeau commun ou vous "
+"répartir le travail."
 
 #: gift_manager/templates/gift_manager/help/topics/friends-and-sharing.html:12
 msgid ""
 "On a shared gift plan, a friend can claim the gift so that nobody buys it "
 "twice."
-msgstr "Sur un projet de cadeau partagé, un ami peut réserver le cadeau pour que personne ne l'achète en double."
+msgstr ""
+"Sur un projet de cadeau partagé, un ami peut réserver le cadeau pour que "
+"personne ne l'achète en double."
 
 #: gift_manager/templates/gift_manager/help/topics/friends-and-sharing.html:14
 msgid "Nothing is shared until you choose to share it."
@@ -3416,7 +3466,9 @@ msgstr "Partager des éléments avec des amis"
 msgid ""
 "Gift Manager helps you plan gifts for the people you care about, from the "
 "first idea to the day you give it."
-msgstr "Gift Manager vous aide à préparer les cadeaux pour vos proches, de la première idée jusqu'au jour où vous l'offrez."
+msgstr ""
+"Gift Manager vous aide à préparer les cadeaux pour vos proches, de la "
+"première idée jusqu'au jour où vous l'offrez."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:5
 msgid "Gift plans"
@@ -3426,13 +3478,18 @@ msgstr "Projets de cadeaux"
 msgid ""
 "A gift plan is the heart of the app. It links a recipient and a gift, "
 "usually for an occasion, and has a status that moves until the gift is given."
-msgstr "Le projet de cadeau est le cœur de l'application. Il relie un destinataire et un cadeau, en général pour une occasion, et a un statut qui avance jusqu'à ce que le cadeau soit offert."
+msgstr ""
+"Le projet de cadeau est le cœur de l'application. Il relie un destinataire "
+"et un cadeau, en général pour une occasion, et a un statut qui avance "
+"jusqu'à ce que le cadeau soit offert."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:7
 msgid ""
 "Your gift plans list shows what needs doing next, and the dashboard reminds "
 "you of the plans that are due soon."
-msgstr "La liste de vos projets de cadeaux montre ce qu'il reste à faire, et le tableau de bord vous rappelle les projets dont l'échéance approche."
+msgstr ""
+"La liste de vos projets de cadeaux montre ce qu'il reste à faire, et le "
+"tableau de bord vous rappelle les projets dont l'échéance approche."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:9
 #: gift_manager/templates/gift_manager/home.html:102
@@ -3448,27 +3505,26 @@ msgstr "Utiliser le parcours guidé"
 msgid ""
 "Recipients are the people you give gifts to, and the groups they belong to, "
 "such as a family or a team."
-msgstr "Les destinataires sont les personnes à qui vous offrez des cadeaux, et les groupes auxquels elles appartiennent, comme une famille ou une équipe."
+msgstr ""
+"Les destinataires sont les personnes à qui vous offrez des cadeaux, et les "
+"groupes auxquels elles appartiennent, comme une famille ou une équipe."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:17
 msgid ""
 "A gift plan for a group is one shared gift for the whole group. To give each "
 "member their own gift, create one plan per person."
-msgstr "Un projet de cadeau pour un groupe est un seul cadeau commun pour tout le groupe. Pour offrir un cadeau à chaque membre, créez un projet par personne."
-
-#: gift_manager/templates/gift_manager/help/topics/how-it-works.html:18
-msgid "Add a recipient"
-msgstr "Ajouter un destinataire"
+msgstr ""
+"Un projet de cadeau pour un groupe est un seul cadeau commun pour tout le "
+"groupe. Pour offrir un cadeau à chaque membre, créez un projet par personne."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:23
 msgid ""
 "Gifts are your catalogue of ideas. Write an idea down once, then reuse it in "
 "as many gift plans as you like. Tags help you sort them."
-msgstr "Les cadeaux forment votre catalogue d'idées. Notez une idée une fois, puis réutilisez-la dans autant de projets de cadeaux que vous voulez. Les tags vous aident à les classer."
-
-#: gift_manager/templates/gift_manager/help/topics/how-it-works.html:24
-msgid "Add a gift idea"
-msgstr "Ajouter une idée de cadeau"
+msgstr ""
+"Les cadeaux forment votre catalogue d'idées. Notez une idée une fois, puis "
+"réutilisez-la dans autant de projets de cadeaux que vous voulez. Les tags "
+"vous aident à les classer."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:28
 msgid "Events and birthdays"
@@ -3479,7 +3535,11 @@ msgid ""
 "Events are the occasions you give gifts for, such as Christmas or a wedding. "
 "They can repeat every year. For a birthday, pick the Birthday event: the due "
 "date is the recipient's next birthday."
-msgstr "Les événements sont les occasions pour lesquelles vous offrez des cadeaux, comme Noël ou un mariage. Ils peuvent se répéter chaque année. Pour un anniversaire, choisissez l'événement Anniversaire : l'échéance est le prochain anniversaire du destinataire."
+msgstr ""
+"Les événements sont les occasions pour lesquelles vous offrez des cadeaux, "
+"comme Noël ou un mariage. Ils peuvent se répéter chaque année. Pour un "
+"anniversaire, choisissez l'événement Anniversaire : l'échéance est le "
+"prochain anniversaire du destinataire."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:30
 msgid "Linking a gift plan to an event gives it a due date."
@@ -3523,7 +3583,9 @@ msgstr "le destinataire l'a reçu."
 msgid ""
 "If you change your mind, set the plan to Abandoned. It stays in the history "
 "without asking for anything."
-msgstr "Si vous changez d'avis, passez le projet en Abandonné. Il reste dans l'historique sans rien vous demander."
+msgstr ""
+"Si vous changez d'avis, passez le projet en Abandonné. Il reste dans "
+"l'historique sans rien vous demander."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:47
 #: gift_manager/templates/gift_manager/includes/gift_suggestions_placeholder.html:6
@@ -3535,7 +3597,10 @@ msgid ""
 "Short of ideas? A recipient's page suggests gifts from your catalogue and, "
 "when AI is available, new ideas based on what you know about them. Accept a "
 "suggestion to turn it into a gift plan."
-msgstr "En panne d'idées ? La page d'un destinataire propose des cadeaux de votre catalogue et, quand l'IA est disponible, de nouvelles idées d'après ce que vous savez de lui. Acceptez une suggestion pour en faire un projet de cadeau."
+msgstr ""
+"En panne d'idées ? La page d'un destinataire propose des cadeaux de votre "
+"catalogue et, quand l'IA est disponible, de nouvelles idées d'après ce que "
+"vous savez de lui. Acceptez une suggestion pour en faire un projet de cadeau."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:52
 msgid "A typical workflow"
@@ -3551,7 +3616,9 @@ msgstr "Notez vos idées de cadeaux dès qu'elles vous viennent."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:56
 msgid "Create a gift plan: pick a recipient, a gift and an occasion."
-msgstr "Créez un projet de cadeau : choisissez un destinataire, un cadeau et une occasion."
+msgstr ""
+"Créez un projet de cadeau : choisissez un destinataire, un cadeau et une "
+"occasion."
 
 #: gift_manager/templates/gift_manager/help/topics/how-it-works.html:57
 msgid "Move the plan to Planned, then Purchased once you have bought the gift."
@@ -3561,20 +3628,28 @@ msgstr "Passez le projet en Prévu, puis en Acheté une fois le cadeau acheté."
 msgid ""
 "After the occasion, mark it as Given. The plan becomes part of the "
 "recipient's gift history, so you don't give the same thing twice."
-msgstr "Après l'occasion, marquez-le comme Offert. Le projet rejoint l'historique des cadeaux du destinataire, pour ne pas offrir deux fois la même chose."
+msgstr ""
+"Après l'occasion, marquez-le comme Offert. Le projet rejoint l'historique "
+"des cadeaux du destinataire, pour ne pas offrir deux fois la même chose."
 
 #: gift_manager/templates/gift_manager/help/topics/quick-capture.html:4
 msgid ""
 "The bookmarklet is a button in your browser's bookmarks bar. On a product "
 "page, one click saves the product to Gift Manager with its name, link and "
 "price when the page provides them."
-msgstr "Le marque-page est un bouton dans la barre de favoris de votre navigateur. Sur une page produit, un clic enregistre le produit dans Gift Manager avec son nom, son lien et son prix quand la page les fournit."
+msgstr ""
+"Le marque-page est un bouton dans la barre de favoris de votre navigateur. "
+"Sur une page produit, un clic enregistre le produit dans Gift Manager avec "
+"son nom, son lien et son prix quand la page les fournit."
 
 #: gift_manager/templates/gift_manager/help/topics/quick-capture.html:9
 msgid ""
 "Use it whenever you see something online: plan it for someone, add it to "
 "your wishlist, or keep it as a gift idea."
-msgstr "Utilisez-le dès que vous repérez quelque chose en ligne : prévoyez-le pour quelqu'un, ajoutez-le à votre liste de souhaits ou gardez-le comme idée de cadeau."
+msgstr ""
+"Utilisez-le dès que vous repérez quelque chose en ligne : prévoyez-le pour "
+"quelqu'un, ajoutez-le à votre liste de souhaits ou gardez-le comme idée de "
+"cadeau."
 
 #: gift_manager/templates/gift_manager/help/topics/quick-capture.html:15
 msgid "Open your profile and find the Browser bookmarklet section."
@@ -3597,7 +3672,9 @@ msgstr "Ouvrir mon profil"
 msgid ""
 "Received gifts is your private memory of the gifts you were given: what, "
 "from whom and when."
-msgstr "Les cadeaux reçus sont votre mémoire privée des cadeaux qu'on vous a offerts : quoi, de qui et quand."
+msgstr ""
+"Les cadeaux reçus sont votre mémoire privée des cadeaux qu'on vous a "
+"offerts : quoi, de qui et quand."
 
 #: gift_manager/templates/gift_manager/help/topics/received-gifts.html:10
 msgid "Keep track of the thank-you notes you still have to write."
@@ -3633,42 +3710,56 @@ msgstr "Les rappels vous évitent d'être pris de court par une occasion."
 msgid ""
 "Reminder emails list the gift plans due soon, every day or every Monday. "
 "Choose how far ahead they look."
-msgstr "Les e-mails de rappel listent les projets de cadeaux dont l'échéance approche, chaque jour ou chaque lundi. Choisissez jusqu'où ils regardent."
+msgstr ""
+"Les e-mails de rappel listent les projets de cadeaux dont l'échéance "
+"approche, chaque jour ou chaque lundi. Choisissez jusqu'où ils regardent."
 
 #: gift_manager/templates/gift_manager/help/topics/reminders.html:11
 msgid ""
 "The calendar feed is a private link you add to your calendar app. Your gift "
 "plans, events and birthdays then show up there. You can disable it or create "
 "a new link at any time."
-msgstr "Le flux de calendrier est un lien privé que vous ajoutez à votre application d'agenda. Vos projets de cadeaux, événements et anniversaires y apparaissent alors. Vous pouvez le désactiver ou créer un nouveau lien à tout moment."
+msgstr ""
+"Le flux de calendrier est un lien privé que vous ajoutez à votre application "
+"d'agenda. Vos projets de cadeaux, événements et anniversaires y apparaissent "
+"alors. Vous pouvez le désactiver ou créer un nouveau lien à tout moment."
 
 #: gift_manager/templates/gift_manager/help/topics/reminders.html:17
 msgid ""
 "Both settings are in the Reminders section of your profile. Reminder emails "
 "are off until you turn them on."
-msgstr "Ces deux réglages se trouvent dans la section Rappels de votre profil. Les e-mails de rappel sont désactivés tant que vous ne les activez pas."
+msgstr ""
+"Ces deux réglages se trouvent dans la section Rappels de votre profil. Les e-"
+"mails de rappel sont désactivés tant que vous ne les activez pas."
 
 #: gift_manager/templates/gift_manager/help/topics/secret-santa.html:4
 msgid ""
 "A Secret Santa draws who gives a gift to whom in a group, such as a family "
 "or a team. Each person gives one gift and receives one."
-msgstr "Un Père Noël secret tire au sort qui offre un cadeau à qui dans un groupe, comme une famille ou une équipe. Chacun offre un cadeau et en reçoit un."
+msgstr ""
+"Un Père Noël secret tire au sort qui offre un cadeau à qui dans un groupe, "
+"comme une famille ou une équipe. Chacun offre un cadeau et en reçoit un."
 
 #: gift_manager/templates/gift_manager/help/topics/secret-santa.html:10
 msgid ""
 "Participants don't need an account. Each one gets a personal link to see "
 "whom they drew, by email or from you."
-msgstr "Les participants n'ont pas besoin de compte. Chacun reçoit un lien personnel pour voir qui il a tiré, par e-mail ou de votre part."
+msgstr ""
+"Les participants n'ont pas besoin de compte. Chacun reçoit un lien personnel "
+"pour voir qui il a tiré, par e-mail ou de votre part."
 
 #: gift_manager/templates/gift_manager/help/topics/secret-santa.html:11
 msgid ""
 "Use exclusion sets so that couples or siblings don't draw each other, and "
 "set a budget."
-msgstr "Utilisez des groupes d'exclusion pour que les couples ou les frères et sœurs ne se tirent pas entre eux, et fixez un budget."
+msgstr ""
+"Utilisez des groupes d'exclusion pour que les couples ou les frères et sœurs "
+"ne se tirent pas entre eux, et fixez un budget."
 
 #: gift_manager/templates/gift_manager/help/topics/secret-santa.html:12
 msgid "Before the draw, participants can say what they would like to receive."
-msgstr "Avant le tirage, les participants peuvent dire ce qu'ils aimeraient recevoir."
+msgstr ""
+"Avant le tirage, les participants peuvent dire ce qu'ils aimeraient recevoir."
 
 #: gift_manager/templates/gift_manager/help/topics/secret-santa.html:18
 msgid "Create an exchange, add the participants, then draw."
@@ -3685,30 +3776,41 @@ msgstr "Nouvel échange"
 msgid ""
 "Your wishlist lists the things you would love to receive. It saves your "
 "family and friends from guessing."
-msgstr "Votre liste de souhaits rassemble ce que vous aimeriez recevoir. Vos proches n'ont plus à deviner."
+msgstr ""
+"Votre liste de souhaits rassemble ce que vous aimeriez recevoir. Vos proches "
+"n'ont plus à deviner."
 
 #: gift_manager/templates/gift_manager/help/topics/wishlist.html:10
 msgid ""
 "Your confirmed friends see your active wishes when they plan a gift for you, "
 "and can turn one into a gift plan."
-msgstr "Vos amis confirmés voient vos souhaits actifs quand ils préparent un cadeau pour vous, et peuvent en faire un projet de cadeau."
+msgstr ""
+"Vos amis confirmés voient vos souhaits actifs quand ils préparent un cadeau "
+"pour vous, et peuvent en faire un projet de cadeau."
 
 #: gift_manager/templates/gift_manager/help/topics/wishlist.html:11
 msgid ""
 "For people without an account, create a guest link. Anyone with the link "
 "sees your active wishes, and nothing else. You can disable it or create a "
 "new one at any time."
-msgstr "Pour les personnes sans compte, créez un lien invité. Toute personne qui a le lien voit vos souhaits actifs, et rien d'autre. Vous pouvez le désactiver ou en créer un nouveau à tout moment."
+msgstr ""
+"Pour les personnes sans compte, créez un lien invité. Toute personne qui a "
+"le lien voit vos souhaits actifs, et rien d'autre. Vous pouvez le désactiver "
+"ou en créer un nouveau à tout moment."
 
 #: gift_manager/templates/gift_manager/help/topics/wishlist.html:12
 msgid "Archive a wish you no longer want instead of deleting it."
-msgstr "Archivez un souhait qui ne vous intéresse plus au lieu de le supprimer."
+msgstr ""
+"Archivez un souhait qui ne vous intéresse plus au lieu de le supprimer."
 
 #: gift_manager/templates/gift_manager/help/topics/wishlist.html:18
 msgid ""
 "Add a first wish, with a link and a price hint if you have them. The guest "
 "link is at the bottom of your wishlist page."
-msgstr "Ajoutez un premier souhait, avec un lien et une indication de prix si vous les avez. Le lien invité se trouve en bas de la page de votre liste de souhaits."
+msgstr ""
+"Ajoutez un premier souhait, avec un lien et une indication de prix si vous "
+"les avez. Le lien invité se trouve en bas de la page de votre liste de "
+"souhaits."
 
 #: gift_manager/templates/gift_manager/help/topics/wishlist.html:20
 #: gift_manager/templates/gift_manager/profile_detail.html:207
