@@ -103,8 +103,9 @@ page.
 - A **Help** link in the navbar utilities (next to Profile). It falls into the collapsed menu on
   mobile like the other utilities.
 - Each checklist step has a "What's this?" link to its Help page.
-- The empty states of the main list pages (gift plans, recipients, wishlist, received gifts,
-  Secret Santa) get a "Learn more" link to the matching Help page. *(My calls, from the review:)*
+- The empty states of the main list pages (gift plans, recipients, Secret Santa) get a "Learn
+  more" link to the matching Help page. The wishlist and received-gifts pages carry it on their
+  intro line instead, so the link doesn't appear twice. *(My calls, from the reviews:)*
   - **Gifts:** Grid.js draws the list and only shows a generic "No matching records found".
     Add a server-rendered empty state for when the user can access no gifts, and put the link
     there.
@@ -114,7 +115,9 @@ page.
 
 ### 3. Getting-started checklist
 
-A card at the top of the authenticated dashboard, above "Next actions".
+A card at the top of the authenticated dashboard's content: just below the "Next actions"
+heading and its buttons, and above "Needs attention". It sits inside the live-refreshed block,
+so ticks update after creating something in the side panel. *(My call.)*
 
 ```
 Getting started                                   2/4   [Hide]
@@ -138,7 +141,8 @@ Getting started                                   2/4   [Hide]
 - **Explore more (optional) steps:**
   5. Add something to your wishlist: at least one `Wish` by the user.
   6. Connect with a friend: at least one friend, or one invitation sent.
-- Each step is one ownership-filtered `exists()` query. The accessible counts the dashboard
+- Each step is one small `exists()` query, filtered on ownership where it applies, plus one
+  query to load the short status list. The accessible counts the dashboard
   already computes in `views/common.py` (`home`) can't be reused, since they include shared
   data.
 - An unfinished step shows its action link: the create page, plus the guided flow for the
