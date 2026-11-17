@@ -41,7 +41,7 @@ development database.
 ## Verification
 
 ```bash
-tox run -e py311
+tox run -e py312
 tox run -e lint
 tox run -e e2e
 ```
@@ -49,8 +49,8 @@ tox run -e e2e
 Use targeted tests while developing:
 
 ```bash
-tox run -e py311 -- gift_manager/tests/test_permissions.py
-tox run -e py311 -- -k "permission"
+tox run -e py312 -- gift_manager/tests/test_permissions.py
+tox run -e py312 -- -k "permission"
 ```
 
 ## AI-Assisted Development

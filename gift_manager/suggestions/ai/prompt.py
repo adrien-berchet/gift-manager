@@ -2,9 +2,9 @@
 
 import re
 from collections.abc import Iterable
+from datetime import UTC
 from datetime import datetime
 from datetime import time
-from datetime import timezone
 from typing import Any
 
 from django.contrib.auth.models import User
@@ -113,7 +113,7 @@ def derive_age_bracket(birthday_year: int | None, current_year: int | None = Non
     if not birthday_year:
         return None
     if current_year is None:
-        current_year = datetime.now(timezone.utc).year
+        current_year = datetime.now(UTC).year
     age = current_year - birthday_year
     if age < 0:
         return None
@@ -126,11 +126,11 @@ def derive_age_bracket(birthday_year: int | None, current_year: int | None = Non
 def format_relative_recency(created: datetime, now: datetime | None = None) -> str:
     """Format creation timestamp as coarse relative duration."""
     if now is None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
     if created.tzinfo is None and now.tzinfo is not None:
-        created = created.replace(tzinfo=timezone.utc)
+        created = created.replace(tzinfo=UTC)
     elif created.tzinfo is not None and now.tzinfo is None:
-        now = now.replace(tzinfo=timezone.utc)
+        now = now.replace(tzinfo=UTC)
     delta = now - created
     days = max(0, delta.days)
     if days < 30:
@@ -582,7 +582,7 @@ def _format_received_gift_item(
             item["occasion"] = scrubbed_occ
 
     if rg.received_on:
-        dt = datetime.combine(rg.received_on, time.min, tzinfo=timezone.utc)
+        dt = datetime.combine(rg.received_on, time.min, tzinfo=UTC)
         item["recency"] = format_relative_recency(dt)
     elif rg.created_at:
         item["recency"] = format_relative_recency(rg.created_at)

@@ -56,8 +56,8 @@ Useful references:
 Prefer targeted checks before broader suites:
 
 ```bash
-tox run -e py311 -- gift_manager/tests/path/to/test_file.py
-tox run -e py311 -- -k "keyword"
+tox run -e py312 -- gift_manager/tests/path/to/test_file.py
+tox run -e py312 -- -k "keyword"
 tox run -e lint
 tox run -e e2e -- gift_manager/tests/e2e/path_to_test.py
 ```

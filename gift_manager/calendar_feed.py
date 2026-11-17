@@ -6,10 +6,10 @@ of being expanded, so the feed stays small whatever the horizon of the calendar 
 """
 
 import re
+from datetime import UTC
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone as dt_timezone
 
 from django.conf import settings
 from django.urls import reverse
@@ -203,7 +203,7 @@ def _birthday_entries(user, today: date, stamp: str) -> list[list[str]]:
 def build_calendar(user, *, today: date | None = None, now: datetime | None = None) -> str:
     """Return the iCalendar document of a user, in the language of their profile."""
     today = today or timezone.localdate()
-    stamp = (now or datetime.now(dt_timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
+    stamp = (now or datetime.now(UTC)).strftime("%Y%m%dT%H%M%SZ")
 
     with translation.override(user.profile.language):
         lines = [

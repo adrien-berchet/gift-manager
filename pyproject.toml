@@ -3,7 +3,7 @@ name = "gift-manager"
 authors = [{ name = "Adrien Berchet", email = "adrien.berchet@gmail.com" }]
 description = "A Django application to manage gifts."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = { text = "Business Source License 1.1 (BUSL-1.1)" }
 classifiers = [
     "License :: Other/Proprietary License",
@@ -104,7 +104,7 @@ addopts = "-v --strict-markers"
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.

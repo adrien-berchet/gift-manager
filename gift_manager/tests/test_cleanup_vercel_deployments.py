@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import urllib.error
+from datetime import UTC
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -257,9 +258,8 @@ def test_prune_deployments_older_than_days():
     ):
         # Fix datetime.now(timezone.utc)
         from datetime import datetime
-        from datetime import timezone
 
-        fixed_now = datetime.fromtimestamp(now_ms / 1000.0, tz=timezone.utc)
+        fixed_now = datetime.fromtimestamp(now_ms / 1000.0, tz=UTC)
         mock_dt.now.return_value = fixed_now
         mock_dt.fromtimestamp.side_effect = datetime.fromtimestamp
 
