@@ -1,0 +1,20 @@
+{% load i18n %}
+<section>
+  <h2>{% trans "What it's for" %}</h2>
+  <p>{% trans "The bookmarklet is a button in your browser's bookmarks bar. On a product page, one click saves the product to Gift Manager with its name, link and price when the page provides them." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "When to use it" %}</h2>
+  <p>{% trans "Use it whenever you see something online: plan it for someone, add it to your wishlist, or keep it as a gift idea." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "How to start" %}</h2>
+  <ol>
+    <li>{% trans "Open your profile and find the Browser bookmarklet section." %}</li>
+    <li>{% trans "Drag the button to your bookmarks bar." %}</li>
+    <li>{% trans "On a product page, click the bookmark." %}</li>
+  </ol>
+  <p><a href="{% url 'gift_manager:profile_detail' %}">{% trans "Open my profile" %}</a></p>
+</section>

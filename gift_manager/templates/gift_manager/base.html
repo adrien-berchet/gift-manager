@@ -164,6 +164,11 @@
                         </a>
                     </li>
                     {% endif %}
+                    <li class="nav-item{% if user.is_authenticated and not user.is_superuser %} navbar-utility-wide{% endif %}">
+                        <a href="{% url 'gift_manager:help_index' %}" class="nav-link {% if 'help_' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="fas fa-circle-question me-1" aria-hidden="true"></i>{% trans "Help" %}
+                        </a>
+                    </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a href="{% url 'gift_manager:profile_detail' %}" class="nav-link {% if request.resolver_match.url_name == 'profile_detail' %}active{% endif %}" title="{% trans 'My profile' %}">
@@ -181,7 +186,7 @@
                         </a>
                     </li>
                     {% else %}
-                    <li class="nav-item">
+                    <li class="nav-item navbar-utility-half">
                         <a class="btn btn-primary btn-sm" href="{% url 'account_login' %}">
                             <i class="fas fa-sign-in-alt me-1"></i>{% trans "Sign In" %}
                         </a>

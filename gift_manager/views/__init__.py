@@ -54,6 +54,8 @@ from .group_gifts import relation_group_gift_contributor_remove
 from .group_gifts import relation_group_gift_contributor_toggle_paid
 from .group_gifts import relation_group_gift_mode
 from .group_gifts import relation_group_gift_toggle
+from .help import HelpIndexView
+from .help import HelpTopicView
 from .i18n import set_language
 from .i18n import translate_url_safe
 
@@ -240,6 +242,8 @@ __all__ = [
     "GiftTagListView",
     "GiftTagUpdateView",
     "GiftUpdateView",
+    "HelpIndexView",
+    "HelpTopicView",
     "InvitationExpiredView",
     "PersonCreateView",
     "PersonDeleteView",

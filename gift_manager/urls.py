@@ -24,6 +24,8 @@ app_name = "gift_manager"
 urlpatterns = [
     path("", views.home, name="home"),
     path("api/search/", views.global_search, name="global_search"),
+    path("help/", views.HelpIndexView.as_view(), name="help_index"),
+    path("help/<slug:topic>/", views.HelpTopicView.as_view(), name="help_topic"),
     path("profile/", views.ProfileDetailView.as_view(), name="profile_detail"),
     path("send-invitation/", views.SendInvitationView.as_view(), name="send_invitation"),
     path(

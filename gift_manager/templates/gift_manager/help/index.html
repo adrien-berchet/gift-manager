@@ -1,0 +1,32 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n static %}
+
+{% block title %}Gift Manager - {% trans "Help" %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/help.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% trans "Help" %}</h1>
+    <p class="text-muted mb-0">{% trans "Start with how Gift Manager works, then explore the features you need." %}</p>
+  </div>
+</div>
+
+<ul class="help-topic-grid">
+  {% for topic in topics %}
+  <li>
+    <a class="help-topic-card" href="{% url 'gift_manager:help_topic' topic.slug %}">
+      <i class="{{ topic.icon }}" aria-hidden="true"></i>
+      <div>
+        <h2>{{ topic.title }}</h2>
+        <p>{{ topic.summary }}</p>
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

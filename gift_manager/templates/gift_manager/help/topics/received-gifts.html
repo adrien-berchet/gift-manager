@@ -1,0 +1,23 @@
+{% load i18n %}
+<section>
+  <h2>{% trans "What it's for" %}</h2>
+  <p>{% trans "Received gifts is your private memory of the gifts you were given: what, from whom and when." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "When to use it" %}</h2>
+  <ul>
+    <li>{% trans "Keep track of the thank-you notes you still have to write." %}</li>
+    <li>{% trans "Mark a received gift as fulfilling one of your wishes." %}</li>
+    <li>{% trans "Share your reaction with the friend who gave it." %}</li>
+  </ul>
+  <p>{% trans "Only you can see this list." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "How to start" %}</h2>
+  <p>
+    <a href="{% url 'gift_manager:received_gift_create' %}">{% trans "Record a received gift" %}</a>
+    · <a href="{% url 'gift_manager:received_gift_list' %}">{% trans "Open received gifts" %}</a>
+  </p>
+</section>
