@@ -31,6 +31,8 @@ class GettingStartedStep:
     help_url: str
     optional: bool
     guided_url: str | None = None
+    # Whether action_url has a side-panel form; other pages open as normal pages
+    opens_in_panel: bool = True
 
 
 @dataclass(frozen=True)
@@ -106,6 +108,7 @@ def compute_getting_started(user) -> GettingStarted:
             action_url=reverse("gift_manager:relations"),
             help_url=_help_url("how-it-works", "statuses"),
             optional=False,
+            opens_in_panel=False,
         ),
         GettingStartedStep(
             key="wish",
@@ -123,6 +126,7 @@ def compute_getting_started(user) -> GettingStarted:
             action_url=reverse("gift_manager:send_invitation"),
             help_url=_help_url("friends-and-sharing"),
             optional=True,
+            opens_in_panel=False,
         ),
     )
     return GettingStarted(steps=steps)

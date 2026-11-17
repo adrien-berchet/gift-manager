@@ -171,3 +171,13 @@ class TestGettingStartedCard:
 
         for step in compute_getting_started(user).steps:
             assert f'href="{step.help_url}"' in html
+
+    def test_only_panel_ready_steps_open_in_the_side_panel(self, authenticated_client):
+        """Pages without a side-panel version (invitation, plans list) open as normal pages."""
+        card = _card_html(authenticated_client)
+        invite_url = reverse("gift_manager:send_invitation")
+        relations_url = reverse("gift_manager:relations")
+
+        assert f'href="{invite_url}">' in card
+        assert f'href="{relations_url}">' in card
+        assert f'href="{reverse("gift_manager:gift_create")}" data-action="create"' in card

@@ -1,8 +1,8 @@
 {% load i18n %}
 {% comment %}
 Getting-started checklist on the dashboard. Expects ``getting_started`` (a GettingStarted).
-Step links open in the side panel like the dashboard's other create buttons, except the
-"progress" step, which goes to the gift plans list.
+Step links open in the side panel like the dashboard's other create buttons, except the steps
+whose page has no side-panel version (``opens_in_panel`` is false).
 {% endcomment %}
 <section id="getting-started" class="getting-started-card" aria-labelledby="getting-started-heading">
   <div class="getting-started-header">
