@@ -93,7 +93,9 @@ docker compose exec web python manage.py migrate
 
 - Match the existing Bootstrap/HTMX/Grid.js style.
 - Preserve progressive enhancement: forms and core flows should work without custom JavaScript when practical.
-- Do not put feature explanations or keyboard shortcut documentation into the UI unless the user asks.
+- Full feature explanations live in the Help section (`gift_manager/help_topics.py`) and the
+  getting-started checklist; a page may keep one short intro line linking to its Help topic. Do
+  not add keyboard shortcut documentation to the UI unless the user asks.
 - Verify mobile and e2e-sensitive UI changes with Playwright when behavior or layout changes.
 
 ## Security And Data

@@ -45,7 +45,7 @@ class TestQuickActionButtons:
 
     def test_gift_list_contains_action_buttons(self):
         """Test that gift list contains quick action buttons."""
-        GiftFactory()
+        GiftFactory(shared_with=[self.user])
 
         url = reverse("gift_manager:gifts")
         response = self.client.get(url)

@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.translation import gettext
 from django.views.generic import DetailView
 from django.views.generic import TemplateView
@@ -239,6 +240,29 @@ class UpdateViewPreferencesView(LoginRequiredMixin, View):
             gettext("Display preferences saved successfully."),
             redirect_to="gift_manager:profile_detail",
         )
+
+
+class HideGettingStartedView(LoginRequiredMixin, View):
+    """Hide the getting-started checklist from the dashboard."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, *args, **kwargs):
+        # Keep the first hide time when the button is pressed again
+        Profile.objects.filter(user=request.user, getting_started_hidden_at__isnull=True).update(
+            getting_started_hidden_at=timezone.now()
+        )
+        return redirect("gift_manager:home")
+
+
+class ShowGettingStartedView(LoginRequiredMixin, View):
+    """Show the getting-started checklist on the dashboard again."""
+
+    http_method_names = ["post"]
+
+    def post(self, request, *args, **kwargs):
+        Profile.objects.filter(user=request.user).update(getting_started_hidden_at=None)
+        return redirect("gift_manager:home")
 
 
 class UpdateProfilePreferencesView(LoginRequiredMixin, View):

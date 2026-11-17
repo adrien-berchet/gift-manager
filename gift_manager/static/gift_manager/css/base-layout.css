@@ -282,6 +282,17 @@ body {
         grid-column: 1 / -1;
     }
 
+    /* Keep the two-column grid free of half-empty rows once Help is in the list:
+       signed in, Help takes a full row; signed out, Sign In shares a row with the
+       language selector. */
+    .navbar-utilities > .nav-item.navbar-utility-wide {
+        grid-column: 1 / -1;
+    }
+
+    .navbar-utilities > .nav-item.navbar-utility-half:last-child {
+        grid-column: auto;
+    }
+
     .navbar-utilities .nav-link,
     .navbar-utilities .theme-toggle,
     .navbar-utilities .language-select {

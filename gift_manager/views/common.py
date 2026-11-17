@@ -14,6 +14,7 @@ from django.utils.translation import gettext
 from django.views.decorators.http import require_GET
 
 from gift_manager.birthdays import build_upcoming_birthdays
+from gift_manager.getting_started import compute_getting_started
 from gift_manager.gift_plan_cards import build_dashboard_summary
 from gift_manager.gift_plan_cards import build_gift_plan_action_groups
 from gift_manager.models import Event
@@ -151,6 +152,10 @@ def home(request):
 
         if not attention_groups:
             context["next_upcoming_item"] = _find_next_upcoming_item(gift_plans, user, today)
+
+        context["getting_started"] = (
+            None if user.profile.getting_started_hidden_at else compute_getting_started(user)
+        )
 
     return render(request, "gift_manager/home.html", context)
 

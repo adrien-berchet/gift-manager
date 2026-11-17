@@ -157,6 +157,7 @@
         <a href="{% url 'gift_manager:relation_guided_create' %}" class="btn btn-outline-primary" data-action="create">
             <i class="fas fa-wand-magic-sparkles me-2" aria-hidden="true"></i>{% trans "Guided" %}
         </a>
+        {% include "gift_manager/includes/help_learn_more.html" with topic="how-it-works" anchor="gift-plans" %}
     </div>
     {% endif %}
 </section>

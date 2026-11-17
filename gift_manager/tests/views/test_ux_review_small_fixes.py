@@ -50,6 +50,7 @@ def test_dashboard_invites_to_create_a_first_plan_only_without_plans(client, use
 
 @pytest.mark.django_db
 def test_grid_filter_labels_are_translated(client, user):
+    GiftFactory(shared_with=[user])  # the gift list shows its grid only with a gift
     with translation.override("fr"):
         content = client.get(reverse("gift_manager:gifts")).content.decode()
     for key, french in (

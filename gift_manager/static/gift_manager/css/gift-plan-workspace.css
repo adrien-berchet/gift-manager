@@ -779,7 +779,8 @@
     text-align: center;
 }
 
-.gift-plan-empty-state i {
+/* Only the large icon: button and link icons keep their own size and colour */
+.gift-plan-empty-state > i {
     color: var(--color-primary);
     font-size: 2rem;
 }

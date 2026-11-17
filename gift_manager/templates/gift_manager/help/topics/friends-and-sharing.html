@@ -1,0 +1,23 @@
+{% load i18n %}
+<section>
+  <h2>{% trans "What it's for" %}</h2>
+  <p>{% trans "Friends are other Gift Manager users you trust. Once connected, you can see each other's wishlists and plan gifts together." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "When to use it" %}</h2>
+  <ul>
+    <li>{% trans "Invite a friend by email from your profile. They become a confirmed friend when they accept." %}</li>
+    <li>{% trans "Share recipients, gifts or gift plans with friends, as viewers or as editors, to prepare a shared gift or split the work." %}</li>
+    <li>{% trans "On a shared gift plan, a friend can claim the gift so that nobody buys it twice." %}</li>
+  </ul>
+  <p>{% trans "Nothing is shared until you choose to share it." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "How to start" %}</h2>
+  <p>
+    <a href="{% url 'gift_manager:send_invitation' %}">{% trans "Invite a friend" %}</a>
+    · <a href="{% url 'gift_manager:share_objects' %}">{% trans "Share items with friends" %}</a>
+  </p>
+</section>

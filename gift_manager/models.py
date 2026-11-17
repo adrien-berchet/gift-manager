@@ -121,6 +121,18 @@ class UserPermissionQuerySet(models.QuerySet):
         """Return all objects accessible by a user (shared with the user)."""
         return self.filter(Q(shared_with=user))
 
+    def owned_by(self, user):
+        """Return the objects on which ``user`` holds an owner permission.
+
+        Uses a subquery on the permission rows so the user and level conditions apply to the
+        same row.
+        """
+        field = self.model._meta.get_field("shared_with")  # noqa: SLF001
+        owner_rows = field.remote_field.through.objects.filter(
+            user=user, permission_type=PermissionLevel.OWNER
+        )
+        return self.filter(pk__in=owner_rows.values(field.m2m_field_name()))
+
 
 class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
@@ -479,6 +491,9 @@ class Profile(models.Model):
     # Day of the last digest email actually sent; lets a re-run of the command skip the users
     # who already got theirs (e.g. after a partial failure)
     last_digest_sent_on = models.DateField(null=True, blank=True, editable=False)
+    # When the user hid the getting-started checklist; null while it shows on the dashboard.
+    # Only an explicit hide sets it, so the card never comes back on its own.
+    getting_started_hidden_at = models.DateTimeField(null=True, blank=True, editable=False)
     # Secret of the private calendar feed URL; null while the feed is disabled
     calendar_token = models.CharField(
         max_length=64, unique=True, null=True, blank=True, editable=False

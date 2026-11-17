@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 from django.urls import reverse
 
+from gift_manager.tests.factories import GiftFactory
+
 BULK_LIST_PAGES = (
     ("gifts", "gift-grid"),
     ("persons", "person-grid"),
@@ -14,7 +16,11 @@ BULK_LIST_PAGES = (
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(("url_name", "grid_id"), BULK_LIST_PAGES)
-def test_advanced_list_tools_wrap_filters_and_selection(authenticated_client, url_name, grid_id):
+def test_advanced_list_tools_wrap_filters_and_selection(
+    authenticated_client, user, url_name, grid_id
+):
+    # The gift list shows its grid only once the user can see a gift
+    GiftFactory(shared_with=[user])
     response = authenticated_client.get(reverse(f"gift_manager:{url_name}"))
 
     assert response.status_code == 200
@@ -63,7 +69,10 @@ def test_status_list_omits_advanced_controls(authenticated_client):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(("url_name", "grid_id"), BULK_LIST_PAGES)
-def test_basic_page_actions_stay_before_advanced_tools(authenticated_client, url_name, grid_id):
+def test_basic_page_actions_stay_before_advanced_tools(
+    authenticated_client, user, url_name, grid_id
+):
+    GiftFactory(shared_with=[user])
     response = authenticated_client.get(reverse(f"gift_manager:{url_name}"))
 
     assert response.status_code == 200

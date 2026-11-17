@@ -107,6 +107,9 @@ class GiftListView(
             .order_by("name")
         )
         context["show_unassigned"] = self.show_unassigned
+        # Whether the user can see any gift at all, whatever the filter: with none, the page
+        # shows an empty state instead of the grid
+        context["has_gifts"] = Gift.objects.accessible_by(self.request.user).exists()
         return context
 
     def _populate_tag_info_fallback(self, data) -> None:

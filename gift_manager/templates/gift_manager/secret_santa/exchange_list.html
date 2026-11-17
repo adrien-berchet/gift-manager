@@ -43,6 +43,7 @@
   <a href="{% url 'gift_manager:secret_santa_create' %}" class="btn btn-primary">
     <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "New exchange" %}
   </a>
+  {% include "gift_manager/includes/help_learn_more.html" with topic="secret-santa" %}
 </div>
 {% endif %}
 {% endblock %}

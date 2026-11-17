@@ -1,0 +1,23 @@
+{% load i18n %}
+<section>
+  <h2>{% trans "What it's for" %}</h2>
+  <p>{% trans "Your wishlist lists the things you would love to receive. It saves your family and friends from guessing." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "When to use it" %}</h2>
+  <ul>
+    <li>{% trans "Your confirmed friends see your active wishes when they plan a gift for you, and can turn one into a gift plan." %}</li>
+    <li>{% trans "For people without an account, create a guest link. Anyone with the link sees your active wishes, and nothing else. You can disable it or create a new one at any time." %}</li>
+    <li>{% trans "Archive a wish you no longer want instead of deleting it." %}</li>
+  </ul>
+</section>
+
+<section>
+  <h2>{% trans "How to start" %}</h2>
+  <p>{% trans "Add a first wish, with a link and a price hint if you have them. The guest link is at the bottom of your wishlist page." %}</p>
+  <p>
+    <a href="{% url 'gift_manager:wish_create' %}">{% trans "Add a wish" %}</a>
+    · <a href="{% url 'gift_manager:wishlist_list' %}">{% trans "Open my wishlist" %}</a>
+  </p>
+</section>

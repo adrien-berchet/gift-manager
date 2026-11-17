@@ -54,6 +54,8 @@ from .group_gifts import relation_group_gift_contributor_remove
 from .group_gifts import relation_group_gift_contributor_toggle_paid
 from .group_gifts import relation_group_gift_mode
 from .group_gifts import relation_group_gift_toggle
+from .help import HelpIndexView
+from .help import HelpTopicView
 from .i18n import set_language
 from .i18n import translate_url_safe
 
@@ -84,10 +86,12 @@ from .plan_coordination import relation_release
 from .profile import AcceptInvitationView
 from .profile import CancelInvitationView
 from .profile import ConfirmRemoveFriendView
+from .profile import HideGettingStartedView
 from .profile import InvitationExpiredView
 from .profile import ProfileDetailView
 from .profile import RemoveFriendView
 from .profile import SendInvitationView
+from .profile import ShowGettingStartedView
 from .profile import UpdateProfilePreferencesView
 from .profile import UpdateViewPreferencesView
 
@@ -240,6 +244,9 @@ __all__ = [
     "GiftTagListView",
     "GiftTagUpdateView",
     "GiftUpdateView",
+    "HelpIndexView",
+    "HelpTopicView",
+    "HideGettingStartedView",
     "InvitationExpiredView",
     "PersonCreateView",
     "PersonDeleteView",
@@ -282,6 +289,7 @@ __all__ = [
     "SendInvitationView",
     "ShareObjectsView",
     "SharedUsersMixin",
+    "ShowGettingStartedView",
     "UpdateProfilePreferencesView",
     "UpdateReminderPreferencesView",
     "UpdateViewPreferencesView",

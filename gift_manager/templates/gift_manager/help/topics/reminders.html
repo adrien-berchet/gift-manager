@@ -1,0 +1,19 @@
+{% load i18n %}
+<section>
+  <h2>{% trans "What it's for" %}</h2>
+  <p>{% trans "Reminders make sure an occasion never takes you by surprise." %}</p>
+</section>
+
+<section>
+  <h2>{% trans "When to use it" %}</h2>
+  <ul>
+    <li>{% trans "Reminder emails list the gift plans due soon, every day or every Monday. Choose how far ahead they look." %}</li>
+    <li>{% trans "The calendar feed is a private link you add to your calendar app. Your gift plans, events and birthdays then show up there. You can disable it or create a new link at any time." %}</li>
+  </ul>
+</section>
+
+<section>
+  <h2>{% trans "How to start" %}</h2>
+  <p>{% trans "Both settings are in the Reminders section of your profile. Reminder emails are off until you turn them on." %}</p>
+  <p><a href="{% url 'gift_manager:profile_detail' %}">{% trans "Open my profile" %}</a></p>
+</section>

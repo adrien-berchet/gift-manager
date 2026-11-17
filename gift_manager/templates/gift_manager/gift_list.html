@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'gift_manager/css/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/css/dynamic-filters.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/css/permission-ui.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -36,10 +37,23 @@
        {% if show_unassigned %}aria-current="page"{% endif %}>{% trans "Not in a plan yet" %}</a>
 </nav>
 
+{# Both are rendered and one is hidden, so creating the first gift or deleting the last one #}
+{# switches them in place (gift-empty-state.js) #}
+<div id="gift-list-body"{% if not has_gifts %} hidden{% endif %}>
 {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="gift-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
 <div id="gift-grid" class="list-container"></div>
+</div>
+<div class="gift-plan-empty-state" id="gift-empty-state"{% if has_gifts %} hidden{% endif %}>
+    <i class="fas fa-gift" aria-hidden="true"></i>
+    <h3>{% trans "No gifts yet." %}</h3>
+    <p class="text-muted small mb-0">{% trans "Keep your gift ideas here and reuse them in your gift plans." %}</p>
+    <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary" data-action="create">
+        <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "New gift" %}
+    </a>
+    {% include "gift_manager/includes/help_learn_more.html" with topic="how-it-works" anchor="gifts" %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -51,6 +65,7 @@
 <script src="{% static 'gift_manager/js/bulk-operations.js' %}"></script>
 <script src="{% static 'gift_manager/js/real-time-search.js' %}"></script>
 <script src="{% static 'gift_manager/js/dynamic-filters.js' %}"></script>
+<script src="{% static 'gift_manager/js/gift-empty-state.js' %}"></script>
 {% include "gift_manager/includes/grid-translations.html" %}
 {{ grid_data|json_script:"grid-data" }}
 {{ user_permissions|json_script:"user-permissions" }}
@@ -178,6 +193,12 @@
                 ]
             },
             idFieldIndex: 6
+        });
+        GiftEmptyState.init({
+            grid: grid,
+            gridId: 'gift-grid',
+            listBodyId: 'gift-list-body',
+            emptyStateId: 'gift-empty-state'
         });
 
 } catch (error) {

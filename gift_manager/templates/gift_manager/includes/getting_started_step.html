@@ -1,0 +1,18 @@
+{% load i18n %}
+<li class="getting-started-step{% if step.done %} is-done{% endif %}">
+  {% if step.done %}
+  <i class="fas fa-circle-check" aria-hidden="true"></i>
+  <span class="getting-started-label">{{ step.label }}<span class="visually-hidden"> ({% trans "done" %})</span></span>
+  {% else %}
+  <i class="far fa-circle" aria-hidden="true"></i>
+  <span class="getting-started-label">
+    <a href="{{ step.action_url }}"{% if step.opens_in_panel %} data-action="create"{% endif %}>{{ step.label }}</a>
+    {% if step.guided_url %}
+    <a href="{{ step.guided_url }}" class="getting-started-guided" data-action="create">
+      <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "Guided" %}
+    </a>
+    {% endif %}
+  </span>
+  {% endif %}
+  <a href="{{ step.help_url }}" class="getting-started-help">{% trans "What's this?" %}<span class="visually-hidden"> {{ step.label }}</span></a>
+</li>

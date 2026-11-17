@@ -1,0 +1,60 @@
+{% load i18n %}
+<p class="lead">{% trans "Gift Manager helps you plan gifts for the people you care about, from the first idea to the day you give it." %}</p>
+
+<section id="gift-plans" aria-labelledby="gift-plans-title">
+  <h2 id="gift-plans-title"><i class="fas fa-hand-holding-heart" aria-hidden="true"></i>{% trans "Gift plans" %}</h2>
+  <p>{% trans "A gift plan is the heart of the app. It links a recipient and a gift, usually for an occasion, and has a status that moves until the gift is given." %}</p>
+  <p>{% trans "Your gift plans list shows what needs doing next, and the dashboard reminds you of the plans that are due soon." %}</p>
+  <p>
+    <a href="{% url 'gift_manager:relation_create' %}">{% trans "Create a gift plan" %}</a>
+    · <a href="{% url 'gift_manager:relation_guided_create' %}">{% trans "Use the guided flow" %}</a>
+  </p>
+</section>
+
+<section id="recipients" aria-labelledby="recipients-title">
+  <h2 id="recipients-title"><i class="fas fa-users" aria-hidden="true"></i>{% trans "Recipients" %}</h2>
+  <p>{% trans "Recipients are the people you give gifts to, and the groups they belong to, such as a family or a team." %}</p>
+  <p>{% trans "A gift plan for a group is one shared gift for the whole group. To give each member their own gift, create one plan per person." %}</p>
+  <p><a href="{% url 'gift_manager:person_create' %}">{% trans "Add a recipient" %}</a></p>
+</section>
+
+<section id="gifts" aria-labelledby="gifts-title">
+  <h2 id="gifts-title"><i class="fas fa-gift" aria-hidden="true"></i>{% trans "Gifts" %}</h2>
+  <p>{% trans "Gifts are your catalogue of ideas. Write an idea down once, then reuse it in as many gift plans as you like. Tags help you sort them." %}</p>
+  <p><a href="{% url 'gift_manager:gift_create' %}">{% trans "Add a gift idea" %}</a></p>
+</section>
+
+<section id="occasions" aria-labelledby="occasions-title">
+  <h2 id="occasions-title"><i class="fas fa-calendar-alt" aria-hidden="true"></i>{% trans "Events and birthdays" %}</h2>
+  <p>{% trans "Events are the occasions you give gifts for, such as Christmas or a wedding. They can repeat every year. For a birthday, pick the Birthday event: the due date is the recipient's next birthday." %}</p>
+  <p>{% trans "Linking a gift plan to an event gives it a due date." %}</p>
+  <p><a href="{% url 'gift_manager:events' %}">{% trans "See your events" %}</a></p>
+</section>
+
+<section id="statuses" aria-labelledby="statuses-title">
+  <h2 id="statuses-title"><i class="fas fa-tasks" aria-hidden="true"></i>{% trans "Statuses" %}</h2>
+  <p>{% trans "Each gift plan has a status that shows where it stands:" %}</p>
+  <ol>
+    <li><strong>{% trans "Idea" %}</strong>: {% trans "you are still thinking about it." %}</li>
+    <li><strong>{% trans "Planned" %}</strong>: {% trans "you have decided to give it." %}</li>
+    <li><strong>{% trans "Purchased" %}</strong>: {% trans "you have bought it." %}</li>
+    <li><strong>{% trans "Given" %}</strong>: {% trans "the recipient has it." %}</li>
+  </ol>
+  <p>{% trans "If you change your mind, set the plan to Abandoned. It stays in the history without asking for anything." %}</p>
+</section>
+
+<section id="suggestions" aria-labelledby="suggestions-title">
+  <h2 id="suggestions-title"><i class="fas fa-lightbulb" aria-hidden="true"></i>{% trans "Suggestions" %}</h2>
+  <p>{% trans "Short of ideas? A recipient's page suggests gifts from your catalogue and, when AI is available, new ideas based on what you know about them. Accept a suggestion to turn it into a gift plan." %}</p>
+</section>
+
+<section id="typical-workflow" aria-labelledby="typical-workflow-title">
+  <h2 id="typical-workflow-title"><i class="fas fa-route" aria-hidden="true"></i>{% trans "A typical workflow" %}</h2>
+  <ol>
+    <li>{% trans "Add the people you give gifts to." %}</li>
+    <li>{% trans "Write down gift ideas whenever they come to you." %}</li>
+    <li>{% trans "Create a gift plan: pick a recipient, a gift and an occasion." %}</li>
+    <li>{% trans "Move the plan to Planned, then Purchased once you have bought the gift." %}</li>
+    <li>{% trans "After the occasion, mark it as Given. The plan becomes part of the recipient's gift history, so you don't give the same thing twice." %}</li>
+  </ol>
+</section>

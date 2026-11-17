@@ -1,0 +1,100 @@
+/* Help pages: index cards and topic content. */
+
+.help-topic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.help-topic-card {
+    display: flex;
+    gap: var(--space-3);
+    height: 100%;
+    padding: var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: inherit;
+    text-decoration: none;
+}
+
+.help-topic-card:hover,
+.help-topic-card:focus-visible {
+    border-color: var(--color-primary);
+    color: inherit;
+}
+
+.help-topic-card i {
+    flex: 0 0 auto;
+    width: 1.5rem;
+    margin-top: 0.2rem;
+    color: var(--color-primary);
+    text-align: center;
+}
+
+.help-topic-card h2 {
+    margin: 0 0 var(--space-1);
+    font-size: 1.05rem;
+}
+
+.help-topic-card p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.925rem;
+}
+
+.help-article {
+    max-width: 46rem;
+}
+
+.help-article section {
+    margin-bottom: var(--space-6);
+    scroll-margin-top: 5rem;
+}
+
+.help-article h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 1.25rem;
+}
+
+.help-article h2 i {
+    color: var(--color-primary);
+}
+
+.help-article ol,
+.help-article ul {
+    padding-left: 1.25rem;
+}
+
+.help-article li + li {
+    margin-top: var(--space-1);
+}
+
+.help-other-topics {
+    max-width: 46rem;
+    margin-top: var(--space-8);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-color);
+}
+
+.help-other-topics ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.help-show-again {
+    margin-top: var(--space-6);
+    padding: var(--space-4);
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+}

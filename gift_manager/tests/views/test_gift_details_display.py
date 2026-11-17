@@ -116,7 +116,8 @@ class TestSamePriceEverywhere:
         assert expected in card
         assert wish.title in wishlist.content.decode()
 
-    def test_gifts_list_shows_the_server_formatted_price(self, client):
+    def test_gifts_list_shows_the_server_formatted_price(self, client, user):
+        _share(user, GiftFactory())  # the gift list shows its grid only with a gift
         content = client.get(reverse("gift_manager:gifts")).content.decode()
         assert "Intl.NumberFormat" not in content
         assert "row.cells[11].data" in content

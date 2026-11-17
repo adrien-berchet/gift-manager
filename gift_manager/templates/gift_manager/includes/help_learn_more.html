@@ -1,0 +1,1 @@
+{% load i18n %}{# Link to a Help topic. Takes ``topic`` (slug) and an optional ``anchor``. #}<a class="help-learn-more text-nowrap" href="{% url 'gift_manager:help_topic' topic %}{% if anchor %}#{{ anchor }}{% endif %}"><i class="fas fa-circle-question me-1" aria-hidden="true"></i>{% trans "Learn more" %}</a>

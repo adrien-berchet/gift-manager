@@ -6,6 +6,7 @@ from django.urls import reverse
 from hypothesis import given
 from hypothesis import strategies as st
 
+from gift_manager.models import GiftPermission
 from gift_manager.models import PermissionLevel
 from gift_manager.tests.factories import EventFactory
 from gift_manager.tests.factories import GiftFactory
@@ -108,7 +109,12 @@ class TestQuickActionsAvailabilityProperty:
         Validates: Requirements 4.1, 4.2
         """
         # Create entity with random data
-        self.create_entity(entity_type, entity_data)
+        entity = self.create_entity(entity_type, entity_data)
+        if entity_type == "gift":
+            # The gift list shows its grid only once the user can see a gift
+            GiftPermission.objects.create(
+                user=self.user, gift=entity, permission_type=PermissionLevel.VIEWER
+            )
 
         # Get the list URL for this entity type
         list_url = self.get_list_url(entity_type)

@@ -1,0 +1,39 @@
+{% extends "gift_manager/base.html" %}
+
+{% load i18n static %}
+
+{% block title %}Gift Manager - {{ topic.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'gift_manager/css/help.css' %}">
+{% endblock %}
+
+{% block content %}
+<nav aria-label="{% trans 'Breadcrumb' %}">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'gift_manager:help_index' %}">{% trans "Help" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ topic.title }}</li>
+  </ol>
+</nav>
+
+<div class="page-header">
+  <h1><i class="{{ topic.icon }} me-2" aria-hidden="true"></i>{{ topic.title }}</h1>
+</div>
+
+<article class="help-article">
+  {% include topic.template %}
+</article>
+
+<aside class="help-other-topics" aria-labelledby="help-other-topics-title">
+  <h2 class="h6 text-muted" id="help-other-topics-title">{% trans "Other topics" %}</h2>
+  <ul>
+    {% for other in topics %}{% if other.slug != topic.slug %}
+    <li>
+      <a href="{% url 'gift_manager:help_topic' other.slug %}">
+        <i class="{{ other.icon }} me-1" aria-hidden="true"></i>{{ other.title }}
+      </a>
+    </li>
+    {% endif %}{% endfor %}
+  </ul>
+</aside>
+{% endblock %}
