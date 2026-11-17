@@ -121,6 +121,18 @@ class UserPermissionQuerySet(models.QuerySet):
         """Return all objects accessible by a user (shared with the user)."""
         return self.filter(Q(shared_with=user))
 
+    def owned_by(self, user):
+        """Return the objects on which ``user`` holds an owner permission.
+
+        Uses a subquery on the permission rows so the user and level conditions apply to the
+        same row.
+        """
+        field = self.model._meta.get_field("shared_with")
+        owner_rows = field.remote_field.through.objects.filter(
+            user=user, permission_type=PermissionLevel.OWNER
+        )
+        return self.filter(pk__in=owner_rows.values(field.m2m_field_name()))
+
 
 class PersonQuerySet(UserPermissionQuerySet):
     """QuerySet for Person model with additional query methods."""
