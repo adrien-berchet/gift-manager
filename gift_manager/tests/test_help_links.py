@@ -56,27 +56,34 @@ class TestHelpLinks:
         assert html.count(f'href="{_help("received-gifts")}"') == 1
 
 
+LIST_BODY_HIDDEN = '<div id="gift-list-body" hidden>'
+LIST_BODY_SHOWN = '<div id="gift-list-body">'
+EMPTY_STATE_HIDDEN = 'id="gift-empty-state" hidden'
+
+
 @pytest.mark.django_db
 class TestGiftListEmptyState:
-    """The gift list shows its own empty state when the user can access no gift."""
+    """The gift list renders both its grid and its empty state, and shows one of them."""
 
     def test_gift_list_shows_empty_state_without_gifts(self, authenticated_client):
-        """No accessible gift: empty state with a create button and a Help link, no grid."""
+        """No accessible gift: the empty state shows, the grid is there but hidden."""
         html = _html(authenticated_client, "gifts")
 
-        assert 'id="gift-grid"' not in html
+        assert LIST_BODY_HIDDEN in html
+        assert 'id="gift-grid"' in html
         assert "No gifts yet." in html
+        assert EMPTY_STATE_HIDDEN not in html
         assert f'href="{reverse("gift_manager:gift_create")}"' in html
         assert f'href="{_help("how-it-works", "gifts")}"' in html
 
     def test_gift_list_shows_grid_with_gifts(self, authenticated_client, user):
-        """With an accessible gift the grid shows and the empty state does not."""
+        """With an accessible gift the grid shows and the empty state is hidden."""
         GiftFactory(shared_with=[user])
 
         html = _html(authenticated_client, "gifts")
 
-        assert 'id="gift-grid"' in html
-        assert "No gifts yet." not in html
+        assert LIST_BODY_SHOWN in html
+        assert EMPTY_STATE_HIDDEN in html
 
     def test_unassigned_filter_with_no_match_keeps_grid(self, authenticated_client, user):
         """The empty state depends on accessible gifts, not on the filter."""
@@ -87,5 +94,13 @@ class TestGiftListEmptyState:
 
         html = _html(authenticated_client, "gifts", "?unassigned=1")
 
-        assert 'id="gift-grid"' in html
-        assert "No gifts yet." not in html
+        assert LIST_BODY_SHOWN in html
+        assert EMPTY_STATE_HIDDEN in html
+
+    def test_grid_scripts_load_without_gifts(self, authenticated_client):
+        """The grid is set up even when empty, so a first gift can appear without a reload."""
+        html = _html(authenticated_client, "gifts")
+
+        assert 'id="grid-data"' in html
+        assert "gift-empty-state.js" in html
+        assert "location.reload" not in html
