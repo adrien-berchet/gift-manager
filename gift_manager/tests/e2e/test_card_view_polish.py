@@ -614,7 +614,11 @@ def test_group_cards_show_the_member_count(logged_in_page: Page, live_server, se
 
 
 @pytest.mark.parametrize("view", ["card", "list"])
-@pytest.mark.parametrize(("path", "grid"), [*PAGES, ("persons", "person-grid")])
+# The gift list hides its grid and shows its own empty state instead: see test_gift_empty_state_e2e
+@pytest.mark.parametrize(
+    ("path", "grid"),
+    [*(page for page in PAGES if page[0] != "gifts"), ("persons", "person-grid")],
+)
 def test_empty_list_shows_the_no_records_message(
     page: Page, client, live_server, settings, path, grid, view
 ):
