@@ -148,7 +148,7 @@ tox -e e2e-debug
 tox -e e2e-mobile
 
 # Run full cross-browser testing
-tox -e py311-playwright
+tox -e py312-playwright
 ```
 
 ## Test Configuration
@@ -159,13 +159,13 @@ The e2e tests are integrated with tox for consistent testing environments:
 
 ```bash
 # Run e2e tests with tox
-tox -e py311-playwright
+tox -e py312-playwright
 
 # Run with specific browser
-tox -e py311-playwright -- --browser firefox
+tox -e py312-playwright -- --browser firefox
 
 # Run with multiple Python versions
-tox -e py310-playwright,py311-playwright,py312-playwright
+tox -e py312-playwright,py313-playwright
 ```
 
 ### Environment Variables

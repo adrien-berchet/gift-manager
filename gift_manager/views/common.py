@@ -1,7 +1,6 @@
 """Common utilities and type definitions for views."""
 
 from datetime import date
-from typing import TypeAlias
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -30,7 +29,7 @@ from gift_manager.secret_santa import dashboard as secret_santa_dashboard
 from gift_manager.statuses import is_terminal_status
 
 # Type definitions for clarity
-ModelType: TypeAlias = type[Model]
+type ModelType = type[Model]
 SharedObjectType = Person | PersonGroup | Gift | Event | Relation
 
 

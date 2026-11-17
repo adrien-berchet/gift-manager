@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date
-from enum import Enum
+from enum import StrEnum
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
@@ -165,7 +165,7 @@ def _resolve_reveal_date(relation: Relation, received_on: date | None) -> date:
     return timezone.localdate()
 
 
-class ShareReactionResult(str, Enum):
+class ShareReactionResult(StrEnum):
     """Outcome of sharing a recipient's reaction feedback with a source plan."""
 
     SHARED = "shared"

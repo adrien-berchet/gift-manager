@@ -20,9 +20,9 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import UTC
 from datetime import date
 from datetime import datetime
-from datetime import timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ def shift_months(base: date, months: int) -> date:
 
 def compute_target_date(today: date | None = None, years: int = 4) -> date:
     """Return ``today`` shifted forward by ``years`` calendar years (leap-day safe)."""
-    base = today or datetime.now(tz=timezone.utc).date()
+    base = today or datetime.now(tz=UTC).date()
     return shift_months(base, years * 12)
 
 
@@ -110,7 +110,7 @@ def check_change_date(
 ) -> bool:
     """Return True if ``Change Date`` in ``LICENSE`` is at least ``min_months`` away."""
     _, _, current_date = read_change_date(repo_root)
-    base = today or datetime.now(tz=timezone.utc).date()
+    base = today or datetime.now(tz=UTC).date()
     min_required = shift_months(base, min_months)
     if current_date < min_required:
         suggested = compute_target_date(base)

@@ -1,9 +1,9 @@
 """Tests for anonymised AI prompt generation and schema."""
 
 import json
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import timezone
 
 import pytest
 
@@ -83,7 +83,7 @@ def test_payload_contains_no_names_emails_or_ids(user):
         is_direct=True,
         person_id=person.pk,
         group_id=group.pk,
-        created=datetime.now(timezone.utc),
+        created=datetime.now(UTC),
     )
 
     history = RecipientHistory(
@@ -151,7 +151,7 @@ def test_group_payload_labels_members(user):
         is_direct=True,
         person_id=None,
         group_id=group.pk,
-        created=datetime(2026, 1, 3, tzinfo=timezone.utc),
+        created=datetime(2026, 1, 3, tzinfo=UTC),
     )
     item_m1 = HistoryItem(
         relation_id=2,
@@ -165,7 +165,7 @@ def test_group_payload_labels_members(user):
         is_direct=False,
         person_id=p1.pk,
         group_id=group.pk,
-        created=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        created=datetime(2026, 1, 2, tzinfo=UTC),
     )
     item_m2 = HistoryItem(
         relation_id=3,
@@ -179,7 +179,7 @@ def test_group_payload_labels_members(user):
         is_direct=False,
         person_id=p2.pk,
         group_id=group.pk,
-        created=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        created=datetime(2026, 1, 1, tzinfo=UTC),
     )
 
     history = RecipientHistory(
@@ -220,7 +220,7 @@ def test_ratings_and_notes_only_when_visible(user):
         is_direct=True,
         person_id=person.pk,
         group_id=None,
-        created=datetime.now(timezone.utc),
+        created=datetime.now(UTC),
     )
     history = RecipientHistory(
         recipient=person,
@@ -247,7 +247,7 @@ def test_ratings_and_notes_only_when_visible(user):
 @pytest.mark.django_db
 def test_caps_are_applied(user):
     person = Person.objects.create(first_name="David", family_name="Lee")
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     items = tuple(
         HistoryItem(
             relation_id=i,
@@ -316,7 +316,7 @@ def test_french_stopwords_and_tags_are_not_mutilated(user):
         is_direct=True,
         person_id=person.pk,
         group_id=group.pk,
-        created=datetime.now(timezone.utc),
+        created=datetime.now(UTC),
     )
     history = RecipientHistory(
         recipient=person,
@@ -376,7 +376,7 @@ def test_derive_age_bracket(birth_year, current_year, expected):
 
 
 def test_format_relative_recency():
-    now = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 10, 20, 12, 0, tzinfo=UTC)
     assert format_relative_recency(now - timedelta(days=5), now=now) == "recently"
     assert format_relative_recency(now - timedelta(days=29), now=now) == "recently"
     assert format_relative_recency(now - timedelta(days=35), now=now) == "1 month ago"
@@ -391,7 +391,7 @@ def test_payload_includes_age_bracket_and_notes_opt_in(user):
         first_name="Camille",
         birthday_day=15,
         birthday_month=6,
-        birthday_year=datetime.now(timezone.utc).year - 10,
+        birthday_year=datetime.now(UTC).year - 10,
         notes="Allergique aux noix et adore les jeux d'échecs. Offrir à Camille.",
     )
     user.profile.ai_share_person_notes = True
@@ -454,7 +454,7 @@ def test_payload_includes_event_price_and_budget(user):
         is_direct=True,
         person_id=person.pk,
         group_id=None,
-        created=datetime.now(timezone.utc),
+        created=datetime.now(UTC),
         event_name="Anniversaire de Leo",
         price=49.99,
     )
@@ -470,7 +470,7 @@ def test_payload_includes_event_price_and_budget(user):
         is_direct=True,
         person_id=person.pk,
         group_id=None,
-        created=datetime.now(timezone.utc),
+        created=datetime.now(UTC),
         event_name="Noël",
         price=15.00,
     )

@@ -6,8 +6,8 @@ for the modern UX interface feature.
 
 import json
 import time
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from pathlib import Path
 
 import pytest
@@ -31,7 +31,7 @@ class PropertyTestResult:
         self.duration = duration
         self.error = error
         self.examples_run = examples_run
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         """Convert result to dictionary for serialization."""
@@ -328,6 +328,4 @@ if __name__ == "__main__":
     # Save results
     runner = PropertyTestRunner()
     runner.results = results
-    runner.save_results(
-        f"pbt_results_{command}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.json"
-    )
+    runner.save_results(f"pbt_results_{command}_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.json")

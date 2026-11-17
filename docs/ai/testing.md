@@ -5,9 +5,9 @@
 Use the smallest check that covers the change first:
 
 ```bash
-tox run -e py311 -- gift_manager/tests/test_permissions.py
-tox run -e py311 -- gift_manager/tests/views/test_base.py
-tox run -e py311 -- -k "permission"
+tox run -e py312 -- gift_manager/tests/test_permissions.py
+tox run -e py312 -- gift_manager/tests/views/test_base.py
+tox run -e py312 -- -k "permission"
 tox run -e lint
 ```
 
@@ -16,7 +16,7 @@ Browser/UI behavior:
 ```bash
 tox run -e e2e -- gift_manager/tests/e2e/test_crud_workflows.py
 tox run -e e2e-mobile
-tox run -e py311-playwright
+tox run -e py312-playwright
 ```
 
 The browser tox environments download the browsers but do not install the operating-system

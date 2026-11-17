@@ -22,8 +22,8 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from pathlib import Path
 from typing import Any
 
@@ -236,12 +236,12 @@ def prune_deployments(
         return 0
 
     to_delete: list[dict[str, Any]] = []
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     for dep in deployments:
         created_ms = dep.get("created")
         if created_ms:
-            created_dt = datetime.fromtimestamp(created_ms / 1000.0, tz=timezone.utc)
+            created_dt = datetime.fromtimestamp(created_ms / 1000.0, tz=UTC)
             age_days = (now - created_dt).total_seconds() / 86400.0
         else:
             created_dt = None
@@ -270,7 +270,7 @@ def prune_deployments(
         dep_id = dep.get("uid") or dep.get("id", "unknown")
         url = dep.get("url", "unknown-url")
         created_str = (
-            datetime.fromtimestamp(dep["created"] / 1000.0, tz=timezone.utc).strftime(
+            datetime.fromtimestamp(dep["created"] / 1000.0, tz=UTC).strftime(
                 "%Y-%m-%d %H:%M:%S UTC"
             )
             if dep.get("created")

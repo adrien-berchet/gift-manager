@@ -37,12 +37,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python-version: "3.10"
-            tox-env: "py310,lint"
-          - python-version: "3.11"
-            tox-env: "py311"
           - python-version: "3.12"
-            tox-env: "py312"
+            tox-env: "py312,lint"
+          - python-version: "3.13"
+            tox-env: "py313"
 
     services:
       postgres:
@@ -102,9 +100,9 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
-        if: matrix.python-version == '3.12'
+        if: matrix.python-version == '3.13'
         with:
-          file: ./reports/coverage-py312.xml
+          file: ./reports/coverage-py313.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
