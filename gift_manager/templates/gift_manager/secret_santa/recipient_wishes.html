@@ -2,28 +2,35 @@
 {# What the recipient shared with their Santa, from access.recipient_view only. #}
 <div class="secret-santa-recipient-wishes">
   {% if recipient.has_content %}
-  <h3 class="h6">{% blocktrans with name=recipient.name %}What {{ name }} would like{% endblocktrans %}</h3>
   {% if recipient.exchange_wishes or recipient.shared_wishes %}
-  <ul class="list-group mb-3">
-    {% for wish in recipient.exchange_wishes %}
-    <li class="list-group-item secret-santa-recipient-wish">
-      {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
-      {% if wish.price is not None %}<span class="text-muted small">· {{ wish.price|format_price:exchange.currency }}</span>{% endif %}
-    </li>
-    {% endfor %}
-    {% for wish in recipient.shared_wishes %}
-    <li class="list-group-item secret-santa-recipient-wish">
-      {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
-      {% if wish.price_hint is not None %}<span class="text-muted small">· {{ wish.price_hint|format_price:recipient.shared_currency }}</span>{% endif %}
-      {% if wish.notes %}<div class="small text-muted">{{ wish.notes|linebreaksbr }}</div>{% endif %}
-    </li>
-    {% endfor %}
-  </ul>
+  <div class="secret-santa-subsection">
+    <h3 class="h6 secret-santa-subsection-title">
+      <i class="fas fa-gift me-2" aria-hidden="true"></i>{% blocktrans with name=recipient.name %}What {{ name }} would like{% endblocktrans %}
+    </h3>
+    <ul class="list-group">
+      {% for wish in recipient.exchange_wishes %}
+      <li class="list-group-item secret-santa-recipient-wish">
+        {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
+        {% if wish.price is not None %}<span class="text-muted small">· {{ wish.price|format_price:exchange.currency }}</span>{% endif %}
+      </li>
+      {% endfor %}
+      {% for wish in recipient.shared_wishes %}
+      <li class="list-group-item secret-santa-recipient-wish">
+        {% with link=wish.url|safe_http_url %}{% if link %}<a href="{{ link }}" target="_blank" rel="noopener noreferrer">{{ wish.title }}</a>{% else %}{{ wish.title }}{% endif %}{% endwith %}
+        {% if wish.price_hint is not None %}<span class="text-muted small">· {{ wish.price_hint|format_price:recipient.shared_currency }}</span>{% endif %}
+        {% if wish.notes %}<div class="small text-muted">{{ wish.notes|linebreaksbr }}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
   {% endif %}
-  {% if recipient.note %}
-  <figure class="mb-0 secret-santa-recipient-note">
-    <blockquote class="mb-0">{{ recipient.note|linebreaksbr }}</blockquote>
-  </figure>
+  {% if recipient.note.strip %}
+  <div class="secret-santa-subsection">
+    <h3 class="h6 secret-santa-subsection-title">
+      <i class="fas fa-comment-dots me-2" aria-hidden="true"></i>{% blocktrans with name=recipient.name %}Note from {{ name }}{% endblocktrans %}
+    </h3>
+    <blockquote class="mb-0 secret-santa-note secret-santa-recipient-note">{{ recipient.note|linebreaksbr }}</blockquote>
+  </div>
   {% endif %}
   {% else %}
   <p class="text-muted mb-0">{% blocktrans with name=recipient.name %}{{ name }} has not shared anything yet.{% endblocktrans %}</p>

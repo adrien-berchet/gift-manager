@@ -1,0 +1,15 @@
+{% load i18n static %}
+{# Navbar of the standalone pages: the brand, the theme and the language only. #}
+{# Needs theme_init_script.html in <head> and theme-toggle.js. #}
+<nav class="navbar standalone-navbar" aria-label="{% trans 'Top navigation' %}">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'gift_manager:home' %}">
+            <img src="{% static 'gift_manager/images/gift.png' %}" alt="" height="28">
+            Gift Manager
+        </a>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            {% include "gift_manager/includes/theme_toggle_button.html" %}
+            {% include "gift_manager/includes/language_select_form.html" %}
+        </div>
+    </div>
+</nav>

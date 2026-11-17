@@ -13,6 +13,7 @@ from functools import wraps
 from typing import TYPE_CHECKING
 from urllib.parse import urlencode
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
@@ -116,6 +117,19 @@ def _see_other(url: str) -> HttpResponse:
     return _private(response)
 
 
+def _chosen_language(request) -> str | None:
+    """Return the language the visitor picked in the navbar for this page, if any.
+
+    The language selector stores the choice in the language cookie and moves the page under
+    that language's prefix. The link sent by email carries the organizer's prefix, so the
+    cookie alone (set while using the app) does not override the page's default language.
+    """
+    chosen = request.COOKIES.get(settings.LANGUAGE_COOKIE_NAME)
+    if chosen and chosen == translation.get_language_from_path(request.path_info):
+        return chosen
+    return None
+
+
 def _render_page(
     request,
     participant: ExchangeParticipant,
@@ -133,7 +147,7 @@ def _render_page(
     """
     exchange = participant.exchange
     linked_viewer = access.viewer_is_linked(participant, request.user)
-    language = (
+    language = _chosen_language(request) or (
         request.user.profile.language if linked_viewer else exchange.organizer.profile.language
     )
     with translation.override(language):
@@ -142,6 +156,8 @@ def _render_page(
             "exchange": exchange,
             "organizer_name": emails.organizer_name(exchange),
             "linked_viewer": linked_viewer,
+            # After an action's error the page shows at the action URL: switch back to the page
+            "language_next": _page_url(participant),
             "error": error,
             "referrer_policy": PERSONAL_PAGE_REFERRER_POLICY,
         }

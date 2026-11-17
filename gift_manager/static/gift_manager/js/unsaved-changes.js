@@ -492,7 +492,8 @@
 
     function updateFormActions(form, hasChanges) {
         const actions = form.querySelector(CONFIG.selectors.formActions);
-        if (!actions) {
+        // data-unsaved-static: the leave warning still applies, but the action bar keeps its look
+        if (!actions || actions.hasAttribute("data-unsaved-static")) {
             return;
         }
 
