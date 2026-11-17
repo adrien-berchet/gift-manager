@@ -10,6 +10,7 @@
 """
 
 import os
+import random
 import re
 from datetime import timedelta
 from decimal import Decimal
@@ -343,7 +344,9 @@ class TestSecretSantaAfterTheDrawE2E:
         )
         for name in ("Ann", "Ben", "Cid", "Dee", "Eli"):
             service.add_participant(exchange, name=name, email=f"{name.lower()}@example.com")
-        service.run_draw(exchange)
+        # Seeded: removing someone from a mutual pair cannot be repaired, and a random draw
+        # sometimes paired Cid with their own Santa
+        service.run_draw(exchange, rng=random.Random(1))  # noqa: S311 - reproducible test
         detail = f"{live_server.url}{reverse('gift_manager:secret_santa_detail', args=[exchange.exchange_id])}"
         context = browser.new_context(**browser_context_args)
         guest_context = browser.new_context(
@@ -357,6 +360,7 @@ class TestSecretSantaAfterTheDrawE2E:
             # Remove and repair: only Cid's Santa gets a new assignment
             cid = exchange.participants.get(name="Cid")
             cid_santa = ExchangeParticipant.objects.get(gives_to=cid).name
+            assert cid.gives_to.name != cid_santa, "the draw put Cid in a mutual pair"
             row = page.locator(".secret-santa-participant", has_text="Cid")
             # A red outlined button like the other row actions (QA 2026-11-15, R2)
             remove_border = row.locator(".secret-santa-remove > summary").evaluate(
