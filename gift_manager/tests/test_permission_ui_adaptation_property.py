@@ -107,6 +107,11 @@ class PermissionUIAdaptationPropertyTest(HypothesisTestCase):
         list_url = list_urls.get(entity_type)
         if not list_url:
             return
+        if entity_type == "gift":
+            # The gift list shows its grid only once the user can see a gift
+            PermissionService.create_or_update_permission(
+                self.user, GiftFactory(), permission_level=PermissionLevel.OWNER
+            )
 
         response = self.client.get(reverse(list_url))
         self.assertEqual(response.status_code, 200)

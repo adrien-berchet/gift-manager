@@ -226,9 +226,18 @@ class TestGiftGridDataSerialization:
         gift_names = [row[1] for row in grid_data]
         assert malicious_name in gift_names
 
-    def test_user_permissions_json_script_rendered_when_empty(self, authenticated_client):
+    def test_user_permissions_json_script_rendered_when_empty(self, authenticated_client, user):
         """An empty permissions dict renders a valid user-permissions json_script with {}."""
-        response = authenticated_client.get(reverse("gift_manager:gifts"))
+        # The grid needs an accessible gift; the filter then leaves it with no row
+        gift = GiftFactory()
+        PermissionService.create_or_update_permission(
+            user, gift, permission_level=PermissionLevel.OWNER
+        )
+        plan = RelationFactory(gift=gift)
+        PermissionService.create_or_update_permission(
+            user, plan, permission_level=PermissionLevel.OWNER
+        )
+        response = authenticated_client.get(reverse("gift_manager:gifts") + "?unassigned=1")
         assert response.status_code == 200
         perms = _extract_user_permissions_json(response.content.decode())
         assert perms == {}

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="{% static 'gift_manager/css/real-time-search.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/css/dynamic-filters.css' %}">
 <link rel="stylesheet" href="{% static 'gift_manager/css/permission-ui.css' %}">
+<link rel="stylesheet" href="{% static 'gift_manager/css/gift-plan-workspace.css' %}">
 {% endblock %}
 
 {% block title %}Gift Manager - {{ translated_type }}{% endblock %}
@@ -36,13 +37,31 @@
        {% if show_unassigned %}aria-current="page"{% endif %}>{% trans "Not in a plan yet" %}</a>
 </nav>
 
+{% if has_gifts %}
 {% include "gift_manager/includes/advanced_list_tools.html" with grid_id="gift-grid" show_bulk_select=True %}
 
 <!-- Grid.js container -->
 <div id="gift-grid" class="list-container"></div>
+{% else %}
+<div class="gift-plan-empty-state" id="gift-empty-state">
+    <i class="fas fa-gift" aria-hidden="true"></i>
+    <h3>{% trans "No gifts yet." %}</h3>
+    <p class="text-muted small mb-0">{% trans "Keep your gift ideas here and reuse them in your gift plans." %}</p>
+    <a href="{% url 'gift_manager:gift_create' %}" class="btn btn-primary" data-action="create">
+        <i class="fas fa-plus me-2" aria-hidden="true"></i>{% trans "New gift" %}
+    </a>
+    {% include "gift_manager/includes/help_learn_more.html" with topic="how-it-works" anchor="gifts" %}
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
+{% if not has_gifts %}
+{# No grid to refresh: show the new gift by reloading once one is created in the side panel #}
+<script>
+    document.addEventListener('list:update', function () { window.location.reload(); }, { once: true });
+</script>
+{% else %}
 <script src="{% static 'gift_manager/js/grid-actions.js' %}"></script>
 <script src="{% static 'gift_manager/js/grid-utils.js' %}"></script>
 <script src="{% static 'gift_manager/js/permission-utils.js' %}">{# Permission-aware UI utilities #}</script>
@@ -185,4 +204,5 @@
     }
     }) ();
 </script>
+{% endif %}
 {% endblock %}
