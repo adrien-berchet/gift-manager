@@ -129,3 +129,31 @@ class TestPhoneMenuWithHelp:
         expect(menu).to_be_visible()
 
         assert menu.evaluate(UTILITY_ROWS_ARE_FULL)
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.frontend
+@pytest.mark.e2e
+class TestGiftEmptyStateIcons:
+    """Only the large icon of an empty state is styled large; button and link icons stay small."""
+
+    def test_learn_more_and_button_icons_keep_their_size_and_colour(
+        self, page, client, live_server, settings, new_user
+    ):
+        page.set_viewport_size(DESKTOP)
+        _sign_in(page, client, live_server, settings, new_user)
+        page.goto(f"{live_server.url}/en/gifts/")
+        empty_state = page.locator("#gift-empty-state")
+        expect(empty_state).to_be_visible()
+
+        learn_more = empty_state.locator(".help-learn-more")
+        icon_size = learn_more.locator("i").evaluate(
+            "i => parseFloat(getComputedStyle(i).fontSize)"
+        )
+        text_size = learn_more.evaluate("a => parseFloat(getComputedStyle(a).fontSize)")
+        assert icon_size == text_size
+
+        button = empty_state.locator("a.btn-primary")
+        plus_colour = button.locator("i").evaluate("i => getComputedStyle(i).color")
+        button_background = button.evaluate("b => getComputedStyle(b).backgroundColor")
+        assert plus_colour != button_background
