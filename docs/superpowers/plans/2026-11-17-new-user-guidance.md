@@ -33,7 +33,8 @@ Empty states and existing intro lines link to the matching Help topic.
   that are only shared with them.
 - Nothing hides the card automatically; only an explicit Hide sets
   `Profile.getting_started_hidden_at`.
-- Use the same Font Awesome icons as the navigation for each concept.
+- Give each concept the Font Awesome icon the app already uses for it: the navbar icon where
+  there is one, otherwise the icon on the Profile page (wishlist, bookmarklet).
 - Use PostgreSQL for tests (`tox run -e py311 -- …`). Don't run `tox -e py311` and `tox -e e2e`
   at the same time, because they share the test database.
 - Lint: `tox -e lint` needs Python 3.10, which may be missing. If so, run
@@ -221,8 +222,15 @@ Expected: FAIL with `NoReverseMatch` / `ImportError`.
 - **Navbar Help link.** The utilities list (`ul.navbar-utilities`, `base.html:145`) sits inside
   `#navbarSupportedContent`, so on phones it is reached through the navbar toggler. Add an
   `<li class="nav-item">` link to `help_index`
-  (`fas fa-circle-question`, label "Help") before the Profile item. Mark it active when
-  `request.resolver_match.url_name` starts with `help`.
+  (`fas fa-circle-question`, label "Help") before the Profile item. Mark it active with the
+  existing pattern `{% if 'help_' in request.resolver_match.url_name %}`. No other URL name
+  contains `help_`.
+- **Phone layout of the utilities.** On phones, `.navbar-utilities` is a 2-column grid whose last
+  item spans both columns (`gift_manager/static/gift_manager/css/base-layout.css:272-283`). One
+  more item would leave a half-empty row for a regular logged-in user (search, theme, Help,
+  Profile, language, then Sign Out across both columns). Add a phone-only rule in the same media
+  block that makes the Help item span both columns as well. Check the menu at 390 px wide, both
+  logged in and logged out. `test_phone_layout.py` runs in Task 6.
 
 - [ ] **Step 4: Run the tests and check that they pass**
 
@@ -294,11 +302,15 @@ Step table. The labels are copy, and the help URLs use Task 2's anchors:
 | gift | Add a gift idea | `Gift.objects.owned_by(u)` exists | `gift_create` | `how-it-works#gifts` | no |
 | plan | Create your first gift plan | `Relation.objects.owned_by(u)` exists | `relation_create` (+ `guided_url` = `relation_guided_create`) | `how-it-works#gift-plans` | no |
 | progress | Move a plan to Purchased or Given | owned plan with `status_id` in the progress status ids | `relations` | `how-it-works#statuses` | no |
-| wish | Add something to your wishlist | `Wish.objects.filter(wisher=u)` exists | `wish_create` | `wishlist` | yes |
+| wish | Add something to your wishlist | `Wish.objects.for_wisher(u).filter(is_deleted_by_wisher=False)` exists (archived wishes count, soft-deleted ones don't) | `wish_create` | `wishlist` | yes |
 | friend | Connect with a friend | `u.profile.friends` exists or `Invitation.objects.filter(sender=u)` exists | `send_invitation` | `friends-and-sharing` | yes |
 
 Progress status ids: `[s.pk for s in RelationStatus.objects.all() if is_purchased_status(s) or
 is_given_status(s)]`. The status table is tiny, and the helpers already handle translation.
+That's one small extra query on top of one `exists()` per step; the design doc says the same.
+
+Add to the test list: `test_soft_deleted_wish_does_not_tick_wish_step` (a wish with
+`is_deleted_by_wisher=True` → not done) and `test_archived_wish_ticks_wish_step`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -363,7 +375,13 @@ git commit -m "Feat: Compute getting-started steps from the user's own data"
 - Modify: `gift_manager/views/__init__.py`, `gift_manager/urls.py`
 - Modify: `gift_manager/views/common.py:98+` (`home` context)
 - Create: `gift_manager/templates/gift_manager/includes/getting_started_card.html`
-- Modify: `gift_manager/templates/gift_manager/home.html` (include the card between `.dashboard-topbar` and the "Next actions" section)
+- Modify: `gift_manager/templates/gift_manager/home.html`. Include the card as the **first child
+  of `#dashboard-live`** (`home.html:33`), before the "Needs attention" section. That puts it
+  below the topbar (the `<h1>` "Next actions" and its buttons) and inside the block that HTMX
+  refreshes through `hx-select="#dashboard-live"`. After a create in the offcanvas, the ticks
+  update without a reload. Step action links use `data-action="create"`, like the dashboard's
+  other create buttons, so they open in the offcanvas. The "progress" step's link goes to the
+  gift plans list, so it gets no `data-action`. The "What's this?" links are plain links.
 - Modify: `gift_manager/views/help.py` and `help/index.html` (show-again form)
 - Modify: `gift_manager/static/gift_manager/css/dashboard.css`
 - Test: `gift_manager/tests/test_getting_started_card.py` (create)
@@ -471,9 +489,9 @@ git commit -m "Feat: Show a dismissible getting-started checklist on the dashboa
 - Modify (empty states):
   - `relation_list.html:~151` → topic `how-it-works#gift-plans`
   - `recipient_list.html:~226` → `how-it-works#recipients`
-  - `includes/wishlist_body_partial.html:~17` → `wishlist`
-  - `includes/received_gift_list_partial.html:~142`, unfiltered branch only → `received-gifts`
   - `secret_santa/exchange_list.html:~39` → `secret-santa`
+  - Wishlist and received gifts: **no link in the empty state**. Their intro line, which shows on
+    every full-page render, already carries it, and a second identical link would be noise.
 - Modify (existing intro lines):
   - `wishlist_list.html:~28` → `wishlist`
   - `received_gift_list.html:~27` → `received-gifts`
@@ -484,6 +502,12 @@ git commit -m "Feat: Show a dismissible getting-started checklist on the dashboa
   `gift_list.html:18-55` (server-rendered empty state)
 - Modify: `AGENTS.md` (Frontend Notes rule)
 - Test: `gift_manager/tests/test_help_links.py` (create)
+- Modify (existing tests that load `/gifts/` for a user with no accessible gift and assert on
+  the grid; give the user an accessible gift in their setup, without changing what they assert):
+  - `gift_manager/tests/views/test_advanced_list_tools.py:7,17-40`
+  - `gift_manager/tests/test_quick_action_buttons.py:46-58`: the `GiftFactory()` there is not
+    shared with the user.
+  - `gift_manager/tests/views/test_ux_review_small_fixes.py:51-62`
 - Modify: `locale/fr/LC_MESSAGES/django.po`
 
 **Interfaces:**
@@ -521,7 +545,9 @@ class TestHelpLinks:
     def test_gift_list_shows_grid_with_gifts(self, authenticated_client, user): ...
     def test_unassigned_filter_with_no_match_keeps_grid(self, authenticated_client, user): ...
         # user owns a gift used by a plan; GET ?unassigned=1 -> 'id="gift-grid"' present
-    def test_filtered_received_gifts_empty_state_has_no_learn_more(self, authenticated_client): ...
+    def test_wishlist_has_a_single_learn_more_when_empty(self, authenticated_client):
+        html = authenticated_client.get(reverse("gift_manager:wishlist_list")).content.decode()
+        assert html.count(reverse("gift_manager:help_topic", args=["wishlist"])) == 1
 ```
 
 - [ ] **Step 2: Run the tests and check that they fail**
@@ -555,8 +581,10 @@ not add keyboard shortcut documentation to the UI unless the user asks."
 
 - [ ] **Step 6: Run the tests and check that they pass**
 
-Run: `tox run -e py311 -- gift_manager/tests/test_help_links.py gift_manager/tests/test_grid_actions.py`
-Expected: PASS. The e2e list-template test runs in Task 6.
+Run: `tox run -e py311 -- gift_manager/tests/test_help_links.py gift_manager/tests/test_grid_actions.py gift_manager/tests/views/test_advanced_list_tools.py gift_manager/tests/test_quick_action_buttons.py gift_manager/tests/views/test_ux_review_small_fixes.py`
+Expected: PASS. Then run `rg -l "reverse\(\"gift_manager:gifts\"\)|'/gifts/'|\"/gifts/\"" gift_manager/tests`
+and run every non-e2e file it lists. Any other test that expects the grid for a user with no
+gifts gets the same setup fix. The e2e list-template test runs in Task 6.
 
 - [ ] **Step 7: Translate and check locale coverage** (same commands as Task 2, Step 5).
 
@@ -608,6 +636,8 @@ not the test's expectations.
 - [ ] **Step 3: Run the related existing e2e tests**
 
 Run: `tox run -e e2e -- gift_manager/tests/e2e/test_dashboard_layout.py gift_manager/tests/e2e/test_phone_layout.py gift_manager/tests/e2e/test_list_templates.py`
+Pay attention to the dashboard live-refresh tests in `test_dashboard_layout.py` (around lines 491
+and 616-679), because the card now sits inside `#dashboard-live`.
 Expected: PASS. The card must not break the dashboard layout tests. If one asserts a
 first-viewport layout that the card now pushes down, have the test hide the card in its setup
 (set `getting_started_hidden_at` on the user's profile), not change the card.
