@@ -92,7 +92,7 @@ class Exchange(models.Model):
         verbose_name_plural = gettext_lazy("Secret Santa exchanges")
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     @property
     def is_draft(self) -> bool:
@@ -175,7 +175,7 @@ class ExchangeParticipant(models.Model):
         ]
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
     def save(self, *args, **kwargs):
         if not self.token:
@@ -225,7 +225,7 @@ class ExchangeWish(models.Model):
         verbose_name_plural = gettext_lazy("Exchange wishes")
 
     def __str__(self) -> str:
-        return self.title
+        return str(self.title)
 
 
 class ExclusionSet(models.Model):
@@ -242,4 +242,4 @@ class ExclusionSet(models.Model):
         verbose_name_plural = gettext_lazy("Exclusion sets")
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
