@@ -127,7 +127,7 @@ class UserPermissionQuerySet(models.QuerySet):
         Uses a subquery on the permission rows so the user and level conditions apply to the
         same row.
         """
-        field = self.model._meta.get_field("shared_with")
+        field = self.model._meta.get_field("shared_with")  # noqa: SLF001
         owner_rows = field.remote_field.through.objects.filter(
             user=user, permission_type=PermissionLevel.OWNER
         )

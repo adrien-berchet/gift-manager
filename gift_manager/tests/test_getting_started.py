@@ -45,7 +45,12 @@ class TestComputeGettingStarted:
         assert not any(s.done for s in getting_started.steps)
         assert getting_started.core_done_count == 0
         assert not getting_started.all_done
-        assert [s.key for s in getting_started.core_steps] == ["recipient", "gift", "plan", "progress"]
+        assert [s.key for s in getting_started.core_steps] == [
+            "recipient",
+            "gift",
+            "plan",
+            "progress",
+        ]
         assert [s.key for s in getting_started.optional_steps] == ["wish", "friend"]
 
     def test_owned_person_counts_as_recipient(self, user):

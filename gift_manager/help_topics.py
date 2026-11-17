@@ -33,14 +33,18 @@ HELP_TOPICS: tuple[HelpTopic, ...] = (
     HelpTopic(
         slug="wishlist",
         title=_("Wishlist and guest links"),
-        summary=_("List what you would like to receive and share it, even with people without an account."),
+        summary=_(
+            "List what you would like to receive and share it, even with people without an account."
+        ),
         icon="fas fa-gift",
         template=_template("wishlist"),
     ),
     HelpTopic(
         slug="friends-and-sharing",
         title=_("Friends and sharing"),
-        summary=_("Invite friends and plan gifts together by sharing recipients, gifts and gift plans."),
+        summary=_(
+            "Invite friends and plan gifts together by sharing recipients, gifts and gift plans."
+        ),
         icon="fas fa-share-alt",
         template=_template("friends-and-sharing"),
     ),
