@@ -2113,8 +2113,11 @@
         // verify the grid is showing proper empty state if data is empty.
         // This catches the Grid.js bug where forceRender() (triggered by sort clicks or
         // MutationObserver cascades) leaves tbody empty instead of showing noRecordsFound.
+        // Wait for the render to settle rather than a fixed delay: on a slow browser the
+        // "no records" row is not drawn yet after a short delay, and the fallback would then
+        // replace it, so the same empty list would look different from one load to the next.
         if (data.length === 0) {
-            setTimeout(function () {
+            whenGridRendered(grid, function () {
                 var container = document.getElementById(gridId);
                 if (container && !container.querySelector('.grid-empty-state')) {
                     // Check if Grid.js native empty message is visible
@@ -2123,7 +2126,7 @@
                         injectEmptyStateIfNeeded(gridId);
                     }
                 }
-            }, 200);
+            });
         }
 
         return grid;

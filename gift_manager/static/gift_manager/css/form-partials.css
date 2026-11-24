@@ -148,6 +148,13 @@
     margin-bottom: 0.5rem;
 }
 
+/* A field's label sits on its own line. Labels are inline-block (Bootstrap reboot) and
+   .form-input-text inputs are inline, so with a short label the input would otherwise
+   follow it on the same line whenever both fit (narrower default input in WebKit). */
+.form-field > .form-label {
+    display: block;
+}
+
 .form-control, .form-select {
     border-radius: 0.375rem;
     border: 1px solid #ced4da;
