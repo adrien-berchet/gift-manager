@@ -22,6 +22,8 @@ def login(page: Page, base_url: str):
     page.fill('input[name="login"]', "alice")
     page.fill('input[name="password"]', "alice_password")
     page.click('button[type="submit"]')
+    # networkidle alone can return on the idle login page, before the redirect after login starts
+    page.wait_for_url(lambda url: "/accounts/login/" not in url, timeout=10_000)
     page.wait_for_load_state("networkidle", timeout=10_000)
     assert "/accounts/login/" not in page.url, f"Still on login page: {page.url}"
 

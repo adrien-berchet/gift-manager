@@ -39,8 +39,10 @@ class BaseE2ETest:
         page.fill('input[name="password"]', password)
         page.click('button[type="submit"]')
 
-        # Wait for successful login (redirect away from login page)
-        # Don't assume specific redirect URL, just wait for navigation
+        # Wait for successful login (redirect away from login page). Don't assume a specific
+        # redirect URL. networkidle alone can return on the idle login page, before the redirect
+        # starts, so wait for the URL to change first.
+        page.wait_for_url(lambda url: "/accounts/login/" not in url, timeout=self.page_load_timeout)
         page.wait_for_load_state("networkidle", timeout=self.page_load_timeout)
 
         # Verify we're no longer on the login page
