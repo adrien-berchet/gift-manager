@@ -287,10 +287,9 @@ class TestGiftSuggestions(BaseE2ETest):
         expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
         ai_scroll.focus()
         page.keyboard.press("Tab")
-        hc_outline = occ_any_label.evaluate(
-            "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
-        )
-        assert hc_outline["style"] == "solid" and hc_outline["width"] == "3px"
+        # Retrying assertions: WebKit may apply the emulated media after emulate_media returns
+        expect(occ_any_label).to_have_css("outline-style", "solid")
+        expect(occ_any_label).to_have_css("outline-width", "3px")
         page.emulate_media(contrast="null")
 
         generate_btn.click()
