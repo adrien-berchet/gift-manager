@@ -319,7 +319,7 @@
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .quick-action-btn {
         border-width: 2px;
     }
@@ -669,7 +669,7 @@
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .list-item {
         border-width: 2px;
     }

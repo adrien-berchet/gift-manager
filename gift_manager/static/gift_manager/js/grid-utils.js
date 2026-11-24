@@ -885,15 +885,15 @@
                         removeEmptyStateIfPresent(grid._containerId);
                     }
 
-                    // Update the grid
-                    grid.updateConfig({
-                        data: extractedData
-                    }).forceRender();
+                    // Update global data variable if it exists
+                    if (window.data !== undefined) {
+                        window.data = extractedData;
+                    }
 
-                    // Wait for Grid.js to finish rendering using MutationObserver
-                    // This detects when DOM mutations have stopped, indicating rendering is complete
-                    const gridContainer = document.getElementById(grid._containerId);
-                    if (gridContainer) {
+                    const onRendered = function () {
+                        // Wait for the DOM mutations of the render to stop
+                        const gridContainer = document.getElementById(grid._containerId);
+                        if (!gridContainer) return;
                         waitForGridRenderComplete(gridContainer, () => {
                             // Fix Grid.js bug: forceRender with empty data doesn't show noRecordsFound
                             // Use force=true because Grid.js leaves stale rows in DOM after forceRender
@@ -905,27 +905,37 @@
                             }));
                             // Update pagination footer after DOM is fully rendered
                             updatePaginationVisibility(grid, extractedData.length);
+
+                            // Enable or disable the buttons of the new rows from the permissions
+                            const containerId = grid._containerId;
+                            if (containerId && window.PermissionUtils && window.userPermissions) {
+                                window.PermissionUtils.updateUIForPermissions(containerId, window.userPermissions);
+                            }
+                            if (postUpdateCallback && typeof postUpdateCallback === 'function') {
+                                postUpdateCallback();
+                            }
                         });
-                    }
+                    };
 
-                    // Update global data variable if it exists
-                    if (window.data !== undefined) {
-                        window.data = extractedData;
-                    }
-
-                    // After grid renders, update UI based on permissions
-                    // This ensures buttons are enabled/disabled correctly after refresh
-                    setTimeout(() => {
-                        const containerId = grid._containerId;
-                        if (containerId && window.PermissionUtils && window.userPermissions) {
-                            window.PermissionUtils.updateUIForPermissions(containerId, window.userPermissions);
-                        }
-                    }, 50);
-
-                    // Run post-update callback if provided
-                    if (postUpdateCallback && typeof postUpdateCallback === 'function') {
-                        setTimeout(postUpdateCallback, 100);
-                    }
+                    // Grid.js fails and shows its error message when a forced render overlaps
+                    // data it is still processing (e.g. the page size update that closing the
+                    // panel triggers on a slow device): wait for a quiet grid, and render again
+                    // if the render still ended in an error
+                    const renderRefreshedData = function (retriesLeft) {
+                        whenGridRendered(grid, function () {
+                            grid.updateConfig({ data: extractedData });
+                            forceRenderAndWait(grid, function () {
+                                const store = grid.config.store;
+                                const failed = store && store.getState().status === GRID_STATUS_ERROR;
+                                if (failed && retriesLeft > 0) {
+                                    renderRefreshedData(retriesLeft - 1);
+                                } else {
+                                    onRendered();
+                                }
+                            });
+                        });
+                    };
+                    renderRefreshedData(MAX_RENDER_RETRIES);
 
                 } catch (parseError) {
                     console.error(`[${entityType}List] Error parsing refreshed data:`, parseError);
@@ -2113,8 +2123,11 @@
         // verify the grid is showing proper empty state if data is empty.
         // This catches the Grid.js bug where forceRender() (triggered by sort clicks or
         // MutationObserver cascades) leaves tbody empty instead of showing noRecordsFound.
+        // Wait for the render to settle rather than a fixed delay: on a slow browser the
+        // "no records" row is not drawn yet after a short delay, and the fallback would then
+        // replace it, so the same empty list would look different from one load to the next.
         if (data.length === 0) {
-            setTimeout(function () {
+            whenGridRendered(grid, function () {
                 var container = document.getElementById(gridId);
                 if (container && !container.querySelector('.grid-empty-state')) {
                     // Check if Grid.js native empty message is visible
@@ -2123,7 +2136,7 @@
                         injectEmptyStateIfNeeded(gridId);
                     }
                 }
-            }, 200);
+            });
         }
 
         return grid;

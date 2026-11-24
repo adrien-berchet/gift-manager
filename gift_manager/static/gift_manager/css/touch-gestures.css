@@ -248,7 +248,7 @@
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .swipe-action-btn {
         border: 2px solid currentColor;
     }

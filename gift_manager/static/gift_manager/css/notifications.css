@@ -326,7 +326,7 @@ st.notification-info .toast-body::before {
    High Contrast Mode
    ========================================================================= */
 
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .toast {
         border: 2px solid currentColor;
         backdrop-filter: none;

@@ -2262,15 +2262,18 @@ h4, h5, h6 {
 }
 
 /* High contrast mode adjustments */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     :root {
         --border-color: #000;
         --text-primary: #000;
         --text-secondary: #333;
     }
 
-    .btn {
-        border: 2px solid currentColor;
+    /* Same specificity as :root and declared later, so dark text never lands on dark surfaces */
+    [data-theme="dark"] {
+        --border-color: #cbd5e1;
+        --text-primary: #ffffff;
+        --text-secondary: #f1f5f9;
     }
 }
 

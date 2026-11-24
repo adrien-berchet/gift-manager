@@ -23,6 +23,16 @@ def phone_page(page, client, live_server, seed_data_e2e, settings):
     return page
 
 
+def wait_for_list_idle(page):
+    """Wait until the list grid has settled after loading.
+
+    The grid is aria-busy while its page size update measures the cards and re-renders the
+    rows, hiding them meanwhile: a click on a row action then lands on nothing.
+    """
+    expect(page.locator(".gridjs-tbody .gridjs-tr").first).to_be_attached()
+    expect(page.locator('[aria-busy="true"]:has(.gridjs-tbody)')).to_have_count(0)
+
+
 def assert_cards_fit(page):
     """Check the cards themselves: hidden overflow can mask a broken document width."""
     cards = page.locator('[data-view="card"] .gridjs-tbody .gridjs-tr')
@@ -103,6 +113,7 @@ def test_phone_edit_actions_stay_visible_while_fields_scroll(phone_page, live_se
     page = phone_page
     page.set_viewport_size({"width": 320, "height": 568})
     page.goto(f"{live_server.url}/{language}/persons/")
+    wait_for_list_idle(page)
     page.locator('[data-action="edit"]:visible').first.click()
     panel = page.locator("#editPanel")
     expect(panel.locator("form")).to_be_visible()
@@ -152,6 +163,7 @@ def test_phone_edit_save_cancel_and_delete_confirmation(phone_page, live_server,
     seed_data_e2e.alice.profile.friends.add(seed_data_e2e.bob.profile)
     page.set_viewport_size({"width": 375, "height": 667})
     page.goto(f"{live_server.url}/en/gifts/")
+    wait_for_list_idle(page)
     page.locator('[data-action="edit"]:visible').first.click()
     panel = page.locator("#editPanel")
     name = panel.locator('[name="name"]')
@@ -215,6 +227,7 @@ def test_edit_panel_validation_errors_still_receive_focus(phone_page, live_serve
     page = phone_page
     page.set_viewport_size({"width": 375, "height": 667})
     page.goto(f"{live_server.url}/en/gifts/")
+    wait_for_list_idle(page)
     page.locator('[data-action="edit"]:visible').first.click()
     panel = page.locator("#editPanel")
     expect(panel.locator("form")).to_be_visible()
@@ -471,8 +484,10 @@ def test_phone_clicking_ai_steering_pills_does_not_scroll_viewport(
 
     budget_label = ai_block.locator('label[for$="_under_30"]')
     budget_label.scroll_into_view_if_needed()
-    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY
-    page.evaluate("window.scrollBy(0, -180)")
+    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY.
+    # Scroll instantly: Bootstrap's smooth scroll-behavior would otherwise still be animating
+    # when scrollY is read (Firefox/WebKit), and Playwright would click a moving pill.
+    page.evaluate("window.scrollBy({top: -180, behavior: 'instant'})")
     scroll_before = page.evaluate("window.scrollY")
 
     budget_label.click()

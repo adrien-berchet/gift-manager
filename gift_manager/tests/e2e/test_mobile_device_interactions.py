@@ -400,13 +400,31 @@ class TestMobileDeviceInteractions(BaseE2ETest):
                 f"Mobile page load took {load_time}ms, should be under 10000ms"
             )
 
-            # Measure modal interaction time
-            start_time = page.evaluate("performance.now()")
-            self.click_quick_action(page, 0, "delete")
+            # Time the app in the page, from the Delete click to the end of the modal's fade-in, so
+            # neither the overflow menu, the Playwright round trips nor wait_for_modal's settle
+            # delay counts against the budget
+            delete_btn = self.reveal_row_action(self.get_list_items(page).nth(0), "delete")
+            expect(delete_btn).to_be_enabled()
+            delete_btn.evaluate("el => el.scrollIntoView({block: 'center', behavior: 'instant'})")
+            delete_btn.evaluate(
+                """button => {
+                    window.modalOpenTime = new Promise(resolve => {
+                        let clickedAt;
+                        button.addEventListener('click', () => { clickedAt = performance.now(); },
+                                                {capture: true, once: true});
+                        document.getElementById('confirmModal').addEventListener(
+                            'shown.bs.modal', () => resolve(performance.now() - clickedAt), {once: true});
+                    });
+                }"""
+            )
+            delete_btn.click()
             self.wait_for_modal(page)
-            end_time = page.evaluate("performance.now()")
-
-            modal_time = end_time - start_time
+            # null if the modal never reported its end of transition
+            modal_time = page.evaluate(
+                "Promise.race([window.modalOpenTime,"
+                " new Promise(resolve => setTimeout(() => resolve(null), 5000))])"
+            )
+            assert modal_time is not None, "#confirmModal never fired shown.bs.modal"
             assert modal_time < 2000, (
                 f"Mobile modal open took {modal_time}ms, should be under 2000ms"
             )

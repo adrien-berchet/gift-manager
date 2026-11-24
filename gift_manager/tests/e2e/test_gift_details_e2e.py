@@ -1,5 +1,6 @@
 """Browser tests for the link and price of gifts and gift plans."""
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -72,7 +73,8 @@ class TestGiftDetailsWorkflow:
         page.fill("input[name='url']", "https://shop.example/form")
         page.fill("input[name='price']", "19.90")
         page.locator("form button[type='submit']").first.click()
-        expect(page).not_to_have_url(f"{live_server.url}/gifts/create/")
+        # /gifts/create/ redirects to /en/gifts/create/: match both, or this passes before saving
+        expect(page).not_to_have_url(re.compile(r"/gifts/create/$"))
 
         gift = Gift.objects.get(name="Form Gift")
         assert gift.url == "https://shop.example/form"

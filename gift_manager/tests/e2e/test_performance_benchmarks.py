@@ -127,37 +127,60 @@ class TestPerformanceBenchmarks(BaseE2ETest):
         self.login_as_user(page, live_server, test_user)
         self.navigate_to_entity_list(page, live_server, "persons")
 
-        def open_panel():
-            self.click_quick_action(page, 0, "edit")
-            self.wait_for_panel(page)
-            return page.locator("#editPanel").is_visible()
+        panel = page.locator("#editPanel")
 
-        metrics = self.measure_operation(page, "open_edit_panel", open_panel)
+        # Time the app in the page, from the user's input to the end of Bootstrap's transition:
+        # wait_for_panel's settle delay and expect()'s polling backoff must not count
+        self.arm_panel_timing(page, "click", "shown.bs.offcanvas")
+        self.click_quick_action(page, 0, "edit")
+        self.wait_for_panel(page)
+        open_ms = self.read_panel_timing(page)
 
-        assert metrics["duration_ms"] < self.performance_thresholds["panel_open"], (
-            f"Panel open took {metrics['duration_ms']:.0f}ms, "
+        assert open_ms < self.performance_thresholds["panel_open"], (
+            f"Panel open took {open_ms:.0f}ms, "
             f"should be under {self.performance_thresholds['panel_open']}ms"
         )
 
-        assert metrics["result"], "Panel should be visible after opening"
-
         # Test panel close performance
-        def close_panel():
-            page.keyboard.press("Escape")
-            panel = page.locator("#editPanel")
-            expect(panel).not_to_be_visible()
-            return not panel.is_visible()
+        self.arm_panel_timing(page, "keydown", "hidden.bs.offcanvas")
+        page.keyboard.press("Escape")
+        expect(panel).not_to_be_visible()
+        close_ms = self.read_panel_timing(page)
 
-        close_metrics = self.measure_operation(page, "close_edit_panel", close_panel)
-
-        assert close_metrics["duration_ms"] < self.performance_thresholds["panel_close"], (
-            f"Panel close took {close_metrics['duration_ms']:.0f}ms, "
+        assert close_ms < self.performance_thresholds["panel_close"], (
+            f"Panel close took {close_ms:.0f}ms, "
             f"should be under {self.performance_thresholds['panel_close']}ms"
         )
 
         print("Panel Performance:")
-        print(f"  Open Time: {metrics['duration_ms']:.0f}ms")
-        print(f"  Close Time: {close_metrics['duration_ms']:.0f}ms")
+        print(f"  Open Time: {open_ms:.0f}ms")
+        print(f"  Close Time: {close_ms:.0f}ms")
+
+    @staticmethod
+    def arm_panel_timing(page: Page, start_event: str, end_event: str):
+        """Time from the next start_event on the page to end_event on #editPanel."""
+        page.evaluate(
+            """([startEvent, endEvent]) => {
+                window.panelTiming = new Promise(resolve => {
+                    let startedAt;
+                    document.addEventListener(startEvent, () => { startedAt = performance.now(); },
+                                              {capture: true, once: true});
+                    document.getElementById('editPanel').addEventListener(
+                        endEvent, () => resolve(performance.now() - startedAt), {once: true});
+                });
+            }""",
+            [start_event, end_event],
+        )
+
+    @staticmethod
+    def read_panel_timing(page: Page) -> float:
+        """Return the armed timing, failing clearly if the panel never fired its event."""
+        duration = page.evaluate(
+            "Promise.race([window.panelTiming,"
+            " new Promise(resolve => setTimeout(() => resolve(null), 5000))])"
+        )
+        assert duration is not None, "#editPanel never fired the Bootstrap event"
+        return duration
 
     def test_form_submission_performance(self, page: Page, live_server, test_user):
         """Test form submission performance."""
@@ -285,7 +308,17 @@ class TestPerformanceBenchmarks(BaseE2ETest):
                     def perform_bulk_delete():
                         bulk_delete_btn.click()
                         modal_id = self.wait_for_bulk_delete_modal(page)
-                        self.confirm_modal_action(page, modal_id)
+                        # The delete is a plain fetch() that wait_for_ajax_complete (HTMX only)
+                        # does not track. Wait for its response so the test cannot finish, and
+                        # the DB flush start, while the server is still deleting rows.
+                        with page.expect_response(
+                            lambda r: (
+                                "/api/bulk-operations/" in r.url and r.request.method == "POST"
+                            ),
+                            timeout=self.page_load_timeout,
+                        ) as response_info:
+                            self.confirm_modal_action(page, modal_id)
+                        assert response_info.value.ok
                         self.wait_for_ajax_complete(page)
                         return True
 
