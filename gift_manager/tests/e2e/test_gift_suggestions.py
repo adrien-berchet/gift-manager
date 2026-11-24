@@ -360,20 +360,29 @@ class TestGiftSuggestions(BaseE2ETest):
             )
         cdp.detach()
 
+    @pytest.mark.browser_context_args(contrast="more")
     def test_ai_steering_pills_in_high_contrast_mode(
         self, page: Page, live_server, test_user, monkeypatch
     ):
         """With the OS asking for more contrast, pills keep their checked fill and get a thicker focus ring.
 
-        The contrast is emulated before the page loads: Firefox updates matchMedia but does not
-        restyle an already loaded page when the emulated media changes.
+        The contrast is set on the browser context before any page loads: Firefox does not restyle
+        a loaded page when page.emulate_media changes the contrast. Playwright 1.65 (Firefox 159)
+        or later is needed: older Firefox builds drop the emulated media when Django's
+        Cross-Origin-Opener-Policy header swaps the browsing context on the first navigation.
         """
-        page.emulate_media(contrast="more")
         group, suggestions = self._open_group_suggestions(page, live_server, test_user, monkeypatch)
         root_var = (
             "name => getComputedStyle(document.documentElement).getPropertyValue(name).trim()"
         )
-        assert page.evaluate(root_var, "--focus-outline-width") == "3px"
+        state = page.evaluate(
+            """() => ({
+                matches: matchMedia('(prefers-contrast: more)').matches,
+                width: getComputedStyle(document.documentElement)
+                    .getPropertyValue('--focus-outline-width').trim(),
+            })"""
+        )
+        assert state == {"matches": True, "width": "3px"}, state
         assert page.evaluate(root_var, "--text-primary") == "#000"
 
         budget_label = suggestions.locator('label[for$="_under_30"]')
