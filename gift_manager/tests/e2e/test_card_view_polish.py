@@ -8,6 +8,7 @@ import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
+from gift_manager.models import Event
 from gift_manager.models import PermissionLevel
 from gift_manager.permissions import create_or_update_permission
 from gift_manager.tests.factories import GiftFactory
@@ -74,8 +75,15 @@ def _own(user, *objects):
 
 
 def _wait_for_grid(page: Page, grid: str):
-    """Wait until the grid rows are rendered and no page size update re-renders them."""
-    page.wait_for_selector(f'#{grid}:not([aria-busy="true"]) .gridjs-tbody .gridjs-tr')
+    """Wait until the grid rows are rendered and no page size update re-renders them.
+
+    An empty grid may instead show the app's own empty state with the table hidden: that
+    happens when its deferred check runs before Grid.js drew its "no records" row (WebKit).
+    """
+    idle = f'#{grid}:not([aria-busy="true"])'
+    page.locator(f"{idle} .gridjs-tbody .gridjs-tr, {idle} .grid-empty-state").filter(
+        visible=True
+    ).first.wait_for()
 
 
 def _set_view(page: Page, grid: str, view: str):
@@ -623,6 +631,10 @@ def test_empty_list_shows_the_no_records_message(
     page: Page, client, live_server, settings, path, grid, view
 ):
     """A user without any entity sees the "no records" message instead of an empty grid."""
+    # Migration 0032 creates a global Birthday event that every user sees. Only the first
+    # live-server test of a run still has it (each test's teardown flushes the database),
+    # so drop it to start from the same empty state whatever the test order.
+    Event.objects.filter(is_birthday=True).delete()
     client.force_login(UserFactory())
     page.context.add_cookies(
         [
@@ -637,7 +649,10 @@ def test_empty_list_shows_the_no_records_message(
     _set_view(page, grid, view)
     page.wait_for_timeout(300)  # past the deferred empty state check
 
-    message = page.locator(f"#{grid} .gridjs-notfound, #{grid} .grid-empty-state")
+    # Grid.js's own message, or the app's empty state shown with the table hidden
+    message = page.locator(f"#{grid} .gridjs-notfound, #{grid} .grid-empty-state").filter(
+        visible=True
+    )
     expect(message.first).to_be_visible()
     expect(message.first).to_contain_text("No")
     # In the card view, the message is not drawn as an (empty) card

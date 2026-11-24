@@ -471,8 +471,10 @@ def test_phone_clicking_ai_steering_pills_does_not_scroll_viewport(
 
     budget_label = ai_block.locator('label[for$="_under_30"]')
     budget_label.scroll_into_view_if_needed()
-    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY
-    page.evaluate("window.scrollBy(0, -180)")
+    # Position the pill near the bottom of the viewport so a center-scroll would move scrollY.
+    # Scroll instantly: Bootstrap's smooth scroll-behavior would otherwise still be animating
+    # when scrollY is read (Firefox/WebKit), and Playwright would click a moving pill.
+    page.evaluate("window.scrollBy({top: -180, behavior: 'instant'})")
     scroll_before = page.evaluate("window.scrollY")
 
     budget_label.click()
