@@ -117,6 +117,7 @@ jobs:
           --self-contained-html \
           --junit-xml=reports/e2e-${{ matrix.browser }}.xml \
           --maxfail=5 \
+          --tracing retain-on-failure \
           --tb=short \
           -v
 
@@ -224,6 +225,7 @@ jobs:
           --self-contained-html \
           --junit-xml=reports/e2e-mobile.xml \
           --maxfail=3 \
+          --tracing retain-on-failure \
           --tb=short \
           -v
 
