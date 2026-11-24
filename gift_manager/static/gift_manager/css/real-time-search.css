@@ -185,7 +185,7 @@
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .form-control.search-error {
         border-width: 2px;
     }

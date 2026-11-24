@@ -130,7 +130,7 @@
     }
 }
 
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .field-group-unsaved {
         border-left-color: currentColor;
     }

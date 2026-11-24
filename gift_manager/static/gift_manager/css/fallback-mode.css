@@ -119,7 +119,7 @@ noscript {
     margin-top: 0.25rem;
 }
 
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .fallback-mode .btn,
     .fallback-mode .form-control,
     .fallback-mode .alert {

@@ -543,7 +543,7 @@ input.searching {
 }
 
 /* High contrast mode support */
-@media (prefers-contrast: high) {
+@media (prefers-contrast: more) {
     .loading-overlay {
         background: rgba(255, 255, 255, 0.95);
         border: 2px solid var(--color-primary);

@@ -280,17 +280,7 @@ class TestGiftSuggestions(BaseE2ETest):
         assert radio_style["clip"] == "rect(0px, 0px, 0px, 0px)"
         assert budget_label.evaluate("el => getComputedStyle(el).outlineStyle") == "none"
 
-        # Emulate high-contrast mode: clicking a pill keeps its checked fill, and tabbing shows a 3px outline
         expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
-        page.emulate_media(contrast="more")
-        budget_label.click()
-        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
-        ai_scroll.focus()
-        page.keyboard.press("Tab")
-        # Retrying assertions: WebKit may apply the emulated media after emulate_media returns
-        expect(occ_any_label).to_have_css("outline-style", "solid")
-        expect(occ_any_label).to_have_css("outline-width", "3px")
-        page.emulate_media(contrast="null")
 
         generate_btn.click()
 
@@ -369,6 +359,54 @@ class TestGiftSuggestions(BaseE2ETest):
                 != "rgba(0, 0, 0, 0)"
             )
         cdp.detach()
+
+    def test_ai_steering_pills_in_high_contrast_mode(
+        self, page: Page, live_server, test_user, monkeypatch
+    ):
+        """With the OS asking for more contrast, pills keep their checked fill and get a thicker focus ring.
+
+        The contrast is emulated before the page loads: Firefox updates matchMedia but does not
+        restyle an already loaded page when the emulated media changes.
+        """
+        page.emulate_media(contrast="more")
+        group, suggestions = self._open_group_suggestions(page, live_server, test_user, monkeypatch)
+        root_var = (
+            "name => getComputedStyle(document.documentElement).getPropertyValue(name).trim()"
+        )
+        assert page.evaluate(root_var, "--focus-outline-width") == "3px"
+        assert page.evaluate(root_var, "--text-primary") == "#000"
+
+        budget_label = suggestions.locator('label[for$="_under_30"]')
+        budget_label.click()
+        expect(
+            suggestions.locator('input.btn-check[name="budget"][value="under_30"]')
+        ).to_be_checked()
+        expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
+
+        ai_scroll = suggestions.locator(
+            "[data-gift-suggestions-ai] .gift-suggestions-scroll-container"
+        )
+        occ_any_radio = suggestions.locator('input.btn-check[name="occasion"][value=""]')
+        occ_any_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_any"]')
+        skip_link = page.locator("a.skip-link").first
+        # The ring is black on the light theme and white on the dark one, where black would vanish.
+        # The skip link is painted with the ring color, so its text takes the opposite one.
+        for theme, ring_color, skip_text_color, text_color in (
+            ("light", "rgb(0, 0, 0)", "rgb(255, 255, 255)", "#000"),
+            ("dark", "rgb(255, 255, 255)", "rgb(0, 0, 0)", "#ffffff"),
+        ):
+            page.evaluate(
+                "theme => document.documentElement.setAttribute('data-theme', theme)", theme
+            )
+            assert page.evaluate(root_var, "--text-primary") == text_color
+            expect(skip_link).to_have_css("background-color", ring_color)
+            expect(skip_link).to_have_css("color", skip_text_color)
+            ai_scroll.focus()
+            page.keyboard.press("Tab")
+            expect(occ_any_radio).to_be_focused()
+            expect(occ_any_label).to_have_css("outline-style", "solid")
+            expect(occ_any_label).to_have_css("outline-width", "3px")
+            expect(occ_any_label).to_have_css("outline-color", ring_color)
 
     def test_review_and_restore_dismissed_suggestions(self, page: Page, live_server, test_user):
         """Dismissing a suggestion updates the badge count; opening the dismissed panel allows restoring it."""

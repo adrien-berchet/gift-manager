@@ -36,12 +36,20 @@
     --focus-shadow-size: 0.25rem;
 }
 
-/* High Contrast Focus Indicators */
-@media (prefers-contrast: high) {
+/* High Contrast Focus Indicators: every focus rule below reads these variables. The obsolete
+   `prefers-contrast: high` value matches in no browser; `more` is what an OS contrast setting sets. */
+@media (prefers-contrast: more) {
     :root {
         --focus-color: #000000;
+        --focus-color-rgb: 0, 0, 0;
         --focus-outline-width: 3px;
         --focus-outline-offset: 1px;
+    }
+
+    /* A black ring would vanish on the dark surfaces */
+    [data-theme="dark"] {
+        --focus-color: #ffffff;
+        --focus-color-rgb: 255, 255, 255;
     }
 }
 
@@ -149,6 +157,20 @@ a:focus {
     outline-offset: 2px !important;
 }
 
+/* The dark theme's light blue link color would sit on the skip link's blue background */
+[data-theme="dark"] a.skip-link,
+[data-theme="dark"] a.skip-link:hover {
+    color: white;
+}
+
+/* With more contrast, the dark theme's focus color (the skip link background) is white */
+@media (prefers-contrast: more) {
+    [data-theme="dark"] a.skip-link,
+    [data-theme="dark"] a.skip-link:hover {
+        color: #000000;
+    }
+}
+
 /* List Navigation Styles */
 .list-group-item:focus,
 .table-row:focus,
@@ -215,25 +237,6 @@ a:focus {
     .btn:focus {
         min-height: 44px;
         min-width: 44px;
-    }
-}
-
-/* High Contrast Mode Support */
-@media (prefers-contrast: high) {
-    button:focus,
-    input:not(.btn-check):not(.rating-input-radio):focus,
-    select:focus,
-    textarea:focus,
-    a:focus,
-    [tabindex]:focus {
-        outline: 3px solid currentColor !important;
-        outline-offset: 2px !important;
-        background-color: HighlightText !important;
-        color: Highlight !important;
-    }
-
-    .btn:focus {
-        border: 3px solid currentColor !important;
     }
 }
 
