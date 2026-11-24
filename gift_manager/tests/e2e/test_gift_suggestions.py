@@ -9,6 +9,7 @@ Covers:
 
 from pathlib import Path
 
+import pytest
 from playwright.sync_api import Page
 from playwright.sync_api import expect
 
@@ -180,8 +181,8 @@ class TestGiftSuggestions(BaseE2ETest):
             "Studio Headphones"
         )
 
-    def test_accept_ai_idea_on_group_page(self, page: Page, live_server, test_user, monkeypatch):
-        """AI ideas load lazily on group detail page, can be accepted into group plans, and 'More ideas' works."""
+    def _open_group_suggestions(self, page: Page, live_server, test_user, monkeypatch):
+        """Open a shared group's detail page with a fake AI client and wait for its AI block."""
         from datetime import timedelta
 
         from django.utils import timezone
@@ -233,6 +234,12 @@ class TestGiftSuggestions(BaseE2ETest):
         # AI block loads lazily inside suggestions with generate button
         generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
         expect(generate_btn).to_be_visible(timeout=self.ajax_timeout * 2)
+        return group, suggestions
+
+    def test_accept_ai_idea_on_group_page(self, page: Page, live_server, test_user, monkeypatch):
+        """AI ideas load lazily on group detail page, can be accepted into group plans, and 'More ideas' works."""
+        group, suggestions = self._open_group_suggestions(page, live_server, test_user, monkeypatch)
+        generate_btn = suggestions.locator("[data-suggestion-more-ideas]")
 
         # Tabbing into the occasion and budget pill groups shows a visible focus ring on each pill
         ai_scroll = suggestions.locator(
@@ -275,11 +282,7 @@ class TestGiftSuggestions(BaseE2ETest):
 
         # Emulate high-contrast mode: clicking a pill keeps its checked fill, and tabbing shows a 3px outline
         expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
-        cdp = page.context.new_cdp_session(page)
-        cdp.send(
-            "Emulation.setEmulatedMedia",
-            {"features": [{"name": "prefers-contrast", "value": "more"}]},
-        )
+        page.emulate_media(contrast="more")
         budget_label.click()
         expect(budget_label).to_have_css("background-color", "rgb(79, 70, 229)")
         ai_scroll.focus()
@@ -288,37 +291,7 @@ class TestGiftSuggestions(BaseE2ETest):
             "el => ({ style: getComputedStyle(el).outlineStyle, width: getComputedStyle(el).outlineWidth })"
         )
         assert hc_outline["style"] == "solid" and hc_outline["width"] == "3px"
-
-        # Emulate touch device (hover: none): hovering an unchecked pill keeps a transparent background
-        cdp.send("Emulation.setEmulatedMedia", {"features": []})
-        cdp.send(
-            "Emulation.setDeviceMetricsOverride",
-            {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True},
-        )
-        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": True})
-        assert page.evaluate("window.matchMedia('(hover: none)').matches")
-        occ_event_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_1"]')
-        for dark in (False, True):
-            if dark:
-                page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
-            occ_event_label.hover()
-            assert (
-                occ_event_label.evaluate("el => getComputedStyle(el).backgroundColor")
-                == "rgba(0, 0, 0, 0)"
-            )
-            budget_any_label.hover()
-            assert (
-                budget_any_label.evaluate("el => getComputedStyle(el).backgroundColor")
-                == "rgba(0, 0, 0, 0)"
-            )
-            assert (
-                budget_label.evaluate("el => getComputedStyle(el).backgroundColor")
-                != "rgba(0, 0, 0, 0)"
-            )
-        page.evaluate("document.documentElement.setAttribute('data-theme', 'light')")
-        cdp.send("Emulation.clearDeviceMetricsOverride")
-        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": False})
-        cdp.detach()
+        page.emulate_media(contrast="null")
 
         generate_btn.click()
 
@@ -353,6 +326,50 @@ class TestGiftSuggestions(BaseE2ETest):
         # Batch 2 idea 'Star Map' appears in AI block
         star_map_item = page.locator('[data-suggestion-source="ai"]').filter(has_text="Star Map")
         expect(star_map_item).to_be_visible(timeout=self.ajax_timeout * 2)
+
+    @pytest.mark.only_browser("chromium")
+    def test_ai_steering_pills_keep_transparent_hover_on_touch(
+        self, page: Page, live_server, test_user, monkeypatch
+    ):
+        """On a touch device (hover: none), hovering an unchecked pill keeps a transparent background.
+
+        Chromium only: emulating hover: none needs CDP touch emulation, which Firefox and WebKit lack.
+        """
+        group, suggestions = self._open_group_suggestions(page, live_server, test_user, monkeypatch)
+        budget_label = suggestions.locator('label[for$="_under_30"]')
+        budget_label.click()
+        expect(
+            suggestions.locator('input.btn-check[name="budget"][value="under_30"]')
+        ).to_be_checked()
+
+        cdp = page.context.new_cdp_session(page)
+        cdp.send(
+            "Emulation.setDeviceMetricsOverride",
+            {"width": 390, "height": 844, "deviceScaleFactor": 1, "mobile": True},
+        )
+        cdp.send("Emulation.setTouchEmulationEnabled", {"enabled": True})
+        assert page.evaluate("window.matchMedia('(hover: none)').matches")
+
+        occ_event_label = suggestions.locator('label[for$="_occ_' + str(group.pk) + '_1"]')
+        budget_any_label = suggestions.locator('label[for$="_budget_' + str(group.pk) + '_any"]')
+        for dark in (False, True):
+            if dark:
+                page.evaluate("document.documentElement.setAttribute('data-theme', 'dark')")
+            occ_event_label.hover()
+            assert (
+                occ_event_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            budget_any_label.hover()
+            assert (
+                budget_any_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                == "rgba(0, 0, 0, 0)"
+            )
+            assert (
+                budget_label.evaluate("el => getComputedStyle(el).backgroundColor")
+                != "rgba(0, 0, 0, 0)"
+            )
+        cdp.detach()
 
     def test_review_and_restore_dismissed_suggestions(self, page: Page, live_server, test_user):
         """Dismissing a suggestion updates the badge count; opening the dismissed panel allows restoring it."""

@@ -285,7 +285,17 @@ class TestPerformanceBenchmarks(BaseE2ETest):
                     def perform_bulk_delete():
                         bulk_delete_btn.click()
                         modal_id = self.wait_for_bulk_delete_modal(page)
-                        self.confirm_modal_action(page, modal_id)
+                        # The delete is a plain fetch() that wait_for_ajax_complete (HTMX only)
+                        # does not track. Wait for its response so the test cannot finish, and
+                        # the DB flush start, while the server is still deleting rows.
+                        with page.expect_response(
+                            lambda r: (
+                                "/api/bulk-operations/" in r.url and r.request.method == "POST"
+                            ),
+                            timeout=self.page_load_timeout,
+                        ) as response_info:
+                            self.confirm_modal_action(page, modal_id)
+                        assert response_info.value.ok
                         self.wait_for_ajax_complete(page)
                         return True
 
