@@ -12,6 +12,9 @@
       <i class="fas fa-wand-magic-sparkles me-1" aria-hidden="true"></i>{% trans "Guided" %}
     </a>
     {% endif %}
+    {% if step.secondary_url %}
+    <a href="{{ step.secondary_url }}" class="getting-started-secondary">{{ step.secondary_label }}</a>
+    {% endif %}
   </span>
   {% endif %}
   <a href="{{ step.help_url }}" class="getting-started-help">{% trans "What's this?" %}<span class="visually-hidden"> {{ step.label }}</span></a>

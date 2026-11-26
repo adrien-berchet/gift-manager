@@ -190,6 +190,10 @@ EMAIL_ENCRYPTION_KEY = get_env_variable(
 )
 
 
+# Selecting every contact of a contact import (up to 1,000) posts one field per contact, over
+# Django's default limit of 1,000 fields per request.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 LANGUAGES = [

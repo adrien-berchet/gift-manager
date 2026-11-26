@@ -1,0 +1,6 @@
+First Name,Middle Name,Last Name,Phonetic First Name,Phonetic Middle Name,Phonetic Last Name,Name Prefix,Name Suffix,Nickname,File As,Organization Name,Organization Title,Organization Department,Birthday,Notes,Photo,Labels,E-mail 1 - Label,E-mail 1 - Value,E-mail 2 - Label,E-mail 2 - Value,Phone 1 - Label,Phone 1 - Value
+Élodie,Anne,Marchand,,,,,,,,,,,1987-03-14,"Likes tea, not coffee",,* myContacts,* Home,elodie.marchand@example.com ::: elodie.perso@example.net,Work,e.marchand@example.org,Mobile,+33 6 11 11 11 11
+Thomas,,Nguyen,,,,,,,,,,,--05-09,,,* myContacts,* Other,thomas.nguyen@example.com,,,,
+,,,,,,,,,,Boulangerie Dupont,,,,,,* myContacts,Work,contact@example.com,,,Work,+33 1 22 22 22 22
+,,Leroy,,,,,,,,,,,--1225,,,* myContacts,,,,,,
+Hélène,,Roux,,,,,,,,,,,1990-02-30,,,* myContacts,Home,not-an-email,,,,

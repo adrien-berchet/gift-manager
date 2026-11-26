@@ -754,7 +754,8 @@
         font-weight: 600;
     }
 
-    .getting-started-label > a.getting-started-guided {
+    .getting-started-label > a.getting-started-guided,
+    .getting-started-label > a.getting-started-secondary {
         font-size: var(--text-sm);
         font-weight: 500;
     }

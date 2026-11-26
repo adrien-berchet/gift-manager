@@ -23,6 +23,11 @@ from .common import get_user
 from .common import global_search
 from .common import home
 
+# Contact import views
+from .contact_import import ContactImportPreviewView
+from .contact_import import ContactImportUploadView
+from .contact_import import contact_import_cancel
+
 # Event views
 from .event import EventCreateView
 from .event import EventDeleteView
@@ -217,6 +222,8 @@ __all__ = [
     "CancelToPreviousMixin",
     "CaptureView",
     "ConfirmRemoveFriendView",
+    "ContactImportPreviewView",
+    "ContactImportUploadView",
     "ContextPermissionMixin",
     "CreatePermissionMixin",
     "DeleteSharedMixin",
@@ -305,6 +312,7 @@ __all__ = [
     "add_multiple_child_groups_to_group",
     "add_multiple_persons_to_group",
     "calendar_feed",
+    "contact_import_cancel",
     "dismissed_url_for",
     "event_plan_again",
     "get_user",

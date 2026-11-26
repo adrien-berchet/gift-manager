@@ -1,2 +1,3 @@
-# Byte-exact vCard fixtures: keep CRLF/LF endings, the BOM and Windows-1252 bytes as written.
+# Byte-exact vCard and CSV fixtures: keep CRLF/LF endings, the BOM and Windows-1252 bytes as written.
 *.vcf -text
+*.csv -text

@@ -106,6 +106,30 @@ def date_in_year(year: int, month: int, day: int) -> date_class:
     return date_class(year, month, min(day, calendar.monthrange(year, month)[1]))
 
 
+def birthday_parts_error(day: int | None, month: int | None, year: int | None) -> dict | None:
+    """Return the field errors of a birthday, or None when it is valid or absent.
+
+    A birthday is a day and a month, with an optional year that is not in the future.
+    Without a year, year 2000 (a leap year) is used, so February 29 stays valid.
+    """
+    if day is None and month is None:
+        if year is None:
+            return None
+        return {"birthday_year": gettext_lazy("Enter a day and a month for the birthday.")}
+    if day is None or month is None:
+        return {"birthday_day": gettext_lazy("Enter both the day and the month.")}
+    field, message = None, gettext_lazy("Enter a valid date.")
+    if not 1 <= month <= 12:
+        field = "birthday_month"
+    elif year is not None and year < 1:
+        field = "birthday_year"
+    elif year is not None and year > timezone.localdate().year:
+        field, message = "birthday_year", gettext_lazy("Enter a year that is not in the future.")
+    elif not 1 <= day <= calendar.monthrange(year or 2000, month)[1]:
+        field = "birthday_day"
+    return {field: message} if field else None
+
+
 def next_yearly_occurrence(month: int, day: int, today: date_class) -> date_class:
     """Return the first occurrence of a month/day that is on or after today."""
     candidate = date_in_year(today.year, month, day)
@@ -765,26 +789,17 @@ class Person(models.Model):
     def clean(self):
         """Validate that the birthday is a real calendar day (February 29 needs no year)."""
         super().clean()
-        if self.birthday_month is None and self.birthday_day is None:
-            if self.birthday_year is not None:
-                raise ValidationError(
-                    {"birthday_year": gettext_lazy("Enter a day and a month for the birthday.")}
-                )
-            return
-        if self.birthday_month is None or self.birthday_day is None:
-            raise ValidationError(
-                {"birthday_day": gettext_lazy("Enter both the day and the month.")}
-            )
-        if not (1 <= self.birthday_month <= 12 and 1 <= self.birthday_day <= 31):
+        day, month, year = self.birthday_day, self.birthday_month, self.birthday_year
+        in_range = (
+            (day is None or 1 <= day <= 31)
+            and (month is None or 1 <= month <= 12)
+            and (year is None or year >= 1)
+        )
+        if not in_range and day is not None and month is not None:
             return  # the field validators already report out-of-range values
-        if self.birthday_year is not None and self.birthday_year > timezone.localdate().year:
-            raise ValidationError(
-                {"birthday_year": gettext_lazy("Enter a year that is not in the future.")}
-            )
-        # Year 2000 is a leap year: February 29 stays valid without a year.
-        year = self.birthday_year or 2000
-        if self.birthday_day > calendar.monthrange(year, self.birthday_month)[1]:
-            raise ValidationError({"birthday_day": gettext_lazy("Enter a valid date.")})
+        errors = birthday_parts_error(day, month, year)
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def email(self) -> str | None:

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+Implemented
 
 ## Summary
 
@@ -304,6 +304,30 @@ Constraints and suggestions:
   name unless a simple split proves reliable. Phone numbers and addresses it can return are
   ignored.
 - Other follow-ups: contact export and optional live sync with an address book provider.
+
+## Implementation Notes
+
+- Parser: `gift_manager/contact_import.py` (pure, `vobject` card by card for vCard, `csv` for
+  CSV). Service: `gift_manager/contact_import_service.py`. Forms:
+  `gift_manager/contact_import_forms.py`. Views: `gift_manager/views/contact_import.py`
+  (`persons/import/`, `persons/import/<id>/`, `persons/import/<id>/cancel/`).
+- Choices made during implementation, agreed with an `agy` review:
+  - One pending import per session; a new upload replaces it, and it expires after one hour.
+  - Files with a UTF-16 byte order mark (old Google CSV exports) are decoded as UTF-16 before
+    the UTF-8 / Windows-1252 / Latin-1 chain.
+  - A CSV needs a header row; one with no recognized name, email or birthday column, or a
+    `.vcf` file without any card, is rejected as unsupported. Two-digit years in slash dates
+    are in this century up to the current year, in the previous one after.
+  - Control characters (NUL, tabs, line breaks) in names are replaced by spaces: PostgreSQL
+    refuses NUL in text.
+  - People are created with `bulk_create`, their OWNER rows with
+    `PermissionService.grant_owner_to_new_objects`, and the optional group is filled through
+    `GroupHierarchyService.change_members(..., members_are_new=True)`, which now checks the
+    group once instead of once per person. A 1,000-contact import runs in a few queries.
+  - The birthday rules of `Person.clean()` live in `models.birthday_parts_error`, shared with
+    the parser.
+  - Unexpected parser errors log only the exception type and show a generic message, so no
+    contact data reaches the logs, Sentry or admin emails.
 
 ## Open Questions
 

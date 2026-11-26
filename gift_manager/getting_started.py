@@ -31,6 +31,9 @@ class GettingStartedStep:
     help_url: str
     optional: bool
     guided_url: str | None = None
+    # An optional second way to do the step, shown as a plain link (a full page, no panel)
+    secondary_url: str | None = None
+    secondary_label: str | None = None
     # Whether action_url has a side-panel form; other pages open as normal pages
     opens_in_panel: bool = True
 
@@ -83,6 +86,8 @@ def compute_getting_started(user) -> GettingStarted:
             action_url=reverse("gift_manager:person_create"),
             help_url=_help_url("how-it-works", "recipients"),
             optional=False,
+            secondary_url=reverse("gift_manager:contact_import"),
+            secondary_label=gettext("Import contacts"),
         ),
         GettingStartedStep(
             key="gift",

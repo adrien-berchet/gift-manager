@@ -643,6 +643,7 @@ dependencies = [
     { name = "sqlparse" },
     { name = "urllib3" },
     { name = "uvicorn" },
+    { name = "vobject" },
     { name = "werkzeug" },
     { name = "whitenoise" },
 ]
@@ -739,6 +740,7 @@ requires-dist = [
     { name = "tox-gh-actions", marker = "extra == 'test'", specifier = ">=3" },
     { name = "urllib3", specifier = ">=2.8.0" },
     { name = "uvicorn", specifier = ">=0.24" },
+    { name = "vobject", specifier = ">=0.9.9" },
     { name = "werkzeug", specifier = ">=3.1.9" },
     { name = "whitenoise", specifier = ">=6.6" },
 ]
@@ -2072,6 +2074,15 @@ wheels = [
 ]
 
 [[package]]
+name = "pytz"
+version = "2026.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/b0/168030b0bfcc334cf09fa3313afdb888d892c8a0027324683d1de0ec277e/pytz-2026.6.tar.gz", hash = "sha256:3b0fc2727707663d6e517936f444fd8a8b240f1fc32f4bf7ee03274245945284", size = 318520, upload-time = "2026-10-29T09:05:47.011Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/25/564f3fc5b70c1398d706c51f2b1470d0ea0b1b2f96fee67877b6f5bdf3b6/pytz-2026.6-py2.py3-none-any.whl", hash = "sha256:7fed3fee8fd6bd4a2b7b75a8d56021d0624127bf69bd5691f115db929ac570b3", size = 506321, upload-time = "2026-10-29T09:05:45.14Z" },
+]
+
+[[package]]
 name = "pyyaml"
 version = "6.0.3"
 source = { registry = "https://pypi.org/simple" }
@@ -2457,6 +2468,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ea/fa/18004e5cb15541ad2a68ff219c755233b012b12d4ec8663d06a258082bec/virtualenv-21.7.1.tar.gz", hash = "sha256:d0dbfaa5483487baea28d7210ef8d24c9d1bd0f10f449eeb215568825a9b334e", size = 5525237, upload-time = "2026-07-30T15:40:36.36Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4b/a7/ded126c19495158a05c7202b3389139839d4cf78d622d453867778e0f7a8/virtualenv-21.7.1-py3-none-any.whl", hash = "sha256:6394973f990536e34c05157179146c020284c42fe01da1dfeb0ba16c345280d9", size = 5504576, upload-time = "2026-07-30T15:40:34.512Z" },
+]
+
+[[package]]
+name = "vobject"
+version = "0.9.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+    { name = "pytz" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d0/8a/15c34b3d27c43fc81a467d0f66577afc5542326804c42f30557e31c3259e/vobject-0.9.9.tar.gz", hash = "sha256:ac44e5d7e2079d84c1d52c50a615b9bec4b1ba958608c4c7fe40cbf33247b38e", size = 1208905, upload-time = "2024-12-16T07:29:39.178Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/20/6bba813bbd498c28edbbcf8253a6398cf4266ecf7bfa6129835c0a2bfbb1/vobject-0.9.9-py2.py3-none-any.whl", hash = "sha256:0fbdb982065cf4d1843a5d5950c88510041c6de026bda49c3502721de1c6ac3d", size = 47526, upload-time = "2024-12-16T07:31:08.493Z" },
 ]
 
 [[package]]

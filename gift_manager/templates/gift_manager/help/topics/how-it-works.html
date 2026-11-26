@@ -15,7 +15,11 @@
   <h2 id="recipients-title"><i class="fas fa-users" aria-hidden="true"></i>{% trans "Recipients" %}</h2>
   <p>{% trans "Recipients are the people you give gifts to, and the groups they belong to, such as a family or a team." %}</p>
   <p>{% trans "A gift plan for a group is one shared gift for the whole group. To give each member their own gift, create one plan per person." %}</p>
-  <p><a href="{% url 'gift_manager:person_create' %}">{% trans "Add a recipient" %}</a></p>
+  <p>{% trans "Already keep your contacts on your phone, in Google Contacts, Apple Contacts or Outlook? Export them as a vCard (.vcf) or CSV file and import them: you choose which contacts to add, and their email addresses and birthdays come along." %}</p>
+  <p>
+    <a href="{% url 'gift_manager:person_create' %}">{% trans "Add a recipient" %}</a>
+    · <a href="{% url 'gift_manager:contact_import' %}">{% trans "Import contacts" %}</a>
+  </p>
 </section>
 
 <section id="gifts" aria-labelledby="gifts-title">

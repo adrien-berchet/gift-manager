@@ -523,6 +523,26 @@ class PermissionService:
         return permission_obj
 
     @classmethod
+    def grant_owner_to_new_objects(cls, user, objs) -> None:
+        """Give ``user`` the OWNER permission on objects created just now, in one query.
+
+        Only for objects of one model that have no permission row yet (a bulk creation):
+        unlike ``create_or_update_permission`` it never updates an existing row. The rows are
+        the ``shared_with`` through rows, so this also shares the objects with ``user``.
+        """
+        objs = list(objs)
+        if not objs:
+            return
+        model = cls.get_permission_model(objs[0])
+        object_attr = cls._get_permission_object_attr(objs[0], model)
+        model.objects.bulk_create(
+            [
+                model(user=user, permission_type=PermissionLevel.OWNER, **{object_attr: obj})
+                for obj in objs
+            ]
+        )
+
+    @classmethod
     def delete_permission(cls, user, obj) -> bool:
         """Delete a user's permission on an object."""
         model = cls.get_permission_model(obj)

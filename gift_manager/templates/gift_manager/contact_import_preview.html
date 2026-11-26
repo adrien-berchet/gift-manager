@@ -1,0 +1,106 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n static %}
+
+{% block title %}Gift Manager - {% trans "Import contacts" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 contact-import">
+    <div class="page-header">
+        <h1 class="h3">
+            <i class="fas fa-file-import me-2" aria-hidden="true"></i>{% trans "Choose the contacts to import" %}
+        </h1>
+    </div>
+
+    <p class="mb-1">
+        {% blocktrans count counter=rows|length %}{{ counter }} contact found in the file.{% plural %}{{ counter }} contacts found in the file.{% endblocktrans %}
+        {% if skipped %}
+        {% blocktrans count counter=skipped %}{{ counter }} entry without a name or unreadable was left out.{% plural %}{{ counter }} entries without a name or unreadable were left out.{% endblocktrans %}
+        {% endif %}
+    </p>
+    <p class="text-muted small">{% trans "Contacts that look like people you already have are not selected. Only the first email address of each contact is imported." %}</p>
+
+    {% if form.errors %}
+    <div class="alert alert-danger" role="alert" tabindex="-1">
+        <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
+        {% for field in form %}{% for error in field.errors %}{{ error }} {% endfor %}{% endfor %}
+        {% for error in form.non_field_errors %}{{ error }} {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" id="contact-import-form" data-contact-import>
+        {% csrf_token %}
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <div class="btn-group btn-group-sm" role="group" aria-label="{% trans 'Selection controls' %}" data-contact-import-controls hidden>
+                <button type="button" class="btn btn-outline-primary" data-select="all">{% trans "Select all" %}</button>
+                <button type="button" class="btn btn-outline-secondary" data-select="none">{% trans "Select none" %}</button>
+            </div>
+            <span class="text-muted small" aria-live="polite">
+                {% blocktrans with count=selected_count %}Selected: <span data-selected-count>{{ count }}</span>{% endblocktrans %}
+            </span>
+        </div>
+
+        <div class="table-responsive contact-import-table">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col"><span class="visually-hidden">{% trans "Import" %}</span></th>
+                        <th scope="col">{% trans "First name" %}</th>
+                        <th scope="col">{% trans "Family name" %}</th>
+                        <th scope="col">{% trans "Email address" %}</th>
+                        <th scope="col">{% trans "Birthday" %}</th>
+                        <th scope="col">{% trans "Notes" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr{% if row.duplicate %} class="contact-import-duplicate"{% endif %}>
+                        <td>
+                            <input class="form-check-input" type="checkbox" name="selected" value="{{ row.index }}"
+                                   id="contact-{{ row.index }}"{% if row.checked %} checked{% endif %}
+                                   aria-label="{% blocktrans with name=row.given %}Import {{ name }}{% endblocktrans %}{% if row.family %} {{ row.family }}{% endif %}">
+                        </td>
+                        <td><label for="contact-{{ row.index }}" class="mb-0">{{ row.given }}</label></td>
+                        <td>{{ row.family }}</td>
+                        <td class="text-break">{{ row.email }}</td>
+                        <td>{{ row.birthday }}</td>
+                        <td>
+                            {% if row.duplicate == "owned" %}
+                            <span class="badge text-bg-warning">{% trans "Already in your people" %}</span>
+                            {% elif row.duplicate == "shared" %}
+                            <span class="badge text-bg-info">{% trans "Shared with you" %}</span>
+                            {% endif %}
+                            {% if row.invalid_birthday %}
+                            <span class="small text-muted d-block">{% trans "Birthday not recognized, it will not be imported." %}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if form.group.field.queryset.exists %}
+        <div class="mb-3" style="max-width: 420px;">
+            <label for="{{ form.group.id_for_label }}" class="form-label">{{ form.group.label }}</label>
+            {{ form.group }}
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end">
+            <button type="submit" form="contact-import-cancel" class="btn btn-secondary">
+                <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Cancel" %}
+            </button>
+            <button type="submit" class="btn btn-primary" data-loading-text="{% trans 'Importing...' %}">
+                <i class="fas fa-file-import me-1" aria-hidden="true"></i>{% trans "Import selected contacts" %}
+            </button>
+        </div>
+    </form>
+    <form method="post" action="{{ cancel_url }}" id="contact-import-cancel">
+        {% csrf_token %}
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'gift_manager/js/contact-import.js' %}"></script>
+{% endblock %}

@@ -177,11 +177,28 @@ class GroupHierarchyService:
 
     @classmethod
     def check_member_changes(
-        cls, actor, group: PersonGroup, *, add=(), remove=(), group_is_new: bool = False
+        cls,
+        actor,
+        group: PersonGroup,
+        *,
+        add=(),
+        remove=(),
+        group_is_new: bool = False,
+        members_are_new: bool = False,
     ) -> None:
-        """Raise PermissionDenied unless actor may apply these membership changes."""
-        for person in [*add, *remove]:
-            cls.assert_can_change_member(actor, group, person, group_is_new=group_is_new)
+        """Raise PermissionDenied unless actor may apply these membership changes.
+
+        The group is checked once. ``members_are_new`` (people the actor just created)
+        skips the per-person check for the added people only.
+        """
+        add, remove = list(add), list(remove)
+        if not add and not remove:
+            return
+        cls._assert_can_edit(actor, group, is_new=group_is_new)
+        for person in add:
+            cls._assert_can_edit(actor, person, is_new=members_are_new)
+        for person in remove:
+            cls._assert_can_edit(actor, person)
 
     @classmethod
     def check_person_group_changes(
@@ -217,13 +234,25 @@ class GroupHierarchyService:
 
     @classmethod
     def change_members(
-        cls, actor, group: PersonGroup, *, add=(), remove=(), group_is_new: bool = False
+        cls,
+        actor,
+        group: PersonGroup,
+        *,
+        add=(),
+        remove=(),
+        group_is_new: bool = False,
+        members_are_new: bool = False,
     ) -> None:
         """Add or remove persons in group, all or nothing."""
         add, remove = list(add), list(remove)
         with transaction.atomic():
             cls.check_member_changes(
-                actor, group, add=add, remove=remove, group_is_new=group_is_new
+                actor,
+                group,
+                add=add,
+                remove=remove,
+                group_is_new=group_is_new,
+                members_are_new=members_are_new,
             )
             group.person_set.add(*add)
             group.person_set.remove(*remove)

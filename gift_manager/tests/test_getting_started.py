@@ -209,3 +209,12 @@ class TestComputeGettingStarted:
             "gift_manager:help_topic", args=["friends-and-sharing"]
         )
         assert all(s.guided_url is None for s in steps.values() if s.key != "plan")
+
+    def test_recipient_step_offers_contact_import(self, user):
+        """The recipient step links to the contact import as a secondary way."""
+        steps = {s.key: s for s in compute_getting_started(user).steps}
+
+        assert steps["recipient"].secondary_url == reverse("gift_manager:contact_import")
+        assert steps["recipient"].secondary_label == "Import contacts"
+        assert steps["recipient"].guided_url is None
+        assert all(s.secondary_url is None for s in steps.values() if s.key != "recipient")

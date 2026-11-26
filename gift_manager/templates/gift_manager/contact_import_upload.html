@@ -1,0 +1,34 @@
+{% extends "gift_manager/base.html" %}
+{% load i18n %}
+
+{% block title %}Gift Manager - {% trans "Import contacts" %}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 contact-import" style="max-width: 720px;">
+    <nav aria-label="breadcrumb">
+        <a href="{{ cancel_url }}" class="text-decoration-none">
+            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>{% trans "Back to recipients" %}
+        </a>
+    </nav>
+    <div class="card p-4 mt-3">
+        <h1 class="h3 mb-3">
+            <i class="fas fa-file-import me-2" aria-hidden="true"></i>{% trans "Import contacts" %}
+        </h1>
+        <p>{% trans "Export your contacts from your phone, Google Contacts, Apple Contacts or Outlook as a vCard (.vcf) or CSV file, then upload it here. You choose which contacts to import on the next page." %}</p>
+        <p class="text-muted small">{% trans "Names, email addresses and birthdays are imported. Phone numbers, addresses, photos and notes are ignored. The file itself is not kept." %}</p>
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            {% include "gift_manager/includes/forms/errors.html" %}
+            {% include "gift_manager/includes/forms/field.html" with field=form.file %}
+            <div class="d-flex gap-2 justify-content-end">
+                <a href="{{ cancel_url }}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1" aria-hidden="true"></i>{% trans "Cancel" %}
+                </a>
+                <button type="submit" class="btn btn-primary" data-loading-text="{% trans 'Reading the file...' %}">
+                    <i class="fas fa-upload me-1" aria-hidden="true"></i>{% trans "Continue" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

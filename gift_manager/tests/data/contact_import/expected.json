@@ -199,5 +199,186 @@
     1970
    ]
   }
+ ],
+ "google.csv": [
+  {
+   "given": "Élodie",
+   "family": "Marchand",
+   "emails": [
+    "elodie.marchand@example.com",
+    "elodie.perso@example.net",
+    "e.marchand@example.org"
+   ],
+   "bday": [
+    14,
+    3,
+    1987
+   ]
+  },
+  {
+   "given": "Thomas",
+   "family": "Nguyen",
+   "emails": [
+    "thomas.nguyen@example.com"
+   ],
+   "bday": [
+    9,
+    5,
+    null
+   ]
+  },
+  {
+   "given": "Leroy",
+   "family": "",
+   "emails": [],
+   "bday": [
+    25,
+    12,
+    null
+   ]
+  },
+  {
+   "given": "Hélène",
+   "family": "Roux",
+   "emails": [],
+   "bday": null
+  }
+ ],
+ "google_legacy.csv": [
+  {
+   "given": "Camille",
+   "family": "Dubois",
+   "emails": [
+    "camille.d@example.com",
+    "camille.dubois@example.org"
+   ],
+   "bday": [
+    5,
+    1,
+    1990
+   ]
+  },
+  {
+   "given": "Bastien Lefèvre",
+   "family": "",
+   "emails": [
+    "bastien@example.com"
+   ],
+   "bday": [
+    22,
+    7,
+    null
+   ]
+  }
+ ],
+ "outlook_en.csv": [
+  {
+   "given": "Inès",
+   "family": "Rousseau",
+   "emails": [
+    "i.rousseau@example.com",
+    "ines.r@example.org"
+   ],
+   "bday": [
+    21,
+    6,
+    1985
+   ]
+  },
+  {
+   "given": "Noël",
+   "family": "Lefèvre-Œuvray",
+   "emails": [
+    "noel@example.com"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Zoé",
+   "family": "Martin",
+   "emails": [
+    "zoe@example.com"
+   ],
+   "bday": null
+  }
+ ],
+ "outlook_fr.csv": [
+  {
+   "given": "Inès",
+   "family": "Rousseau",
+   "emails": [
+    "i.rousseau@example.com",
+    "ines.r@example.org"
+   ],
+   "bday": [
+    21,
+    6,
+    1985
+   ]
+  },
+  {
+   "given": "Benoît",
+   "family": "Cœur",
+   "emails": [
+    "benoit.coeur@example.com"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Éric",
+   "family": "",
+   "emails": [],
+   "bday": [
+    3,
+    4,
+    1990
+   ]
+  }
+ ],
+ "simple.csv": [
+  {
+   "given": "Ana",
+   "family": "Silva",
+   "emails": [
+    "ana@example.com"
+   ],
+   "bday": [
+    12,
+    4,
+    1990
+   ]
+  },
+  {
+   "given": "Okafor",
+   "family": "",
+   "emails": [
+    "chidi@example.com"
+   ],
+   "bday": [
+    1,
+    12,
+    null
+   ]
+  },
+  {
+   "given": "Lucas",
+   "family": "",
+   "emails": [
+    "lucas@example.com"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Paul",
+   "family": "Durand, Jr.",
+   "emails": [
+    "paul.durand@example.com"
+   ],
+   "bday": [
+    21,
+    6,
+    1985
+   ]
+  }
  ]
 }

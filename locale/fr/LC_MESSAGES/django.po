@@ -8199,6 +8199,118 @@ msgstr "Réservé par un ami"
 msgid "Only the wisher can delete this wish."
 msgstr "Seul l'auteur du souhait peut le supprimer."
 
+msgid "This file is too large: files are limited to 2 MB."
+msgstr "Ce fichier est trop volumineux : la limite est de 2 Mo."
+
+#, python-format
+msgid "This file contains more than %(count)s contacts. Split it into smaller files and import them one by one."
+msgstr "Ce fichier contient plus de %(count)s contacts. Découpez-le en fichiers plus petits et importez-les un par un."
+
+msgid "This file is empty or contains no contacts."
+msgstr "Ce fichier est vide ou ne contient aucun contact."
+
+msgid "This file is not a contacts file. Export your contacts as a vCard (.vcf) or CSV (.csv) file and try again."
+msgstr "Ce fichier n'est pas un fichier de contacts. Exportez vos contacts au format vCard (.vcf) ou CSV (.csv) et réessayez."
+
+msgid "No contact with a name was found in this file."
+msgstr "Aucun contact avec un nom n'a été trouvé dans ce fichier."
+
+msgid "This file could not be read."
+msgstr "Ce fichier n'a pas pu être lu."
+
+msgid "Contacts file"
+msgstr "Fichier de contacts"
+
+msgid "A vCard (.vcf) or CSV (.csv) file, up to 2 MB."
+msgstr "Un fichier vCard (.vcf) ou CSV (.csv), de 2 Mo au maximum."
+
+msgid "Select at least one contact to import."
+msgstr "Sélectionnez au moins un contact à importer."
+
+msgid "This selection is not valid. Reload the page and try again."
+msgstr "Cette sélection n'est pas valide. Rechargez la page et réessayez."
+
+msgid "Contacts"
+msgstr "Contacts"
+
+msgid "Add the imported people to a group (optional)"
+msgstr "Ajouter les personnes importées à un groupe (facultatif)"
+
+msgid "This import is no longer available. Upload your contacts file again."
+msgstr "Cet import n'est plus disponible. Envoyez à nouveau votre fichier de contacts."
+
+#, python-format
+msgid "Contacts imported: %(imported)d. Not imported: %(not_imported)d."
+msgstr "Contacts importés : %(imported)d. Non importés : %(not_imported)d."
+
+msgid "Import contacts"
+msgstr "Importer des contacts"
+
+msgid "Back to recipients"
+msgstr "Retour aux destinataires"
+
+msgid "Export your contacts from your phone, Google Contacts, Apple Contacts or Outlook as a vCard (.vcf) or CSV file, then upload it here. You choose which contacts to import on the next page."
+msgstr "Exportez vos contacts depuis votre téléphone, Google Contacts, Apple Contacts ou Outlook au format vCard (.vcf) ou CSV, puis envoyez le fichier ici. Vous choisirez les contacts à importer à l'étape suivante."
+
+msgid "Names, email addresses and birthdays are imported. Phone numbers, addresses, photos and notes are ignored. The file itself is not kept."
+msgstr "Les noms, adresses email et anniversaires sont importés. Les numéros de téléphone, adresses postales, photos et notes sont ignorés. Le fichier lui-même n'est pas conservé."
+
+msgid "Reading the file..."
+msgstr "Lecture du fichier..."
+
+msgid "Continue"
+msgstr "Continuer"
+
+msgid "Choose the contacts to import"
+msgstr "Choisissez les contacts à importer"
+
+msgid "Contacts that look like people you already have are not selected. Only the first email address of each contact is imported."
+msgstr "Les contacts qui ressemblent à des personnes que vous avez déjà ne sont pas sélectionnés. Seule la première adresse email de chaque contact est importée."
+
+msgid "Select none"
+msgstr "Ne rien sélectionner"
+
+#, python-format
+msgid "Selected: <span data-selected-count>%(count)s</span>"
+msgstr "Sélectionnés : <span data-selected-count>%(count)s</span>"
+
+#, python-format
+msgid "Import %(name)s"
+msgstr "Importer %(name)s"
+
+msgid "Already in your people"
+msgstr "Déjà dans vos personnes"
+
+msgid "Shared with you"
+msgstr "Partagé avec vous"
+
+msgid "Birthday not recognized, it will not be imported."
+msgstr "Anniversaire non reconnu, il ne sera pas importé."
+
+msgid "Importing..."
+msgstr "Importation..."
+
+msgid "Import selected contacts"
+msgstr "Importer les contacts sélectionnés"
+
+msgid "Some contacts could not be imported. Nothing was imported."
+msgstr "Certains contacts n'ont pas pu être importés. Rien n'a été importé."
+
+msgid "Already keep your contacts on your phone, in Google Contacts, Apple Contacts or Outlook? Export them as a vCard (.vcf) or CSV file and import them: you choose which contacts to add, and their email addresses and birthdays come along."
+msgstr "Vos contacts sont déjà sur votre téléphone, dans Google Contacts, Apple Contacts ou Outlook ? Exportez-les au format vCard (.vcf) ou CSV et importez-les : vous choisissez les contacts à ajouter, et leurs adresses email et anniversaires sont repris."
+
+#, python-format
+msgid "%(counter)s contact found in the file."
+msgid_plural "%(counter)s contacts found in the file."
+msgstr[0] "%(counter)s contact trouvé dans le fichier."
+msgstr[1] "%(counter)s contacts trouvés dans le fichier."
+
+#, python-format
+msgid "%(counter)s entry without a name or unreadable was left out."
+msgid_plural "%(counter)s entries without a name or unreadable were left out."
+msgstr[0] "%(counter)s entrée sans nom ou illisible a été écartée."
+msgstr[1] "%(counter)s entrées sans nom ou illisibles ont été écartées."
+
 #~ msgid "This participation is already linked to an account."
 #~ msgstr "Cette participation est déjà liée à un compte."
 

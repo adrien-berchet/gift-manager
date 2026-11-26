@@ -351,6 +351,17 @@ urlpatterns = [
     path("recipients/", views.RecipientListView.as_view(), name="recipients"),
     path("persons/", views.PersonListView.as_view(), name="persons"),
     path("persons/create/", views.PersonCreateView.as_view(), name="person_create"),
+    path("persons/import/", views.ContactImportUploadView.as_view(), name="contact_import"),
+    path(
+        "persons/import/<str:import_id>/",
+        views.ContactImportPreviewView.as_view(),
+        name="contact_import_preview",
+    ),
+    path(
+        "persons/import/<str:import_id>/cancel/",
+        views.contact_import_cancel,
+        name="contact_import_cancel",
+    ),
     path("persons/<uuid:pk>/", views.PersonDetailView.as_view(), name="person_detail"),
     path("persons/<uuid:pk>/edit/", views.PersonUpdateView.as_view(), name="person_edit"),
     path("persons/<uuid:pk>/delete/", views.PersonDeleteView.as_view(), name="person_delete"),

@@ -1,5 +1,7 @@
 """Tests for the getting-started card on the dashboard, and hiding or showing it."""
 
+import re
+
 import pytest
 from django.urls import reverse
 
@@ -72,6 +74,18 @@ class TestGettingStartedCard:
 
         assert reverse("gift_manager:person_create") in html
         assert reverse("gift_manager:relation_guided_create") in html
+
+    def test_recipient_step_has_a_plain_import_link(self, authenticated_client):
+        """The import link is a plain page link, the plan step keeps its Guided link."""
+        html = _card_html(authenticated_client)
+
+        import_link = re.search(
+            rf'<a href="{reverse("gift_manager:contact_import")}"[^>]*>', html
+        ).group(0)
+        assert "data-action" not in import_link
+        assert "getting-started-secondary" in import_link
+        guided = re.findall(r'<a href="([^"]+)" class="getting-started-guided"', html)
+        assert guided == [reverse("gift_manager:relation_guided_create")]
 
     def test_finished_step_has_no_action_link(self, authenticated_client, user):
         """A finished step shows a tick and no action link."""

@@ -1,4 +1,4 @@
 [codespell]
-skip = .git/*,*.svg,*.mo,*.po,staticfiles/*
+skip = .git/*,*.svg,*.mo,*.po,staticfiles/*,gift_manager/tests/data/contact_import/*
 ignore-words-list = ue,dateA,abandonne,Abandonned,bord,discreet,technic,limite,pre-selected,stdio,complet,adresse
 builtin = clear,rare
