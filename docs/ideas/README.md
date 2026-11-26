@@ -90,6 +90,7 @@ status and notes to reflect the move.
 | 0036 | Filter Received Gifts By Free-Text Giver | Implemented | Gift Plans | Giver filter also matches free-text givers and the revealed givers shown by name, not only address-book people and groups. From the 2026-11-12 QA pass. Moved to `implemented/`. |
 | 0037 | Consistent Price Formatting | Implemented | i18n | One locale-aware price format on the gifts grid and server-rendered pages ("€24.50" in English, "24,50 €" in French). From the 2026-11-12 QA pass. Moved to `implemented/`. |
 | 0038 | Delete For Everyone With Copies For Dependent Plans | Proposed | Sharing | The only owner of a shared object deletes it for everyone; owners of dependent plans keep a copy, so no plan is lost and no surprise is revealed. |
+| 0039 | Import Contacts From A File | Ready | Recipients | Upload a vCard (parsed with `vobject`, chosen by a spike) or CSV export up to 2 MB / 1,000 contacts; preview with a duplicate check against owned and shared people. Phone contact picker is a follow-up. |
 
 
 ## Working With Ideas

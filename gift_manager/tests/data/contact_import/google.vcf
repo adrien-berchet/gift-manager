@@ -1,0 +1,28 @@
+BEGIN:VCARD
+VERSION:3.0
+FN:Élodie Marchand
+N:Marchand;Élodie;;;
+EMAIL;TYPE=INTERNET;TYPE=HOME:elodie.marchand@example.com
+EMAIL;TYPE=INTERNET;TYPE=WORK:e.marchand@example.org
+TEL;TYPE=CELL:+33 6 00 00 00 00
+BDAY:1987-03-14
+item1.EMAIL;TYPE=INTERNET:elodie.perso@example.net
+item1.X-ABLabel:Perso
+CATEGORIES:myContacts
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Thomas Nguyen
+N:Nguyen;Thomas;;;
+item1.EMAIL;TYPE=INTERNET:thomas.nguyen@example.com
+item1.X-ABLabel:
+BDAY:--05-09
+CATEGORIES:myContacts
+END:VCARD
+BEGIN:VCARD
+VERSION:3.0
+FN:Sarah
+N:;Sarah;;;
+BDAY:--1225
+NOTE:Rencontrée au club\, mardi\nCadeau: livre
+END:VCARD

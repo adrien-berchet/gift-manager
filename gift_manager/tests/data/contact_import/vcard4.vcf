@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:4.0
+FN:Chloé Bernard
+N:Bernard;Chloé;;;
+EMAIL;TYPE=work:chloe.b@example.org
+EMAIL;TYPE=home;PREF=1:chloe@example.com
+BDAY:--0905
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+FN:Noah Lambert
+N:Lambert;Noah;;;
+BDAY:19780214
+EMAIL:noah@example.com
+END:VCARD
+BEGIN:VCARD
+VERSION:4.0
+FN:Lina Moreau
+N:Moreau;Lina;;;
+BDAY;VALUE=text:circa 1980
+END:VCARD

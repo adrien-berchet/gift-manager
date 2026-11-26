@@ -1,0 +1,203 @@
+{
+ "google.vcf": [
+  {
+   "given": "Élodie",
+   "family": "Marchand",
+   "emails": [
+    "elodie.marchand@example.com",
+    "e.marchand@example.org",
+    "elodie.perso@example.net"
+   ],
+   "bday": [
+    14,
+    3,
+    1987
+   ]
+  },
+  {
+   "given": "Thomas",
+   "family": "Nguyen",
+   "emails": [
+    "thomas.nguyen@example.com"
+   ],
+   "bday": [
+    9,
+    5,
+    null
+   ]
+  },
+  {
+   "given": "Sarah",
+   "family": "",
+   "emails": [],
+   "bday": [
+    25,
+    12,
+    null
+   ]
+  }
+ ],
+ "apple.vcf": [
+  {
+   "given": "Bastien",
+   "family": "Lefèvre",
+   "emails": [
+    "bastien@example.com"
+   ],
+   "bday": [
+    22,
+    7,
+    null
+   ]
+  },
+  {
+   "given": "Camille",
+   "family": "Dubois",
+   "emails": [
+    "camille.dubois@example.org",
+    "camille.d@example.com"
+   ],
+   "bday": [
+    5,
+    1,
+    1990
+   ]
+  },
+  {
+   "given": "Boulangerie Dupont",
+   "family": "",
+   "emails": [
+    "contact@example.com"
+   ],
+   "bday": null
+  }
+ ],
+ "android.vcf": [
+  {
+   "given": "Maëlle",
+   "family": "Guérin",
+   "emails": [
+    "maelle.guerin@example.com"
+   ],
+   "bday": [
+    30,
+    11,
+    1992
+   ]
+  },
+  {
+   "given": "Hugo",
+   "family": "Petit",
+   "emails": [
+    "hugo.petit@example.com",
+    "hugo@example.net"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Joséphine",
+   "family": "Étienne-François de la Fontaine Saint-Geré",
+   "emails": [],
+   "bday": [
+    3,
+    2,
+    2001
+   ]
+  }
+ ],
+ "outlook.vcf": [
+  {
+   "given": "Inès",
+   "family": "Rousseau",
+   "emails": [
+    "i.rousseau@example.com"
+   ],
+   "bday": [
+    21,
+    6,
+    1985
+   ]
+  }
+ ],
+ "vcard4.vcf": [
+  {
+   "given": "Chloé",
+   "family": "Bernard",
+   "emails": [
+    "chloe@example.com",
+    "chloe.b@example.org"
+   ],
+   "bday": [
+    5,
+    9,
+    null
+   ]
+  },
+  {
+   "given": "Noah",
+   "family": "Lambert",
+   "emails": [
+    "noah@example.com"
+   ],
+   "bday": [
+    14,
+    2,
+    1978
+   ]
+  },
+  {
+   "given": "Lina",
+   "family": "Moreau",
+   "emails": [],
+   "bday": null
+  }
+ ],
+ "edge_cases.vcf": [
+  {
+   "given": "Zoé 🎁",
+   "family": "Martin",
+   "emails": [
+    "zoe@example.com"
+   ],
+   "bday": [
+    1,
+    6,
+    2010
+   ]
+  },
+  {
+   "given": "Jean",
+   "family": "Dupont, Jr.",
+   "emails": [
+    "jean@example.com"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Anne-Sophie",
+   "family": "Delacroix-Villemur",
+   "emails": [],
+   "bday": null
+  },
+  {
+   "given": "Paul",
+   "family": "Garnier",
+   "emails": [
+    "paul@example.com"
+   ],
+   "bday": null
+  },
+  {
+   "given": "Marc",
+   "family": "Faure",
+   "emails": [
+    "marc@example.com"
+   ],
+   "bday": [
+    31,
+    1,
+    1970
+   ]
+  }
+ ]
+}
